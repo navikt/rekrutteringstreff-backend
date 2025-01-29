@@ -1,0 +1,42 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: rekrutteringstreff-api
+  namespace: toi
+  labels:
+    team: toi
+spec:
+  image: {{ image }}
+  port: 8301
+  ingresses:
+    - {{ ingress }}
+  liveness:
+    path: /isalive
+  readiness:
+    port: 8080
+    path: /isready
+  prometheus:
+    enabled: true
+    path: /metrics
+  replicas:
+    min: {{ min_replicas }}
+    max: {{ max_replicas }}
+  secureLogs:
+    enabled: true
+  resources:
+    limits:
+      cpu: 3000m
+      memory: 2048Mi
+    requests:
+      cpu: 100m
+      memory: 512Mi
+  accessPolicy:
+    inbound:
+      rules:
+        - application: rekrutteringsbistand
+  azure:
+    application:
+      enabled: true
+      allowAllUsers: false
+  kafka:
+    pool: {{kafka_pool}}

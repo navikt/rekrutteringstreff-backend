@@ -1,0 +1,21 @@
+name: toi-arbeidsgiver-notifikasjon
+
+on:
+  push:
+    paths:
+      - apps/rekrutteringstreff-api/**
+      - deploy-rekrutteringstreff-api.yaml
+      - .github/workflows/deploy-template.yaml
+      - buildSrc/**
+
+jobs:
+  build-deploy:
+    uses: ./.github/workflows/deploy-template.yaml
+    with:
+      app_name: ${{ github.workflow }}
+      #deploy_dev_branch: refs/heads/ikkeibrukenda
+    secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
+      security-events: write
