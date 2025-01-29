@@ -10,17 +10,19 @@ repositories {
     maven("https://packages.confluent.io/maven/")
 }
 
+val jupiterVersion = "5.11.4"
+
 dependencies {
     implementation(kotlin("stdlib"))
 
-    implementation("org.slf4j:slf4j-api:2.0.3")
-    implementation("ch.qos.logback:logback-classic:1.4.12")
-    implementation("net.logstash.logback:logstash-logback-encoder:7.2")
+    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("ch.qos.logback:logback-classic:1.5.16")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.1")
-    testImplementation("org.assertj:assertj-core:3.23.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:$jupiterVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:$jupiterVersion")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$jupiterVersion")
+    testImplementation("org.assertj:assertj-core:3.27.3")
 }
 
 val stiTilApplicationClass =
