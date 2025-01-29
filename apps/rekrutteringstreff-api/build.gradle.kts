@@ -1,13 +1,8 @@
 plugins {
-    kotlin("jvm")
-    application
+    id("toi.common")
 }
 
 val javalinVersion = "6.4.0"
-
-repositories {
-    mavenCentral()
-}
 
 dependencies {
     implementation("io.javalin:javalin:$javalinVersion")
