@@ -1,4 +1,4 @@
-name: toi-arbeidsgiver-notifikasjon
+name: rekrutteringstreff-api
 
 on:
   push:
