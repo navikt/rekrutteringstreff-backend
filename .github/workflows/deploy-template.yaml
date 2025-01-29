@@ -31,7 +31,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           chmod +x ./gradlew
-          ./gradlew wrapper
           ./gradlew :apps:${{ inputs.app_name }}:test :apps:${{ inputs.app_name }}:build
       - name: Push docker image to GAR
         uses: nais/docker-build-push@v0
