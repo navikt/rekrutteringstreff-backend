@@ -14,7 +14,7 @@ dependencies {
     implementation(kotlin("stdlib"))
 
     implementation("org.slf4j:slf4j-api:2.0.3")
-    implementation("ch.qos.logback:logback-classic:1.4.4")
+    implementation("ch.qos.logback:logback-classic:1.4.12")
     implementation("net.logstash.logback:logstash-logback-encoder:7.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.1")
