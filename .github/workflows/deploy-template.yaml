@@ -56,8 +56,8 @@ jobs:
       - uses: nais/deploy/actions/deploy@v2
         env:
           CLUSTER: dev-gcp
-          RESOURCE: apps/${{ inputs.app_name }}/nais.yaml
-          VARS: apps/${{ inputs.app_name }}/nais-dev.yaml
+          RESOURCE: apps/${{ inputs.app_name }}/.nais/app.yaml
+          VARS: apps/${{ inputs.app_name }}/.nais/dev-gcp.yaml
           VAR: image=${{ needs.build-and-publish.outputs.image }}
 
  # deploy-to-prod-gcp:
@@ -70,8 +70,8 @@ jobs:
  #     - uses: nais/deploy/actions/deploy@v2
  #       env:
  #         CLUSTER: prod-gcp
- #         RESOURCE: apps/${{ inputs.app_name }}/nais.yaml,apps/${{ inputs.app_name }}/alerts.yaml
- #         VARS: apps/${{ inputs.app_name }}/nais-prod.yaml
+ #         RESOURCE: apps/${{ inputs.app_name }}/.nais/app.yaml,apps/${{ inputs.app_name }}/.nais/alerts.yaml
+ #         VARS: apps/${{ inputs.app_name }}/.nais/prod-gcp.yaml
  #         VAR: image=${{ needs.build-and-publish.outputs.image }}
 
   call-trivy-security-scan:
