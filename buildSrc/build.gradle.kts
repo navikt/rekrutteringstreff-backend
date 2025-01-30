@@ -2,7 +2,7 @@ import ca.cutterslade.gradle.analyze.AnalyzeDependenciesTask
 
 plugins {
     `kotlin-dsl`
-    id("ca.cutterslade.analyze") version "1.9.0" apply true
+    id("ca.cutterslade.analyze") version "1.10.0" apply true
 }
 
 group = "no.nav.arbeidsgiver"
@@ -14,7 +14,6 @@ repositories {
 
 dependencies {
     implementation(kotlin("gradle-plugin"))
-    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.20")
 }
 
 java {
@@ -23,7 +22,7 @@ java {
 
 tasks {
     withType<Wrapper> {
-        gradleVersion = "8.11.1"
+        gradleVersion = "8.12.1"
     }
 
     withType<AnalyzeDependenciesTask> {
