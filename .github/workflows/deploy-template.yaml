@@ -40,8 +40,6 @@ jobs:
           image_suffix: ${{ inputs.app_name }}
           dockerfile: apps/${{ inputs.app_name }}/Dockerfile
           docker_context: apps/${{ inputs.app_name }}
-          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
-          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
           tag: ${{ github.ref == 'refs/heads/main' && 'latest' || github.sha }}
           build_args: |
             APP_NAME=${{ inputs.app_name }}
@@ -76,7 +74,7 @@ jobs:
 
   call-trivy-security-scan:
     needs: build-and-publish
-    uses: navikt/toi-github-actions-workflows/.github/workflows/trivy-security-scan.yaml@main
+    uses: navikt/toi-github-actions-workflows/.github/workflows/trivy-security-scan.yaml@v1
     with:
       image: ${{ needs.build-and-publish.outputs.image }}
     permissions:
