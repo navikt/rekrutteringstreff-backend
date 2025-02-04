@@ -11,6 +11,7 @@ val postgresVersion = "42.7.5"
 val hikariVersion = "6.2.1"
 val testContainerVersion = "1.20.4"
 val swaggerParserVersion = "2.1.12"
+val nimbusVersion = "10.0.1"
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
@@ -26,6 +27,7 @@ dependencies {
     implementation("io.javalin.community.openapi:javalin-swagger-plugin:$javalinVersion")
     implementation("io.javalin.community.openapi:openapi-specification:$javalinVersion")
     kapt("io.swagger.parser.v3:swagger-parser:$swaggerParserVersion")
+    implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")

@@ -17,6 +17,16 @@ class KubernetesHealthTest {
     private val appPort = 10000
     private val app = App(port = appPort)
 
+    @BeforeAll
+    fun setUp() {
+        app.start()
+    }
+
+    @AfterAll
+    fun tearDown() {
+        app.close()
+    }
+
     @Test
     fun isAlive() {
         val (_, response: Response, result: Result<Unit, FuelError>) = Fuel.get("http://localhost:$appPort/isalive")
@@ -35,15 +45,5 @@ class KubernetesHealthTest {
             is Result.Success -> assertThat(response.statusCode).isEqualTo(200)
             is Result.Failure -> throw result.error
         }
-    }
-
-    @BeforeAll
-    fun setUp() {
-        app.start()
-    }
-
-    @AfterAll
-    fun tearDown() {
-        app.close()
     }
 }

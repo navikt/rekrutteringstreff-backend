@@ -4,7 +4,8 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.rekrutteringstreff.App
-import no.nav.toi.rekrutteringstreff.TestStatus
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.Status
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -17,7 +18,7 @@ class RekrutteringstreffTest {
     private val authPort = 18012
     private val database = TestDatabase()
     private val appPort = 10000
-    private val app = App(port = appPort)
+    private val app = App(port = appPort, repo = RekrutteringstreffRepository(database.dataSource))
 
     @BeforeAll
     fun setUp() {
@@ -42,7 +43,7 @@ class RekrutteringstreffTest {
         val token = lagToken(navIdent = navIdent)
         val gyldigTittelfelt = "Tittelfeltet"
         val gyldigKontorfelt = "Gyldig NAV Kontor"
-        val gyldigStatus = TestStatus.Utkast
+        val gyldigStatus = Status.Utkast
         val gyldigFraTid = ZonedDateTime.now().minusDays(1)
         val gyldigTilTid = ZonedDateTime.now().plusDays(1).plusHours(2)
         val gyldigSted = "Gyldig Sted"
@@ -51,12 +52,12 @@ class RekrutteringstreffTest {
                 """
                 {
                     "tittel": "$gyldigTittelfelt",
-                    "kontor": "$gyldigTittelfelt",
+                    "kontor": "$gyldigKontorfelt",
                     "fraTid": "$gyldigFraTid",
                     "tilTid": "$gyldigTilTid",
                     "sted": "$gyldigSted"
                 }
-            """.trimIndent()
+                """.trimIndent()
             )
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
@@ -64,16 +65,14 @@ class RekrutteringstreffTest {
             is Result.Failure -> throw result.error
             is Result.Success -> {
                 assertThat(response.statusCode).isEqualTo(201)
-
                 val rekrutteringstreff = database.hentAlleRekrutteringstreff()
-                assertThat(rekrutteringstreff).size().isEqualTo(1)
-
+                assertThat(rekrutteringstreff).hasSize(1)
                 rekrutteringstreff[0].apply {
                     assertThat(tittel).isEqualTo(gyldigTittelfelt)
                     assertThat(fraTid).isEqualTo(gyldigFraTid)
                     assertThat(tilTid).isEqualTo(gyldigTilTid)
                     assertThat(sted).isEqualTo(gyldigSted)
-                    assertThat(status).isEqualTo(gyldigStatus)
+                    assertThat(status).isEqualTo(gyldigStatus.name)
                     assertThat(opprettetAvKontor).isEqualTo(gyldigKontorfelt)
                     assertThat(opprettetAvPerson).isEqualTo(navIdent)
                 }
