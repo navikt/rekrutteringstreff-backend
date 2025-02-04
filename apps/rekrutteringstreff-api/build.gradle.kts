@@ -1,16 +1,16 @@
 plugins {
     id("toi.common")
-    id("com.google.devtools.ksp") version "2.0.20-1.0.25" apply true
-
+    kotlin("kapt")
 }
 
 val javalinVersion = "6.4.0"
-
+val swaggerParserVersion = "2.1.12"
 
 dependencies {
     implementation("io.javalin:javalin:$javalinVersion")
-    ksp("io.javalin.community.openapi:openapi-annotation-processor:6.4.0")
-    implementation("io.javalin.community.openapi:javalin-openapi-plugin:6.4.0")
-    implementation("io.javalin.community.openapi:javalin-swagger-plugin:6.4.0")
-    implementation("io.javalin.community.openapi:openapi-specification:6.4.0")
+    kapt("io.javalin.community.openapi:openapi-annotation-processor:$javalinVersion")
+    implementation("io.javalin.community.openapi:javalin-openapi-plugin:$javalinVersion")
+    implementation("io.javalin.community.openapi:javalin-swagger-plugin:$javalinVersion")
+    implementation("io.javalin.community.openapi:openapi-specification:$javalinVersion")
+    kapt("io.swagger.parser.v3:swagger-parser:$swaggerParserVersion")
 }
