@@ -1,13 +1,12 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
+import no.nav.toi.rekrutteringstreff.App
+import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
 import java.time.ZonedDateTime
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -45,19 +44,21 @@ class RekrutteringstreffTest {
         val gyldigTilTid = ZonedDateTime.now().plusDays(1).plusHours(2)
         val gyldigSted = "Gyldig Sted"
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
-            .body("""
+            .body(
+                """
                 {
                     "tittel": "$gyldigTittelfelt",
                     "fraTid": "$gyldigFraTid",
                     "tilTid": "$gyldigTilTid",
                     "sted": "$gyldigSted"
                 }
-            """.trimIndent())
+            """.trimIndent()
+            )
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
-        when(result) {
-            is com.github.kittinunf.result.Result.Failure -> throw result.error
-            is com.github.kittinunf.result.Result.Success -> {
+        when (result) {
+            is Result.Failure -> throw result.error
+            is Result.Success -> {
                 assertThat(response.statusCode).isEqualTo(201)
 
                 val rekrutteringstreff = database.hentRekrutteringstreff()
