@@ -1,8 +1,8 @@
 package no.nav.toi.rekrutteringstreff
 
 import io.javalin.Javalin
-import org.flywaydb.core.Flyway
-import javax.sql.DataSource
+import java.time.Instant
+import java.time.ZoneId
 
 class App(private val port: Int = 8080) {
     private lateinit var javalin: Javalin
@@ -24,3 +24,5 @@ fun main() {
 
     ).start()
 }
+
+fun Instant.atOslo() = this.atZone(ZoneId.of("Europe/Oslo"))

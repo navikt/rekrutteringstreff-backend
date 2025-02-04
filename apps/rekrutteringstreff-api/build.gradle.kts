@@ -14,6 +14,7 @@ val swaggerParserVersion = "2.1.12"
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
+    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("com.github.kittinunf.fuel:fuel:$fuelVersion")

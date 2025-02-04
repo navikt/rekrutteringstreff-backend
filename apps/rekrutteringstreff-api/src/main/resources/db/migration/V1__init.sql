@@ -6,6 +6,9 @@ CREATE TABLE rekrutteringstreff (
     opprettet_av_person text,
     opprettet_av_kontor text,
     opprettet_av_tidspunkt timestamp with time zone not null,
+    fratid timestamp with time zone not null,
+    tiltid timestamp with time zone not null,
+    sted timestamp with time zone not null,
     eiere text[]
 );
 

@@ -6,39 +6,54 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import javax.sql.DataSource
 import org.flywaydb.core.Flyway
+import java.sql.ResultSet
 import java.time.ZonedDateTime
 
 class TestDatabase {
     fun slettAlt() {
-        TODO("Not yet implemented")
+        dataSource.connection.use {
+            it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
+        }
     }
 
-    fun hentRekrutteringstreff(): List<TestRekrutteringstreff> {
-       val treff = TestRekrutteringstreff("Testtittel", ZonedDateTime.now(), ZonedDateTime.now(), "Teststed")
-        return listOf(treff)
-
-
+    fun hentAlleRekrutteringstreff(): List<TestRekrutteringstreff> {
+        dataSource.connection.use {
+            val resultSet =
+                it.prepareStatement("SELECT * FROM rekrutteringstreff ORDER BY id ASC")
+                    .executeQuery()
+            return generateSequence {
+                if (resultSet.next()) konverterTilRekrutteringstreff(resultSet)
+                else null
+            }.toList()
+        }
     }
 
-    class TestDatabase {
+    private fun konverterTilRekrutteringstreff(resultSet: ResultSet) = TestRekrutteringstreff(
+        resultSet.getString("tittel"),
+        resultSet.getTimestamp("fratid").toInstant().atOslo(),
+        resultSet.getTimestamp("tiltid").toInstant().atOslo(),
+        resultSet.getString("sted"),
+        resultSet.getString("status"),
+        resultSet.getString("opprettet_av_person"),
+        resultSet.getString("opprettet_av_kontor")
+    )
 
-        companion object {
+    companion object {
+        private var lokalPostgres: PostgreSQLContainer<*>? = null
 
-            private var lokalPostgres: PostgreSQLContainer<*>? = null
+        fun getLokalPostgres(): PostgreSQLContainer<*> {
+            return if (lokalPostgres != null) {
+                lokalPostgres as PostgreSQLContainer<*>
+            } else {
+                lokalPostgres = PostgreSQLContainer(DockerImageName.parse("postgres:17.2-alpine"))
+                    .withDatabaseName("dbname")
+                    .withUsername("username")
+                    .withPassword("pwd")
 
-            fun getLokalPostgres(): PostgreSQLContainer<*> {
-                return if (lokalPostgres != null) {
-                    lokalPostgres as PostgreSQLContainer<*>
-                } else {
-                    lokalPostgres = PostgreSQLContainer(DockerImageName.parse("postgres:17.2-alpine"))
-                        .withDatabaseName("dbname")
-                        .withUsername("username")
-                        .withPassword("pwd")
-
-                    (lokalPostgres as PostgreSQLContainer<*>).apply { this.start() }
-                }
+                (lokalPostgres as PostgreSQLContainer<*>).also(PostgreSQLContainer<*>::start)
             }
         }
+    }
 
 
         val dataSource: DataSource = HikariDataSource(
@@ -60,7 +75,15 @@ class TestDatabase {
                 .load()
                 .migrate()
         }
-    }
 }
 
-class TestRekrutteringstreff(val tittel: String, val fraTid: ZonedDateTime, val tilTid: ZonedDateTime, val sted: String)
+enum class TestStatus { Utkast }
+class TestRekrutteringstreff(
+    val tittel: String,
+    val fraTid: ZonedDateTime,
+    val tilTid: ZonedDateTime,
+    val sted: String,
+    val status: String,
+    val opprettetAvPerson: String,
+    val opprettetAvKontor: String
+)

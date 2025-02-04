@@ -4,6 +4,7 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.rekrutteringstreff.App
+import no.nav.toi.rekrutteringstreff.TestStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -40,6 +41,8 @@ class RekrutteringstreffTest {
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
         val gyldigTittelfelt = "Tittelfeltet"
+        val gyldigKontorfelt = "Gyldig NAV Kontor"
+        val gyldigStatus = TestStatus.Utkast
         val gyldigFraTid = ZonedDateTime.now().minusDays(1)
         val gyldigTilTid = ZonedDateTime.now().plusDays(1).plusHours(2)
         val gyldigSted = "Gyldig Sted"
@@ -48,6 +51,7 @@ class RekrutteringstreffTest {
                 """
                 {
                     "tittel": "$gyldigTittelfelt",
+                    "kontor": "$gyldigTittelfelt",
                     "fraTid": "$gyldigFraTid",
                     "tilTid": "$gyldigTilTid",
                     "sted": "$gyldigSted"
@@ -61,7 +65,7 @@ class RekrutteringstreffTest {
             is Result.Success -> {
                 assertThat(response.statusCode).isEqualTo(201)
 
-                val rekrutteringstreff = database.hentRekrutteringstreff()
+                val rekrutteringstreff = database.hentAlleRekrutteringstreff()
                 assertThat(rekrutteringstreff).size().isEqualTo(1)
 
                 rekrutteringstreff[0].apply {
@@ -69,6 +73,9 @@ class RekrutteringstreffTest {
                     assertThat(fraTid).isEqualTo(gyldigFraTid)
                     assertThat(tilTid).isEqualTo(gyldigTilTid)
                     assertThat(sted).isEqualTo(gyldigSted)
+                    assertThat(status).isEqualTo(gyldigStatus)
+                    assertThat(opprettetAvKontor).isEqualTo(gyldigKontorfelt)
+                    assertThat(opprettetAvPerson).isEqualTo(navIdent)
                 }
             }
         }
