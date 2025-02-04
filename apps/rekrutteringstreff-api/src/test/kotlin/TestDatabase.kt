@@ -14,7 +14,10 @@ class TestDatabase {
     }
 
     fun hentRekrutteringstreff(): List<TestRekrutteringstreff> {
-        TODO("Not yet implemented")
+       val treff = TestRekrutteringstreff("Testtittel", ZonedDateTime.now(), ZonedDateTime.now(), "Teststed")
+        return listOf(treff)
+
+
     }
 
     class TestDatabase {

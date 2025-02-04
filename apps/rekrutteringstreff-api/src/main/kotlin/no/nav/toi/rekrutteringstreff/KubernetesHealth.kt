@@ -16,7 +16,7 @@ private const val endepunktAlive = "/isalive"
     //requestBody = OpenApiRequestBody([OpenApiContent(String::class)]),
     responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
     path = "/isready",
-    methods = [HttpMethod.POST]
+    methods = [HttpMethod.GET]
 )
 fun isReadyHandler(ctx: io.javalin.http.Context) {
     ctx.result("isready")
@@ -29,7 +29,7 @@ fun isReadyHandler(ctx: io.javalin.http.Context) {
     //requestBody = OpenApiRequestBody([OpenApiContent(String::class)]),
     responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
     path = "/isalive",
-    methods = [HttpMethod.POST]
+    methods = [HttpMethod.GET]
 )
 fun isAliveHandler(ctx: io.javalin.http.Context) {
     ctx.result("isalive")

@@ -7,6 +7,7 @@ class App(private val port: Int = 8080) {
     fun start() {
         javalin = Javalin.create()
         javalin.handleHealth()
+        javalin.handleRekrutteringstreff()
 
 
         javalin.start(port)
