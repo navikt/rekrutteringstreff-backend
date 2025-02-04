@@ -1,10 +1,14 @@
 package no.nav.toi.rekrutteringstreff
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.javalin.Javalin
+import io.javalin.http.Context
+import io.javalin.http.bodyAsClass
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
+import java.time.ZonedDateTime
 
 private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
@@ -17,11 +21,24 @@ private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
     path = endepunktRekrutteringstreff,
     methods = [HttpMethod.POST]
 )
-fun opprettRekrutteringstreffHandler(ctx: io.javalin.http.Context) {
-    ctx.status(201).result("TODO treffresult post")
-}
+fun opprettRekrutteringstreffHandler(repo: RekruttureingstreffRepository): (Context) -> Unit =
+    { ctx ->
+        val dto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
+        repo.opprett(dto)
+        ctx.status(201).result("TODO treffresult post")
+    }
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+private data class OpprettRekrutteringstreffDto(
+    val tittel: String,
+    val opprettetAvNavkontorEnhetId: String,
+//    val opprettet_tidspunkt: ZonedDateTime, // generes av backend
+//    val opprettet_av_navident  // hentes fra token
+    val fraTid: ZonedDateTime,
+    val tilTid: ZonedDateTime,
+    val sted: String
+)
 
-fun Javalin.handleRekrutteringstreff() {
-    post(endepunktRekrutteringstreff, ::opprettRekrutteringstreffHandler)
+fun Javalin.handleRekrutteringstreff(repo: RekruttureingstreffRepository) {
+    post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
 }

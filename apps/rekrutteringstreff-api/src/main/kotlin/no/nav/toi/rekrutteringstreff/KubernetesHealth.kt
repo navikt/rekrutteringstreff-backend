@@ -11,7 +11,6 @@ private const val endepunktAlive = "/isalive"
 
 @OpenApi(
     summary = "isready",
-    operationId = "todo",
     tags = [],
     //requestBody = OpenApiRequestBody([OpenApiContent(String::class)]),
     responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
@@ -24,7 +23,6 @@ fun isReadyHandler(ctx: io.javalin.http.Context) {
 
 @OpenApi(
     summary = "isalive",
-    operationId = "todo",
     tags = [],
     //requestBody = OpenApiRequestBody([OpenApiContent(String::class)]),
     responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
