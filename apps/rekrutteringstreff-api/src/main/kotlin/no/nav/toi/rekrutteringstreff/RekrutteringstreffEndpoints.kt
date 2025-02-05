@@ -9,7 +9,6 @@ import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
 import java.time.ZonedDateTime
-import com.nimbusds.jwt.SignedJWT
 
 private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
@@ -23,7 +22,7 @@ private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit =
     { ctx ->
         val dto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
-        val navIdent = ctx.extractNavIdent()
+        val navIdent = ctx.extractNavIdent() // Henter ut navIdent fra den autentiserte brukeren
         repo.opprett(dto, navIdent)
         ctx.status(201).result("Rekrutteringstreff opprettet")
     }
@@ -36,16 +35,6 @@ data class OpprettRekrutteringstreffDto(
     val tilTid: ZonedDateTime,
     val sted: String
 )
-
-fun Context.extractNavIdent(): String {
-    val token = header("Authorization")?.removePrefix("Bearer ")?.trim() ?: ""
-    return try {
-        val jwt = SignedJWT.parse(token)
-        jwt.jwtClaimsSet.getStringClaim("NAVident") ?: "ukjent"
-    } catch (e: Exception) {
-        "ukjent"
-    }
-}
 
 fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
