@@ -8,7 +8,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
-                INSERT INTO rekrutteringstreff 
+                INSERT INTO $tabellnavn 
                 (id, tittel, status, opprettet_av_person, opprettet_av_kontor, opprettet_av_tidspunkt, fratid, tiltid, sted, eiere)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent()
@@ -28,5 +28,10 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             }
         }
     }
+    private companion object {
+        const val tabellnavn = "rekrutteringstreff"
+    }
 }
+
+
 
