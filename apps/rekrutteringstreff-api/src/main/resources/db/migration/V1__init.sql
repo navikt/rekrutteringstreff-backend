@@ -3,7 +3,7 @@ CREATE TABLE rekrutteringstreff (
     id uuid NOT NULL,
     tittel text,
     status text,
-    opprettet_av_person text,
+    opprettet_av_person_navident text,
     opprettet_av_kontor_enhetid text,
     opprettet_av_tidspunkt timestamp with time zone not null,
     fratid timestamp with time zone not null,

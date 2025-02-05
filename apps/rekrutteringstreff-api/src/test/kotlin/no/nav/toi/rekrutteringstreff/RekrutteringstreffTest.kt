@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.responseUnit
 import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.rekrutteringstreff.*
@@ -14,6 +15,7 @@ class RekrutteringstreffTest {
     private val authPort = 18012
     private val database = TestDatabase()
     private val appPort = 10000
+    private val repo = RekrutteringstreffRepository(database.dataSource) // hmmm
 
     private val app = App(
         port = appPort,
@@ -72,7 +74,7 @@ class RekrutteringstreffTest {
             is Result.Failure -> throw result.error
             is Result.Success -> {
                 assertThat(response.statusCode).isEqualTo(201)
-                val rekrutteringstreff = database.hentAlleRekrutteringstreff()
+                val rekrutteringstreff: List<Rekrutteringstreff> = database.hentAlleRekrutteringstreff()
                 assertThat(rekrutteringstreff).hasSize(1)
                 rekrutteringstreff[0].apply {
                     assertThat(tittel).isEqualTo(gyldigTittelfelt)
@@ -80,23 +82,69 @@ class RekrutteringstreffTest {
                     assertThat(tilTid).isEqualTo(gyldigTilTid)
                     assertThat(sted).isEqualTo(gyldigSted)
                     assertThat(status).isEqualTo(gyldigStatus.name)
-                    assertThat(opprettetAvKontor).isEqualTo(gyldigKontorfelt)
-                    assertThat(opprettetAvPerson).isEqualTo(navIdent)
+                    assertThat(opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
+                    assertThat(opprettetAvPersonNavident).isEqualTo(navIdent)
                 }
             }
         }
     }
 
-    private fun lagToken(
-        issuerId: String = "http://localhost:$authPort/default",
-        navIdent: String = "A000001",
-        claims: Map<String, Any> = mapOf("NAVident" to navIdent),
-        expiry: Long = 3600
-    ) = authServer.issueToken(
-        issuerId = issuerId,
-        subject = "subject",
-        claims = claims,
-        expiry = expiry,
-        audience = "rekrutteringstreff-audience"
-    )
+
+    @Test
+    fun hentAlleRekrutteringstreff() {
+        // Gitt db med to treff
+        // når kaller hentAlle med HTTP
+        // så skal jeg få to treff og HTTP 200
+
+        val treff1 = OpprettRekrutteringstreffDto(
+            tittel = "Tittel1111111",
+            fraTid = nowOslo(),
+            tilTid = nowOslo(),
+            sted = "anySted",
+            opprettetAvNavkontorEnhetId = "anyEnhetId"
+        )
+        val treff2 = OpprettRekrutteringstreffDto(
+            tittel = "Tittel222222222222",
+            fraTid = nowOslo(),
+            tilTid = nowOslo(),
+            sted = "anySted",
+            opprettetAvNavkontorEnhetId = "anyEnhetId"
+        )
+
+
+        repo.opprett(treff1, "navident1111111")
+        repo.opprett(treff2, "navident222222222")
+
+        val navIdent = "A123456"
+        val token = lagToken(navIdent = navIdent)
+
+        // http get
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
+            .header("Authorization", "Bearer ${token.serialize()}").responseUnit()
+
+        // asserts
+
+        when (result) {
+            is Result.Failure -> throw result.error
+            is Result.Success -> {
+                assertThat(response.statusCode).isEqualTo(200)
+                // todo: Mer
+            }
+        }
+    }
+}
+
+
+private fun lagToken(
+    issuerId: String = "http://localhost:$authPort/default",
+    navIdent: String = "A000001",
+    claims: Map<String, Any> = mapOf("NAVident" to navIdent),
+    expiry: Long = 3600
+) = authServer.issueToken(
+    issuerId = issuerId,
+    subject = "subject",
+    claims = claims,
+    expiry = expiry,
+    audience = "rekrutteringstreff-audience"
+)
 }

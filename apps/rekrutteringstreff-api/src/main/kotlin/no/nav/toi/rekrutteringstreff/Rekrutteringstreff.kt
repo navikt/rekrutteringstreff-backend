@@ -8,6 +8,6 @@ class Rekrutteringstreff(
     val tilTid: ZonedDateTime,
     val sted: String,
     val status: String,
-    val opprettetAvPerson: String,
-    val opprettetAvKontor: String
+    val opprettetAvPersonNavident: String,
+    val opprettetAvNavkontorEnhetId: String
 )
