@@ -1,7 +1,9 @@
 package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.responseUnit
+import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.rekrutteringstreff.*
@@ -92,9 +94,6 @@ class RekrutteringstreffTest {
 
     @Test
     fun hentAlleRekrutteringstreff() {
-        // Gitt db med to treff
-        // når kaller hentAlle med HTTP
-        // så skal jeg få to treff og HTTP 200
 
         val treff1 = OpprettRekrutteringstreffDto(
             tittel = "Tittel1111111",
@@ -111,40 +110,45 @@ class RekrutteringstreffTest {
             opprettetAvNavkontorEnhetId = "anyEnhetId"
         )
 
-
         repo.opprett(treff1, "navident1111111")
         repo.opprett(treff2, "navident222222222")
 
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
 
-        // http get
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
-            .header("Authorization", "Bearer ${token.serialize()}").responseUnit()
 
-        // asserts
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/hentalle")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<Rekrutteringstreff>> {
+                override fun deserialize(content: String): List<Rekrutteringstreff> =
+                    jacksonObjectMapper().readValue(content)
+            })
 
         when (result) {
-            is Result.Failure -> throw result.error
-            is Result.Success -> {
+            is Result.Failure<*> -> throw result.error
+            is Result.Success<List<Rekrutteringstreff>> -> {
                 assertThat(response.statusCode).isEqualTo(200)
-                // todo: Mer
+                val liste = result.get()
+                assertThat(liste).hasSize(2)
+                val returnertTreff1 = liste.first()
+                val returnertTreff2 = liste.last()
+                assertThat(returnertTreff1.tittel).isEqualTo(treff1.tittel)
+                assertThat(returnertTreff2.tittel).isEqualTo(treff2.tittel)
             }
         }
     }
-}
 
 
-private fun lagToken(
-    issuerId: String = "http://localhost:$authPort/default",
-    navIdent: String = "A000001",
-    claims: Map<String, Any> = mapOf("NAVident" to navIdent),
-    expiry: Long = 3600
-) = authServer.issueToken(
-    issuerId = issuerId,
-    subject = "subject",
-    claims = claims,
-    expiry = expiry,
-    audience = "rekrutteringstreff-audience"
-)
+    private fun lagToken(
+        issuerId: String = "http://localhost:$authPort/default",
+        navIdent: String = "A000001",
+        claims: Map<String, Any> = mapOf("NAVident" to navIdent),
+        expiry: Long = 3600
+    ) = authServer.issueToken(
+        issuerId = issuerId,
+        subject = "subject",
+        claims = claims,
+        expiry = expiry,
+        audience = "rekrutteringstreff-audience"
+    )
 }
