@@ -32,7 +32,7 @@ class TestDatabase {
         resultSet.getString("sted"),
         resultSet.getString("status"),
         resultSet.getString("opprettet_av_person"),
-        resultSet.getString("opprettet_av_kontor")
+        resultSet.getString("opprettet_av_kontor_enhetid")
     )
 
     companion object {

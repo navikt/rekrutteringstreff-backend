@@ -53,7 +53,7 @@ class RekrutteringstreffTest {
                 """
                 {
                     "tittel": "$gyldigTittelfelt",
-                    "kontor": "$gyldigKontorfelt",
+                    "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt",
                     "fraTid": "$gyldigFraTid",
                     "tilTid": "$gyldigTilTid",
                     "sted": "$gyldigSted"
