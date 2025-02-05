@@ -119,14 +119,14 @@ class RekrutteringstreffTest {
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/hentalle")
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<Rekrutteringstreff>> {
-                override fun deserialize(content: String): List<Rekrutteringstreff> =
+            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffDTO>> {
+                override fun deserialize(content: String): List<RekrutteringstreffDTO> =
                     jacksonObjectMapper().readValue(content)
             })
 
         when (result) {
             is Result.Failure<*> -> throw result.error
-            is Result.Success<List<Rekrutteringstreff>> -> {
+            is Result.Success<List<RekrutteringstreffDTO>> -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val liste = result.get()
                 assertThat(liste).hasSize(2)

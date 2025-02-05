@@ -31,7 +31,7 @@ class TestDatabase {
         resultSet.getTimestamp("tiltid").toInstant().atOslo(),
         resultSet.getString("sted"),
         resultSet.getString("status"),
-        resultSet.getString("opprettet_av_person"),
+        resultSet.getString("opprettet_av_person_navident"),
         resultSet.getString("opprettet_av_kontor_enhetid")
     )
 

@@ -10,4 +10,6 @@ class Rekrutteringstreff(
     val status: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String
-)
+) {
+    fun tilRekrutteringstreffDTO() = RekrutteringstreffDTO(tittel)
+}
