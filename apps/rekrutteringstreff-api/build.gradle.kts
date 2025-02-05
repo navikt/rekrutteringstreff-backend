@@ -20,6 +20,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("com.github.kittinunf.fuel:fuel:$fuelVersion")
     implementation("com.github.kittinunf.fuel:fuel-jackson:$fuelVersion")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2")
     implementation("io.javalin:javalin:$javalinVersion")
 
     kapt("io.javalin.community.openapi:openapi-annotation-processor:$javalinVersion")

@@ -7,6 +7,7 @@ import org.testcontainers.utility.DockerImageName
 import javax.sql.DataSource
 import org.flywaydb.core.Flyway
 import java.sql.ResultSet
+import java.util.UUID
 
 class TestDatabase {
     fun slettAlt() {
@@ -26,13 +27,14 @@ class TestDatabase {
     }
 
     private fun konverterTilRekrutteringstreff(resultSet: ResultSet) = Rekrutteringstreff(
-        resultSet.getString("tittel"),
-        resultSet.getTimestamp("fratid").toInstant().atOslo(),
-        resultSet.getTimestamp("tiltid").toInstant().atOslo(),
-        resultSet.getString("sted"),
-        resultSet.getString("status"),
-        resultSet.getString("opprettet_av_person_navident"),
-        resultSet.getString("opprettet_av_kontor_enhetid")
+        id = resultSet.getObject("id", UUID::class.java),
+        tittel = resultSet.getString("tittel"),
+        fraTid = resultSet.getTimestamp("fratid").toInstant().atOslo(),
+        tilTid = resultSet.getTimestamp("tiltid").toInstant().atOslo(),
+        sted = resultSet.getString("sted"),
+        status = resultSet.getString("status"),
+        opprettetAvPersonNavident = resultSet.getString("opprettet_av_person_navident"),
+        opprettetAvNavkontorEnhetId = resultSet.getString("opprettet_av_kontor_enhetid")
     )
 
     companion object {

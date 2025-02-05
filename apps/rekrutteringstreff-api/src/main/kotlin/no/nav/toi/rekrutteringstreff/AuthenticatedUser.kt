@@ -41,11 +41,14 @@ fun Context.extractNavIdent(): String =
 
 fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>): Javalin {
     val verifiers = authConfigs.map { jwtVerifier(it) }
-    before("/api/rekrutteringstreff") { ctx ->
-        val token = ctx.header(HttpHeader.AUTHORIZATION.name)?.removePrefix("Bearer ")?.trim()
-            ?: throw UnauthorizedResponse("Missing token")
-        val decoded = verifyJwt(verifiers, token)
-        ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded))
+    before { ctx ->
+        if (ctx.path().matches(Regex("""/api/rekrutteringstreff(?:$|/.*)"""))) {
+            val token = ctx.header(HttpHeader.AUTHORIZATION.name)
+                ?.removePrefix("Bearer ")
+                ?.trim() ?: throw UnauthorizedResponse("Missing token")
+            val decoded = verifyJwt(verifiers, token)
+            ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded))
+        }
     }
     return this
 }

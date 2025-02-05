@@ -2,9 +2,11 @@ package no.nav.toi.rekrutteringstreff
 
 import java.sql.ResultSet
 import java.sql.Timestamp
+import java.util.UUID
 import javax.sql.DataSource
 
 class RekrutteringstreffRepository(private val dataSource: DataSource) {
+
     fun opprett(dto: OpprettRekrutteringstreffDto, navIdent: String) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
@@ -14,7 +16,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent()
             ).use { stmt ->
-                stmt.setObject(1, java.util.UUID.randomUUID())
+                stmt.setObject(1, UUID.randomUUID())
                 stmt.setString(2, dto.tittel)
                 stmt.setString(3, Status.Utkast.name)
                 stmt.setString(4, navIdent)
@@ -30,18 +32,52 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun oppdater(id: UUID, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                UPDATE $tabellnavn 
+                SET $tittel = ?, $fratid = ?, $tiltid = ?, $sted = ?
+                WHERE id = ?
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setString(1, dto.tittel)
+                stmt.setTimestamp(2, Timestamp.from(dto.fraTid.toInstant()))
+                stmt.setTimestamp(3, Timestamp.from(dto.tilTid.toInstant()))
+                stmt.setString(4, dto.sted)
+                stmt.setObject(5, id)
+                stmt.executeUpdate()
+            }
+        }
+    }
+
+    fun slett(id: UUID) {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement("DELETE FROM $tabellnavn WHERE id = ?").use { stmt ->
+                stmt.setObject(1, id)
+                stmt.executeUpdate()
+            }
+        }
+    }
+
     fun hentAlle() = dataSource.connection.use { connection ->
-        connection.prepareStatement(
-            """
-            SELECT * FROM $tabellnavn
-            """.trimIndent()
-        ).use { stmt ->
+        connection.prepareStatement("SELECT * FROM $tabellnavn").use { stmt ->
             stmt.executeQuery().let { resultSet ->
                 generateSequence {
-                    if(resultSet.next())
+                    if (resultSet.next())
                         resultSet.tilRekrutteringstreff()
                     else null
                 }.toList()
+            }
+        }
+    }
+
+    fun hent(id: UUID): Rekrutteringstreff? {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement("SELECT * FROM $tabellnavn WHERE id = ?").use { stmt ->
+                stmt.setObject(1, id)
+                val resultSet = stmt.executeQuery()
+                return if (resultSet.next()) resultSet.tilRekrutteringstreff() else null
             }
         }
     }
@@ -60,15 +96,13 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     }
 
     private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(
-        getString(tittel),
-        getTimestamp(fratid).toInstant().atOslo(),
-        getTimestamp(tiltid).toInstant().atOslo(),
-        getString(sted),
-        getString(status),
-        getString(opprettetAvPersonNavident),
-        getString(opprettetAvPersonNavident)
+        id = getObject("id", UUID::class.java),
+        tittel = getString(tittel),
+        fraTid = getTimestamp(fratid).toInstant().atOslo(),
+        tilTid = getTimestamp(tiltid).toInstant().atOslo(),
+        sted = getString(sted),
+        status = getString(status),
+        opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
+        opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid)
     )
-
 }
-
-
