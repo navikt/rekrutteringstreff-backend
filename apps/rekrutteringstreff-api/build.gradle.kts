@@ -26,6 +26,8 @@ dependencies {
     implementation("io.javalin.community.openapi:javalin-openapi-plugin:$javalinVersion")
     implementation("io.javalin.community.openapi:javalin-swagger-plugin:$javalinVersion")
     implementation("io.javalin.community.openapi:openapi-specification:$javalinVersion")
+    implementation("com.auth0:java-jwt:4.4.0")
+    implementation("com.auth0:jwks-rsa:0.22.1")
     kapt("io.swagger.parser.v3:swagger-parser:$swaggerParserVersion")
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
 

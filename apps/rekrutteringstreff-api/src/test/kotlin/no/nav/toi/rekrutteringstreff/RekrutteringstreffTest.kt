@@ -3,10 +3,7 @@ package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.rekrutteringstreff.App
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.Status
-import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.time.ZonedDateTime
@@ -18,7 +15,11 @@ class RekrutteringstreffTest {
     private val authPort = 18012
     private val database = TestDatabase()
     private val appPort = 10000
-    private val app = App(port = appPort, repo = RekrutteringstreffRepository(database.dataSource))
+
+    private val app = App(
+        port = appPort,
+        repo = RekrutteringstreffRepository(database.dataSource)
+    )
 
     @BeforeAll
     fun setUp() {
