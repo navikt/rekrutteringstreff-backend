@@ -39,7 +39,7 @@ data class AuthenticatedUser(
 fun Context.extractNavIdent(): String =
     attribute<AuthenticatedUser>("authenticatedUser")?.navIdent ?: throw UnauthorizedResponse("Not authenticated")
 
-fun Javalin.authenticateEndpoints(authConfigs: List<AuthenticationConfiguration>): Javalin {
+fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>): Javalin {
     val verifiers = authConfigs.map { jwtVerifier(it) }
     before("/api/rekrutteringstreff") { ctx ->
         val token = ctx.header(HttpHeader.AUTHORIZATION.name)?.removePrefix("Bearer ")?.trim()

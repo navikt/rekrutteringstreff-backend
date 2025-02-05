@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 
+import com.github.dockerjava.api.model.AuthConfig
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
@@ -18,7 +19,12 @@ class RekrutteringstreffTest {
 
     private val app = App(
         port = appPort,
-        repo = RekrutteringstreffRepository(database.dataSource)
+        repo = RekrutteringstreffRepository(database.dataSource),
+        authConfigs = listOf(AuthenticationConfiguration(
+            issuer = "http://localhost:$authPort/default",
+            jwksUri = "http://localhost:$authPort/default/jwks",
+            audience = "rekrutteringstreff-audience"
+        ))
     )
 
     @BeforeAll
@@ -90,6 +96,7 @@ class RekrutteringstreffTest {
         issuerId = issuerId,
         subject = "subject",
         claims = claims,
-        expiry = expiry
+        expiry = expiry,
+        audience = "rekrutteringstreff-audience"
     )
 }
