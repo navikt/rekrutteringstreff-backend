@@ -9,7 +9,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             connection.prepareStatement(
                 """
                 INSERT INTO rekrutteringstreff 
-                (id, tittel, status, opprettet_av_person, opprettet_av_kontor, opprettet_av_tidspunkt, fratid, tiltid, sted, eiere)
+                (id, tittel, status, opprettet_av_person, opprettet_av_navkontor, opprettet_av_tidspunkt, fratid, tiltid, sted, eiere)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent()
             ).use { stmt ->
@@ -17,7 +17,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 stmt.setString(2, dto.tittel)
                 stmt.setString(3, Status.Utkast.name)
                 stmt.setString(4, navIdent)
-                stmt.setString(5, dto.kontor)
+                stmt.setString(5, dto.opprettetAvNavkontorEnhetId)
                 stmt.setTimestamp(6, Timestamp.from(java.time.Instant.now()))
                 stmt.setTimestamp(7, Timestamp.from(dto.fraTid.toInstant()))
                 stmt.setTimestamp(8, Timestamp.from(dto.tilTid.toInstant()))

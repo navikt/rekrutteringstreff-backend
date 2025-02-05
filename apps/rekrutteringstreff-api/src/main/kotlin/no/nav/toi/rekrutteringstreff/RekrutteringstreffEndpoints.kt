@@ -31,7 +31,7 @@ fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Conte
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpprettRekrutteringstreffDto(
     val tittel: String,
-    val kontor: String,
+    val opprettetAvNavkontorEnhetId: String,
     val fraTid: ZonedDateTime,
     val tilTid: ZonedDateTime,
     val sted: String
