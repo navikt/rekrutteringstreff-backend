@@ -28,7 +28,7 @@ dependencies {
 val stiTilApplicationClass =
     File("${projectDir}/src/main/kotlin")
         .walk()
-        .find { it.name == "Application.kt" }
+        .find { it.name == "App.kt" }
         ?.path?.removePrefix("${project.projectDir}/src/main/kotlin/")
         ?.replace("/", ".")
         ?.replace(".kt", "Kt") ?: throw Exception("Finner ingen Application.kt i prosjektet ${project.name}")

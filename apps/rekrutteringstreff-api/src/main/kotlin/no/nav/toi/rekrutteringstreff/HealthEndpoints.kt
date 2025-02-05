@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
 import io.javalin.Javalin
+import io.javalin.http.Context
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
@@ -10,29 +11,24 @@ private const val endepunktReady = "/isready"
 private const val endepunktAlive = "/isalive"
 
 @OpenApi(
-    summary = "isready",
-    tags = [],
-    //requestBody = OpenApiRequestBody([OpenApiContent(String::class)]),
+    summary = "Er applikasjonen klar?",
     responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
-    path = "/isready",
+    path = endepunktReady,
     methods = [HttpMethod.GET]
 )
-fun isReadyHandler(ctx: io.javalin.http.Context) {
+fun isReadyHandler(ctx: Context) {
     ctx.result("isready")
 }
 
 @OpenApi(
-    summary = "isalive",
-    tags = [],
-    //requestBody = OpenApiRequestBody([OpenApiContent(String::class)]),
+    summary = "Er applikasjonen levende?",
     responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
-    path = "/isalive",
+    path = endepunktAlive,
     methods = [HttpMethod.GET]
 )
-fun isAliveHandler(ctx: io.javalin.http.Context) {
+fun isAliveHandler(ctx: Context) {
     ctx.result("isalive")
 }
-
 
 fun Javalin.handleHealth() {
     get(endepunktReady, ::isReadyHandler)

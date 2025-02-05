@@ -13,32 +13,29 @@ import java.time.ZonedDateTime
 private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
 @OpenApi(
-    summary = endepunktRekrutteringstreff,
-    operationId = "todo",
-    tags = [],
-    //requestBody = OpenApiRequestBody([OpenApiContent(String::class)]),
-    responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
+    summary = "Opprett rekrutteringstreff",
+    operationId = "opprettRekrutteringstreff",
+    responses = [OpenApiResponse("201", [OpenApiContent(String::class)])],
     path = endepunktRekrutteringstreff,
     methods = [HttpMethod.POST]
 )
-fun opprettRekrutteringstreffHandler(repo: RekruttureingstreffRepository): (Context) -> Unit =
+fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit =
     { ctx ->
         val dto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
-        repo.opprett(dto)
-        ctx.status(201).result("TODO treffresult post")
+        val navIdent = ctx.extractNavIdent() // Henter ut navIdent fra den autentiserte brukeren
+        repo.opprett(dto, navIdent)
+        ctx.status(201).result("Rekrutteringstreff opprettet")
     }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-private data class OpprettRekrutteringstreffDto(
+data class OpprettRekrutteringstreffDto(
     val tittel: String,
     val opprettetAvNavkontorEnhetId: String,
-//    val opprettet_tidspunkt: ZonedDateTime, // generes av backend
-//    val opprettet_av_navident  // hentes fra token
     val fraTid: ZonedDateTime,
     val tilTid: ZonedDateTime,
     val sted: String
 )
 
-fun Javalin.handleRekrutteringstreff(repo: RekruttureingstreffRepository) {
+fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
 }
