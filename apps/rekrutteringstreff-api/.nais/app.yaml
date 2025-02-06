@@ -13,7 +13,6 @@ spec:
   liveness:
     path: /isalive
   readiness:
-    port: 8080
     path: /isready
   prometheus:
     enabled: true
@@ -39,4 +38,4 @@ spec:
       enabled: true
       allowAllUsers: false
   kafka:
-    pool: {{kafka_pool}}
+    pool: {{ kafka_pool }}
