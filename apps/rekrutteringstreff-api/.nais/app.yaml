@@ -39,3 +39,10 @@ spec:
       allowAllUsers: false
   kafka:
     pool: {{ kafka_pool }}
+  gcp:
+    sqlInstances:
+      - type: POSTGRES_15
+        databases:
+          - name: rekrutteringstreff-db
+        tier: {{ gcp_db_tier }}
+        diskAutoresize: {{ gcp_disk_autoresize }}

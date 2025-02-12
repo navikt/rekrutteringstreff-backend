@@ -58,13 +58,25 @@ private fun getenv(key: String) =
     System.getenv(key) ?: throw IllegalArgumentException("Det finnes ingen system-variabel ved navn $key")
 
 private fun createDataSource(): DataSource {
+    val env: Map<String?, String?> = System.getenv()!!
+
+     val host = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_HOST"]!!
+     val port = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PORT"]!!
+     val database = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_DATABASE"]!!
+     val user = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_USERNAME"]!!
+     val pw = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PASSWORD"]!!
+
     val config = HikariConfig().apply {
-        jdbcUrl = "jdbc:postgresql://localhost:5432/rekrrutteringstreffdb"
-        username = "todo"
-        password = "todo"
-        maximumPoolSize = 3
+        jdbcUrl = "jdbc:postgresql://$host:$port/$database"
+        username = user
+        password = pw
+        maximumPoolSize = 2
         isAutoCommit = true
         transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+        minimumIdle = 1
+        driverClassName = "org.postgresql.Driver"
+        initializationFailTimeout = 5000
+
     }
     return HikariDataSource(config)
 }

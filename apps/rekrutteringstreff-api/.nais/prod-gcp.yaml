@@ -1,0 +1,6 @@
+kafka_pool: nav-prod
+ingress: https://rekrutteringstreff-api.intern.nav.no
+min_replicas: 2
+max_replicas: 4
+gcp_db_tier: db-custom-1-3840
+gcp_disk_autoresize: true
