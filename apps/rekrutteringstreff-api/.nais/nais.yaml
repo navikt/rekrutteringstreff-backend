@@ -46,6 +46,3 @@ spec:
           - name: rekrutteringstreff-db
         tier: {{ gcp_db_tier }}
         diskAutoresize: {{ gcp_disk_autoresize }}
-  env:
-    - name: JDK_JAVA_OPTIONS
-      value: $(JAVA_PROXY_OPTIONS)
