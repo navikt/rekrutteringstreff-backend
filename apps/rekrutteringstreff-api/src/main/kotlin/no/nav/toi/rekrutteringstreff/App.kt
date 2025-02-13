@@ -11,7 +11,7 @@ import javax.sql.DataSource
 
 class App(
     private val port: Int,
-    private val repo: RekrutteringstreffRepository,
+    //private val repo: RekrutteringstreffRepository,
     private val authConfigs: List<AuthenticationConfiguration>
 ) {
     lateinit var javalin: Javalin
@@ -21,7 +21,7 @@ class App(
         javalin = Javalin.create()
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
-        javalin.handleRekrutteringstreff(repo)
+        //javalin.handleRekrutteringstreff(repo)
         javalin.start(port)
     }
 
@@ -34,7 +34,7 @@ class App(
 
 fun main() {
     App(
-        8080, RekrutteringstreffRepository(createDataSource()), listOf(
+        8080, /*RekrutteringstreffRepository(createDataSource()),*/ listOf(
             AuthenticationConfiguration(
                 audience = getenv("AZURE_APP_CLIENT_ID"),
                 issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
@@ -57,7 +57,7 @@ fun Instant.atOslo(): ZonedDateTime = this.atZone(of("Europe/Oslo")).truncatedTo
 private fun getenv(key: String) =
     System.getenv(key) ?: throw IllegalArgumentException("Det finnes ingen system-variabel ved navn $key")
 
-private fun createDataSource(): DataSource {
+/*private fun createDataSource(): DataSource {
     val env: Map<String?, String?> = System.getenv()!!
 
      val host = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_HOST"]!!
@@ -79,4 +79,4 @@ private fun createDataSource(): DataSource {
 
     }
     return HikariDataSource(config)
-}
+}*/
