@@ -3,8 +3,8 @@ kafka_pool: nav-dev
     "https://rekrutteringstreff-api.intern.dev.nav.no/swagger",
     "https://rekrutteringstreff-api.intern.dev.nav.no/webjars",
     "https://rekrutteringstreff-api.intern.dev.nav.no/openapi",
-    "https://rekrutteringstreff-api.intern.dev.nav.no/api"
-    "https://rekrutteringstreff-api.intern.dev.nav.no/isalive"
+    "https://rekrutteringstreff-api.intern.dev.nav.no/api",
+    "https://rekrutteringstreff-api.intern.dev.nav.no/isalive",
     "https://rekrutteringstreff-api.intern.dev.nav.no/isready"
   ]
 cluster: dev-gcp
