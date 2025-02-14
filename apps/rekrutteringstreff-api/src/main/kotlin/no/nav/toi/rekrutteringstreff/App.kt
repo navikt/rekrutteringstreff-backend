@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
+import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
 import java.time.ZonedDateTime
@@ -33,8 +34,11 @@ class App(
 }
 
 fun main() {
+
+    val dataSource = createDataSource()
+    kjørFlywayMigreringer(dataSource)
     App(
-        8080, RekrutteringstreffRepository(createDataSource()), listOf(
+        8080, RekrutteringstreffRepository(dataSource), listOf(
             AuthenticationConfiguration(
                 audience = getenv("AZURE_APP_CLIENT_ID"),
                 issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
@@ -42,6 +46,13 @@ fun main() {
             )
         )
     ).start()
+}
+
+fun kjørFlywayMigreringer(dataSource: DataSource) {
+    Flyway.configure()
+        .dataSource(dataSource)
+        .load()
+        .migrate()
 }
 
 /**
