@@ -4,9 +4,10 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
-import io.javalin.openapi.OpenApiInfo
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.handleRekrutteringstreff
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of

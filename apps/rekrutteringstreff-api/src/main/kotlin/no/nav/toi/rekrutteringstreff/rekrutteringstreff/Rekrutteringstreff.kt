@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
 import java.time.ZonedDateTime
 import java.util.UUID

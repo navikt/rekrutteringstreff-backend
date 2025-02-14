@@ -3,10 +3,10 @@ package no.nav.toi.rekrutteringstreff
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.Rekrutteringstreff
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import javax.sql.DataSource
-import org.flywaydb.core.Flyway
 import java.sql.ResultSet
 import java.util.UUID
 

@@ -1,5 +1,7 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
+import no.nav.toi.rekrutteringstreff.Status
+import no.nav.toi.rekrutteringstreff.atOslo
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.UUID

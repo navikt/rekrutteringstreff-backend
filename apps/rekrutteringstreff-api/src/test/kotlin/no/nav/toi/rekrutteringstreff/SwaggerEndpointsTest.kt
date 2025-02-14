@@ -3,7 +3,6 @@ package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result
 import no.nav.toi.rekrutteringstreff.App
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll

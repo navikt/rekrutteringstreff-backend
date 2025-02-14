@@ -8,6 +8,10 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import no.nav.toi.rekrutteringstreff.ObjectMapperProvider.mapper
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OppdaterRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpprettRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffDTO
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
