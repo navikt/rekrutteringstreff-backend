@@ -33,6 +33,8 @@ spec:
     inbound:
       rules:
         - application: rekrutteringsbistand
+          namespace: toi
+          cluster: { { cluster } }
   azure:
     application:
       enabled: true
