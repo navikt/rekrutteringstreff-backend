@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
+import io.javalin.openapi.BearerAuth
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
@@ -44,7 +45,6 @@ class App(
 fun main() {
 
     val dataSource = createDataSource()
-
     App(
         8080,
         listOf(
@@ -66,32 +66,22 @@ fun kjørFlywayMigreringer(dataSource: DataSource) {
 }
 
 fun configureOpenApi(config: JavalinConfig) {
-    val openApiConfiguration = OpenApiPlugin {
-            openApiConfig ->
+    val openApiPlugin = OpenApiPlugin { openApiConfig ->
         openApiConfig.withDefinitionConfiguration { _, definition ->
-            definition.apply {
-                withInfo {
-                    it.title = "Rekrutteringstreff API"
-                }
+            definition.withInfo { info ->
+                info.title = "Rekrutteringstreff API"
+                info.version = "1.0.0"
+            }
+            definition.withSecurity { security ->
+                security.withSecurityScheme("bearerAuth", BearerAuth())
             }
         }
     }
-    config.registerPlugin(openApiConfiguration)
+    config.registerPlugin(openApiPlugin)
     config.registerPlugin(SwaggerPlugin { swaggerConfiguration ->
         swaggerConfiguration.validatorUrl = null
     })
 }
-
-/*fun registrerSwagger() {
-    config.registerPlugin(
-        OpenApiPlugin(
-            OpenApiOptions(OpenApiInfo("Rekrutteringstreff API", "1.0"))
-                .path("/openapi") // OpenAPI-specifikasjonen
-                .swagger(SwaggerOptions("/swagger")) // Swagger-UI
-                .reDoc(ReDocOptions("/redoc")) // Alternativ UI
-        )
-    )
-}*/
 
 /**
  * Tidspunkt uten nanosekunder, for å unngå at to like tidspunkter blir ulike pga at database og Microsoft Windws håndterer nanos annerledes enn Mac og Linux.
