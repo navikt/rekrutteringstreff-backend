@@ -12,7 +12,12 @@ private const val endepunktAlive = "/isalive"
 
 @OpenApi(
     summary = "Er applikasjonen klar?",
-    responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
+    responses = [
+        OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(from = String::class, example = "isready")]
+        )
+    ],
     path = endepunktReady,
     methods = [HttpMethod.GET]
 )
@@ -22,7 +27,12 @@ fun isReadyHandler(ctx: Context) {
 
 @OpenApi(
     summary = "Er applikasjonen levende?",
-    responses = [OpenApiResponse("200", [OpenApiContent(String::class)])],
+    responses = [
+        OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(from = String::class, example = "isalive")]
+        )
+    ],
     path = endepunktAlive,
     methods = [HttpMethod.GET]
 )
