@@ -34,7 +34,7 @@ spec:
       rules:
         - application: rekrutteringsbistand
           namespace: toi
-          cluster: { { cluster } }
+          cluster: {{ cluster }}
   azure:
     application:
       enabled: true
