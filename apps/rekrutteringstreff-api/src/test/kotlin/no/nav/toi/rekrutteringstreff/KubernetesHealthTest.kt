@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 
+/*
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.Response
@@ -14,7 +15,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
-/*@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KubernetesHealthTest {
     private val appPort = 10000
     private val app = App(port = appPort, RekrutteringstreffRepository(TestDatabase().dataSource), listOf())
