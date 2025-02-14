@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
-/*
+
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.testcontainers.containers.PostgreSQLContainer
@@ -73,4 +73,4 @@ class TestDatabase {
             .load()
             .migrate()
     }
-}*/
+}
