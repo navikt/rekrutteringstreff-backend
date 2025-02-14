@@ -43,7 +43,7 @@ spec:
     pool: {{ kafka_pool }}
   gcp:
     sqlInstances:
-      - type: POSTGRES_15
+      - type: {{ postgres }}
         databases:
           - name: rekrutteringstreff-db
         tier: {{ gcp_db_tier }}
