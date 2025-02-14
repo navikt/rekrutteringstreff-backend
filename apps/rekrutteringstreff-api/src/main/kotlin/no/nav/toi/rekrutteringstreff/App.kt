@@ -60,14 +60,15 @@ private fun getenv(key: String) =
 private fun createDataSource(): DataSource {
     val env: Map<String?, String?> = System.getenv()!!
 
-    val host = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_HOST"]!!
-    val port = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PORT"]!!
-    val database = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_DATABASE"]!!
+    //val host = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_HOST"]!!
+    //val port = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PORT"]!!
+    //val database = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_DATABASE"]!!
+    val jdbcurl = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_JDBC_URL"]!!
     val user = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_USERNAME"]!!
     val pw = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PASSWORD"]!!
 
     return HikariConfig().apply {
-        jdbcUrl = "jdbc:postgresql://$host:$port/$database"
+        jdbcUrl = jdbcurl
         username = user
         password = pw
         maximumPoolSize = 2
