@@ -114,7 +114,12 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = OppdaterRekrutteringstreffDto::class,
-            example = """{"tittel": "Oppdatert tittel", "fraTid": "2025-06-15T09:30:00+02:00", "tilTid": "2025-06-15T11:30:00+02:00", "sted": "NAV Oslo - rom 101"}"""
+            example = """{
+                    "tittel": "Oppdatert tittel", 
+                    "fraTid": "2025-06-15T09:30:00+02:00", 
+                    "tilTid": "2025-06-15T11:30:00+02:00", 
+                    "sted": "NAV Oslo - rom 101"
+            }"""
         )]
     ),
     responses = [
@@ -122,7 +127,15 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
             status = "200",
             content = [OpenApiContent(
                 from = RekrutteringstreffDTO::class,
-                example = """{"id": "d6a587cd-8797-4b9a-a68b-575373f16d65", "tittel": "Oppdatert tittel", "fraTid": "2025-06-15T09:30:00+02:00", "tilTid": "2025-06-15T11:30:00+02:00", "sted": "NAV Oslo - rom 101", "status": "Utkast", "opprettetAvPersonNavident": "A123456", "opprettetAvNavkontorEnhetId": "0318"}"""
+                example = """{"id": "d6a587cd-8797-4b9a-a68b-575373f16d65", 
+                    "tittel": "Oppdatert tittel", 
+                    "fraTid": "2025-06-15T09:30:00+02:00", 
+                    "tilTid": "2025-06-15T11:30:00+02:00", 
+                    "sted": "NAV Oslo - rom 101", 
+                    "status": "Utkast", 
+                    "opprettetAvPersonNavident": "A123456", 
+                    "opprettetAvNavkontorEnhetId": "0318"
+                }"""
             )]
         )
     ],
