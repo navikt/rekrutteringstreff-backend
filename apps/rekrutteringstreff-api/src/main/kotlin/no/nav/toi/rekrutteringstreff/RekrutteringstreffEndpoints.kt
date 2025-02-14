@@ -161,6 +161,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
+    put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
 }
 
