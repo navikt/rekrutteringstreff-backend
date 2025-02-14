@@ -3,6 +3,10 @@ package no.nav.toi.rekrutteringstreff
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
+import io.javalin.config.JavalinConfig
+import io.javalin.openapi.OpenApiInfo
+import io.javalin.openapi.plugin.OpenApiPlugin
+import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
@@ -12,17 +16,20 @@ import javax.sql.DataSource
 
 class App(
     private val port: Int,
-    private val repo: RekrutteringstreffRepository,
-    private val authConfigs: List<AuthenticationConfiguration>
+    private val authConfigs: List<AuthenticationConfiguration>,
+    private val dataSource: DataSource
 ) {
     lateinit var javalin: Javalin
         private set
 
     fun start() {
-        javalin = Javalin.create()
+        kjørFlywayMigreringer(dataSource)
+        javalin = Javalin.create { config ->
+            configureOpenApi(config)
+        }
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
-        javalin.handleRekrutteringstreff(repo)
+        javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
         javalin.start(port)
     }
 
@@ -36,15 +43,17 @@ class App(
 fun main() {
 
     val dataSource = createDataSource()
-    kjørFlywayMigreringer(dataSource)
+
     App(
-        8080, RekrutteringstreffRepository(dataSource), listOf(
+        8080,
+        listOf(
             AuthenticationConfiguration(
                 audience = getenv("AZURE_APP_CLIENT_ID"),
                 issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
                 jwksUri = getenv("AZURE_OPENID_CONFIG_JWKS_URI")
             )
-        )
+        ),
+        dataSource
     ).start()
 }
 
@@ -54,6 +63,34 @@ fun kjørFlywayMigreringer(dataSource: DataSource) {
         .load()
         .migrate()
 }
+
+fun configureOpenApi(config: JavalinConfig) {
+    val openApiConfiguration = OpenApiPlugin {
+            openApiConfig ->
+        openApiConfig.withDefinitionConfiguration { _, definition ->
+            definition.apply {
+                withInfo {
+                    it.title = "Rekrutteringstreff API"
+                }
+            }
+        }
+    }
+    config.registerPlugin(openApiConfiguration)
+    config.registerPlugin(SwaggerPlugin { swaggerConfiguration ->
+        swaggerConfiguration.validatorUrl = null
+    })
+}
+
+/*fun registrerSwagger() {
+    config.registerPlugin(
+        OpenApiPlugin(
+            OpenApiOptions(OpenApiInfo("Rekrutteringstreff API", "1.0"))
+                .path("/openapi") // OpenAPI-specifikasjonen
+                .swagger(SwaggerOptions("/swagger")) // Swagger-UI
+                .reDoc(ReDocOptions("/redoc")) // Alternativ UI
+        )
+    )
+}*/
 
 /**
  * Tidspunkt uten nanosekunder, for å unngå at to like tidspunkter blir ulike pga at database og Microsoft Windws håndterer nanos annerledes enn Mac og Linux.

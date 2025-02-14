@@ -66,11 +66,4 @@ class TestDatabase {
             password = postgres.password
             validate()
         })
-
-    init {
-        Flyway.configure()
-            .dataSource(dataSource)
-            .load()
-            .migrate()
-    }
 }

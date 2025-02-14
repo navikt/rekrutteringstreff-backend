@@ -13,6 +13,7 @@ import java.util.UUID
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffTest {
 
+
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
     private val database = TestDatabase()
@@ -21,14 +22,14 @@ class RekrutteringstreffTest {
 
     private val app = App(
         port = appPort,
-        repo = RekrutteringstreffRepository(database.dataSource),
         authConfigs = listOf(
             AuthenticationConfiguration(
                 issuer = "http://localhost:$authPort/default",
                 jwksUri = "http://localhost:$authPort/default/jwks",
                 audience = "rekrutteringstreff-audience"
             )
-        )
+        ),
+        database.dataSource
     )
 
     @BeforeAll
