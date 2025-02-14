@@ -1,10 +1,13 @@
 package no.nav.toi.rekrutteringstreff
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
 import java.time.Instant
 import java.time.ZoneId.of
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MILLIS
+import javax.sql.DataSource
 
 class App(
     private val port: Int,
@@ -31,7 +34,7 @@ class App(
 
 fun main() {
     App(
-        8080, RekrutteringstreffRepository(DataSourceFactory.createDataSource()), listOf(
+        8080, RekrutteringstreffRepository(createDataSource()), listOf(
             AuthenticationConfiguration(
                 audience = getenv("AZURE_APP_CLIENT_ID"),
                 issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
@@ -53,3 +56,24 @@ fun Instant.atOslo(): ZonedDateTime = this.atZone(of("Europe/Oslo")).truncatedTo
 
 private fun getenv(key: String) =
     System.getenv(key) ?: throw IllegalArgumentException("Det finnes ingen system-variabel ved navn $key")
+
+private fun createDataSource(): DataSource {
+    val env: Map<String?, String?> = System.getenv()!!
+
+    val jdbcurl = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_JDBC_URL"]!!
+    val user = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_USERNAME"]!!
+    val pw = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PASSWORD"]!!
+
+    return HikariConfig().apply {
+        jdbcUrl = jdbcurl
+        username = user
+        password = pw
+        maximumPoolSize = 2
+        isAutoCommit = true
+        transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+        minimumIdle = 1
+        driverClassName = "org.postgresql.Driver"
+        initializationFailTimeout = 5000
+        validate()
+    }.let(::HikariDataSource)
+}

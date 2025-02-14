@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
+
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.testcontainers.containers.PostgreSQLContainer
@@ -8,6 +9,7 @@ import javax.sql.DataSource
 import org.flywaydb.core.Flyway
 import java.sql.ResultSet
 import java.util.UUID
+
 
 class TestDatabase {
     fun slettAlt() {

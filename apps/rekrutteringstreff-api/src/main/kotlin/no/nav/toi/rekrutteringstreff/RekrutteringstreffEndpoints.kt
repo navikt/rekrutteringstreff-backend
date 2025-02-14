@@ -101,7 +101,6 @@ data class RekrutteringstreffDTO(
     val opprettetAvNavkontorEnhetId: String
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class OpprettRekrutteringstreffDto(
     val tittel: String,
     val opprettetAvNavkontorEnhetId: String,

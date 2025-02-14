@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 
+
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.Response
