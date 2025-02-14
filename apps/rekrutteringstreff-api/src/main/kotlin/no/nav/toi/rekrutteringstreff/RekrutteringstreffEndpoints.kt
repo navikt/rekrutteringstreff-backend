@@ -16,36 +16,22 @@ private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = OpprettRekrutteringstreffDto::class,
-            exampleObjects = [
-                OpenApiExampleProperty(
-                    name = "Opprett - request",
-                    value = """
-                    {
-                      "tittel": "Sommerjobbtreff",
-                      "opprettetAvNavkontorEnhetId": "0318",
-                      "fraTid": "2025-06-15T09:00:00+02:00",
-                      "tilTid": "2025-06-15T11:00:00+02:00",
-                      "sted": "NAV Oslo"
-                    }
-                    """
-                )
-            ]
+            example = """{
+                "tittel": "Sommerjobbtreff",
+                "opprettetAvNavkontorEnhetId": "0318",
+                "fraTid": "2025-06-15T09:00:00+02:00",
+                "tilTid": "2025-06-15T11:00:00+02:00",
+                "sted": "NAV Oslo"
+            }"""
         )]
     ),
-    responses = [
-        OpenApiResponse(
-            status = "201",
-            content = [OpenApiContent(
-                from = String::class,
-                exampleObjects = [
-                    OpenApiExampleProperty(
-                        name = "Opprett - respons",
-                        value = "Rekrutteringstreff opprettet"
-                    )
-                ]
-            )]
-        )
-    ],
+    responses = [OpenApiResponse(
+        status = "201",
+        content = [OpenApiContent(
+            from = String::class,
+            example = "Rekrutteringstreff opprettet"
+        )]
+    )],
     path = endepunktRekrutteringstreff,
     methods = [HttpMethod.POST]
 )
@@ -59,43 +45,34 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
 @OpenApi(
     summary = "Hent alle rekrutteringstreff",
     operationId = "hentAlleRekrutteringstreff",
-    responses = [
-        OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(
-                from = Array<RekrutteringstreffDTO>::class,
-                exampleObjects = [
-                    OpenApiExampleProperty(
-                        name = "Eksempel liste",
-                        value = """
-                        [
-                          {
-                            "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
-                            "tittel": "Sommerjobbtreff",
-                            "fraTid": "2025-06-15T09:00:00+02:00",
-                            "tilTid": "2025-06-15T11:00:00+02:00",
-                            "sted": "NAV Oslo",
-                            "status": "Utkast",
-                            "opprettetAvPersonNavident": "A123456",
-                            "opprettetAvNavkontorEnhetId": "0318"
-                          },
-                          {
-                            "id": "a7f2387c-4354-4a2e-90a2-fff1a1d83dc6",
-                            "tittel": "Høstjobbtreff",
-                            "fraTid": "2025-09-10T10:00:00+02:00",
-                            "tilTid": "2025-09-10T12:00:00+02:00",
-                            "sted": "NAV Bergen",
-                            "status": "Publisert",
-                            "opprettetAvPersonNavident": "A654321",
-                            "opprettetAvNavkontorEnhetId": "1203"
-                          }
-                        ]
-                        """
-                    )
-                ]
-            )]
-        )
-    ],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = Array<RekrutteringstreffDTO>::class,
+            example = """[
+                {
+                    "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
+                    "tittel": "Sommerjobbtreff",
+                    "fraTid": "2025-06-15T09:00:00+02:00",
+                    "tilTid": "2025-06-15T11:00:00+02:00",
+                    "sted": "NAV Oslo",
+                    "status": "Utkast",
+                    "opprettetAvPersonNavident": "A123456",
+                    "opprettetAvNavkontorEnhetId": "0318"
+                },
+                {
+                    "id": "a7f2387c-4354-4a2e-90a2-fff1a1d83dc6",
+                    "tittel": "Høstjobbtreff",
+                    "fraTid": "2025-09-10T10:00:00+02:00",
+                    "tilTid": "2025-09-10T12:00:00+02:00",
+                    "sted": "NAV Bergen",
+                    "status": "Publisert",
+                    "opprettetAvPersonNavident": "A654321",
+                    "opprettetAvNavkontorEnhetId": "1203"
+                }
+            ]"""
+        )]
+    )],
     path = endepunktRekrutteringstreff,
     methods = [HttpMethod.GET]
 )
@@ -106,31 +83,22 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
 @OpenApi(
     summary = "Hent ett rekrutteringstreff",
     operationId = "hentRekrutteringstreff",
-    responses = [
-        OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(
-                from = RekrutteringstreffDTO::class,
-                exampleObjects = [
-                    OpenApiExampleProperty(
-                        name = "Eksempel",
-                        value = """
-                        {
-                          "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
-                          "tittel": "Sommerjobbtreff",
-                          "fraTid": "2025-06-15T09:00:00+02:00",
-                          "tilTid": "2025-06-15T11:00:00+02:00",
-                          "sted": "NAV Oslo",
-                          "status": "Utkast",
-                          "opprettetAvPersonNavident": "A123456",
-                          "opprettetAvNavkontorEnhetId": "0318"
-                        }
-                        """
-                    )
-                ]
-            )]
-        )
-    ],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = RekrutteringstreffDTO::class,
+            example = """{
+                "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
+                "tittel": "Sommerjobbtreff",
+                "fraTid": "2025-06-15T09:00:00+02:00",
+                "tilTid": "2025-06-15T11:00:00+02:00",
+                "sted": "NAV Oslo",
+                "status": "Utkast",
+                "opprettetAvPersonNavident": "A123456",
+                "opprettetAvNavkontorEnhetId": "0318"
+            }"""
+        )]
+    )],
     path = "$endepunktRekrutteringstreff/{id}",
     methods = [HttpMethod.GET]
 )
@@ -146,19 +114,7 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = OppdaterRekrutteringstreffDto::class,
-            exampleObjects = [
-                OpenApiExampleProperty(
-                    name = "Oppdater - request",
-                    value = """
-                    {
-                      "tittel": "Oppdatert tittel",
-                      "fraTid": "2025-06-15T09:30:00+02:00",
-                      "tilTid": "2025-06-15T11:30:00+02:00",
-                      "sted": "NAV Oslo - rom 101"
-                    }
-                    """
-                )
-            ]
+            example = """{"tittel": "Oppdatert tittel", "fraTid": "2025-06-15T09:30:00+02:00", "tilTid": "2025-06-15T11:30:00+02:00", "sted": "NAV Oslo - rom 101"}"""
         )]
     ),
     responses = [
@@ -166,23 +122,7 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
             status = "200",
             content = [OpenApiContent(
                 from = RekrutteringstreffDTO::class,
-                exampleObjects = [
-                    OpenApiExampleProperty(
-                        name = "Oppdater - respons",
-                        value = """
-                        {
-                          "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
-                          "tittel": "Oppdatert tittel",
-                          "fraTid": "2025-06-15T09:30:00+02:00",
-                          "tilTid": "2025-06-15T11:30:00+02:00",
-                          "sted": "NAV Oslo - rom 101",
-                          "status": "Utkast",
-                          "opprettetAvPersonNavident": "A123456",
-                          "opprettetAvNavkontorEnhetId": "0318"
-                        }
-                        """
-                    )
-                ]
+                example = """{"id": "d6a587cd-8797-4b9a-a68b-575373f16d65", "tittel": "Oppdatert tittel", "fraTid": "2025-06-15T09:30:00+02:00", "tilTid": "2025-06-15T11:30:00+02:00", "sted": "NAV Oslo - rom 101", "status": "Utkast", "opprettetAvPersonNavident": "A123456", "opprettetAvNavkontorEnhetId": "0318"}"""
             )]
         )
     ],
@@ -201,20 +141,13 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
 @OpenApi(
     summary = "Slett rekrutteringstreff",
     operationId = "slettRekrutteringstreff",
-    responses = [
-        OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(
-                from = String::class,
-                exampleObjects = [
-                    OpenApiExampleProperty(
-                        name = "Slett - respons",
-                        value = "Rekrutteringstreff slettet"
-                    )
-                ]
-            )]
-        )
-    ],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = String::class,
+            example = "Rekrutteringstreff slettet"
+        )]
+    )],
     path = "$endepunktRekrutteringstreff/{id}",
     methods = [HttpMethod.DELETE]
 )
@@ -228,7 +161,6 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
-    put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
 }
 
