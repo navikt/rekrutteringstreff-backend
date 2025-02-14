@@ -1,5 +1,10 @@
 kafka_pool: nav-dev
-ingress: https://rekrutteringstreff-api.intern.dev.nav.no
+"ingress": [
+    "https://rekrutteringstreff-api.intern.dev.nav.no/swagger",
+    "https://rekrutteringstreff-api.intern.dev.nav.no/webjars",
+    "https://rekrutteringstreff-api.intern.dev.nav.no/openapi",
+    "https://rekrutteringstreff-api.intern.dev.nav.no/api"
+  ]
 cluster: dev-gcp
 min_replicas: 1
 max_replicas: 1

@@ -9,7 +9,9 @@ spec:
   image: {{ image }}
   port: 8080
   ingresses:
-    - {{ ingress }}
+  {{#each ingress as |url|}}
+    - {{url}}
+  {{/each}}
   liveness:
     path: /isalive
   readiness:
