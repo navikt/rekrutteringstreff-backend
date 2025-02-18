@@ -47,12 +47,20 @@ fun main() {
     val dataSource = createDataSource()
     App(
         8080,
-        listOf(
+        listOfNotNull(
             AuthenticationConfiguration(
                 audience = getenv("AZURE_APP_CLIENT_ID"),
                 issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
                 jwksUri = getenv("AZURE_OPENID_CONFIG_JWKS_URI")
-            )
+            ),
+            if (System.getenv("NAIS_CLUSTER_NAME") == "dev-gcp")
+                AuthenticationConfiguration(
+                    audience = "dev-gcp:toi:rekrutteringsbistand-kandidatsok-api",
+                    issuer = "https://fakedings.intern.dev.nav.no/fake/aad",
+                    jwksUri = "https://fakedings.intern.dev.nav.no/fake/jwks",
+                )
+            else
+                null
         ),
         dataSource
     ).start()
