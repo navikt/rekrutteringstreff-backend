@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
 import com.auth0.jwk.JwkProviderBuilder
+import com.auth0.jwk.SigningKeyNotFoundException
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
@@ -61,7 +62,9 @@ private fun verifyJwt(verifiers: List<JWTVerifier>, token: String): DecodedJWT {
         try {
             return verifier.verify(token)
         } catch (e: JWTVerificationException) {
-            log.info("verifyJwt feilet for verifier.", e) // prøv neste verifier
+            log.info("verifyJwt JWTVerificationException-feil for verifier.", e) // prøv neste verifier
+        } catch (e: SigningKeyNotFoundException) {
+            log.info("verifyJwt SigningKeyNotFoundException-feil for verifier.", e) // prøv neste verifier
         }
     }
     throw UnauthorizedResponse("Token verification failed")
