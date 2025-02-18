@@ -46,6 +46,7 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
 @OpenApi(
     summary = "Hent alle rekrutteringstreff",
     operationId = "hentAlleRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
