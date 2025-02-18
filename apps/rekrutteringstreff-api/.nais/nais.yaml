@@ -37,6 +37,9 @@ spec:
         - application: rekrutteringsbistand
           namespace: toi
           cluster: {{ cluster }}
+    outbound:
+      external:
+        - host: fakedings.intern.dev.nav.no
   azure:
     application:
       enabled: true
