@@ -62,9 +62,9 @@ private fun verifyJwt(verifiers: List<JWTVerifier>, token: String): DecodedJWT {
         try {
             return verifier.verify(token)
         } catch (e: JWTVerificationException) {
-            log.info("verifyJwt JWTVerificationException-feil for verifier.", e) // prøv neste verifier
+            // prøv neste verifier
         } catch (e: SigningKeyNotFoundException) {
-            log.info("verifyJwt SigningKeyNotFoundException-feil for verifier.", e) // prøv neste verifier
+            // prøv neste verifier
         }
     }
     throw UnauthorizedResponse("Token verification failed")

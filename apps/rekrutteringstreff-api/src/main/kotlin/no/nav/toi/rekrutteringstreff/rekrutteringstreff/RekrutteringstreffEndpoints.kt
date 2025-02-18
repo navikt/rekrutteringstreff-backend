@@ -14,6 +14,7 @@ private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 @OpenApi(
     summary = "Opprett rekrutteringstreff",
     operationId = "opprettRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = OpprettRekrutteringstreffDto::class,
@@ -85,6 +86,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
 @OpenApi(
     summary = "Hent ett rekrutteringstreff",
     operationId = "hentRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
@@ -113,6 +115,7 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
 @OpenApi(
     summary = "Oppdater rekrutteringstreff",
     operationId = "oppdaterRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = OppdaterRekrutteringstreffDto::class,
@@ -156,6 +159,7 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
 @OpenApi(
     summary = "Slett rekrutteringstreff",
     operationId = "slettRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
