@@ -81,7 +81,7 @@ fun configureOpenApi(config: JavalinConfig) {
                 info.version = "1.0.0"
             }
             definition.withSecurity { security ->
-                security.withSecurityScheme("bearerAuth", BearerAuth())
+                security.withBearerAuth()
             }
         }
     }
