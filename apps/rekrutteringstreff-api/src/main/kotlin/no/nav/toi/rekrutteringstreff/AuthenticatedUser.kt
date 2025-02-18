@@ -10,12 +10,15 @@ import com.auth0.jwt.interfaces.RSAKeyProvider
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.UnauthorizedResponse
+import noClassLogger
 import org.eclipse.jetty.http.HttpHeader
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
 import java.util.concurrent.TimeUnit
 
 private const val NAV_IDENT_CLAIM = "NAVident"
+
+private val log = noClassLogger()
 
 data class AuthenticationConfiguration(
     val issuer: String,
@@ -58,7 +61,7 @@ private fun verifyJwt(verifiers: List<JWTVerifier>, token: String): DecodedJWT {
         try {
             return verifier.verify(token)
         } catch (e: JWTVerificationException) {
-            // prøv neste verifier
+            log.info("verifyJwt feilet for verifier.", e) // prøv neste verifier
         }
     }
     throw UnauthorizedResponse("Token verification failed")
