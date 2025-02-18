@@ -56,7 +56,7 @@ fun main() {
             if (System.getenv("NAIS_CLUSTER_NAME") == "dev-gcp")
                 AuthenticationConfiguration(
                     audience = "dev-gcp:toi:rekrutteringstreff-api",
-                    issuer = "https://fakedings.intern.dev.nav.no/fake/aad",
+                    issuer = "https://fakedings.intern.dev.nav.no/fake",
                     jwksUri = "https://fakedings.intern.dev.nav.no/fake/jwks",
                 )
             else
