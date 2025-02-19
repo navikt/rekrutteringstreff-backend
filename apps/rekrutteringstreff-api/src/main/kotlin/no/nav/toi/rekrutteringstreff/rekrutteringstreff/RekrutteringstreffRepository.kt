@@ -27,8 +27,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 stmt.setTimestamp(7, Timestamp.from(dto.fraTid.toInstant()))
                 stmt.setTimestamp(8, Timestamp.from(dto.tilTid.toInstant()))
                 stmt.setString(9, dto.sted)
-                val emptyArray = connection.createArrayOf("text", arrayOf<String>())
-                stmt.setArray(10, emptyArray)
+                stmt.setArray(10, connection.createArrayOf("text", arrayOf(navIdent)))
                 stmt.executeUpdate()
             }
         }
