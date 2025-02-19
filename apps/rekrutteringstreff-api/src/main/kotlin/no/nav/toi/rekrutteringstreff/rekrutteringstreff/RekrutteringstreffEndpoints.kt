@@ -87,6 +87,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     summary = "Hent ett rekrutteringstreff",
     operationId = "hentRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(name = "id", type = UUID::class)],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
@@ -113,9 +114,10 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
 }
 
 @OpenApi(
-    summary = "Oppdater rekrutteringstreff",
+    summary = "Oppdater ett rekrutteringstreff",
     operationId = "oppdaterRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(name = "id", type = UUID::class)],
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = OppdaterRekrutteringstreffDto::class,
@@ -157,9 +159,10 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
 }
 
 @OpenApi(
-    summary = "Slett rekrutteringstreff",
+    summary = "Slett ett rekrutteringstreff",
     operationId = "slettRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(name = "id", type = UUID::class)],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
