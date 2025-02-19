@@ -96,23 +96,12 @@ class RekrutteringstreffTest {
 
     @Test
     fun hentAlleRekrutteringstreff() {
-        val treff1 = OpprettRekrutteringstreffDto(
-            tittel = "Tittel1111111",
-            fraTid = nowOslo(),
-            tilTid = nowOslo(),
-            sted = "Sted1",
-            opprettetAvNavkontorEnhetId = "Enhet1"
-        )
-        val treff2 = OpprettRekrutteringstreffDto(
-            tittel = "Tittel2222222",
-            fraTid = nowOslo(),
-            tilTid = nowOslo(),
-            sted = "Sted2",
-            opprettetAvNavkontorEnhetId = "Enhet2"
-        )
-
-        repo.opprett(treff1, "navident1")
-        repo.opprett(treff2, "navident2")
+        val tittel1 = "Tittel1111111"
+        val sted1 = "Sted1"
+        val tittel2 = "Tittel2222222"
+        val sted2 = "Sted2"
+        opprettRekrutteringstreffIDatabase(navIdent = "navident1", tittel = tittel1, sted = sted1)
+        opprettRekrutteringstreffIDatabase(navIdent = "navIdent2", tittel = tittel2, sted = sted2)
 
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
@@ -132,10 +121,10 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val liste = result.get()
                 assertThat(liste).hasSize(2)
-                val dto1 = liste.find { it.tittel == treff1.tittel }!!
-                assertThat(dto1.sted).isEqualTo(treff1.sted)
-                val dto2 = liste.find { it.tittel == treff2.tittel }!!
-                assertThat(dto2.sted).isEqualTo(treff2.sted)
+                val dto1 = liste.find { it.tittel == tittel1 }!!
+                assertThat(dto1.sted).isEqualTo(sted1)
+                val dto2 = liste.find { it.tittel == tittel2 }!!
+                assertThat(dto2.sted).isEqualTo(sted2)
             }
         }
     }
@@ -190,17 +179,6 @@ class RekrutteringstreffTest {
         }
     }
 
-    private fun opprettRekrutteringstreffIDatabase(navIdent: String, tittel: String = "Original Tittel", sted: String = "Original Sted") {
-        val originalDto = OpprettRekrutteringstreffDto(
-            tittel = tittel,
-            opprettetAvNavkontorEnhetId = "Original Kontor",
-            fraTid = nowOslo().minusDays(1),
-            tilTid = nowOslo().plusDays(1),
-            sted = sted
-        )
-        repo.opprett(originalDto, navIdent)
-    }
-
     @Test
     fun slettRekrutteringstreff() {
         val navIdent = "A123456"
@@ -218,6 +196,17 @@ class RekrutteringstreffTest {
         }
         val remaining = database.hentAlleRekrutteringstreff()
         assertThat(remaining).isEmpty()
+    }
+
+    private fun opprettRekrutteringstreffIDatabase(navIdent: String, tittel: String = "Original Tittel", sted: String = "Original Sted") {
+        val originalDto = OpprettRekrutteringstreffDto(
+            tittel = tittel,
+            opprettetAvNavkontorEnhetId = "Original Kontor",
+            fraTid = nowOslo().minusDays(1),
+            tilTid = nowOslo().plusDays(1),
+            sted = sted
+        )
+        repo.opprett(originalDto, navIdent)
     }
 
     private fun lagToken(
