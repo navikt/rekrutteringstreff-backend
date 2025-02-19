@@ -4,6 +4,7 @@ package no.nav.toi.rekrutteringstreff
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result
+import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -143,19 +144,12 @@ class RekrutteringstreffTest {
     fun hentRekrutteringstreff() {
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
-        val originalDto = OpprettRekrutteringstreffDto(
-            tittel = "Spesifikk Tittel",
-            opprettetAvNavkontorEnhetId = "Kontor",
-            fraTid = nowOslo().minusDays(1),
-            tilTid = nowOslo().plusDays(1),
-            sted = "Sted"
-        )
-        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
-            .body(mapper.writeValueAsString(originalDto))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        val created = database.hentAlleRekrutteringstreff().first()
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${created.id}")
+        val originalTittel = "Spesifikk Tittel"
+        val originalSted = "Sted"
+
+        opprettRekrutteringstreffIDatabase(token, tittel = originalTittel, sted = originalSted)
+        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         when(result) {
@@ -163,8 +157,8 @@ class RekrutteringstreffTest {
             is Result.Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = mapper.readValue(result.get(), RekrutteringstreffDTO::class.java)
-                assertThat(dto.tittel).isEqualTo(originalDto.tittel)
-                assertThat(dto.sted).isEqualTo(originalDto.sted)
+                assertThat(dto.tittel).isEqualTo(originalTittel)
+                assertThat(dto.sted).isEqualTo(originalSted)
             }
         }
     }
@@ -173,17 +167,7 @@ class RekrutteringstreffTest {
     fun oppdaterRekrutteringstreff() {
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
-        val originalDto = OpprettRekrutteringstreffDto(
-            tittel = "Original Tittel",
-            opprettetAvNavkontorEnhetId = "Original Kontor",
-            fraTid = nowOslo().minusDays(1),
-            tilTid = nowOslo().plusDays(1),
-            sted = "Original Sted"
-        )
-        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
-            .body(mapper.writeValueAsString(originalDto))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        opprettRekrutteringstreffIDatabase(token)
         val created = database.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
             tittel = "Oppdatert Tittel",
@@ -206,23 +190,27 @@ class RekrutteringstreffTest {
         }
     }
 
-    @Test
-    fun slettRekrutteringstreff() {
-        val navIdent = "A123456"
-        val token = lagToken(navIdent = navIdent)
+    private fun opprettRekrutteringstreffIDatabase(token: SignedJWT, tittel: String = "Original Tittel", sted: String = "Original Sted") {
         val originalDto = OpprettRekrutteringstreffDto(
-            tittel = "Tittel for sletting",
-            opprettetAvNavkontorEnhetId = "Kontor",
+            tittel = tittel,
+            opprettetAvNavkontorEnhetId = "Original Kontor",
             fraTid = nowOslo().minusDays(1),
             tilTid = nowOslo().plusDays(1),
-            sted = "Sted"
+            sted = sted
         )
         Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
             .body(mapper.writeValueAsString(originalDto))
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
-        val created = database.hentAlleRekrutteringstreff().first()
-        val (_, deleteResponse, deleteResult) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${created.id}")
+    }
+
+    @Test
+    fun slettRekrutteringstreff() {
+        val navIdent = "A123456"
+        val token = lagToken(navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(token)
+        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val (_, deleteResponse, deleteResult) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         when (deleteResult) {
