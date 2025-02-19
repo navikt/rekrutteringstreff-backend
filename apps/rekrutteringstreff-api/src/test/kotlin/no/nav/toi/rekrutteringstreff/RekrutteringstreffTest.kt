@@ -147,7 +147,7 @@ class RekrutteringstreffTest {
         val originalTittel = "Spesifikk Tittel"
         val originalSted = "Sted"
 
-        opprettRekrutteringstreffIDatabase(token, tittel = originalTittel, sted = originalSted)
+        opprettRekrutteringstreffIDatabase(navIdent, tittel = originalTittel, sted = originalSted)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -167,7 +167,7 @@ class RekrutteringstreffTest {
     fun oppdaterRekrutteringstreff() {
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
-        opprettRekrutteringstreffIDatabase(token)
+        opprettRekrutteringstreffIDatabase(navIdent)
         val created = database.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
             tittel = "Oppdatert Tittel",
@@ -190,7 +190,7 @@ class RekrutteringstreffTest {
         }
     }
 
-    private fun opprettRekrutteringstreffIDatabase(token: SignedJWT, tittel: String = "Original Tittel", sted: String = "Original Sted") {
+    private fun opprettRekrutteringstreffIDatabase(navIdent: String, tittel: String = "Original Tittel", sted: String = "Original Sted") {
         val originalDto = OpprettRekrutteringstreffDto(
             tittel = tittel,
             opprettetAvNavkontorEnhetId = "Original Kontor",
@@ -198,17 +198,14 @@ class RekrutteringstreffTest {
             tilTid = nowOslo().plusDays(1),
             sted = sted
         )
-        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
-            .body(mapper.writeValueAsString(originalDto))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        repo.opprett(originalDto, navIdent)
     }
 
     @Test
     fun slettRekrutteringstreff() {
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
-        opprettRekrutteringstreffIDatabase(token)
+        opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val (_, deleteResponse, deleteResult) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
