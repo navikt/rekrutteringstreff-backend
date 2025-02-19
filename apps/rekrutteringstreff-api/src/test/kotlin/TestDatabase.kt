@@ -18,11 +18,32 @@ class TestDatabase {
         }
     }
 
+    fun oppdaterRekrutteringstreff(eiere: List<String>, uuid: UUID) {
+        dataSource.connection.use {
+            it.prepareStatement("UPDATE rekrutteringstreff SET eiere = ? WHERE id = ?").apply {
+                setArray(1, connection.createArrayOf("text", eiere.toTypedArray()))
+                setObject(2, uuid)
+            }.executeUpdate()
+        }
+    }
+
     fun hentAlleRekrutteringstreff(): List<Rekrutteringstreff> {
         dataSource.connection.use {
             val resultSet = it.prepareStatement("SELECT * FROM rekrutteringstreff ORDER BY id ASC").executeQuery()
             return generateSequence {
                 if (resultSet.next()) konverterTilRekrutteringstreff(resultSet)
+                else null
+            }.toList()
+        }
+    }
+
+    fun hentEiere(id: UUID): List<String> {
+        dataSource.connection.use {
+            val resultSet = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ? ASC").apply {
+                setObject(1, id)
+            }.executeQuery()
+            return generateSequence {
+                if (resultSet.next()) resultSet.getString("eiere")
                 else null
             }.toList()
         }
