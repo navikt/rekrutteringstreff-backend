@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
 import no.nav.toi.rekrutteringstreff.Status
 import no.nav.toi.rekrutteringstreff.atOslo
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.Eier
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.UUID
@@ -83,17 +84,35 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
     }
 
-    private companion object {
-        const val tabellnavn = "rekrutteringstreff"
-        const val tittel = "tittel"
-        const val status = "status"
-        const val opprettetAvPersonNavident = "opprettet_av_person_navident"
-        const val opprettetAvKontorEnhetid = "opprettet_av_kontor_enhetid"
-        const val opprettetAvTidspunkt = "opprettet_av_tidspunkt"
-        const val fratid = "fratid"
-        const val tiltid = "tiltid"
-        const val sted = "sted"
-        const val eiere = "eiere"
+    val eierRepository = EierRepository(dataSource)
+
+    companion object {
+        private const val tabellnavn = "rekrutteringstreff"
+        private const val tittel = "tittel"
+        private const val status = "status"
+        private const val opprettetAvPersonNavident = "opprettet_av_person_navident"
+        private const val opprettetAvKontorEnhetid = "opprettet_av_kontor_enhetid"
+        private const val opprettetAvTidspunkt = "opprettet_av_tidspunkt"
+        private const val fratid = "fratid"
+        private const val tiltid = "tiltid"
+        private const val sted = "sted"
+        private const val eiere = "eiere"
+
+        class EierRepository(private val dataSource: DataSource) {
+            fun hent(id: UUID): List<Eier>? {
+                dataSource.connection.use { connection ->
+                    connection.prepareStatement("SELECT $eiere FROM $tabellnavn WHERE id = ?").use { stmt ->
+                        stmt.setObject(1, id)
+                        val resultSet = stmt.executeQuery()
+                        return if (resultSet.next()) {
+                            (resultSet.getArray("eiere").array as Array<*>)
+                                .map(Any?::toString)
+                                .map(::Eier)
+                        } else null
+                    }
+                }
+            }
+        }
     }
 
     private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(

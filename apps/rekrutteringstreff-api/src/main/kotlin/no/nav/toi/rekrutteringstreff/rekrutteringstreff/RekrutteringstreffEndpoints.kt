@@ -6,10 +6,11 @@ import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.rekrutteringstreff.extractNavIdent
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.handleEiere
 import java.time.ZonedDateTime
 import java.util.*
 
-private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
 @OpenApi(
     summary = "Opprett rekrutteringstreff",
@@ -185,6 +186,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
     put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
+    handleEiere(repo, endepunktRekrutteringstreff)
 }
 
 data class RekrutteringstreffDTO(
