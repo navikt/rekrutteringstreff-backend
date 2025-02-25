@@ -39,7 +39,7 @@ class TestDatabase {
 
     fun hentEiere(id: UUID): List<String> {
         dataSource.connection.use {
-            val resultSet = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ? ASC").apply {
+            val resultSet = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ?").apply {
                 setObject(1, id)
             }.executeQuery()
             return generateSequence {

@@ -1,10 +1,11 @@
 package no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier
+import io.javalin.http.bodyAsClass
+
 
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.*
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffDTO
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.Eier.Companion.tilJson
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.endepunktRekrutteringstreff
@@ -14,6 +15,24 @@ private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"
 
 fun Javalin.handleEiere(repo: RekrutteringstreffRepository, endepunktRekrutteringstreff: String) {
     get(eiereEndepunkt, hentEiere(repo))
+    put(eiereEndepunkt, leggTilEiere(repo.eierRepository))
+}
+
+@OpenApi(
+    summary = "Legg til ny eier til et rekrutteringstreff",
+    operationId = "leggTilEier",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(name = "id", type = UUID::class)],
+    responses = [OpenApiResponse(
+        status = "201"
+    )],
+    path = endepunktRekrutteringstreff,
+    methods = [HttpMethod.PUT]
+)
+private fun leggTilEiere(repo: RekrutteringstreffRepository.Companion.EierRepository): (Context) -> Unit = { ctx ->
+    val eiere: List<String> = ctx.bodyAsClass<List<String>>()
+    repo.leggTilEiere(eiere)
+    ctx.status(201)//.result(eiere.tilJson())
 }
 
 

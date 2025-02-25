@@ -3,9 +3,8 @@ package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.ResponseDeserializable
+import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.result.Result
-import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.rekrutteringstreff.App
 import no.nav.toi.rekrutteringstreff.AuthenticationConfiguration
@@ -14,10 +13,10 @@ import org.junit.jupiter.api.*
 import no.nav.toi.rekrutteringstreff.ObjectMapperProvider.mapper
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.nowOslo
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpprettRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffDTO
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
+import java.net.HttpURLConnection
+import java.net.HttpURLConnection.HTTP_CREATED
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -71,11 +70,11 @@ class RekrutteringstreffEierTest {
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
-        when(result) {
+        when (result) {
             is Result.Failure -> throw result.error
             is Result.Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readValue(result.get(), object : TypeReference<List<String>>(){})
+                val dto = mapper.readValue(result.get(), object : TypeReference<List<String>>() {})
                 assertThat(dto).containsExactlyInAnyOrder(*eiere.toTypedArray())
             }
         }
@@ -83,24 +82,31 @@ class RekrutteringstreffEierTest {
 
     @Test
     fun leggTilEier() {
-        val navIdent = "A123456"
-        val lagtTilEier = "B654321"
-        val token = lagToken(navIdent = navIdent)
-        opprettRekrutteringstreffIDatabase(navIdent)
+        val bruker = "A123456"
+        val nyEier = "B654321"
+        val token = lagToken(navIdent = bruker)
+        opprettRekrutteringstreffIDatabase(bruker)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).doesNotContain(nyEier)
+
         val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
-            .body(mapper.writeValueAsString(listOf(lagtTilEier)))
+            .body(mapper.writeValueAsString(listOf(nyEier)))
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
+
         when (updateResult) {
             is Result.Failure -> throw updateResult.error
             is Result.Success -> {
-                assertThat(updateResponse.statusCode).isEqualTo(200)
+                assertThat(updateResponse.statusCode).isEqualTo(HTTP_CREATED)
                 val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-                assertThat(eiere).contains(lagtTilEier)
+                assertThat(eiere).contains(nyEier)
             }
         }
     }
+
+    // TODO testcase: Legg til flere eiere samtidig
+
 
     @Test
     fun slettEier() {
@@ -121,7 +127,11 @@ class RekrutteringstreffEierTest {
         assertThat(eiere).doesNotContain(navIdent)
     }
 
-    private fun opprettRekrutteringstreffIDatabase(navIdent: String, tittel: String = "Original Tittel", sted: String = "Original Sted") {
+    private fun opprettRekrutteringstreffIDatabase(
+        navIdent: String,
+        tittel: String = "Original Tittel",
+        sted: String = "Original Sted"
+    ) {
         val originalDto = OpprettRekrutteringstreffDto(
             tittel = tittel,
             opprettetAvNavkontorEnhetId = "Original Kontor",

@@ -112,6 +112,11 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                     }
                 }
             }
+
+            fun leggTilEiere(nyeEiere: List<String>) {
+                dataSource.connection.use { connection ->
+                    connection.prepareStatement()
+            }
         }
     }
 
