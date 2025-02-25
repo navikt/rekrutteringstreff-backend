@@ -1,4 +1,5 @@
 package no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier
+
 import io.javalin.http.bodyAsClass
 
 
@@ -29,7 +30,7 @@ fun Javalin.handleEiere(repo: RekrutteringstreffRepository, endepunktRekrutterin
     path = endepunktRekrutteringstreff,
     methods = [HttpMethod.PUT]
 )
-private fun leggTilEiere(repo: RekrutteringstreffRepository.Companion.EierRepository): (Context) -> Unit = { ctx ->
+private fun leggTilEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
     val eiere: List<String> = ctx.bodyAsClass<List<String>>()
     repo.leggTilEiere(eiere)
     ctx.status(201)//.result(eiere.tilJson())

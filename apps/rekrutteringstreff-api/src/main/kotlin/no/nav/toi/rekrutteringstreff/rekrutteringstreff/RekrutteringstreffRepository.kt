@@ -2,7 +2,7 @@ package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
 import no.nav.toi.rekrutteringstreff.Status
 import no.nav.toi.rekrutteringstreff.atOslo
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.Eier
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.EierRepository
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.UUID
@@ -15,7 +15,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             connection.prepareStatement(
                 """
                 INSERT INTO $tabellnavn 
-                (id, $tittel, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $fratid, $tiltid, $sted, $eiere)
+                ($idKolonne, $tittel, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $fratid, $tiltid, $sted, $eiere)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent()
             ).use { stmt ->
@@ -40,7 +40,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 """
                 UPDATE $tabellnavn 
                 SET $tittel = ?, $fratid = ?, $tiltid = ?, $sted = ?
-                WHERE id = ?
+                WHERE $idKolonne = ?
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setString(1, dto.tittel)
@@ -55,7 +55,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
     fun slett(id: UUID) {
         dataSource.connection.use { connection ->
-            connection.prepareStatement("DELETE FROM $tabellnavn WHERE id = ?").use { stmt ->
+            connection.prepareStatement("DELETE FROM $tabellnavn WHERE $idKolonne = ?").use { stmt ->
                 stmt.setObject(1, id)
                 stmt.executeUpdate()
             }
@@ -76,7 +76,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
     fun hent(id: UUID): Rekrutteringstreff? {
         dataSource.connection.use { connection ->
-            connection.prepareStatement("SELECT * FROM $tabellnavn WHERE id = ?").use { stmt ->
+            connection.prepareStatement("SELECT * FROM $tabellnavn WHERE $idKolonne = ?").use { stmt ->
                 stmt.setObject(1, id)
                 val resultSet = stmt.executeQuery()
                 return if (resultSet.next()) resultSet.tilRekrutteringstreff() else null
@@ -84,10 +84,16 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
     }
 
-    val eierRepository = EierRepository(dataSource)
+    val eierRepository = EierRepository(
+        dataSource,
+        rekrutteringstreff = Tabellnavn(tabellnavn),
+        eiere = Kolonnenavn(eiere),
+        id = Kolonnenavn(idKolonne)
+    )
 
     companion object {
         private const val tabellnavn = "rekrutteringstreff"
+        private const val idKolonne = "id"
         private const val tittel = "tittel"
         private const val status = "status"
         private const val opprettetAvPersonNavident = "opprettet_av_person_navident"
@@ -97,31 +103,10 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         private const val tiltid = "tiltid"
         private const val sted = "sted"
         private const val eiere = "eiere"
-
-        class EierRepository(private val dataSource: DataSource) {
-            fun hent(id: UUID): List<Eier>? {
-                dataSource.connection.use { connection ->
-                    connection.prepareStatement("SELECT $eiere FROM $tabellnavn WHERE id = ?").use { stmt ->
-                        stmt.setObject(1, id)
-                        val resultSet = stmt.executeQuery()
-                        return if (resultSet.next()) {
-                            (resultSet.getArray("eiere").array as Array<*>)
-                                .map(Any?::toString)
-                                .map(::Eier)
-                        } else null
-                    }
-                }
-            }
-
-            fun leggTilEiere(nyeEiere: List<String>) {
-                dataSource.connection.use { connection ->
-                    connection.prepareStatement()
-            }
-        }
     }
 
     private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(
-        id = getObject("id", UUID::class.java),
+        id = getObject(idKolonne, UUID::class.java),
         tittel = getString(tittel),
         fraTid = getTimestamp(fratid).toInstant().atOslo(),
         tilTid = getTimestamp(tiltid).toInstant().atOslo(),
@@ -130,4 +115,12 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid)
     )
+}
+
+class Tabellnavn(private val navn: String) {
+    override fun toString() = navn
+}
+
+class Kolonnenavn(private val navn: String) {
+    override fun toString() = navn
 }
