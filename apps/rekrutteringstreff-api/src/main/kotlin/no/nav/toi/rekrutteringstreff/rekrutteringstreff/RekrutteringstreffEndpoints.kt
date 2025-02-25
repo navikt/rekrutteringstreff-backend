@@ -186,7 +186,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
     put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
-    handleEiere(repo, endepunktRekrutteringstreff)
+    handleEiere(repo.eierRepository)
 }
 
 data class RekrutteringstreffDTO(

@@ -7,16 +7,15 @@ import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.*
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.Eier.Companion.tilJson
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.*
 
 private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"
 
-fun Javalin.handleEiere(repo: RekrutteringstreffRepository, endepunktRekrutteringstreff: String) {
+fun Javalin.handleEiere(repo: EierRepository) {
     get(eiereEndepunkt, hentEiere(repo))
-    put(eiereEndepunkt, leggTilEiere(repo.eierRepository))
+    put(eiereEndepunkt, leggTilEiere(repo))
 }
 
 @OpenApi(
@@ -57,9 +56,9 @@ private fun leggTilEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
     path = endepunktRekrutteringstreff,
     methods = [HttpMethod.GET]
 )
-private fun hentEiere(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+private fun hentEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
     val id = UUID.fromString(ctx.pathParam("id"))
-    val eiere = repo.eierRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    val eiere = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     ctx.status(200).result(eiere.tilJson())
 }
 
