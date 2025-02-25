@@ -69,7 +69,9 @@ class RekrutteringstreffTest {
                 """
                 {
                     "tittel": "$gyldigTittelfelt",
+                    "opprettetAvPersonNavident": "$navIdent",
                     "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt",
+                    "opprettetAvTidspunkt": "${nowOslo().minusDays(10)}",
                     "fraTid": "$gyldigFraTid",
                     "tilTid": "$gyldigTilTid",
                     "sted": "$gyldigSted"
@@ -202,6 +204,8 @@ class RekrutteringstreffTest {
         val originalDto = OpprettRekrutteringstreffDto(
             tittel = tittel,
             opprettetAvNavkontorEnhetId = "Original Kontor",
+            opprettetAvPersonNavident = navIdent,
+            opprettetAvTidspunkt = nowOslo().minusDays(10),
             fraTid = nowOslo().minusDays(1),
             tilTid = nowOslo().plusDays(1),
             sted = sted

@@ -34,9 +34,7 @@ spec:
   accessPolicy:
     inbound:
       rules:
-        - application: rekrutteringsbistand
-          namespace: toi
-          cluster: {{ cluster }}
+        - application: rekrutteringsbistand-frontend
     outbound:
       external:
         - host: fakedings.intern.dev.nav.no
@@ -44,6 +42,11 @@ spec:
     application:
       enabled: true
       allowAllUsers: false
+      claims:
+        extra:
+          - NAVident
+        groups:
+          - id: {{ adGruppeUtvikler }}
   kafka:
     pool: {{ kafka_pool }}
   gcp:

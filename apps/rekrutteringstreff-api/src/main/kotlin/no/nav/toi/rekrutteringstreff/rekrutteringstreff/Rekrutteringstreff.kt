@@ -11,7 +11,8 @@ class Rekrutteringstreff(
     val sted: String,
     val status: String,
     val opprettetAvPersonNavident: String,
-    val opprettetAvNavkontorEnhetId: String
+    val opprettetAvNavkontorEnhetId: String,
+    val opprettetAvTidspunkt: ZonedDateTime,
 ) {
     fun tilRekrutteringstreffDTO() = RekrutteringstreffDTO(
         tittel = tittel,
@@ -21,6 +22,7 @@ class Rekrutteringstreff(
         status = status,
         opprettetAvPersonNavident = opprettetAvPersonNavident,
         opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
+        opprettetAvTidspunkt = opprettetAvTidspunkt,
         id = id.somUuid
     )
 }

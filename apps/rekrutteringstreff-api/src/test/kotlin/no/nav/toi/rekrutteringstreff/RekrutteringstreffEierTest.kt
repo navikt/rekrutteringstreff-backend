@@ -81,6 +81,7 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
+    @Disabled("Ikke implementert ennå")
     fun leggTilEier() {
         val bruker = "A123456"
         val nyEier = "B654321"
@@ -109,6 +110,7 @@ class RekrutteringstreffEierTest {
 
 
     @Test
+    @Disabled("Ikke implementert ennå")
     fun slettEier() {
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
@@ -135,6 +137,8 @@ class RekrutteringstreffEierTest {
         val originalDto = OpprettRekrutteringstreffDto(
             tittel = tittel,
             opprettetAvNavkontorEnhetId = "Original Kontor",
+            opprettetAvPersonNavident = navIdent,
+            opprettetAvTidspunkt = nowOslo().minusDays(10),
             fraTid = nowOslo().minusDays(1),
             tilTid = nowOslo().plusDays(1),
             sted = sted

@@ -113,7 +113,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         sted = getString(sted),
         status = getString(status),
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
-        opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid)
+        opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
+        opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo()
     )
 }
 
