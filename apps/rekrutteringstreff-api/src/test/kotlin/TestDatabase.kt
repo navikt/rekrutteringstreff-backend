@@ -38,16 +38,12 @@ class TestDatabase {
         }
     }
 
-    fun hentEiere(id: TreffId): List<String> {
-        dataSource.connection.use {
-            val resultSet = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ?").apply {
-                setObject(1, id.somUuid)
-            }.executeQuery()
-            return generateSequence {
-                if (resultSet.next()) resultSet.getString("eiere")
-                else null
-            }.toList()
-        }
+    fun hentEiere(id: TreffId): List<String> = dataSource.connection.use {
+        val resultSet = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ?").apply {
+            setObject(1, id.somUuid)
+        }.executeQuery()
+        if (resultSet.next()) (resultSet.getArray("eiere").array as Array<*>).map(Any?::toString)
+        else emptyList()
     }
 
     private fun konverterTilRekrutteringstreff(resultSet: ResultSet) = Rekrutteringstreff(
