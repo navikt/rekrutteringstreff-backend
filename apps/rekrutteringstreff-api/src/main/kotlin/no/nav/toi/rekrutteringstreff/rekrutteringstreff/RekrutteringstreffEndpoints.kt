@@ -109,7 +109,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     methods = [HttpMethod.GET]
 )
 private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
-    val id = UUID.fromString(ctx.pathParam("id"))
+    val id = TreffId(ctx.pathParam("id"))
     val treff = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     ctx.status(200).json(treff.tilRekrutteringstreffDTO())
 }
@@ -151,7 +151,7 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
     methods = [HttpMethod.PUT]
 )
 private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
-    val id = UUID.fromString(ctx.pathParam("id"))
+    val id = TreffId(ctx.pathParam("id"))
     val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
     val navIdent = ctx.extractNavIdent()
     repo.oppdater(id, dto, navIdent)
@@ -175,7 +175,7 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     methods = [HttpMethod.DELETE]
 )
 private fun slettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
-    val id = UUID.fromString(ctx.pathParam("id"))
+    val id = TreffId(ctx.pathParam("id"))
     repo.slett(id)
     ctx.status(200).result("Rekrutteringstreff slettet")
 }

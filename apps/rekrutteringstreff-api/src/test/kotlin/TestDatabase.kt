@@ -4,6 +4,7 @@ package no.nav.toi.rekrutteringstreff
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.Rekrutteringstreff
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.TreffId
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import javax.sql.DataSource
@@ -18,11 +19,11 @@ class TestDatabase {
         }
     }
 
-    fun oppdaterRekrutteringstreff(eiere: List<String>, uuid: UUID) {
+    fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) {
         dataSource.connection.use {
             it.prepareStatement("UPDATE rekrutteringstreff SET eiere = ? WHERE id = ?").apply {
                 setArray(1, connection.createArrayOf("text", eiere.toTypedArray()))
-                setObject(2, uuid)
+                setObject(2, id.somUuid)
             }.executeUpdate()
         }
     }
@@ -37,10 +38,10 @@ class TestDatabase {
         }
     }
 
-    fun hentEiere(id: UUID): List<String> {
+    fun hentEiere(id: TreffId): List<String> {
         dataSource.connection.use {
             val resultSet = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ?").apply {
-                setObject(1, id)
+                setObject(1, id.somUuid)
             }.executeQuery()
             return generateSequence {
                 if (resultSet.next()) resultSet.getString("eiere")
@@ -50,7 +51,7 @@ class TestDatabase {
     }
 
     private fun konverterTilRekrutteringstreff(resultSet: ResultSet) = Rekrutteringstreff(
-        id = resultSet.getObject("id", UUID::class.java),
+        id = TreffId(resultSet.getObject("id", UUID::class.java)),
         tittel = resultSet.getString("tittel"),
         fraTid = resultSet.getTimestamp("fratid").toInstant().atOslo(),
         tilTid = resultSet.getTimestamp("tiltid").toInstant().atOslo(),

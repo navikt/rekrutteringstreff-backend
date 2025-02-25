@@ -34,7 +34,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun oppdater(id: UUID, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
+    fun oppdater(id: TreffId, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
@@ -47,16 +47,16 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 stmt.setTimestamp(2, Timestamp.from(dto.fraTid.toInstant()))
                 stmt.setTimestamp(3, Timestamp.from(dto.tilTid.toInstant()))
                 stmt.setString(4, dto.sted)
-                stmt.setObject(5, id)
+                stmt.setObject(5, id.somUuid)
                 stmt.executeUpdate()
             }
         }
     }
 
-    fun slett(id: UUID) {
+    fun slett(id: TreffId) {
         dataSource.connection.use { connection ->
             connection.prepareStatement("DELETE FROM $tabellnavn WHERE $idKolonne = ?").use { stmt ->
-                stmt.setObject(1, id)
+                stmt.setObject(1, id.somUuid)
                 stmt.executeUpdate()
             }
         }
@@ -74,10 +74,10 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun hent(id: UUID): Rekrutteringstreff? {
+    fun hent(id: TreffId): Rekrutteringstreff? {
         dataSource.connection.use { connection ->
             connection.prepareStatement("SELECT * FROM $tabellnavn WHERE $idKolonne = ?").use { stmt ->
-                stmt.setObject(1, id)
+                stmt.setObject(1, id.somUuid)
                 val resultSet = stmt.executeQuery()
                 return if (resultSet.next()) resultSet.tilRekrutteringstreff() else null
             }
@@ -106,7 +106,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     }
 
     private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(
-        id = getObject(idKolonne, UUID::class.java),
+        id = TreffId(getObject(idKolonne, UUID::class.java)),
         tittel = getString(tittel),
         fraTid = getTimestamp(fratid).toInstant().atOslo(),
         tilTid = getTimestamp(tiltid).toInstant().atOslo(),

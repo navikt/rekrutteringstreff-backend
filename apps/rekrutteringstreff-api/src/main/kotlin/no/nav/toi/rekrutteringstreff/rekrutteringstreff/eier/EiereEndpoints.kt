@@ -7,6 +7,7 @@ import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.*
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.Eier.Companion.tilJson
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.*
@@ -31,8 +32,9 @@ fun Javalin.handleEiere(repo: EierRepository) {
 )
 private fun leggTilEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
     val eiere: List<String> = ctx.bodyAsClass<List<String>>()
-    repo.leggTilEiere(eiere)
-    ctx.status(201)//.result(eiere.tilJson())
+    val id = TreffId(ctx.pathParam("id"))
+    repo.leggTilEiere(id, eiere)
+    ctx.status(201)
 }
 
 
@@ -57,7 +59,7 @@ private fun leggTilEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
     methods = [HttpMethod.GET]
 )
 private fun hentEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
-    val id = UUID.fromString(ctx.pathParam("id"))
+    val id = TreffId(ctx.pathParam("id"))
     val eiere = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     ctx.status(200).result(eiere.tilJson())
 }
