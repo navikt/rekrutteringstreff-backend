@@ -67,6 +67,7 @@ private fun verifyJwt(verifiers: List<JWTVerifier>, token: String): DecodedJWT {
             // prøv neste verifier
         }
     }
+    log.error("Token verification failed")
     throw UnauthorizedResponse("Token verification failed")
 }
 

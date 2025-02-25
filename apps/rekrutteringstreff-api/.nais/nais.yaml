@@ -44,6 +44,11 @@ spec:
     application:
       enabled: true
       allowAllUsers: false
+      claims:
+        extra:
+          - NAVident
+        groups:
+          - id: {{adGruppeUtvikler}}
   kafka:
     pool: {{ kafka_pool }}
   gcp:
