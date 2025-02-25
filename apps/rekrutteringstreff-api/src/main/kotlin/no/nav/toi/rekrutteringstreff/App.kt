@@ -1,5 +1,8 @@
 package no.nav.toi.rekrutteringstreff
 
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
@@ -28,6 +31,10 @@ class App(
         kjørFlywayMigreringer(dataSource)
         javalin = Javalin.create { config ->
             configureOpenApi(config)
+            jacksonObjectMapper().apply {
+                disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                registerModule(JavaTimeModule())
+            }
         }
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
