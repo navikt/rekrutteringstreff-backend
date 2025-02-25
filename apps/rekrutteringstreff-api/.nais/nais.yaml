@@ -34,7 +34,7 @@ spec:
   accessPolicy:
     inbound:
       rules:
-        - application: rekrutteringsbistand
+        - application: rekrutteringsbistand-frontend
           namespace: toi
           cluster: {{ cluster }}
     outbound:
