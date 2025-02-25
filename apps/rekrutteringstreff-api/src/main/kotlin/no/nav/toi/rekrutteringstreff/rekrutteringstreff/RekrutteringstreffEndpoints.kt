@@ -22,6 +22,8 @@ const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
             example = """{
                 "tittel": "Sommerjobbtreff",
                 "opprettetAvNavkontorEnhetId": "0318",
+                "opprettetAvPersonNavident": "A123456",
+                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
                 "fraTid": "2025-06-15T09:00:00+02:00",
                 "tilTid": "2025-06-15T11:00:00+02:00",
                 "sted": "NAV Oslo"
@@ -62,7 +64,8 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
                     "sted": "NAV Oslo",
                     "status": "Utkast",
                     "opprettetAvPersonNavident": "A123456",
-                    "opprettetAvNavkontorEnhetId": "0318"
+                    "opprettetAvNavkontorEnhetId": "0318",
+                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
                 },
                 {
                     "id": "a7f2387c-4354-4a2e-90a2-fff1a1d83dc6",
@@ -72,7 +75,8 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
                     "sted": "NAV Bergen",
                     "status": "Publisert",
                     "opprettetAvPersonNavident": "A654321",
-                    "opprettetAvNavkontorEnhetId": "1203"
+                    "opprettetAvNavkontorEnhetId": "1203",
+                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
                 }
             ]"""
         )]
@@ -101,7 +105,8 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
                 "sted": "NAV Oslo",
                 "status": "Utkast",
                 "opprettetAvPersonNavident": "A123456",
-                "opprettetAvNavkontorEnhetId": "0318"
+                "opprettetAvNavkontorEnhetId": "0318",
+                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
             }"""
         )]
     )],
@@ -142,7 +147,8 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
                     "sted": "NAV Oslo - rom 101", 
                     "status": "Utkast", 
                     "opprettetAvPersonNavident": "A123456", 
-                    "opprettetAvNavkontorEnhetId": "0318"
+                    "opprettetAvNavkontorEnhetId": "0318",
+                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
                 }"""
             )]
         )
@@ -197,12 +203,15 @@ data class RekrutteringstreffDTO(
     val sted: String,
     val status: String,
     val opprettetAvPersonNavident: String,
-    val opprettetAvNavkontorEnhetId: String
+    val opprettetAvNavkontorEnhetId: String,
+    val opprettetAvTidspunkt: ZonedDateTime,
 )
 
 data class OpprettRekrutteringstreffDto(
     val tittel: String,
+    val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
+    val opprettetAvTidspunkt: ZonedDateTime,
     val fraTid: ZonedDateTime,
     val tilTid: ZonedDateTime,
     val sted: String

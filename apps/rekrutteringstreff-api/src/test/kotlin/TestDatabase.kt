@@ -58,7 +58,8 @@ class TestDatabase {
         sted = resultSet.getString("sted"),
         status = resultSet.getString("status"),
         opprettetAvPersonNavident = resultSet.getString("opprettet_av_person_navident"),
-        opprettetAvNavkontorEnhetId = resultSet.getString("opprettet_av_kontor_enhetid")
+        opprettetAvNavkontorEnhetId = resultSet.getString("opprettet_av_kontor_enhetid"),
+        opprettetAvTidspunkt = resultSet.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo()
     )
 
     companion object {
