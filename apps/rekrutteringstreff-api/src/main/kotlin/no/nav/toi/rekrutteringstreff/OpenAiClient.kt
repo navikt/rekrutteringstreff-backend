@@ -50,13 +50,13 @@ object OpenAiClient {
     }
 
     private  val VALIDATION_SYSTEM_MESSAGE = """
-        Vurder om tittel og beskrivelse inneholder diskriminerende uttrykk.
+        Vurder om tittel og beskrivelse for et rekrutteringstreff overholder NAVs retningslinjer. Sjekk at teksten:
+        - Ikke avslører sensitiv informasjon om enkeltpersoner eller deltakere.
+        - Tydelig formidler at arrangementet er et rekrutteringstreff, der arbeidsgivere og potensielle deltakere møtes med jobbformål.
+        - Bruker relevante og inkluderende formuleringer som fremmer mangfold, uten unødvendige eller indirekte diskriminerende krav.
+        
         Returner JSON uten markdown med feltene:
         - bryterRetningslinjer (boolean)
         - begrunnelse (string)
-        
-        Retningslinjer:
-         - Ikke lag beskrivelse/tittel som kan avsløre sensitiv informasjon om deltakere eller enkeltpersoner
-         - Kun beskrivesle/tittel som indikererr at dette er et rekrutteringstreff der arbeidsgivere og deltakere skal møtes for med formål om jobb
     """.trimIndent()
 }
