@@ -11,9 +11,9 @@
     </appender>
 
     <appender name="secureLog" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>/secure-logs/secure.log</file>
+        <file>/secure-logs/secure.no.nav.toi.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>/secure-logs/secure.log.%i</fileNamePattern>
+            <fileNamePattern>/secure-logs/secure.no.nav.toi.log.%i</fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>1</maxIndex>
         </rollingPolicy>

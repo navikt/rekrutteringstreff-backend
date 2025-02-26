@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature

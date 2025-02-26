@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier
+package no.nav.toi.rekrutteringstreff.eier
 
 import io.javalin.http.bodyAsClass
 
@@ -7,9 +7,9 @@ import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.*
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.Eier.Companion.tilJson
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.endepunktRekrutteringstreff
+import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilJson
+import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.*
 
 private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"

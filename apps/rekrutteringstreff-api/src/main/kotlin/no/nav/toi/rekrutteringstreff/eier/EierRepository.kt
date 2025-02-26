@@ -1,8 +1,8 @@
-package no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier
+package no.nav.toi.rekrutteringstreff.eier
 
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.Kolonnenavn
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.Tabellnavn
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.Kolonnenavn
+import no.nav.toi.rekrutteringstreff.Tabellnavn
+import no.nav.toi.rekrutteringstreff.TreffId
 import javax.sql.DataSource
 
 

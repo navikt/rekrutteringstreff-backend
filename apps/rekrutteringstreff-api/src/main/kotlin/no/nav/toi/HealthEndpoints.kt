@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi
 
 import io.javalin.Javalin
 import io.javalin.http.Context

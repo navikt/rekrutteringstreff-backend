@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier
+package no.nav.toi.rekrutteringstreff.eier
 
 class Eier(private val navIdent: String) {
     companion object {

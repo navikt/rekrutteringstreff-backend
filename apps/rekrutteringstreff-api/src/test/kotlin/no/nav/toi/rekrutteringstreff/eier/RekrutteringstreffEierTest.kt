@@ -1,21 +1,19 @@
-package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
+package no.nav.toi.rekrutteringstreff.eier
 
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.rekrutteringstreff.App
-import no.nav.toi.rekrutteringstreff.AuthenticationConfiguration
+import no.nav.toi.App
+import no.nav.toi.AuthenticationConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
-import no.nav.toi.rekrutteringstreff.ObjectMapperProvider.mapper
+import no.nav.toi.ObjectMapperProvider.mapper
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.nowOslo
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpprettRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
-import java.net.HttpURLConnection
+import no.nav.toi.nowOslo
+import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.util.UUID
 

@@ -1,3 +1,5 @@
+package no.nav.toi
+
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.Marker
@@ -12,10 +14,10 @@ val Any.log: Logger
  * Brukes til å logging fra Kotlin-kode hvor vi ikke er inne i en klasse, typisk i en "top level function".
  * Kalles fra den filen du ønsker å logg i slik:
  *```
- * import no.nav.yada.noClassLogger
- * private val log: Logger = noClassLogger()
+ * import no.nav.yada.no.nav.toi.noClassLogger
+ * private val no.nav.toi.log: Logger = no.nav.toi.noClassLogger()
  * fun myTopLevelFunction() {
- *      log.info("yada yada yada")
+ *      no.nav.toi.log.info("yada yada yada")
  *      ...
  * }
  *```
@@ -32,9 +34,9 @@ fun noClassLogger(): Logger {
  *
  * Brukes ved å dekorere en hvilken som helst, vanlig org.slf4j.Logger slik:
  * ```
- * import no.nav.statistikkapi.logging.SecureLogLogger.Companion.secure
+ * import no.nav.statistikkapi.logging.no.nav.toi.SecureLogLogger.Companion.secure
  * ...
- * secure(log).info(msg)
+ * secure(no.nav.toi.log).info(msg)
  * ```
  *
  * For at dette skal virke må appens fil `logback.xml` bruke appendere med filtere slik at logging events som har en marker med navn `SECURE_LOG` styres til riktig loggfil:
