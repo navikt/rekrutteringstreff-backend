@@ -4,6 +4,8 @@ import com.github.kittinunf.fuel.httpPost
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.result.Result
+import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 
 data class OpenAiMessage(val role: String, val content: String)
 data class OpenAiRequest(val messages: List<OpenAiMessage>, val temperature: Double, val max_tokens: Int)

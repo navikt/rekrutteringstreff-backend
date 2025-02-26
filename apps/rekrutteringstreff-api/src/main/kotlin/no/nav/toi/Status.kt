@@ -1,3 +1,3 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi
 
 enum class Status { Utkast, Publisert, Avlyst }

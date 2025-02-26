@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
+package no.nav.toi
 
 
 import com.github.kittinunf.fuel.Fuel
@@ -6,7 +6,6 @@ import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.fuel.core.responseUnit
 import com.github.kittinunf.result.Result
-import no.nav.toi.rekrutteringstreff.App
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -17,7 +16,7 @@ import org.junit.jupiter.api.TestInstance
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KubernetesHealthTest {
     private val appPort = 10000
-    private val app = App(port = appPort,listOf(), TestDatabase().dataSource)
+    private val app = App(port = appPort, listOf(), TestDatabase().dataSource)
 
     @BeforeAll
     fun setUp() {

@@ -1,10 +1,11 @@
-package no.nav.toi.rekrutteringstreff.rekrutteringstreff
+package no.nav.toi.rekrutteringstreff
 
-import no.nav.toi.rekrutteringstreff.Status
-import no.nav.toi.rekrutteringstreff.atOslo
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.Status
+import no.nav.toi.atOslo
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import java.sql.ResultSet
 import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
@@ -25,7 +26,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 stmt.setString(4, Status.Utkast.name)
                 stmt.setString(5, navIdent)
                 stmt.setString(6, dto.opprettetAvNavkontorEnhetId)
-                stmt.setTimestamp(7, Timestamp.from(java.time.Instant.now()))
+                stmt.setTimestamp(7, Timestamp.from(Instant.now()))
                 stmt.setTimestamp(8, Timestamp.from(dto.fraTid.toInstant()))
                 stmt.setTimestamp(9, Timestamp.from(dto.tilTid.toInstant()))
                 stmt.setString(10, dto.sted)

@@ -1,12 +1,13 @@
-package no.nav.toi.rekrutteringstreff.rekrutteringstreff
+package no.nav.toi.rekrutteringstreff
 
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
-import no.nav.toi.rekrutteringstreff.extractNavIdent
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.eier.handleEiere
+import no.nav.toi.extractNavIdent
+import no.nav.toi.rekrutteringstreff.eier.handleEiere
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
 import java.time.ZonedDateTime
 import java.util.*
 

@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi
 
 import com.auth0.jwk.JwkProviderBuilder
 import com.auth0.jwk.SigningKeyNotFoundException
@@ -11,7 +11,6 @@ import com.auth0.jwt.interfaces.RSAKeyProvider
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.UnauthorizedResponse
-import noClassLogger
 import org.eclipse.jetty.http.HttpHeader
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
@@ -88,6 +87,7 @@ private fun algorithm(jwksUri: String): Algorithm {
     return Algorithm.RSA256(object : RSAKeyProvider {
         override fun getPublicKeyById(keyId: String): RSAPublicKey =
             jwkProvider.get(keyId).publicKey as RSAPublicKey
+
         override fun getPrivateKey() = throw UnsupportedOperationException()
         override fun getPrivateKeyId() = throw UnsupportedOperationException()
     })

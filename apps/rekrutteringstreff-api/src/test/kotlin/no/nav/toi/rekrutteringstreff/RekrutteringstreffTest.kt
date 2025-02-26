@@ -7,16 +7,15 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.rekrutteringstreff.ObjectMapperProvider.mapper
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OppdaterRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpprettRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffDTO
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
+import no.nav.toi.App
+import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.ObjectMapperProvider.mapper
+import no.nav.toi.Status
+import no.nav.toi.nowOslo
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.util.UUID
+import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffTest {
@@ -71,8 +70,8 @@ class RekrutteringstreffTest {
         val gyldigTittelfelt = "Tittelfeltet"
         val gyldigKontorfelt = "Gyldig NAV Kontor"
         val gyldigStatus = Status.Utkast
-        val gyldigFraTid = nowOslo().minusDays(1)
-        val gyldigTilTid = nowOslo().plusDays(1).plusHours(2)
+        val gyldigFraTid = no.nav.toi.nowOslo().minusDays(1)
+        val gyldigTilTid = no.nav.toi.nowOslo().plusDays(1).plusHours(2)
         val gyldigSted = "Gyldig Sted"
         val gyldigBeskrivelse = "Beskrivelse for oppretting"
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
@@ -117,8 +116,18 @@ class RekrutteringstreffTest {
         val tittel2 = "Tittel2222222"
         val sted2 = "Sted2"
         val beskrivelse2 = "Beskrivelse 2"
-        opprettRekrutteringstreffIDatabase(navIdent = "navident1", tittel = tittel1, sted = sted1, beskrivelse = beskrivelse1)
-        opprettRekrutteringstreffIDatabase(navIdent = "navIdent2", tittel = tittel2, sted = sted2, beskrivelse = beskrivelse2)
+        opprettRekrutteringstreffIDatabase(
+            navIdent = "navident1",
+            tittel = tittel1,
+            sted = sted1,
+            beskrivelse = beskrivelse1
+        )
+        opprettRekrutteringstreffIDatabase(
+            navIdent = "navIdent2",
+            tittel = tittel2,
+            sted = sted2,
+            beskrivelse = beskrivelse2
+        )
 
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
@@ -127,7 +136,8 @@ class RekrutteringstreffTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<RekrutteringstreffDTO>> {
                 override fun deserialize(content: String): List<RekrutteringstreffDTO> {
-                    val type = mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDTO::class.java)
+                    val type =
+                        mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDTO::class.java)
                     return mapper.readValue(content, type)
                 }
             })
@@ -156,12 +166,17 @@ class RekrutteringstreffTest {
         val originalSted = "Sted"
         val originalBeskrivelse = "Spesifikk beskrivelse"
 
-        opprettRekrutteringstreffIDatabase(navIdent, tittel = originalTittel, sted = originalSted, beskrivelse = originalBeskrivelse)
+        opprettRekrutteringstreffIDatabase(
+            navIdent,
+            tittel = originalTittel,
+            sted = originalSted,
+            beskrivelse = originalBeskrivelse
+        )
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
-        when(result) {
+        when (result) {
             is Result.Failure -> throw result.error
             is Result.Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
@@ -220,6 +235,7 @@ class RekrutteringstreffTest {
         val remaining = database.hentAlleRekrutteringstreff()
         assertThat(remaining).isEmpty()
     }
+
 
     @Test
     fun validerRekrutteringstreff() {

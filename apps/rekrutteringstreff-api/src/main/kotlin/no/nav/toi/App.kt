@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -7,11 +7,10 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
-import io.javalin.openapi.BearerAuth
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.handleRekrutteringstreff
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
