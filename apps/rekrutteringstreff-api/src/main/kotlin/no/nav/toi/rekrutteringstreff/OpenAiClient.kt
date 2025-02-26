@@ -1,8 +1,8 @@
 package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
-import com.github.kittinunf.fuel.httpPost
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.kittinunf.fuel.httpPost
 import com.github.kittinunf.result.Result
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
@@ -49,11 +49,11 @@ object OpenAiClient {
         }
     }
 
-    private  val VALIDATION_SYSTEM_MESSAGE = """
-        Vurder om tittel og beskrivelse for et rekrutteringstreff overholder NAVs retningslinjer. Sjekk at teksten:
+    private val VALIDATION_SYSTEM_MESSAGE = """
+        Vurder om tittel og beskrivelse for et rekrutteringstreff overholder NAVs retningslinjer. Retningslinjene gjelder for både arbeidstaker og arbeidsgiver. Sjekk at teksten:
         - Ikke avslører sensitiv informasjon om enkeltpersoner eller deltakere.
         - Tydelig formidler at arrangementet er et rekrutteringstreff, der arbeidsgivere og potensielle deltakere møtes med jobbformål.
-        - Bruker relevante og inkluderende formuleringer som fremmer mangfold, uten unødvendige eller indirekte diskriminerende krav.
+        - Bruker relevante og inkluderende formuleringer som fremmer mangfold, uten unødvendige eller indirekte diskriminerende krav. Eksempel på diskriminering er kjønn, religion, livssyn, hudfarge, nasjonal eller etnisk opprinnelse, politisk syn, medlemskap i arbeidstakerorganisasjon, seksuell orientering, funksjonshemming eller alder. Forbudet omfatter også indirekte diskriminering; for eksempel at det stilles krav om gode norskkunnskaper eller avtjent verneplikt, uten at slike krav er nødvendige for å utføre stillingens arbeidsoppgaver på en forsvarlig måte.
         
         Returner JSON uten markdown med feltene:
         - bryterRetningslinjer (boolean)
