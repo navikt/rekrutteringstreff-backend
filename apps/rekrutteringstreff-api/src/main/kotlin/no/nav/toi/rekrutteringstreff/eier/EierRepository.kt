@@ -29,15 +29,15 @@ class EierRepository(
 
     fun leggTilEiere(id: TreffId, nyeEiere: List<String>) {
         dataSource.connection.use { connection ->
-            val eiereOgNyeEiere = connection.prepareStatement("SELECT $eiere FROM $rekrutteringstreff WHERE $idKolonne = ?").use { stmt ->
+            val eiereOgNyeEiere: Set<String> = connection.prepareStatement("SELECT $eiere FROM $rekrutteringstreff WHERE $idKolonne = ?").use { stmt ->
                 stmt.setObject(1, id.somUuid)
                 val resulSet = stmt.executeQuery()
                 if(resulSet.next()) {
                     (resulSet.getArray("$eiere").array as Array<*>).map(Any?::toString) + nyeEiere
                 } else emptyList()
-            }
+            }.toSet()
             connection.prepareStatement("UPDATE $rekrutteringstreff SET $eiere = ? WHERE $idKolonne = ?").use { stmt ->
-                stmt.setArray(1, connection.createArrayOf("text", eiereOgNyeEiere.toSet().toTypedArray()))
+                stmt.setArray(1, connection.createArrayOf("text", eiereOgNyeEiere.toTypedArray()))
                 stmt.setObject(2, id.somUuid)
                 stmt.executeUpdate()
             }
