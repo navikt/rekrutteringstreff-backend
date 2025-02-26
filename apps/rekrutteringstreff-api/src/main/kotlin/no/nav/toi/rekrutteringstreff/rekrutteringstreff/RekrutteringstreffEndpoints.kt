@@ -21,6 +21,7 @@ const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
             from = OpprettRekrutteringstreffDto::class,
             example = """{
                 "tittel": "Sommerjobbtreff",
+                "beskrivelse": "Beskrivelse av arrangementet",
                 "opprettetAvNavkontorEnhetId": "0318",
                 "opprettetAvPersonNavident": "A123456",
                 "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
@@ -59,24 +60,26 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
                 {
                     "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
                     "tittel": "Sommerjobbtreff",
+                    "beskrivelse": "Beskrivelse av Sommerjobbtreff",
                     "fraTid": "2025-06-15T09:00:00+02:00",
                     "tilTid": "2025-06-15T11:00:00+02:00",
                     "sted": "NAV Oslo",
                     "status": "Utkast",
                     "opprettetAvPersonNavident": "A123456",
                     "opprettetAvNavkontorEnhetId": "0318",
-                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
+                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
                 },
                 {
                     "id": "a7f2387c-4354-4a2e-90a2-fff1a1d83dc6",
                     "tittel": "Høstjobbtreff",
+                    "beskrivelse": "Beskrivelse av Høstjobbtreff",
                     "fraTid": "2025-09-10T10:00:00+02:00",
                     "tilTid": "2025-09-10T12:00:00+02:00",
                     "sted": "NAV Bergen",
                     "status": "Publisert",
                     "opprettetAvPersonNavident": "A654321",
                     "opprettetAvNavkontorEnhetId": "1203",
-                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
+                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
                 }
             ]"""
         )]
@@ -100,13 +103,14 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
             example = """{
                 "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
                 "tittel": "Sommerjobbtreff",
+                "beskrivelse": "Beskrivelse av Sommerjobbtreff",
                 "fraTid": "2025-06-15T09:00:00+02:00",
                 "tilTid": "2025-06-15T11:00:00+02:00",
                 "sted": "NAV Oslo",
                 "status": "Utkast",
                 "opprettetAvPersonNavident": "A123456",
                 "opprettetAvNavkontorEnhetId": "0318",
-                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
+                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
             }"""
         )]
     )],
@@ -128,31 +132,32 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
         content = [OpenApiContent(
             from = OppdaterRekrutteringstreffDto::class,
             example = """{
-                    "tittel": "Oppdatert tittel", 
-                    "fraTid": "2025-06-15T09:30:00+02:00", 
-                    "tilTid": "2025-06-15T11:30:00+02:00", 
-                    "sted": "NAV Oslo - rom 101"
+                "tittel": "Oppdatert tittel", 
+                "beskrivelse": "Oppdatert beskrivelse",
+                "fraTid": "2025-06-15T09:30:00+02:00", 
+                "tilTid": "2025-06-15T11:30:00+02:00", 
+                "sted": "NAV Oslo - rom 101"
             }"""
         )]
     ),
-    responses = [
-        OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(
-                from = RekrutteringstreffDTO::class,
-                example = """{"id": "d6a587cd-8797-4b9a-a68b-575373f16d65", 
-                    "tittel": "Oppdatert tittel", 
-                    "fraTid": "2025-06-15T09:30:00+02:00", 
-                    "tilTid": "2025-06-15T11:30:00+02:00", 
-                    "sted": "NAV Oslo - rom 101", 
-                    "status": "Utkast", 
-                    "opprettetAvPersonNavident": "A123456", 
-                    "opprettetAvNavkontorEnhetId": "0318",
-                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
-                }"""
-            )]
-        )
-    ],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = RekrutteringstreffDTO::class,
+            example = """{
+                "id": "d6a587cd-8797-4b9a-a68b-575373f16d65", 
+                "tittel": "Oppdatert tittel", 
+                "beskrivelse": "Oppdatert beskrivelse", 
+                "fraTid": "2025-06-15T09:30:00+02:00", 
+                "tilTid": "2025-06-15T11:30:00+02:00", 
+                "sted": "NAV Oslo - rom 101", 
+                "status": "Utkast", 
+                "opprettetAvPersonNavident": "A123456", 
+                "opprettetAvNavkontorEnhetId": "0318",
+                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
+            }"""
+        )]
+    )],
     path = "$endepunktRekrutteringstreff/{id}",
     methods = [HttpMethod.PUT]
 )
@@ -198,6 +203,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
 data class RekrutteringstreffDTO(
     val id: UUID,
     val tittel: String,
+    val beskrivelse: String?,
     val fraTid: ZonedDateTime,
     val tilTid: ZonedDateTime,
     val sted: String,
@@ -209,6 +215,7 @@ data class RekrutteringstreffDTO(
 
 data class OpprettRekrutteringstreffDto(
     val tittel: String,
+    val beskrivelse: String?,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
@@ -219,6 +226,7 @@ data class OpprettRekrutteringstreffDto(
 
 data class OppdaterRekrutteringstreffDto(
     val tittel: String,
+    val beskrivelse: String?,
     val fraTid: ZonedDateTime,
     val tilTid: ZonedDateTime,
     val sted: String

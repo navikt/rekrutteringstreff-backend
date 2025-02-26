@@ -136,6 +136,7 @@ class RekrutteringstreffEierTest {
     ) {
         val originalDto = OpprettRekrutteringstreffDto(
             tittel = tittel,
+            beskrivelse = "Testbeskrivelse",
             opprettetAvNavkontorEnhetId = "Original Kontor",
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),

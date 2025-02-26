@@ -6,6 +6,7 @@ import java.util.*
 class Rekrutteringstreff(
     val id: TreffId,
     val tittel: String,
+    val beskrivelse: String,
     val fraTid: ZonedDateTime,
     val tilTid: ZonedDateTime,
     val sted: String,
@@ -16,6 +17,7 @@ class Rekrutteringstreff(
 ) {
     fun tilRekrutteringstreffDTO() = RekrutteringstreffDTO(
         tittel = tittel,
+        beskrivelse = beskrivelse,
         fraTid = fraTid,
         tilTid = tilTid,
         sted = sted,

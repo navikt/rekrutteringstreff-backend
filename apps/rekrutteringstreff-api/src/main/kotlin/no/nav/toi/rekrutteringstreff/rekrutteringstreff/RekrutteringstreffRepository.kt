@@ -15,20 +15,21 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             connection.prepareStatement(
                 """
                 INSERT INTO $tabellnavn 
-                ($idKolonne, $tittel, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $fratid, $tiltid, $sted, $eiere)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ($idKolonne, $tittel, $beskrivelse, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $fratid, $tiltid, $sted, $eiere)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setObject(1, UUID.randomUUID())
                 stmt.setString(2, dto.tittel)
-                stmt.setString(3, Status.Utkast.name)
-                stmt.setString(4, navIdent)
-                stmt.setString(5, dto.opprettetAvNavkontorEnhetId)
-                stmt.setTimestamp(6, Timestamp.from(java.time.Instant.now()))
-                stmt.setTimestamp(7, Timestamp.from(dto.fraTid.toInstant()))
-                stmt.setTimestamp(8, Timestamp.from(dto.tilTid.toInstant()))
-                stmt.setString(9, dto.sted)
-                stmt.setArray(10, connection.createArrayOf("text", arrayOf(navIdent)))
+                stmt.setString(3, dto.beskrivelse)
+                stmt.setString(4, Status.Utkast.name)
+                stmt.setString(5, navIdent)
+                stmt.setString(6, dto.opprettetAvNavkontorEnhetId)
+                stmt.setTimestamp(7, Timestamp.from(java.time.Instant.now()))
+                stmt.setTimestamp(8, Timestamp.from(dto.fraTid.toInstant()))
+                stmt.setTimestamp(9, Timestamp.from(dto.tilTid.toInstant()))
+                stmt.setString(10, dto.sted)
+                stmt.setArray(11, connection.createArrayOf("text", arrayOf(navIdent)))
                 stmt.executeUpdate()
             }
         }
@@ -39,15 +40,16 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             connection.prepareStatement(
                 """
                 UPDATE $tabellnavn 
-                SET $tittel = ?, $fratid = ?, $tiltid = ?, $sted = ?
+                SET $tittel = ?, $beskrivelse = ?, $fratid = ?, $tiltid = ?, $sted = ?
                 WHERE $idKolonne = ?
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setString(1, dto.tittel)
-                stmt.setTimestamp(2, Timestamp.from(dto.fraTid.toInstant()))
-                stmt.setTimestamp(3, Timestamp.from(dto.tilTid.toInstant()))
-                stmt.setString(4, dto.sted)
-                stmt.setObject(5, id.somUuid)
+                stmt.setString(2, dto.beskrivelse)
+                stmt.setTimestamp(3, Timestamp.from(dto.fraTid.toInstant()))
+                stmt.setTimestamp(4, Timestamp.from(dto.tilTid.toInstant()))
+                stmt.setString(5, dto.sted)
+                stmt.setObject(6, id.somUuid)
                 stmt.executeUpdate()
             }
         }
@@ -95,6 +97,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         private const val tabellnavn = "rekrutteringstreff"
         private const val idKolonne = "id"
         private const val tittel = "tittel"
+        private const val beskrivelse = "beskrivelse"
         private const val status = "status"
         private const val opprettetAvPersonNavident = "opprettet_av_person_navident"
         private const val opprettetAvKontorEnhetid = "opprettet_av_kontor_enhetid"
@@ -108,6 +111,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(
         id = TreffId(getObject(idKolonne, UUID::class.java)),
         tittel = getString(tittel),
+        beskrivelse = getString(beskrivelse),
         fraTid = getTimestamp(fratid).toInstant().atOslo(),
         tilTid = getTimestamp(tiltid).toInstant().atOslo(),
         sted = getString(sted),
@@ -117,6 +121,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo()
     )
 }
+
 
 class Tabellnavn(private val navn: String) {
     override fun toString() = navn

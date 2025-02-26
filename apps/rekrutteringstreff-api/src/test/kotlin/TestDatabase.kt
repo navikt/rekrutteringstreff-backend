@@ -49,6 +49,7 @@ class TestDatabase {
     private fun konverterTilRekrutteringstreff(resultSet: ResultSet) = Rekrutteringstreff(
         id = TreffId(resultSet.getObject("id", UUID::class.java)),
         tittel = resultSet.getString("tittel"),
+        beskrivelse = resultSet.getString("beskrivelse"),
         fraTid = resultSet.getTimestamp("fratid").toInstant().atOslo(),
         tilTid = resultSet.getTimestamp("tiltid").toInstant().atOslo(),
         sted = resultSet.getString("sted"),

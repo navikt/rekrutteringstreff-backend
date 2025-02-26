@@ -1,23 +1,20 @@
 package no.nav.toi.rekrutteringstreff
 
-
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result
-import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
 import no.nav.toi.rekrutteringstreff.ObjectMapperProvider.mapper
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpprettRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffDTO
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.RekrutteringstreffRepository
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.*
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffTest {
-
 
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
@@ -64,11 +61,13 @@ class RekrutteringstreffTest {
         val gyldigFraTid = nowOslo().minusDays(1)
         val gyldigTilTid = nowOslo().plusDays(1).plusHours(2)
         val gyldigSted = "Gyldig Sted"
+        val gyldigBeskrivelse = "Beskrivelse for oppretting"
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
             .body(
                 """
                 {
                     "tittel": "$gyldigTittelfelt",
+                    "beskrivelse": "$gyldigBeskrivelse",
                     "opprettetAvPersonNavident": "$navIdent",
                     "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt",
                     "opprettetAvTidspunkt": "${nowOslo().minusDays(10)}",
@@ -86,6 +85,7 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(201)
                 val rekrutteringstreff = database.hentAlleRekrutteringstreff().first()
                 assertThat(rekrutteringstreff.tittel).isEqualTo(gyldigTittelfelt)
+                assertThat(rekrutteringstreff.beskrivelse).isEqualTo(gyldigBeskrivelse)
                 assertThat(rekrutteringstreff.fraTid).isEqualTo(gyldigFraTid)
                 assertThat(rekrutteringstreff.tilTid).isEqualTo(gyldigTilTid)
                 assertThat(rekrutteringstreff.sted).isEqualTo(gyldigSted)
@@ -100,10 +100,12 @@ class RekrutteringstreffTest {
     fun hentAlleRekrutteringstreff() {
         val tittel1 = "Tittel1111111"
         val sted1 = "Sted1"
+        val beskrivelse1 = "Beskrivelse 1"
         val tittel2 = "Tittel2222222"
         val sted2 = "Sted2"
-        opprettRekrutteringstreffIDatabase(navIdent = "navident1", tittel = tittel1, sted = sted1)
-        opprettRekrutteringstreffIDatabase(navIdent = "navIdent2", tittel = tittel2, sted = sted2)
+        val beskrivelse2 = "Beskrivelse 2"
+        opprettRekrutteringstreffIDatabase(navIdent = "navident1", tittel = tittel1, sted = sted1, beskrivelse = beskrivelse1)
+        opprettRekrutteringstreffIDatabase(navIdent = "navIdent2", tittel = tittel2, sted = sted2, beskrivelse = beskrivelse2)
 
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)
@@ -125,8 +127,10 @@ class RekrutteringstreffTest {
                 assertThat(liste).hasSize(2)
                 val dto1 = liste.find { it.tittel == tittel1 }!!
                 assertThat(dto1.sted).isEqualTo(sted1)
+                assertThat(dto1.beskrivelse).isEqualTo(beskrivelse1)
                 val dto2 = liste.find { it.tittel == tittel2 }!!
                 assertThat(dto2.sted).isEqualTo(sted2)
+                assertThat(dto2.beskrivelse).isEqualTo(beskrivelse2)
             }
         }
     }
@@ -137,8 +141,9 @@ class RekrutteringstreffTest {
         val token = lagToken(navIdent = navIdent)
         val originalTittel = "Spesifikk Tittel"
         val originalSted = "Sted"
+        val originalBeskrivelse = "Spesifikk beskrivelse"
 
-        opprettRekrutteringstreffIDatabase(navIdent, tittel = originalTittel, sted = originalSted)
+        opprettRekrutteringstreffIDatabase(navIdent, tittel = originalTittel, sted = originalSted, beskrivelse = originalBeskrivelse)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -150,6 +155,7 @@ class RekrutteringstreffTest {
                 val dto = mapper.readValue(result.get(), RekrutteringstreffDTO::class.java)
                 assertThat(dto.tittel).isEqualTo(originalTittel)
                 assertThat(dto.sted).isEqualTo(originalSted)
+                assertThat(dto.beskrivelse).isEqualTo(originalBeskrivelse)
             }
         }
     }
@@ -162,6 +168,7 @@ class RekrutteringstreffTest {
         val created = database.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
             tittel = "Oppdatert Tittel",
+            beskrivelse = "Oppdatert beskrivelse",
             fraTid = nowOslo().minusHours(2),
             tilTid = nowOslo().plusHours(3),
             sted = "Oppdatert Sted"
@@ -177,6 +184,7 @@ class RekrutteringstreffTest {
                 val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDTO::class.java)
                 assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
                 assertThat(updatedDto.sted).isEqualTo(updateDto.sted)
+                assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
             }
         }
     }
@@ -200,9 +208,10 @@ class RekrutteringstreffTest {
         assertThat(remaining).isEmpty()
     }
 
-    private fun opprettRekrutteringstreffIDatabase(navIdent: String, tittel: String = "Original Tittel", sted: String = "Original Sted") {
+    private fun opprettRekrutteringstreffIDatabase(navIdent: String, tittel: String = "Original Tittel", sted: String = "Original Sted", beskrivelse: String? = "Original Beskrivelse") {
         val originalDto = OpprettRekrutteringstreffDto(
             tittel = tittel,
+            beskrivelse = beskrivelse,
             opprettetAvNavkontorEnhetId = "Original Kontor",
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),
@@ -233,6 +242,7 @@ class RekrutteringstreffTest {
                 """
                 {
                     "tittel": "No Auth",
+                    "beskrivelse": "Ingen autorisasjon",
                     "opprettetAvNavkontorEnhetId": "Test",
                     "fraTid": "${nowOslo()}",
                     "tilTid": "${nowOslo()}",
@@ -255,7 +265,6 @@ class RekrutteringstreffTest {
 
     @Test
     fun unauthorizedHentEnkelt() {
-        // Bruker et dummy UUID
         val dummyId = UUID.randomUUID().toString()
         val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .header("Authorization", "Bearer invalidtoken")
@@ -268,6 +277,7 @@ class RekrutteringstreffTest {
         val dummyId = UUID.randomUUID().toString()
         val updateDto = OppdaterRekrutteringstreffDto(
             tittel = "Updated",
+            beskrivelse = "Oppdatert beskrivelse",
             fraTid = nowOslo(),
             tilTid = nowOslo(),
             sted = "Updated"
