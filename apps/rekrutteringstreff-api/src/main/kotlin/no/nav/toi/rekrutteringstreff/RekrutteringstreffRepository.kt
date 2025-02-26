@@ -16,7 +16,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             connection.prepareStatement(
                 """
                 INSERT INTO $tabellnavn 
-                ($idKolonne, $tittel, $beskrivelse, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $fratid, $tiltid, $sted, $eiere)
+                ($id, $tittel, $beskrivelse, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $fratid, $tiltid, $sted, $eiere)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent()
             ).use { stmt ->
@@ -36,13 +36,13 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun oppdater(id: TreffId, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
+    fun oppdater(treff: TreffId, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
                 UPDATE $tabellnavn 
                 SET $tittel = ?, $beskrivelse = ?, $fratid = ?, $tiltid = ?, $sted = ?
-                WHERE $idKolonne = ?
+                WHERE $id = ?
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setString(1, dto.tittel)
@@ -50,16 +50,16 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 stmt.setTimestamp(3, Timestamp.from(dto.fraTid.toInstant()))
                 stmt.setTimestamp(4, Timestamp.from(dto.tilTid.toInstant()))
                 stmt.setString(5, dto.sted)
-                stmt.setObject(6, id.somUuid)
+                stmt.setObject(6, treff.somUuid)
                 stmt.executeUpdate()
             }
         }
     }
 
-    fun slett(id: TreffId) {
+    fun slett(treff: TreffId) {
         dataSource.connection.use { connection ->
-            connection.prepareStatement("DELETE FROM $tabellnavn WHERE $idKolonne = ?").use { stmt ->
-                stmt.setObject(1, id.somUuid)
+            connection.prepareStatement("DELETE FROM $tabellnavn WHERE $id = ?").use { stmt ->
+                stmt.setObject(1, treff.somUuid)
                 stmt.executeUpdate()
             }
         }
@@ -77,10 +77,10 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun hent(id: TreffId): Rekrutteringstreff? {
+    fun hent(treff: TreffId): Rekrutteringstreff? {
         dataSource.connection.use { connection ->
-            connection.prepareStatement("SELECT * FROM $tabellnavn WHERE $idKolonne = ?").use { stmt ->
-                stmt.setObject(1, id.somUuid)
+            connection.prepareStatement("SELECT * FROM $tabellnavn WHERE $id = ?").use { stmt ->
+                stmt.setObject(1, treff.somUuid)
                 val resultSet = stmt.executeQuery()
                 return if (resultSet.next()) resultSet.tilRekrutteringstreff() else null
             }
@@ -91,12 +91,12 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         dataSource,
         rekrutteringstreff = Tabellnavn(tabellnavn),
         eiere = Kolonnenavn(eiere),
-        id = Kolonnenavn(idKolonne)
+        id = Kolonnenavn(id)
     )
 
     companion object {
         private const val tabellnavn = "rekrutteringstreff"
-        private const val idKolonne = "id"
+        private const val id = "id"
         private const val tittel = "tittel"
         private const val beskrivelse = "beskrivelse"
         private const val status = "status"
@@ -110,7 +110,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     }
 
     private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(
-        id = TreffId(getObject(idKolonne, UUID::class.java)),
+        id = TreffId(getObject(id, UUID::class.java)),
         tittel = getString(tittel),
         beskrivelse = getString(beskrivelse),
         fraTid = getTimestamp(fratid).toInstant().atOslo(),
