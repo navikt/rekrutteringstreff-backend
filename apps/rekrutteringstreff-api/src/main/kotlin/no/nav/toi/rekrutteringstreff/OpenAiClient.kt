@@ -8,10 +8,14 @@ import com.github.kittinunf.result.Result
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class OpenAiMessage(val role: String, val content: String)
+
 data class OpenAiRequest(val messages: List<OpenAiMessage>, val temperature: Double, val max_tokens: Int)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class OpenAiResponse(val id: String?, val choices: List<Choice>?)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class Choice(val message: OpenAiMessage?, val finish_reason: String?)
 
 object OpenAiClient {
