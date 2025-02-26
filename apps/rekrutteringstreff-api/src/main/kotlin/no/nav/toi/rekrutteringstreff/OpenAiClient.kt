@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.fuel.httpPost
@@ -7,6 +8,7 @@ import com.github.kittinunf.result.Result
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class OpenAiMessage(val role: String, val content: String)
 data class OpenAiRequest(val messages: List<OpenAiMessage>, val temperature: Double, val max_tokens: Int)
 data class OpenAiResponse(val id: String?, val choices: List<Choice>?)
