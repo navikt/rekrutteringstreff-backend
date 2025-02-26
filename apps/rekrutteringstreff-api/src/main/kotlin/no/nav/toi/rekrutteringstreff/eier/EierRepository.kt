@@ -46,15 +46,8 @@ class EierRepository(
 
     fun slett(id: TreffId, eier: String) {
         dataSource.connection.use { connection ->
-            val eiereUtenSlettetEier: Set<String> = connection.prepareStatement("SELECT $eiere FROM $rekrutteringstreff WHERE $idKolonne = ?").use { stmt ->
-                stmt.setObject(1, id.somUuid)
-                val resulSet = stmt.executeQuery()
-                if(resulSet.next()) {
-                    (resulSet.getArray("$eiere").array as Array<*>).map(Any?::toString) - eier
-                } else emptyList()
-            }.toSet()
-            connection.prepareStatement("UPDATE $rekrutteringstreff SET $eiere = ? WHERE $idKolonne = ?").use { stmt ->
-                stmt.setArray(1, connection.createArrayOf("text", eiereUtenSlettetEier.toTypedArray()))
+            connection.prepareStatement("UPDATE $rekrutteringstreff SET $eiere = array_remove($eiere, ?) WHERE $idKolonne = ?").use { stmt ->
+                stmt.setString(1, eier)
                 stmt.setObject(2, id.somUuid)
                 stmt.executeUpdate()
             }

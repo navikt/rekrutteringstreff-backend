@@ -197,6 +197,27 @@ class RekrutteringstreffEierTest {
         assertThat(eiere).doesNotContain(navIdent)
     }
 
+    @Test
+    fun slettEierBeholderAndreEiere() {
+        val navIdent = "A123456"
+        val beholdIdent = "B987654"
+        val token = lagToken(navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        repo.eierRepository.leggTilEiere(opprettetRekrutteringstreff.id, listOf(beholdIdent))
+        val (_, deleteResponse, deleteResult) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        when (deleteResult) {
+            is Result.Failure -> throw deleteResult.error
+            is Result.Success -> {
+                assertThat(deleteResponse.statusCode).isEqualTo(200)
+            }
+        }
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).contains(beholdIdent)
+    }
+
     private fun opprettRekrutteringstreffIDatabase(
         navIdent: String,
         tittel: String = "Original Tittel",
