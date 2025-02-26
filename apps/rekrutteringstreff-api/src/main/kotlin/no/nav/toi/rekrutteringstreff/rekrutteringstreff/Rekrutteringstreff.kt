@@ -1,7 +1,7 @@
 package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 
 class Rekrutteringstreff(
     val id: TreffId,
@@ -27,8 +27,11 @@ class Rekrutteringstreff(
     )
 }
 
+
 data class TreffId(private val id: UUID) {
-    constructor(id : String): this(UUID.fromString(id))
+    constructor(id: String) : this(UUID.fromString(id))
+
     val somUuid = id
-    override fun toString() = id.toString()
+    val somString = id.toString()
+    override fun toString() = somString
 }
