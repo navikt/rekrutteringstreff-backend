@@ -179,7 +179,6 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    @Disabled("Ikke implementert ennå")
     fun slettEier() {
         val navIdent = "A123456"
         val token = lagToken(navIdent = navIdent)

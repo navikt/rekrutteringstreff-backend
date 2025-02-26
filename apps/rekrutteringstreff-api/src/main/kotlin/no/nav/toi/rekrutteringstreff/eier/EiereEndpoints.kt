@@ -13,10 +13,12 @@ import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.*
 
 private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"
+private const val slettEiereEndepunkt = "$eiereEndepunkt/{navIdent}"
 
 fun Javalin.handleEiere(repo: EierRepository) {
     get(eiereEndepunkt, hentEiere(repo))
     put(eiereEndepunkt, leggTilEiere(repo))
+    delete(slettEiereEndepunkt, slettEier(repo))
 }
 
 @OpenApi(
@@ -27,7 +29,7 @@ fun Javalin.handleEiere(repo: EierRepository) {
     responses = [OpenApiResponse(
         status = "201"
     )],
-    path = endepunktRekrutteringstreff,
+    path = eiereEndepunkt,
     methods = [HttpMethod.PUT]
 )
 private fun leggTilEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
@@ -55,12 +57,29 @@ private fun leggTilEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
                 """
         )]
     )],
-    path = endepunktRekrutteringstreff,
+    path = eiereEndepunkt,
     methods = [HttpMethod.GET]
 )
 private fun hentEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
     val id = TreffId(ctx.pathParam("id"))
     val eiere = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     ctx.status(200).result(eiere.tilJson())
+}
+
+
+@OpenApi(
+    summary = "Slett eier av et rekrutteringstreff",
+    operationId = "slettEier",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(name = "id", type = UUID::class), OpenApiParam(name = "navIdent", type = String::class)],
+    responses = [OpenApiResponse(status = "200")],
+    path = slettEiereEndepunkt,
+    methods = [HttpMethod.DELETE]
+)
+private fun slettEier(repo: EierRepository): (Context) -> Unit = { ctx ->
+    val id = TreffId(ctx.pathParam("id"))
+    val navIdent = ctx.pathParam("navIdent")
+    repo.slett(id, navIdent)
+    ctx.status(200)
 }
 
