@@ -107,15 +107,13 @@ fun ZonedDateTime.atOslo(): ZonedDateTime = this.withZoneSameInstant(of("Europe/
 fun Instant.atOslo(): ZonedDateTime = this.atZone(of("Europe/Oslo")).truncatedTo(MILLIS)
 
 
-private fun getenv(key: String) =
-    System.getenv(key) ?: throw IllegalArgumentException("Det finnes ingen system-variabel ved navn $key")
+private fun getenv(key: String): String =
+    System.getenv(key) ?: throw NullPointerException("Det finnes ingen miljøvariabel med navn [$key]")
 
 private fun createDataSource(): DataSource {
-    val env: Map<String?, String?> = System.getenv()!!
-
-    val jdbcurl = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_JDBC_URL"]!!
-    val user = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_USERNAME"]!!
-    val pw = env["NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PASSWORD"]!!
+    val jdbcurl = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_JDBC_URL")
+    val user = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_USERNAME")
+    val pw = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PASSWORD")
 
     return HikariConfig().apply {
         jdbcUrl = jdbcurl

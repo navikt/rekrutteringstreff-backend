@@ -70,8 +70,8 @@ class RekrutteringstreffTest {
         val gyldigTittelfelt = "Tittelfeltet"
         val gyldigKontorfelt = "Gyldig NAV Kontor"
         val gyldigStatus = Status.Utkast
-        val gyldigFraTid = no.nav.toi.nowOslo().minusDays(1)
-        val gyldigTilTid = no.nav.toi.nowOslo().plusDays(1).plusHours(2)
+        val gyldigFraTid = nowOslo().minusDays(1)
+        val gyldigTilTid = nowOslo().plusDays(1).plusHours(2)
         val gyldigSted = "Gyldig Sted"
         val gyldigBeskrivelse = "Beskrivelse for oppretting"
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
@@ -319,7 +319,7 @@ class RekrutteringstreffTest {
     )
 
     @Test
-    fun unauthorizedOpprett() {
+    fun autentiseringOpprett() {
         val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
             .body(
                 """
@@ -339,7 +339,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun unauthorizedHentAlle() {
+    fun autentiseringHentAlle() {
         val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
             .header("Authorization", "Bearer invalidtoken")
             .responseString()
@@ -347,7 +347,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun unauthorizedHentEnkelt() {
+    fun autentiseringHentEnkelt() {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .header("Authorization", "Bearer invalidtoken")
@@ -356,7 +356,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun unauthorizedOppdater() {
+    fun autentiseringOppdater() {
         val dummyId = UUID.randomUUID().toString()
         val updateDto = OppdaterRekrutteringstreffDto(
             tittel = "Updated",
@@ -373,7 +373,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun unauthorizedSlett() {
+    fun autentiseringSlett() {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .header("Authorization", "Bearer invalidtoken")
