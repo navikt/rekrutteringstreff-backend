@@ -79,7 +79,6 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    @Disabled("Ikke implementert ennå")
     fun leggTilEier() {
         val bruker = "A123456"
         val nyEier = "B654321"
@@ -104,8 +103,80 @@ class RekrutteringstreffEierTest {
         }
     }
 
-    // TODO testcase: Legg til flere eiere samtidig
+    @Test
+    fun leggTilFlereEiereSamtidig() {
+        val bruker = "A123456"
+        val nyeEiere = listOf("B654321", "C987654")
+        val token = lagToken(navIdent = bruker)
+        opprettRekrutteringstreffIDatabase(bruker)
+        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).doesNotContainAnyElementsOf(nyeEiere)
 
+        val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
+            .body(mapper.writeValueAsString(nyeEiere))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        when (updateResult) {
+            is Result.Failure -> throw updateResult.error
+            is Result.Success -> {
+                assertThat(updateResponse.statusCode).isEqualTo(HTTP_CREATED)
+                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+                assertThat(eiere).containsAll(nyeEiere)
+            }
+        }
+    }
+
+    @Test
+    fun ikkeFjernGamleEiereNårManLeggerTilNye() {
+        val bruker = "A123456"
+        val nyeEiere = listOf("B654321", "C987654")
+        val token = lagToken(navIdent = bruker)
+        opprettRekrutteringstreffIDatabase(bruker)
+        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).contains(bruker)
+
+        val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
+            .body(mapper.writeValueAsString(nyeEiere))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        when (updateResult) {
+            is Result.Failure -> throw updateResult.error
+            is Result.Success -> {
+                assertThat(updateResponse.statusCode).isEqualTo(HTTP_CREATED)
+                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+                assertThat(eiere).contains(bruker)
+            }
+        }
+    }
+
+    @Test
+    fun ikkeLeggTilDuplikaterAvEiere() {
+        val bruker = "A123456"
+        val token = lagToken(navIdent = bruker)
+        opprettRekrutteringstreffIDatabase(bruker)
+        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).contains(bruker)
+
+        val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
+            .body(mapper.writeValueAsString(listOf(bruker)))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        when (updateResult) {
+            is Result.Failure -> throw updateResult.error
+            is Result.Success -> {
+                assertThat(updateResponse.statusCode).isEqualTo(HTTP_CREATED)
+                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+                assertThat(eiere).contains(bruker)
+                    .hasSize(1)
+            }
+        }
+    }
 
     @Test
     @Disabled("Ikke implementert ennå")
