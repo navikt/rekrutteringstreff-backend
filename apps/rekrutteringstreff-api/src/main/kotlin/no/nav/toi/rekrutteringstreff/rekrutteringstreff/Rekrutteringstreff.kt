@@ -29,7 +29,7 @@ class Rekrutteringstreff(
 
 
 data class TreffId(private val id: UUID) {
-    constructor(id: String) : this(UUID.fromString(id))
+    constructor(uuid: String) : this(UUID.fromString(uuid))
 
     val somUuid = id
     val somString = id.toString()
