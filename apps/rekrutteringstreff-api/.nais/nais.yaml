@@ -38,6 +38,9 @@ spec:
     outbound:
       external:
         - host: fakedings.intern.dev.nav.no
+        - host: {{ openai_azure_host }}
+          ports:
+            - port: 443
   azure:
     application:
       enabled: true
@@ -56,3 +59,5 @@ spec:
           - name: rekrutteringstreff-db
         tier: {{ gcp_db_tier }}
         diskAutoresize: {{ gcp_disk_autoresize }}
+  envFrom:
+    - secret: openai-toi-rekrutteringsbistand-stilling

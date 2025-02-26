@@ -3,6 +3,9 @@ package no.nav.toi.rekrutteringstreff
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result
+import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.App
 import no.nav.toi.AuthenticationConfiguration
@@ -11,10 +14,19 @@ import no.nav.toi.Status
 import no.nav.toi.nowOslo
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffTest {
+
+    companion object {
+        @JvmStatic
+        @RegisterExtension
+        val wireMockServer: WireMockExtension = WireMockExtension.newInstance()
+            .options(WireMockConfiguration.options().port(9955))
+            .build()
+    }
 
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
@@ -222,6 +234,56 @@ class RekrutteringstreffTest {
         }
         val remaining = database.hentAlleRekrutteringstreff()
         assertThat(remaining).isEmpty()
+    }
+
+
+    @Test
+    fun validerRekrutteringstreff() {
+        val openAiResponseBody = """
+             {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"Tittelen eller beskrivelsen inneholder potensielt diskriminerende uttrykk.\" }"
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+
+        wireMockServer.stubFor(
+            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2023-03-15-preview"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(openAiResponseBody)
+                )
+        )
+
+        val token = lagToken(navIdent = "A123456")
+        val payload = """
+            {
+                "tittel": "Kritisk Tittel",
+                "beskrivelse": "Denne beskrivelsen kan oppfattes som diskriminerende."
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/valider")
+            .body(payload)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        when(result) {
+            is Result.Failure -> throw result.error
+            is Result.Success -> {
+                assertThat(response.statusCode).isEqualTo(200)
+                val validationResult = mapper.readValue(result.get(), ValiderRekrutteringstreffResponsDto::class.java)
+                assertThat(validationResult.bryterRetningslinjer).isTrue()
+                assertThat(validationResult.begrunnelse).isEqualTo("Tittelen eller beskrivelsen inneholder potensielt diskriminerende uttrykk.")
+            }
+        }
     }
 
     private fun opprettRekrutteringstreffIDatabase(

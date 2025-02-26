@@ -12,6 +12,7 @@ val hikariVersion = "6.2.1"
 val testContainerVersion = "1.20.4"
 val swaggerParserVersion = "2.1.12"
 val nimbusVersion = "10.0.1"
+val wiremockVersion = "3.12.0"
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
@@ -35,5 +36,6 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
+    testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
 
 }

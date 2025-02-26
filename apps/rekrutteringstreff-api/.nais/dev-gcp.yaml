@@ -14,4 +14,5 @@ gcp_db_tier: db-f1-micro
 gcp_disk_autoresize: false
 postgres: POSTGRES_15
 adGruppeUtvikler: "a1749d9a-52e0-4116-bb9f-935c38f6c74a"
+openai_azure_host: "arbeidsmarked-dev.openai.azure.com"
 

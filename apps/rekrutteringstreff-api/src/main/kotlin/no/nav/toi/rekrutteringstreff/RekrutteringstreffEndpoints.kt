@@ -7,6 +7,7 @@ import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.extractNavIdent
 import no.nav.toi.rekrutteringstreff.eier.handleEiere
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -67,18 +68,6 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
                     "status": "Utkast",
                     "opprettetAvPersonNavident": "A123456",
                     "opprettetAvNavkontorEnhetId": "0318",
-                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
-                },
-                {
-                    "id": "a7f2387c-4354-4a2e-90a2-fff1a1d83dc6",
-                    "tittel": "Høstjobbtreff",
-                    "beskrivelse": "Beskrivelse av Høstjobbtreff",
-                    "fraTid": "2025-09-10T10:00:00+02:00",
-                    "tilTid": "2025-09-10T12:00:00+02:00",
-                    "sted": "NAV Bergen",
-                    "status": "Publisert",
-                    "opprettetAvPersonNavident": "A654321",
-                    "opprettetAvNavkontorEnhetId": "1203",
                     "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
                 }
             ]"""
@@ -191,12 +180,45 @@ private fun slettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): 
     ctx.status(200).result("Rekrutteringstreff slettet")
 }
 
+@OpenApi(
+    summary = "Valider tittel og beskrivelse",
+    operationId = "validerRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = ValiderRekrutteringstreffDto::class,
+            example = """{
+                "tittel": "Sommerjobbtreff",
+                "beskrivelse": "Vi arrangerer et sommerjobbtreff for flere arbeidsgivere."
+            }"""
+        )]
+    ),
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = ValiderRekrutteringstreffResponsDto::class,
+            example = """{
+                "bryterRetningslinjer": true,
+                "begrunnelse": "Sensitiv personinformasjon funnet"
+            }"""
+        )]
+    )],
+    path = "$endepunktRekrutteringstreff/valider",
+    methods = [HttpMethod.POST]
+)
+private fun validerRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    val dto = ctx.bodyAsClass<ValiderRekrutteringstreffDto>()
+    val validationResult = OpenAiClient.validateRekrutteringstreff(dto)
+    ctx.status(200).json(validationResult)
+}
+
 fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
     put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
+    post("$endepunktRekrutteringstreff/valider", validerRekrutteringstreffHandler(repo))
     handleEiere(repo.eierRepository)
 }
 
@@ -230,4 +252,14 @@ data class OppdaterRekrutteringstreffDto(
     val fraTid: ZonedDateTime,
     val tilTid: ZonedDateTime,
     val sted: String
+)
+
+data class ValiderRekrutteringstreffDto(
+    val tittel: String,
+    val beskrivelse: String
+)
+
+data class ValiderRekrutteringstreffResponsDto(
+    val bryterRetningslinjer: Boolean,
+    val begrunnelse: String
 )
