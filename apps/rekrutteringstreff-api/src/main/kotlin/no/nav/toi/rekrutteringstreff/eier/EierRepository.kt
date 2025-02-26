@@ -26,7 +26,7 @@ class EierRepository(
         }
     }
 
-    fun leggTilEiere(treff: TreffId, nyeEiere: List<String>) {
+    fun leggTil(treff: TreffId, nyeEiere: List<String>) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """

@@ -17,7 +17,7 @@ private const val slettEiereEndepunkt = "$eiereEndepunkt/{navIdent}"
 
 fun Javalin.handleEiere(repo: EierRepository) {
     get(eiereEndepunkt, hentEiere(repo))
-    put(eiereEndepunkt, leggTilEiere(repo))
+    put(eiereEndepunkt, leggTil(repo))
     delete(slettEiereEndepunkt, slettEier(repo))
 }
 
@@ -32,10 +32,10 @@ fun Javalin.handleEiere(repo: EierRepository) {
     path = eiereEndepunkt,
     methods = [HttpMethod.PUT]
 )
-private fun leggTilEiere(repo: EierRepository): (Context) -> Unit = { ctx ->
+private fun leggTil(repo: EierRepository): (Context) -> Unit = { ctx ->
     val eiere: List<String> = ctx.bodyAsClass<List<String>>()
     val id = TreffId(ctx.pathParam("id"))
-    repo.leggTilEiere(id, eiere)
+    repo.leggTil(id, eiere)
     ctx.status(201)
 }
 

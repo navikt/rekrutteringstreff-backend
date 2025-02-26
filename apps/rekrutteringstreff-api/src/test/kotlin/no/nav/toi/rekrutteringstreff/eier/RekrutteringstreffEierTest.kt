@@ -204,7 +204,7 @@ class RekrutteringstreffEierTest {
         val token = lagToken(navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        repo.eierRepository.leggTilEiere(opprettetRekrutteringstreff.id, listOf(beholdIdent))
+        repo.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
         val (_, deleteResponse, deleteResult) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
