@@ -216,6 +216,7 @@ private fun validerRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
 }
 
 fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
+    log.info("Starter handleRekrutteringstreff")
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))

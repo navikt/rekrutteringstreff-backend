@@ -43,6 +43,7 @@ fun Context.extractNavIdent(): String =
     attribute<AuthenticatedUser>("authenticatedUser")?.navIdent ?: throw UnauthorizedResponse("Not authenticated")
 
 fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>): Javalin {
+    log.info("Starter autentiseringoppsett")
     val verifiers = authConfigs.map { jwtVerifier(it) }
     before { ctx ->
         if (ctx.path().matches(Regex("""/api/rekrutteringstreff(?:$|/.*)"""))) {
