@@ -8,8 +8,8 @@ import com.github.kittinunf.result.Result.Success
 import org.assertj.core.api.Assertions.assertThat
 
 /**
- * Denne funksjonens eksistensberettigelse er å få kastet exception når et HTTP kall har feilet uten at vi har fått noen
- * responsstatuskode, f.eks. java.net.SocketException: Unexpected end of file from server */
+ * Denne funksjonens eksistensberettigelse er å få kastet den underliggende exception når et HTTP kall har feilet uten
+ * at vi har fått noen responsstatuskode, f.eks. java.net.SocketException: Unexpected end of file from server */
 fun assertStatuscodeEquals(
     expectedStatuscode: Int,
     actualResponse: Response,
