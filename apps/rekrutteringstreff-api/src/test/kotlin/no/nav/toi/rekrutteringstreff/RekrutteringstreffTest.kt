@@ -2,16 +2,14 @@ package no.nav.toi.rekrutteringstreff
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
-import com.github.kittinunf.result.Result
+import com.github.kittinunf.result.Result.Failure
+import com.github.kittinunf.result.Result.Success
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.App
-import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.*
 import no.nav.toi.ObjectMapperProvider.mapper
-import no.nav.toi.Status
-import no.nav.toi.nowOslo
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -92,8 +90,8 @@ class RekrutteringstreffTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         when (result) {
-            is Result.Failure -> throw result.error
-            is Result.Success -> {
+            is Failure -> throw result.error
+            is Success -> {
                 assertThat(response.statusCode).isEqualTo(201)
                 val rekrutteringstreff = database.hentAlleRekrutteringstreff().first()
                 assertThat(rekrutteringstreff.tittel).isEqualTo(gyldigTittelfelt)
@@ -143,8 +141,8 @@ class RekrutteringstreffTest {
             })
 
         when (result) {
-            is Result.Failure<*> -> throw result.error
-            is Result.Success<List<RekrutteringstreffDTO>> -> {
+            is Failure<*> -> throw result.error
+            is Success<List<RekrutteringstreffDTO>> -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val liste = result.get()
                 assertThat(liste).hasSize(2)
@@ -177,8 +175,8 @@ class RekrutteringstreffTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         when (result) {
-            is Result.Failure -> throw result.error
-            is Result.Success -> {
+            is Failure -> throw result.error
+            is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = mapper.readValue(result.get(), RekrutteringstreffDTO::class.java)
                 assertThat(dto.tittel).isEqualTo(originalTittel)
@@ -206,8 +204,8 @@ class RekrutteringstreffTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         when (updateResult) {
-            is Result.Failure -> throw updateResult.error
-            is Result.Success -> {
+            is Failure -> throw updateResult.error
+            is Success -> {
                 assertThat(updateResponse.statusCode).isEqualTo(200)
                 val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDTO::class.java)
                 assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
@@ -227,8 +225,8 @@ class RekrutteringstreffTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         when (deleteResult) {
-            is Result.Failure -> throw deleteResult.error
-            is Result.Success -> {
+            is Failure -> throw deleteResult.error
+            is Success -> {
                 assertThat(deleteResponse.statusCode).isEqualTo(200)
             }
         }
@@ -275,9 +273,9 @@ class RekrutteringstreffTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        when(result) {
-            is Result.Failure -> throw result.error
-            is Result.Success -> {
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val validationResult = mapper.readValue(result.get(), ValiderRekrutteringstreffResponsDto::class.java)
                 assertThat(validationResult.bryterRetningslinjer).isTrue()
@@ -375,9 +373,9 @@ class RekrutteringstreffTest {
     @Test
     fun autentiseringSlett() {
         val dummyId = UUID.randomUUID().toString()
-        val (_, response, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
+        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .header("Authorization", "Bearer invalidtoken")
             .responseString()
-        assertThat(response.statusCode).isEqualTo(401)
+        assertStatuscodeEquals(401, response, result)
     }
 }
