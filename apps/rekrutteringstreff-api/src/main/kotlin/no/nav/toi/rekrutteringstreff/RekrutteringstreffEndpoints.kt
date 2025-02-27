@@ -11,7 +11,6 @@ import no.nav.toi.rekrutteringstreff.eier.handleEiere
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
 import java.time.ZonedDateTime
 import java.util.*
-import kotlin.math.log
 
 private val log = noClassLogger()
 const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
