@@ -261,7 +261,7 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    @Ignore
+    @Disabled
     fun unauthorizedLeggTilEiere() {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, _) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
