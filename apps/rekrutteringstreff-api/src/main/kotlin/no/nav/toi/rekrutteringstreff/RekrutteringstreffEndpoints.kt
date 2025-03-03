@@ -84,6 +84,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
         ctx.status(200).json(repo.hentAlle().map { it.tilRekrutteringstreffDTO() })
     } catch (e: Exception) {
         log.error("hentAlleRekrutteringstreffHandler feilet", e)
+        throw e
     }
 }
 
