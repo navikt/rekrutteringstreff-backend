@@ -67,15 +67,21 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     }
 
     fun hentAlle() = dataSource.connection.use { connection ->
-        log.info("connection", connection)
+        log.info("connection: ${connection}")
         connection.prepareStatement("SELECT * FROM $tabellnavn").use { stmt ->
             log.info("stmt", stmt)
             stmt.executeQuery().let { resultSet ->
-                log.info("resultSet", resultSet)
+                log.info("resultSet ${resultSet}");
                 generateSequence {
-                    if (resultSet.next())
-                        resultSet.tilRekrutteringstreff()
-                    else null
+                    if (resultSet.next()) {
+                        val treff = resultSet.tilRekrutteringstreff()
+                        log.info("Treff ${treff}")
+                        treff
+                    }
+                    else {
+                        log.info("No result set found");
+                        null
+                    }
                 }.toList()
             }
         }
