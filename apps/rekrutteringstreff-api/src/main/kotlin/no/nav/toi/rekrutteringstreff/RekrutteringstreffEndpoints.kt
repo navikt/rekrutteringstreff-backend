@@ -79,13 +79,7 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     methods = [HttpMethod.GET]
 )
 private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
-    log.info("hentAlleRekrutteringstreffHandler kalt")
-    try {
-        ctx.status(200).json(repo.hentAlle().map { it.tilRekrutteringstreffDTO() })
-    } catch (e: Exception) {
-        log.error("hentAlleRekrutteringstreffHandler feilet", e)
-        throw e
-    }
+    ctx.status(200).json(repo.hentAlle().map { it.tilRekrutteringstreffDTO() })
 }
 
 @OpenApi(

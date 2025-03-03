@@ -2,12 +2,11 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.Status
 import no.nav.toi.atOslo
-import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import javax.sql.DataSource
 
 class RekrutteringstreffRepository(private val dataSource: DataSource) {
@@ -67,21 +66,11 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     }
 
     fun hentAlle() = dataSource.connection.use { connection ->
-        log.info("connection: ${connection}")
         connection.prepareStatement("SELECT * FROM $tabellnavn").use { stmt ->
-            log.info("stmt", stmt)
             stmt.executeQuery().let { resultSet ->
-                log.info("resultSet ${resultSet}");
                 generateSequence {
-                    if (resultSet.next()) {
-                        val treff = resultSet.tilRekrutteringstreff()
-                        log.info("Treff ${treff}")
-                        treff
-                    }
-                    else {
-                        log.info("No result set found");
-                        null
-                    }
+                    if (resultSet.next()) resultSet.tilRekrutteringstreff()
+                    else null
                 }.toList()
             }
         }
@@ -120,8 +109,6 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     }
 
     private fun ResultSet.tilRekrutteringstreff(): Rekrutteringstreff {
-        log.info("ResultSet.tilRekrutteringstreff()")
-        log.info("Beskrivelse", getString("beskrivelse"))
         return Rekrutteringstreff(
             id = TreffId(getObject(id, UUID::class.java)),
             tittel = getString(tittel),
