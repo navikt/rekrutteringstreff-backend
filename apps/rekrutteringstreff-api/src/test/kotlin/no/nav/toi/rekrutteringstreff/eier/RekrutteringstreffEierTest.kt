@@ -7,11 +7,8 @@ import com.github.kittinunf.fuel.core.Request
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.App
-import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.*
 import no.nav.toi.ObjectMapperProvider.mapper
-import no.nav.toi.assertStatuscodeEquals
-import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -46,20 +43,6 @@ class RekrutteringstreffEierTest {
             ),
             database.dataSource
         )
-
-        private fun lagToken(
-            issuerId: String = "http://localhost:$authPort/default",
-            navIdent: String = "A000001",
-            claims: Map<String, Any> = mapOf("NAVident" to navIdent),
-            expiry: Long = 3600,
-            audience: String = "rekrutteringstreff-audience"
-        ) = authServer.issueToken(
-            issuerId = issuerId,
-            subject = "subject",
-            claims = claims,
-            expiry = expiry,
-            audience = audience
-        )
     }
 
     @BeforeAll
@@ -83,7 +66,7 @@ class RekrutteringstreffEierTest {
     fun hentEiere() {
         val navIdent = "A123456"
         val eiere = ('0'..'9').map { "Z99999$it" }
-        val token = lagToken(navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
 
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
@@ -105,7 +88,7 @@ class RekrutteringstreffEierTest {
     fun leggTilEier() {
         val bruker = "A123456"
         val nyEier = "B654321"
-        val token = lagToken(navIdent = bruker)
+        val token = authServer.lagToken(authPort, navIdent = bruker)
         opprettRekrutteringstreffIDatabase(bruker)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
@@ -130,7 +113,7 @@ class RekrutteringstreffEierTest {
     fun leggTilFlereEiereSamtidig() {
         val bruker = "A123456"
         val nyeEiere = listOf("B654321", "C987654")
-        val token = lagToken(navIdent = bruker)
+        val token = authServer.lagToken(authPort, navIdent = bruker)
         opprettRekrutteringstreffIDatabase(bruker)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
@@ -155,7 +138,7 @@ class RekrutteringstreffEierTest {
     fun ikkeFjernGamleEiereNårManLeggerTilNye() {
         val bruker = "A123456"
         val nyeEiere = listOf("B654321", "C987654")
-        val token = lagToken(navIdent = bruker)
+        val token = authServer.lagToken(authPort, navIdent = bruker)
         opprettRekrutteringstreffIDatabase(bruker)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
@@ -179,7 +162,7 @@ class RekrutteringstreffEierTest {
     @Test
     fun ikkeLeggTilDuplikaterAvEiere() {
         val bruker = "A123456"
-        val token = lagToken(navIdent = bruker)
+        val token = authServer.lagToken(authPort, navIdent = bruker)
         opprettRekrutteringstreffIDatabase(bruker)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         assertThat(database.hentEiere(opprettetRekrutteringstreff.id)).contains(bruker)
@@ -202,7 +185,7 @@ class RekrutteringstreffEierTest {
     @Test
     fun slettEier() {
         val navIdent = "A123456"
-        val token = lagToken(navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
@@ -222,7 +205,7 @@ class RekrutteringstreffEierTest {
     fun slettEierBeholderAndreEiere() {
         val navIdent = "A123456"
         val beholdIdent = "B987654"
-        val token = lagToken(navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         repo.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
@@ -257,14 +240,14 @@ class RekrutteringstreffEierTest {
         repo.opprett(originalDto, navIdent)
     }
 
-    enum class UautentifiserendeTestCase(val leggPåToken: Request.() -> Request) {
-        UgyldigToken({ this.header("Authorization", "Bearer ugyldigtoken") }),
-        IngenToken({ this }),
-        UgyldigIssuer({ this.header("Authorization", "Bearer ${lagToken(issuerId = "http://localhost:12345/default").serialize()}") }),
-        UgyldigAudience({ this.header("Authorization", "Bearer ${lagToken(audience = "ugyldig-audience").serialize()}") }),
-        UtgåttToken({ this.header("Authorization", "Bearer ${lagToken(expiry = -1).serialize()}") }),
-        ManglendeNavIdent({ this.header("Authorization", "Bearer ${lagToken(claims = emptyMap()).serialize()}") }),
-        NoneAlgoritme({ this.header("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJub25lIn0.${lagToken().serialize().split(".")[1]}.") });
+    enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server) -> Request) {
+        UgyldigToken({ authServer -> this.header("Authorization", "Bearer ugyldigtoken") }),
+        IngenToken({ authServer -> this }),
+        UgyldigIssuer({ authServer -> this.header("Authorization", "Bearer ${authServer.lagToken(authPort, issuerId = "http://localhost:12345/default").serialize()}") }),
+        UgyldigAudience({ authServer -> this.header("Authorization", "Bearer ${authServer.lagToken(authPort, audience = "ugyldig-audience").serialize()}") }),
+        UtgåttToken({ authServer -> this.header("Authorization", "Bearer ${authServer.lagToken(authPort, expiry = -1).serialize()}") }),
+        ManglendeNavIdent({ authServer -> this.header("Authorization", "Bearer ${authServer.lagToken(authPort, claims = emptyMap()).serialize()}") }),
+        NoneAlgoritme({ authServer -> this.header("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJub25lIn0.${authServer.lagToken(authPort).serialize().split(".")[1]}.") });
     }
 
     fun tokenVarianter() = UautentifiserendeTestCase.entries.map{ Arguments.of(it) }.stream()
@@ -275,7 +258,7 @@ class RekrutteringstreffEierTest {
         val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
-            .leggPåToken()
+            .leggPåToken(authServer)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
@@ -287,7 +270,7 @@ class RekrutteringstreffEierTest {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
             .body(mapper.writeValueAsString("""["A123456"]"""))
-            .leggPåToken()
+            .leggPåToken(authServer)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
@@ -299,7 +282,7 @@ class RekrutteringstreffEierTest {
         val dummyId = UUID.randomUUID().toString()
         val navIdent = "A123456"
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent")
-            .leggPåToken()
+            .leggPåToken(authServer)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }

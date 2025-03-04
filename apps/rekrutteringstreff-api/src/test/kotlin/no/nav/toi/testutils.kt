@@ -5,6 +5,7 @@ import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.result.Result
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
+import no.nav.security.mock.oauth2.MockOAuth2Server
 import org.assertj.core.api.Assertions.assertThat
 
 /**
@@ -24,3 +25,17 @@ fun assertStatuscodeEquals(
         }
     }
 }
+fun MockOAuth2Server.lagToken(
+    authPort: Int,
+    issuerId: String = "http://localhost:$authPort/default",
+    navIdent: String = "A000001",
+    claims: Map<String, Any> = mapOf("NAVident" to navIdent),
+    expiry: Long = 3600,
+    audience: String = "rekrutteringstreff-audience"
+) = issueToken(
+    issuerId = issuerId,
+    subject = "subject",
+    claims = claims,
+    expiry = expiry,
+    audience = audience
+)

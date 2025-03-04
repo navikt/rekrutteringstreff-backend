@@ -64,7 +64,7 @@ class RekrutteringstreffTest {
     @Test
     fun opprettRekrutteringstreff() {
         val navIdent = "A123456"
-        val token = lagToken(navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
         val gyldigTittelfelt = "Tittelfeltet"
         val gyldigKontorfelt = "Gyldig NAV Kontor"
         val gyldigStatus = Status.Utkast
@@ -128,7 +128,7 @@ class RekrutteringstreffTest {
         )
 
         val navIdent = "A123456"
-        val token = lagToken(navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
 
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -159,7 +159,7 @@ class RekrutteringstreffTest {
     @Test
     fun hentRekrutteringstreff() {
         val navIdent = "A123456"
-        val token = lagToken(navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
         val originalTittel = "Spesifikk Tittel"
         val originalSted = "Sted"
         val originalBeskrivelse = "Spesifikk beskrivelse"
@@ -189,7 +189,7 @@ class RekrutteringstreffTest {
     @Test
     fun oppdaterRekrutteringstreff() {
         val navIdent = "A123456"
-        val token = lagToken(navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val created = database.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
@@ -218,7 +218,7 @@ class RekrutteringstreffTest {
     @Test
     fun slettRekrutteringstreff() {
         val navIdent = "A123456"
-        val token = lagToken(navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
@@ -260,7 +260,7 @@ class RekrutteringstreffTest {
                 )
         )
 
-        val token = lagToken(navIdent = "A123456")
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
         val payload = """
             {
                 "tittel": "Kritisk Tittel",
@@ -302,19 +302,6 @@ class RekrutteringstreffTest {
         )
         repo.opprett(originalDto, navIdent)
     }
-
-    private fun lagToken(
-        issuerId: String = "http://localhost:$authPort/default",
-        navIdent: String = "A000001",
-        claims: Map<String, Any> = mapOf("NAVident" to navIdent),
-        expiry: Long = 3600
-    ) = authServer.issueToken(
-        issuerId = issuerId,
-        subject = "subject",
-        claims = claims,
-        expiry = expiry,
-        audience = "rekrutteringstreff-audience"
-    )
 
     @Test
     fun autentiseringOpprett() {
