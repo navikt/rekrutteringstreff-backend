@@ -221,17 +221,17 @@ class RekrutteringstreffTest {
         val token = lagToken(navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val (_, deleteResponse, deleteResult) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
+        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
-        when (deleteResult) {
-            is Failure -> throw deleteResult.error
+        when (result) {
+            is Failure -> throw result.error
             is Success -> {
-                assertThat(deleteResponse.statusCode).isEqualTo(200)
+                assertThat(response.statusCode).isEqualTo(200)
+                val remaining = database.hentAlleRekrutteringstreff()
+                assertThat(remaining).isEmpty()
             }
         }
-        val remaining = database.hentAlleRekrutteringstreff()
-        assertThat(remaining).isEmpty()
     }
 
 
@@ -318,7 +318,7 @@ class RekrutteringstreffTest {
 
     @Test
     fun autentiseringOpprett() {
-        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
             .body(
                 """
                 {
@@ -333,24 +333,24 @@ class RekrutteringstreffTest {
             )
             .header("Authorization", "Bearer invalidtoken")
             .responseString()
-        assertThat(response.statusCode).isEqualTo(401)
+        assertStatuscodeEquals(401, response, result)
     }
 
     @Test
     fun autentiseringHentAlle() {
-        val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
             .header("Authorization", "Bearer invalidtoken")
             .responseString()
-        assertThat(response.statusCode).isEqualTo(401)
+        assertStatuscodeEquals(401, response, result)
     }
 
     @Test
     fun autentiseringHentEnkelt() {
         val dummyId = UUID.randomUUID().toString()
-        val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .header("Authorization", "Bearer invalidtoken")
             .responseString()
-        assertThat(response.statusCode).isEqualTo(401)
+        assertStatuscodeEquals(401, response, result)
     }
 
     @Test
@@ -363,11 +363,11 @@ class RekrutteringstreffTest {
             tilTid = nowOslo(),
             sted = "Updated"
         )
-        val (_, response, _) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
+        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .body(mapper.writeValueAsString(updateDto))
             .header("Authorization", "Bearer invalidtoken")
             .responseString()
-        assertThat(response.statusCode).isEqualTo(401)
+        assertStatuscodeEquals(401, response, result)
     }
 
     @Test
