@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff.eier
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.Request
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
@@ -16,30 +17,50 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.util.*
+
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffEierTest {
 
 
-    private val authServer = MockOAuth2Server()
-    private val authPort = 18012
-    private val database = TestDatabase()
-    private val appPort = 10001
-    private val repo = RekrutteringstreffRepository(database.dataSource)
+    companion object {
+        private val authServer = MockOAuth2Server()
+        private val authPort = 18012
+        private val database = TestDatabase()
+        private val appPort = 10001
+        private val repo = RekrutteringstreffRepository(database.dataSource)
 
-    private val app = App(
-        port = appPort,
-        authConfigs = listOf(
-            AuthenticationConfiguration(
-                issuer = "http://localhost:$authPort/default",
-                jwksUri = "http://localhost:$authPort/default/jwks",
-                audience = "rekrutteringstreff-audience"
-            )
-        ),
-        database.dataSource
-    )
+        private val app = App(
+            port = appPort,
+            authConfigs = listOf(
+                AuthenticationConfiguration(
+                    issuer = "http://localhost:$authPort/default",
+                    jwksUri = "http://localhost:$authPort/default/jwks",
+                    audience = "rekrutteringstreff-audience"
+                )
+            ),
+            database.dataSource
+        )
+
+        private fun lagToken(
+            issuerId: String = "http://localhost:$authPort/default",
+            navIdent: String = "A000001",
+            claims: Map<String, Any> = mapOf("NAVident" to navIdent),
+            expiry: Long = 3600,
+            audience: String = "rekrutteringstreff-audience"
+        ) = authServer.issueToken(
+            issuerId = issuerId,
+            subject = "subject",
+            claims = claims,
+            expiry = expiry,
+            audience = audience
+        )
+    }
 
     @BeforeAll
     fun setUp() {
@@ -236,30 +257,33 @@ class RekrutteringstreffEierTest {
         repo.opprett(originalDto, navIdent)
     }
 
-    private fun lagToken(
-        issuerId: String = "http://localhost:$authPort/default",
-        navIdent: String = "A000001",
-        claims: Map<String, Any> = mapOf("NAVident" to navIdent),
-        expiry: Long = 3600
-    ) = authServer.issueToken(
-        issuerId = issuerId,
-        subject = "subject",
-        claims = claims,
-        expiry = expiry,
-        audience = "rekrutteringstreff-audience"
-    )
+    enum class UautentifiserendeTestCase(val leggPåToken: Request.() -> Request) {
+        UgyldigToken({ this.header("Authorization", "Bearer ugyldigtoken") }),
+        IngenToken({ this }),
+        UgyldigIssuer({ this.header("Authorization", "Bearer ${lagToken(issuerId = "http://localhost:12345/default").serialize()}") }),
+        UgyldigAudience({ this.header("Authorization", "Bearer ${lagToken(audience = "ugyldig-audience").serialize()}") }),
+        UtgåttToken({ this.header("Authorization", "Bearer ${lagToken(expiry = -1).serialize()}") }),
+        ManglendeNavIdent({ this.header("Authorization", "Bearer ${lagToken(claims = emptyMap()).serialize()}") }),
+        NoneAlgoritme({ this.header("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJub25lIn0.${lagToken().serialize().split(".")[1]}.") });
+    }
 
-    @Test
-    fun autentiseringHentEiere() {
+    fun tokenVarianter() = UautentifiserendeTestCase.entries.map{ Arguments.of(it) }.stream()
+
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringHentEiere(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
-            .header("Authorization", "Bearer invalidtoken")
+            .leggPåToken()
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
 
-    @Test
-    fun autentiseringLeggTilEiere() {
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringLeggTilEiere(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
             .body(mapper.writeValueAsString("""["A123456"]"""))
@@ -268,8 +292,10 @@ class RekrutteringstreffEierTest {
         assertStatuscodeEquals(401, response, result)
     }
 
-    @Test
-    fun autentiseringSlettEier() {
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringSlettEier(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val navIdent = "A123456"
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent")
