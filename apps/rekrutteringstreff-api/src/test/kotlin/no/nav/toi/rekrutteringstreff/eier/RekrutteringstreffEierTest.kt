@@ -26,7 +26,7 @@ class RekrutteringstreffEierTest {
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
     private val database = TestDatabase()
-    private val appPort = 10000
+    private val appPort = 10001
     private val repo = RekrutteringstreffRepository(database.dataSource)
 
     private val app = App(
@@ -259,7 +259,6 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    @Disabled
     fun autentiseringLeggTilEiere() {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
