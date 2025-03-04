@@ -10,6 +10,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.ObjectMapperProvider.mapper
+import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -31,7 +32,7 @@ class RekrutteringstreffTest {
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
     private val database = TestDatabase()
-    private val appPort = 10000
+    private val appPort = ubruktPortnr()
     private val repo = RekrutteringstreffRepository(database.dataSource)
 
     private val app = App(

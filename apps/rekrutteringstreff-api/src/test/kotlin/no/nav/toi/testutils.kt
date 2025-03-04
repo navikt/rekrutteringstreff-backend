@@ -9,6 +9,7 @@ import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.provider.Arguments
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Denne funksjonens eksistensberettigelse er å få kastet den underliggende exception når et HTTP kall har feilet uten
@@ -27,6 +28,8 @@ fun assertStatuscodeEquals(
         }
     }
 }
+
+
 fun MockOAuth2Server.lagToken(
     authPort: Int,
     issuerId: String = "http://localhost:$authPort/default",
@@ -41,6 +44,7 @@ fun MockOAuth2Server.lagToken(
     expiry = expiry,
     audience = audience
 )
+
 
 enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server, Int) -> Request) {
     UgyldigToken({ authServer, authPort -> this.header("Authorization", "Bearer ugyldigtoken") }),
@@ -71,6 +75,12 @@ enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server
     });
 
     companion object {
-        fun somStrømAvArgumenter() = entries.map{ Arguments.of(it) }.stream()
+        fun somStrømAvArgumenter() = entries.map { Arguments.of(it) }.stream()
     }
+}
+
+
+object ubruktPortnrFra10000 {
+    private val portnr = AtomicInteger(10000)
+    fun ubruktPortnr(): Int = portnr.andIncrement
 }

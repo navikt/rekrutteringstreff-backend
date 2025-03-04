@@ -1,9 +1,7 @@
 package no.nav.toi.rekrutteringstreff.eier
 
-
 import com.fasterxml.jackson.core.type.TypeReference
 import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.Request
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
@@ -12,10 +10,10 @@ import no.nav.toi.ObjectMapperProvider.mapper
 import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.util.*
@@ -29,7 +27,7 @@ class RekrutteringstreffEierTest {
         private val authServer = MockOAuth2Server()
         private val authPort = 18012
         private val database = TestDatabase()
-        private val appPort = 10001
+        private val appPort = ubruktPortnr()
         private val repo = RekrutteringstreffRepository(database.dataSource)
 
         private val app = App(

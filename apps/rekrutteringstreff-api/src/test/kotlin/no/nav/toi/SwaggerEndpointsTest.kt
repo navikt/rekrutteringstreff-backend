@@ -3,6 +3,7 @@ package no.nav.toi
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -13,7 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SwaggerEndpointsTest {
 
-    private val appPort = 10000
+    private val appPort = ubruktPortnr()
     private val app = App(port = appPort, listOf(), TestDatabase().dataSource)
 
     @BeforeAll
