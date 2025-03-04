@@ -287,7 +287,7 @@ class RekrutteringstreffEierTest {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
             .body(mapper.writeValueAsString("""["A123456"]"""))
-            .header("Authorization", "Bearer invalidtoken")
+            .leggPåToken()
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
@@ -299,7 +299,7 @@ class RekrutteringstreffEierTest {
         val dummyId = UUID.randomUUID().toString()
         val navIdent = "A123456"
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent")
-            .header("Authorization", "Bearer invalidtoken")
+            .leggPåToken()
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
