@@ -7,16 +7,16 @@ import com.github.kittinunf.result.Result
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.App
 import no.nav.toi.AuthenticationConfiguration
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
 import no.nav.toi.ObjectMapperProvider.mapper
-import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.assertStatuscodeEquals
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import org.junit.Ignore
+import no.nav.toi.rekrutteringstreff.TestDatabase
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.*
 import java.net.HttpURLConnection.HTTP_CREATED
-import java.util.UUID
+import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffEierTest {
@@ -251,7 +251,7 @@ class RekrutteringstreffEierTest {
     )
 
     @Test
-    fun unauthorizedHentEiere() {
+    fun autentiseringHentEiere() {
         // Bruker et dummy UUID
         val dummyId = UUID.randomUUID().toString()
         val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
@@ -262,7 +262,7 @@ class RekrutteringstreffEierTest {
 
     @Test
     @Disabled
-    fun unauthorizedLeggTilEiere() {
+    fun autentiseringLeggTilEiere() {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, _) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
             .body(mapper.writeValueAsString("""["A123456"]"""))
@@ -272,12 +272,12 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    fun unauthorizedSlettEier() {
+    fun autentiseringSlettEier() {
         val dummyId = UUID.randomUUID().toString()
         val navIdent = "A123456"
-        val (_, response, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent")
+        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent")
             .header("Authorization", "Bearer invalidtoken")
             .responseString()
-        assertThat(response.statusCode).isEqualTo(401)
+        assertStatuscodeEquals(401, response, result)
     }
 }
