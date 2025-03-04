@@ -11,7 +11,6 @@ import no.nav.toi.rekrutteringstreff.eier.handleEiere
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
 import java.time.ZonedDateTime
 import java.util.*
-import kotlin.math.log
 
 private val log = noClassLogger()
 const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -80,7 +79,6 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     methods = [HttpMethod.GET]
 )
 private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
-    log.info("hentAlleRekrutteringstreffHandler kalt")
     ctx.status(200).json(repo.hentAlle().map { it.tilRekrutteringstreffDTO() })
 }
 

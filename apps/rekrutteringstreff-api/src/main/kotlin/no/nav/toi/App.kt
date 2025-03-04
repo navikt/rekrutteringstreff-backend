@@ -27,13 +27,16 @@ class App(
         private set
 
     fun start() {
+        log.info("Starter app")
         kjørFlywayMigreringer(dataSource)
+        log.info("Har kjørt flyway migreringer")
         javalin = Javalin.create { config ->
             configureOpenApi(config)
             jacksonObjectMapper().apply {
                 disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                 registerModule(JavaTimeModule())
             }
+            log.info("Javalin opprettet")
         }
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
@@ -48,9 +51,13 @@ class App(
     }
 }
 
-fun main() {
+private val log = noClassLogger()
 
+fun main() {
+    log.info("Starter App");
     val dataSource = createDataSource()
+    log.info("Datasource opprettet");
+
     App(
         8080,
         listOfNotNull(

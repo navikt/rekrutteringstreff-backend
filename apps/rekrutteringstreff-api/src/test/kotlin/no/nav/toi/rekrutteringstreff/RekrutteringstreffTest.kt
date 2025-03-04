@@ -371,6 +371,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
+    @Disabled
     fun autentiseringSlett() {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")

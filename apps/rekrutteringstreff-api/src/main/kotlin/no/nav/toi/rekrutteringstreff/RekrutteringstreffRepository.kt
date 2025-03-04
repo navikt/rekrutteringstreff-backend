@@ -6,7 +6,7 @@ import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import javax.sql.DataSource
 
 class RekrutteringstreffRepository(private val dataSource: DataSource) {
@@ -69,8 +69,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         connection.prepareStatement("SELECT * FROM $tabellnavn").use { stmt ->
             stmt.executeQuery().let { resultSet ->
                 generateSequence {
-                    if (resultSet.next())
-                        resultSet.tilRekrutteringstreff()
+                    if (resultSet.next()) resultSet.tilRekrutteringstreff()
                     else null
                 }.toList()
             }
@@ -109,18 +108,20 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         private const val eiere = "eiere"
     }
 
-    private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(
-        id = TreffId(getObject(id, UUID::class.java)),
-        tittel = getString(tittel),
-        beskrivelse = getString(beskrivelse),
-        fraTid = getTimestamp(fratid).toInstant().atOslo(),
-        tilTid = getTimestamp(tiltid).toInstant().atOslo(),
-        sted = getString(sted),
-        status = getString(status),
-        opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
-        opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
-        opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo()
-    )
+    private fun ResultSet.tilRekrutteringstreff(): Rekrutteringstreff {
+        return Rekrutteringstreff(
+            id = TreffId(getObject(id, UUID::class.java)),
+            tittel = getString(tittel),
+            beskrivelse = getString(beskrivelse),
+            fraTid = getTimestamp(fratid).toInstant().atOslo(),
+            tilTid = getTimestamp(tiltid).toInstant().atOslo(),
+            sted = getString(sted),
+            status = getString(status),
+            opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
+            opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
+            opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo()
+        )
+    }
 }
 
 
