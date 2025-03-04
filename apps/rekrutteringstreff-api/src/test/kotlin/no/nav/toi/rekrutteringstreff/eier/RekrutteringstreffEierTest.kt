@@ -240,17 +240,7 @@ class RekrutteringstreffEierTest {
         repo.opprett(originalDto, navIdent)
     }
 
-    enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server) -> Request) {
-        UgyldigToken({ authServer -> this.header("Authorization", "Bearer ugyldigtoken") }),
-        IngenToken({ authServer -> this }),
-        UgyldigIssuer({ authServer -> this.header("Authorization", "Bearer ${authServer.lagToken(authPort, issuerId = "http://localhost:12345/default").serialize()}") }),
-        UgyldigAudience({ authServer -> this.header("Authorization", "Bearer ${authServer.lagToken(authPort, audience = "ugyldig-audience").serialize()}") }),
-        UtgåttToken({ authServer -> this.header("Authorization", "Bearer ${authServer.lagToken(authPort, expiry = -1).serialize()}") }),
-        ManglendeNavIdent({ authServer -> this.header("Authorization", "Bearer ${authServer.lagToken(authPort, claims = emptyMap()).serialize()}") }),
-        NoneAlgoritme({ authServer -> this.header("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJub25lIn0.${authServer.lagToken(authPort).serialize().split(".")[1]}.") });
-    }
-
-    fun tokenVarianter() = UautentifiserendeTestCase.entries.map{ Arguments.of(it) }.stream()
+    fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
@@ -258,7 +248,7 @@ class RekrutteringstreffEierTest {
         val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
-            .leggPåToken(authServer)
+            .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
@@ -270,7 +260,7 @@ class RekrutteringstreffEierTest {
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
             .body(mapper.writeValueAsString("""["A123456"]"""))
-            .leggPåToken(authServer)
+            .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
@@ -282,7 +272,7 @@ class RekrutteringstreffEierTest {
         val dummyId = UUID.randomUUID().toString()
         val navIdent = "A123456"
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent")
-            .leggPåToken(authServer)
+            .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }

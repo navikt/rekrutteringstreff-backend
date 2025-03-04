@@ -13,6 +13,8 @@ import no.nav.toi.ObjectMapperProvider.mapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -303,8 +305,12 @@ class RekrutteringstreffTest {
         repo.opprett(originalDto, navIdent)
     }
 
-    @Test
-    fun autentiseringOpprett() {
+    fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
+
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringOpprett(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
             .body(
                 """
@@ -318,30 +324,36 @@ class RekrutteringstreffTest {
                 }
                 """.trimIndent()
             )
-            .header("Authorization", "Bearer invalidtoken")
+            .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
 
-    @Test
-    fun autentiseringHentAlle() {
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringHentAlle(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
-            .header("Authorization", "Bearer invalidtoken")
+            .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
 
-    @Test
-    fun autentiseringHentEnkelt() {
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringHentEnkelt(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
-            .header("Authorization", "Bearer invalidtoken")
+            .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
 
-    @Test
-    fun autentiseringOppdater() {
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringOppdater(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val updateDto = OppdaterRekrutteringstreffDto(
             tittel = "Updated",
@@ -352,16 +364,18 @@ class RekrutteringstreffTest {
         )
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .body(mapper.writeValueAsString(updateDto))
-            .header("Authorization", "Bearer invalidtoken")
+            .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
 
-    @Test
-    fun autentiseringSlett() {
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringSlett(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
-            .header("Authorization", "Bearer invalidtoken")
+            .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }

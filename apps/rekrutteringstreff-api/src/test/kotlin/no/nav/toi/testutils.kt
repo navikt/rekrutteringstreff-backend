@@ -1,12 +1,14 @@
 package no.nav.toi
 
 import com.github.kittinunf.fuel.core.FuelError
+import com.github.kittinunf.fuel.core.Request
 import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.result.Result
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.params.provider.Arguments
 
 /**
  * Denne funksjonens eksistensberettigelse er å få kastet den underliggende exception når et HTTP kall har feilet uten
@@ -39,3 +41,36 @@ fun MockOAuth2Server.lagToken(
     expiry = expiry,
     audience = audience
 )
+
+enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server, Int) -> Request) {
+    UgyldigToken({ authServer, authPort -> this.header("Authorization", "Bearer ugyldigtoken") }),
+    IngenToken({ authServer, authPort -> this }),
+    UgyldigIssuer({ authServer, authPort ->
+        this.header(
+            "Authorization",
+            "Bearer ${authServer.lagToken(authPort, issuerId = "http://localhost:12345/default").serialize()}"
+        )
+    }),
+    UgyldigAudience({ authServer, authPort ->
+        this.header(
+            "Authorization",
+            "Bearer ${authServer.lagToken(authPort, audience = "ugyldig-audience").serialize()}"
+        )
+    }),
+    UtgåttToken({ authServer, authPort ->
+        this.header("Authorization", "Bearer ${authServer.lagToken(authPort, expiry = -1).serialize()}")
+    }),
+    ManglendeNavIdent({ authServer, authPort ->
+        this.header("Authorization", "Bearer ${authServer.lagToken(authPort, claims = emptyMap()).serialize()}")
+    }),
+    NoneAlgoritme({ authServer, authPort ->
+        this.header(
+            "Authorization",
+            "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJub25lIn0.${authServer.lagToken(authPort).serialize().split(".")[1]}."
+        )
+    });
+
+    companion object {
+        fun somStrømAvArgumenter() = entries.map{ Arguments.of(it) }.stream()
+    }
+}
