@@ -8,6 +8,7 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.ObjectMapperProvider.mapper
 import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
@@ -225,17 +226,13 @@ class RekrutteringstreffEierTest {
         tittel: String = "Original Tittel",
         sted: String = "Original Sted"
     ) {
-        val originalDto = OpprettRekrutteringstreffDto(
+        val originalDto = OpprettRekrutteringstreffInternalDto(
             tittel = tittel,
-            beskrivelse = "Testbeskrivelse",
             opprettetAvNavkontorEnhetId = "Original Kontor",
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),
-            fraTid = nowOslo().minusDays(1),
-            tilTid = nowOslo().plusDays(1),
-            sted = sted
         )
-        repo.opprett(originalDto, navIdent)
+        repo.opprett(originalDto)
     }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()

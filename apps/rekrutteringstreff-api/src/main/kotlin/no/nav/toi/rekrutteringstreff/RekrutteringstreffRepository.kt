@@ -11,26 +11,23 @@ import javax.sql.DataSource
 
 class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
-    fun opprett(dto: OpprettRekrutteringstreffDto, navIdent: String) {
+    fun opprett(dto: OpprettRekrutteringstreffInternalDto) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
                 INSERT INTO $tabellnavn 
-                ($id, $tittel, $beskrivelse, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $fratid, $tiltid, $sted, $eiere)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ($id, $tittel, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $eiere)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """.trimIndent()
             ).use { stmt ->
-                stmt.setObject(1, UUID.randomUUID())
-                stmt.setString(2, dto.tittel)
-                stmt.setString(3, dto.beskrivelse)
-                stmt.setString(4, Status.Utkast.name)
-                stmt.setString(5, navIdent)
-                stmt.setString(6, dto.opprettetAvNavkontorEnhetId)
-                stmt.setTimestamp(7, Timestamp.from(Instant.now()))
-                stmt.setTimestamp(8, Timestamp.from(dto.fraTid.toInstant()))
-                stmt.setTimestamp(9, Timestamp.from(dto.tilTid.toInstant()))
-                stmt.setString(10, dto.sted)
-                stmt.setArray(11, connection.createArrayOf("text", arrayOf(navIdent)))
+                var c =  0;
+                stmt.setObject(++c, UUID.randomUUID())
+                stmt.setString(++c, dto.tittel)
+                stmt.setString(++c, Status.Utkast.name)
+                stmt.setString(++c, dto.opprettetAvPersonNavident)
+                stmt.setString(++c, dto.opprettetAvNavkontorEnhetId)
+                stmt.setTimestamp(++c, Timestamp.from(Instant.now()))
+                stmt.setArray(++c, connection.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
                 stmt.executeUpdate()
             }
         }
@@ -113,8 +110,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             id = TreffId(getObject(id, UUID::class.java)),
             tittel = getString(tittel),
             beskrivelse = getString(beskrivelse),
-            fraTid = getTimestamp(fratid).toInstant().atOslo(),
-            tilTid = getTimestamp(tiltid).toInstant().atOslo(),
+            fraTid = getTimestamp(fratid)?.toInstant()?.atOslo(),
+            tilTid = getTimestamp(tiltid)?.toInstant()?.atOslo(),
             sted = getString(sted),
             status = getString(status),
             opprettetAvPersonNavident = getString(opprettetAvPersonNavident),

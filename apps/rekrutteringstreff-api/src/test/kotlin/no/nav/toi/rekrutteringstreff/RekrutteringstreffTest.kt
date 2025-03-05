@@ -68,25 +68,13 @@ class RekrutteringstreffTest {
     fun opprettRekrutteringstreff() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val gyldigTittelfelt = "Tittelfeltet"
         val gyldigKontorfelt = "Gyldig NAV Kontor"
         val gyldigStatus = Status.Utkast
-        val gyldigFraTid = nowOslo().minusDays(1)
-        val gyldigTilTid = nowOslo().plusDays(1).plusHours(2)
-        val gyldigSted = "Gyldig Sted"
-        val gyldigBeskrivelse = "Beskrivelse for oppretting"
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
             .body(
                 """
                 {
-                    "tittel": "$gyldigTittelfelt",
-                    "beskrivelse": "$gyldigBeskrivelse",
-                    "opprettetAvPersonNavident": "$navIdent",
-                    "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt",
-                    "opprettetAvTidspunkt": "${nowOslo().minusDays(10)}",
-                    "fraTid": "$gyldigFraTid",
-                    "tilTid": "$gyldigTilTid",
-                    "sted": "$gyldigSted"
+                    "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt"
                 }
                 """.trimIndent()
             )
@@ -97,11 +85,11 @@ class RekrutteringstreffTest {
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(201)
                 val rekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-                assertThat(rekrutteringstreff.tittel).isEqualTo(gyldigTittelfelt)
-                assertThat(rekrutteringstreff.beskrivelse).isEqualTo(gyldigBeskrivelse)
-                assertThat(rekrutteringstreff.fraTid).isEqualTo(gyldigFraTid)
-                assertThat(rekrutteringstreff.tilTid).isEqualTo(gyldigTilTid)
-                assertThat(rekrutteringstreff.sted).isEqualTo(gyldigSted)
+                assertThat(rekrutteringstreff.tittel).isEqualTo("Nytt rekrutteringstreff")
+                assertThat(rekrutteringstreff.beskrivelse).isNull()
+                assertThat(rekrutteringstreff.fraTid).isNull()
+                assertThat(rekrutteringstreff.tilTid).isNull()
+                assertThat(rekrutteringstreff.sted).isNull()
                 assertThat(rekrutteringstreff.status).isEqualTo(gyldigStatus.name)
                 assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
                 assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
@@ -112,22 +100,14 @@ class RekrutteringstreffTest {
     @Test
     fun hentAlleRekrutteringstreff() {
         val tittel1 = "Tittel1111111"
-        val sted1 = "Sted1"
-        val beskrivelse1 = "Beskrivelse 1"
         val tittel2 = "Tittel2222222"
-        val sted2 = "Sted2"
-        val beskrivelse2 = "Beskrivelse 2"
         opprettRekrutteringstreffIDatabase(
             navIdent = "navident1",
             tittel = tittel1,
-            sted = sted1,
-            beskrivelse = beskrivelse1
         )
         opprettRekrutteringstreffIDatabase(
             navIdent = "navIdent2",
             tittel = tittel2,
-            sted = sted2,
-            beskrivelse = beskrivelse2
         )
 
         val navIdent = "A123456"
@@ -149,12 +129,7 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val liste = result.get()
                 assertThat(liste).hasSize(2)
-                val dto1 = liste.find { it.tittel == tittel1 }!!
-                assertThat(dto1.sted).isEqualTo(sted1)
-                assertThat(dto1.beskrivelse).isEqualTo(beskrivelse1)
-                val dto2 = liste.find { it.tittel == tittel2 }!!
-                assertThat(dto2.sted).isEqualTo(sted2)
-                assertThat(dto2.beskrivelse).isEqualTo(beskrivelse2)
+                assertThat(liste.map { it.tittel }).contains(tittel1, tittel2)
             }
         }
     }
@@ -164,14 +139,10 @@ class RekrutteringstreffTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val originalTittel = "Spesifikk Tittel"
-        val originalSted = "Sted"
-        val originalBeskrivelse = "Spesifikk beskrivelse"
 
         opprettRekrutteringstreffIDatabase(
             navIdent,
             tittel = originalTittel,
-            sted = originalSted,
-            beskrivelse = originalBeskrivelse
         )
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
@@ -183,8 +154,6 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = mapper.readValue(result.get(), RekrutteringstreffDTO::class.java)
                 assertThat(dto.tittel).isEqualTo(originalTittel)
-                assertThat(dto.sted).isEqualTo(originalSted)
-                assertThat(dto.beskrivelse).isEqualTo(originalBeskrivelse)
             }
         }
     }
@@ -290,20 +259,14 @@ class RekrutteringstreffTest {
     private fun opprettRekrutteringstreffIDatabase(
         navIdent: String,
         tittel: String = "Original Tittel",
-        sted: String = "Original Sted",
-        beskrivelse: String? = "Original Beskrivelse"
     ) {
-        val originalDto = OpprettRekrutteringstreffDto(
+        val originalDto = OpprettRekrutteringstreffInternalDto(
             tittel = tittel,
-            beskrivelse = beskrivelse,
             opprettetAvNavkontorEnhetId = "Original Kontor",
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),
-            fraTid = nowOslo().minusDays(1),
-            tilTid = nowOslo().plusDays(1),
-            sted = sted
         )
-        repo.opprett(originalDto, navIdent)
+        repo.opprett(originalDto)
     }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()

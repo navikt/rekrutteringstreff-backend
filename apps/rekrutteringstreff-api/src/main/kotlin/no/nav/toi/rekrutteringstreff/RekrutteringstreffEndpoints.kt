@@ -23,14 +23,7 @@ const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         content = [OpenApiContent(
             from = OpprettRekrutteringstreffDto::class,
             example = """{
-                "tittel": "Sommerjobbtreff",
-                "beskrivelse": "Beskrivelse av arrangementet",
                 "opprettetAvNavkontorEnhetId": "0318",
-                "opprettetAvPersonNavident": "A123456",
-                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
-                "fraTid": "2025-06-15T09:00:00+02:00",
-                "tilTid": "2025-06-15T11:00:00+02:00",
-                "sted": "NAV Oslo"
             }"""
         )]
     ),
@@ -45,9 +38,26 @@ const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
     methods = [HttpMethod.POST]
 )
 private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
-    val dto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
-    val navIdent = ctx.extractNavIdent()
-    repo.opprett(dto, navIdent)
+    /*
+                "tittel": "Sommerjobbtreff",
+                "beskrivelse": "Beskrivelse av arrangementet",
+                "opprettetAvNavkontorEnhetId": "0318",
+                "opprettetAvPersonNavident": "A123456",
+                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
+                "fraTid": "2025-06-15T09:00:00+02:00",
+                "tilTid": "2025-06-15T11:00:00+02:00",
+                "sted": "NAV Oslo"
+     */
+
+    val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
+    val internalDto = OpprettRekrutteringstreffInternalDto(
+        tittel = "Nytt rekrutteringstreff",
+        opprettetAvPersonNavident = ctx.extractNavIdent(),
+        opprettetAvNavkontorEnhetId = inputDto.opprettetAvNavkontorEnhetId,
+        opprettetAvTidspunkt = ZonedDateTime.now(),
+    )
+
+    repo.opprett(internalDto)
     ctx.status(201).result("Rekrutteringstreff opprettet")
 }
 
@@ -228,9 +238,9 @@ data class RekrutteringstreffDTO(
     val id: UUID,
     val tittel: String,
     val beskrivelse: String?,
-    val fraTid: ZonedDateTime,
-    val tilTid: ZonedDateTime,
-    val sted: String,
+    val fraTid: ZonedDateTime?,
+    val tilTid: ZonedDateTime?,
+    val sted: String?,
     val status: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
@@ -238,14 +248,14 @@ data class RekrutteringstreffDTO(
 )
 
 data class OpprettRekrutteringstreffDto(
+    val opprettetAvNavkontorEnhetId: String,
+)
+
+data class OpprettRekrutteringstreffInternalDto(
     val tittel: String,
-    val beskrivelse: String?,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
-    val fraTid: ZonedDateTime,
-    val tilTid: ZonedDateTime,
-    val sted: String
 )
 
 data class OppdaterRekrutteringstreffDto(
