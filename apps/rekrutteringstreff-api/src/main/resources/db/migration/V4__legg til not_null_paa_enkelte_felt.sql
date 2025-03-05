@@ -1,0 +1,4 @@
+ALTER TABLE rekrutteringstreff
+    ALTER COLUMN tittel SET NOT NULL,
+ALTER COLUMN status SET NOT NULL,
+  ALTER COLUMN eiere SET NOT NULL;
