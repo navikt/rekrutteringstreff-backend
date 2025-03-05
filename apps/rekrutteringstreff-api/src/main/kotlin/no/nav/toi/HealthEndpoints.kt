@@ -21,7 +21,7 @@ private const val endepunktAlive = "/isalive"
     path = endepunktReady,
     methods = [HttpMethod.GET]
 )
-fun isReadyHandler(ctx: Context) {
+private fun isReadyHandler(ctx: Context) {
     ctx.result("isready")
 }
 
@@ -36,7 +36,7 @@ fun isReadyHandler(ctx: Context) {
     path = endepunktAlive,
     methods = [HttpMethod.GET]
 )
-fun isAliveHandler(ctx: Context) {
+private fun isAliveHandler(ctx: Context) {
     ctx.result("isalive")
 }
 

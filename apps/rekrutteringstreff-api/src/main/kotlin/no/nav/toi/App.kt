@@ -23,7 +23,7 @@ class App(
     private val authConfigs: List<AuthenticationConfiguration>,
     private val dataSource: DataSource
 ) {
-    lateinit var javalin: Javalin
+    private lateinit var javalin: Javalin
         private set
 
     fun start() {
@@ -79,14 +79,14 @@ fun main() {
     ).start()
 }
 
-fun kjørFlywayMigreringer(dataSource: DataSource) {
+private fun kjørFlywayMigreringer(dataSource: DataSource) {
     Flyway.configure()
         .dataSource(dataSource)
         .load()
         .migrate()
 }
 
-fun configureOpenApi(config: JavalinConfig) {
+private fun configureOpenApi(config: JavalinConfig) {
     val openApiPlugin = OpenApiPlugin { openApiConfig ->
         openApiConfig.withDefinitionConfiguration { _, definition ->
             definition.withInfo { info ->

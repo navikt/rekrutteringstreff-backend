@@ -20,31 +20,37 @@ private const val NAV_IDENT_CLAIM = "NAVident"
 
 private val log = noClassLogger()
 
-data class AuthenticationConfiguration(
-    val issuer: String,
-    val jwksUri: String,
-    val audience: String
-)
+class AuthenticationConfiguration(
+    private val issuer: String,
+    private val jwksUri: String,
+    private val audience: String
+) {
+    fun jwtVerifier() = JWT.require(algorithm(jwksUri))
+        .withIssuer(issuer)
+        .withAudience(audience)
+        .withClaimPresence(NAV_IDENT_CLAIM)
+        .build()
+}
 
-data class AuthenticatedUser(
-    val navIdent: String,
-    val jwt: String
+class AuthenticatedUser private constructor(
+    private val navIdent: String
 ) {
     companion object {
         fun fromJwt(jwt: DecodedJWT): AuthenticatedUser {
             val navIdent = jwt.getClaim(NAV_IDENT_CLAIM).asString()
                 ?: throw UnauthorizedResponse("Missing claim: $NAV_IDENT_CLAIM")
-            return AuthenticatedUser(navIdent, jwt.token)
+            return AuthenticatedUser(navIdent)
         }
+
+        fun Context.extractNavIdent(): String =
+            attribute<AuthenticatedUser>("authenticatedUser")?.navIdent ?: throw UnauthorizedResponse("Not authenticated")
     }
 }
 
-fun Context.extractNavIdent(): String =
-    attribute<AuthenticatedUser>("authenticatedUser")?.navIdent ?: throw UnauthorizedResponse("Not authenticated")
 
 fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>): Javalin {
     log.info("Starter autentiseringoppsett")
-    val verifiers = authConfigs.map { jwtVerifier(it) }
+    val verifiers = authConfigs.map { it.jwtVerifier() }
     before { ctx ->
         if (ctx.path().matches(Regex("""/api/rekrutteringstreff(?:$|/.*)"""))) {
             val token = ctx.header(HttpHeader.AUTHORIZATION.name)
@@ -71,14 +77,6 @@ private fun verifyJwt(verifiers: List<JWTVerifier>, token: String): DecodedJWT {
     throw UnauthorizedResponse("Token verification failed")
 }
 
-private fun jwtVerifier(config: AuthenticationConfiguration): JWTVerifier {
-    val algorithm = algorithm(config.jwksUri)
-    return JWT.require(algorithm)
-        .withIssuer(config.issuer)
-        .withAudience(config.audience)
-        .withClaimPresence(NAV_IDENT_CLAIM)
-        .build()
-}
 
 private fun algorithm(jwksUri: String): Algorithm {
     val jwkProvider = JwkProviderBuilder(URI(jwksUri).toURL())
