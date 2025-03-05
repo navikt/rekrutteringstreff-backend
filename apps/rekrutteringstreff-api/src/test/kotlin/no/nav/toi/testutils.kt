@@ -1,5 +1,9 @@
 package no.nav.toi
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.Request
 import com.github.kittinunf.fuel.core.Response
@@ -83,4 +87,9 @@ enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server
 object ubruktPortnrFra10000 {
     private val portnr = AtomicInteger(10000)
     fun ubruktPortnr(): Int = portnr.andIncrement
+}
+
+val mapper: ObjectMapper = jacksonObjectMapper().apply {
+    registerModule(JavaTimeModule())
+    disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
 }
