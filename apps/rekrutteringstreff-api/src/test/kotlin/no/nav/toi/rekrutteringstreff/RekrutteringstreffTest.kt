@@ -84,6 +84,10 @@ class RekrutteringstreffTest {
             is Failure -> throw result.error
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(201)
+                val json = mapper.readTree(result.get())
+                val postId = json.get("id").asText()
+                assertThat(postId).isNotEmpty()
+
                 val rekrutteringstreff = database.hentAlleRekrutteringstreff().first()
                 assertThat(rekrutteringstreff.tittel).isEqualTo("Nytt rekrutteringstreff")
                 assertThat(rekrutteringstreff.beskrivelse).isNull()
@@ -93,6 +97,7 @@ class RekrutteringstreffTest {
                 assertThat(rekrutteringstreff.status).isEqualTo(gyldigStatus.name)
                 assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
                 assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
+                assertThat(rekrutteringstreff.id.somString).isEqualTo(postId)
             }
         }
     }
