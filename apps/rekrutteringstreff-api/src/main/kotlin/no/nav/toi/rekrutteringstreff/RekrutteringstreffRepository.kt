@@ -11,17 +11,18 @@ import javax.sql.DataSource
 
 class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
-    fun opprett(dto: OpprettRekrutteringstreffInternalDto) {
+    fun opprett(dto: OpprettRekrutteringstreffInternalDto): UUID {
+        val gerernertId = UUID.randomUUID()
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
-                INSERT INTO $tabellnavn 
-                ($id, $tittel, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $eiere)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """.trimIndent()
+            INSERT INTO $tabellnavn 
+            ($id, $tittel, $status, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $eiere)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent()
             ).use { stmt ->
-                var c =  0;
-                stmt.setObject(++c, UUID.randomUUID())
+                var c = 0
+                stmt.setObject(++c, gerernertId)
                 stmt.setString(++c, dto.tittel)
                 stmt.setString(++c, Status.Utkast.name)
                 stmt.setString(++c, dto.opprettetAvPersonNavident)
@@ -31,6 +32,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 stmt.executeUpdate()
             }
         }
+        return gerernertId
     }
 
     fun oppdater(treff: TreffId, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
@@ -42,12 +44,13 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 WHERE $id = ?
                 """.trimIndent()
             ).use { stmt ->
-                stmt.setString(1, dto.tittel)
-                stmt.setString(2, dto.beskrivelse)
-                stmt.setTimestamp(3, Timestamp.from(dto.fraTid.toInstant()))
-                stmt.setTimestamp(4, Timestamp.from(dto.tilTid.toInstant()))
-                stmt.setString(5, dto.sted)
-                stmt.setObject(6, treff.somUuid)
+                var c = 0
+                stmt.setString(++c, dto.tittel)
+                stmt.setString(++c, dto.beskrivelse)
+                stmt.setTimestamp(++c, Timestamp.from(dto.fraTid.toInstant()))
+                stmt.setTimestamp(++c, Timestamp.from(dto.tilTid.toInstant()))
+                stmt.setString(++c, dto.sted)
+                stmt.setObject(++c, treff.somUuid)
                 stmt.executeUpdate()
             }
         }

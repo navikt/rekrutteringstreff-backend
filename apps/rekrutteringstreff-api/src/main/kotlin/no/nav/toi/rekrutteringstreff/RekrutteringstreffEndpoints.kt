@@ -38,27 +38,15 @@ const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
     methods = [HttpMethod.POST]
 )
 private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
-    /*
-                "tittel": "Sommerjobbtreff",
-                "beskrivelse": "Beskrivelse av arrangementet",
-                "opprettetAvNavkontorEnhetId": "0318",
-                "opprettetAvPersonNavident": "A123456",
-                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
-                "fraTid": "2025-06-15T09:00:00+02:00",
-                "tilTid": "2025-06-15T11:00:00+02:00",
-                "sted": "NAV Oslo"
-     */
-
     val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
     val internalDto = OpprettRekrutteringstreffInternalDto(
         tittel = "Nytt rekrutteringstreff",
         opprettetAvPersonNavident = ctx.extractNavIdent(),
         opprettetAvNavkontorEnhetId = inputDto.opprettetAvNavkontorEnhetId,
-        opprettetAvTidspunkt = ZonedDateTime.now(),
+        opprettetAvTidspunkt = ZonedDateTime.now()
     )
-
-    repo.opprett(internalDto)
-    ctx.status(201).result("Rekrutteringstreff opprettet")
+    val id = repo.opprett(internalDto)
+    ctx.status(201).json(mapOf("id" to id.toString()))
 }
 
 @OpenApi(
