@@ -279,12 +279,7 @@ class RekrutteringstreffTest {
             .body(
                 """
                 {
-                    "tittel": "No Auth",
-                    "beskrivelse": "Ingen autorisasjon",
                     "opprettetAvNavkontorEnhetId": "Test",
-                    "fraTid": "${nowOslo()}",
-                    "tilTid": "${nowOslo()}",
-                    "sted": "Test"
                 }
                 """.trimIndent()
             )

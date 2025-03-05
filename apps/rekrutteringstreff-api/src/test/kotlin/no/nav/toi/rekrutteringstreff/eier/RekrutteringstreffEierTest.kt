@@ -7,7 +7,6 @@ import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.ObjectMapperProvider.mapper
-import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -224,7 +223,6 @@ class RekrutteringstreffEierTest {
     private fun opprettRekrutteringstreffIDatabase(
         navIdent: String,
         tittel: String = "Original Tittel",
-        sted: String = "Original Sted"
     ) {
         val originalDto = OpprettRekrutteringstreffInternalDto(
             tittel = tittel,
