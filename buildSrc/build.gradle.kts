@@ -5,7 +5,7 @@ plugins {
     id("ca.cutterslade.analyze") version "1.9.0" apply true
 }
 
-group = "no.nav.arbeidsgiver"
+group = "no.nav.toi"
 version = "unspecified"
 
 repositories {
