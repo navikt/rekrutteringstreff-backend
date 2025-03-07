@@ -9,6 +9,7 @@ import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
+import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
 import org.flywaydb.core.Flyway
@@ -24,7 +25,6 @@ class App(
     private val dataSource: DataSource
 ) {
     private lateinit var javalin: Javalin
-        private set
 
     fun start() {
         log.info("Starter app")
@@ -54,9 +54,10 @@ class App(
 private val log = noClassLogger()
 
 fun main() {
-    log.info("Starter App");
+    log.info("Starter App")
+    secure(log).info("Starter App. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
     val dataSource = createDataSource()
-    log.info("Datasource opprettet");
+    log.info("Datasource opprettet")
 
     App(
         8080,
