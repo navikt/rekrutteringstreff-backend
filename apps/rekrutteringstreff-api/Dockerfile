@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/java21
+FROM gcr.io/distroless/java21:nonroot
 ARG APP_NAME
 WORKDIR /$APP_NAME
 COPY build/libs/*.jar ./
