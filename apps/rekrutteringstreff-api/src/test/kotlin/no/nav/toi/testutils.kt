@@ -24,11 +24,11 @@ fun assertStatuscodeEquals(
     actualResult: Result<*, FuelError>
 ) {
     when (actualResult) {
-        is Success -> assertThat(expectedStatuscode).isEqualTo(actualResponse.statusCode)
+        is Success -> assertThat(actualResponse.statusCode).isEqualTo(expectedStatuscode)
         is Failure -> if (actualResponse.statusCode == -1) {
             throw actualResult.error
         } else {
-            assertThat(expectedStatuscode).isEqualTo(actualResponse.statusCode)
+            assertThat(actualResponse.statusCode).isEqualTo(expectedStatuscode)
         }
     }
 }
