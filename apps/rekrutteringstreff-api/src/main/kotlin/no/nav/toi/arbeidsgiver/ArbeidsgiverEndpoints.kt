@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.arbeidsgiver
+package no.nav.toi.arbeidsgiver
 
 
 import io.javalin.Javalin

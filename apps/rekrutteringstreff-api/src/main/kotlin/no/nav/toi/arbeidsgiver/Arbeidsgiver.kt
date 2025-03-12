@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.arbeidsgiver
+package no.nav.toi.arbeidsgiver
 
 data class Orgnr(private val orgnr: String) {
     init {
