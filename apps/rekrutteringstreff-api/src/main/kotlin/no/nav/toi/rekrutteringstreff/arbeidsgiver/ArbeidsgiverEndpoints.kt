@@ -13,11 +13,12 @@ import java.util.*
 private const val pathParamTreffId = "treffId"
 private const val leggTilArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver"
 
-data class LeggTilArbeidsgiverDto(
-    val treffId: String,
+private data class LeggTilArbeidsgiverDto(
     val orgnr: String,
     val orgnavn: String
-) // TODO Are: Takler Javalin bruke sterkere typer her?
+) {
+    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(orgnr), Orgnavn(orgnavn))
+}
 
 
 @OpenApi(
@@ -32,10 +33,10 @@ data class LeggTilArbeidsgiverDto(
     methods = [HttpMethod.POST]
 )
 private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
-    val arbeidsgiver: LeggTilArbeidsgiverDto = ctx.bodyAsClass<LeggTilArbeidsgiverDto>()
+    val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass<LeggTilArbeidsgiverDto>()
     val treff = TreffId(ctx.pathParam("treffId"))
-    repo.leggTil(arbeidsgiver, treff)
-    ctx.status(201) // TODO: Inkluidere ID til ny arbeidsgiver i HTTP response?
+    repo.leggTil(dto.somLeggTilArbeidsgiver(), treff)
+    ctx.status(201)
 }
 
 

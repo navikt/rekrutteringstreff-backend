@@ -4,6 +4,7 @@ import com.github.kittinunf.fuel.Fuel
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -69,21 +70,24 @@ class ArbeidsgiverTest {
 
     @Test
     fun leggTilArbeidsgiver() {
-        val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
-//        val anyOrgnr = Orgnr("555555555")
-//        val anyOrgnavn = Orgnavn("anyOrgnavn")
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
         val anyOrgnr = "555555555"
         val anyOrgnavn = "anyOrgnavn"
-        val anyTreffId = UUID.randomUUID().toString()
-        val anyArbeidsgiver = LeggTilArbeidsgiverDto(anyTreffId, anyOrgnr, anyOrgnavn)
+        val anyTreffId = TreffId(UUID.randomUUID())
+        val requestBody = """
+            {
+              "orgnr" : "$anyOrgnr",
+              "orgnavn" : "$anyOrgnavn"
+            }
+            """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$anyTreffId/arbeidsgiver")
-            .body(mapper.writeValueAsString(anyArbeidsgiver))
+            .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
         assertStatuscodeEquals(HTTP_CREATED, response, result)
+        // TODO Assert antall i DB
     }
 
     // TODO testcase: Når treffet ikke finnes
