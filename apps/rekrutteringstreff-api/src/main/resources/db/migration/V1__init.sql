@@ -1,5 +1,5 @@
 CREATE TABLE rekrutteringstreff (
-    db_id serial PRIMARY KEY,
+    db_id bigserial PRIMARY KEY,
     id uuid NOT NULL,
     tittel text,
     status text,
