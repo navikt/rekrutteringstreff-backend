@@ -1,5 +1,0 @@
-ALTER TABLE rekrutteringstreff
-    ALTER COLUMN fratid DROP NOT NULL,
-    ALTER COLUMN tiltid DROP NOT NULL,
-    ALTER COLUMN sted DROP NOT NULL,
-    ALTER COLUMN beskrivelse DROP NOT NULL;
