@@ -3,8 +3,10 @@ package no.nav.toi.rekrutteringstreff.arbeidsgiver
 import com.github.kittinunf.fuel.Fuel
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.arbeidsgiver.Arbeidsgiver
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -12,7 +14,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
-import java.util.UUID
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -22,7 +23,7 @@ class ArbeidsgiverTest {
     companion object {
         private val authServer = MockOAuth2Server()
         private val authPort = 18012
-        private val database = TestDatabase()
+        private val db = TestDatabase()
         private val appPort = ubruktPortnr()
 
         private val app = App(
@@ -34,7 +35,7 @@ class ArbeidsgiverTest {
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            database.dataSource
+            db.dataSource
         )
     }
 
@@ -52,7 +53,7 @@ class ArbeidsgiverTest {
 
     @AfterEach
     fun reset() {
-        database.slettAlt()
+        db.slettAlt()
     }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
@@ -72,26 +73,33 @@ class ArbeidsgiverTest {
     @Test
     fun leggTilArbeidsgiver() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
-        val anyOrgnr = "555555555"
-        val anyOrgnavn = "anyOrgnavn"
-        val anyTreffId = TreffId(UUID.randomUUID())
+        val orgnr = Orgnr("555555555")
+        val orgnavn = Orgnavn("Oooorgnavn")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
             {
-              "orgnr" : "$anyOrgnr",
-              "orgnavn" : "$anyOrgnavn"
+              "orgnr" : "$orgnr",
+              "orgnavn" : "$orgnavn"
             }
             """.trimIndent()
-        assertThat(database.hentAlleArbeidsgviere()).isEmpty()
+        assertThat(db.hentAlleArbeidsgviere()).isEmpty()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$anyTreffId/arbeidsgiver")
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/arbeidsgiver")
             .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
         assertStatuscodeEquals(HTTP_CREATED, response, result)
-        assertThat(database.hentAlleArbeidsgviere().size).isEqualTo(1)
+        val actualArbeidsgivere = db.hentAlleArbeidsgviere()
+        assertThat(actualArbeidsgivere.size).isEqualTo(1)
+        actualArbeidsgivere.first().also { actual: Arbeidsgiver ->
+            assertThat(actual.treffId).isEqualTo(treffId)
+            assertThat(actual.orgnr).isEqualTo(orgnr)
+            assertThat(actual.orgnavn).isEqualTo(orgnavn)
+        }
     }
 
     // TODO testcase: Når treffet ikke finnes
+
 
 }

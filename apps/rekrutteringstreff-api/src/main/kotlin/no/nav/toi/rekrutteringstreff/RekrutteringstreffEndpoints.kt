@@ -154,7 +154,7 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     val id = TreffId(ctx.pathParam("id"))
     val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
     val navIdent = ctx.extractNavIdent()
-    repo.oppdater(id, dto, navIdent)
+    repo.oppdater(id, dto)
     val updated = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet etter oppdatering")
     ctx.status(200).json(updated.tilRekrutteringstreffDTO())
 }

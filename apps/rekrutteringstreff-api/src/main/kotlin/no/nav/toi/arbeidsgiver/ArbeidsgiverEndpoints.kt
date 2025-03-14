@@ -10,7 +10,7 @@ import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.*
 
 
-private const val pathParamTreffId = "treffId"
+private const val pathParamTreffId = "id"
 private const val leggTilArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver"
 
 private data class LeggTilArbeidsgiverDto(
@@ -34,7 +34,7 @@ private data class LeggTilArbeidsgiverDto(
 )
 private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
     val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass<LeggTilArbeidsgiverDto>()
-    val treff = TreffId(ctx.pathParam("treffId"))
+    val treff = TreffId(ctx.pathParam(pathParamTreffId))
     repo.leggTil(dto.somLeggTilArbeidsgiver(), treff)
     ctx.status(201)
 }

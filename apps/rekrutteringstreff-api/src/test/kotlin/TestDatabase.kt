@@ -7,16 +7,32 @@ import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.atOslo
+import no.nav.toi.nowOslo
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
-import javax.sql.DataSource
 import java.sql.ResultSet
-import java.util.UUID
+import java.util.*
+import javax.sql.DataSource
 
 
 class TestDatabase {
+
+    fun opprettRekrutteringstreffIDatabase(
+        navIdent: String = "Original navident",
+        tittel: String = "Original Tittel",
+    ): TreffId {
+        val originalDto = OpprettRekrutteringstreffInternalDto(
+            tittel = tittel,
+            opprettetAvNavkontorEnhetId = "Original Kontor",
+            opprettetAvPersonNavident = navIdent,
+            opprettetAvTidspunkt = nowOslo().minusDays(10),
+        )
+        return RekrutteringstreffRepository(dataSource).opprett(originalDto)
+    }
+
     fun slettAlt() {
         dataSource.connection.use {
+            it.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
             it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
         }
     }
