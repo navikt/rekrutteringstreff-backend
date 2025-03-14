@@ -11,8 +11,8 @@ import javax.sql.DataSource
 
 class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
-    fun opprett(dto: OpprettRekrutteringstreffInternalDto): UUID {
-        val gerernertId = UUID.randomUUID()
+    fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
+        val nyTreffId = TreffId(UUID.randomUUID())
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
@@ -22,7 +22,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             """.trimIndent()
             ).use { stmt ->
                 var c = 0
-                stmt.setObject(++c, gerernertId)
+                stmt.setObject(++c, nyTreffId.somUuid)
                 stmt.setString(++c, dto.tittel)
                 stmt.setString(++c, Status.Utkast.name)
                 stmt.setString(++c, dto.opprettetAvPersonNavident)
@@ -32,10 +32,10 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 stmt.executeUpdate()
             }
         }
-        return gerernertId
+        return nyTreffId
     }
 
-    fun oppdater(treff: TreffId, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
+    fun oppdater(treff: TreffId, dto: OppdaterRekrutteringstreffDto) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
