@@ -71,6 +71,16 @@ class ArbeidsgiverTest {
         assertStatuscodeEquals(HTTP_UNAUTHORIZED, response, result)
     }
 
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringHentArbeidsgiverr(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
+        val anyTreffId = "anyTreffID"
+        val (_, response, result) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver")
+            .leggPåToken(authServer, authPort)
+            .responseString()
+        assertStatuscodeEquals(HTTP_UNAUTHORIZED, response, result)
+    }
 
     @Test
     fun leggTilArbeidsgiver() {
