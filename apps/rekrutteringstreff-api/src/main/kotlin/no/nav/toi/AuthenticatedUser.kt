@@ -10,10 +10,13 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import com.auth0.jwt.interfaces.RSAKeyProvider
 import io.javalin.Javalin
 import io.javalin.http.Context
+import io.javalin.http.ForbiddenResponse
+import io.javalin.http.InternalServerErrorResponse
 import io.javalin.http.UnauthorizedResponse
 import org.eclipse.jetty.http.HttpHeader
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 private const val NAV_IDENT_CLAIM = "NAVident"
@@ -33,22 +36,35 @@ class AuthenticationConfiguration(
 }
 
 class AuthenticatedUser private constructor(
-    private val navIdent: String
+    private val navIdent: String,
+    private val roller: Set<Rolle>,
+    private val jwt: String
 ) {
-    companion object {
-        fun fromJwt(jwt: DecodedJWT): AuthenticatedUser {
-            val navIdent = jwt.getClaim(NAV_IDENT_CLAIM).asString()
-                ?: throw UnauthorizedResponse("Missing claim: $NAV_IDENT_CLAIM")
-            return AuthenticatedUser(navIdent)
+    fun verifiserAutorisasjon(vararg gyldigeRoller: Rolle) {
+        if(!erEnAvRollene(*gyldigeRoller)) {
+            throw ForbiddenResponse()
         }
+    }
 
+    fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
+
+    companion object {
+        fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon) =
+            AuthenticatedUser(
+                navIdent = jwt.getClaim(NAV_IDENT_CLAIM).asString(),
+                roller = jwt.getClaim("groups")
+                    .asList(UUID::class.java)
+                    .let(rolleUuidSpesifikasjon::rollerForUuider),
+                jwt = jwt.token,
+            )
         fun Context.extractNavIdent(): String =
             attribute<AuthenticatedUser>("authenticatedUser")?.navIdent ?: throw UnauthorizedResponse("Not authenticated")
     }
 }
 
 
-fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>): Javalin {
+fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>,
+                                                             rolleUuidSpesifikasjon: RolleUuidSpesifikasjon): Javalin {
     log.info("Starter autentiseringoppsett")
     val verifiers = authConfigs.map { it.jwtVerifier() }
     before { ctx ->
@@ -57,7 +73,7 @@ fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<
                 ?.removePrefix("Bearer ")
                 ?.trim() ?: throw UnauthorizedResponse("Missing token")
             val decoded = verifyJwt(verifiers, token)
-            ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded))
+            ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon))
         }
     }
     return this
@@ -91,3 +107,9 @@ private fun algorithm(jwksUri: String): Algorithm {
         override fun getPrivateKeyId() = throw UnsupportedOperationException()
     })
 }
+
+fun Context.authenticatedUser() = attribute<AuthenticatedUser>("authenticatedUser")
+    ?: run {
+        log.error("No authenticated user found!")
+        throw InternalServerErrorResponse()
+    }
