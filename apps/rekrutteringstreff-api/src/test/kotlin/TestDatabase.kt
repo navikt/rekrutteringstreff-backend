@@ -3,9 +3,7 @@ package no.nav.toi.rekrutteringstreff
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import no.nav.toi.arbeidsgiver.Arbeidsgiver
-import no.nav.toi.arbeidsgiver.Orgnavn
-import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.atOslo
 import no.nav.toi.nowOslo
 import org.testcontainers.containers.PostgreSQLContainer
@@ -99,6 +97,14 @@ class TestDatabase {
         orgnr = Orgnr(resultSet.getString("orgnr")),
         orgnavn = Orgnavn(resultSet.getString("orgnavn"))
     )
+
+    fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
+        val repo = ArbeidsgiverRepository(dataSource)
+        arbeidsgivere.forEach {
+            val arbeidsgiver = LeggTilArbeidsgiver(it.orgnr, it.orgnavn)
+            repo.leggTil(arbeidsgiver, it.treffId)
+        }
+    }
 
 
     companion object {

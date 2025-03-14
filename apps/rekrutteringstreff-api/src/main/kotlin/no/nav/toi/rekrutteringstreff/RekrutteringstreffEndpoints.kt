@@ -153,7 +153,7 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
 private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
     val id = TreffId(ctx.pathParam("id"))
     val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
-    val navIdent = ctx.extractNavIdent()
+    ctx.extractNavIdent()
     repo.oppdater(id, dto)
     val updated = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet etter oppdatering")
     ctx.status(200).json(updated.tilRekrutteringstreffDTO())
@@ -206,7 +206,7 @@ private fun slettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): 
     path = "$endepunktRekrutteringstreff/valider",
     methods = [HttpMethod.POST]
 )
-private fun validerRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+private fun validerRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
     val dto = ctx.bodyAsClass<ValiderRekrutteringstreffDto>()
     val validationResult = OpenAiClient.validateRekrutteringstreff(dto)
     ctx.status(200).json(validationResult)
@@ -218,7 +218,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
     put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
-    post("$endepunktRekrutteringstreff/valider", validerRekrutteringstreffHandler(repo))
+    post("$endepunktRekrutteringstreff/valider", validerRekrutteringstreffHandler())
     handleEiere(repo.eierRepository)
 }
 
@@ -239,7 +239,7 @@ data class OpprettRekrutteringstreffDto(
     val opprettetAvNavkontorEnhetId: String,
 )
 
-data class OpprettRekrutteringstreffInternalDto(
+data class OpprettRekrutteringstreffInternalDto( // TODO Are: Finnet et bedre navn? Ligger den i feil klasse?
     val tittel: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,

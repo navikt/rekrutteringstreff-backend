@@ -1,9 +1,13 @@
 package no.nav.toi.rekrutteringstreff.arbeidsgiver
 
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.ResponseDeserializable
+import com.github.kittinunf.result.Result.Failure
+import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
+import no.nav.toi.arbeidsgiver.ArbeidsgiverOutboundDto
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -12,13 +16,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import java.net.HttpURLConnection.HTTP_CREATED
-import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
+import java.net.HttpURLConnection.*
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ArbeidsgiverTest {
-
 
     companion object {
         private val authServer = MockOAuth2Server()
@@ -99,7 +101,64 @@ class ArbeidsgiverTest {
         }
     }
 
-    // TODO testcase: Når treffet ikke finnes
+    // TODO testcase: Hva skal skje når treffet ikke finnes?
 
+    @Test
+    fun hentArbeidsgivere() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+
+        val treffId1 = db.opprettRekrutteringstreffIDatabase()
+        val treffId2 = db.opprettRekrutteringstreffIDatabase()
+        val treffId3 = db.opprettRekrutteringstreffIDatabase()
+        val orgnr1 = Orgnr("111111111")
+        val orgnr2 = Orgnr("222222222")
+        val orgnr3 = Orgnr("333333333")
+        val orgnr4 = Orgnr("444444444")
+        val orgnavn1 = Orgnavn("Orgnavn1")
+        val orgnavn2 = Orgnavn("Orgnavn2")
+        val orgnavn3 = Orgnavn("Orgnavn3")
+        val orgnavn4 = Orgnavn("Orgnavn4")
+        val arbeidsgivere1: List<Arbeidsgiver> = listOf(
+            Arbeidsgiver(treffId1, orgnr1, orgnavn1)
+        )
+        val arbeidsgivere2: List<Arbeidsgiver> = listOf(
+            Arbeidsgiver(treffId2, orgnr2, orgnavn2),
+            Arbeidsgiver(treffId2, orgnr3, orgnavn3)
+        )
+        val arbeidsgivere3: List<Arbeidsgiver> = listOf(
+            Arbeidsgiver(treffId3, orgnr4, orgnavn4),
+        )
+        db.leggTilArbeidsgivere(arbeidsgivere1)
+        db.leggTilArbeidsgivere(arbeidsgivere2)
+        db.leggTilArbeidsgivere(arbeidsgivere3)
+
+        assertThat(db.hentAlleRekrutteringstreff().size).isEqualTo(3)
+        assertThat(db.hentAlleArbeidsgviere().size).isEqualTo(4)
+
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$treffId2/arbeidsgiver")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<ArbeidsgiverOutboundDto>> {
+                override fun deserialize(content: String): List<ArbeidsgiverOutboundDto> {
+                    val type = mapper.typeFactory.constructCollectionType(
+                        List::class.java,
+                        ArbeidsgiverOutboundDto::class.java
+                    )
+                    return mapper.readValue(content, type)
+                }
+            })
+
+        assertStatuscodeEquals(HTTP_OK, response, result)
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                val actualArbeidsgivere: List<ArbeidsgiverOutboundDto> = result.value
+                assertThat(actualArbeidsgivere.size).isEqualTo(2)
+                assertThat(actualArbeidsgivere).contains(
+                    ArbeidsgiverOutboundDto(orgnr3.asString, orgnavn3.asString),
+                    ArbeidsgiverOutboundDto(orgnr2.asString, orgnavn2.asString),
+                )
+            }
+        }
+    }
 
 }
