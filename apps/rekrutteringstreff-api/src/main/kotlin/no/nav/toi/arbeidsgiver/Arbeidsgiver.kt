@@ -1,5 +1,7 @@
 package no.nav.toi.arbeidsgiver
 
+import no.nav.toi.rekrutteringstreff.TreffId
+
 data class Orgnr(private val orgnr: String) {
     init {
         if (!(orgnr.length == 9 && orgnr.all(Char::isDigit))) throw IllegalArgumentException("Orgnr må være 9 siffer. Mottok [$orgnr].")
@@ -21,6 +23,12 @@ data class Orgnavn(private val orgnavn: String) {
 
 
 data class LeggTilArbeidsgiver(
+    val orgnr: Orgnr,
+    val orgnavn: Orgnavn,
+)
+
+data class Arbeidsgiver(
+    val treffId: TreffId,
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
 )

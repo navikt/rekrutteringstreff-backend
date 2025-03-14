@@ -6,6 +6,7 @@ import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -80,6 +81,7 @@ class ArbeidsgiverTest {
               "orgnavn" : "$anyOrgnavn"
             }
             """.trimIndent()
+        assertThat(database.hentAlleArbeidsgviere()).isEmpty()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$anyTreffId/arbeidsgiver")
             .body(requestBody)
@@ -87,7 +89,7 @@ class ArbeidsgiverTest {
             .responseString()
 
         assertStatuscodeEquals(HTTP_CREATED, response, result)
-        // TODO Assert antall i DB
+        assertThat(database.hentAlleArbeidsgviere().size).isEqualTo(1)
     }
 
     // TODO testcase: Når treffet ikke finnes
