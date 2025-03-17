@@ -39,7 +39,9 @@ class RekrutteringstreffEierTest {
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            database.dataSource
+            database.dataSource,
+            arbeidsgiverrettet,
+            utvikler
         )
     }
 

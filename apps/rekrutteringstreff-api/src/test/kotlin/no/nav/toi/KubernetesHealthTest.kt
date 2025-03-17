@@ -13,11 +13,12 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KubernetesHealthTest {
     private val appPort = ubruktPortnr()
-    private val app = App(port = appPort, listOf(), TestDatabase().dataSource)
+    private val app = App(port = appPort, listOf(), TestDatabase().dataSource, arbeidsgiverrettet, utvikler)
 
     @BeforeAll
     fun setUp() {
