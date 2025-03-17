@@ -14,7 +14,6 @@ val swaggerParserVersion = "2.1.12"
 val nimbusVersion = "10.0.1"
 val wiremockVersion = "3.12.0"
 val jacksonDatatypeJsr310Version = "2.18.2" // JavaTimeModule, se https://github.com/FasterXML/jackson-modules-java8
-//val jacksonModuleKotlin = "2.18.3"
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
@@ -39,6 +38,4 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
-//    testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
-
 }
