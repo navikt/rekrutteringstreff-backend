@@ -90,8 +90,8 @@ class ArbeidsgiverTest {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
             {
-              "orgnr" : "$orgnr",
-              "orgnavn" : "$orgnavn"
+              "organisasjonsummer" : "$orgnr",
+              "navn" : "$orgnavn"
             }
             """.trimIndent()
         assertThat(db.hentAlleArbeidsgviere()).isEmpty()
