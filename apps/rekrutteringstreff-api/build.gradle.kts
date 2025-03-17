@@ -13,6 +13,7 @@ val testContainerVersion = "1.20.4"
 val swaggerParserVersion = "2.1.12"
 val nimbusVersion = "10.0.1"
 val wiremockVersion = "3.12.0"
+val jacksonDatatypeJsr310Version = "2.18.2" // JavaTimeModule, se https://github.com/FasterXML/jackson-modules-java8
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
@@ -21,7 +22,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("com.github.kittinunf.fuel:fuel:$fuelVersion")
     implementation("com.github.kittinunf.fuel:fuel-jackson:$fuelVersion")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonDatatypeJsr310Version")
     implementation("io.javalin:javalin:$javalinVersion")
 
     kapt("io.javalin.community.openapi:openapi-annotation-processor:$javalinVersion")
@@ -37,5 +38,4 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
-
 }
