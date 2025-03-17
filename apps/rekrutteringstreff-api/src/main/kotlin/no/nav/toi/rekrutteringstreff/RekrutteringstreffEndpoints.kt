@@ -239,7 +239,7 @@ data class OpprettRekrutteringstreffDto(
     val opprettetAvNavkontorEnhetId: String,
 )
 
-data class OpprettRekrutteringstreffInternalDto( // TODO Are: Finnet et bedre navn? Ligger den i feil klasse?
+data class OpprettRekrutteringstreffInternalDto( // TODO Are: Finne et bedre navn? Ligger den i feil klasse?
     val tittel: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
