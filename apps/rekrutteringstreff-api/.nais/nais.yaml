@@ -62,3 +62,8 @@ spec:
         cascadingDelete: true
   envFrom:
     - secret: openai-toi-rekrutteringsbistand-stilling
+  env:
+    - name: REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET
+      value: {{adGruppeArbeidsgiverrettet}}
+    - name: REKRUTTERINGSBISTAND_UTVIKLER
+      value: {{adGruppeUtvikler}}

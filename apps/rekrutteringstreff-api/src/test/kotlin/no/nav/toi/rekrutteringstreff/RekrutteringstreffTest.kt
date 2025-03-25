@@ -44,7 +44,9 @@ class RekrutteringstreffTest {
                 audience = "rekrutteringstreff-audience"
             )
         ),
-        database.dataSource
+        database.dataSource,
+        arbeidsgiverrettet,
+        utvikler
     )
 
     @BeforeAll
