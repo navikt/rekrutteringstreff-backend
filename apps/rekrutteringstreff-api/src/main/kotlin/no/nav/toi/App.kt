@@ -57,8 +57,8 @@ class App(
 private val log = noClassLogger()
 
 fun main() {
-    log.info("Starter App")
-    secure(log).info("Starter App. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
+    log.info("Starter app.")
+    secure(log).info("Starter app. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
     val dataSource = createDataSource()
     log.info("Datasource opprettet")
 
