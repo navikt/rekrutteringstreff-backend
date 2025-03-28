@@ -14,10 +14,10 @@ private const val pathParamTreffId = "id"
 private const val arbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver"
 
 private data class LeggTilArbeidsgiverDto(
-    val organisasjonsummer: String,
+    val organisasjonsnummer: String,
     val navn: String
 ) {
-    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsummer), Orgnavn(navn))
+    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn))
 }
 
 data class ArbeidsgiverOutboundDto(
