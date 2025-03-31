@@ -48,7 +48,7 @@ class ArbeidsgiverRepository(
     fun hentArbeidsgivere(treff: TreffId): List<Arbeidsgiver> {
         dataSource.connection.use { connection ->
             if (!finnesIDb(connection, treff))
-                throw IllegalArgumentException("Kan ikke hente arbeidsgivere fordi det ikek finnes noe rekrutteringstreff med id $treff.")
+                throw IllegalArgumentException("Kan ikke hente arbeidsgivere fordi det ikke finnes noe rekrutteringstreff med id $treff.")
 
             connection.prepareStatement(
                 """

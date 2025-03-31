@@ -11,48 +11,49 @@ import java.util.*
 
 
 private const val pathParamTreffId = "id"
-private const val arbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver"
+private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 
-private data class LeggTilArbeidsgiverDto(
-    val organisasjonsnummer: String,
-    val navn: String
+private data class LeggTilJobbsøkerDto(
+    val fødselsnummer: String,
+    val fornavn: String,
+    val etternavn: String
 ) {
-    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn))
+    fun somLeggTilJobbsøker() = LeggTilJobbsøker(Fødselsnummer(fødselsnummer), Fornavn(fornavn), Etternavn(etternavn))
 }
 
-data class ArbeidsgiverOutboundDto(
-    val orgnaisasjonsnummer: String,
-    val navn: String,
-    val status: String = "TODO" // TODO Are: Default bør ikke settes her
+data class JobbsøkerOutboundDto(
+    val fødselsnummer: String,
+    val fornavn: String,
+    val etternavn: String
 )
 
 @OpenApi(
-    summary = "Legg til ny arbeidsgiver til et rekrutteringstreff",
-    operationId = "leggTilArbeidsgiver",
+    summary = "Legg til ny jobbsøker til et rekrutteringstreff",
+    operationId = "leggTilJobbsøker",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class)],
     responses = [OpenApiResponse(
         status = "201"
     )],
-    path = arbeidsgiverPath,
+    path = jobbsøkerPath,
     methods = [HttpMethod.POST]
 )
-private fun leggTilArbeidsgiverHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
-    val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass<LeggTilArbeidsgiverDto>()
+private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    val dto: LeggTilJobbsøkerDto = ctx.bodyAsClass<LeggTilJobbsøkerDto>()
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
-    repo.leggTil(dto.somLeggTilArbeidsgiver(), treff)
+    repo.leggTil(dto.somLeggTilJobbsøker(), treff)
     ctx.status(201)
 }
 
 
 @OpenApi(
-    summary = "Hent alle arbeidsgivere for et rekrutteringstreff",
-    operationId = "hentArbeidsgivere",
+    summary = "Hent alle jobbsøkere for et rekrutteringstreff",
+    operationId = "hentJobbsøkere",
     security = [OpenApiSecurity(name = "BearerAuth")],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
-            from = Array<ArbeidsgiverOutboundDto>::class,
+            from = Array<JobbsøkerOutboundDto>::class,
             example = """[
                 {
                     "TODO": "TODO",
@@ -60,25 +61,26 @@ private fun leggTilArbeidsgiverHandler(repo: JobbsøkerRepository): (Context) ->
             ]"""
         )]
     )],
-    path = arbeidsgiverPath,
+    path = jobbsøkerPath,
     methods = [HttpMethod.GET]
 )
-private fun hentArbeidsgivere(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+private fun hentJobbsøkere(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
-    val arbeidsgivere = repo.hentArbeidsgivere(treff)
-    ctx.status(200).json(arbeidsgivere.toOutboundDto())
+    val jobbsøkere = repo.hentJobbsøkere(treff)
+    ctx.status(200).json(jobbsøkere.toOutboundDto())
 }
 
-private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
+private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     map {
-        ArbeidsgiverOutboundDto(
-            orgnaisasjonsnummer = it.orgnr.asString,
-            navn = it.orgnavn.asString
+        JobbsøkerOutboundDto(
+            fødselsnummer = it.fødselsnummer.asString,
+            fornavn = it.fornavn.asString,
+            etternavn = it.etternavn.asString
         )
     }
 
 
-fun Javalin.handleArbeidsgiver(repo: JobbsøkerRepository) {
-    post(arbeidsgiverPath, leggTilArbeidsgiverHandler(repo))
-    get(arbeidsgiverPath, hentArbeidsgivere(repo))
+fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
+    post(jobbsøkerPath, leggTilJobbsøkerHandler(repo))
+    get(jobbsøkerPath, hentJobbsøkere(repo))
 }

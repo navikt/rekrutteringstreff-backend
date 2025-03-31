@@ -2,33 +2,43 @@ package no.nav.toi.jobbsoker
 
 import no.nav.toi.rekrutteringstreff.TreffId
 
-data class Orgnr(private val orgnr: String) {
+data class Fødselsnummer(private val fødselsnummer: String) {
     init {
-        if (!(orgnr.length == 9 && orgnr.all(Char::isDigit))) throw IllegalArgumentException("Orgnr må være 9 siffer. Mottok [$orgnr].")
+        if (!(fødselsnummer.length == 11 && fødselsnummer.all(Char::isDigit))) throw IllegalArgumentException("Fødselsnummer må være 11 siffer. Mottok [$fødselsnummer].")
     }
 
-    val asString = orgnr
+    val asString = fødselsnummer
     override fun toString(): String = asString
 
 }
 
-data class Orgnavn(private val orgnavn: String) {
+data class Fornavn(private val fornavn: String) {
     init {
-        if (orgnavn.isEmpty()) throw IllegalArgumentException("Orgnavn må være ikke-tomt.")
+        if (fornavn.isEmpty()) throw IllegalArgumentException("Fornavn må være ikke-tomt.")
     }
 
-    val asString = orgnavn
+    val asString = fornavn
     override fun toString(): String = asString
 }
 
+data class Etternavn(private val etternavn: String) {
+    init {
+        if (etternavn.isEmpty()) throw IllegalArgumentException("Etternavn må være ikke-tomt.")
+    }
 
-data class LeggTilArbeidsgiver(
-    val orgnr: Orgnr,
-    val orgnavn: Orgnavn,
+    val asString = etternavn
+    override fun toString(): String = asString
+}
+
+data class LeggTilJobbsøker(
+    val fødselsnummer: Fødselsnummer,
+    val fornavn: Fornavn,
+    val etternavn: Etternavn
 )
 
-data class Arbeidsgiver(
+data class Jobbsøker(
     val treffId: TreffId,
-    val orgnr: Orgnr,
-    val orgnavn: Orgnavn,
+    val fødselsnummer: Fødselsnummer,
+    val fornavn: Fornavn,
+    val etternavn: Etternavn
 )
