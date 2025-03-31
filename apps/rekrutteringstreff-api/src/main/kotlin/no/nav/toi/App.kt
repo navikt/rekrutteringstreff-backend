@@ -10,9 +10,11 @@ import io.javalin.config.JavalinConfig
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.toi.SecureLogLogger.Companion.secure
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.handleJobbsøker
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
 import org.flywaydb.core.Flyway
 import java.time.Instant
@@ -44,6 +46,7 @@ class App(
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource))
+        javalin.handleJobbsøker(JobbsøkerRepository(dataSource))
         javalin.start(port)
     }
 
