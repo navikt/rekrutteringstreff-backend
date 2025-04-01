@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.atOslo
+import no.nav.toi.jobbsoker.*
 import no.nav.toi.nowOslo
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
@@ -31,6 +32,7 @@ class TestDatabase {
     fun slettAlt() {
         dataSource.connection.use {
             it.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
+            it.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
             it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
         }
     }
@@ -78,6 +80,22 @@ class TestDatabase {
         }
     }
 
+    fun hentAlleJobbsøkere(): List<Jobbsøker> {
+        val sql = """
+            SELECT js.fodselsnummer, js.fornavn, js.etternavn, rt.id as treff_id
+            FROM jobbsoker js
+            JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
+            ORDER BY js.db_id ASC;
+        """.trimIndent()
+        dataSource.connection.use {
+            val resultSet = it.prepareStatement(sql).executeQuery()
+            return generateSequence {
+                if (resultSet.next()) konverterTilJobbsøker(resultSet)
+                else null
+            }.toList()
+        }
+    }
+
 
     private fun konverterTilRekrutteringstreff(resultSet: ResultSet) = Rekrutteringstreff(
         id = TreffId(resultSet.getObject("id", UUID::class.java)),
@@ -98,6 +116,14 @@ class TestDatabase {
         orgnavn = Orgnavn(resultSet.getString("orgnavn"))
     )
 
+    private fun konverterTilJobbsøker(resultSet: ResultSet) = Jobbsøker(
+        treffId = TreffId(resultSet.getString("treff_id")),
+        fødselsnummer = Fødselsnummer(resultSet.getString("fodselsnummer")),
+        fornavn = Fornavn(resultSet.getString("fornavn")),
+        etternavn = Etternavn(resultSet.getString("etternavn"))
+    )
+
+
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         val repo = ArbeidsgiverRepository(dataSource)
         arbeidsgivere.forEach {
@@ -106,6 +132,13 @@ class TestDatabase {
         }
     }
 
+    fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
+        val repo = JobbsøkerRepository(dataSource)
+        jobbsøkere.forEach {
+            val jobbsøker = LeggTilJobbsøker(it.fødselsnummer, it.fornavn, it.etternavn)
+            repo.leggTil(jobbsøker, it.treffId)
+        }
+    }
 
     companion object {
         private var lokalPostgres: PostgreSQLContainer<*>? = null
