@@ -32,6 +32,7 @@ data class JobbsøkerOutboundDto(
     operationId = "leggTilJobbsøker",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class)],
+    requestBody = OpenApiRequestBody([OpenApiContent(LeggTilJobbsøkerDto::class)]),
     responses = [OpenApiResponse(
         status = "201"
     )],
@@ -56,7 +57,14 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
             from = Array<JobbsøkerOutboundDto>::class,
             example = """[
                 {
-                    "TODO": "TODO",
+                    "fødselsnummer": "12345678901",
+                    "fornavn": "Ola",
+                    "etternavn": "Nordmann"
+                },
+                {
+                    "fødselsnummer": "10987654321",
+                    "fornavn": "Kari",
+                    "etternavn": "Nordmann"
                 }
             ]"""
         )]
