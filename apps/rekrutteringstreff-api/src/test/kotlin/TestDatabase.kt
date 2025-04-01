@@ -3,17 +3,34 @@ package no.nav.toi.rekrutteringstreff
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.atOslo
+import no.nav.toi.nowOslo
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
-import javax.sql.DataSource
 import java.sql.ResultSet
-import java.util.UUID
+import java.util.*
+import javax.sql.DataSource
 
 
 class TestDatabase {
+
+    fun opprettRekrutteringstreffIDatabase(
+        navIdent: String = "Original navident",
+        tittel: String = "Original Tittel",
+    ): TreffId {
+        val originalDto = OpprettRekrutteringstreffInternalDto(
+            tittel = tittel,
+            opprettetAvNavkontorEnhetId = "Original Kontor",
+            opprettetAvPersonNavident = navIdent,
+            opprettetAvTidspunkt = nowOslo().minusDays(10),
+        )
+        return RekrutteringstreffRepository(dataSource).opprett(originalDto)
+    }
+
     fun slettAlt() {
         dataSource.connection.use {
+            it.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
             it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
         }
     }
@@ -45,6 +62,23 @@ class TestDatabase {
         else emptyList()
     }
 
+    fun hentAlleArbeidsgviere(): List<Arbeidsgiver> {
+        val sql = """
+            SELECT ag.orgnr, ag.orgnavn, rt.id as treff_id
+            FROM arbeidsgiver ag
+            JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
+            ORDER BY ag.db_id ASC;
+        """.trimIndent()
+        dataSource.connection.use {
+            val resultSet = it.prepareStatement(sql).executeQuery()
+            return generateSequence {
+                if (resultSet.next()) konverterTilArbeidsgiver(resultSet)
+                else null
+            }.toList()
+        }
+    }
+
+
     private fun konverterTilRekrutteringstreff(resultSet: ResultSet) = Rekrutteringstreff(
         id = TreffId(resultSet.getObject("id", UUID::class.java)),
         tittel = resultSet.getString("tittel"),
@@ -57,6 +91,21 @@ class TestDatabase {
         opprettetAvNavkontorEnhetId = resultSet.getString("opprettet_av_kontor_enhetid"),
         opprettetAvTidspunkt = resultSet.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo()
     )
+
+    private fun konverterTilArbeidsgiver(resultSet: ResultSet) = Arbeidsgiver(
+        treffId = TreffId(resultSet.getString("treff_id")),
+        orgnr = Orgnr(resultSet.getString("orgnr")),
+        orgnavn = Orgnavn(resultSet.getString("orgnavn"))
+    )
+
+    fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
+        val repo = ArbeidsgiverRepository(dataSource)
+        arbeidsgivere.forEach {
+            val arbeidsgiver = LeggTilArbeidsgiver(it.orgnr, it.orgnavn)
+            repo.leggTil(arbeidsgiver, it.treffId)
+        }
+    }
+
 
     companion object {
         private var lokalPostgres: PostgreSQLContainer<*>? = null

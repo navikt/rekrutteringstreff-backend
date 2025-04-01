@@ -11,6 +11,8 @@ import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
 import org.flywaydb.core.Flyway
 import java.time.Instant
@@ -44,6 +46,7 @@ class App(
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs, RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler))
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
+        javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource))
         javalin.start(port)
     }
 
@@ -57,8 +60,8 @@ class App(
 private val log = noClassLogger()
 
 fun main() {
-    log.info("Starter App")
-    secure(log).info("Starter App. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
+    log.info("Starter app.")
+    secure(log).info("Starter app. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
     val dataSource = createDataSource()
     log.info("Datasource opprettet")
 

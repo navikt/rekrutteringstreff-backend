@@ -9,7 +9,6 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
-import no.nav.toi.mapper
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -31,9 +30,8 @@ class RekrutteringstreffTest {
 
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
-    private val database = TestDatabase()
+    private val db = TestDatabase()
     private val appPort = ubruktPortnr()
-    private val repo = RekrutteringstreffRepository(database.dataSource)
 
     private val app = App(
         port = appPort,
@@ -44,7 +42,7 @@ class RekrutteringstreffTest {
                 audience = "rekrutteringstreff-audience"
             )
         ),
-        database.dataSource,
+        db.dataSource,
         arbeidsgiverrettet,
         utvikler
     )
@@ -63,7 +61,7 @@ class RekrutteringstreffTest {
 
     @AfterEach
     fun reset() {
-        database.slettAlt()
+        db.slettAlt()
     }
 
     @Test
@@ -90,7 +88,7 @@ class RekrutteringstreffTest {
                 val postId = json.get("id").asText()
                 assertThat(postId).isNotEmpty()
 
-                val rekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+                val rekrutteringstreff = db.hentAlleRekrutteringstreff().first()
                 assertThat(rekrutteringstreff.tittel).isEqualTo("Nytt rekrutteringstreff")
                 assertThat(rekrutteringstreff.beskrivelse).isNull()
                 assertThat(rekrutteringstreff.fraTid).isNull()
@@ -108,11 +106,11 @@ class RekrutteringstreffTest {
     fun hentAlleRekrutteringstreff() {
         val tittel1 = "Tittel1111111"
         val tittel2 = "Tittel2222222"
-        opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffIDatabase(
             navIdent = "navident1",
             tittel = tittel1,
         )
-        opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffIDatabase(
             navIdent = "navIdent2",
             tittel = tittel2,
         )
@@ -147,11 +145,11 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val originalTittel = "Spesifikk Tittel"
 
-        opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffIDatabase(
             navIdent,
             tittel = originalTittel,
         )
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val opprettetRekrutteringstreff = db.hentAlleRekrutteringstreff().first()
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
@@ -169,8 +167,8 @@ class RekrutteringstreffTest {
     fun oppdaterRekrutteringstreff() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        opprettRekrutteringstreffIDatabase(navIdent)
-        val created = database.hentAlleRekrutteringstreff().first()
+        db.opprettRekrutteringstreffIDatabase(navIdent)
+        val created = db.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
             tittel = "Oppdatert Tittel",
             beskrivelse = "Oppdatert beskrivelse",
@@ -198,8 +196,8 @@ class RekrutteringstreffTest {
     fun slettRekrutteringstreff() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        opprettRekrutteringstreffIDatabase(navIdent)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        db.opprettRekrutteringstreffIDatabase(navIdent)
+        val opprettetRekrutteringstreff = db.hentAlleRekrutteringstreff().first()
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
@@ -207,7 +205,7 @@ class RekrutteringstreffTest {
             is Failure -> throw result.error
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
-                val remaining = database.hentAlleRekrutteringstreff()
+                val remaining = db.hentAlleRekrutteringstreff()
                 assertThat(remaining).isEmpty()
             }
         }
@@ -263,18 +261,6 @@ class RekrutteringstreffTest {
         }
     }
 
-    private fun opprettRekrutteringstreffIDatabase(
-        navIdent: String,
-        tittel: String = "Original Tittel",
-    ) {
-        val originalDto = OpprettRekrutteringstreffInternalDto(
-            tittel = tittel,
-            opprettetAvNavkontorEnhetId = "Original Kontor",
-            opprettetAvPersonNavident = navIdent,
-            opprettetAvTidspunkt = nowOslo().minusDays(10),
-        )
-        repo.opprett(originalDto)
-    }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
 

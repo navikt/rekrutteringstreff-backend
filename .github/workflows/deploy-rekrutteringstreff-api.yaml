@@ -13,7 +13,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/bigserial
+      deploy_dev_branch: refs/heads/arbeidsgiver-1
     secrets: inherit
     permissions:
       contents: read
