@@ -30,7 +30,12 @@ data class ArbeidsgiverOutboundDto(
     summary = "Legg til ny arbeidsgiver til et rekrutteringstreff",
     operationId = "leggTilArbeidsgiver",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    pathParams = [OpenApiParam(
+        name = pathParamTreffId,
+        type = UUID::class,
+        required = true,
+        description = "Rekrutteringstreffets unike identifikator (UUID)"
+    )],
     responses = [OpenApiResponse(
         status = "201"
     )],
@@ -49,7 +54,12 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
     summary = "Hent alle arbeidsgivere for et rekrutteringstreff",
     operationId = "hentArbeidsgivere",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    pathParams = [OpenApiParam(
+        name = pathParamTreffId,
+        type = UUID::class,
+        required = true,
+        description = "Rekrutteringstreffets unike identifikator (UUID)"
+    )],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
