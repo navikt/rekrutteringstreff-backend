@@ -6,6 +6,8 @@ import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.Rolle
+import no.nav.toi.authenticatedUser
 import no.nav.toi.noClassLogger
 import no.nav.toi.rekrutteringstreff.eier.handleEiere
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
@@ -38,6 +40,7 @@ const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
     methods = [HttpMethod.POST]
 )
 private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
     val internalDto = OpprettRekrutteringstreffInternalDto(
         tittel = "Nytt rekrutteringstreff",
@@ -77,6 +80,7 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     methods = [HttpMethod.GET]
 )
 private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     ctx.status(200).json(repo.hentAlle().map { it.tilRekrutteringstreffDTO() })
 }
 
@@ -107,6 +111,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     methods = [HttpMethod.GET]
 )
 private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val id = TreffId(ctx.pathParam("id"))
     val treff = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     ctx.status(200).json(treff.tilRekrutteringstreffDTO())
@@ -151,6 +156,7 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
     methods = [HttpMethod.PUT]
 )
 private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val id = TreffId(ctx.pathParam("id"))
     val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
     ctx.extractNavIdent()
@@ -175,6 +181,7 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     methods = [HttpMethod.DELETE]
 )
 private fun slettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val id = TreffId(ctx.pathParam("id"))
     repo.slett(id)
     ctx.status(200).result("Rekrutteringstreff slettet")

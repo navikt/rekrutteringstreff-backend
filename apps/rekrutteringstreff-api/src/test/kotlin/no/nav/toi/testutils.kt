@@ -13,6 +13,7 @@ import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.provider.Arguments
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -33,12 +34,17 @@ fun assertStatuscodeEquals(
     }
 }
 
+val modiaGenerell = UUID.randomUUID()
+val arbeidsgiverrettet = UUID.randomUUID()
+val utvikler = UUID.randomUUID()
+
 
 fun MockOAuth2Server.lagToken(
     authPort: Int,
     issuerId: String = "http://localhost:$authPort/default",
     navIdent: String = "A000001",
-    claims: Map<String, Any> = mapOf("NAVident" to navIdent),
+    groups: List<UUID> = listOf(arbeidsgiverrettet),
+    claims: Map<String, Any> = mapOf("NAVident" to navIdent, "groups" to groups.map(UUID::toString)),
     expiry: Long = 3600,
     audience: String = "rekrutteringstreff-audience"
 ) = issueToken(

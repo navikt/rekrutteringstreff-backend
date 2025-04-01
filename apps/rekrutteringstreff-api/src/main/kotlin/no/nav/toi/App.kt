@@ -21,12 +21,15 @@ import java.time.Instant
 import java.time.ZoneId.of
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MILLIS
+import java.util.UUID
 import javax.sql.DataSource
 
 class App(
     private val port: Int,
     private val authConfigs: List<AuthenticationConfiguration>,
-    private val dataSource: DataSource
+    private val dataSource: DataSource,
+    private val arbeidsgiverrettet: UUID,
+    private val utvikler: UUID
 ) {
     private lateinit var javalin: Javalin
 
@@ -43,7 +46,7 @@ class App(
             log.info("Javalin opprettet")
         }
         javalin.handleHealth()
-        javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
+        javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs, RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler))
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource))
         javalin.handleJobbsøker(JobbsøkerRepository(dataSource))
@@ -82,7 +85,9 @@ fun main() {
             else
                 null
         ),
-        dataSource
+        dataSource,
+        System.getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET").let(UUID::fromString),
+        System.getenv("REKRUTTERINGSBISTAND_UTVIKLER").let(UUID::fromString)
     ).start()
 }
 
