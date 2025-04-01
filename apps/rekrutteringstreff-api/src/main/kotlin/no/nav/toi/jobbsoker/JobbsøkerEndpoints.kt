@@ -31,8 +31,13 @@ data class JobbsøkerOutboundDto(
     summary = "Legg til ny jobbsøker til et rekrutteringstreff",
     operationId = "leggTilJobbsøker",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class)],
-    requestBody = OpenApiRequestBody([OpenApiContent(LeggTilJobbsøkerDto::class)]),
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = LeggTilJobbsøkerDto::class,
+            example = """{"fødselsnummer": "12345678901", "fornavn": "Ola", "etternavn": "Nordmann"}"""
+        )]
+    ),
     responses = [OpenApiResponse(
         status = "201"
     )],
@@ -51,6 +56,7 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
     summary = "Hent alle jobbsøkere for et rekrutteringstreff",
     operationId = "hentJobbsøkere",
     security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
