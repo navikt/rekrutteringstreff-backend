@@ -37,7 +37,9 @@ class ArbeidsgiverTest {
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            db.dataSource
+            db.dataSource,
+            arbeidsgiverrettet,
+            utvikler
         )
     }
 
