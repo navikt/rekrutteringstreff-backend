@@ -36,6 +36,12 @@ data class ArbeidsgiverOutboundDto(
         required = true,
         description = "Rekrutteringstreffets unike identifikator (UUID)"
     )],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = LeggTilArbeidsgiverDto::class,
+            example = """{"organisasjonsnummer": "123456789", "navn": "Example Company"}"""
+        )]
+    ),
     responses = [OpenApiResponse(
         status = "201"
     )],
@@ -66,7 +72,14 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
             from = Array<ArbeidsgiverOutboundDto>::class,
             example = """[
                 {
-                    "TODO": "TODO",
+                    "organisasjonsnummer": "123456789",
+                    "navn": "Example Company",
+                    "status": "Active"
+                },
+                {
+                    "organisasjonsnummer": "987654321",
+                    "navn": "Another Company",
+                    "status": "Inactive"
                 }
             ]"""
         )]
