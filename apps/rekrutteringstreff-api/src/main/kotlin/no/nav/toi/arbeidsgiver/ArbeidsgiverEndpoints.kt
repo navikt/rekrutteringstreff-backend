@@ -30,7 +30,18 @@ data class ArbeidsgiverOutboundDto(
     summary = "Legg til ny arbeidsgiver til et rekrutteringstreff",
     operationId = "leggTilArbeidsgiver",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class)],
+    pathParams = [OpenApiParam(
+        name = pathParamTreffId,
+        type = UUID::class,
+        required = true,
+        description = "Rekrutteringstreffets unike identifikator (UUID)"
+    )],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = LeggTilArbeidsgiverDto::class,
+            example = """{"organisasjonsnummer": "123456789", "navn": "Example Company"}"""
+        )]
+    ),
     responses = [OpenApiResponse(
         status = "201"
     )],
@@ -49,13 +60,26 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
     summary = "Hent alle arbeidsgivere for et rekrutteringstreff",
     operationId = "hentArbeidsgivere",
     security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(
+        name = pathParamTreffId,
+        type = UUID::class,
+        required = true,
+        description = "Rekrutteringstreffets unike identifikator (UUID)"
+    )],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
             from = Array<ArbeidsgiverOutboundDto>::class,
             example = """[
                 {
-                    "TODO": "TODO",
+                    "organisasjonsnummer": "123456789",
+                    "navn": "Example Company",
+                    "status": "eksempelstatus"
+                },
+                {
+                    "organisasjonsnummer": "987654321",
+                    "navn": "Another Company",
+                    "status": "eksempelstatus"
                 }
             ]"""
         )]
