@@ -74,12 +74,12 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
                 {
                     "organisasjonsnummer": "123456789",
                     "navn": "Example Company",
-                    "status": "Active"
+                    "status": "eksempelstatus"
                 },
                 {
                     "organisasjonsnummer": "987654321",
                     "navn": "Another Company",
-                    "status": "Inactive"
+                    "status": "eksempelstatus"
                 }
             ]"""
         )]
