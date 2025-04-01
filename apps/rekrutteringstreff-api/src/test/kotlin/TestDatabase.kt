@@ -32,6 +32,7 @@ class TestDatabase {
     fun slettAlt() {
         dataSource.connection.use {
             it.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
+            it.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
             it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
         }
     }

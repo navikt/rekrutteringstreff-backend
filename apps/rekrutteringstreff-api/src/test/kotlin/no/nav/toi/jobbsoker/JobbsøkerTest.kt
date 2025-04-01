@@ -119,10 +119,10 @@ class JobbsøkerTest {
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
         val treffId3 = db.opprettRekrutteringstreffIDatabase()
-        val fnr1 = Fødselsnummer("111111111")
-        val fnr2 = Fødselsnummer("222222222")
-        val fnr3 = Fødselsnummer("333333333")
-        val fnr4 = Fødselsnummer("444444444")
+        val fnr1 = Fødselsnummer("11111111111")
+        val fnr2 = Fødselsnummer("22222222222")
+        val fnr3 = Fødselsnummer("33333333333")
+        val fnr4 = Fødselsnummer("44444444444")
         val fornavn1 = Fornavn("Fornavn1")
         val fornavn2 = Fornavn("Fornavn2")
         val fornavn3 = Fornavn("Fornavn3")
@@ -147,7 +147,7 @@ class JobbsøkerTest {
         db.leggTilJobbsøkere(jobbsøkere3)
 
         assertThat(db.hentAlleRekrutteringstreff().size).isEqualTo(3)
-        assertThat(db.hentAlleArbeidsgviere().size).isEqualTo(4)
+        assertThat(db.hentAlleJobbsøkere().size).isEqualTo(4)
 
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$treffId2/jobbsoker")
             .header("Authorization", "Bearer ${token.serialize()}")
