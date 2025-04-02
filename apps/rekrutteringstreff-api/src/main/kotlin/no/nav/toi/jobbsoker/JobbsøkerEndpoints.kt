@@ -15,14 +15,21 @@ private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTref
 
 private data class LeggTilJobbsøkerDto(
     val fødselsnummer: String,
+    val kandidatnummer: String?,
     val fornavn: String,
     val etternavn: String
 ) {
-    fun somLeggTilJobbsøker() = LeggTilJobbsøker(Fødselsnummer(fødselsnummer), Fornavn(fornavn), Etternavn(etternavn))
+    fun somLeggTilJobbsøker() = LeggTilJobbsøker(
+        Fødselsnummer(fødselsnummer),
+        kandidatnummer?.let { Kandidatnummer(it) },
+        Fornavn(fornavn),
+        Etternavn(etternavn)
+    )
 }
 
 data class JobbsøkerOutboundDto(
     val fødselsnummer: String,
+    val kandidatnummer: String?,
     val fornavn: String,
     val etternavn: String
 )
@@ -98,6 +105,7 @@ private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     map {
         JobbsøkerOutboundDto(
             fødselsnummer = it.fødselsnummer.asString,
+            kandidatnummer = it.kandidatnummer?.asString,
             fornavn = it.fornavn.asString,
             etternavn = it.etternavn.asString
         )

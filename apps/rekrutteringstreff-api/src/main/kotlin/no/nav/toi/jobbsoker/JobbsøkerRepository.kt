@@ -2,13 +2,17 @@ package no.nav.toi.jobbsoker
 
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
+import java.sql.ResultSet
 import javax.sql.DataSource
 
 class JobbsøkerRepository(
     private val dataSource: DataSource,
 ) {
 
-    private fun hentTreffDbId(connection: Connection, treff: TreffId): Long? { // TODO Are; Duplisert i arbeidsgiver? Refaktorer.
+    private fun hentTreffDbId(
+        connection: Connection,
+        treff: TreffId
+    ): Long? {
         connection.prepareStatement(
             "SELECT db_id FROM rekrutteringstreff WHERE id = ?"
         ).use { stmt ->
@@ -29,12 +33,13 @@ class JobbsøkerRepository(
 
         fun leggTilJobbsøker(connection: Connection, jobbsøker: LeggTilJobbsøker, treffDbId: Long) {
             connection.prepareStatement(
-                "INSERT INTO jobbsoker (treff_db_id, fodselsnummer, fornavn, etternavn) VALUES (?, ?, ?, ?)"
+                "INSERT INTO jobbsoker (treff_db_id, fodselsnummer, kandidatnummer, fornavn, etternavn) VALUES (?, ?, ?, ?, ?)"
             ).use { stmt ->
                 stmt.setLong(1, treffDbId)
                 stmt.setString(2, jobbsøker.fødselsnummer.asString)
-                stmt.setString(3, jobbsøker.fornavn.asString)
-                stmt.setString(4, jobbsøker.etternavn.asString)
+                stmt.setString(3, jobbsøker.kandidatnummer?.asString)
+                stmt.setString(4, jobbsøker.fornavn.asString)
+                stmt.setString(5, jobbsøker.etternavn.asString)
                 stmt.executeUpdate()
             }
         }
@@ -53,7 +58,7 @@ class JobbsøkerRepository(
 
             connection.prepareStatement(
                 """
-                SELECT js.fodselsnummer, js.fornavn, js.etternavn, rt.id as treff_id
+                SELECT js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, rt.id as treff_id
                 FROM jobbsoker js
                 JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
                 WHERE rt.id = ?
@@ -61,23 +66,26 @@ class JobbsøkerRepository(
             """.trimIndent()
             ).use { stmt ->
                 stmt.setObject(1, treff.somUuid)
-                stmt.executeQuery().use { rs ->
-                    val jobbsøkere = mutableListOf<Jobbsøker>()
-                    while (rs.next()) {
-                        jobbsøkere.add(
-                            Jobbsøker(
-                                treffId = TreffId(rs.getString("treff_id")),
-                                fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
-                                fornavn = Fornavn(rs.getString("fornavn")),
-                                etternavn = Etternavn(rs.getString("etternavn"))
-
-                            )
-                        )
-                    }
-                    return jobbsøkere
-                }
+                val resultSet = stmt.executeQuery()
+                return resultSet.use(this::tilJobbsøkere)
             }
         }
+    }
+
+    private fun tilJobbsøkere(rs: ResultSet): List<Jobbsøker> {
+        val jobbsøkere = mutableListOf<Jobbsøker>()
+        while (rs.next()) {
+            jobbsøkere.add(
+                Jobbsøker(
+                    treffId = TreffId(rs.getString("treff_id")),
+                    fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
+                    kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
+                    fornavn = Fornavn(rs.getString("fornavn")),
+                    etternavn = Etternavn(rs.getString("etternavn"))
+                )
+            )
+        }
+        return jobbsøkere
     }
 
 }

@@ -14,7 +14,7 @@ import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
 import java.time.ZonedDateTime
 import java.util.*
 
-private val log = noClassLogger()
+private const val pathParamTreffId = "id"
 const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
 @OpenApi(
@@ -88,7 +88,12 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     summary = "Hent ett rekrutteringstreff",
     operationId = "hentRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = "id", type = UUID::class)],
+    pathParams = [OpenApiParam(
+        name = pathParamTreffId,
+        type = UUID::class,
+        required = true,
+        description = "Rekrutteringstreffets unike identifikator (UUID)"
+    )],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
@@ -121,7 +126,12 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
     summary = "Oppdater ett rekrutteringstreff",
     operationId = "oppdaterRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = "id", type = UUID::class)],
+    pathParams = [OpenApiParam(
+        name = pathParamTreffId,
+        type = UUID::class,
+        required = true,
+        description = "Rekrutteringstreffets unike identifikator (UUID)"
+    )],
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = OppdaterRekrutteringstreffDto::class,
@@ -169,7 +179,12 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     summary = "Slett ett rekrutteringstreff",
     operationId = "slettRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = "id", type = UUID::class)],
+    pathParams = [OpenApiParam(
+        name = pathParamTreffId,
+        type = UUID::class,
+        required = true,
+        description = "Rekrutteringstreffets unike identifikator (UUID)"
+    )],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(

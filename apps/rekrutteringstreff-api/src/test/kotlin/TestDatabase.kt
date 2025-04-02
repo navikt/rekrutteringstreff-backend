@@ -82,7 +82,7 @@ class TestDatabase {
 
     fun hentAlleJobbsøkere(): List<Jobbsøker> {
         val sql = """
-            SELECT js.fodselsnummer, js.fornavn, js.etternavn, rt.id as treff_id
+            SELECT js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, rt.id as treff_id
             FROM jobbsoker js
             JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
             ORDER BY js.db_id ASC;
@@ -97,32 +97,32 @@ class TestDatabase {
     }
 
 
-    private fun konverterTilRekrutteringstreff(resultSet: ResultSet) = Rekrutteringstreff(
-        id = TreffId(resultSet.getObject("id", UUID::class.java)),
-        tittel = resultSet.getString("tittel"),
-        beskrivelse = resultSet.getString("beskrivelse"),
-        fraTid = resultSet.getTimestamp("fratid")?.toInstant()?.atOslo(),
-        tilTid = resultSet.getTimestamp("tiltid")?.toInstant()?.atOslo(),
-        sted = resultSet.getString("sted"),
-        status = resultSet.getString("status"),
-        opprettetAvPersonNavident = resultSet.getString("opprettet_av_person_navident"),
-        opprettetAvNavkontorEnhetId = resultSet.getString("opprettet_av_kontor_enhetid"),
-        opprettetAvTidspunkt = resultSet.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo()
+    private fun konverterTilRekrutteringstreff(rs: ResultSet) = Rekrutteringstreff(
+        id = TreffId(rs.getObject("id", UUID::class.java)),
+        tittel = rs.getString("tittel"),
+        beskrivelse = rs.getString("beskrivelse"),
+        fraTid = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
+        tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
+        sted = rs.getString("sted"),
+        status = rs.getString("status"),
+        opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
+        opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
+        opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo()
     )
 
-    private fun konverterTilArbeidsgiver(resultSet: ResultSet) = Arbeidsgiver(
-        treffId = TreffId(resultSet.getString("treff_id")),
-        orgnr = Orgnr(resultSet.getString("orgnr")),
-        orgnavn = Orgnavn(resultSet.getString("orgnavn"))
+    private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
+        treffId = TreffId(rs.getString("treff_id")),
+        orgnr = Orgnr(rs.getString("orgnr")),
+        orgnavn = Orgnavn(rs.getString("orgnavn"))
     )
 
-    private fun konverterTilJobbsøker(resultSet: ResultSet) = Jobbsøker(
-        treffId = TreffId(resultSet.getString("treff_id")),
-        fødselsnummer = Fødselsnummer(resultSet.getString("fodselsnummer")),
-        fornavn = Fornavn(resultSet.getString("fornavn")),
-        etternavn = Etternavn(resultSet.getString("etternavn"))
+    private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
+        treffId = TreffId(rs.getString("treff_id")),
+        fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
+        kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
+        fornavn = Fornavn(rs.getString("fornavn")),
+        etternavn = Etternavn(rs.getString("etternavn"))
     )
-
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         val repo = ArbeidsgiverRepository(dataSource)
@@ -135,7 +135,7 @@ class TestDatabase {
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
         val repo = JobbsøkerRepository(dataSource)
         jobbsøkere.forEach {
-            val jobbsøker = LeggTilJobbsøker(it.fødselsnummer, it.fornavn, it.etternavn)
+            val jobbsøker = LeggTilJobbsøker(it.fødselsnummer, it.kandidatnummer, it.fornavn, it.etternavn)
             repo.leggTil(jobbsøker, it.treffId)
         }
     }
