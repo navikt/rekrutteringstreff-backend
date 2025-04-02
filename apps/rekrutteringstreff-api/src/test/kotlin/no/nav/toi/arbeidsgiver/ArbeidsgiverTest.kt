@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.arbeidsgiver
+package no.nav.toi.arbeidsgiver
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
@@ -6,10 +6,8 @@ import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
-import no.nav.toi.arbeidsgiver.Arbeidsgiver
-import no.nav.toi.arbeidsgiver.ArbeidsgiverOutboundDto
-import no.nav.toi.arbeidsgiver.Orgnavn
-import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat

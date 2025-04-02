@@ -2,6 +2,8 @@ package no.nav.toi
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result
+import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
@@ -10,7 +12,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SwaggerEndpointsTest {

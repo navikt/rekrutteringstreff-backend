@@ -6,6 +6,8 @@ import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
@@ -33,7 +35,9 @@ class JobbsøkerTest {
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            db.dataSource
+            dataSource = db.dataSource,
+            arbeidsgiverrettet = arbeidsgiverrettet,
+            utvikler = utvikler
         )
     }
 

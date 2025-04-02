@@ -15,12 +15,12 @@ data class RolleUuidSpesifikasjon(
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
 ) {
-    private fun rolleForUuid(uuid: UUID) = when (uuid) {
+    private fun rolleForUuid(uuid: UUID): Rolle? = when (uuid) {
         arbeidsgiverrettet -> Rolle.ARBEIDSGIVER_RETTET
         utvikler -> Rolle.UTVIKLER
         else -> { log.warn("Ukjent rolle-UUID: $uuid"); null }
     }
 
-    fun rollerForUuider(uuider: Collection<UUID>) = uuider.mapNotNull(::rolleForUuid).toSet()
+    fun rollerForUuider(uuider: Collection<UUID>): Set<Rolle> = uuider.mapNotNull(::rolleForUuid).toSet()
 }
 

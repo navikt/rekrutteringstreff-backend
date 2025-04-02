@@ -11,6 +11,7 @@ import com.github.kittinunf.result.Result
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
+import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.provider.Arguments
 import java.util.UUID
@@ -34,10 +35,11 @@ fun assertStatuscodeEquals(
     }
 }
 
-val modiaGenerell = UUID.randomUUID()
-val arbeidsgiverrettet = UUID.randomUUID()
-val utvikler = UUID.randomUUID()
-
+object AzureAdRoller {
+    val modiaGenerell: UUID = UUID.randomUUID()
+    val arbeidsgiverrettet: UUID = UUID.randomUUID()
+    val utvikler: UUID = UUID.randomUUID()
+}
 
 fun MockOAuth2Server.lagToken(
     authPort: Int,
