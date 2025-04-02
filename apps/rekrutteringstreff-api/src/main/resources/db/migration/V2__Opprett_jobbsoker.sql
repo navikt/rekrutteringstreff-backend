@@ -4,6 +4,6 @@ CREATE TABLE jobbsoker
     treff_db_id   bigint NOT NULL,
     fodselsnummer text   NOT NULL,
     fornavn       text,
-    etternavn     text,
+    etternavn      text,
     FOREIGN KEY (treff_db_id) REFERENCES rekrutteringstreff (db_id)
 );
