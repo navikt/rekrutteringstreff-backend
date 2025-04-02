@@ -5,6 +5,9 @@ import com.github.kittinunf.fuel.core.Method
 import com.github.kittinunf.fuel.core.Request
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.modiaGenerell
+import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.*
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.*
@@ -56,7 +59,7 @@ private class AutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        repo.opprett(OpprettRekrutteringstreffInternalDto("Tittel","A213456", "Kontor", ZonedDateTime.now()))
+        repo.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
     }
 
@@ -65,10 +68,14 @@ private class AutorisasjonsTest {
         database.slettAlt()
     }
 
-    enum class Endepunkt(val url: () -> String, val metode: Method, val requestBygger: Request.() -> Request = { this }){
-        OpprettRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff" },Method.POST,{
+    enum class Endepunkt(
+        val url: () -> String,
+        val metode: Method,
+        val requestBygger: Request.() -> Request = { this }
+    ) {
+        OpprettRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff" }, Method.POST, {
             body(
-            """
+                """
                 {
                     "opprettetAvNavkontorEnhetId": "NAV-kontor"
                 }
@@ -76,20 +83,32 @@ private class AutorisasjonsTest {
             )
         }),
         HentAlleRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff" }, Method.GET),
-        HentRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" }, Method.GET),
-        OppdaterRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" }, Method.PUT,{
-            body(mapper.writeValueAsString(
-                OppdaterRekrutteringstreffDto(
-                    tittel = "Oppdatert Tittel",
-                    beskrivelse = "Oppdatert beskrivelse",
-                    fraTid = nowOslo().minusHours(2),
-                    tilTid = nowOslo().plusHours(3),
-                    sted = "Oppdatert Sted"
+        HentRekrutteringstreff(
+            { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" },
+            Method.GET
+        ),
+        OppdaterRekrutteringstreff(
+            { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" },
+            Method.PUT,
+            {
+                body(
+                    mapper.writeValueAsString(
+                        OppdaterRekrutteringstreffDto(
+                            tittel = "Oppdatert Tittel",
+                            beskrivelse = "Oppdatert beskrivelse",
+                            fraTid = nowOslo().minusHours(2),
+                            tilTid = nowOslo().plusHours(3),
+                            sted = "Oppdatert Sted"
+                        )
+                    )
                 )
-            ))
-        }),
-        SlettRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" }, Method.DELETE)
+            }),
+        SlettRekrutteringstreff(
+            { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" },
+            Method.DELETE
+        )
     }
+
     enum class Gruppe(val somStringListe: List<UUID>) {
         ModiaGenerell(listOf(modiaGenerell)),
         Arbeidsgiverrettet(listOf(arbeidsgiverrettet)),
@@ -120,7 +139,10 @@ private class AutorisasjonsTest {
         val byggRequest = endepunkt.requestBygger
         val (_, response, result) = Fuel.request(endepunkt.metode, endepunkt.url())
             .byggRequest()
-            .header("Authorization", "Bearer ${authServer.lagToken(authPort, groups = gruppetilhørighet.somStringListe).serialize()}")
+            .header(
+                "Authorization",
+                "Bearer ${authServer.lagToken(authPort, groups = gruppetilhørighet.somStringListe).serialize()}"
+            )
             .responseString()
         assertStatuscodeEquals(expectedStatus, response, result)
     }
