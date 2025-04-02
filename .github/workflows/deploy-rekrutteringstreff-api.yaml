@@ -13,7 +13,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/bedre-swagger
+      deploy_dev_branch: refs/heads/jobbsoker-kandidatnummer
     secrets: inherit
     permissions:
       contents: read

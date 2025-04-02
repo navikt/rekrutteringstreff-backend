@@ -9,7 +9,15 @@ data class Fødselsnummer(private val fødselsnummer: String) {
 
     val asString = fødselsnummer
     override fun toString(): String = asString
+}
 
+data class Kandidatnummer(private val kandidatnummer: String) {
+    init {
+        if (kandidatnummer.isEmpty()) throw IllegalArgumentException("Kandidatnummer må være ikke-tomt.")
+    }
+
+    val asString = kandidatnummer
+    override fun toString(): String = asString
 }
 
 data class Fornavn(private val fornavn: String) {
@@ -32,6 +40,7 @@ data class Etternavn(private val etternavn: String) {
 
 data class LeggTilJobbsøker(
     val fødselsnummer: Fødselsnummer,
+    val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
     val etternavn: Etternavn
 )
@@ -39,6 +48,7 @@ data class LeggTilJobbsøker(
 data class Jobbsøker(
     val treffId: TreffId,
     val fødselsnummer: Fødselsnummer,
+    val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
     val etternavn: Etternavn
 )
