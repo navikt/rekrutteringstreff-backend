@@ -53,7 +53,7 @@ class JobbsøkerRepository(
 
         dataSource.connection.use { connection ->
             val treffDbId: Long = hentTreffDbId(connection, treff)
-                ?: throw IllegalArgumentException("Can't add jobbsøker because there is no treff with id ${treff.somUuid}. jobbsøker=$jobbsøker")
+                ?: throw IllegalArgumentException("Kan ikke legge til jobbsøker på treffet fordi det ikke finnes noe treff med id ${treff.somUuid}. jobbsøker=$jobbsøker")
             leggTilJobbsøker(connection, jobbsøker, treffDbId)
         }
     }
@@ -61,7 +61,7 @@ class JobbsøkerRepository(
     fun hentJobbsøkere(treff: TreffId): List<Jobbsøker> {
         dataSource.connection.use { connection ->
             if (!finnesIDb(connection, treff))
-                throw IllegalArgumentException("Can't fetch jobbsøkere because no rekrutteringstreff exists with id $treff.")
+                throw IllegalArgumentException("Kan ikke hente jobbsøkere fordi det ikke finnes noe rekrutteringstreff med id $treff.")
 
             connection.prepareStatement(
                 """

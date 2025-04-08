@@ -39,7 +39,7 @@ data class Etternavn(private val etternavn: String) {
 data class Navkontor(private val navkontor: String) {
     init {
         if (navkontor.isEmpty()) {
-            throw IllegalArgumentException("Navkontor cannot be empty.")
+            throw IllegalArgumentException("Navkontor kan ikke være tomt.")
         }
     }
     val asString = navkontor
@@ -49,7 +49,7 @@ data class Navkontor(private val navkontor: String) {
 data class VeilederNavn(private val navn: String) {
     init {
         if (navn.isEmpty()) {
-            throw IllegalArgumentException("VeilederNavn cannot be empty.")
+            throw IllegalArgumentException("VeilederNavn kan ikke være tomt.")
         }
     }
     val asString = navn
@@ -59,7 +59,7 @@ data class VeilederNavn(private val navn: String) {
 data class VeilederNavIdent(private val ident: String) {
     init {
         if (ident.isEmpty()) {
-            throw IllegalArgumentException("VeilederNavIdent cannot be empty.")
+            throw IllegalArgumentException("VeilederNavIdent kan ikke være tom.")
         }
     }
     val asString = ident
