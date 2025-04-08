@@ -152,8 +152,10 @@ class JobbsøkerTest {
         val navkontor3 = Navkontor("Trondheim")
         val veilederNavn1 = VeilederNavn("Veileder1")
         val veilederNavn2 = VeilederNavn("Veileder2")
+        val veilederNavn3 = VeilederNavn("Veileder3")
         val veilederNavIdent1 = VeilederNavIdent("NAV001")
         val veilederNavIdent2 = VeilederNavIdent("NAV002")
+        val veilederNavIdent3 = VeilederNavIdent("NAV003")
 
         val jobbsøkere1 = listOf(
             Jobbsøker(treffId1, fnr1, kandidatnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1)
@@ -163,7 +165,7 @@ class JobbsøkerTest {
             Jobbsøker(treffId2, fnr3, kandidatnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2)
         )
         val jobbsøkere3 = listOf(
-            Jobbsøker(treffId3, fnr4, kandidatnr1, fornavn4, etternavn4, navkontor3, veilederNavn1, veilederNavIdent1)
+            Jobbsøker(treffId3, fnr4, kandidatnr1, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3)
         )
         db.leggTilJobbsøkere(jobbsøkere1)
         db.leggTilJobbsøkere(jobbsøkere2)
