@@ -16,7 +16,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.*
 
-
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JobbsøkerTest {
 
@@ -63,8 +62,8 @@ class JobbsøkerTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringLeggTilJobbsøker(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val anyTreffId = "anyTreffID"
+        val leggPåToken = autentiseringstest.leggPåToken
         val (_, response, result) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker")
             .leggPåToken(authServer, authPort)
             .responseString()
@@ -74,8 +73,8 @@ class JobbsøkerTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentJobbsøkerr(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val anyTreffId = "anyTreffID"
+        val leggPåToken = autentiseringstest.leggPåToken
         val (_, response, result) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker")
             .leggPåToken(authServer, authPort)
             .responseString()
@@ -89,13 +88,19 @@ class JobbsøkerTest {
         val kandidatnr = Kandidatnummer("Kaaaaaaandidatnummer")
         val fornavn = Fornavn("Foooornavn")
         val etternavn = Etternavn("Eeeetternavn")
+        val navkontor = Navkontor("Oslo")
+        val veilederNavn = VeilederNavn("Test Veileder")
+        val veilederNavIdent = VeilederNavIdent("NAV001")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
             {
-              "fødselsnummer" : "$fnr",
-              "kandidatnummer" : "$kandidatnr",
-              "fornavn" : "$fornavn",
-              "etternavn" : "$etternavn"
+              "fødselsnummer" : "${fnr}",
+              "kandidatnummer" : "${kandidatnr}",
+              "fornavn" : "${fornavn}",
+              "etternavn" : "${etternavn}",
+              "navkontor" : "${navkontor}",
+              "veilederNavn" : "${veilederNavn}",
+              "veilederNavIdent" : "${veilederNavIdent}"
             }
             """.trimIndent()
         assertThat(db.hentAlleJobbsøkere()).isEmpty()
@@ -108,16 +113,17 @@ class JobbsøkerTest {
         assertStatuscodeEquals(HTTP_CREATED, response, result)
         val actualJobbsøkere = db.hentAlleJobbsøkere()
         assertThat(actualJobbsøkere.size).isEqualTo(1)
-        actualJobbsøkere.first().also { actual: Jobbsøker ->
+        actualJobbsøkere.first().also { actual ->
             assertThat(actual.treffId).isEqualTo(treffId)
             assertThat(actual.fødselsnummer).isEqualTo(fnr)
             assertThat(actual.kandidatnummer).isEqualTo(kandidatnr)
             assertThat(actual.fornavn).isEqualTo(fornavn)
             assertThat(actual.etternavn).isEqualTo(etternavn)
+            assertThat(actual.navkontor).isEqualTo(navkontor)
+            assertThat(actual.veilederNavn).isEqualTo(veilederNavn)
+            assertThat(actual.veilederNavIdent).isEqualTo(veilederNavIdent)
         }
     }
-
-    // TODO testcase: Hva skal skje når treffet ikke finnes?
 
     @Test
     fun hentJobbsøkere() {
@@ -130,9 +136,9 @@ class JobbsøkerTest {
         val fnr2 = Fødselsnummer("22222222222")
         val fnr3 = Fødselsnummer("33333333333")
         val fnr4 = Fødselsnummer("44444444444")
-        val anyKandidatnr = Kandidatnummer("anyKandidatnummer")
-        val forventetKandidatnr2 = Kandidatnummer("Kandidatnr2")
-        val forventetKandidatnr3 = Kandidatnummer("Kandidatnr3")
+        val kandidatnr1 = Kandidatnummer("Kandidatnr1")
+        val kandidatnr2 = Kandidatnummer("Kandidatnr2")
+        val kandidatnr3 = Kandidatnummer("Kandidatnr3")
         val fornavn1 = Fornavn("Fornavn1")
         val fornavn2 = Fornavn("Fornavn2")
         val fornavn3 = Fornavn("Fornavn3")
@@ -141,16 +147,25 @@ class JobbsøkerTest {
         val etternavn2 = Etternavn("Etternavn2")
         val etternavn3 = Etternavn("Etternavn3")
         val etternavn4 = Etternavn("Etternavn4")
+        val navkontor1 = Navkontor("Oslo")
+        val navkontor2 = Navkontor("Bergen")
+        val navkontor3 = Navkontor("Trondheim")
+        val veilederNavn1 = VeilederNavn("Veileder1")
+        val veilederNavn2 = VeilederNavn("Veileder2")
+        val veilederNavn3 = VeilederNavn("Veileder3")
+        val veilederNavIdent1 = VeilederNavIdent("NAV001")
+        val veilederNavIdent2 = VeilederNavIdent("NAV002")
+        val veilederNavIdent3 = VeilederNavIdent("NAV003")
 
-        val jobbsøkere1: List<Jobbsøker> = listOf(
-            Jobbsøker(treffId1, fnr1, anyKandidatnr, fornavn1, etternavn1)
+        val jobbsøkere1 = listOf(
+            Jobbsøker(treffId1, fnr1, kandidatnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1)
         )
-        val jobbsøkere2: List<Jobbsøker> = listOf(
-            Jobbsøker(treffId2, fnr2, forventetKandidatnr2, fornavn2, etternavn2),
-            Jobbsøker(treffId2, fnr3, forventetKandidatnr3, fornavn3, etternavn3)
+        val jobbsøkere2 = listOf(
+            Jobbsøker(treffId2, fnr2, kandidatnr2, fornavn2, etternavn2, navkontor1, veilederNavn1, veilederNavIdent1),
+            Jobbsøker(treffId2, fnr3, kandidatnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2)
         )
-        val jobbsøkere3: List<Jobbsøker> = listOf(
-            Jobbsøker(treffId3, fnr4, anyKandidatnr, fornavn4, etternavn4),
+        val jobbsøkere3 = listOf(
+            Jobbsøker(treffId3, fnr4, kandidatnr1, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3)
         )
         db.leggTilJobbsøkere(jobbsøkere1)
         db.leggTilJobbsøkere(jobbsøkere2)
@@ -175,25 +190,29 @@ class JobbsøkerTest {
         when (result) {
             is Failure -> throw result.error
             is Success -> {
-                val actualJobbsøkere: List<JobbsøkerOutboundDto> = result.value
+                val actualJobbsøkere = result.value
                 assertThat(actualJobbsøkere.size).isEqualTo(2)
                 assertThat(actualJobbsøkere).containsExactlyInAnyOrder(
                     JobbsøkerOutboundDto(
                         fnr2.asString,
-                        forventetKandidatnr2.asString,
+                        kandidatnr2.asString,
                         fornavn2.asString,
-                        etternavn2.asString
+                        etternavn2.asString,
+                        navkontor1.asString,
+                        veilederNavn1.asString,
+                        veilederNavIdent1.asString
                     ),
                     JobbsøkerOutboundDto(
                         fnr3.asString,
-                        forventetKandidatnr3.asString,
+                        kandidatnr3.asString,
                         fornavn3.asString,
-                        etternavn3.asString
-                    ),
+                        etternavn3.asString,
+                        navkontor2.asString,
+                        veilederNavn2.asString,
+                        veilederNavIdent2.asString
+                    )
                 )
             }
         }
     }
-
-    // TODO Are: Testcase: Når kandidatnummer ikke ikke kommer inn og når ikke finnes ved henting
 }

@@ -28,18 +28,25 @@ class JobbsøkerRepository(
     private fun finnesIDb(connection: Connection, treffId: TreffId): Boolean =
         hentTreffDbId(connection, treffId) != null
 
-
     fun leggTil(jobbsøker: LeggTilJobbsøker, treff: TreffId) {
 
         fun leggTilJobbsøker(connection: Connection, jobbsøker: LeggTilJobbsøker, treffDbId: Long) {
             connection.prepareStatement(
-                "INSERT INTO jobbsoker (treff_db_id, fodselsnummer, kandidatnummer, fornavn, etternavn) VALUES (?, ?, ?, ?, ?)"
+                """
+                INSERT INTO jobbsoker (
+                    treff_db_id, fodselsnummer, kandidatnummer, fornavn, etternavn, 
+                    navkontor, veileder_navn, veileder_navident
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """.trimIndent()
             ).use { stmt ->
                 stmt.setLong(1, treffDbId)
                 stmt.setString(2, jobbsøker.fødselsnummer.asString)
                 stmt.setString(3, jobbsøker.kandidatnummer?.asString)
                 stmt.setString(4, jobbsøker.fornavn.asString)
                 stmt.setString(5, jobbsøker.etternavn.asString)
+                stmt.setString(6, jobbsøker.navkontor?.asString)
+                stmt.setString(7, jobbsøker.veilederNavn?.asString)
+                stmt.setString(8, jobbsøker.veilederNavIdent?.asString)
                 stmt.executeUpdate()
             }
         }
@@ -58,12 +65,13 @@ class JobbsøkerRepository(
 
             connection.prepareStatement(
                 """
-                SELECT js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, rt.id as treff_id
+                SELECT js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, 
+                       js.navkontor, js.veileder_navn, js.veileder_navident, rt.id as treff_id
                 FROM jobbsoker js
                 JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
                 WHERE rt.id = ?
                 ORDER BY js.db_id ASC;
-            """.trimIndent()
+                """.trimIndent()
             ).use { stmt ->
                 stmt.setObject(1, treff.somUuid)
                 val resultSet = stmt.executeQuery()
@@ -81,11 +89,13 @@ class JobbsøkerRepository(
                     fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
                     kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
                     fornavn = Fornavn(rs.getString("fornavn")),
-                    etternavn = Etternavn(rs.getString("etternavn"))
+                    etternavn = Etternavn(rs.getString("etternavn")),
+                    navkontor = rs.getString("navkontor")?.let { Navkontor(it) },
+                    veilederNavn = rs.getString("veileder_navn")?.let { VeilederNavn(it) },
+                    veilederNavIdent = rs.getString("veileder_navident")?.let { VeilederNavIdent(it) }
                 )
             )
         }
         return jobbsøkere
     }
-
 }
