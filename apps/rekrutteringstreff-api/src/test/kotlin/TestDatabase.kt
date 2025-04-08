@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.arbeidsgiver.*
@@ -12,7 +11,6 @@ import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
 import java.util.*
 import javax.sql.DataSource
-
 
 class TestDatabase {
 
@@ -82,7 +80,7 @@ class TestDatabase {
 
     fun hentAlleJobbsøkere(): List<Jobbsøker> {
         val sql = """
-            SELECT js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, rt.id as treff_id
+            SELECT js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, js.navkontor, js.veileder_navn, js.veileder_navident, rt.id as treff_id
             FROM jobbsoker js
             JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
             ORDER BY js.db_id ASC;
@@ -95,7 +93,6 @@ class TestDatabase {
             }.toList()
         }
     }
-
 
     private fun konverterTilRekrutteringstreff(rs: ResultSet) = Rekrutteringstreff(
         id = TreffId(rs.getObject("id", UUID::class.java)),
@@ -121,7 +118,10 @@ class TestDatabase {
         fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
         kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
         fornavn = Fornavn(rs.getString("fornavn")),
-        etternavn = Etternavn(rs.getString("etternavn"))
+        etternavn = Etternavn(rs.getString("etternavn")),
+        navkontor = Navkontor(rs.getString("navkontor")),
+        veilederNavn = VeilederNavn(rs.getString("veileder_navn")),
+        veilederNavIdent = VeilederNavIdent(rs.getString("veileder_navident"))
     )
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
@@ -135,7 +135,15 @@ class TestDatabase {
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
         val repo = JobbsøkerRepository(dataSource)
         jobbsøkere.forEach {
-            val jobbsøker = LeggTilJobbsøker(it.fødselsnummer, it.kandidatnummer, it.fornavn, it.etternavn)
+            val jobbsøker = LeggTilJobbsøker(
+                it.fødselsnummer,
+                it.kandidatnummer,
+                it.fornavn,
+                it.etternavn,
+                it.navkontor,
+                it.veilederNavn,
+                it.veilederNavIdent
+            )
             repo.leggTil(jobbsøker, it.treffId)
         }
     }
