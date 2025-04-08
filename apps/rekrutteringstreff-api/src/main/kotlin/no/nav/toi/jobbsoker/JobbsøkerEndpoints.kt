@@ -55,8 +55,9 @@ data class JobbsøkerOutboundDto(
         content = [OpenApiContent(
             from = LeggTilJobbsøkerDto::class,
             example = """{
-                "fødselsnummer": "12345678901", 
-                "fornavn": "Ola", 
+                "fødselsnummer": "12345678901",
+                "kandidatnummer": "K123456",
+                "fornavn": "Ola",
                 "etternavn": "Nordmann",
                 "navkontor": "NAV Oslo",
                 "veilederNavn": "Kari Nordmann",
@@ -94,6 +95,7 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
             example = """[
                 {
                     "fødselsnummer": "12345678901",
+                    "kandidatnummer": "K123456",
                     "fornavn": "Ola",
                     "etternavn": "Nordmann",
                     "navkontor": "Oslo",
@@ -102,6 +104,7 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
                 },
                 {
                     "fødselsnummer": "10987654321",
+                    "kandidatnummer": "K543210",
                     "fornavn": "Kari",
                     "etternavn": "Nordmann",
                     "navkontor": null,
