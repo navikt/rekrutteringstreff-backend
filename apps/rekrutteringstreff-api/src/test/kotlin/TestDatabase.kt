@@ -116,12 +116,12 @@ class TestDatabase {
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
         treffId = TreffId(rs.getString("treff_id")),
         fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
-        kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
+        kandidatnummer = rs.getString("kandidatnummer")?.let(::Kandidatnummer),
         fornavn = Fornavn(rs.getString("fornavn")),
         etternavn = Etternavn(rs.getString("etternavn")),
-        navkontor = Navkontor(rs.getString("navkontor")),
-        veilederNavn = VeilederNavn(rs.getString("veileder_navn")),
-        veilederNavIdent = VeilederNavIdent(rs.getString("veileder_navident"))
+        navkontor = rs.getString("navkontor")?.let(::Navkontor),
+        veilederNavn = rs.getString("veileder_navn")?.let(::VeilederNavn),
+        veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent)
     )
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {

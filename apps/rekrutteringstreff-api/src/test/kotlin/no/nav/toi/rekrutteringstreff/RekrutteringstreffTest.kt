@@ -11,6 +11,13 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.arbeidsgiver.Arbeidsgiver
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.jobbsoker.Etternavn
+import no.nav.toi.jobbsoker.Fornavn
+import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -195,7 +202,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun slettRekrutteringstreff() {
+    fun slettRekrutteringstreffUtenCascade() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent)
@@ -209,6 +216,50 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val remaining = db.hentAlleRekrutteringstreff()
                 assertThat(remaining).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `cascade delete av jobbsøkere og arbeidsgivere ved sletting av rekrutteringstreff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+
+        db.opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = db.hentAlleRekrutteringstreff().first()
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(
+            treffId = treff.id,
+            fødselsnummer = Fødselsnummer("01010112345"),
+            fornavn = Fornavn("Kari"),
+            etternavn = Etternavn("Nordmann"),
+            kandidatnummer = null,
+            navkontor = null,
+            veilederNavn = null,
+            veilederNavIdent = null
+        )))
+        db.leggTilArbeidsgivere(listOf(Arbeidsgiver(
+            treffId = treff.id,
+            orgnr = Orgnr("999888777"),
+            orgnavn = Orgnavn("Testbedrift AS")
+        )))
+
+        assertThat(db.hentAlleJobbsøkere()).isNotEmpty
+        assertThat(db.hentAlleArbeidsgviere()).isNotEmpty
+
+        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                assertThat(response.statusCode).isEqualTo(200)
+
+                assertThat(db.hentAlleRekrutteringstreff()).isEmpty()
+
+                assertThat(db.hentAlleJobbsøkere()).isEmpty()
+                assertThat(db.hentAlleArbeidsgviere()).isEmpty()
             }
         }
     }
