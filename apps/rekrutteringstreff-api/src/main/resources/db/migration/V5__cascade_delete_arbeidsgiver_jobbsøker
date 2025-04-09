@@ -1,0 +1,11 @@
+ALTER TABLE jobbsoker
+ADD CONSTRAINT fk_jobbsoker_rekrutteringstreff
+FOREIGN KEY (treff_db_id)
+REFERENCES rekrutteringstreff(db_id)
+ON DELETE CASCADE;
+
+ALTER TABLE arbeidsgiver
+ADD CONSTRAINT fk_arbeidsgiver_rekrutteringstreff
+FOREIGN KEY (treff_db_id)
+REFERENCES rekrutteringstreff(db_id)
+ON DELETE CASCADE;
