@@ -16,7 +16,7 @@ enum class Hendelsestype {
     LAGT_TIL
 }
 
-enum class AktorType {
+enum class AktørType {
     ARRANGØR
 }
 
@@ -24,8 +24,8 @@ data class JobbsøkerHendelse(
     val id: UUID,
     val tidspunkt: ZonedDateTime,
     val hendelsestype: Hendelsestype,
-    val opprettetAvAktortype: AktorType,
-    val aktorIdentifikasjon: String?
+    val opprettetAvAktørType: AktørType,
+    val aktørIdentifikasjon: String?
 )
 
 class JobbsøkerRepository(
@@ -49,8 +49,8 @@ class JobbsøkerRepository(
         dataSource.connection.use { connection ->
             val treffDbId: Long = hentTreffDbId(connection, treff)
                 ?: throw IllegalArgumentException("Kan ikke legge til jobbsøker på treffet fordi det ikke finnes noe treff med id ${treff.somUuid}. jobbsøker=$jobbsøker")
-            val jobbsokerDbId = leggTilJobbsøker(connection, jobbsøker, treffDbId)
-            leggTilHendelse(connection, jobbsokerDbId, Hendelsestype.LAGT_TIL, AktorType.ARRANGØR, opprettetAv)
+            val jobbsøkerDbId = leggTilJobbsøker(connection, jobbsøker, treffDbId)
+            leggTilHendelse(connection, jobbsøkerDbId, Hendelsestype.LAGT_TIL, AktørType.ARRANGØR, opprettetAv)
         }
     }
 
@@ -84,8 +84,8 @@ class JobbsøkerRepository(
         connection: Connection,
         jobbsøkerDbId: Long,
         hendelsestype: Hendelsestype,
-        opprettetAvAktortype: AktorType,
-        aktorIdentifikasjon: String
+        opprettetAvAktørType: AktørType,
+        aktørIdentifikasjon: String
     ) {
         connection.prepareStatement(
             """
@@ -98,8 +98,8 @@ class JobbsøkerRepository(
             stmt.setLong(2, jobbsøkerDbId)
             stmt.setTimestamp(3, Timestamp.from(Instant.now()))
             stmt.setString(4, hendelsestype.toString())
-            stmt.setString(5, opprettetAvAktortype.toString())
-            stmt.setString(6, aktorIdentifikasjon)
+            stmt.setString(5, opprettetAvAktørType.toString())
+            stmt.setString(6, aktørIdentifikasjon)
             stmt.executeUpdate()
         }
     }
@@ -146,7 +146,7 @@ class JobbsøkerRepository(
                 stmt.executeQuery().use { rs ->
                     val result = mutableListOf<Jobbsøker>()
                     while (rs.next()) {
-                        val jobbsoker = Jobbsøker(
+                        val jobbsøker = Jobbsøker(
                             treffId = TreffId(rs.getString("treff_id")),
                             fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
                             kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
@@ -157,7 +157,7 @@ class JobbsøkerRepository(
                             veilederNavIdent = rs.getString("veileder_navident")?.let { VeilederNavIdent(it) },
                             hendelser = parseHendelser(rs.getString("hendelser"))
                         )
-                        result.add(jobbsoker)
+                        result.add(jobbsøker)
                     }
                     return result
                 }
@@ -166,7 +166,6 @@ class JobbsøkerRepository(
     }
 
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
-
         data class HendelseJson(
             val id: String,
             val tidspunkt: String,
@@ -179,8 +178,8 @@ class JobbsøkerRepository(
                 id = UUID.fromString(h.id),
                 tidspunkt = ZonedDateTime.parse(h.tidspunkt),
                 hendelsestype = Hendelsestype.valueOf(h.hendelsestype),
-                opprettetAvAktortype = AktorType.valueOf(h.opprettetAvAktortype),
-                aktorIdentifikasjon = h.aktorIdentifikasjon
+                opprettetAvAktørType = AktørType.valueOf(h.opprettetAvAktortype),
+                aktørIdentifikasjon = h.aktorIdentifikasjon
             )
         }
     }

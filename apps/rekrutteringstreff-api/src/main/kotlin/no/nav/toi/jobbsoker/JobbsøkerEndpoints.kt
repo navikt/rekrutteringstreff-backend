@@ -149,8 +149,8 @@ private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
                     id = hendelse.id.toString(),
                     tidspunkt = hendelse.tidspunkt,
                     hendelsestype = hendelse.hendelsestype.toString(),
-                    opprettetAvAktortype = hendelse.opprettetAvAktortype.toString(),
-                    aktorIdentifikasjon = hendelse.aktorIdentifikasjon
+                    opprettetAvAktortype = hendelse.opprettetAvAktørType.toString(),
+                    aktorIdentifikasjon = hendelse.aktørIdentifikasjon
                 )
             }
         )
