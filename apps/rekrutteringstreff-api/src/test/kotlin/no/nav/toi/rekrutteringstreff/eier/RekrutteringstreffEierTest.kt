@@ -23,6 +23,7 @@ import java.util.*
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffEierTest {
 
+    val mapper = JacksonConfig.mapper
 
     companion object {
         private val authServer = MockOAuth2Server()

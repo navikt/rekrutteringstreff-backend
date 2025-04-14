@@ -92,7 +92,7 @@ private class AutorisasjonsTest {
             Method.PUT,
             {
                 body(
-                    mapper.writeValueAsString(
+                    JacksonConfig.mapper.writeValueAsString(
                         OppdaterRekrutteringstreffDto(
                             tittel = "Oppdatert Tittel",
                             beskrivelse = "Oppdatert beskrivelse",

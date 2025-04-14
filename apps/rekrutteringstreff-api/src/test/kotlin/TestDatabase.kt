@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.atOslo
 import no.nav.toi.jobbsoker.*
@@ -133,7 +134,7 @@ class TestDatabase {
     }
 
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
-        val repo = JobbsøkerRepository(dataSource)
+        val repo = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         jobbsøkere.forEach {
             val jobbsøker = LeggTilJobbsøker(
                 it.fødselsnummer,
@@ -144,7 +145,7 @@ class TestDatabase {
                 it.veilederNavn,
                 it.veilederNavIdent
             )
-            repo.leggTil(jobbsøker, it.treffId)
+            repo.leggTil(jobbsøker, it.treffId, "testperson")
         }
     }
 
