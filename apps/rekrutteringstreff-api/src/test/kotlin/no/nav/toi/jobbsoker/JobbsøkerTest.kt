@@ -212,8 +212,8 @@ class JobbsøkerTest {
                         .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS));
 
                     assertThat(hendelse.hendelsestype).isEqualTo("LAGT_TIL")
-                    assertThat(hendelse.opprettetAvAktortype).isEqualTo("ARRANGØR")
-                    assertThat(hendelse.aktorIdentifikasjon).isEqualTo("testperson")
+                    assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
+                    assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 }
             }
         }
@@ -260,8 +260,8 @@ class JobbsøkerTest {
                 assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
                 val hendelse = jobbsoeker.hendelser.first()
                 assertThat(hendelse.hendelsestype).isEqualTo("LAGT_TIL")
-                assertThat(hendelse.opprettetAvAktortype).isEqualTo("ARRANGØR")
-                assertThat(hendelse.aktorIdentifikasjon).isEqualTo("testperson")
+                assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
+                assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 assertThatCode { UUID.fromString(hendelse.id) }
                     .doesNotThrowAnyException()
                 assertThat(hendelse.tidspunkt.toInstant())
