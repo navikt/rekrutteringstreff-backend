@@ -37,8 +37,8 @@ data class JobbsøkerHendelseOutboundDto(
     val id: String,
     val tidspunkt: ZonedDateTime,
     val hendelsestype: String,
-    val opprettetAvAktortype: String,
-    val aktorIdentifikasjon: String?
+    val opprettetAvAktørType: String,
+    val aktørIdentifikasjon: String?
 )
 
 data class JobbsøkerOutboundDto(
@@ -111,7 +111,16 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
                     "etternavn": "Nordmann",
                     "navkontor": "Oslo",
                     "veilederNavn": "Kari Nordmann",
-                    "veilederNavIdent": "NAV123"
+                    "veilederNavIdent": "NAV123",
+                    "hendelser": [
+                        {
+                            "id": "any-uuid",
+                            "tidspunkt": "2025-04-14T10:38:41Z",
+                            "hendelsestype": "LAGT_TIL",
+                            "opprettetAvAktørType": "ARRANGØR",
+                            "aktørIdentifikasjon": "testperson"
+                        }
+                    ]
                 },
                 {
                     "fødselsnummer": "10987654321",
@@ -120,7 +129,8 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
                     "etternavn": "Nordmann",
                     "navkontor": null,
                     "veilederNavn": null,
-                    "veilederNavIdent": null
+                    "veilederNavIdent": null,
+                    "hendelser": []
                 }
             ]"""
         )]
@@ -149,12 +159,13 @@ private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
                     id = hendelse.id.toString(),
                     tidspunkt = hendelse.tidspunkt,
                     hendelsestype = hendelse.hendelsestype.toString(),
-                    opprettetAvAktortype = hendelse.opprettetAvAktørType.toString(),
-                    aktorIdentifikasjon = hendelse.aktørIdentifikasjon
+                    opprettetAvAktørType = hendelse.opprettetAvAktørType.toString(),
+                    aktørIdentifikasjon = hendelse.aktørIdentifikasjon
                 )
             }
         )
     }
+
 fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     post(jobbsøkerPath, leggTilJobbsøkerHandler(repo))
     get(jobbsøkerPath, hentJobbsøkere(repo))
