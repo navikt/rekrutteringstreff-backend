@@ -84,5 +84,6 @@ data class Jobbsøker(
     val etternavn: Etternavn,
     val navkontor: Navkontor?,
     val veilederNavn: VeilederNavn?,
-    val veilederNavIdent: VeilederNavIdent?
+    val veilederNavIdent: VeilederNavIdent?,
+    val hendelser: List<JobbsøkerHendelse> = emptyList()
 )

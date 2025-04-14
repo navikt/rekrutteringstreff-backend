@@ -22,6 +22,9 @@ import java.util.*
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffTest {
 
+    private val mapper = JacksonConfig.mapper
+
+
     companion object {
         @JvmStatic
         @RegisterExtension

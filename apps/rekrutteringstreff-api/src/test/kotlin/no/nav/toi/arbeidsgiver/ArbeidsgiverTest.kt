@@ -149,6 +149,7 @@ class ArbeidsgiverTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<ArbeidsgiverOutboundDto>> {
                 override fun deserialize(content: String): List<ArbeidsgiverOutboundDto> {
+                    val mapper = JacksonConfig.mapper
                     val type = mapper.typeFactory.constructCollectionType(
                         List::class.java,
                         ArbeidsgiverOutboundDto::class.java

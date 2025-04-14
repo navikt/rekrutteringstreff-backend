@@ -4,8 +4,10 @@ import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
+import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
+import java.time.ZonedDateTime
 import java.util.*
 
 private const val pathParamTreffId = "id"
@@ -31,6 +33,14 @@ private data class LeggTilJobbsøkerDto(
     )
 }
 
+data class JobbsøkerHendelseOutboundDto(
+    val id: String,
+    val tidspunkt: ZonedDateTime,
+    val hendelsestype: String,
+    val opprettetAvAktortype: String,
+    val aktorIdentifikasjon: String?
+)
+
 data class JobbsøkerOutboundDto(
     val fødselsnummer: String,
     val kandidatnummer: String?,
@@ -38,7 +48,8 @@ data class JobbsøkerOutboundDto(
     val etternavn: String,
     val navkontor: String?,
     val veilederNavn: String?,
-    val veilederNavIdent: String?
+    val veilederNavIdent: String?,
+    val hendelser: List<JobbsøkerHendelseOutboundDto>
 )
 
 @OpenApi(
@@ -74,7 +85,7 @@ data class JobbsøkerOutboundDto(
 private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     val dto: LeggTilJobbsøkerDto = ctx.bodyAsClass()
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
-    repo.leggTil(dto.somLeggTilJobbsøker(), treff)
+    repo.leggTil(dto.somLeggTilJobbsøker(), treff, ctx.extractNavIdent())
     ctx.status(201)
 }
 
@@ -132,10 +143,18 @@ private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
             etternavn = it.etternavn.asString,
             navkontor = it.navkontor?.asString,
             veilederNavn = it.veilederNavn?.asString,
-            veilederNavIdent = it.veilederNavIdent?.asString
+            veilederNavIdent = it.veilederNavIdent?.asString,
+            hendelser = it.hendelser.map { hendelse ->
+                JobbsøkerHendelseOutboundDto(
+                    id = hendelse.id.toString(),
+                    tidspunkt = hendelse.tidspunkt,
+                    hendelsestype = hendelse.hendelsestype.toString(),
+                    opprettetAvAktortype = hendelse.opprettetAvAktortype.toString(),
+                    aktorIdentifikasjon = hendelse.aktorIdentifikasjon
+                )
+            }
         )
     }
-
 fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     post(jobbsøkerPath, leggTilJobbsøkerHandler(repo))
     get(jobbsøkerPath, hentJobbsøkere(repo))

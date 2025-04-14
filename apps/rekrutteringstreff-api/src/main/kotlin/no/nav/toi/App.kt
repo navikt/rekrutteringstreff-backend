@@ -1,8 +1,5 @@
 package no.nav.toi
 
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
@@ -32,24 +29,19 @@ class App(
     private val utvikler: UUID
 ) {
     private lateinit var javalin: Javalin
-
     fun start() {
         log.info("Starter app")
         kjørFlywayMigreringer(dataSource)
         log.info("Har kjørt flyway migreringer")
         javalin = Javalin.create { config ->
             configureOpenApi(config)
-            jacksonObjectMapper().apply {
-                disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                registerModule(JavaTimeModule())
-            }
             log.info("Javalin opprettet")
         }
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs, RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler))
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource))
-        javalin.handleJobbsøker(JobbsøkerRepository(dataSource))
+        javalin.handleJobbsøker(JobbsøkerRepository(dataSource, JacksonConfig.mapper))
         javalin.start(port)
     }
 

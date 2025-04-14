@@ -1,10 +1,10 @@
 package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.fuel.httpPost
 import com.github.kittinunf.result.Result
+import no.nav.toi.JacksonConfig
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 
@@ -24,7 +24,7 @@ object OpenAiClient {
     private val openAiApiUrl = System.getenv("OPENAI_API_URL")
         ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2023-03-15-preview"
     private val openAiApiKey = System.getenv("OPENAI_API_KEY") ?: "test-key"
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = JacksonConfig.mapper
 
     fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto {
         val systemMessage = VALIDATION_SYSTEM_MESSAGE

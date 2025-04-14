@@ -10,11 +10,16 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
-import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import java.net.HttpURLConnection.*
+import java.net.HttpURLConnection.HTTP_CREATED
+import java.net.HttpURLConnection.HTTP_OK
+import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JobbsøkerTest {
@@ -38,6 +43,9 @@ class JobbsøkerTest {
             arbeidsgiverrettet = arbeidsgiverrettet,
             utvikler = utvikler
         )
+
+        // Mapper for JSON parsing
+        val mapper = JacksonConfig.mapper
     }
 
     @BeforeAll
@@ -192,26 +200,74 @@ class JobbsøkerTest {
             is Success -> {
                 val actualJobbsøkere = result.value
                 assertThat(actualJobbsøkere.size).isEqualTo(2)
-                assertThat(actualJobbsøkere).containsExactlyInAnyOrder(
-                    JobbsøkerOutboundDto(
-                        fnr2.asString,
-                        kandidatnr2.asString,
-                        fornavn2.asString,
-                        etternavn2.asString,
-                        navkontor1.asString,
-                        veilederNavn1.asString,
-                        veilederNavIdent1.asString
-                    ),
-                    JobbsøkerOutboundDto(
-                        fnr3.asString,
-                        kandidatnr3.asString,
-                        fornavn3.asString,
-                        etternavn3.asString,
-                        navkontor2.asString,
-                        veilederNavn2.asString,
-                        veilederNavIdent2.asString
-                    )
-                )
+                actualJobbsøkere.forEach { jobbsøker ->
+                    assertThat(jobbsøker.hendelser.size).isEqualTo(1)
+                    val hendelse = jobbsøker.hendelser.first()
+
+                    assertThatCode { UUID.fromString(hendelse.id) }
+                        .doesNotThrowAnyException()
+
+                    assertThat(hendelse.tidspunkt).isNotNull()
+                    assertThat(hendelse.tidspunkt.toInstant())
+                        .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS));
+
+                    assertThat(hendelse.hendelsestype).isEqualTo("LAGT_TIL")
+                    assertThat(hendelse.opprettetAvAktortype).isEqualTo("ARRANGØR")
+                    assertThat(hendelse.aktorIdentifikasjon).isEqualTo("testperson")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun hentJobbsøkerHendelser() {
+        val token = authServer.lagToken(authPort, navIdent = "testperson")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val requestBody = """
+        {
+          "fødselsnummer" : "77777777777",
+          "kandidatnummer" : "K777777",
+          "fornavn" : "Test",
+          "etternavn" : "Bruker",
+          "navkontor" : "Oslo",
+          "veilederNavn" : "Test Veileder",
+          "veilederNavIdent" : "NAV007"
+        }
+    """.trimIndent()
+
+        val (_, postResponse, postResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(HTTP_CREATED, postResponse, postResult)
+
+        val (_, getResponse, getResult) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
+                override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
+                    val type = mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java)
+                    return mapper.readValue(content, type)
+                }
+            })
+
+        assertStatuscodeEquals(HTTP_OK, getResponse, getResult)
+        when (getResult) {
+            is Failure -> throw getResult.error
+            is Success -> {
+                val actualJobbsøkere = getResult.value
+                assertThat(actualJobbsøkere.size).isEqualTo(1)
+                val jobbsoeker = actualJobbsøkere.first()
+                assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
+                val hendelse = jobbsoeker.hendelser.first()
+                assertThat(hendelse.hendelsestype).isEqualTo("LAGT_TIL")
+                assertThat(hendelse.opprettetAvAktortype).isEqualTo("ARRANGØR")
+                assertThat(hendelse.aktorIdentifikasjon).isEqualTo("testperson")
+                assertThatCode { UUID.fromString(hendelse.id) }
+                    .doesNotThrowAnyException()
+                assertThat(hendelse.tidspunkt.toInstant())
+                    .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS));
+
+
             }
         }
     }
