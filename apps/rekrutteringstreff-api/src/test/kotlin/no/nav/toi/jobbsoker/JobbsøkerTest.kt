@@ -211,7 +211,7 @@ class JobbsøkerTest {
                     assertThat(hendelse.tidspunkt.toInstant())
                         .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS));
 
-                    assertThat(hendelse.hendelsestype).isEqualTo("LAGT_TIL")
+                    assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
                     assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
                     assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 }
@@ -259,7 +259,7 @@ class JobbsøkerTest {
                 val jobbsoeker = actualJobbsøkere.first()
                 assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
                 val hendelse = jobbsoeker.hendelser.first()
-                assertThat(hendelse.hendelsestype).isEqualTo("LAGT_TIL")
+                assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
                 assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
                 assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 assertThatCode { UUID.fromString(hendelse.id) }

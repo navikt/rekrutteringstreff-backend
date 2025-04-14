@@ -13,7 +13,7 @@ import java.util.UUID
 import javax.sql.DataSource
 
 enum class Hendelsestype {
-    LAGT_TIL
+    LEGG_TIL
 }
 
 enum class AktørType {
@@ -50,7 +50,7 @@ class JobbsøkerRepository(
             val treffDbId: Long = hentTreffDbId(connection, treff)
                 ?: throw IllegalArgumentException("Kan ikke legge til jobbsøker på treffet fordi det ikke finnes noe treff med id ${treff.somUuid}. jobbsøker=$jobbsøker")
             val jobbsøkerDbId = leggTilJobbsøker(connection, jobbsøker, treffDbId)
-            leggTilHendelse(connection, jobbsøkerDbId, Hendelsestype.LAGT_TIL, AktørType.ARRANGØR, opprettetAv)
+            leggTilHendelse(connection, jobbsøkerDbId, Hendelsestype.LEGG_TIL, AktørType.ARRANGØR, opprettetAv)
         }
     }
 

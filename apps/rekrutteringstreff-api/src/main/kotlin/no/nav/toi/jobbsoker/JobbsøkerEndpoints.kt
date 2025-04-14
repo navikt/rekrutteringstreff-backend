@@ -116,7 +116,7 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
                         {
                             "id": "any-uuid",
                             "tidspunkt": "2025-04-14T10:38:41Z",
-                            "hendelsestype": "LAGT_TIL",
+                            "hendelsestype": "LEGG_TIL",
                             "opprettetAvAktørType": "ARRANGØR",
                             "aktørIdentifikasjon": "testperson"
                         }

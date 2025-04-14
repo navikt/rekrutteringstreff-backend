@@ -60,7 +60,7 @@ class JobbsøkerRepositoryTest {
         val h = js.hendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(h.hendelsestype.toString()).isEqualTo("LAGT_TIL")
+        assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
         assertThat(h.opprettetAvAktørType.toString()).isEqualTo("ARRANGØR")
         assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
     }
@@ -92,7 +92,7 @@ class JobbsøkerRepositoryTest {
         val h = js.hendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(h.hendelsestype.toString()).isEqualTo("LAGT_TIL")
+        assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
         assertThat(h.opprettetAvAktørType.toString()).isEqualTo("ARRANGØR")
         assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
     }
@@ -144,7 +144,7 @@ class JobbsøkerRepositoryTest {
             val h = js.hendelser.first()
             assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
             assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-            assertThat(h.hendelsestype.toString()).isEqualTo("LAGT_TIL")
+            assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
             assertThat(h.opprettetAvAktørType.toString()).isEqualTo("ARRANGØR")
             assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
         }
