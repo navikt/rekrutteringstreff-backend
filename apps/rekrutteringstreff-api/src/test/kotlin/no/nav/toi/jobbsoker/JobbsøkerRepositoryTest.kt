@@ -150,53 +150,33 @@ class JobbsøkerRepositoryTest {
         }
     }
 
-
     @Test
-    fun hentJobbsøkerUtenHendelserTest() {
-        val treffId: TreffId = db.opprettRekrutteringstreffIDatabase()
-        val id = leggTilDirekteJobbsøkerUtenHendelse(
-            treffId, LeggTilJobbsøker(
-                Fødselsnummer("55555555555"),
-                Kandidatnummer("K999999"),
-                Fornavn("Per"),
-                Etternavn("Olsen"),
-                Navkontor("Trondheim"),
-                VeilederNavn("Navn"),
-                VeilederNavIdent("NAV999")
-            )
-        )
-        val jobbsøkere = repository.hentJobbsøkere(treffId)
-        val js = jobbsøkere.find { it.fødselsnummer.asString == "55555555555" }
-        assertThat(js).isNotNull
-        assertThat(js!!.hendelser).isEmpty()
-    }
+    fun hentJobbsøkerHendelserTest() {
+        val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreffHendelser")
 
-    private fun leggTilDirekteJobbsøkerUtenHendelse(treff: TreffId, input: LeggTilJobbsøker): Long {
-        db.dataSource.connection.use { connection ->
-            val treffDbId =
-                connection.prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
-                    stmt.setObject(1, treff.somUuid)
-                    stmt.executeQuery().use { rs ->
-                        if (rs.next()) rs.getLong("db_id") else throw IllegalArgumentException("Treff ikke funnet")
-                    }
-                }
-            return connection.prepareStatement(
-                "INSERT INTO jobbsoker (treff_db_id, fodselsnummer, kandidatnummer, fornavn, etternavn, navkontor, veileder_navn, veileder_navident) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                Statement.RETURN_GENERATED_KEYS
-            ).use { stmt ->
-                stmt.setLong(1, treffDbId)
-                stmt.setString(2, input.fødselsnummer.asString)
-                stmt.setString(3, input.kandidatnummer?.asString)
-                stmt.setString(4, input.fornavn.asString)
-                stmt.setString(5, input.etternavn.asString)
-                stmt.setString(6, input.navkontor?.asString)
-                stmt.setString(7, input.veilederNavn?.asString)
-                stmt.setString(8, input.veilederNavIdent?.asString)
-                stmt.executeUpdate()
-                stmt.generatedKeys.use { keys ->
-                    if (keys.next()) keys.getLong(1) else throw IllegalStateException("Ingen nøkkel returnert")
-                }
-            }
-        }
+        val input = LeggTilJobbsøker(
+            Fødselsnummer("11223344556"),
+            Kandidatnummer("K7890"),
+            Fornavn("Emil"),
+            Etternavn("Hansen"),
+            Navkontor("NAV Bergen"),
+            VeilederNavn("Lars"),
+            VeilederNavIdent("NAV456")
+        )
+        repository.leggTil(input, treffId, "testperson")
+
+        val hendelser = repository.hentJobbsøkerHendelser(treffId)
+
+        assertThat(hendelser).hasSize(1)
+
+        val hendelse = hendelser.first()
+        assertThat(hendelse.fødselsnummer.asString).isEqualTo("11223344556")
+        assertThat(hendelse.kandidatnummer?.asString).isEqualTo("K7890")
+        assertThat(hendelse.fornavn.asString).isEqualTo("Emil")
+        assertThat(hendelse.etternavn.asString).isEqualTo("Hansen")
+        assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL)
+        assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+        assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
+        assertThat(hendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
     }
 }

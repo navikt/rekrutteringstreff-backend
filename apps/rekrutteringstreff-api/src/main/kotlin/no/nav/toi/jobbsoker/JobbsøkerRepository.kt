@@ -28,6 +28,19 @@ data class JobbsøkerHendelse(
     val aktørIdentifikasjon: String?
 )
 
+// Ny data‑klasse med jobb­søkerdata
+data class JobbsøkerHendelseMedJobbsøkerData(
+    val id: UUID,
+    val tidspunkt: ZonedDateTime,
+    val hendelsestype: Hendelsestype,
+    val opprettetAvAktørType: AktørType,
+    val aktørIdentifikasjon: String?,
+    val fødselsnummer: Fødselsnummer,
+    val kandidatnummer: Kandidatnummer?,
+    val fornavn: Fornavn,
+    val etternavn: Etternavn
+)
+
 class JobbsøkerRepository(
     private val dataSource: DataSource,
     private val objectMapper: ObjectMapper
@@ -48,7 +61,7 @@ class JobbsøkerRepository(
     fun leggTil(jobbsøker: LeggTilJobbsøker, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { connection ->
             val treffDbId: Long = hentTreffDbId(connection, treff)
-                ?: throw IllegalArgumentException("Kan ikke legge til jobbsøker på treffet fordi det ikke finnes noe treff med id ${treff.somUuid}. jobbsøker=$jobbsøker")
+                ?: throw IllegalArgumentException("Kan ikke legge til jobbsøker; treff med id ${treff.somUuid} finnes ikke.")
             val jobbsøkerDbId = leggTilJobbsøker(connection, jobbsøker, treffDbId)
             leggTilHendelse(connection, jobbsøkerDbId, Hendelsestype.LEGG_TIL, AktørType.ARRANGØR, opprettetAv)
         }
@@ -107,7 +120,7 @@ class JobbsøkerRepository(
     fun hentJobbsøkere(treff: TreffId): List<Jobbsøker> {
         dataSource.connection.use { connection ->
             if (!finnesIDb(connection, treff))
-                throw IllegalArgumentException("Kan ikke hente jobbsøkere fordi det ikke finnes noe rekrutteringstreff med id $treff.")
+                throw IllegalArgumentException("Kan ikke hente jobbsøkere; treff med id $treff finnes ikke.")
 
             val sql = """
                 SELECT 
@@ -127,7 +140,7 @@ class JobbsøkerRepository(
                                 'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
                                 'hendelsestype', jh.hendelsestype,
                                 'opprettetAvAktortype', jh.opprettet_av_aktortype,
-                                'aktorIdentifikasjon', jh.aktøridentifikasjon
+                                'aktøridentifikasjon', jh.aktøridentifikasjon
                             )
                         ) FILTER (WHERE jh.id IS NOT NULL),
                         '[]'
@@ -165,33 +178,42 @@ class JobbsøkerRepository(
         }
     }
 
-    fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelse> {
+    fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {
         dataSource.connection.use { connection ->
             val sql = """
-            SELECT 
-                jh.id,
-                jh.tidspunkt,
-                jh.hendelsestype,
-                jh.opprettet_av_aktortype,
-                jh.aktøridentifikasjon
-            FROM jobbsoker_hendelse jh
-            JOIN jobbsoker js ON jh.jobbsoker_db_id = js.db_id
-            JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
-            WHERE rt.id = ?
-            ORDER BY jh.tidspunkt DESC;
-        """.trimIndent()
+                SELECT 
+                    jh.id as hendelse_id,
+                    jh.tidspunkt,
+                    jh.hendelsestype,
+                    jh.opprettet_av_aktortype,
+                    jh.aktøridentifikasjon,
+                    js.fodselsnummer,
+                    js.kandidatnummer,
+                    js.fornavn,
+                    js.etternavn
+                FROM jobbsoker_hendelse jh
+                JOIN jobbsoker js ON jh.jobbsoker_db_id = js.db_id
+                JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
+                WHERE rt.id = ?
+                ORDER BY jh.tidspunkt DESC;
+            """.trimIndent()
+
             connection.prepareStatement(sql).use { stmt ->
                 stmt.setObject(1, treff.somUuid)
                 stmt.executeQuery().use { rs ->
-                    val result = mutableListOf<JobbsøkerHendelse>()
+                    val result = mutableListOf<JobbsøkerHendelseMedJobbsøkerData>()
                     while (rs.next()) {
                         result.add(
-                            JobbsøkerHendelse(
-                                id = UUID.fromString(rs.getString("id")),
+                            JobbsøkerHendelseMedJobbsøkerData(
+                                id = UUID.fromString(rs.getString("hendelse_id")),
                                 tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(java.time.ZoneId.of("Europe/Oslo")),
                                 hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
                                 opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
-                                aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
+                                aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
+                                fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
+                                kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
+                                fornavn = Fornavn(rs.getString("fornavn")),
+                                etternavn = Etternavn(rs.getString("etternavn"))
                             )
                         )
                     }
@@ -201,14 +223,13 @@ class JobbsøkerRepository(
         }
     }
 
-
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
         data class HendelseJson(
             val id: String,
             val tidspunkt: String,
             val hendelsestype: String,
             val opprettetAvAktortype: String,
-            val aktorIdentifikasjon: String?
+            val aktøridentifikasjon: String?
         )
         return objectMapper.readValue(json, object : TypeReference<List<HendelseJson>>() {}).map { h ->
             JobbsøkerHendelse(
@@ -216,7 +237,7 @@ class JobbsøkerRepository(
                 tidspunkt = ZonedDateTime.parse(h.tidspunkt),
                 hendelsestype = Hendelsestype.valueOf(h.hendelsestype),
                 opprettetAvAktørType = AktørType.valueOf(h.opprettetAvAktortype),
-                aktørIdentifikasjon = h.aktorIdentifikasjon
+                aktørIdentifikasjon = h.aktøridentifikasjon
             )
         }
     }

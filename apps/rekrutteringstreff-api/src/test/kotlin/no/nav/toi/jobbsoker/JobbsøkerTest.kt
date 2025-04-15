@@ -213,7 +213,7 @@ class JobbsøkerTest {
     }
 
     @Test
-    fun hentJobbsøkerHendelserTest() {
+    fun hentJobbsøkerTest() {
         val token = authServer.lagToken(authPort, navIdent = "testperson")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
@@ -261,7 +261,7 @@ class JobbsøkerTest {
     }
 
     @Test
-    fun hentAlleJobbsøkereHendelserTest() {
+    fun hentJobbsøkerHendelserTest() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val input1 = LeggTilJobbsøker(
@@ -309,9 +309,9 @@ class JobbsøkerTest {
         ))
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<JobbsøkerHendelseOutboundDto>> {
-                override fun deserialize(content: String): List<JobbsøkerHendelseOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerHendelseOutboundDto::class.java)
+            .responseObject(object : ResponseDeserializable<List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>> {
+                override fun deserialize(content: String): List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto> {
+                    val type = mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerHendelseMedJobbsøkerDataOutboundDto::class.java)
                     return mapper.readValue(content, type)
                 }
             })
@@ -327,6 +327,10 @@ class JobbsøkerTest {
                     assertThat(h.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
                     assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.toString())
                     assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
+                    assertThat(h.fødselsnummer).isIn("11111111111", "22222222222")
+                    assertThat(h.kandidatnummer).isIn("K111", "K222")
+                    assertThat(h.fornavn).isIn("Ola", "Kari")
+                    assertThat(h.etternavn).isEqualTo("Nordmann")
                     assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
                 }
             }

@@ -42,6 +42,18 @@ data class JobbsøkerHendelseOutboundDto(
     val aktørIdentifikasjon: String?
 )
 
+data class JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
+    val id: String,
+    val tidspunkt: ZonedDateTime,
+    val hendelsestype: String,
+    val opprettetAvAktørType: String,
+    val aktørIdentifikasjon: String?,
+    val fødselsnummer: String,
+    val kandidatnummer: String?,
+    val fornavn: String,
+    val etternavn: String
+)
+
 data class JobbsøkerOutboundDto(
     val fødselsnummer: String,
     val kandidatnummer: String?,
@@ -144,8 +156,8 @@ private fun hentJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Uni
 }
 
 @OpenApi(
-    summary = "Hent alle jobbsøkerhendelser for et rekrutteringstreff, sortert nyeste først",
-    operationId = "hentJobbsøkerhendelser",
+    summary = "Hent alle jobbsøkerhendelser med jobbsøkerdata for et rekrutteringstreff, sortert med nyeste først",
+    operationId = "hentJobbsøkerHendelserMedData",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [OpenApiParam(
         name = pathParamTreffId,
@@ -156,14 +168,18 @@ private fun hentJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Uni
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
-            from = Array<JobbsøkerHendelseOutboundDto>::class,
+            from = Array<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>::class,
             example = """[
                 {
                     "id": "any-uuid",
                     "tidspunkt": "2025-04-14T10:38:41Z",
                     "hendelsestype": "LAGT_TIL",
                     "opprettetAvAktørType": "ARRANGØR",
-                    "aktørIdentifikasjon": "testperson"
+                    "aktørIdentifikasjon": "testperson",
+                    "fødselsnummer": "12345678901",
+                    "kandidatnummer": "K123456",
+                    "fornavn": "Ola",
+                    "etternavn": "Nordmann"
                 }
             ]"""
         )]
@@ -175,12 +191,16 @@ private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     val hendelser = repo.hentJobbsøkerHendelser(treff)
     ctx.status(200).json(hendelser.map { h ->
-        JobbsøkerHendelseOutboundDto(
+        JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
             id = h.id.toString(),
             tidspunkt = h.tidspunkt,
             hendelsestype = h.hendelsestype.toString(),
             opprettetAvAktørType = h.opprettetAvAktørType.toString(),
-            aktørIdentifikasjon = h.aktørIdentifikasjon
+            aktørIdentifikasjon = h.aktørIdentifikasjon,
+            fødselsnummer = h.fødselsnummer.asString,
+            kandidatnummer = h.kandidatnummer?.asString,
+            fornavn = h.fornavn.asString,
+            etternavn = h.etternavn.asString
         )
     })
 }
