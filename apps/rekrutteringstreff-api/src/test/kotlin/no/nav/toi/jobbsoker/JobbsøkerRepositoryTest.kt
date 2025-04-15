@@ -61,7 +61,7 @@ class JobbsøkerRepositoryTest {
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
         assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-        assertThat(h.opprettetAvAktørType.toString()).isEqualTo("ARRANGØR")
+        assertThat(h.opprettetAvAktørType.toString()).isEqualTo(AktørType.ARRANGØR.toString())
         assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
     }
 
@@ -93,7 +93,7 @@ class JobbsøkerRepositoryTest {
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
         assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-        assertThat(h.opprettetAvAktørType.toString()).isEqualTo("ARRANGØR")
+        assertThat(h.opprettetAvAktørType.toString()).isEqualTo(AktørType.ARRANGØR.toString())
         assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
     }
 
@@ -145,7 +145,7 @@ class JobbsøkerRepositoryTest {
             assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
             assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
             assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-            assertThat(h.opprettetAvAktørType.toString()).isEqualTo("ARRANGØR")
+            assertThat(h.opprettetAvAktørType.toString()).isEqualTo(AktørType.ARRANGØR.toString())
             assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
         }
     }
