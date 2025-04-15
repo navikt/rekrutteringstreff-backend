@@ -204,8 +204,8 @@ class JobbsøkerTest {
                     assertThat(hendelse.tidspunkt).isNotNull()
                     assertThat(hendelse.tidspunkt.toInstant())
                         .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-                    assertThat(hendelse.hendelsestype).isEqualTo("LEGG_TIL")
-                    assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
+                    assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
+                    assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.toString())
                     assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 }
             }
@@ -249,8 +249,8 @@ class JobbsøkerTest {
                 val jobbsoeker = actualJobbsøkere.first()
                 assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
                 val hendelse = jobbsoeker.hendelser.first()
-                assertThat(hendelse.hendelsestype).isEqualTo("LEGG_TIL")
-                assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
+                assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
+                assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.toString())
                 assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 assertThatCode { UUID.fromString(hendelse.id) }
                     .doesNotThrowAnyException()
@@ -324,8 +324,8 @@ class JobbsøkerTest {
                 assertThat(hendelser[0].tidspunkt.toInstant()).isAfterOrEqualTo(hendelser[1].tidspunkt.toInstant())
                 hendelser.forEach { h ->
                     assertThatCode { UUID.fromString(h.id) }.doesNotThrowAnyException()
-                    assertThat(h.hendelsestype).isEqualTo("LEGG_TIL")
-                    assertThat(h.opprettetAvAktørType).isEqualTo("ARRANGØR")
+                    assertThat(h.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
+                    assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.toString())
                     assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
                     assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
                 }
