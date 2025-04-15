@@ -5,13 +5,15 @@ import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.*
-import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
-import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.JacksonConfig
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
-import org.assertj.core.api.Assertions.*
-import org.junit.jupiter.api.*
+import no.nav.toi.rekrutteringstreff.TreffId
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatCode
+import org.assertj.core.api.Assertions.within
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.HTTP_CREATED
@@ -20,6 +22,9 @@ import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import no.nav.toi.*
+import org.junit.jupiter.api.*
+
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JobbsøkerTest {
@@ -28,7 +33,7 @@ class JobbsøkerTest {
         private val authServer = MockOAuth2Server()
         private val authPort = 18012
         private val db = TestDatabase()
-        private val appPort = ubruktPortnr()
+        private val appPort = ubruktPortnrFra10000.ubruktPortnr()
 
         private val app = App(
             port = appPort,
@@ -40,11 +45,10 @@ class JobbsøkerTest {
                 )
             ),
             dataSource = db.dataSource,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler
+            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
+            utvikler = AzureAdRoller.utvikler
         )
 
-        // Mapper for JSON parsing
         val mapper = JacksonConfig.mapper
     }
 
@@ -90,7 +94,7 @@ class JobbsøkerTest {
     }
 
     @Test
-    fun leggTilJobbsøker() {
+    fun leggTilJobbsøkerTest() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val fnr = Fødselsnummer("55555555555")
         val kandidatnr = Kandidatnummer("Kaaaaaaandidatnummer")
@@ -134,9 +138,8 @@ class JobbsøkerTest {
     }
 
     @Test
-    fun hentJobbsøkere() {
+    fun hentJobbsøkereTest() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
-
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
         val treffId3 = db.opprettRekrutteringstreffIDatabase()
@@ -164,7 +167,6 @@ class JobbsøkerTest {
         val veilederNavIdent1 = VeilederNavIdent("NAV001")
         val veilederNavIdent2 = VeilederNavIdent("NAV002")
         val veilederNavIdent3 = VeilederNavIdent("NAV003")
-
         val jobbsøkere1 = listOf(
             Jobbsøker(treffId1, fnr1, kandidatnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1)
         )
@@ -178,22 +180,16 @@ class JobbsøkerTest {
         db.leggTilJobbsøkere(jobbsøkere1)
         db.leggTilJobbsøkere(jobbsøkere2)
         db.leggTilJobbsøkere(jobbsøkere3)
-
         assertThat(db.hentAlleRekrutteringstreff().size).isEqualTo(3)
         assertThat(db.hentAlleJobbsøkere().size).isEqualTo(4)
-
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$treffId2/jobbsoker")
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
                 override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(
-                        List::class.java,
-                        JobbsøkerOutboundDto::class.java
-                    )
+                    val type = mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java)
                     return mapper.readValue(content, type)
                 }
             })
-
         assertStatuscodeEquals(HTTP_OK, response, result)
         when (result) {
             is Failure -> throw result.error
@@ -203,15 +199,12 @@ class JobbsøkerTest {
                 actualJobbsøkere.forEach { jobbsøker ->
                     assertThat(jobbsøker.hendelser.size).isEqualTo(1)
                     val hendelse = jobbsøker.hendelser.first()
-
                     assertThatCode { UUID.fromString(hendelse.id) }
                         .doesNotThrowAnyException()
-
                     assertThat(hendelse.tidspunkt).isNotNull()
                     assertThat(hendelse.tidspunkt.toInstant())
-                        .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS));
-
-                    assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
+                        .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+                    assertThat(hendelse.hendelsestype).isEqualTo("LEGG_TIL")
                     assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
                     assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 }
@@ -220,7 +213,7 @@ class JobbsøkerTest {
     }
 
     @Test
-    fun hentJobbsøkerHendelser() {
+    fun hentJobbsøkerHendelserTest() {
         val token = authServer.lagToken(authPort, navIdent = "testperson")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
@@ -234,14 +227,12 @@ class JobbsøkerTest {
           "veilederNavIdent" : "NAV007"
         }
     """.trimIndent()
-
-        val (_, postResponse, postResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
+        val (_, postResponse, postResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
             .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         assertStatuscodeEquals(HTTP_CREATED, postResponse, postResult)
-
-        val (_, getResponse, getResult) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
+        val (_, getResponse, getResult) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
                 override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
@@ -249,7 +240,6 @@ class JobbsøkerTest {
                     return mapper.readValue(content, type)
                 }
             })
-
         assertStatuscodeEquals(HTTP_OK, getResponse, getResult)
         when (getResult) {
             is Failure -> throw getResult.error
@@ -259,15 +249,86 @@ class JobbsøkerTest {
                 val jobbsoeker = actualJobbsøkere.first()
                 assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
                 val hendelse = jobbsoeker.hendelser.first()
-                assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
+                assertThat(hendelse.hendelsestype).isEqualTo("LEGG_TIL")
                 assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
                 assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 assertThatCode { UUID.fromString(hendelse.id) }
                     .doesNotThrowAnyException()
                 assertThat(hendelse.tidspunkt.toInstant())
-                    .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS));
+                    .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+            }
+        }
+    }
 
-
+    @Test
+    fun hentAlleJobbsøkereHendelserTest() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val input1 = LeggTilJobbsøker(
+            Fødselsnummer("11111111111"),
+            Kandidatnummer("K111"),
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            Navkontor("NAV Oslo"),
+            VeilederNavn("Veileder1"),
+            VeilederNavIdent("NAV111")
+        )
+        val input2 = LeggTilJobbsøker(
+            Fødselsnummer("22222222222"),
+            Kandidatnummer("K222"),
+            Fornavn("Kari"),
+            Etternavn("Nordmann"),
+            Navkontor("NAV Bergen"),
+            VeilederNavn("Veileder2"),
+            VeilederNavIdent("NAV222")
+        )
+        db.leggTilJobbsøkere(listOf(
+            Jobbsøker(
+                treffId,
+                input1.fødselsnummer,
+                input1.kandidatnummer,
+                input1.fornavn,
+                input1.etternavn,
+                input1.navkontor,
+                input1.veilederNavn,
+                input1.veilederNavIdent
+            )
+        ))
+        Thread.sleep(1000)
+        db.leggTilJobbsøkere(listOf(
+            Jobbsøker(
+                treffId,
+                input2.fødselsnummer,
+                input2.kandidatnummer,
+                input2.fornavn,
+                input2.etternavn,
+                input2.navkontor,
+                input2.veilederNavn,
+                input2.veilederNavIdent
+            )
+        ))
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<JobbsøkerHendelseOutboundDto>> {
+                override fun deserialize(content: String): List<JobbsøkerHendelseOutboundDto> {
+                    val type = mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerHendelseOutboundDto::class.java)
+                    return mapper.readValue(content, type)
+                }
+            })
+        assertThat(response.statusCode).isEqualTo(200)
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                val hendelser = result.value
+                assertThat(hendelser).hasSize(2)
+                assertThat(hendelser[0].tidspunkt.toInstant()).isAfterOrEqualTo(hendelser[1].tidspunkt.toInstant())
+                hendelser.forEach { h ->
+                    assertThatCode { UUID.fromString(h.id) }.doesNotThrowAnyException()
+                    assertThat(h.hendelsestype).isEqualTo("LEGG_TIL")
+                    assertThat(h.opprettetAvAktørType).isEqualTo("ARRANGØR")
+                    assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
+                    assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+                }
             }
         }
     }

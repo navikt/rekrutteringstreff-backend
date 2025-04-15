@@ -165,6 +165,43 @@ class JobbsøkerRepository(
         }
     }
 
+    fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelse> {
+        dataSource.connection.use { connection ->
+            val sql = """
+            SELECT 
+                jh.id,
+                jh.tidspunkt,
+                jh.hendelsestype,
+                jh.opprettet_av_aktortype,
+                jh.aktøridentifikasjon
+            FROM jobbsoker_hendelse jh
+            JOIN jobbsoker js ON jh.jobbsoker_db_id = js.db_id
+            JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
+            WHERE rt.id = ?
+            ORDER BY jh.tidspunkt DESC;
+        """.trimIndent()
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                stmt.executeQuery().use { rs ->
+                    val result = mutableListOf<JobbsøkerHendelse>()
+                    while (rs.next()) {
+                        result.add(
+                            JobbsøkerHendelse(
+                                id = UUID.fromString(rs.getString("id")),
+                                tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(java.time.ZoneId.of("Europe/Oslo")),
+                                hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                                opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                                aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
+                            )
+                        )
+                    }
+                    return result
+                }
+            }
+        }
+    }
+
+
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
         data class HendelseJson(
             val id: String,

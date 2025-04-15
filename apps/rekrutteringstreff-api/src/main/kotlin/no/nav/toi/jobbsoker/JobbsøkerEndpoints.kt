@@ -12,6 +12,7 @@ import java.util.*
 
 private const val pathParamTreffId = "id"
 private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
+private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
 
 private data class LeggTilJobbsøkerDto(
     val fødselsnummer: String,
@@ -76,9 +77,7 @@ data class JobbsøkerOutboundDto(
             }"""
         )]
     ),
-    responses = [OpenApiResponse(
-        status = "201"
-    )],
+    responses = [OpenApiResponse(status = "201")],
     path = jobbsøkerPath,
     methods = [HttpMethod.POST]
 )
@@ -116,7 +115,7 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
                         {
                             "id": "any-uuid",
                             "tidspunkt": "2025-04-14T10:38:41Z",
-                            "hendelsestype": "LEGG_TIL",
+                            "hendelsestype": "LAGT_TIL",
                             "opprettetAvAktørType": "ARRANGØR",
                             "aktørIdentifikasjon": "testperson"
                         }
@@ -138,10 +137,52 @@ private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> U
     path = jobbsøkerPath,
     methods = [HttpMethod.GET]
 )
-private fun hentJobbsøkere(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+private fun hentJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     val jobbsøkere = repo.hentJobbsøkere(treff)
     ctx.status(200).json(jobbsøkere.toOutboundDto())
+}
+
+@OpenApi(
+    summary = "Hent alle jobbsøkerhendelser for et rekrutteringstreff, sortert nyeste først",
+    operationId = "hentJobbsøkerhendelser",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(
+        name = pathParamTreffId,
+        type = UUID::class,
+        required = true,
+        description = "Rekrutteringstreffets unike identifikator (UUID)"
+    )],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = Array<JobbsøkerHendelseOutboundDto>::class,
+            example = """[
+                {
+                    "id": "any-uuid",
+                    "tidspunkt": "2025-04-14T10:38:41Z",
+                    "hendelsestype": "LAGT_TIL",
+                    "opprettetAvAktørType": "ARRANGØR",
+                    "aktørIdentifikasjon": "testperson"
+                }
+            ]"""
+        )]
+    )],
+    path = hendelserPath,
+    methods = [HttpMethod.GET]
+)
+private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    val treff = TreffId(ctx.pathParam(pathParamTreffId))
+    val hendelser = repo.hentJobbsøkerHendelser(treff)
+    ctx.status(200).json(hendelser.map { h ->
+        JobbsøkerHendelseOutboundDto(
+            id = h.id.toString(),
+            tidspunkt = h.tidspunkt,
+            hendelsestype = h.hendelsestype.toString(),
+            opprettetAvAktørType = h.opprettetAvAktørType.toString(),
+            aktørIdentifikasjon = h.aktørIdentifikasjon
+        )
+    })
 }
 
 private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
@@ -154,13 +195,13 @@ private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
             navkontor = it.navkontor?.asString,
             veilederNavn = it.veilederNavn?.asString,
             veilederNavIdent = it.veilederNavIdent?.asString,
-            hendelser = it.hendelser.map { hendelse ->
+            hendelser = it.hendelser.map { h ->
                 JobbsøkerHendelseOutboundDto(
-                    id = hendelse.id.toString(),
-                    tidspunkt = hendelse.tidspunkt,
-                    hendelsestype = hendelse.hendelsestype.toString(),
-                    opprettetAvAktørType = hendelse.opprettetAvAktørType.toString(),
-                    aktørIdentifikasjon = hendelse.aktørIdentifikasjon
+                    id = h.id.toString(),
+                    tidspunkt = h.tidspunkt,
+                    hendelsestype = h.hendelsestype.toString(),
+                    opprettetAvAktørType = h.opprettetAvAktørType.toString(),
+                    aktørIdentifikasjon = h.aktørIdentifikasjon
                 )
             }
         )
@@ -168,5 +209,6 @@ private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
 
 fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     post(jobbsøkerPath, leggTilJobbsøkerHandler(repo))
-    get(jobbsøkerPath, hentJobbsøkere(repo))
+    get(jobbsøkerPath, hentJobbsøkereHandler(repo))
+    get(hendelserPath, hentJobbsøkerHendelserHandler(repo))
 }
