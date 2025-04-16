@@ -4,12 +4,15 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
+import no.nav.toi.arbeidsgiver.AktørType
+import no.nav.toi.arbeidsgiver.Hendelsestype
 import no.nav.toi.atOslo
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.nowOslo
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
+import java.time.ZoneId
 import java.util.*
 import javax.sql.DataSource
 
@@ -63,7 +66,7 @@ class TestDatabase {
         else emptyList()
     }
 
-    fun hentAlleArbeidsgviere(): List<Arbeidsgiver> {
+    fun hentAlleArbeidsgivere(): List<Arbeidsgiver> {
         val sql = """
             SELECT ag.orgnr, ag.orgnavn, rt.id as treff_id
             FROM arbeidsgiver ag
@@ -76,6 +79,75 @@ class TestDatabase {
                 if (resultSet.next()) konverterTilArbeidsgiver(resultSet)
                 else null
             }.toList()
+        }
+    }
+
+    fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelse> {
+        val sql = """
+        SELECT 
+            jh.id,
+            jh.tidspunkt,
+            jh.hendelsestype,
+            jh.opprettet_av_aktortype,
+            jh.aktøridentifikasjon
+        FROM jobbsoker_hendelse jh
+        JOIN jobbsoker js ON jh.jobbsoker_db_id = js.db_id
+        JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
+        WHERE rt.id = ?
+        ORDER BY jh.tidspunkt ASC;
+    """.trimIndent()
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                stmt.executeQuery().use { rs ->
+                    return generateSequence {
+                        if (rs.next()) {
+                            JobbsøkerHendelse(
+                                id = UUID.fromString(rs.getString("id")),
+                                tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
+                                hendelsestype = no.nav.toi.jobbsoker.Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                                opprettetAvAktørType = no.nav.toi.jobbsoker.AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                                aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
+                            )
+                        } else null
+                    }.toList()
+                }
+            }
+        }
+    }
+
+    fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> {
+        val sql = """
+        SELECT 
+            ah.id,
+            ah.tidspunkt,
+            ah.hendelsestype,
+            ah.opprettet_av_aktortype,
+            ah.aktøridentifikasjon
+        FROM arbeidsgiver_hendelse ah
+        JOIN arbeidsgiver ag ON ah.arbeidsgiver_db_id = ag.db_id
+        JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
+        WHERE rt.id = ?
+        ORDER BY ah.tidspunkt ASC;
+    """.trimIndent()
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                stmt.executeQuery().use { rs ->
+                    return generateSequence {
+                        if (rs.next()) {
+                            ArbeidsgiverHendelse(
+                                id = UUID.fromString(rs.getString("id")),
+                                tidspunkt = rs.getTimestamp("tidspunkt")
+                                    .toInstant().atZone(ZoneId.of("Europe/Oslo")),
+                                hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                                opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                                aktøridentifikasjon = rs.getString("aktøridentifikasjon")
+                            )
+                        } else null
+                    }.toList()
+                }
+            }
         }
     }
 
@@ -126,10 +198,10 @@ class TestDatabase {
     )
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
-        val repo = ArbeidsgiverRepository(dataSource)
+        val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         arbeidsgivere.forEach {
             val arbeidsgiver = LeggTilArbeidsgiver(it.orgnr, it.orgnavn)
-            repo.leggTil(arbeidsgiver, it.treffId)
+            repo.leggTil(arbeidsgiver, it.treffId, "testperson")
         }
     }
 

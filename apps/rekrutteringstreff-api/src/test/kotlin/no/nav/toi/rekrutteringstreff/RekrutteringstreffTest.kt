@@ -248,7 +248,7 @@ class RekrutteringstreffTest {
         )))
 
         assertThat(db.hentAlleJobbsøkere()).isNotEmpty
-        assertThat(db.hentAlleArbeidsgviere()).isNotEmpty
+        assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
 
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -262,7 +262,7 @@ class RekrutteringstreffTest {
                 assertThat(db.hentAlleRekrutteringstreff()).isEmpty()
 
                 assertThat(db.hentAlleJobbsøkere()).isEmpty()
-                assertThat(db.hentAlleArbeidsgviere()).isEmpty()
+                assertThat(db.hentAlleArbeidsgivere()).isEmpty()
             }
         }
     }

@@ -43,7 +43,7 @@ class App(
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs, RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler))
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
-        javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource))
+        javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
         javalin.handleJobbsøker(JobbsøkerRepository(dataSource, JacksonConfig.mapper))
         javalin.start(port)
     }
