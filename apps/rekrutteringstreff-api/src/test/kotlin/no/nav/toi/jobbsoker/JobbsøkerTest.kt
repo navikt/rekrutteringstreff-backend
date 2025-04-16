@@ -23,6 +23,8 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 import no.nav.toi.*
+import no.nav.toi.arbeidsgiver.ArbeidsgiverTest
+import no.nav.toi.arbeidsgiver.ArbeidsgiverTest.Companion
 import org.junit.jupiter.api.*
 
 
@@ -135,6 +137,12 @@ class JobbsøkerTest {
             assertThat(actual.veilederNavn).isEqualTo(veilederNavn)
             assertThat(actual.veilederNavIdent).isEqualTo(veilederNavIdent)
         }
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser).hasSize(1)
+        val h = hendelser.first()
+        assertThat(h.hendelsestype.toString()).isEqualTo(no.nav.toi.arbeidsgiver.Hendelsestype.LEGG_TIL.toString())
+        assertThat(h.opprettetAvAktørType.toString()).isEqualTo(no.nav.toi.arbeidsgiver.AktørType.ARRANGØR.toString())
+        assertThat(h.aktørIdentifikasjon).isEqualTo("A123456")
     }
 
     @Test
