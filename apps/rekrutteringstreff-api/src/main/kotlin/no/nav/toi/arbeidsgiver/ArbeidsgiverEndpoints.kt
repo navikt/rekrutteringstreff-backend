@@ -21,10 +21,29 @@ private data class LeggTilArbeidsgiverDto(
     fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn))
 }
 
+data class ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
+    val id: String,
+    val tidspunkt: ZonedDateTime,
+    val hendelsestype: String,
+    val opprettetAvAktørType: String,
+    val aktøridentifikasjon: String?,
+    val orgnr: String,
+    val orgnavn: String
+)
+
+data class ArbeidsgiverHendelseOutboundDto(
+    val id: String,
+    val tidspunkt: ZonedDateTime,
+    val hendelsestype: String,
+    val opprettetAvAktørType: String,
+    val aktøridentifikasjon: String?,
+)
+
+
 data class ArbeidsgiverOutboundDto(
-    val orgnaisasjonsnummer: String,
+    val organisasjonsnummer: String,
     val navn: String,
-    val status: String = "TODO" // TODO: Vurder om default skal settes her
+    val hendelser: List<ArbeidsgiverHendelseOutboundDto>
 )
 
 @OpenApi(
@@ -48,7 +67,7 @@ data class ArbeidsgiverOutboundDto(
     methods = [HttpMethod.POST]
 )
 private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
-    val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass<LeggTilArbeidsgiverDto>()
+    val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass()
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     repo.leggTil(dto.somLeggTilArbeidsgiver(), treff, ctx.extractNavIdent())
     ctx.status(201)
@@ -69,37 +88,52 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
         content = [OpenApiContent(
             from = Array<ArbeidsgiverOutboundDto>::class,
             example = """[
-                {"organisasjonsnummer": "123456789", "navn": "Example Company", "status": "eksempelstatus"},
-                {"organisasjonsnummer": "987654321", "navn": "Another Company", "status": "eksempelstatus"}
+                {
+                    "organisasjonsnummer": "123456789",
+                    "navn": "Example Company",
+                    "hendelser": [
+                        {
+                            "id": "any-uuid",
+                            "tidspunkt": "2025-04-14T10:38:41Z",
+                            "hendelsestype": "LEGG_TIL",
+                            "opprettetAvAktørType": "ARRANGØR",
+                            "aktøridentifikasjon": "testperson",
+                        }
+                    ]
+                },
+                {
+                    "organisasjonsnummer": "987654321",
+                    "navn": "Another Company",
+                    "hendelser": []
+                }
             ]"""
         )]
     )],
     path = arbeidsgiverPath,
     methods = [HttpMethod.GET]
 )
-private fun hentArbeidsgivere(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
+private fun hentArbeidsgivereHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     val arbeidsgivere = repo.hentArbeidsgivere(treff)
     ctx.status(200).json(arbeidsgivere.toOutboundDto())
 }
 
 private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
-    map {
+    map { arbeidsgiver ->
         ArbeidsgiverOutboundDto(
-            orgnaisasjonsnummer = it.orgnr.asString,
-            navn = it.orgnavn.asString
+            organisasjonsnummer = arbeidsgiver.orgnr.asString,
+            navn = arbeidsgiver.orgnavn.asString,
+            hendelser = arbeidsgiver.hendelser.map { h ->
+                ArbeidsgiverHendelseOutboundDto(
+                    id = h.id.toString(),
+                    tidspunkt = h.tidspunkt,
+                    hendelsestype = h.hendelsestype.toString(),
+                    opprettetAvAktørType = h.opprettetAvAktørType.toString(),
+                    aktøridentifikasjon = h.aktøridentifikasjon,
+                )
+            }
         )
     }
-
-data class ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
-    val id: String,
-    val tidspunkt: ZonedDateTime,
-    val hendelsestype: String,
-    val opprettetAvAktørType: String,
-    val aktøridentifikasjon: String?,
-    val orgnr: String,
-    val orgnavn: String
-)
 
 @OpenApi(
     summary = "Hent alle arbeidsgiverhendelser med tilhørende data for et rekrutteringstreff, sortert med nyeste først",
@@ -149,6 +183,6 @@ private fun hentArbeidsgiverHendelserHandler(repo: ArbeidsgiverRepository): (Con
 
 fun Javalin.handleArbeidsgiver(repo: ArbeidsgiverRepository) {
     post(arbeidsgiverPath, leggTilArbeidsgiverHandler(repo))
-    get(arbeidsgiverPath, hentArbeidsgivere(repo))
+    get(arbeidsgiverPath, hentArbeidsgivereHandler(repo))
     get(hendelserArbeidsgiverPath, hentArbeidsgiverHendelserHandler(repo))
 }

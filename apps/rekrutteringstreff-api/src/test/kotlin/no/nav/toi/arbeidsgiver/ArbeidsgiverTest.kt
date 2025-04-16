@@ -22,6 +22,8 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ArbeidsgiverTest {
@@ -141,14 +143,14 @@ class ArbeidsgiverTest {
         val orgnavn4 = Orgnavn("Orgnavn4")
 
         val arbeidsgivere1 = listOf(
-            Arbeidsgiver(treffId1, orgnr1, orgnavn1)
+            Arbeidsgiver(treffId1, orgnr1, orgnavn1, emptyList())
         )
         val arbeidsgivere2 = listOf(
-            Arbeidsgiver(treffId2, orgnr2, orgnavn2),
-            Arbeidsgiver(treffId2, orgnr3, orgnavn3)
+            Arbeidsgiver(treffId2, orgnr2, orgnavn2, emptyList()),
+            Arbeidsgiver(treffId2, orgnr3, orgnavn3, emptyList())
         )
         val arbeidsgivere3 = listOf(
-            Arbeidsgiver(treffId3, orgnr4, orgnavn4)
+            Arbeidsgiver(treffId3, orgnr4, orgnavn4, emptyList())
         )
         db.leggTilArbeidsgivere(arbeidsgivere1)
         db.leggTilArbeidsgivere(arbeidsgivere2)
@@ -173,10 +175,19 @@ class ArbeidsgiverTest {
             is Success -> {
                 val actualArbeidsgivere: List<ArbeidsgiverOutboundDto> = result.value
                 assertThat(actualArbeidsgivere.size).isEqualTo(2)
-                assertThat(actualArbeidsgivere).contains(
-                    ArbeidsgiverOutboundDto(orgnr3.asString, orgnavn3.asString),
-                    ArbeidsgiverOutboundDto(orgnr2.asString, orgnavn2.asString)
-                )
+
+                actualArbeidsgivere.forEach { arbeidsgiver ->
+                    assertThat(arbeidsgiver.hendelser).hasSize(1)
+                    val hendelse = arbeidsgiver.hendelser.first()
+                    assertThat(hendelse.hendelsestype).isEqualTo("LEGG_TIL")
+                    assertThat(hendelse.opprettetAvAktørType).isEqualTo("ARRANGØR")
+                    assertThat(hendelse.aktøridentifikasjon).isEqualTo("testperson")
+                }
+
+                val arbeidsgiverOrg2 = actualArbeidsgivere.find { it.organisasjonsnummer == orgnr2.asString }
+                assertThat(arbeidsgiverOrg2).isNotNull
+                val arbeidsgiverOrg3 = actualArbeidsgivere.find { it.organisasjonsnummer == orgnr3.asString }
+                assertThat(arbeidsgiverOrg3).isNotNull
             }
         }
     }
