@@ -4,6 +4,8 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
+import io.javalin.json.JavalinJackson
+import io.javalin.json.JsonMapper
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.toi.SecureLogLogger.Companion.secure
@@ -34,6 +36,7 @@ class App(
         kjørFlywayMigreringer(dataSource)
         log.info("Har kjørt flyway migreringer")
         javalin = Javalin.create { config ->
+            config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
             configureOpenApi(config)
             log.info("Javalin opprettet")
         }
