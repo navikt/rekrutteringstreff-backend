@@ -28,7 +28,6 @@ data class JobbsøkerHendelse(
     val aktørIdentifikasjon: String?
 )
 
-// Ny data‑klasse med jobb­søkerdata
 data class JobbsøkerHendelseMedJobbsøkerData(
     val id: UUID,
     val tidspunkt: ZonedDateTime,

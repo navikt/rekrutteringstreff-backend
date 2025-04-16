@@ -24,7 +24,6 @@ class ArbeidsgiverRepositoryTest {
         @BeforeAll
         @JvmStatic
         fun setup() {
-            // Kjør migreringene før testene
             Flyway.configure().dataSource(db.dataSource).load().migrate()
             repository = ArbeidsgiverRepository(db.dataSource, mapper)
         }
@@ -59,10 +58,8 @@ class ArbeidsgiverRepositoryTest {
 
     @Test
     fun hentArbeidsgivereTest() {
-        // Opprett to treff med ulike arbeidsgivere
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
-        // Her benytter vi en databasehjelpefunksjon for direkte innsetting av arbeidsgivere
         val ag1 = Arbeidsgiver(treffId1, Orgnr("111111111"), Orgnavn("Company A"))
         val ag2 = Arbeidsgiver(treffId2, Orgnr("222222222"), Orgnavn("Company B"))
         val ag3 = Arbeidsgiver(treffId2, Orgnr("333333333"), Orgnavn("Company C"))
