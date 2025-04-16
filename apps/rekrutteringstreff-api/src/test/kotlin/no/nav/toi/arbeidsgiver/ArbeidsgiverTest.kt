@@ -172,7 +172,6 @@ class ArbeidsgiverTest {
             is Failure -> throw result.error
             is Success -> {
                 val actualArbeidsgivere: List<ArbeidsgiverOutboundDto> = result.value
-                // For treffId2 forventes 2 arbeidsgivere
                 assertThat(actualArbeidsgivere.size).isEqualTo(2)
                 assertThat(actualArbeidsgivere).contains(
                     ArbeidsgiverOutboundDto(orgnr3.asString, orgnavn3.asString),
@@ -186,7 +185,6 @@ class ArbeidsgiverTest {
     fun hentArbeidsgiverHendelser() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreffHendelser")
-        // Bruk API-et for å opprette en arbeidsgiver (som også logger et hendelsesoppslag)
         val requestBody = """
             {
               "organisasjonsnummer": "777777777",
@@ -199,7 +197,6 @@ class ArbeidsgiverTest {
             .responseString()
         assertStatuscodeEquals(HTTP_CREATED, postResponse, postResult)
 
-        // Hent hendelsene via API
         val (_, response, result) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto>> {
