@@ -41,6 +41,9 @@ data class RekrutteringstreffDetaljOutboundDto(
     val hendelser: List<RekrutteringstreffHendelseOutboundDto>
 )
 
+enum class HendelseRessurs {
+    REKRUTTERINGSTREFF, JOBBSØKER, ARBEIDSGIVER
+}
 
 class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
@@ -216,9 +219,10 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-            SELECT id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon
+            SELECT id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, ressurs
             FROM (
                 SELECT h.id,
+                       '${HendelseRessurs.REKRUTTERINGSTREFF.name}' AS ressurs,
                        h.tidspunkt,
                        h.hendelsestype,
                        h.opprettet_av_aktortype,
@@ -230,6 +234,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 UNION ALL
 
                 SELECT jh.id,
+                       '${HendelseRessurs.JOBBSØKER.name}' AS ressurs,
                        jh.tidspunkt,
                        jh.hendelsestype,
                        jh.opprettet_av_aktortype,
@@ -242,6 +247,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 UNION ALL
 
                 SELECT ah.id,
+                       '${HendelseRessurs.ARBEIDSGIVER.name}' AS ressurs,
                        ah.tidspunkt,
                        ah.hendelsestype,
                        ah.opprettet_av_aktortype,
@@ -262,7 +268,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                             tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atOslo(),
                             hendelsestype = rs.getString("hendelsestype"),
                             opprettetAvAktørType = rs.getString("opprettet_av_aktortype"),
-                            aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
+                            aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
+                            ressurs = HendelseRessurs.valueOf(rs.getString("ressurs"))
                         ) else null
                     }.toList()
                 }
