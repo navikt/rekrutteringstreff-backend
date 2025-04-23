@@ -1,5 +1,7 @@
 package no.nav.toi.jobbsoker
 
+import no.nav.toi.AktørType
+import no.nav.toi.Hendelsestype
 import no.nav.toi.JacksonConfig
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -8,7 +10,6 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.sql.Statement
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -60,8 +61,8 @@ class JobbsøkerRepositoryTest {
         val h = js.hendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-        assertThat(h.opprettetAvAktørType.toString()).isEqualTo(AktørType.ARRANGØR.toString())
+        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
     }
 
@@ -92,8 +93,8 @@ class JobbsøkerRepositoryTest {
         val h = js.hendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-        assertThat(h.opprettetAvAktørType.toString()).isEqualTo(AktørType.ARRANGØR.toString())
+        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
     }
 
@@ -144,8 +145,8 @@ class JobbsøkerRepositoryTest {
             val h = js.hendelser.first()
             assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
             assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-            assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-            assertThat(h.opprettetAvAktørType.toString()).isEqualTo(AktørType.ARRANGØR.toString())
+            assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+            assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
             assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
         }
     }
@@ -174,7 +175,7 @@ class JobbsøkerRepositoryTest {
         assertThat(hendelse.kandidatnummer?.asString).isEqualTo("K7890")
         assertThat(hendelse.fornavn.asString).isEqualTo("Emil")
         assertThat(hendelse.etternavn.asString).isEqualTo("Hansen")
-        assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL)
+        assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
         assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
         assertThat(hendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))

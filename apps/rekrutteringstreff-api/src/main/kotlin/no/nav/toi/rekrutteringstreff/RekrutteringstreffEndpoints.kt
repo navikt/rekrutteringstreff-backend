@@ -8,7 +8,6 @@ import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.noClassLogger
 import no.nav.toi.rekrutteringstreff.eier.handleEiere
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
 import java.time.ZonedDateTime
@@ -16,6 +15,10 @@ import java.util.*
 
 private const val pathParamTreffId = "id"
 const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/hendelser"
+private const val fellesPath =
+    "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
+
 
 @OpenApi(
     summary = "Opprett rekrutteringstreff",
@@ -85,30 +88,34 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
 }
 
 @OpenApi(
-    summary = "Hent ett rekrutteringstreff",
+    summary = "Hent ett rekrutteringstreff (inkl. hendelser)",
     operationId = "hentRekrutteringstreff",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(
-        name = pathParamTreffId,
-        type = UUID::class,
-        required = true,
-        description = "Rekrutteringstreffets unike identifikator (UUID)"
-    )],
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
-            from = RekrutteringstreffDTO::class,
+            from = RekrutteringstreffDetaljOutboundDto::class,
             example = """{
-                "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
-                "tittel": "Sommerjobbtreff",
-                "beskrivelse": "Beskrivelse av Sommerjobbtreff",
-                "fraTid": "2025-06-15T09:00:00+02:00",
-                "tilTid": "2025-06-15T11:00:00+02:00",
-                "sted": "NAV Oslo",
-                "status": "Utkast",
-                "opprettetAvPersonNavident": "A123456",
-                "opprettetAvNavkontorEnhetId": "0318",
-                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
+               "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
+               "tittel":"Sommerjobbtreff",
+               "beskrivelse":null,
+               "fraTid":null,
+               "tilTid":null,
+               "sted":null,
+               "status":"Utkast",
+               "opprettetAvPersonNavident":"A123456",
+               "opprettetAvNavkontorEnhetId":"0318",
+               "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+               "hendelser":[
+                 {
+                   "id":"any-uuid",
+                   "tidspunkt":"2025-06-01T08:00:00Z",
+                   "hendelsestype":"OPPRETT",
+                   "opprettetAvAktørType":"ARRANGØR",
+                   "aktørIdentifikasjon":"A123456"
+                 }
+               ]
             }"""
         )]
     )],
@@ -117,9 +124,9 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
 )
 private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-    val id = TreffId(ctx.pathParam("id"))
-    val treff = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
-    ctx.status(200).json(treff.tilRekrutteringstreffDTO())
+    val id = TreffId(ctx.pathParam(pathParamTreffId))
+    repo.hentMedHendelser(id)?.let { ctx.status(200).json(it) }
+        ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 }
 
 @OpenApi(
@@ -170,7 +177,7 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     val id = TreffId(ctx.pathParam("id"))
     val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
     ctx.extractNavIdent()
-    repo.oppdater(id, dto)
+    repo.oppdater(id, dto, ctx.extractNavIdent())
     val updated = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet etter oppdatering")
     ctx.status(200).json(updated.tilRekrutteringstreffDTO())
 }
@@ -234,6 +241,50 @@ private fun validerRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
     ctx.status(200).json(validationResult)
 }
 
+@OpenApi(
+    summary = "Hent hendelser for rekrutteringstreff, nyeste først",
+    operationId = "hentRekrutteringstreffHendelser",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(from = Array<RekrutteringstreffHendelseOutboundDto>::class)]
+    )],
+    path = hendelserPath,
+    methods = [HttpMethod.GET]
+)
+private fun hentHendelserHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    val treff = TreffId(ctx.pathParam(pathParamTreffId))
+    val list = repo.hentHendelser(treff).map {
+        RekrutteringstreffHendelseOutboundDto(
+            id = it.id.toString(),
+            tidspunkt = it.tidspunkt,
+            hendelsestype = it.hendelsestype.name,
+            opprettetAvAktørType = it.opprettetAvAktørType.name,
+            aktørIdentifikasjon = it.aktørIdentifikasjon
+        )
+    }
+    ctx.status(200).json(list)
+}
+
+@OpenApi(
+    summary = "Hent ALLE hendelser for et rekrutteringstreff (jobbsøker, arbeidsgiver, treff)",
+    operationId = "hentAlleHendelser",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(from = Array<FellesHendelseOutboundDto>::class)]
+    )],
+    path = fellesPath,
+    methods = [HttpMethod.GET]
+)
+private fun hentAlleHendelserHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    val treff = TreffId(ctx.pathParam(pathParamTreffId))
+    val list  = repo.hentAlleHendelser(treff)
+    ctx.status(200).json(list)
+}
+
 fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
@@ -241,6 +292,8 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
     post("$endepunktRekrutteringstreff/valider", validerRekrutteringstreffHandler())
+    get(hendelserPath, hentHendelserHandler(repo))
+    get(fellesPath, hentAlleHendelserHandler(repo))
     handleEiere(repo.eierRepository)
 }
 
@@ -284,4 +337,12 @@ data class ValiderRekrutteringstreffDto(
 data class ValiderRekrutteringstreffResponsDto(
     val bryterRetningslinjer: Boolean,
     val begrunnelse: String
+)
+
+data class FellesHendelseOutboundDto(
+    val id: String,
+    val tidspunkt: ZonedDateTime,
+    val hendelsestype: String,
+    val opprettetAvAktørType: String,
+    val aktørIdentifikasjon: String?
 )

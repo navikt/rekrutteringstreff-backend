@@ -2,6 +2,8 @@ package no.nav.toi.arbeidsgiver
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import no.nav.toi.AktørType
+import no.nav.toi.Hendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.SQLException
@@ -12,14 +14,6 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
-
-enum class Hendelsestype {
-    LEGG_TIL
-}
-
-enum class AktørType {
-    ARRANGØR
-}
 
 data class ArbeidsgiverHendelse(
     val id: UUID,
@@ -61,7 +55,7 @@ class ArbeidsgiverRepository(
             val treffDbId: Long = hentTreffDbId(connection, treff)
                 ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
             val arbeidsgiverDbId = leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
-            leggTilHendelse(connection, arbeidsgiverDbId, Hendelsestype.LEGG_TIL, AktørType.ARRANGØR, opprettetAv)
+            leggTilHendelse(connection, arbeidsgiverDbId, Hendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
         }
     }
 
