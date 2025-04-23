@@ -95,7 +95,7 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
                         {
                             "id": "any-uuid",
                             "tidspunkt": "2025-04-14T10:38:41Z",
-                            "hendelsestype": "OPRETT",
+                            "hendelsestype": "OPPRETT",
                             "opprettetAvAktørType": "ARRANGØR",
                             "aktøridentifikasjon": "testperson",
                         }
