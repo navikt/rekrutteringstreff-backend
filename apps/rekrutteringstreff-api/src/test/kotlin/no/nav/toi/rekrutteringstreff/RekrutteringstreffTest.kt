@@ -382,7 +382,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun `GET alle hendelser returnerer sortert kombinert liste`() {
+    fun `hent alle hendelser returnerer sortert kombinert liste`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treff = db.opprettRekrutteringstreffIDatabase("A123456")
 
@@ -431,6 +431,12 @@ class RekrutteringstreffTest {
         val list = result.value
         assertThat(list).hasSize(4)
         assertThat(list).isSortedAccordingTo(compareByDescending<FellesHendelseOutboundDto> { it.tidspunkt })
+        assertThat(list.map { it.ressurs }).containsExactlyInAnyOrder(
+            HendelseRessurs.REKRUTTERINGSTREFF,
+            HendelseRessurs.REKRUTTERINGSTREFF,
+            HendelseRessurs.JOBBSØKER,
+            HendelseRessurs.ARBEIDSGIVER
+        )
         assertThat(list.map { it.hendelsestype }).containsExactlyInAnyOrder("OPPRETT", "OPPRETT", "OPPRETT", "OPPDATER")
     }
 

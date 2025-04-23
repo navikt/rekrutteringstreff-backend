@@ -341,6 +341,7 @@ data class ValiderRekrutteringstreffResponsDto(
 
 data class FellesHendelseOutboundDto(
     val id: String,
+    val ressurs: HendelseRessurs,
     val tidspunkt: ZonedDateTime,
     val hendelsestype: String,
     val opprettetAvAktørType: String,
