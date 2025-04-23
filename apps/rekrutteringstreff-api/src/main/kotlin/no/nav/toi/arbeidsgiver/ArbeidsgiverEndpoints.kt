@@ -95,7 +95,7 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
                         {
                             "id": "any-uuid",
                             "tidspunkt": "2025-04-14T10:38:41Z",
-                            "hendelsestype": "LEGG_TIL",
+                            "hendelsestype": "OPRETT",
                             "opprettetAvAktørType": "ARRANGØR",
                             "aktøridentifikasjon": "testperson",
                         }
@@ -153,7 +153,7 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
                 {
                     "id": "any-uuid",
                     "tidspunkt": "2025-04-14T10:38:41Z",
-                    "hendelsestype": "LEGG_TIL",
+                    "hendelsestype": "OPPRETT",
                     "opprettetAvAktørType": "ARRANGØR",
                     "aktøridentifikasjon": "testperson",
                     "orgnr": "123456789",

@@ -169,7 +169,7 @@ class RekrutteringstreffTest {
             is Failure -> throw result.error
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readValue(result.get(), RekrutteringstreffDTO::class.java)
+                val dto = mapper.readValue(result.get(), RekrutteringstreffDetaljOutboundDto::class.java)
                 assertThat(dto.tittel).isEqualTo(originalTittel)
             }
         }
@@ -231,21 +231,29 @@ class RekrutteringstreffTest {
         db.opprettRekrutteringstreffIDatabase(navIdent)
         val treff = db.hentAlleRekrutteringstreff().first()
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(
-            treffId = treff.id,
-            fødselsnummer = Fødselsnummer("01010112345"),
-            fornavn = Fornavn("Kari"),
-            etternavn = Etternavn("Nordmann"),
-            kandidatnummer = null,
-            navkontor = null,
-            veilederNavn = null,
-            veilederNavIdent = null
-        )))
-        db.leggTilArbeidsgivere(listOf(Arbeidsgiver(
-            treffId = treff.id,
-            orgnr = Orgnr("999888777"),
-            orgnavn = Orgnavn("Testbedrift AS")
-        )))
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(
+                    treffId = treff.id,
+                    fødselsnummer = Fødselsnummer("01010112345"),
+                    fornavn = Fornavn("Kari"),
+                    etternavn = Etternavn("Nordmann"),
+                    kandidatnummer = null,
+                    navkontor = null,
+                    veilederNavn = null,
+                    veilederNavIdent = null
+                )
+            )
+        )
+        db.leggTilArbeidsgivere(
+            listOf(
+                Arbeidsgiver(
+                    treffId = treff.id,
+                    orgnr = Orgnr("999888777"),
+                    orgnavn = Orgnavn("Testbedrift AS")
+                )
+            )
+        )
 
         assertThat(db.hentAlleJobbsøkere()).isNotEmpty
         assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
@@ -319,6 +327,112 @@ class RekrutteringstreffTest {
 
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
+
+    @Test
+    fun `GET hendelser gir 200 og sortert liste`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val id = db.opprettRekrutteringstreffIDatabase("A123456")
+        Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}")
+            .body(
+                """{"tittel":"x","beskrivelse":null,"fraTid":"${nowOslo()}",
+                 "tilTid":"${nowOslo()}","sted":"y"}"""
+            )
+            .header("Authorization", "Bearer ${token.serialize()}").response()
+
+        val (_, res, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}/hendelser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffHendelseOutboundDto>> {
+                override fun deserialize(content: String): List<RekrutteringstreffHendelseOutboundDto> {
+                    val type = mapper.typeFactory.constructCollectionType(
+                        List::class.java, RekrutteringstreffHendelseOutboundDto::class.java
+                    )
+                    return mapper.readValue(content, type)
+                }
+            })
+
+        assertThat(res.statusCode).isEqualTo(200)
+        result as com.github.kittinunf.result.Result.Success
+        val list = result.value
+        assertThat(list.map { it.hendelsestype }).containsExactly("OPPDATER", "OPPRETT")
+    }
+
+    @Test
+    fun `hent rekrutteringstreff returnerer hendelser`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+
+        val id = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<RekrutteringstreffDetaljOutboundDto> {
+                override fun deserialize(content: String): RekrutteringstreffDetaljOutboundDto =
+                    mapper.readValue(content, RekrutteringstreffDetaljOutboundDto::class.java)
+            })
+
+        when (result) {
+            is com.github.kittinunf.result.Result.Failure -> throw result.error
+            is com.github.kittinunf.result.Result.Success -> {
+                assertThat(response.statusCode).isEqualTo(200)
+                val dto = result.value
+                assertThat(dto.hendelser).hasSize(1)
+                assertThat(dto.hendelser.first().hendelsestype).isEqualTo(Hendelsestype.OPPRETT.name)
+            }
+        }
+    }
+
+    @Test
+    fun `GET alle hendelser returnerer sortert kombinert liste`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treff = db.opprettRekrutteringstreffIDatabase("A123456")
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(
+                    treff,
+                    Fødselsnummer("11111111111"),
+                    null,
+                    Fornavn("Ola"),
+                    Etternavn("N"),
+                    null,
+                    null,
+                    null
+                )
+            )
+        )
+
+        db.leggTilArbeidsgivere(
+            listOf(
+                Arbeidsgiver(
+                    treff,
+                    Orgnr("999888777"),
+                    Orgnavn("Test AS")
+                )
+            )
+        )
+
+        db.leggTilRekrutteringstreffHendelse(treff, Hendelsestype.OPPDATER, "A123456")
+
+        val (_, res, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/allehendelser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<FellesHendelseOutboundDto>> {
+                override fun deserialize(content: String): List<FellesHendelseOutboundDto> =
+                    mapper.readValue(
+                        content,
+                        mapper.typeFactory.constructCollectionType(
+                            List::class.java,
+                            FellesHendelseOutboundDto::class.java
+                        )
+                    )
+            })
+
+        assertThat(res.statusCode).isEqualTo(200)
+        result as Success
+        val list = result.value
+        assertThat(list).hasSize(4)
+        assertThat(list).isSortedAccordingTo(compareByDescending<FellesHendelseOutboundDto> { it.tidspunkt })
+        assertThat(list.map { it.hendelsestype }).containsExactlyInAnyOrder("OPPRETT", "OPPRETT", "OPPRETT", "OPPDATER")
+    }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")

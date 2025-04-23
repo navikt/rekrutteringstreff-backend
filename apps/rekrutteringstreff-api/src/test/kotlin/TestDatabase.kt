@@ -2,10 +2,10 @@ package no.nav.toi.rekrutteringstreff
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import no.nav.toi.AktørType
+import no.nav.toi.Hendelsestype
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
-import no.nav.toi.arbeidsgiver.AktørType
-import no.nav.toi.arbeidsgiver.Hendelsestype
 import no.nav.toi.atOslo
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.nowOslo
@@ -105,8 +105,8 @@ class TestDatabase {
                             JobbsøkerHendelse(
                                 id = UUID.fromString(rs.getString("id")),
                                 tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                                hendelsestype = no.nav.toi.jobbsoker.Hendelsestype.valueOf(rs.getString("hendelsestype")),
-                                opprettetAvAktørType = no.nav.toi.jobbsoker.AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                                hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                                opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
                                 aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
                             )
                         } else null
@@ -218,6 +218,38 @@ class TestDatabase {
                 it.veilederNavIdent
             )
             repo.leggTil(jobbsøker, it.treffId, "testperson")
+        }
+    }
+
+    fun leggTilRekrutteringstreffHendelse(
+        treffId: TreffId,
+        hendelsestype: Hendelsestype,
+        aktørIdent: String
+    ) {
+        dataSource.connection.use { c ->
+            val treffDbId = c.prepareStatement(
+                "SELECT db_id FROM rekrutteringstreff WHERE id = ?"
+            ).apply {
+                setObject(1, treffId.somUuid)
+            }.executeQuery().let { rs ->
+                if (rs.next()) rs.getLong(1)
+                else error("Treff $treffId finnes ikke i test-DB")
+            }
+
+            c.prepareStatement(
+                """
+            INSERT INTO rekrutteringstreff_hendelse
+              (id, rekrutteringstreff_db_id, tidspunkt,
+               hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+            VALUES (?, ?, now(), ?, ?, ?)
+            """.trimIndent()
+            ).apply {
+                setObject(1, UUID.randomUUID())
+                setLong  (2, treffDbId)
+                setString(3, hendelsestype.name)
+                setString(4, AktørType.ARRANGØR.name)
+                setString(5, aktørIdent)
+            }.executeUpdate()
         }
     }
 

@@ -1,5 +1,7 @@
 package no.nav.toi.arbeidsgiver
 
+import no.nav.toi.AktørType
+import no.nav.toi.Hendelsestype
 import no.nav.toi.JacksonConfig
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -51,8 +53,8 @@ class ArbeidsgiverRepositoryTest {
         val h = ag.hendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(h.hendelsestype.toString()).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-        assertThat(h.opprettetAvAktørType.toString()).isEqualTo(AktørType.ARRANGØR.toString())
+        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktøridentifikasjon).isEqualTo("testperson")
     }
 
@@ -80,7 +82,7 @@ class ArbeidsgiverRepositoryTest {
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
         val h = hendelser.first()
-        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL)
+        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktøridentifikasjon).isEqualTo("testperson")
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))

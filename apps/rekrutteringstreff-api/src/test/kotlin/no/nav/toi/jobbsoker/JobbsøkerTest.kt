@@ -140,8 +140,8 @@ class JobbsøkerTest {
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(1)
         val h = hendelser.first()
-        assertThat(h.hendelsestype.toString()).isEqualTo(no.nav.toi.arbeidsgiver.Hendelsestype.LEGG_TIL.toString())
-        assertThat(h.opprettetAvAktørType.toString()).isEqualTo(no.nav.toi.arbeidsgiver.AktørType.ARRANGØR.toString())
+        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktørIdentifikasjon).isEqualTo("A123456")
     }
 
@@ -212,8 +212,8 @@ class JobbsøkerTest {
                     assertThat(hendelse.tidspunkt).isNotNull()
                     assertThat(hendelse.tidspunkt.toInstant())
                         .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-                    assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-                    assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.toString())
+                    assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.OPPRETT.name)
+                    assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                     assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 }
             }
@@ -257,8 +257,8 @@ class JobbsøkerTest {
                 val jobbsoeker = actualJobbsøkere.first()
                 assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
                 val hendelse = jobbsoeker.hendelser.first()
-                assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-                assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.toString())
+                assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.OPPRETT.name)
+                assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                 assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 assertThatCode { UUID.fromString(hendelse.id) }
                     .doesNotThrowAnyException()
@@ -332,8 +332,8 @@ class JobbsøkerTest {
                 assertThat(hendelser[0].tidspunkt.toInstant()).isAfterOrEqualTo(hendelser[1].tidspunkt.toInstant())
                 hendelser.forEach { h ->
                     assertThatCode { UUID.fromString(h.id) }.doesNotThrowAnyException()
-                    assertThat(h.hendelsestype).isEqualTo(Hendelsestype.LEGG_TIL.toString())
-                    assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.toString())
+                    assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT.name)
+                    assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                     assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
                     assertThat(h.fødselsnummer).isIn("11111111111", "22222222222")
                     assertThat(h.kandidatnummer).isIn("K111", "K222")
