@@ -37,14 +37,14 @@ class JobbsøkerRepositoryTest {
     @Test
     fun leggTilJobbsøkerTest() {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val input = LeggTilJobbsøker(
+        val input = listOf(LeggTilJobbsøker(
             Fødselsnummer("12345678901"),
             Kandidatnummer("K123456"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             Navkontor("NAV Oslo"),
             VeilederNavn("Kari Nordmann"),
-            VeilederNavIdent("NAV123")
+            VeilederNavIdent("NAV123"))
         )
         repository.leggTil(input, treffId, "testperson")
         val jobbsøkere = repository.hentJobbsøkere(treffId)
@@ -69,14 +69,14 @@ class JobbsøkerRepositoryTest {
     @Test
     fun leggTilJobbsøkerMedKunObligatoriskeFelterTest() {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val input = LeggTilJobbsøker(
+        val input = listOf(LeggTilJobbsøker(
             Fødselsnummer("98765432109"),
             null,
             Fornavn("Knut"),
             Etternavn("Hansen"),
             null,
             null,
-            null
+            null)
         )
         repository.leggTil(input, treffId, "testperson")
         val jobbsøkere = repository.hentJobbsøkere(treffId)
@@ -155,14 +155,14 @@ class JobbsøkerRepositoryTest {
     fun hentJobbsøkerHendelserTest() {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreffHendelser")
 
-        val input = LeggTilJobbsøker(
+        val input = listOf(LeggTilJobbsøker(
             Fødselsnummer("11223344556"),
             Kandidatnummer("K7890"),
             Fornavn("Emil"),
             Etternavn("Hansen"),
             Navkontor("NAV Bergen"),
             VeilederNavn("Lars"),
-            VeilederNavIdent("NAV456")
+            VeilederNavIdent("NAV456"))
         )
         repository.leggTil(input, treffId, "testperson")
 

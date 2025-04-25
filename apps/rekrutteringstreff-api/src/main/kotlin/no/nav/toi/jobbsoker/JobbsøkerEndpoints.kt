@@ -14,7 +14,7 @@ private const val pathParamTreffId = "id"
 private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
 
-private data class LeggTilJobbsøkerDto(
+data class JobbsøkerDto(
     val fødselsnummer: String,
     val kandidatnummer: String?,
     val fornavn: String,
@@ -23,14 +23,14 @@ private data class LeggTilJobbsøkerDto(
     val veilederNavn: String?,
     val veilederNavIdent: String?
 ) {
-    fun somLeggTilJobbsøker() = LeggTilJobbsøker(
+    fun domene() = LeggTilJobbsøker(
         Fødselsnummer(fødselsnummer),
-        kandidatnummer?.let { Kandidatnummer(it) },
+        kandidatnummer?.let(::Kandidatnummer),
         Fornavn(fornavn),
         Etternavn(etternavn),
-        navkontor?.let { Navkontor(it) },
-        veilederNavn?.let { VeilederNavn(it) },
-        veilederNavIdent?.let { VeilederNavIdent(it) }
+        navkontor?.let(::Navkontor),
+        veilederNavn?.let(::VeilederNavn),
+        veilederNavIdent?.let(::VeilederNavIdent)
     )
 }
 
@@ -66,19 +66,16 @@ data class JobbsøkerOutboundDto(
 )
 
 @OpenApi(
-    summary = "Legg til ny jobbsøker til et rekrutteringstreff",
-    operationId = "leggTilJobbsøker",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(
-        name = pathParamTreffId,
-        type = UUID::class,
-        required = true,
-        description = "Rekrutteringstreffets unike identifikator (UUID)"
-    )],
+    summary = "Legg til flere jobbsøkere",
+    operationId = "leggTilJobbsøkere",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
     requestBody = OpenApiRequestBody(
+        // ⬇️  merk isArray = true
         content = [OpenApiContent(
-            from = LeggTilJobbsøkerDto::class,
-            example = """{
+            from = Array<JobbsøkerDto>::class,
+            example  = """[
+              {
                 "fødselsnummer": "12345678901",
                 "kandidatnummer": "K123456",
                 "fornavn": "Ola",
@@ -86,17 +83,27 @@ data class JobbsøkerOutboundDto(
                 "navkontor": "NAV Oslo",
                 "veilederNavn": "Kari Nordmann",
                 "veilederNavIdent": "NAV123"
-            }"""
+              },
+              {
+                "fødselsnummer": "10987654321",
+                "kandidatnummer": null,
+                "fornavn": "Kari",
+                "etternavn": "Nordmann",
+                "navkontor": null,
+                "veilederNavn": null,
+                "veilederNavIdent": null
+              }
+            ]"""
         )]
     ),
-    responses = [OpenApiResponse(status = "201")],
+    responses = [OpenApiResponse("201")],
     path = jobbsøkerPath,
     methods = [HttpMethod.POST]
 )
-private fun leggTilJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
-    val dto: LeggTilJobbsøkerDto = ctx.bodyAsClass()
-    val treff = TreffId(ctx.pathParam(pathParamTreffId))
-    repo.leggTil(dto.somLeggTilJobbsøker(), treff, ctx.extractNavIdent())
+private fun leggTilJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()   // leser array
+    val treff  = TreffId(ctx.pathParam(pathParamTreffId))
+    repo.leggTil(dtoer.map { it.domene() }, treff, ctx.extractNavIdent())
     ctx.status(201)
 }
 
@@ -228,7 +235,7 @@ private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     }
 
 fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
-    post(jobbsøkerPath, leggTilJobbsøkerHandler(repo))
+    post(jobbsøkerPath, leggTilJobbsøkereHandler(repo))
     get(jobbsøkerPath, hentJobbsøkereHandler(repo))
     get(hendelserPath, hentJobbsøkerHendelserHandler(repo))
 }

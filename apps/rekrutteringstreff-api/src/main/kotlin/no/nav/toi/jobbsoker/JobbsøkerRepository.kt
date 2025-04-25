@@ -51,12 +51,20 @@ class JobbsøkerRepository(
     private fun finnesIDb(connection: Connection, treffId: TreffId): Boolean =
         hentTreffDbId(connection, treffId) != null
 
-    fun leggTil(jobbsøker: LeggTilJobbsøker, treff: TreffId, opprettetAv: String) {
-        dataSource.connection.use { connection ->
-            val treffDbId: Long = hentTreffDbId(connection, treff)
-                ?: throw IllegalArgumentException("Kan ikke legge til jobbsøker; treff med id ${treff.somUuid} finnes ikke.")
-            val jobbsøkerDbId = leggTilJobbsøker(connection, jobbsøker, treffDbId)
-            leggTilHendelse(connection, jobbsøkerDbId, Hendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
+    fun leggTil(jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId, opprettetAv: String) {
+        dataSource.connection.use { con ->
+            val treffDbId = hentTreffDbId(con, treff)
+                ?: throw IllegalArgumentException("Treff ${treff.somUuid} finnes ikke.")
+            con.autoCommit = false
+            try {
+                jobbsøkere.forEach {
+                    val id = leggTilJobbsøker(con, it, treffDbId)
+                    leggTilHendelse(con, id, Hendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
+                }
+                con.commit()
+            } catch (e: Exception) {
+                con.rollback(); throw e
+            }
         }
     }
 

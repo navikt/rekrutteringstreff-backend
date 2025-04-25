@@ -5,27 +5,17 @@ import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.JacksonConfig
+import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatCode
-import org.assertj.core.api.Assertions.within
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
+import org.assertj.core.api.Assertions.*
+import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import java.net.HttpURLConnection.HTTP_CREATED
-import java.net.HttpURLConnection.HTTP_OK
-import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
+import java.net.HttpURLConnection.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
-import no.nav.toi.*
-import no.nav.toi.arbeidsgiver.ArbeidsgiverTest
-import no.nav.toi.arbeidsgiver.ArbeidsgiverTest.Companion
-import org.junit.jupiter.api.*
+import java.util.*
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -107,7 +97,7 @@ class JobbsøkerTest {
         val veilederNavIdent = VeilederNavIdent("NAV001")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
-            {
+            [{
               "fødselsnummer" : "${fnr}",
               "kandidatnummer" : "${kandidatnr}",
               "fornavn" : "${fornavn}",
@@ -115,7 +105,7 @@ class JobbsøkerTest {
               "navkontor" : "${navkontor}",
               "veilederNavn" : "${veilederNavn}",
               "veilederNavIdent" : "${veilederNavIdent}"
-            }
+            }]
             """.trimIndent()
         assertThat(db.hentAlleJobbsøkere()).isEmpty()
 
@@ -194,7 +184,8 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
                 override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java)
+                    val type =
+                        mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java)
                     return mapper.readValue(content, type)
                 }
             })
@@ -225,7 +216,7 @@ class JobbsøkerTest {
         val token = authServer.lagToken(authPort, navIdent = "testperson")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
-        {
+        [{
           "fødselsnummer" : "77777777777",
           "kandidatnummer" : "K777777",
           "fornavn" : "Test",
@@ -233,7 +224,7 @@ class JobbsøkerTest {
           "navkontor" : "Oslo",
           "veilederNavn" : "Test Veileder",
           "veilederNavIdent" : "NAV007"
-        }
+        }]
     """.trimIndent()
         val (_, postResponse, postResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
             .body(requestBody)
@@ -244,7 +235,8 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
                 override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java)
+                    val type =
+                        mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java)
                     return mapper.readValue(content, type)
                 }
             })
@@ -290,36 +282,43 @@ class JobbsøkerTest {
             VeilederNavn("Veileder2"),
             VeilederNavIdent("NAV222")
         )
-        db.leggTilJobbsøkere(listOf(
-            Jobbsøker(
-                treffId,
-                input1.fødselsnummer,
-                input1.kandidatnummer,
-                input1.fornavn,
-                input1.etternavn,
-                input1.navkontor,
-                input1.veilederNavn,
-                input1.veilederNavIdent
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(
+                    treffId,
+                    input1.fødselsnummer,
+                    input1.kandidatnummer,
+                    input1.fornavn,
+                    input1.etternavn,
+                    input1.navkontor,
+                    input1.veilederNavn,
+                    input1.veilederNavIdent
+                )
             )
-        ))
+        )
         Thread.sleep(1000)
-        db.leggTilJobbsøkere(listOf(
-            Jobbsøker(
-                treffId,
-                input2.fødselsnummer,
-                input2.kandidatnummer,
-                input2.fornavn,
-                input2.etternavn,
-                input2.navkontor,
-                input2.veilederNavn,
-                input2.veilederNavIdent
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(
+                    treffId,
+                    input2.fødselsnummer,
+                    input2.kandidatnummer,
+                    input2.fornavn,
+                    input2.etternavn,
+                    input2.navkontor,
+                    input2.veilederNavn,
+                    input2.veilederNavIdent
+                )
             )
-        ))
+        )
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>> {
                 override fun deserialize(content: String): List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerHendelseMedJobbsøkerDataOutboundDto::class.java)
+                    val type = mapper.typeFactory.constructCollectionType(
+                        List::class.java,
+                        JobbsøkerHendelseMedJobbsøkerDataOutboundDto::class.java
+                    )
                     return mapper.readValue(content, type)
                 }
             })
