@@ -124,21 +124,17 @@ fun Instant.atOslo(): ZonedDateTime = this.atZone(of("Europe/Oslo")).truncatedTo
 private fun getenv(key: String): String =
     System.getenv(key) ?: throw NullPointerException("Det finnes ingen miljøvariabel med navn [$key]")
 
-private fun createDataSource(): DataSource {
-    val jdbcurl = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_JDBC_URL")
-    val user = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_USERNAME")
-    val pw = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PASSWORD")
-
-    return HikariConfig().apply {
-        jdbcUrl = jdbcurl
-        username = user
-        password = pw
-        maximumPoolSize = 2
+private fun createDataSource(): DataSource =
+    HikariConfig().apply {
+        val base = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_JDBC_URL")
+        jdbcUrl = "$base?reWriteBatchedInserts=true"
+        username = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_USERNAME")
+        password = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_DB_PASSWORD")
+        driverClassName = "org.postgresql.Driver"
+        maximumPoolSize = 4
+        minimumIdle = 1
         isAutoCommit = true
         transactionIsolation = "TRANSACTION_REPEATABLE_READ"
-        minimumIdle = 1
-        driverClassName = "org.postgresql.Driver"
-        initializationFailTimeout = 5000
+        initializationFailTimeout = 5_000
         validate()
     }.let(::HikariDataSource)
-}
