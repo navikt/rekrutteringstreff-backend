@@ -1,0 +1,12 @@
+kafka_pool: nav-dev
+"ingress": [
+    "https://rekrutteringstreff-minside-api.ekstern.dev.nav.no/swagger",
+    "https://rekrutteringstreff-minside-api.ekstern.dev.nav.no/webjars",
+    "https://rekrutteringstreff-minside-api.ekstern.dev.nav.no/openapi",
+    "https://rekrutteringstreff-minside-api.ekstern.dev.nav.no/api",
+    "https://rekrutteringstreff-minside-api.ekstern.dev.nav.no/isalive",
+    "https://rekrutteringstreff-minside-api.ekstern.dev.nav.no/isready"
+  ]
+cluster: dev-gcp
+min_replicas: 1
+max_replicas: 1
