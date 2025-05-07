@@ -57,6 +57,18 @@ class RekrutteringstreffRepositoryTest {
             OppdaterRekrutteringstreffDto(
                 tittel = "Ny tittel",
                 beskrivelse = null,
+                fraTid = null,
+                tilTid = null,
+                sted = null
+            ),
+            oppdatertAv = "A1"
+        )
+
+        repository.oppdater(
+            id,
+            OppdaterRekrutteringstreffDto(
+                tittel = "Ny tittel",
+                beskrivelse = null,
                 fraTid = nowOslo(),
                 tilTid = nowOslo().plusHours(1),
                 sted = "Oslo"
@@ -65,8 +77,11 @@ class RekrutteringstreffRepositoryTest {
         )
 
         val hendelser = repository.hentHendelser(id)
-        assertThat(hendelser).hasSize(2)
-        assertThat(hendelser.first().hendelsestype).isEqualTo(Hendelsestype.OPPDATER)
+        assertThat(hendelser).hasSize(3)
+
+        assertThat(hendelser[0].hendelsestype).isEqualTo(Hendelsestype.OPPDATER)
+        assertThat(hendelser[1].hendelsestype).isEqualTo(Hendelsestype.OPPDATER)
+        assertThat(hendelser[2].hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
         assertThat(hendelser.first().tidspunkt)
             .isAfterOrEqualTo(hendelser.last().tidspunkt)
             .isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))

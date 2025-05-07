@@ -91,9 +91,9 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 var i = 0
                 setString(++i, dto.tittel)
                 setString(++i, dto.beskrivelse)
-                setTimestamp(++i, Timestamp.from(dto.fraTid.toInstant()))
-                setTimestamp(++i, Timestamp.from(dto.tilTid.toInstant()))
-                setString(++i, dto.sted)
+                setTimestamp(++i, if(dto.fraTid != null)  Timestamp.from(dto.fraTid.toInstant()) else null)
+                setTimestamp(++i, if(dto.tilTid != null) Timestamp.from(dto.tilTid.toInstant()) else null)
+                setString(++i, dto?.sted)
                 setObject(++i, treff.somUuid)
             }.executeUpdate()
 

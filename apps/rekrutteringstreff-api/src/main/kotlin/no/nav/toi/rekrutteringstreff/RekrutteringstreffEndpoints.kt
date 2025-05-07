@@ -324,9 +324,9 @@ data class OpprettRekrutteringstreffInternalDto( // TODO Are: Finne et bedre nav
 data class OppdaterRekrutteringstreffDto(
     val tittel: String,
     val beskrivelse: String?,
-    val fraTid: ZonedDateTime,
-    val tilTid: ZonedDateTime,
-    val sted: String
+    val fraTid: ZonedDateTime?,
+    val tilTid: ZonedDateTime?,
+    val sted: String?
 )
 
 data class ValiderRekrutteringstreffDto(
