@@ -8,8 +8,8 @@ kafka_pool: nav-dev
     "https://rekrutteringstreff-api.intern.dev.nav.no/isready"
   ]
 cluster: dev-gcp
-min_replicas: 1
-max_replicas: 1
+min_replicas: 0
+max_replicas: 0
 gcp_db_tier: db-f1-micro
 gcp_disk_autoresize: false
 postgres: POSTGRES_15
