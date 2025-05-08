@@ -9,6 +9,8 @@ import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
+import org.flywaydb.core.Flyway
+import org.junit.jupiter.api.BeforeAll
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
@@ -257,5 +259,10 @@ class TestDatabase {
             initializationFailTimeout = 5_000
             validate()
         }
-    )
+    ).apply {
+        Flyway.configure()
+            .dataSource(this)
+            .load()
+            .migrate()
+    }
 }

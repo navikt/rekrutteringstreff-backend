@@ -1,19 +1,26 @@
 package no.nav.toi.rekrutteringstreff.minside
 
+import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.result.Result.Failure
+import com.github.kittinunf.result.Result.Success
 import java.util.concurrent.atomic.AtomicInteger
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffDetaljOutboundDto
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.minside.ubruktPortnrFra10000.ubruktPortnr
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MinsideTest {
+    private val mapper = JacksonConfig.mapper
 
     companion object {
         private val appPort = ubruktPortnr()
@@ -67,6 +74,11 @@ class MinsideTest {
         }
     }
 
+    @BeforeEach
+    fun beforeEach() {
+        db.slettAlt()
+    }
+
     @BeforeAll
     fun setUp() {
         authServer.start(port = authPort)
@@ -83,7 +95,43 @@ class MinsideTest {
 
     @Test
     fun `hent treff`() {
-        authServer.lagToken(authPort)
+        val ident = "12345678910"
+        val token = authServer.lagToken(authPort, pid = ident)
+        val originalTittel = "Spesifikk Tittel"
+
+        db.opprettRekrutteringstreffIDatabase(
+            "A123456",
+            tittel = originalTittel,
+        )
+        val opprettetRekrutteringstreff = db.hentAlleRekrutteringstreff().first()
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                assertThat(response.statusCode).isEqualTo(200)
+                val dto = mapper.readValue(result.get(), RekrutteringstreffDetaljOutboundDto::class.java)
+                assertThat(dto.tittel).isEqualTo(originalTittel)
+            }
+        }
+    }
+
+    @Test
+    fun `401 uten token`() {
+        db.opprettRekrutteringstreffIDatabase(
+            "A123456",
+            tittel = "Spesifikk Tittel",
+        )
+        val opprettetRekrutteringstreff = db.hentAlleRekrutteringstreff().first()
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
+            .responseString()
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                assertThat(response.statusCode).isEqualTo(401)
+            }
+        }
     }
 }
 

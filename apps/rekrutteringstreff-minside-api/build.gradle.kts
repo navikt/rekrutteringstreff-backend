@@ -15,6 +15,7 @@ val nimbusVersion = "10.0.1"
 val wiremockVersion = "3.12.0"
 
 dependencies {
+
     implementation("com.github.kittinunf.fuel:fuel:$fuelVersion")
     implementation("com.github.kittinunf.fuel:fuel-jackson:$fuelVersion")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2")
@@ -35,6 +36,6 @@ dependencies {
     testImplementation("com.zaxxer:HikariCP:$hikariVersion")
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
-
-
+    testImplementation("org.flywaydb:flyway-core:${flywayVersion}")
+    testImplementation("org.flywaydb:flyway-database-postgresql:${flywayVersion}")
 }
