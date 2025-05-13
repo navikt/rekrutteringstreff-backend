@@ -20,6 +20,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 private const val NAV_IDENT_CLAIM = "NAVident"
+private const val PID_CLAIM = "pid"
 
 private val log = noClassLogger()
 
@@ -28,45 +29,66 @@ class AuthenticationConfiguration(
     private val jwksUri: String,
     private val audience: String
 ) {
-    fun jwtVerifier() = JWT.require(algorithm(jwksUri))
-        .withIssuer(issuer)
-        .withAudience(audience)
-        .withClaimPresence(NAV_IDENT_CLAIM)
-        .build()
+    fun jwtVerifiers() = listOf(NAV_IDENT_CLAIM, PID_CLAIM).map { identClaim ->
+        JWT.require(algorithm(jwksUri))
+            .withIssuer(issuer)
+            .withAudience(audience)
+            .withClaimPresence(identClaim)
+            .build()
+    }
 }
 
-class AuthenticatedUser private constructor(
+interface AuthenticatedUser {
+    fun extractNavIdent(): String
+    fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle)
+
+    companion object {
+        fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon): AuthenticatedUser {
+            val navIdentClaim = jwt.getClaim(NAV_IDENT_CLAIM)
+            return if(navIdentClaim.isMissing) {
+                AuthenticatedCitizenUser(jwt.getClaim(PID_CLAIM).asString())
+            } else {
+                AuthenticatedNavUser(
+                    navIdent = navIdentClaim.asString(),
+                    roller = jwt.getClaim("groups")
+                        .asList(UUID::class.java)
+                        .let(rolleUuidSpesifikasjon::rollerForUuider),
+                    jwt = jwt.token,
+                )
+            }
+        }
+        fun Context.extractNavIdent(): String =
+            attribute<AuthenticatedUser>("authenticatedUser")?.extractNavIdent() ?: throw UnauthorizedResponse("Not authenticated")
+    }
+}
+
+private class AuthenticatedNavUser(
     private val navIdent: String,
     private val roller: Set<Rolle>,
     private val jwt: String
-) {
-    fun verifiserAutorisasjon(vararg gyldigeRoller: Rolle) {
+): AuthenticatedUser {
+    override fun verifiserAutorisasjon(vararg gyldigeRoller: Rolle) {
         if(!erEnAvRollene(*gyldigeRoller)) {
             throw ForbiddenResponse()
         }
     }
 
     fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
+    override fun extractNavIdent() = navIdent
+}
 
-    companion object {
-        fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon) =
-            AuthenticatedUser(
-                navIdent = jwt.getClaim(NAV_IDENT_CLAIM).asString(),
-                roller = jwt.getClaim("groups")
-                    .asList(UUID::class.java)
-                    .let(rolleUuidSpesifikasjon::rollerForUuider),
-                jwt = jwt.token,
-            )
-        fun Context.extractNavIdent(): String =
-            attribute<AuthenticatedUser>("authenticatedUser")?.navIdent ?: throw UnauthorizedResponse("Not authenticated")
-    }
+private class AuthenticatedCitizenUser(
+    private val pid: String
+): AuthenticatedUser {
+    override fun extractNavIdent() = throw ForbiddenResponse()
+    override fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle) = throw ForbiddenResponse()
 }
 
 
 fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>,
                                                              rolleUuidSpesifikasjon: RolleUuidSpesifikasjon): Javalin {
     log.info("Starter autentiseringoppsett")
-    val verifiers = authConfigs.map { it.jwtVerifier() }
+    val verifiers = authConfigs.flatMap { it.jwtVerifiers() }
     before { ctx ->
         if (ctx.path().matches(Regex("""/api/rekrutteringstreff(?:$|/.*)"""))) {
             val token = ctx.header(HttpHeader.AUTHORIZATION.name)
