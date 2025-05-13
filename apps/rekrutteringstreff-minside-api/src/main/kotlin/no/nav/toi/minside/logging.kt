@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.minside
+package no.nav.toi.minside
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
