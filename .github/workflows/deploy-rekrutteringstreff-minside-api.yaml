@@ -1,4 +1,4 @@
-name: rekrutteringstreff-api
+name: rekrutteringstreff-minside-api
 
 on:
   push:
