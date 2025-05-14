@@ -35,33 +35,10 @@ spec:
     inbound:
       rules:
         - application: rekrutteringsbistand-frontend
-    outbound:
-      external:
-        - host: fakedings.intern.dev.nav.no
-        - host: {{ openai_azure_host }}
-          ports:
-            - port: 443
   azure:
     application:
       enabled: true
       allowAllUsers: false
-      claims:
-        extra:
-          - NAVident
-        groups:
-          - id: {{ adGruppeUtvikler }}
-  kafka:
-    pool: {{ kafka_pool }}
-  gcp:
-    sqlInstances:
-      - type: {{ postgres }}
-        databases:
-          - name: rekrutteringstreff-db
-        tier: {{ gcp_db_tier }}
-        diskAutoresize: {{ gcp_disk_autoresize }}
-        cascadingDelete: true
-  envFrom:
-    - secret: openai-toi-rekrutteringsbistand-stilling
   env:
     - name: REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET
       value: {{adGruppeArbeidsgiverrettet}}
