@@ -67,3 +67,5 @@ spec:
       value: {{adGruppeArbeidsgiverrettet}}
     - name: REKRUTTERINGSBISTAND_UTVIKLER
       value: {{adGruppeUtvikler}}
+    - name: REKRUTTERINGSTREFF_SCOPE
+      value: {{ rekrutteringstreff_scope }}
