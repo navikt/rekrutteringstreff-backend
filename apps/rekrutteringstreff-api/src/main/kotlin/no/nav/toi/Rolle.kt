@@ -4,7 +4,8 @@ import java.util.*
 
 enum class Rolle {
     ARBEIDSGIVER_RETTET,
-    UTVIKLER
+    UTVIKLER,
+    BORGER
 }
 
 /*

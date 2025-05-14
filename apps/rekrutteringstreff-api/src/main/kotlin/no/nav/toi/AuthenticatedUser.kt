@@ -81,7 +81,9 @@ private class AuthenticatedCitizenUser(
     private val pid: String
 ): AuthenticatedUser {
     override fun extractNavIdent() = throw ForbiddenResponse()
-    override fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle) = throw ForbiddenResponse()
+    override fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle) {
+        if(Rolle.BORGER !in arbeidsgiverRettet) throw ForbiddenResponse()
+    }
 }
 
 
