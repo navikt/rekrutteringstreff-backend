@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffOutboundDto
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffDetaljOutboundDto
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.minside.ubruktPortnrFra10000.ubruktPortnr
@@ -116,8 +117,9 @@ class MinsideTest {
             is Failure -> throw result.error
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readValue(result.get(), RekrutteringstreffDetaljOutboundDto::class.java)
-                assertThat(dto.tittel).isEqualTo(rekrutteringstreffMeldtPå.tittel)
+                val body = result.get()
+                val dto = mapper.readTree(body)
+                assertThat(dto["tittel"].asText()).isEqualTo(rekrutteringstreffMeldtPå.tittel)
             }
         }
     }
@@ -127,10 +129,8 @@ class MinsideTest {
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}")
             .responseString()
         when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(401)
-            }
+            is Failure -> assertThat(response.statusCode).isEqualTo(401)
+            is Success -> throw IllegalStateException("Ble ikke 401, men ${response.statusCode}")
         }
     }
 
@@ -141,10 +141,8 @@ class MinsideTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(401)
-            }
+            is Failure -> assertThat(response.statusCode).isEqualTo(401)
+            is Success -> throw IllegalStateException("Ble ikke 401, men ${response.statusCode}")
         }
     }
 }

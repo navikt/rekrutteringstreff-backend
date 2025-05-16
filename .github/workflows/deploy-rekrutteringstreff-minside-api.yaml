@@ -1,10 +1,10 @@
-name: rekrutteringstreff-api
+name: rekrutteringstreff-minside-api
 
 on:
   push:
     paths:
-      - apps/rekrutteringstreff-api/**
-      - .github/workflows/deploy-rekrutteringstreff-api.yaml
+      - apps/rekrutteringstreff-minside-api/**
+      - .github/workflows/deploy-rekrutteringstreff-minside-api.yaml
       - .github/workflows/deploy-template.yaml
       - buildSrc/**
 

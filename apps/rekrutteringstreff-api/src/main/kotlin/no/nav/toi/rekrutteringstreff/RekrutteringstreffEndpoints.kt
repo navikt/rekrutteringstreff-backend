@@ -123,7 +123,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     methods = [HttpMethod.GET]
 )
 private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
-    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val id = TreffId(ctx.pathParam(pathParamTreffId))
     repo.hentMedHendelser(id)?.let { ctx.status(200).json(it) }
         ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
