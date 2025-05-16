@@ -24,6 +24,7 @@ class App(
             configureOpenApi(config)
             log.info("Javalin opprettet")
         }
+        javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
         javalin.rekrutteringstreffendepunkt(RekrutteringstreffKlient(rekrutteringstreffUrl, azureKlient))
         javalin.start(port)
