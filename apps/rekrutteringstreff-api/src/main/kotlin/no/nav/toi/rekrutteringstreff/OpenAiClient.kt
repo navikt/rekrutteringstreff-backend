@@ -69,6 +69,7 @@ object OpenAiClient {
         
           Det er veldig viktig at du vurderer hvordan ordene brukes. Om de omtaler et arbeidsområde, noe den som skal ansettes får ansvar for, er det ikke personvernssensitivt. 
           Men om det omtaler en egenskap ved de som ansettes, er det en personvernsufordring, siden vi kan senere knytte personer til rekrutteringstreffet. Vi vil for eksempel ikke avsløre at de som knyttes til rekrutteringstreffet som kandidater er IPS brukere.
+          Det er lov å kun sende inn tittel eller beskrivelse for å få vurdert kun en av delene. Men om begge er med skal de vurderes i sammenheng. Tittel har mindre krav til lengde og detalj enn beskrivelse.
         
         Returner JSON uten markdown med feltene:
         - bryterRetningslinjer (boolean)
