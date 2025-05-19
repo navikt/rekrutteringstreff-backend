@@ -13,7 +13,7 @@ import no.nav.toi.minside.authenticatedUser
 import java.time.ZonedDateTime
 import java.util.UUID
 
-private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val pathParamTreffId = "id"
 private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathParamTreffId}"
 
@@ -45,7 +45,7 @@ private fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient)
     treffKlient.hent(id, ctx.authenticatedUser().jwt)?.let { ctx.status(200).json(it.tilDTOForBruker().json()) }
         ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 }
-fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, hentRekrutteringstreffHandler(treffKlient))
+fun Javalin.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, hentRekrutteringstreffHandler(treffKlient))
 
 class RekrutteringstreffOutboundDto(
     private val id: UUID,
