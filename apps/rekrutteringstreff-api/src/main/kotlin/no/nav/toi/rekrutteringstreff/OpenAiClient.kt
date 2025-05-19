@@ -58,7 +58,7 @@ object OpenAiClient {
     }
 
     private val VALIDATION_SYSTEM_MESSAGE = """
-        Vurder om tittel eller beskrivelse, eller eventuelt begge deler om både beskrivelse og tittel er med,  for et rekrutteringstreff overholder NAVs retningslinjer. Retningslinjene gjelder for både arbeidstaker og arbeidsgiver. Sjekk at teksten:
+        Vurder om tittel og beskrivelse for et rekrutteringstreff overholder NAVs retningslinjer. Retningslinjene gjelder for både arbeidstaker og arbeidsgiver. Sjekk at teksten:
         1. Ikke avslører sensitiv informasjon om enkeltpersoner eller deltakere.
         2. Tydelig formidler at arrangementet er et rekrutteringstreff, der arbeidsgivere og potensielle deltakere møtes med jobbformål.
         3. Bruker relevante og inkluderende formuleringer som fremmer mangfold, uten unødvendige eller indirekte diskriminerende krav. Eksempel på diskriminering er kjønn, religion, livssyn, hudfarge, nasjonal eller etnisk opprinnelse, politisk syn, medlemskap i arbeidstakerorganisasjon, seksuell orientering, funksjonshemming eller alder. Forbudet omfatter også indirekte diskriminering; for eksempel at det stilles krav om gode norskkunnskaper eller avtjent verneplikt, uten at slike krav er nødvendige for å utføre stillingens arbeidsoppgaver på en forsvarlig måte.
@@ -66,11 +66,11 @@ object OpenAiClient {
                 *** Stikkord start ***
                 IPS, KVP, Kvalifiseringsprogram, Kvalifiseringslønn, Kvalifiseringsstønad, Aktivitetsplikt, Angst, Arbeid med støtte, Arbeidsevne, Arbeids- og utdanningsreiser, Arbeidsforberedende trening, Arbeidsmarkedskurs, Arbeidspraksis, Arbeidsrettet rehabilitering, Arbeidstrening, AU-reiser, Avklaringstiltak, Barn, Behandling, Behov, Behovsliste, Booppfølging, Deltaker, Depresjon, Diagnoser, Fastlege, Flyktning, Fravær, Gjeld, Helseavklaring, Husleie, Individuell jobbstøtte, Introduksjonsprogram, Introduksjonsstønad, Jobbklar, Jobbspesialist, Kognitive utfordringer, Kognitive problemer, Kognitivt, Kommunale lavterskeltilbud, Kommunale tiltak, Kommunale tjenester, Koordinert bistand, Lån, Langvarig, Livsopphold, Lønnstilskudd, Mentor, Mentortilskudd, Midlertidig bolig, Midlertidig botilbud, Nedsatt arbeidsevne, Nedsatt funksjon, Norskferdigheter, Oppfølging, Oppfølgingstiltak, Oppfølgning i bolig, Opplæring, Opplæringstiltak, Pengestøtte, Problemer, Psykiatri, Psykolog, Rehabilitering, Restanse, Rus, Sommerjobb, Sommerjobbtiltak, Sosial oppfølging, Sosialfaglig oppfølging, Sosialhjelp, Sosialhjelpsmottaker, Sosialstønad, Sosiale problemer, Sosiale utfordringer, Supplerende stønad, Supported Employment, Syk, Sykdom, Sykemeldt, Sykt barn, Tilskudd, Tiltak, Tiltaksdeltaker, Ukrain, Ukraina, Ungdom, Utfordringer, Utvidet oppfølging, Varig tilrettelagt arbeid, Venteliste, Økonomi, Økonomisk kartlegging, Økonomisk rådgivning, Økonomisk sosialhjelp, Økonomisk stønad
                  *** Stikkord slutt ***
-        4. Har korrekt norsk, ikke godta åpenbare skrivefeil eller gramatikkfeil.
+        4. Har korrekt norsk, ikke godta skrivefeil eller gramatikkfeil.
         
           Det er veldig viktig at du vurderer hvordan ordene brukes. Om de omtaler et arbeidsområde, noe den som skal ansettes får ansvar for, er det ikke personvernssensitivt. 
           Men om det omtaler en egenskap ved de som ansettes, er det en personvernsufordring, siden vi kan senere knytte personer til rekrutteringstreffet. Vi vil for eksempel ikke avsløre at de som knyttes til rekrutteringstreffet som kandidater er IPS brukere.
-          Det er lov å kun sende inn tittel eller beskrivelse for å få vurdert kun en av delene. Men om begge er med skal de vurderes i sammenheng. Tittel har mindre krav til lengde og detalj enn beskrivelse.
+          Det er lov å kun sende inn kun tittel eller beskrivelse for å få vurdert kun en av delene. Ikke kommenter at beskrivelse mangler om den er tom eller null. 
         
         Returner JSON uten markdown med feltene:
         - bryterRetningslinjer (boolean)
