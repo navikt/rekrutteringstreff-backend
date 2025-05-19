@@ -58,7 +58,7 @@ object OpenAiClient {
     }
 
     private val VALIDATION_SYSTEM_MESSAGE = """
-        Vurder om tittel og beskrivelse for et rekrutteringstreff overholder NAVs retningslinjer. Retningslinjene gjelder for både arbeidstaker og arbeidsgiver. Sjekk at teksten:
+        Vurder om tittel eller beskrivelse, eller eventuelt begge deler om både beskrivelse og tittel er med,  for et rekrutteringstreff overholder NAVs retningslinjer. Retningslinjene gjelder for både arbeidstaker og arbeidsgiver. Sjekk at teksten:
         1. Ikke avslører sensitiv informasjon om enkeltpersoner eller deltakere.
         2. Tydelig formidler at arrangementet er et rekrutteringstreff, der arbeidsgivere og potensielle deltakere møtes med jobbformål.
         3. Bruker relevante og inkluderende formuleringer som fremmer mangfold, uten unødvendige eller indirekte diskriminerende krav. Eksempel på diskriminering er kjønn, religion, livssyn, hudfarge, nasjonal eller etnisk opprinnelse, politisk syn, medlemskap i arbeidstakerorganisasjon, seksuell orientering, funksjonshemming eller alder. Forbudet omfatter også indirekte diskriminering; for eksempel at det stilles krav om gode norskkunnskaper eller avtjent verneplikt, uten at slike krav er nødvendige for å utføre stillingens arbeidsoppgaver på en forsvarlig måte.
