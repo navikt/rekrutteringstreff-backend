@@ -330,8 +330,8 @@ data class OppdaterRekrutteringstreffDto(
 )
 
 data class ValiderRekrutteringstreffDto(
-    val tittel: String,
-    val beskrivelse: String
+    val tittel: String?,
+    val beskrivelse: String?
 )
 
 data class ValiderRekrutteringstreffResponsDto(
