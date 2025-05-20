@@ -13,7 +13,7 @@ import no.nav.toi.minside.authenticatedUser
 import java.time.ZonedDateTime
 import java.util.UUID
 
-private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val pathParamTreffId = "id"
 private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathParamTreffId}"
 
@@ -42,10 +42,10 @@ private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathP
 )
 private fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
     val id = ctx.pathParam(pathParamTreffId)
-    treffKlient.hent(id, ctx.authenticatedUser().jwt)?.let { ctx.status(200).json(it) }
+    treffKlient.hent(id, ctx.authenticatedUser().jwt)?.let { ctx.status(200).json(it.tilDTOForBruker().json()) }
         ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 }
-fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, hentRekrutteringstreffHandler(treffKlient))
+fun Javalin.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, hentRekrutteringstreffHandler(treffKlient))
 
 class RekrutteringstreffOutboundDto(
     private val id: UUID,
@@ -54,4 +54,15 @@ class RekrutteringstreffOutboundDto(
     private val fraTid: ZonedDateTime?,
     private val tilTid: ZonedDateTime?,
     private val sted: String?,
-)
+) {
+    fun json() = """
+        {
+            "id": "$id",
+            "tittel": "$tittel",
+            "beskrivelse": ${beskrivelse?.let { "\"$it\"" } },
+            "fraTid": ${fraTid?.let { "\"$it\"" } },
+            "tilTid": ${tilTid?.let { "\"$it\"" } },
+            "sted": ${sted?.let { "\"$it\"" } }
+        }
+    """.trimIndent()
+}

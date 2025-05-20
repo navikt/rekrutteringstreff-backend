@@ -6,8 +6,9 @@ import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.arbeid.cv.felles.token.AzureKlient
+import no.nav.toi.minside.arbeidsgiver.rekrutteringstreffendepunkt
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
-import no.nav.toi.minside.rekrutteringstreff.rekrutteringstreffendepunkt
+import no.nav.toi.minside.rekrutteringstreff.arbeidsgiverendepunkt
 
 
 class App(
@@ -24,8 +25,11 @@ class App(
             configureOpenApi(config)
             log.info("Javalin opprettet")
         }
+        javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
-        javalin.rekrutteringstreffendepunkt(RekrutteringstreffKlient(rekrutteringstreffUrl, azureKlient))
+        val rekrutteringstreffKlient = RekrutteringstreffKlient(rekrutteringstreffUrl, azureKlient)
+        javalin.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
+        javalin.arbeidsgiverendepunkt(rekrutteringstreffKlient)
         javalin.start(port)
     }
 

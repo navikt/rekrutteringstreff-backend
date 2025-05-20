@@ -7,8 +7,11 @@ import no.nav.arbeid.cv.felles.token.AzureKlient
 import java.util.concurrent.atomic.AtomicInteger
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.arbeidsgiver.Arbeidsgiver
+import no.nav.toi.arbeidsgiver.ArbeidsgiverOutboundDto
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.*
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffDetaljOutboundDto
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.minside.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
@@ -16,6 +19,10 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.fail
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 
 private const val rekrutteringsTreffAudience = "rekrutteringstreff-audience"
@@ -59,6 +66,8 @@ class MinsideTest {
         )
         private val jobbsøkerFnr = "12345678901"
         private val authServer = MockOAuth2Server()
+        val arrangørOrgNr = "123456789"
+        val arrangørOrgnavn = "Arrangørs organisasjonsnavn"
         private val rekrutteringstreffMeldtPå = "Rekrutteringstreff meldt på".let { tittel ->
             db.apply {
                 opprettRekrutteringstreffIDatabase(
@@ -66,8 +75,9 @@ class MinsideTest {
                     tittel = tittel
                 )
             }.apply {
+                val treffId = hentAlleRekrutteringstreff().first { tittel == it.tittel }.id
                 leggTilJobbsøkere(listOf(Jobbsøker(
-                    treffId = hentAlleRekrutteringstreff().first { tittel == it.tittel }.id,
+                    treffId = treffId,
                     fødselsnummer = Fødselsnummer(jobbsøkerFnr),
                     kandidatnummer = Kandidatnummer("123456"),
                     fornavn = Fornavn("Fornavn"),
@@ -77,6 +87,13 @@ class MinsideTest {
                     veilederNavIdent = VeilederNavIdent("navIdent"),
                     hendelser = emptyList(),
                 )
+                ))
+                leggTilArbeidsgivere(listOf(
+                    Arbeidsgiver(
+                        treffId = treffId,
+                        orgnr = Orgnr(arrangørOrgNr),
+                        orgnavn = Orgnavn(arrangørOrgnavn)
+                    )
                 ))
             }.hentAlleRekrutteringstreff().first { tittel == it.tittel }
         }
@@ -116,35 +133,59 @@ class MinsideTest {
             is Failure -> throw result.error
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readValue(result.get(), RekrutteringstreffDetaljOutboundDto::class.java)
-                assertThat(dto.tittel).isEqualTo(rekrutteringstreffMeldtPå.tittel)
+                val dto = mapper.readTree(result.get())
+                assertThat(dto["tittel"].asText()).isEqualTo(rekrutteringstreffMeldtPå.tittel)
             }
         }
     }
 
     @Test
-    fun `401 uten token`() {
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(401)
-            }
-        }
-    }
+    fun `hent arbeidsgivere for treff`() {
+        val ident = "12345678910"
+        val token = authServer.lagToken(authPort, pid = ident)
 
-    @Test
-    fun `401 med token uten pid`() {
-        val token = authServer.lagToken(authPort, claims = mapOf())
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}")
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/arbeidsgiver")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
         when (result) {
             is Failure -> throw result.error
             is Success -> {
-                assertThat(response.statusCode).isEqualTo(401)
+                assertThat(response.statusCode).isEqualTo(200)
+                val dto = mapper.readTree(result.get())
+                assertThat(dto["organisasjonsnummer"].asText()).isEqualTo(arrangørOrgNr)
+                assertThat(dto["navn"].asText()).isEqualTo(arrangørOrgnavn)
             }
+        }
+    }
+
+
+    fun endepunkter() =
+        listOf(
+            Arguments.of("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}"),
+            Arguments.of("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/arbeidsgiver")
+        )
+    @ParameterizedTest
+    @MethodSource("endepunkter")
+    fun `401 uten token`(url: String) {
+        val (_, response, result) = Fuel.get(url)
+            .responseString()
+        when (result) {
+            is Failure -> assertThat(response.statusCode).isEqualTo(401)
+            is Success -> fail { "Expected 401" }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("endepunkter")
+    fun `401 med token uten pid`(url: String) {
+        val token = authServer.lagToken(authPort, claims = mapOf())
+        val (_, response, result) = Fuel.get(url)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        when (result) {
+            is Failure -> assertThat(response.statusCode).isEqualTo(401)
+            is Success -> fail { "Expected 401" }
+
         }
     }
 }
