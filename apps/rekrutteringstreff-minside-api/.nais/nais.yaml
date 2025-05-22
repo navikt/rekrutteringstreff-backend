@@ -34,7 +34,7 @@ spec:
   accessPolicy:
     inbound:
       rules:
-        - application: rekrutteringsbistand-frontend
+        - application: rekrutteringstreff-bruker
   azure:
     application:
       enabled: true

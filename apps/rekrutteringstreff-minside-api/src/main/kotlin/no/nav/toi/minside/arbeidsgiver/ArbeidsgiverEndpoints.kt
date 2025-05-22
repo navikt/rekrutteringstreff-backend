@@ -54,7 +54,7 @@ private fun hentArbeidsgivereHandler(treffKlient: RekrutteringstreffKlient): (Co
         ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 }
 
-fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(arbeidsgiverPath, hentArbeidsgivereHandler(treffKlient))
+fun Javalin.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(arbeidsgiverPath, hentArbeidsgivereHandler(treffKlient))
 
 
 class ArbeidsgiverOutboundDto(

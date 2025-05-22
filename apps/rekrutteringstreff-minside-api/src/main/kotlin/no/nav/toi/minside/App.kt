@@ -6,9 +6,9 @@ import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.arbeid.cv.felles.token.AzureKlient
-import no.nav.toi.minside.arbeidsgiver.rekrutteringstreffendepunkt
+import no.nav.toi.minside.arbeidsgiver.arbeidsgiverendepunkt
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
-import no.nav.toi.minside.rekrutteringstreff.arbeidsgiverendepunkt
+import no.nav.toi.minside.rekrutteringstreff.rekrutteringstreffendepunkt
 
 
 class App(
