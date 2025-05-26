@@ -59,7 +59,8 @@ class RekrutteringstreffRepositoryTest {
                 beskrivelse = null,
                 fraTid = null,
                 tilTid = null,
-                sted = null
+                gateadresse = null,
+                postnummer = null
             ),
             oppdatertAv = "A1"
         )
@@ -71,7 +72,8 @@ class RekrutteringstreffRepositoryTest {
                 beskrivelse = null,
                 fraTid = nowOslo(),
                 tilTid = nowOslo().plusHours(1),
-                sted = "Oslo"
+                gateadresse = "Karl Johans gate 1",
+                postnummer = "0154"
             ),
             oppdatertAv = "A1"
         )
