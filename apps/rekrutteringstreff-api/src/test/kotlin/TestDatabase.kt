@@ -151,6 +151,7 @@ class TestDatabase {
         tilTid                   = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
         gateadresse                     = rs.getString("gateadresse"),
         postnummer                     = rs.getString("postnummer"),
+        poststed                 = rs.getString("poststed"),
         status                   = rs.getString("status"),
         opprettetAvPersonNavident= rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),

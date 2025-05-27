@@ -35,6 +35,7 @@ data class RekrutteringstreffDetaljOutboundDto(
     val tilTid: ZonedDateTime?,
     val gateadresse: String?,
     val postnummer: String?,
+    val poststed: String?,
     val status: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
@@ -84,7 +85,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             c.prepareStatement(
                 """
                 UPDATE $tabellnavn
-                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, gateadresse=?, postnummer=?
+                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $gateadresse=?, $postnummer=?, poststed=?
                 WHERE $id=?
                 """
             ).apply {
@@ -95,6 +96,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 setTimestamp(++i, if(dto.tilTid != null) Timestamp.from(dto.tilTid.toInstant()) else null)
                 setString(++i, dto.gateadresse)
                 setString(++i, dto.postnummer)
+                setString(++i, dto.poststed)
                 setObject(++i, treff.somUuid)
             }.executeUpdate()
 
@@ -173,6 +175,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                         tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
                         gateadresse = rs.getString("gateadresse"),
                         postnummer = rs.getString("postnummer"),
+                        poststed = rs.getString("poststed"),
                         status = rs.getString("status"),
                         opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
                         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
@@ -307,8 +310,9 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         beskrivelse = getString(beskrivelse),
         fraTid = getTimestamp(fratid)?.toInstant()?.atOslo(),
         tilTid = getTimestamp(tiltid)?.toInstant()?.atOslo(),
-        gateadresse = getString("gateadresse"),
-        postnummer = getString("postnummer"),
+        gateadresse = getString(gateadresse),
+        postnummer = getString(postnummer),
+        poststed = getString(poststed),
         status = getString(status),
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
@@ -334,6 +338,9 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         private const val fratid = "fratid"
         private const val tiltid = "tiltid"
         private const val eiere = "eiere"
+        private const val gateadresse = "gateadresse"
+        private const val postnummer = "postnummer"
+        private const val poststed = "poststed"
     }
 }
 
