@@ -46,3 +46,9 @@ spec:
       value: {{adGruppeUtvikler}}
     - name: REKRUTTERINGSTREFF_SCOPE
       value: {{ rekrutteringstreff_scope }}
+  observability:
+    logging:
+      destinations:
+        - id: loki
+        - id: elastic
+      enabled: true
