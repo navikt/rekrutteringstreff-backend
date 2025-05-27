@@ -31,7 +31,6 @@ class RekrutteringstreffTest {
 
     private val mapper = JacksonConfig.mapper
 
-
     companion object {
         @JvmStatic
         @RegisterExtension
@@ -105,7 +104,8 @@ class RekrutteringstreffTest {
                 assertThat(rekrutteringstreff.beskrivelse).isNull()
                 assertThat(rekrutteringstreff.fraTid).isNull()
                 assertThat(rekrutteringstreff.tilTid).isNull()
-                assertThat(rekrutteringstreff.sted).isNull()
+                assertThat(rekrutteringstreff.gateadresse).isNull()
+                assertThat(rekrutteringstreff.postnummer).isNull()
                 assertThat(rekrutteringstreff.status).isEqualTo(gyldigStatus.name)
                 assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
                 assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
@@ -186,7 +186,8 @@ class RekrutteringstreffTest {
             beskrivelse = "Oppdatert beskrivelse",
             fraTid = nowOslo().minusHours(2),
             tilTid = nowOslo().plusHours(3),
-            sted = "Oppdatert Sted"
+            gateadresse = "Oppdatert Gateadresse",
+            postnummer = "1234"
         )
         val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${created.id}")
             .body(mapper.writeValueAsString(updateDto))
@@ -198,7 +199,8 @@ class RekrutteringstreffTest {
                 assertThat(updateResponse.statusCode).isEqualTo(200)
                 val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDTO::class.java)
                 assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
-                assertThat(updatedDto.sted).isEqualTo(updateDto.sted)
+                assertThat(updatedDto.gateadresse).isEqualTo(updateDto.gateadresse)
+                assertThat(updatedDto.postnummer).isEqualTo(updateDto.postnummer)
                 assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
             }
         }
@@ -275,7 +277,6 @@ class RekrutteringstreffTest {
         }
     }
 
-
     @Test
     fun validerRekrutteringstreff() {
         val openAiResponseBody = """
@@ -325,7 +326,6 @@ class RekrutteringstreffTest {
         }
     }
 
-
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
 
     @Test
@@ -335,7 +335,7 @@ class RekrutteringstreffTest {
         Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}")
             .body(
                 """{"tittel":"x","beskrivelse":null,"fraTid":"${nowOslo()}",
-                 "tilTid":"${nowOslo()}","sted":"y"}"""
+                 "tilTid":"${nowOslo()}","gateadresse":"y","postnummer":"1234"}"""
             )
             .header("Authorization", "Bearer ${token.serialize()}").response()
 
@@ -488,7 +488,8 @@ class RekrutteringstreffTest {
             beskrivelse = "Oppdatert beskrivelse",
             fraTid = nowOslo(),
             tilTid = nowOslo(),
-            sted = "Updated"
+            gateadresse = "Updated Gateadresse",
+            postnummer = "5678"
         )
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .body(mapper.writeValueAsString(updateDto))

@@ -33,7 +33,8 @@ data class RekrutteringstreffDetaljOutboundDto(
     val beskrivelse: String?,
     val fraTid: ZonedDateTime?,
     val tilTid: ZonedDateTime?,
-    val sted: String?,
+    val gateadresse: String?,
+    val postnummer: String?,
     val status: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
@@ -46,7 +47,6 @@ enum class HendelseRessurs {
 }
 
 class RekrutteringstreffRepository(private val dataSource: DataSource) {
-
 
     fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
         val nyTreffId = TreffId(UUID.randomUUID())
@@ -84,7 +84,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             c.prepareStatement(
                 """
                 UPDATE $tabellnavn
-                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $sted=?
+                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, gateadresse=?, postnummer=?
                 WHERE $id=?
                 """
             ).apply {
@@ -93,7 +93,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 setString(++i, dto.beskrivelse)
                 setTimestamp(++i, if(dto.fraTid != null)  Timestamp.from(dto.fraTid.toInstant()) else null)
                 setTimestamp(++i, if(dto.tilTid != null) Timestamp.from(dto.tilTid.toInstant()) else null)
-                setString(++i, dto?.sted)
+                setString(++i, dto.gateadresse)
+                setString(++i, dto.postnummer)
                 setObject(++i, treff.somUuid)
             }.executeUpdate()
 
@@ -109,7 +110,6 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             }
         }
     }
-
 
     fun hentAlle(): List<Rekrutteringstreff> =
         dataSource.connection.use { c ->
@@ -171,7 +171,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                         beskrivelse = rs.getString("beskrivelse"),
                         fraTid = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
                         tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
-                        sted = rs.getString("sted"),
+                        gateadresse = rs.getString("gateadresse"),
+                        postnummer = rs.getString("postnummer"),
                         status = rs.getString("status"),
                         opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
                         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
@@ -306,7 +307,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         beskrivelse = getString(beskrivelse),
         fraTid = getTimestamp(fratid)?.toInstant()?.atOslo(),
         tilTid = getTimestamp(tiltid)?.toInstant()?.atOslo(),
-        sted = getString(sted),
+        gateadresse = getString("gateadresse"),
+        postnummer = getString("postnummer"),
         status = getString(status),
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
@@ -320,7 +322,6 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         id = Kolonnenavn(id)
     )
 
-
     companion object {
         private const val tabellnavn = "rekrutteringstreff"
         private const val id = "id"
@@ -332,7 +333,6 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         private const val opprettetAvTidspunkt = "opprettet_av_tidspunkt"
         private const val fratid = "fratid"
         private const val tiltid = "tiltid"
-        private const val sted = "sted"
         private const val eiere = "eiere"
     }
 }
