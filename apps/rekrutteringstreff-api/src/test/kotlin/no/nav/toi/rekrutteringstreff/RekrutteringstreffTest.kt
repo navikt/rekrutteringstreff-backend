@@ -106,6 +106,7 @@ class RekrutteringstreffTest {
                 assertThat(rekrutteringstreff.tilTid).isNull()
                 assertThat(rekrutteringstreff.gateadresse).isNull()
                 assertThat(rekrutteringstreff.postnummer).isNull()
+                assertThat(rekrutteringstreff.poststed).isNull()
                 assertThat(rekrutteringstreff.status).isEqualTo(gyldigStatus.name)
                 assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
                 assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
@@ -187,7 +188,8 @@ class RekrutteringstreffTest {
             fraTid = nowOslo().minusHours(2),
             tilTid = nowOslo().plusHours(3),
             gateadresse = "Oppdatert Gateadresse",
-            postnummer = "1234"
+            postnummer = "1234",
+            poststed = "Oslo"
         )
         val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${created.id}")
             .body(mapper.writeValueAsString(updateDto))
@@ -201,6 +203,7 @@ class RekrutteringstreffTest {
                 assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
                 assertThat(updatedDto.gateadresse).isEqualTo(updateDto.gateadresse)
                 assertThat(updatedDto.postnummer).isEqualTo(updateDto.postnummer)
+                assertThat(updatedDto.poststed).isEqualTo(updateDto.poststed)
                 assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
             }
         }
@@ -335,7 +338,7 @@ class RekrutteringstreffTest {
         Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}")
             .body(
                 """{"tittel":"x","beskrivelse":null,"fraTid":"${nowOslo()}",
-                 "tilTid":"${nowOslo()}","gateadresse":"y","postnummer":"1234"}"""
+                 "tilTid":"${nowOslo()}","gateadresse":"y","postnummer":"1234"},"poststed":"Bergen"} """
             )
             .header("Authorization", "Bearer ${token.serialize()}").response()
 
@@ -489,7 +492,8 @@ class RekrutteringstreffTest {
             fraTid = nowOslo(),
             tilTid = nowOslo(),
             gateadresse = "Updated Gateadresse",
-            postnummer = "5678"
+            postnummer = "5678",
+            poststed = "Bergen"
         )
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .body(mapper.writeValueAsString(updateDto))

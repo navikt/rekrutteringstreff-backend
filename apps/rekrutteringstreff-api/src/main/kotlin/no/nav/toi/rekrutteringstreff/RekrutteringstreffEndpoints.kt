@@ -71,7 +71,8 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
                     "fraTid": "2025-06-15T09:00:00+02:00",
                     "tilTid": "2025-06-15T11:00:00+02:00",
                     "gateadresse": "Malmøgata 1",
-                    "postnummer": "0566 Oslo",
+                    "postnummer": "0566",
+                    "poststed": "Oslo",
                     "status": "Utkast",
                     "opprettetAvPersonNavident": "A123456",
                     "opprettetAvNavkontorEnhetId": "0318",
@@ -105,6 +106,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
                "tilTid":null,
                "gateadresse": null,
                "postnummer": null,
+               "poststed": null,
                "status":"Utkast",
                "opprettetAvPersonNavident":"A123456",
                "opprettetAvNavkontorEnhetId":"0318",
@@ -150,7 +152,8 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
                 "fraTid": "2025-06-15T09:30:00+02:00", 
                 "tilTid": "2025-06-15T11:30:00+02:00", 
                 "gateadresse": "Malmøgata 1",
-                "postnummer": "0566 Oslo"
+                "postnummer": "0566",
+                "poststed": "Oslo"
             }"""
         )]
     ),
@@ -165,7 +168,8 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
                 "fraTid": "2025-06-15T09:30:00+02:00", 
                 "tilTid": "2025-06-15T11:30:00+02:00", 
                 "gateadresse": "Malmøgata 1",
-                "postnummer": "0566 Oslo",
+                "postnummer": "0566",
+                "poststed": "Oslo",
                 "status": "Utkast", 
                 "opprettetAvPersonNavident": "A123456", 
                 "opprettetAvNavkontorEnhetId": "0318",
@@ -309,6 +313,7 @@ data class RekrutteringstreffDTO(
     val tilTid: ZonedDateTime?,
     val gateadresse: String?,
     val postnummer: String?,
+    val poststed: String?,
     val status: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
@@ -332,7 +337,8 @@ data class OppdaterRekrutteringstreffDto(
     val fraTid: ZonedDateTime?,
     val tilTid: ZonedDateTime?,
     val gateadresse: String?,
-    val postnummer: String?
+    val postnummer: String?,
+    val poststed: String?
 )
 
 data class ValiderRekrutteringstreffDto(
