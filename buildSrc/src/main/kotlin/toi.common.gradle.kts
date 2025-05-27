@@ -25,22 +25,23 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.27.3")
 }
 
-val stiTilApplicationClass =
-    File("${projectDir}/src/main/kotlin")
-        .walk()
-        .find { it.name == "App.kt" }
-        ?.path?.removePrefix("${project.projectDir}/src/main/kotlin/")
-        ?.replace("/", ".")
-        ?.replace(".kt", "Kt") ?: throw Exception("Finner ingen Application.kt i prosjektet ${project.name}")
-
 tasks {
     named<Jar>("jar") {
-        archiveBaseName.set("app")
+        if (!projectDir.absoluteFile.toString().contains("technical-libs")) {
+            archiveBaseName.set("app")
 
-        manifest {
-            attributes["Main-Class"] = stiTilApplicationClass
-            attributes["Class-Path"] = configurations.runtimeClasspath.get().joinToString(separator = " ") {
-                it.name
+            manifest {
+                val stiTilApplicationClass = File("${projectDir}/src/main/kotlin")
+                    .walk()
+                    .find { it.name == "App.kt" }
+                    ?.path?.removePrefix("${project.projectDir}/src/main/kotlin/")
+                    ?.replace("/", ".")
+                    ?.replace(".kt", "Kt")
+                    ?: throw Exception("Finner ingen App.kt i prosjektet ${project.name}")
+                attributes["Main-Class"] = stiTilApplicationClass
+                attributes["Class-Path"] = configurations.runtimeClasspath.get().joinToString(separator = " ") {
+                    it.name
+                }
             }
         }
 

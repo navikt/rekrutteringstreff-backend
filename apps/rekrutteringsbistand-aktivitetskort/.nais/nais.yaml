@@ -1,0 +1,42 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: rekrutteringsbistand-aktivitetskort
+  namespace: toi
+  labels:
+    team: toi
+spec:
+  image: {{ image }}
+  port: 8080
+  ingresses:
+  {{#each ingress as |url|}}
+    - {{url}}
+  {{/each}}
+  liveness:
+    path: /isalive
+  readiness:
+    path: /isready
+  prometheus:
+    enabled: true
+    path: /metrics
+  replicas:
+    min: {{ min_replicas }}
+    max: {{ max_replicas }}
+  secureLogs:
+    enabled: true
+  resources:
+    limits:
+      cpu: 3000m
+      memory: 2048Mi
+    requests:
+      cpu: 100m
+      memory: 512Mi
+  kafka:
+    pool: {{ kafka_pool }}
+  gcp:
+    sqlInstances:
+      - type: {{ postgres_versjon }}
+        tier: {{ gcp_db_tier }}
+        diskAutoresize: {{ gcp_disk_autoresize }}
+        databases:
+          - name: aktivitetskort-db
