@@ -104,6 +104,7 @@ class RekrutteringstreffTest {
                 assertThat(rekrutteringstreff.beskrivelse).isNull()
                 assertThat(rekrutteringstreff.fraTid).isNull()
                 assertThat(rekrutteringstreff.tilTid).isNull()
+                assertThat(rekrutteringstreff.svarfrist).isNull()
                 assertThat(rekrutteringstreff.gateadresse).isNull()
                 assertThat(rekrutteringstreff.postnummer).isNull()
                 assertThat(rekrutteringstreff.poststed).isNull()
@@ -187,6 +188,7 @@ class RekrutteringstreffTest {
             beskrivelse = "Oppdatert beskrivelse",
             fraTid = nowOslo().minusHours(2),
             tilTid = nowOslo().plusHours(3),
+            svarfrist = nowOslo().minusDays(1),
             gateadresse = "Oppdatert Gateadresse",
             postnummer = "1234",
             poststed = "Oslo"
@@ -201,10 +203,14 @@ class RekrutteringstreffTest {
                 assertThat(updateResponse.statusCode).isEqualTo(200)
                 val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDTO::class.java)
                 assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
+                assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
+                assertThat(updatedDto.fraTid).isEqualTo(updateDto.fraTid)
+                assertThat(updatedDto.tilTid).isEqualTo(updateDto.tilTid)
+                assertThat(updatedDto.svarfrist).isEqualTo(updateDto.svarfrist)
                 assertThat(updatedDto.gateadresse).isEqualTo(updateDto.gateadresse)
                 assertThat(updatedDto.postnummer).isEqualTo(updateDto.postnummer)
                 assertThat(updatedDto.poststed).isEqualTo(updateDto.poststed)
-                assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
+
             }
         }
     }
@@ -338,7 +344,7 @@ class RekrutteringstreffTest {
         Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}")
             .body(
                 """{"tittel":"x","beskrivelse":null,"fraTid":"${nowOslo()}",
-                 "tilTid":"${nowOslo()}","gateadresse":"y","postnummer":"1234"},"poststed":"Bergen"} """
+                 "tilTid":"${nowOslo()}","svarfrist":"${nowOslo().minusDays(1)}","gateadresse":"y","postnummer":"1234"},"poststed":"Bergen"} """
             )
             .header("Authorization", "Bearer ${token.serialize()}").response()
 
@@ -491,6 +497,7 @@ class RekrutteringstreffTest {
             beskrivelse = "Oppdatert beskrivelse",
             fraTid = nowOslo(),
             tilTid = nowOslo(),
+            svarfrist = nowOslo(),
             gateadresse = "Updated Gateadresse",
             postnummer = "5678",
             poststed = "Bergen"

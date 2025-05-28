@@ -98,6 +98,7 @@ private class AutorisasjonsTest {
                             beskrivelse = "Oppdatert beskrivelse",
                             fraTid = nowOslo().minusHours(2),
                             tilTid = nowOslo().plusHours(3),
+                            svarfrist = nowOslo().minusDays(1),
                             gateadresse = "Oppdatert gateadresse",
                             postnummer = "1234",
                             poststed = "Oppdatert poststed"
