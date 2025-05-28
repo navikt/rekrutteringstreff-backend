@@ -6,9 +6,9 @@ CREATE TABLE aktivitetskort (
     tittel                      TEXT NOT NULL,
     beskrivelse                 TEXT NOT NULL,
     aktivitets_status           TEXT,
-    startDato                   date,
-    sluttDato                   date,
+    start_dato                   date,
+    slutt_dato                   date,
     endret_av                   TEXT NOT NULL,
     endret_av_type              TEXT NOT NULL,
-    endret_tidspunkt            timestamp with time zone,
+    endret_tidspunkt            timestamp with time zone NOT NULL
 );

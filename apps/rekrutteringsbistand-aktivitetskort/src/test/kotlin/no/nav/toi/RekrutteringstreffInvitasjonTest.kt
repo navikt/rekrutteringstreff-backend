@@ -1,6 +1,7 @@
 package no.nav.toi
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.isMissingOrNull
+import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import org.assertj.core.api.Assertions.assertThat
@@ -36,17 +37,21 @@ class RekrutteringstreffInvitasjonTest {
         }
 
     private val rapid = TestRapid()
-    private val testRepository = TestRepository(DatabaseConfig(localEnv, meterRegistry))
+    private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
+    private val testRepository = TestRepository(databaseConfig)
+    private val app = App(rapid, Repository(databaseConfig))
 
     @BeforeEach
     fun setup() {
         rapid.reset()
         testRepository.slettAlt()
+        app.start()
     }
 
     @AfterAll
     fun teardown() {
         localPostgres.close()
+        app.stop()
     }
 
     @Test
@@ -75,7 +80,22 @@ class RekrutteringstreffInvitasjonTest {
             )
         )
 
-        TODO()
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
+        val inspektør = rapid.inspektør
+        assertThat(inspektør.size).isEqualTo(1)
+        rekrutteringstreffInvitasjoner.apply {
+            assertThat(this[0].tittel).isEqualTo(tittel)
+            assertThat(this[0].beskrivelse).isEqualTo(beskrivelse)
+            assertThat(this[0].fraTid).isEqualTo(startTid.toLocalDate())
+            assertThat(this[0].tilTid).isEqualTo(sluttTid.toLocalDate())
+            assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
+            assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
+            assertThat(this[0].aktivitetsStatus).isNull()
+            assertThat(this[0].endretAv).isEqualTo(endretAv)
+            assertThat(this[0].endretAvType).isEqualTo(endretAvType)
+            assertThat(this[0].endretTidspunkt).isEqualTo(endretTidspunkt.toString())
+        }
     }
 
     @Test
@@ -112,8 +132,8 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(message["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffId.toString())
             assertThat(message["tittel"].asText()).isEqualTo(tittel)
             assertThat(message["beskrivelse"].asText()).isEqualTo(beskrivelse)
-            assertThat(message["startTid"].asText()).isEqualTo(startTid.toLocalDate().toString())
-            assertThat(message["sluttTid"].asText()).isEqualTo(sluttTid.toLocalDate().toString())
+            assertThat(message["startTid"].asText()).isEqualTo(startTid.toString())
+            assertThat(message["sluttTid"].asText()).isEqualTo(sluttTid.toString())
             assertThat(message["endretAv"].asText()).isEqualTo(endretAv)
             assertThat(message["endretAvType"].asText()).isEqualTo(endretAvType)
             assertThat(message["endretTidspunkt"].asText()).isEqualTo(endretTidspunkt.toString())
