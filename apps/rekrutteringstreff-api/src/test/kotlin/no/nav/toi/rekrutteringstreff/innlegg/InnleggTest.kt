@@ -12,6 +12,7 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.*
+import java.util.UUID
 
 
 private object InnleggDtoDeserializer : ResponseDeserializable<InnleggResponseDto> {
@@ -64,7 +65,7 @@ class InnleggTest {
     @MethodSource("tokenVarianter")
     fun autentiseringOpprettInnlegg(tc: UautentifiserendeTestCase) {
         val leggPåToken = tc.leggPåToken
-        val (_, resp, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/any/innlegg")
+        val (_, resp, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg")
             .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(HTTP_UNAUTHORIZED, resp, res)
@@ -74,7 +75,7 @@ class InnleggTest {
     @MethodSource("tokenVarianter")
     fun autentiseringHentInnlegg(tc: UautentifiserendeTestCase) {
         val leggPåToken = tc.leggPåToken
-        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/any/innlegg")
+        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg")
             .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(HTTP_UNAUTHORIZED, resp, res)

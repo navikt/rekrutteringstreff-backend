@@ -4,8 +4,8 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 data class Innlegg(
-    val id: Long,
-    val rekrutteringstreffId: UUID,
+    val id: UUID,
+    val treffId: UUID,
     val tittel: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvPersonNavn: String,
@@ -26,8 +26,8 @@ data class OpprettInnleggRequestDto(
 )
 
 data class InnleggResponseDto(
-    val id: Long,
-    val rekrutteringstreffId: UUID, // Included to show association, could be omitted if context is clear
+    val id: UUID,
+    val treffId: UUID,
     val tittel: String,
     val opprettetAvPersonNavident: String,
     val opprettetAvPersonNavn: String,
@@ -38,15 +38,15 @@ data class InnleggResponseDto(
     val sistOppdatertTidspunkt: ZonedDateTime
 )
 
-fun Innlegg.toResponseDto(): InnleggResponseDto = InnleggResponseDto(
-    id = this.id,
-    rekrutteringstreffId = this.rekrutteringstreffId,
-    tittel = this.tittel,
-    opprettetAvPersonNavident = this.opprettetAvPersonNavident,
-    opprettetAvPersonNavn = this.opprettetAvPersonNavn,
-    opprettetAvPersonBeskrivelse = this.opprettetAvPersonBeskrivelse,
-    sendesTilJobbsokerTidspunkt = this.sendesTilJobbsokerTidspunkt,
-    htmlContent = this.htmlContent,
-    opprettetTidspunkt = this.opprettetTidspunkt,
-    sistOppdatertTidspunkt = this.sistOppdatertTidspunkt
+fun Innlegg.toResponseDto() = InnleggResponseDto(
+    id,
+    treffId,
+    tittel,
+    opprettetAvPersonNavident,
+    opprettetAvPersonNavn,
+    opprettetAvPersonBeskrivelse,
+    sendesTilJobbsokerTidspunkt,
+    htmlContent,
+    opprettetTidspunkt,
+    sistOppdatertTidspunkt
 )

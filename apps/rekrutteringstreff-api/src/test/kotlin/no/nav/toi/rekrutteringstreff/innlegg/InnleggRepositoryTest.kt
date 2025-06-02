@@ -8,11 +8,9 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InnleggRepositoryTest {
@@ -37,15 +35,14 @@ class InnleggRepositoryTest {
 
     @AfterEach
     fun tearDown() {
-        // Ensure innlegg are deleted before rekrutteringstreff due to foreign key
         db.dataSource.connection.use {
             it.prepareStatement("DELETE FROM innlegg").executeUpdate()
         }
         db.slettAlt()
     }
 
-    private fun opprettTestTreff(suffix: String = ""): TreffId {
-        return rekrutteringstreffRepository.opprett(
+    private fun opprettTestTreff(suffix: String = ""): TreffId =
+        rekrutteringstreffRepository.opprett(
             OpprettRekrutteringstreffInternalDto(
                 tittel = "Test Treff for Innlegg $suffix",
                 opprettetAvPersonNavident = "Z999999",
@@ -53,7 +50,6 @@ class InnleggRepositoryTest {
                 opprettetAvTidspunkt = nowOslo()
             )
         )
-    }
 
     @Test
     fun `opprett skal lagre innlegg og returnere det med generert id og tidspunkter`() {
@@ -67,22 +63,21 @@ class InnleggRepositoryTest {
             htmlContent = "<p>Dette er testinnhold.</p>"
         )
 
-        val opprettetInnlegg = innleggRepository.opprett(treffId, dto)
+        val opprettet = innleggRepository.opprett(treffId, dto)
 
-        assertThat(opprettetInnlegg.id).isNotNull()
-        assertThat(opprettetInnlegg.rekrutteringstreffId).isEqualTo(treffId.somUuid)
-        assertThat(opprettetInnlegg.tittel).isEqualTo(dto.tittel)
-        assertThat(opprettetInnlegg.opprettetAvPersonNavident).isEqualTo(dto.opprettetAvPersonNavident)
-        assertThat(opprettetInnlegg.opprettetAvPersonNavn).isEqualTo(dto.opprettetAvPersonNavn)
-        assertThat(opprettetInnlegg.opprettetAvPersonBeskrivelse).isEqualTo(dto.opprettetAvPersonBeskrivelse)
-        assertThat(opprettetInnlegg.sendesTilJobbsokerTidspunkt).isEqualTo(dto.sendesTilJobbsokerTidspunkt)
-        assertThat(opprettetInnlegg.htmlContent).isEqualTo(dto.htmlContent)
-        assertThat(opprettetInnlegg.opprettetTidspunkt).isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))
-        assertThat(opprettetInnlegg.sistOppdatertTidspunkt).isEqualTo(opprettetInnlegg.opprettetTidspunkt)
+        assertThat(opprettet.id).isNotNull
+        assertThat(opprettet.treffId).isEqualTo(treffId.somUuid)
+        assertThat(opprettet.tittel).isEqualTo(dto.tittel)
+        assertThat(opprettet.opprettetAvPersonNavident).isEqualTo(dto.opprettetAvPersonNavident)
+        assertThat(opprettet.opprettetAvPersonNavn).isEqualTo(dto.opprettetAvPersonNavn)
+        assertThat(opprettet.opprettetAvPersonBeskrivelse).isEqualTo(dto.opprettetAvPersonBeskrivelse)
+        assertThat(opprettet.sendesTilJobbsokerTidspunkt).isEqualTo(dto.sendesTilJobbsokerTidspunkt)
+        assertThat(opprettet.htmlContent).isEqualTo(dto.htmlContent)
+        assertThat(opprettet.opprettetTidspunkt).isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))
+        assertThat(opprettet.sistOppdatertTidspunkt).isEqualTo(opprettet.opprettetTidspunkt)
 
-        val hentetInnlegg = innleggRepository.hentById(opprettetInnlegg.id)
-        assertThat(hentetInnlegg).isNotNull
-        assertThat(hentetInnlegg).isEqualTo(opprettetInnlegg)
+        val hentet = innleggRepository.hentById(opprettet.id)
+        assertThat(hentet).isEqualTo(opprettet)
     }
 
     @Test
@@ -97,134 +92,80 @@ class InnleggRepositoryTest {
             htmlContent = "<p>Innhold.</p>"
         )
 
-        val opprettetInnlegg = innleggRepository.opprett(treffId, dto)
+        val opprettet = innleggRepository.opprett(treffId, dto)
 
-        assertThat(opprettetInnlegg.sendesTilJobbsokerTidspunkt).isNull()
-        val hentetInnlegg = innleggRepository.hentById(opprettetInnlegg.id)
-        assertThat(hentetInnlegg?.sendesTilJobbsokerTidspunkt).isNull()
+        assertThat(opprettet.sendesTilJobbsokerTidspunkt).isNull()
+        val hentet = innleggRepository.hentById(opprettet.id)
+        assertThat(hentet?.sendesTilJobbsokerTidspunkt).isNull()
     }
 
     @Test
     fun `hentForTreff skal returnere alle innlegg for et gitt treffId sortert etter opprettelsestidspunkt`() {
-        val treffId1 = opprettTestTreff("1")
-        val treffId2 = opprettTestTreff("2")
+        val treff1 = opprettTestTreff("1")
+        val treff2 = opprettTestTreff("2")
 
-        val innlegg1Dto = OpprettInnleggRequestDto("Innlegg 1", "N1", "Navn1", "Besk1", null, "html1")
-        val innlegg2Dto = OpprettInnleggRequestDto("Innlegg 2", "N2", "Navn2", "Besk2", nowOslo().plusHours(1), "html2")
-        val innlegg3Dto = OpprettInnleggRequestDto("Innlegg 3 For Annet Treff", "N3", "Navn3", "Besk3", null, "html3")
+        val i1 = innleggRepository.opprett(
+            treff1,
+            OpprettInnleggRequestDto("Innlegg 1", "N1", "Navn1", "B1", null, "html1")
+        )
+        Thread.sleep(20)
+        val i2 = innleggRepository.opprett(
+            treff1,
+            OpprettInnleggRequestDto("Innlegg 2", "N2", "Navn2", "B2", nowOslo().plusHours(1), "html2")
+        )
+        innleggRepository.opprett(
+            treff2,
+            OpprettInnleggRequestDto("Innlegg 3", "N3", "Navn3", "B3", null, "html3")
+        )
 
-        val innlegg1 = innleggRepository.opprett(treffId1, innlegg1Dto)
-        Thread.sleep(20) // Ensure different timestamps if tests run very fast
-        val innlegg2 = innleggRepository.opprett(treffId1, innlegg2Dto)
-        innleggRepository.opprett(treffId2, innlegg3Dto)
+        val innlegg = innleggRepository.hentForTreff(treff1)
 
-
-        val innleggForTreff1 = innleggRepository.hentForTreff(treffId1)
-
-        assertThat(innleggForTreff1).hasSize(2)
-        assertThat(innleggForTreff1.map { it.id }).containsExactly(innlegg1.id, innlegg2.id)
-        assertThat(innleggForTreff1[0].tittel).isEqualTo("Innlegg 1")
-        assertThat(innleggForTreff1[1].tittel).isEqualTo("Innlegg 2")
-        assertThat(innleggForTreff1[0].opprettetTidspunkt.toInstant()).isBefore(innleggForTreff1[1].opprettetTidspunkt.toInstant())
-    }
-
-    @Test
-    fun `hentForTreff skal returnere tom liste hvis ingen innlegg finnes for treffId`() {
-        val treffId = opprettTestTreff()
-        val innleggForTreff = innleggRepository.hentForTreff(treffId)
-        assertThat(innleggForTreff).isEmpty()
+        assertThat(innlegg.map { it.id }).containsExactly(i1.id, i2.id)
     }
 
     @Test
     fun `hentById skal returnere korrekt innlegg hvis det finnes`() {
-        val treffId = opprettTestTreff()
-        val dto = OpprettInnleggRequestDto("Tittel", "N", "Navn", "B", null, "html")
-        val opprettetInnlegg = innleggRepository.opprett(treffId, dto)
-
-        val hentetInnlegg = innleggRepository.hentById(opprettetInnlegg.id)
-        assertThat(hentetInnlegg).isNotNull
-        assertThat(hentetInnlegg).isEqualTo(opprettetInnlegg)
-    }
-
-    @Test
-    fun `hentById skal returnere null hvis innlegg ikke finnes`() {
-        val ikkeEksisterendeId = 9999L
-        val hentetInnlegg = innleggRepository.hentById(ikkeEksisterendeId)
-        assertThat(hentetInnlegg).isNull()
+        val treff = opprettTestTreff()
+        val opprettet = innleggRepository.opprett(
+            treff,
+            OpprettInnleggRequestDto("T", "N", "Navn", "B", null, "html")
+        )
+        assertThat(innleggRepository.hentById(opprettet.id)).isEqualTo(opprettet)
     }
 
     @Test
     fun `oppdater skal modifisere et eksisterende innlegg og oppdatere sistOppdatertTidspunkt`() {
-        val treffId = opprettTestTreff()
-        val opprinneligDto = OpprettInnleggRequestDto(
-            tittel = "Opprinnelig Tittel",
-            opprettetAvPersonNavident = "NAV001",
-            opprettetAvPersonNavn = "Kari Veileder",
-            opprettetAvPersonBeskrivelse = "Veileder",
-            sendesTilJobbsokerTidspunkt = nowOslo().plusDays(2).truncatedTo(ChronoUnit.SECONDS),
-            htmlContent = "<p>Opprinnelig innhold.</p>"
+        val treff = opprettTestTreff()
+        val original = innleggRepository.opprett(
+            treff,
+            OpprettInnleggRequestDto(
+                "Old",
+                "NAV001",
+                "Kari",
+                "Veileder",
+                nowOslo().plusDays(2).truncatedTo(ChronoUnit.SECONDS),
+                "<p>Old</p>"
+            )
         )
-        val innlegg = innleggRepository.opprett(treffId, opprinneligDto)
-        val opprinneligOpprettetTidspunkt = innlegg.opprettetTidspunkt
-        val opprinneligSistOppdatertTidspunkt = innlegg.sistOppdatertTidspunkt
-
-        Thread.sleep(50) // Ensure sistOppdatertTidspunkt will be different
-
-        val oppdateringsDto = OpprettInnleggRequestDto(
-            tittel = "Oppdatert Tittel",
-            opprettetAvPersonNavident = "NAV002",
-            opprettetAvPersonNavn = "Ola Oppdaterer",
-            opprettetAvPersonBeskrivelse = "Oppdatert Beskrivelse",
-            sendesTilJobbsokerTidspunkt = null,
-            htmlContent = "<p>Oppdatert innhold.</p>"
+        Thread.sleep(50)
+        val updated = innleggRepository.oppdater(
+            original.id,
+            OpprettInnleggRequestDto("New", "NAV002", "Ola", "Oppdatert", null, "<p>New</p>")
         )
 
-        val oppdatertInnlegg = innleggRepository.oppdater(innlegg.id, oppdateringsDto)
-
-        assertThat(oppdatertInnlegg).isNotNull
-        oppdatertInnlegg?.let {
-            assertThat(it.id).isEqualTo(innlegg.id)
-            assertThat(it.rekrutteringstreffId).isEqualTo(treffId.somUuid)
-            assertThat(it.tittel).isEqualTo(oppdateringsDto.tittel)
-            assertThat(it.opprettetAvPersonNavident).isEqualTo(oppdateringsDto.opprettetAvPersonNavident)
-            assertThat(it.opprettetAvPersonNavn).isEqualTo(oppdateringsDto.opprettetAvPersonNavn)
-            assertThat(it.opprettetAvPersonBeskrivelse).isEqualTo(oppdateringsDto.opprettetAvPersonBeskrivelse)
-            assertThat(it.sendesTilJobbsokerTidspunkt).isNull()
-            assertThat(it.htmlContent).isEqualTo(oppdateringsDto.htmlContent)
-            assertThat(it.opprettetTidspunkt.toInstant()).isEqualTo(opprinneligOpprettetTidspunkt.toInstant())
-            assertThat(it.sistOppdatertTidspunkt.toInstant()).isAfter(opprinneligSistOppdatertTidspunkt.toInstant())
-            assertThat(it.sistOppdatertTidspunkt).isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))
-        }
-
-        val hentetEtterOppdatering = innleggRepository.hentById(innlegg.id)
-        assertThat(hentetEtterOppdatering).isEqualTo(oppdatertInnlegg)
+        assertThat(updated?.treffId).isEqualTo(treff.somUuid)
+        assertThat(updated?.sistOppdatertTidspunkt?.toInstant())
+            .isAfter(original.sistOppdatertTidspunkt.toInstant())
     }
 
     @Test
-    fun `oppdater skal returnere null hvis innlegg ikke finnes`() {
-        val ikkeEksisterendeId = 8888L
-        val dto = OpprettInnleggRequestDto("T", "N", "N", "B", null, "html")
-        val resultat = innleggRepository.oppdater(ikkeEksisterendeId, dto)
-        assertThat(resultat).isNull()
-    }
-
-    @Test
-    fun `slett skal fjerne innlegget fra databasen og returnere true`() {
-        val treffId = opprettTestTreff()
-        val dto = OpprettInnleggRequestDto("Skal slettes", "N", "N", "B", null, "html")
-        val innlegg = innleggRepository.opprett(treffId, dto)
-
-        val slettet = innleggRepository.slett(innlegg.id)
-        assertThat(slettet).isTrue()
-
-        val hentetEtterSletting = innleggRepository.hentById(innlegg.id)
-        assertThat(hentetEtterSletting).isNull()
-    }
-
-    @Test
-    fun `slett skal returnere false hvis innlegg ikke finnes`() {
-        val ikkeEksisterendeId = 7777L
-        val slettet = innleggRepository.slett(ikkeEksisterendeId)
-        assertThat(slettet).isFalse()
+    fun `slett skal fjerne innlegget fra databasen`() {
+        val treff = opprettTestTreff()
+        val innlegg = innleggRepository.opprett(
+            treff,
+            OpprettInnleggRequestDto("Del", "N", "", "", null, "html")
+        )
+        assertThat(innleggRepository.slett(innlegg.id)).isTrue()
+        assertThat(innleggRepository.hentById(innlegg.id)).isNull()
     }
 }

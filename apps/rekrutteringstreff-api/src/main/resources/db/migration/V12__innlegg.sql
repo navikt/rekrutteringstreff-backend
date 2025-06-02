@@ -1,7 +1,7 @@
 CREATE TABLE innlegg (
                          db_id  BIGSERIAL PRIMARY KEY,
-                         treff_db_id BIGINT NOT NULL
-                             REFERENCES rekrutteringstreff (db_id) ON DELETE CASCADE,
+                         id     UUID  NOT NULL DEFAULT gen_random_uuid(),
+                         treff_db_id BIGINT NOT NULL REFERENCES rekrutteringstreff (db_id) ON DELETE CASCADE,
                          tittel                         TEXT NOT NULL,
                          opprettet_av_person_navident   TEXT NOT NULL,
                          opprettet_av_person_navn       TEXT NOT NULL,
@@ -13,3 +13,4 @@ CREATE TABLE innlegg (
 );
 
 CREATE INDEX idx_innlegg_treff_db_id ON innlegg (treff_db_id);
+CREATE UNIQUE INDEX rekrutteringstreff_id_uq ON rekrutteringstreff(id);

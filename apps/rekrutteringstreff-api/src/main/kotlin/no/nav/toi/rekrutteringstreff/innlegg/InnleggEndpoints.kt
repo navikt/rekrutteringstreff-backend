@@ -10,16 +10,16 @@ import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.UUID
 
 private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
-private const val INNLEGG_ID_PARAM = "innleggId"
+private const val INNLEGG_ID_PARAM            = "innleggId"
 
 private const val INNLEGG_BASE_PATH = "$endepunktRekrutteringstreff/{$REKRUTTERINGSTREFF_ID_PARAM}/innlegg"
 private const val INNLEGG_ITEM_PATH = "$INNLEGG_BASE_PATH/{$INNLEGG_ID_PARAM}"
 
 fun Javalin.handleInnlegg(repo: InnleggRepository) {
-    get(INNLEGG_BASE_PATH, hentAlleInnleggForTreff(repo))
-    post(INNLEGG_BASE_PATH, opprettInnleggForTreff(repo))
-    get(INNLEGG_ITEM_PATH, hentEttInnlegg(repo))
-    put(INNLEGG_ITEM_PATH, oppdaterEttInnlegg(repo))
+    get   (INNLEGG_BASE_PATH, hentAlleInnleggForTreff(repo))
+    post  (INNLEGG_BASE_PATH, opprettInnleggForTreff(repo))
+    get   (INNLEGG_ITEM_PATH, hentEttInnlegg(repo))
+    put   (INNLEGG_ITEM_PATH, oppdaterEttInnlegg(repo))
     delete(INNLEGG_ITEM_PATH, slettEttInnlegg(repo))
 }
 
@@ -27,106 +27,90 @@ fun Javalin.handleInnlegg(repo: InnleggRepository) {
     summary = "Hent alle innlegg for et rekrutteringstreff",
     operationId = "hentAlleInnleggForTreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true, description = "Rekrutteringstreffets ID")],
-    responses = [OpenApiResponse(
-        status = "200",
-        content = [OpenApiContent(from = Array<InnleggResponseDto>::class)]
-    )],
+    pathParams = [OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class)],
+    responses = [OpenApiResponse("200", [OpenApiContent(Array<InnleggResponseDto>::class)])],
     path = INNLEGG_BASE_PATH,
     methods = [HttpMethod.GET]
 )
 private fun hentAlleInnleggForTreff(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
-    val innleggListe = repo.hentForTreff(treffId).map { it.toResponseDto() }
-    ctx.status(200).json(innleggListe)
+    ctx.json(repo.hentForTreff(treffId).map(Innlegg::toResponseDto))
 }
 
 @OpenApi(
-    summary = "Opprett et nytt innlegg for et rekrutteringstreff",
+    summary = "Opprett innlegg",
     operationId = "opprettInnleggForTreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true, description = "Rekrutteringstreffets ID")],
-    requestBody = OpenApiRequestBody(content = [OpenApiContent(from = OpprettInnleggRequestDto::class)]),
-    responses = [OpenApiResponse(
-        status = "201",
-        content = [OpenApiContent(from = InnleggResponseDto::class)]
-    )],
+    pathParams = [OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class)],
+    requestBody = OpenApiRequestBody([OpenApiContent(OpprettInnleggRequestDto::class)]),
+    responses = [OpenApiResponse("201", [OpenApiContent(InnleggResponseDto::class)])],
     path = INNLEGG_BASE_PATH,
     methods = [HttpMethod.POST]
 )
 private fun opprettInnleggForTreff(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
-    val requestDto = ctx.bodyAsClass<OpprettInnleggRequestDto>()
-    val nyttInnlegg = repo.opprett(treffId, requestDto)
-    ctx.status(201).json(nyttInnlegg.toResponseDto())
+    val body    = ctx.bodyAsClass<OpprettInnleggRequestDto>()
+    ctx.status(201).json(repo.opprett(treffId, body).toResponseDto())
 }
 
 @OpenApi(
-    summary = "Hent et spesifikt innlegg",
+    summary = "Hent innlegg",
     operationId = "hentEttInnlegg",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [
-        OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true, description = "Rekrutteringstreffets ID"),
-        OpenApiParam(name = INNLEGG_ID_PARAM, type = Long::class, required = true, description = "Innleggets ID")
+        OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class),
+        OpenApiParam(INNLEGG_ID_PARAM,            UUID::class)
     ],
     responses = [
-        OpenApiResponse(status = "200", content = [OpenApiContent(from = InnleggResponseDto::class)]),
-        OpenApiResponse(status = "404", description = "Innlegg ikke funnet")
+        OpenApiResponse("200", [OpenApiContent(InnleggResponseDto::class)]),
+        OpenApiResponse("404")
     ],
     path = INNLEGG_ITEM_PATH,
     methods = [HttpMethod.GET]
 )
 private fun hentEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
-    val innleggId = ctx.pathParam(INNLEGG_ID_PARAM).toLong()
-    val innlegg = repo.hentById(innleggId) ?: throw NotFoundResponse("Innlegg ikke funnet")
-    ctx.status(200).json(innlegg.toResponseDto())
+    val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
+    ctx.json(repo.hentById(id)?.toResponseDto() ?: throw NotFoundResponse())
 }
 
 @OpenApi(
-    summary = "Oppdater et spesifikt innlegg",
+    summary = "Oppdater innlegg",
     operationId = "oppdaterEttInnlegg",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [
-        OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true, description = "Rekrutteringstreffets ID"),
-        OpenApiParam(name = INNLEGG_ID_PARAM, type = Long::class, required = true, description = "Innleggets ID")
+        OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class),
+        OpenApiParam(INNLEGG_ID_PARAM,            UUID::class)
     ],
-    requestBody = OpenApiRequestBody(content = [OpenApiContent(from = OpprettInnleggRequestDto::class)]),
+    requestBody = OpenApiRequestBody([OpenApiContent(OpprettInnleggRequestDto::class)]),
     responses = [
-        OpenApiResponse(status = "200", content = [OpenApiContent(from = InnleggResponseDto::class)]),
-        OpenApiResponse(status = "404", description = "Innlegg ikke funnet")
+        OpenApiResponse("200", [OpenApiContent(InnleggResponseDto::class)]),
+        OpenApiResponse("404")
     ],
     path = INNLEGG_ITEM_PATH,
     methods = [HttpMethod.PUT]
 )
 private fun oppdaterEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
-    // val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM)) // Kan brukes til validering
-    val innleggId = ctx.pathParam(INNLEGG_ID_PARAM).toLong()
-    val requestDto = ctx.bodyAsClass<OpprettInnleggRequestDto>()
-    val oppdatertInnlegg = repo.oppdater(innleggId, requestDto) ?: throw NotFoundResponse("Innlegg ikke funnet for oppdatering")
-    ctx.status(200).json(oppdatertInnlegg.toResponseDto())
+    val id   = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
+    val body = ctx.bodyAsClass<OpprettInnleggRequestDto>()
+    ctx.json(repo.oppdater(id, body)?.toResponseDto() ?: throw NotFoundResponse())
 }
 
 @OpenApi(
-    summary = "Slett et spesifikt innlegg",
+    summary = "Slett innlegg",
     operationId = "slettEttInnlegg",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [
-        OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true, description = "Rekrutteringstreffets ID"),
-        OpenApiParam(name = INNLEGG_ID_PARAM, type = Long::class, required = true, description = "Innleggets ID")
+        OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class),
+        OpenApiParam(INNLEGG_ID_PARAM,            UUID::class)
     ],
     responses = [
-        OpenApiResponse(status = "204", description = "Innlegg slettet"),
-        OpenApiResponse(status = "404", description = "Innlegg ikke funnet")
+        OpenApiResponse("204"),
+        OpenApiResponse("404")
     ],
     path = INNLEGG_ITEM_PATH,
     methods = [HttpMethod.DELETE]
 )
 private fun slettEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
-    val innleggId = ctx.pathParam(INNLEGG_ID_PARAM).toLong()
-    val slettet = repo.slett(innleggId)
-    if (slettet) {
-        ctx.status(204)
-    } else {
-        throw NotFoundResponse("Innlegg ikke funnet for sletting")
-    }
+    val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
+    if (repo.slett(id)) ctx.status(204) else throw NotFoundResponse()
 }
