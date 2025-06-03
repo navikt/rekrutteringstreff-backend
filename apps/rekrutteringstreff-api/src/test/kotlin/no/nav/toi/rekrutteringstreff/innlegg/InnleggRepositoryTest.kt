@@ -108,7 +108,6 @@ class InnleggRepositoryTest {
             treff1,
             OpprettInnleggRequestDto("Innlegg 1", "N1", "Navn1", "B1", null, "html1")
         )
-        Thread.sleep(20)
         val i2 = innleggRepository.opprett(
             treff1,
             OpprettInnleggRequestDto("Innlegg 2", "N2", "Navn2", "B2", nowOslo().plusHours(1), "html2")
@@ -147,7 +146,6 @@ class InnleggRepositoryTest {
                 "<p>Old</p>"
             )
         )
-        Thread.sleep(50)
         val updated = innleggRepository.oppdater(
             original.id,
             OpprettInnleggRequestDto("New", "NAV002", "Ola", "Oppdatert", null, "<p>New</p>")
