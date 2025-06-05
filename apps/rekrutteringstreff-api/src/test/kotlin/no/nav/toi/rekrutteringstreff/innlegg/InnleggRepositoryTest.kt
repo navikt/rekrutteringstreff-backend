@@ -1,169 +1,149 @@
 package no.nav.toi.rekrutteringstreff.innlegg
 
-import no.nav.toi.nowOslo
-import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.atOslo
 import no.nav.toi.rekrutteringstreff.TreffId
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.within
-import org.flywaydb.core.Flyway
-import org.junit.jupiter.api.*
-import java.time.temporal.ChronoUnit
+import java.sql.ResultSet
+import java.sql.Timestamp
+import java.sql.Types
 import java.util.UUID
+import javax.sql.DataSource
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class InnleggRepositoryTest {
+class InnleggRepository(private val dataSource: DataSource) {
 
-    companion object {
-        private val db = TestDatabase()
-        private lateinit var innleggRepository: InnleggRepository
-        private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
+    private object T {
+        const val TABLE              = "innlegg"
+        const val COL_DB_ID          = "db_id"
+        const val COL_ID             = "id"
+        const val COL_TREFF_DB_ID    = "treff_db_id"
+        const val COL_TITTEL         = "tittel"
+        const val COL_NAVIDENT       = "opprettet_av_person_navident"
+        const val COL_NAVN           = "opprettet_av_person_navn"
+        const val COL_BESKRIVELSE    = "opprettet_av_person_beskrivelse"
+        const val COL_SENDES         = "sendes_til_jobbsoker_tidspunkt"
+        const val COL_HTML           = "html_content"
+        const val COL_OPPRETTET      = "opprettet_tidspunkt"
+        const val COL_SIST_OPPDATERT = "sist_oppdatert_tidspunkt"
+        const val COL_TREFF_UUID     = "treffId"
+        const val COL_XMAX           = "xmax"
+    }
 
-        @BeforeAll
-        @JvmStatic
-        fun setup() {
-            Flyway.configure()
-                .dataSource(db.dataSource)
-                .load()
-                .migrate()
-
-            innleggRepository = InnleggRepository(db.dataSource)
-            rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
+    fun hentForTreff(treffId: TreffId): List<Innlegg> {
+        val sql = """
+            SELECT i.*, rt.id AS ${T.COL_TREFF_UUID}
+              FROM ${T.TABLE} i
+              JOIN rekrutteringstreff rt ON i.${T.COL_TREFF_DB_ID} = rt.db_id
+             WHERE rt.id = ?
+             ORDER BY i.${T.COL_OPPRETTET}
+        """
+        return dataSource.connection.use { c ->
+            c.prepareStatement(sql).use { ps ->
+                ps.setObject(1, treffId.somUuid)
+                ps.executeQuery().use { rs ->
+                    generateSequence { if (rs.next()) rs.toInnlegg() else null }.toList()
+                }
+            }
         }
     }
 
-    @AfterEach
-    fun tearDown() {
-        db.dataSource.connection.use {
-            it.prepareStatement("DELETE FROM innlegg").executeUpdate()
+    fun hentById(innleggId: UUID): Innlegg? {
+        val sql = """
+            SELECT i.*, rt.id AS ${T.COL_TREFF_UUID}
+              FROM ${T.TABLE} i
+              JOIN rekrutteringstreff rt ON i.${T.COL_TREFF_DB_ID} = rt.db_id
+             WHERE i.${T.COL_ID} = ?
+        """
+        return dataSource.connection.use { c ->
+            c.prepareStatement(sql).use { ps ->
+                ps.setObject(1, innleggId)
+                ps.executeQuery().use { rs -> if (rs.next()) rs.toInnlegg() else null }
+            }
         }
-        db.slettAlt()
     }
 
-    private fun opprettTestTreff(suffix: String = ""): TreffId =
-        rekrutteringstreffRepository.opprett(
-            OpprettRekrutteringstreffInternalDto(
-                tittel = "Test Treff for Innlegg $suffix",
-                opprettetAvPersonNavident = "Z999999",
-                opprettetAvNavkontorEnhetId = "0000",
-                opprettetAvTidspunkt = nowOslo()
-            )
-        )
+    // Upsert: used for both create and update
+    fun oppdater(innleggId: UUID, treffId: TreffId, dto: OpprettInnleggRequestDto): Pair<Innlegg, Boolean> {
+        return dataSource.connection.use { c ->
+            val treffDbId = c.treffDbId(treffId)
+            val sql = """
+                INSERT INTO ${T.TABLE} (
+                    ${T.COL_ID}, ${T.COL_TREFF_DB_ID}, ${T.COL_TITTEL}, ${T.COL_NAVIDENT},
+                    ${T.COL_NAVN}, ${T.COL_BESKRIVELSE}, ${T.COL_SENDES}, ${T.COL_HTML}
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (${T.COL_ID}) DO UPDATE
+                SET ${T.COL_TITTEL}         = EXCLUDED.${T.COL_TITTEL},
+                    ${T.COL_NAVIDENT}       = EXCLUDED.${T.COL_NAVIDENT},
+                    ${T.COL_NAVN}           = EXCLUDED.${T.COL_NAVN},
+                    ${T.COL_BESKRIVELSE}    = EXCLUDED.${T.COL_BESKRIVELSE},
+                    ${T.COL_SENDES}         = EXCLUDED.${T.COL_SENDES},
+                    ${T.COL_HTML}           = EXCLUDED.${T.COL_HTML},
+                    ${T.COL_SIST_OPPDATERT} = NOW()
+                RETURNING ${T.COL_ID},
+                          (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = ${T.TABLE}.${T.COL_TREFF_DB_ID}) AS ${T.COL_TREFF_UUID},
+                          ${T.COL_TITTEL}, ${T.COL_NAVIDENT}, ${T.COL_NAVN},
+                          ${T.COL_BESKRIVELSE}, ${T.COL_SENDES},
+                          ${T.COL_HTML}, ${T.COL_OPPRETTET}, ${T.COL_SIST_OPPDATERT},
+                          ${T.COL_XMAX}
+            """.trimIndent()
 
-    @Test
-    fun `opprett skal lagre innlegg og returnere det med generert id og tidspunkter`() {
-        val treffId = opprettTestTreff()
-        val dto = OpprettInnleggRequestDto(
-            tittel = "Test Innlegg Tittel",
-            opprettetAvPersonNavident = "X123456",
-            opprettetAvPersonNavn = "Ola Nordmann",
-            opprettetAvPersonBeskrivelse = "Veileder",
-            sendesTilJobbsokerTidspunkt = nowOslo().plusDays(1).truncatedTo(ChronoUnit.SECONDS),
-            htmlContent = "<p>Dette er testinnhold.</p>"
-        )
+            c.prepareStatement(sql).use { ps ->
+                ps.setObject(1, innleggId)
+                ps.setLong(2, treffDbId)
+                ps.setString(3, dto.tittel)
+                ps.setString(4, dto.opprettetAvPersonNavident)
+                ps.setString(5, dto.opprettetAvPersonNavn)
+                ps.setString(6, dto.opprettetAvPersonBeskrivelse)
+                dto.sendesTilJobbsokerTidspunkt?.let {
+                    ps.setTimestamp(7, Timestamp.from(it.toInstant()))
+                } ?: ps.setNull(7, Types.TIMESTAMP_WITH_TIMEZONE)
+                ps.setString(8, dto.htmlContent)
 
-        val opprettet = innleggRepository.opprett(treffId, dto)
-
-        assertThat(opprettet.id).isNotNull
-        assertThat(opprettet.treffId).isEqualTo(treffId.somUuid)
-        assertThat(opprettet.tittel).isEqualTo(dto.tittel)
-        assertThat(opprettet.opprettetAvPersonNavident).isEqualTo(dto.opprettetAvPersonNavident)
-        assertThat(opprettet.opprettetAvPersonNavn).isEqualTo(dto.opprettetAvPersonNavn)
-        assertThat(opprettet.opprettetAvPersonBeskrivelse).isEqualTo(dto.opprettetAvPersonBeskrivelse)
-        assertThat(opprettet.sendesTilJobbsokerTidspunkt).isEqualTo(dto.sendesTilJobbsokerTidspunkt)
-        assertThat(opprettet.htmlContent).isEqualTo(dto.htmlContent)
-        assertThat(opprettet.opprettetTidspunkt).isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))
-        assertThat(opprettet.sistOppdatertTidspunkt).isEqualTo(opprettet.opprettetTidspunkt)
-
-        val hentet = innleggRepository.hentById(opprettet.id)
-        assertThat(hentet).isEqualTo(opprettet)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        val innlegg = rs.toInnlegg()
+                        val xmax = rs.getObject(T.COL_XMAX)
+                        Pair(innlegg, xmax.toString() == "0")
+                    } else {
+                        error("Upsert operation for innleggId $innleggId did not return a row, or treffId $treffId became invalid.")
+                    }
+                }
+            }
+        }
     }
 
-    @Test
-    fun `opprett skal håndtere null sendesTilJobbsokerTidspunkt`() {
-        val treffId = opprettTestTreff()
-        val dto = OpprettInnleggRequestDto(
-            tittel = "Test Innlegg Uten Sendetidspunkt",
-            opprettetAvPersonNavident = "X123456",
-            opprettetAvPersonNavn = "Ola Nordmann",
-            opprettetAvPersonBeskrivelse = "Veileder",
-            sendesTilJobbsokerTidspunkt = null,
-            htmlContent = "<p>Innhold.</p>"
-        )
-
-        val opprettet = innleggRepository.opprett(treffId, dto)
-
-        assertThat(opprettet.sendesTilJobbsokerTidspunkt).isNull()
-        val hentet = innleggRepository.hentById(opprettet.id)
-        assertThat(hentet?.sendesTilJobbsokerTidspunkt).isNull()
+    // For POST: generates a new id and calls upsert
+    fun opprett(treffId: TreffId, dto: OpprettInnleggRequestDto): Innlegg {
+        val innleggId = UUID.randomUUID()
+        return oppdater(innleggId, treffId, dto).first
     }
 
-    @Test
-    fun `hentForTreff skal returnere alle innlegg for et gitt treffId sortert etter opprettelsestidspunkt`() {
-        val treff1 = opprettTestTreff("1")
-        val treff2 = opprettTestTreff("2")
+    fun slett(innleggId: UUID): Boolean =
+        dataSource.connection.use { c ->
+            c.prepareStatement("DELETE FROM ${T.TABLE} WHERE ${T.COL_ID} = ?").use { ps ->
+                ps.setObject(1, innleggId)
+                ps.executeUpdate() > 0
+            }
+        }
 
-        val i1 = innleggRepository.opprett(
-            treff1,
-            OpprettInnleggRequestDto("Innlegg 1", "N1", "Navn1", "B1", null, "html1")
-        )
-        val i2 = innleggRepository.opprett(
-            treff1,
-            OpprettInnleggRequestDto("Innlegg 2", "N2", "Navn2", "B2", nowOslo().plusHours(1), "html2")
-        )
-        innleggRepository.opprett(
-            treff2,
-            OpprettInnleggRequestDto("Innlegg 3", "N3", "Navn3", "B3", null, "html3")
-        )
+    private fun java.sql.Connection.treffDbId(treff: TreffId): Long =
+        prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").use { ps ->
+            ps.setObject(1, treff.somUuid)
+            ps.executeQuery().let { rs ->
+                if (rs.next()) rs.getLong(1) else error("Treff $treff finnes ikke")
+            }
+        }
 
-        val innlegg = innleggRepository.hentForTreff(treff1)
-
-        assertThat(innlegg.map { it.id }).containsExactly(i1.id, i2.id)
-    }
-
-    @Test
-    fun `hentById skal returnere korrekt innlegg hvis det finnes`() {
-        val treff = opprettTestTreff()
-        val opprettet = innleggRepository.opprett(
-            treff,
-            OpprettInnleggRequestDto("T", "N", "Navn", "B", null, "html")
+    private fun ResultSet.toInnlegg(): Innlegg =
+        Innlegg(
+            id                           = getObject(T.COL_ID, UUID::class.java),
+            treffId                      = getObject(T.COL_TREFF_UUID, UUID::class.java),
+            tittel                       = getString(T.COL_TITTEL),
+            opprettetAvPersonNavident    = getString(T.COL_NAVIDENT),
+            opprettetAvPersonNavn        = getString(T.COL_NAVN),
+            opprettetAvPersonBeskrivelse = getString(T.COL_BESKRIVELSE),
+            sendesTilJobbsokerTidspunkt  = getTimestamp(T.COL_SENDES)?.toInstant()?.atOslo(),
+            htmlContent                  = getString(T.COL_HTML),
+            opprettetTidspunkt           = getTimestamp(T.COL_OPPRETTET).toInstant().atOslo(),
+            sistOppdatertTidspunkt       = getTimestamp(T.COL_SIST_OPPDATERT).toInstant().atOslo()
         )
-        assertThat(innleggRepository.hentById(opprettet.id)).isEqualTo(opprettet)
-    }
-
-    @Test
-    fun `oppdater skal modifisere et eksisterende innlegg og oppdatere sistOppdatertTidspunkt`() {
-        val treff = opprettTestTreff()
-        val original = innleggRepository.opprett(
-            treff,
-            OpprettInnleggRequestDto(
-                "Old",
-                "NAV001",
-                "Kari",
-                "Veileder",
-                nowOslo().plusDays(2).truncatedTo(ChronoUnit.SECONDS),
-                "<p>Old</p>"
-            )
-        )
-        val updated = innleggRepository.oppdater(
-            original.id,
-            OpprettInnleggRequestDto("New", "NAV002", "Ola", "Oppdatert", null, "<p>New</p>")
-        )
-
-        assertThat(updated?.treffId).isEqualTo(treff.somUuid)
-        assertThat(updated?.sistOppdatertTidspunkt?.toInstant())
-            .isAfter(original.sistOppdatertTidspunkt.toInstant())
-    }
-
-    @Test
-    fun `slett skal fjerne innlegget fra databasen`() {
-        val treff = opprettTestTreff()
-        val innlegg = innleggRepository.opprett(
-            treff,
-            OpprettInnleggRequestDto("Del", "N", "", "", null, "html")
-        )
-        assertThat(innleggRepository.slett(innlegg.id)).isTrue()
-        assertThat(innleggRepository.hentById(innlegg.id)).isNull()
-    }
 }

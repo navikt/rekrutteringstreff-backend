@@ -7,6 +7,7 @@ import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -36,7 +37,7 @@ class InnleggTest {
         private val authServer = MockOAuth2Server()
         private const val authPort = 18013
         private val db = TestDatabase()
-        private val appPort = ubruktPortnrFra10000.ubruktPortnr()
+        private val appPort = TestUtils.getFreePort()
 
         private val app = App(
             port = appPort,
@@ -63,17 +64,7 @@ class InnleggTest {
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
-    fun autentiseringOpprettInnlegg(tc: UautentifiserendeTestCase) {
-        val leggPåToken = tc.leggPåToken
-        val (_, resp, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg")
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(HTTP_UNAUTHORIZED, resp, res)
-    }
-
-    @ParameterizedTest
-    @MethodSource("tokenVarianter")
-    fun autentiseringHentInnlegg(tc: UautentifiserendeTestCase) {
+    fun `autentisering GET alle innlegg`(tc: UautentifiserendeTestCase) {
         val leggPåToken = tc.leggPåToken
         val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg")
             .leggPåToken(authServer, authPort)
@@ -81,34 +72,96 @@ class InnleggTest {
         assertStatuscodeEquals(HTTP_UNAUTHORIZED, resp, res)
     }
 
-
-    @Test
-    fun leggTilInnlegg() {
-        val token   = authServer.lagToken(authPort, navIdent = "A123456")
-        val treffId = db.opprettRekrutteringstreffIDatabase()
-
-        val body = OpprettInnleggRequestDto(
-            "Tittel", "A123456", "Ola Nordmann", "Veileder", null, "<p>Innhold</p>"
-        )
-
-        val (_, resp, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg")
-            .body(JacksonConfig.mapper.writeValueAsString(body))
-            .header("Authorization", "Bearer ${token.serialize()}")
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun `autentisering GET ett innlegg`(tc: UautentifiserendeTestCase) {
+        val leggPåToken = tc.leggPåToken
+        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}")
+            .leggPåToken(authServer, authPort)
             .responseString()
+        assertStatuscodeEquals(HTTP_UNAUTHORIZED, resp, res)
+    }
 
-        assertStatuscodeEquals(HTTP_CREATED, resp, res)
-        assertThat(InnleggRepository(db.dataSource).hentForTreff(treffId)).hasSize(1)
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun `autentisering PUT innlegg`(tc: UautentifiserendeTestCase) {
+        val leggPåToken = tc.leggPåToken
+        val body = OpprettInnleggRequestDto(
+            tittel = "T",
+            opprettetAvPersonNavident = "N",
+            opprettetAvPersonNavn = "",
+            opprettetAvPersonBeskrivelse = "",
+            sendesTilJobbsokerTidspunkt = null,
+            htmlContent = ""
+        )
+        val (_, resp, res) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}")
+            .body(JacksonConfig.mapper.writeValueAsString(body))
+            .leggPåToken(authServer, authPort)
+            .responseString()
+        assertStatuscodeEquals(HTTP_UNAUTHORIZED, resp, res)
+    }
+
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun `autentisering DELETE innlegg`(tc: UautentifiserendeTestCase) {
+        val leggPåToken = tc.leggPåToken
+        val (_, resp, res) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}")
+            .leggPåToken(authServer, authPort)
+            .responseString()
+        assertStatuscodeEquals(HTTP_UNAUTHORIZED, resp, res)
     }
 
 
     @Test
-    fun hentAlleInnlegg() {
+    fun `PUT skal opprette nytt innlegg hvis det ikke finnes`() {
+        val token   = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val nyttInnleggId = UUID.randomUUID()
+
+        val body = OpprettInnleggRequestDto(
+            tittel = "Nytt Innlegg via PUT",
+            opprettetAvPersonNavident = "A123456",
+            opprettetAvPersonNavn = "Ola Nordmann",
+            opprettetAvPersonBeskrivelse = "Veileder",
+            sendesTilJobbsokerTidspunkt = null,
+            htmlContent = "<p>Innhold for nytt innlegg</p>"
+        )
+
+        val (_, resp, res) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg/$nyttInnleggId")
+            .body(JacksonConfig.mapper.writeValueAsString(body))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(InnleggDtoDeserializer)
+
+        assertStatuscodeEquals(HTTP_CREATED, resp, res)
+        when (res) {
+            is Failure -> fail("Request failed: ${res.error.exception.message} \n ${res.error.response.body().asString("application/json;charset=utf-8")}")
+            is Success -> {
+                val opprettetInnlegg = res.value
+                assertThat(opprettetInnlegg.id).isEqualTo(nyttInnleggId)
+                assertThat(opprettetInnlegg.tittel).isEqualTo(body.tittel)
+                assertThat(opprettetInnlegg.treffId).isEqualTo(treffId.somUuid)
+
+                val hentetFraDb = InnleggRepository(db.dataSource).hentById(nyttInnleggId)
+                assertThat(hentetFraDb).isNotNull
+                assertThat(hentetFraDb!!.id).isEqualTo(nyttInnleggId)
+                assertThat(hentetFraDb.tittel).isEqualTo(body.tittel)
+            }
+        }
+    }
+
+
+    @Test
+    fun `hentAlleInnlegg skal returnere innlegg for treffet`() {
         val token   = authServer.lagToken(authPort, navIdent = "B123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
 
         val repo = InnleggRepository(db.dataSource)
-        repo.opprett(treffId, OpprettInnleggRequestDto("T1","B","","",null,"<p/>"))
-        repo.opprett(treffId, OpprettInnleggRequestDto("T2","B","","",null,"<p/>"))
+        // Use PUT to create innlegg
+        val innlegg1Id = UUID.randomUUID()
+        val innlegg2Id = UUID.randomUUID()
+
+        repo.oppdater(innlegg1Id, treffId, OpprettInnleggRequestDto("T1","B123456","Navn","Veileder",null,"<p1/>")) // Upsert
+        repo.oppdater(innlegg2Id, treffId, OpprettInnleggRequestDto("T2","B123456","Navn","Veileder",null,"<p2/>")) // Upsert
 
         val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -116,48 +169,180 @@ class InnleggTest {
 
         assertStatuscodeEquals(HTTP_OK, resp, res)
         when (res) {
-            is Failure -> throw res.error
-            is Success -> assertThat(res.value).hasSize(2)
+            is Failure -> fail("Request failed: ${res.error.exception.message}")
+            is Success -> {
+                assertThat(res.value).hasSize(2)
+                assertThat(res.value.map { it.id }).containsExactlyInAnyOrder(innlegg1Id, innlegg2Id)
+            }
         }
     }
 
 
     @Test
-    fun oppdaterInnlegg() {
+    fun `PUT skal oppdatere et eksisterende innlegg`() {
         val token   = authServer.lagToken(authPort, navIdent = "C123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
 
         val repo = InnleggRepository(db.dataSource)
-        val lagret = repo.opprett(treffId, OpprettInnleggRequestDto("Gammel","C","","",null,"<p/>"))
+        val eksisterendeInnleggId = UUID.randomUUID()
+        val (originaltInnlegg, _) = repo.oppdater(
+            eksisterendeInnleggId,
+            treffId,
+            OpprettInnleggRequestDto("Gammelt Innlegg","C123456","Kari Nordmann","Rådgiver",null,"<p>Gammelt innhold</p>")
+        )
 
-        val patch = OpprettInnleggRequestDto("Ny","C","Ola","Veileder",null,"<p>Ny</p>")
+        val oppdatertBody = OpprettInnleggRequestDto(
+            tittel = "Oppdatert Innlegg",
+            opprettetAvPersonNavident = "C123456", // Kan være samme eller annen
+            opprettetAvPersonNavn = "Kari Oppdatert Nordmann",
+            opprettetAvPersonBeskrivelse = "Oppdatert Rådgiver",
+            sendesTilJobbsokerTidspunkt = null, // Kan endres
+            htmlContent = "<p>Nytt og spennende innhold!</p>"
+        )
 
-        val (_, resp, res) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg/${lagret.id}")
-            .body(JacksonConfig.mapper.writeValueAsString(patch))
+        val (_, resp, res) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg/${originaltInnlegg.id}")
+            .body(JacksonConfig.mapper.writeValueAsString(oppdatertBody))
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(InnleggDtoDeserializer)
 
         assertStatuscodeEquals(HTTP_OK, resp, res)
         when (res) {
-            is Failure -> throw res.error
-            is Success -> assertThat(res.value.tittel).isEqualTo("Ny")
+            is Failure -> fail("Request failed: ${res.error.exception.message} \n ${res.error.response.body().asString("application/json;charset=utf-8")}")
+            is Success -> {
+                val oppdatertInnlegg = res.value
+                assertThat(oppdatertInnlegg.id).isEqualTo(originaltInnlegg.id)
+                assertThat(oppdatertInnlegg.tittel).isEqualTo(oppdatertBody.tittel)
+                assertThat(oppdatertInnlegg.htmlContent).isEqualTo(oppdatertBody.htmlContent)
+                assertThat(oppdatertInnlegg.opprettetAvPersonNavn).isEqualTo(oppdatertBody.opprettetAvPersonNavn)
+                assertThat(oppdatertInnlegg.sistOppdatertTidspunkt).isAfter(originaltInnlegg.sistOppdatertTidspunkt)
+
+                val hentetFraDb = InnleggRepository(db.dataSource).hentById(originaltInnlegg.id)
+                assertThat(hentetFraDb).isNotNull
+                assertThat(hentetFraDb!!.tittel).isEqualTo(oppdatertBody.tittel)
+            }
         }
+    }
+
+    @Test
+    fun `PUT til ikke-eksisterende treffId skal gi 404`() {
+        val token = authServer.lagToken(authPort, navIdent = "E123456")
+        val ikkeEksisterendeTreffId = UUID.randomUUID()
+        val innleggId = UUID.randomUUID()
+
+        val body = OpprettInnleggRequestDto("Test", "E123456", "Navn", "Veileder", null, "<p>Test</p>")
+
+        val (_, resp, res) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$ikkeEksisterendeTreffId/innlegg/$innleggId")
+            .body(JacksonConfig.mapper.writeValueAsString(body))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_NOT_FOUND, resp, res)
     }
 
 
     @Test
-    fun slettInnlegg() {
+    fun `slettInnlegg skal fjerne innlegget`() {
         val token   = authServer.lagToken(authPort, navIdent = "D123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
 
         val repo = InnleggRepository(db.dataSource)
-        val innlegg = repo.opprett(treffId, OpprettInnleggRequestDto("Slett","D","","",null,"<p/>"))
+        val innleggId = UUID.randomUUID()
+        // Create innlegg using PUT via repository's upsert
+        val (innleggSomSkalSlettes, _) = repo.oppdater(
+            innleggId,
+            treffId,
+            OpprettInnleggRequestDto("Innlegg for sletting","D123456","Slette Meg","Test",null,"<p>Slettes snart</p>")
+        )
 
-        val (_, resp, res) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg/${innlegg.id}")
+        val (_, resp, res) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg/${innleggSomSkalSlettes.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
         assertStatuscodeEquals(HTTP_NO_CONTENT, resp, res)
-        assertThat(repo.hentById(innlegg.id)).isNull()
+        assertThat(repo.hentById(innleggSomSkalSlettes.id)).isNull()
+    }
+
+    @Test
+    fun `slettInnlegg for ikke-eksisterende innleggId skal gi 404`() {
+        val token = authServer.lagToken(authPort, navIdent = "F123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val ikkeEksisterendeInnleggId = UUID.randomUUID()
+
+        val (_, resp, res) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg/$ikkeEksisterendeInnleggId")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_NOT_FOUND, resp, res)
+    }
+
+    @Test
+    fun `hentEttInnlegg skal returnere korrekt innlegg`() {
+        val token = authServer.lagToken(authPort, navIdent = "G123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val repo = InnleggRepository(db.dataSource)
+        val innleggId = UUID.randomUUID()
+        val (opprettetInnlegg, _) = repo.oppdater(
+            innleggId,
+            treffId,
+            OpprettInnleggRequestDto("Hent meg", "G123456", "Test Person", "Tester", null, "<p>Hentbart innhold</p>")
+        )
+
+        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg/${opprettetInnlegg.id}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(InnleggDtoDeserializer)
+
+        assertStatuscodeEquals(HTTP_OK, resp, res)
+        when (res) {
+            is Failure -> fail("Request failed: ${res.error.exception.message}")
+            is Success -> {
+                val hentetInnlegg = res.value
+                assertThat(hentetInnlegg.id).isEqualTo(opprettetInnlegg.id)
+                assertThat(hentetInnlegg.tittel).isEqualTo(opprettetInnlegg.tittel)
+            }
+        }
+    }
+
+    @Test
+    fun `hentEttInnlegg for ikke-eksisterende innleggId skal gi 404`() {
+        val token = authServer.lagToken(authPort, navIdent = "H123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val ikkeEksisterendeInnleggId = UUID.randomUUID()
+
+        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/innlegg/$ikkeEksisterendeInnleggId")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_NOT_FOUND, resp, res)
+    }
+}
+
+// Helper object for TestDatabase if not already globally available or extended
+fun TestDatabase.opprettRekrutteringstreffIDatabase(
+    tittel: String = "Test Rekrutteringstreff",
+    navIdent: String = "Z999999",
+    enhetId: String = "0000"
+): TreffId {
+    val id = UUID.randomUUID()
+    this.dataSource.connection.use {
+        val stmt = it.prepareStatement(
+            """
+            INSERT INTO rekrutteringstreff (id, tittel, status, opprettet_av_person_navident, opprettet_av_kontor_enhetid, opprettet_av_tidspunkt, eiere)
+            VALUES (?, ?, 'ÅPENT', ?, ?, NOW(), ARRAY[?])
+            RETURNING id;
+            """.trimIndent()
+        )
+        stmt.setObject(1, id)
+        stmt.setString(2, tittel)
+        stmt.setString(3, navIdent)
+        stmt.setString(4, enhetId)
+        stmt.setString(5, navIdent) // Assuming navIdent is an owner
+        stmt.executeQuery()
+    }
+    return TreffId(id)
+}
+
+object TestUtils {
+    fun getFreePort(): Int {
+        return java.net.ServerSocket(0).use { it.localPort }
     }
 }

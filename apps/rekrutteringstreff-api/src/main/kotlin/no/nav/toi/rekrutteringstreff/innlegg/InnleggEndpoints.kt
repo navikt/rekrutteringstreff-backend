@@ -7,6 +7,7 @@ import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
+import java.net.HttpURLConnection
 import java.util.UUID
 
 private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
@@ -17,8 +18,8 @@ private const val INNLEGG_ITEM_PATH = "$INNLEGG_BASE_PATH/{$INNLEGG_ID_PARAM}"
 
 fun Javalin.handleInnlegg(repo: InnleggRepository) {
     get   (INNLEGG_BASE_PATH, hentAlleInnleggForTreff(repo))
-    post  (INNLEGG_BASE_PATH, opprettInnleggForTreff(repo))
     get   (INNLEGG_ITEM_PATH, hentEttInnlegg(repo))
+    post  (INNLEGG_BASE_PATH, opprettInnlegg(repo))
     put   (INNLEGG_ITEM_PATH, oppdaterEttInnlegg(repo))
     delete(INNLEGG_ITEM_PATH, slettEttInnlegg(repo))
 }
@@ -28,29 +29,19 @@ fun Javalin.handleInnlegg(repo: InnleggRepository) {
     operationId = "hentAlleInnleggForTreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class)],
-    responses = [OpenApiResponse("200", [OpenApiContent(Array<InnleggResponseDto>::class)])],
+    responses = [OpenApiResponse(
+        "200",
+        [OpenApiContent(
+            Array<InnleggResponseDto>::class,
+            example = """[{"id":"...","treffId":"...","tittel":"...","opprettetAvPersonNavident":"...","opprettetAvPersonNavn":"...","opprettetAvPersonBeskrivelse":"...","sendesTilJobbsokerTidspunkt":"...","htmlContent":"...","opprettetTidspunkt":"...","sistOppdatertTidspunkt":"..."}]"""
+        )]
+    )],
     path = INNLEGG_BASE_PATH,
     methods = [HttpMethod.GET]
 )
 private fun hentAlleInnleggForTreff(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
     ctx.json(repo.hentForTreff(treffId).map(Innlegg::toResponseDto))
-}
-
-@OpenApi(
-    summary = "Opprett innlegg",
-    operationId = "opprettInnleggForTreff",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class)],
-    requestBody = OpenApiRequestBody([OpenApiContent(OpprettInnleggRequestDto::class)]),
-    responses = [OpenApiResponse("201", [OpenApiContent(InnleggResponseDto::class)])],
-    path = INNLEGG_BASE_PATH,
-    methods = [HttpMethod.POST]
-)
-private fun opprettInnleggForTreff(repo: InnleggRepository): (Context) -> Unit = { ctx ->
-    val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
-    val body    = ctx.bodyAsClass<OpprettInnleggRequestDto>()
-    ctx.status(201).json(repo.opprett(treffId, body).toResponseDto())
 }
 
 @OpenApi(
@@ -62,7 +53,13 @@ private fun opprettInnleggForTreff(repo: InnleggRepository): (Context) -> Unit =
         OpenApiParam(INNLEGG_ID_PARAM,            UUID::class)
     ],
     responses = [
-        OpenApiResponse("200", [OpenApiContent(InnleggResponseDto::class)]),
+        OpenApiResponse(
+            "200",
+            [OpenApiContent(
+                InnleggResponseDto::class,
+                example = """{"id":"...","treffId":"...","tittel":"...","opprettetAvPersonNavident":"...","opprettetAvPersonNavn":"...","opprettetAvPersonBeskrivelse":"...","sendesTilJobbsokerTidspunkt":"...","htmlContent":"...","opprettetTidspunkt":"...","sistOppdatertTidspunkt":"..."}"""
+            )]
+        ),
         OpenApiResponse("404")
     ],
     path = INNLEGG_ITEM_PATH,
@@ -74,25 +71,89 @@ private fun hentEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx -
 }
 
 @OpenApi(
-    summary = "Oppdater innlegg",
+    summary = "Opprett nytt innlegg",
+    operationId = "opprettInnlegg",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class)],
+    requestBody = OpenApiRequestBody([
+        OpenApiContent(
+            OpprettInnleggRequestDto::class,
+            example = """{"tittel":"...","opprettetAvPersonNavident":"...","opprettetAvPersonNavn":"...","opprettetAvPersonBeskrivelse":"...","sendesTilJobbsokerTidspunkt":"...","htmlContent":"..."}"""
+        )
+    ]),
+    responses = [
+        OpenApiResponse(
+            "201",
+            [OpenApiContent(
+                InnleggResponseDto::class,
+                example = """{"id":"...","treffId":"...","tittel":"...","opprettetAvPersonNavident":"...","opprettetAvPersonNavn":"...","opprettetAvPersonBeskrivelse":"...","sendesTilJobbsokerTidspunkt":"...","htmlContent":"...","opprettetTidspunkt":"...","sistOppdatertTidspunkt":"..."}"""
+            )]
+        ),
+        OpenApiResponse("404")
+    ],
+    path = INNLEGG_BASE_PATH,
+    methods = [HttpMethod.POST]
+)
+private fun opprettInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
+    val treffIdParam = ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM)
+    val treffId = TreffId(treffIdParam)
+    val body = ctx.bodyAsClass<OpprettInnleggRequestDto>()
+    try {
+        val innleggId = UUID.randomUUID()
+        val (innlegg, _) = repo.oppdater(innleggId, treffId, body)
+        ctx.status(HttpURLConnection.HTTP_CREATED).json(innlegg.toResponseDto())
+    } catch (e: IllegalStateException) {
+        if (e.message?.contains("finnes ikke") == true) {
+            throw NotFoundResponse("Rekrutteringstreff med id $treffIdParam ikke funnet.")
+        }
+        throw e
+    }
+}
+
+@OpenApi(
+    summary = "Oppdater et eksisterende innlegg",
     operationId = "oppdaterEttInnlegg",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [
         OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class),
         OpenApiParam(INNLEGG_ID_PARAM,            UUID::class)
     ],
-    requestBody = OpenApiRequestBody([OpenApiContent(OpprettInnleggRequestDto::class)]),
+    requestBody = OpenApiRequestBody([
+        OpenApiContent(
+            OpprettInnleggRequestDto::class,
+            example = """{"tittel":"...","opprettetAvPersonNavident":"...","opprettetAvPersonNavn":"...","opprettetAvPersonBeskrivelse":"...","sendesTilJobbsokerTidspunkt":"...","htmlContent":"..."}"""
+        )
+    ]),
     responses = [
-        OpenApiResponse("200", [OpenApiContent(InnleggResponseDto::class)]),
+        OpenApiResponse(
+            "200",
+            [OpenApiContent(
+                InnleggResponseDto::class,
+                example = """{"id":"...","treffId":"...","tittel":"...","opprettetAvPersonNavident":"...","opprettetAvPersonNavn":"...","opprettetAvPersonBeskrivelse":"...","sendesTilJobbsokerTidspunkt":"...","htmlContent":"...","opprettetTidspunkt":"...","sistOppdatertTidspunkt":"..."}"""
+            )]
+        ),
         OpenApiResponse("404")
     ],
     path = INNLEGG_ITEM_PATH,
     methods = [HttpMethod.PUT]
 )
 private fun oppdaterEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
-    val id   = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
+    val treffIdParam = ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM)
+    val innleggIdParam = ctx.pathParam(INNLEGG_ID_PARAM)
+    val innleggId = UUID.fromString(innleggIdParam)
+    val treffId = TreffId(treffIdParam)
     val body = ctx.bodyAsClass<OpprettInnleggRequestDto>()
-    ctx.json(repo.oppdater(id, body)?.toResponseDto() ?: throw NotFoundResponse())
+
+    try {
+        val (innlegg, created) = repo.oppdater(innleggId, treffId, body)
+        val status = if (created) HttpURLConnection.HTTP_CREATED else HttpURLConnection.HTTP_OK
+        ctx.status(status).json(innlegg.toResponseDto())
+    } catch (e: IllegalStateException) {
+        if (e.message?.contains("finnes ikke") == true) {
+            throw NotFoundResponse("Rekrutteringstreff med id $treffIdParam ikke funnet.")
+        }
+        throw e
+    }
 }
 
 @OpenApi(
@@ -112,5 +173,5 @@ private fun oppdaterEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { c
 )
 private fun slettEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
-    if (repo.slett(id)) ctx.status(204) else throw NotFoundResponse()
+    if (repo.slett(id)) ctx.status(HttpURLConnection.HTTP_NO_CONTENT) else throw NotFoundResponse()
 }
