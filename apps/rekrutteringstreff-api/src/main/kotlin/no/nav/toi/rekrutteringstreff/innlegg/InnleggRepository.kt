@@ -61,6 +61,9 @@ class InnleggRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun opprett(treffId: TreffId, dto: OpprettInnleggRequestDto): Innlegg =
+        oppdater(UUID.randomUUID(), treffId, dto).first
+
     fun oppdater(innleggId: UUID, treffId: TreffId, dto: OpprettInnleggRequestDto): Pair<Innlegg, Boolean> {
         return dataSource.connection.use { c ->
             // Resolve treffDbId first. This will throw IllegalStateException if treffId is not found,
