@@ -15,7 +15,7 @@ class InnleggRepository(private val dataSource: DataSource) {
     private object T {
         const val TABLE              = "innlegg"
         const val COL_DB_ID          = "db_id"
-        const val COL_ID             = "id"            // uuid
+        const val COL_ID             = "id"
         const val COL_TREFF_DB_ID    = "treff_db_id"
         const val COL_TITTEL         = "tittel"
         const val COL_NAVIDENT       = "opprettet_av_person_navident"
@@ -25,8 +25,7 @@ class InnleggRepository(private val dataSource: DataSource) {
         const val COL_HTML           = "html_content"
         const val COL_OPPRETTET      = "opprettet_tidspunkt"
         const val COL_SIST_OPPDATERT = "sist_oppdatert_tidspunkt"
-        const val COL_TREFF_UUID     = "treffId" // Alias for rekrutteringstreff.id
-        const val COL_XMAX           = "xmax"    // System column to detect insert vs update
+        const val COL_TREFF_UUID     = "treffId"
     }
     fun hentForTreff(treffId: TreffId): List<Innlegg> {
         val sql = """
@@ -61,61 +60,64 @@ class InnleggRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun opprett(treffId: TreffId, dto: OpprettInnleggRequestDto): Innlegg =
-        oppdater(UUID.randomUUID(), treffId, dto).first
-
-    fun oppdater(innleggId: UUID, treffId: TreffId, dto: OpprettInnleggRequestDto): Pair<Innlegg, Boolean> {
+    fun opprett(treffId: TreffId, dto: OpprettInnleggRequestDto, navIdent: String): Innlegg {
+        val innleggId = UUID.randomUUID()
         return dataSource.connection.use { c ->
-            // Resolve treffDbId first. This will throw IllegalStateException if treffId is not found,
-            // which will be caught by the endpoint and translated to a 404.
             val treffDbId = c.treffDbId(treffId)
-
             val sql = """
-            INSERT INTO ${T.TABLE} (
-                ${T.COL_ID}, ${T.COL_TREFF_DB_ID}, ${T.COL_TITTEL}, ${T.COL_NAVIDENT},
-                ${T.COL_NAVN}, ${T.COL_BESKRIVELSE}, ${T.COL_SENDES}, ${T.COL_HTML}
-                -- ${T.COL_OPPRETTET} uses DEFAULT on insert, preserved on update
-                -- ${T.COL_SIST_OPPDATERT} uses DEFAULT on insert, set to NOW() on update
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (${T.COL_ID}) DO UPDATE
-            SET ${T.COL_TITTEL}         = EXCLUDED.${T.COL_TITTEL},
-                ${T.COL_NAVIDENT}       = EXCLUDED.${T.COL_NAVIDENT},
-                ${T.COL_NAVN}           = EXCLUDED.${T.COL_NAVN},
-                ${T.COL_BESKRIVELSE}    = EXCLUDED.${T.COL_BESKRIVELSE},
-                ${T.COL_SENDES}         = EXCLUDED.${T.COL_SENDES},
-                ${T.COL_HTML}           = EXCLUDED.${T.COL_HTML},
-                ${T.COL_SIST_OPPDATERT} = NOW()
-                -- ${T.COL_TREFF_DB_ID} should not change on update if ${T.COL_ID} is the conflict target.
-                -- ${T.COL_OPPRETTET} is not changed by the UPDATE clause.
-            RETURNING ${T.COL_ID},
-                      (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = ${T.TABLE}.${T.COL_TREFF_DB_ID}) AS ${T.COL_TREFF_UUID},
-                      ${T.COL_TITTEL}, ${T.COL_NAVIDENT}, ${T.COL_NAVN},
-                      ${T.COL_BESKRIVELSE}, ${T.COL_SENDES},
-                      ${T.COL_HTML}, ${T.COL_OPPRETTET}, ${T.COL_SIST_OPPDATERT},
-                      ${T.COL_XMAX} 
+                INSERT INTO innlegg (
+                    id, treff_db_id, tittel, opprettet_av_person_navident,
+                    opprettet_av_person_navn, opprettet_av_person_beskrivelse, html_content
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                RETURNING id, (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = innlegg.treff_db_id) AS treffId,
+                          tittel, opprettet_av_person_navident, opprettet_av_person_navn,
+                          opprettet_av_person_beskrivelse, sendes_til_jobbsoker_tidspunkt, -- add this
+                          html_content, opprettet_tidspunkt, sist_oppdatert_tidspunkt
             """.trimIndent()
-
             c.prepareStatement(sql).use { ps ->
-                ps.setObject(1, innleggId)       // For INSERT and ON CONFLICT target
-                ps.setLong  (2, treffDbId)       // Use pre-resolved treff_db_id
+                ps.setObject(1, innleggId)
+                ps.setLong(2, treffDbId)
                 ps.setString(3, dto.tittel)
-                ps.setString(4, dto.opprettetAvPersonNavident)
+                ps.setString(4, navIdent)
                 ps.setString(5, dto.opprettetAvPersonNavn)
                 ps.setString(6, dto.opprettetAvPersonBeskrivelse)
-                dto.sendesTilJobbsokerTidspunkt?.let {
-                    ps.setTimestamp(7, Timestamp.from(it.toInstant()))
-                } ?: ps.setNull(7, Types.TIMESTAMP_WITH_TIMEZONE)
-                ps.setString(8, dto.htmlContent)
-
+                ps.setString(7, dto.htmlContent)
                 ps.executeQuery().use { rs ->
-                    if (rs.next()) {
-                        val innlegg = rs.toInnlegg()
-                        val xmax = rs.getObject(T.COL_XMAX)
-                        Pair(innlegg, xmax.toString() == "0")
-                    } else {
-                        error("Upsert operation for innleggId $innleggId did not return a row, or treffId $treffId became invalid.")
-                    }
+                    if (rs.next()) rs.toInnlegg() else error("Insert failed")
+                }
+            }
+        }
+    }
+
+    fun oppdater(innleggId: UUID, treffId: TreffId, dto: OpprettInnleggRequestDto): Innlegg {
+        return dataSource.connection.use { c ->
+            val treffDbId = c.treffDbId(treffId)
+            val sql = """
+            UPDATE innlegg SET
+                tittel = ?,
+                opprettet_av_person_navn = ?,
+                opprettet_av_person_beskrivelse = ?,
+                sendes_til_jobbsoker_tidspunkt = ?,
+                html_content = ?,
+                sist_oppdatert_tidspunkt = NOW()
+            WHERE id = ? AND treff_db_id = ?
+            RETURNING id, (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = innlegg.treff_db_id) AS treffId,
+                      tittel, opprettet_av_person_navident, opprettet_av_person_navn,
+                      opprettet_av_person_beskrivelse, sendes_til_jobbsoker_tidspunkt,
+                      html_content, opprettet_tidspunkt, sist_oppdatert_tidspunkt
+        """.trimIndent()
+            c.prepareStatement(sql).use { ps ->
+                ps.setString(1, dto.tittel)
+                ps.setString(2, dto.opprettetAvPersonNavn)
+                ps.setString(3, dto.opprettetAvPersonBeskrivelse)
+                dto.sendesTilJobbsokerTidspunkt?.let {
+                    ps.setTimestamp(4, java.sql.Timestamp.from(it.toInstant()))
+                } ?: ps.setNull(4, java.sql.Types.TIMESTAMP_WITH_TIMEZONE)
+                ps.setString(5, dto.htmlContent)
+                ps.setObject(6, innleggId)
+                ps.setLong(7, treffDbId)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) rs.toInnlegg() else error("Update failed or not found")
                 }
             }
         }
