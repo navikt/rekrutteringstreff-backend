@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.*
 import java.time.ZonedDateTime
 import java.util.UUID
+import kotlin.text.get
 
 
 private object InnleggDeserializer : ResponseDeserializable<InnleggResponseDto> {
@@ -126,6 +127,75 @@ class InnleggTest {
                 assertThat(repo.hentById(id)!!.tittel).isEqualTo(body.tittel)
             }
         }
+    }
+
+    @Test
+    fun `GET liste returnerer innlegg for treff`() {
+        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val treff = db.opprettRekrutteringstreffIDatabase()
+        val repo = InnleggRepository(db.dataSource)
+        val id = repo.opprett(treff, sampleOpprett(), "C123456").id
+
+        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(InnleggListeDeserializer)
+
+        assertStatuscodeEquals(HTTP_OK, resp, res)
+        when (res) {
+            is Failure -> fail(res.error.message)
+            is Success -> assertThat(res.value).anySatisfy { it.id == id }
+        }
+    }
+
+    @Test
+    fun `GET ett returnerer innlegg`() {
+        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val treff = db.opprettRekrutteringstreffIDatabase()
+        val repo = InnleggRepository(db.dataSource)
+        val id = repo.opprett(treff, sampleOpprett(), "C123456").id
+
+        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg/$id")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(InnleggDeserializer)
+
+        assertStatuscodeEquals(HTTP_OK, resp, res)
+        when (res) {
+            is Failure -> fail(res.error.message)
+            is Success -> assertThat(res.value.id).isEqualTo(id)
+        }
+    }
+
+    @Test
+    fun `POST oppretter innlegg`() {
+        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val treff = db.opprettRekrutteringstreffIDatabase()
+        val body = sampleOpprett()
+
+        val (_, resp, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg")
+            .body(JacksonConfig.mapper.writeValueAsString(body))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(InnleggDeserializer)
+
+        assertStatuscodeEquals(HTTP_CREATED, resp, res)
+        when (res) {
+            is Failure -> fail(res.error.message)
+            is Success -> assertThat(res.value.tittel).isEqualTo(body.tittel)
+        }
+    }
+
+    @Test
+    fun `DELETE fjerner innlegg`() {
+        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val treff = db.opprettRekrutteringstreffIDatabase()
+        val repo = InnleggRepository(db.dataSource)
+        val id = repo.opprett(treff, sampleOpprett(), "C123456").id
+
+        val (_, resp, res) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg/$id")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_NO_CONTENT, resp, res)
+        assertThat(repo.hentById(id)).isNull()
     }
 
     @Test

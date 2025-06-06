@@ -29,7 +29,7 @@ class InnleggRepositoryTest {
         db.slettAlt()
     }
 
-    private fun sampleOpprett(now: ZonedDateTime = ZonedDateTime.now()) =
+    private fun opprettTestdata(now: ZonedDateTime = ZonedDateTime.now()) =
         OpprettInnleggRequestDto(
             tittel = "Tittel",
             opprettetAvPersonNavn = "Ola",
@@ -39,8 +39,24 @@ class InnleggRepositoryTest {
         )
 
     @Test
+    fun `hentById returnerer riktig innlegg`() {
+        val opprettet = repo.opprett(treffId, opprettTestdata(), "A123456")
+        val hentet = repo.hentById(opprettet.id)
+        assertThat(hentet).isNotNull
+        assertThat(hentet!!.id).isEqualTo(opprettet.id)
+    }
+
+    @Test
+    fun `hentForTreff returnerer alle innlegg for treff`() {
+        val i1 = repo.opprett(treffId, opprettTestdata(), "A123456")
+        val i2 = repo.opprett(treffId, opprettTestdata(), "A123456")
+        val liste = repo.hentForTreff(treffId)
+        assertThat(liste).extracting<UUID> { it.id }.containsExactly(i1.id, i2.id)
+    }
+
+    @Test
     fun `opprett persisterer alle felter`() {
-        val dto = sampleOpprett()
+        val dto = opprettTestdata()
         val i   = repo.opprett(treffId, dto, "A123456")
         val dbi = repo.hentById(i.id)!!
 
@@ -51,7 +67,7 @@ class InnleggRepositoryTest {
 
     @Test
     fun `oppdater endrer rad`() {
-        val original = repo.opprett(treffId, sampleOpprett(), "A123456")
+        val original = repo.opprett(treffId, opprettTestdata(), "A123456")
 
         val updated = repo.oppdater(
             original.id,
@@ -75,7 +91,7 @@ class InnleggRepositoryTest {
         val id = UUID.randomUUID()
         val bogusTreff = TreffId(UUID.randomUUID())
         val ex = assertThrows<IllegalStateException> {
-            repo.oppdater(id, bogusTreff, sampleOpprett().let {
+            repo.oppdater(id, bogusTreff, opprettTestdata().let {
                 OppdaterInnleggRequestDto(it.tittel, it.opprettetAvPersonNavn, it.opprettetAvPersonBeskrivelse, it.sendesTilJobbsokerTidspunkt, it.htmlContent)
             })
         }
@@ -85,7 +101,7 @@ class InnleggRepositoryTest {
     @Test
     fun `oppdater kaster feil når innlegg ikke finnes`() {
         val ex = assertThrows<IllegalStateException> {
-            repo.oppdater(UUID.randomUUID(), treffId, sampleOpprett().let {
+            repo.oppdater(UUID.randomUUID(), treffId, opprettTestdata().let {
                 OppdaterInnleggRequestDto(it.tittel, it.opprettetAvPersonNavn, it.opprettetAvPersonBeskrivelse, it.sendesTilJobbsokerTidspunkt, it.htmlContent)
             })
         }
@@ -94,7 +110,7 @@ class InnleggRepositoryTest {
 
     @Test
     fun `slett fjerner rad`() {
-        val id = repo.opprett(treffId, sampleOpprett(), "A123456").id
+        val id = repo.opprett(treffId, opprettTestdata(), "A123456").id
 
         assertThat(repo.slett(id)).isTrue
         assertThat(repo.hentById(id)).isNull()
