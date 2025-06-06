@@ -9,8 +9,7 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
-import java.net.HttpURLConnection.HTTP_CREATED
-import java.net.HttpURLConnection.HTTP_OK
+import java.net.HttpURLConnection.*
 import java.util.UUID
 
 private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
@@ -27,131 +26,25 @@ fun Javalin.handleInnlegg(repo: InnleggRepository) {
     delete(INNLEGG_ITEM_PATH, slettEttInnlegg(repo))
 }
 
-
-@OpenApi(
-    summary = "Hent alle innlegg for et rekrutteringstreff",
-    operationId = "hentAlleInnleggForTreff",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class)],
-    responses = [OpenApiResponse(
-        "200", [OpenApiContent(
-            Array<InnleggResponseDto>::class,
-            example = """
-            [
-              {
-                "id":"11111111-2222-3333-4444-555555555555",
-                "treffId":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-                "tittel":"Velkommen!",
-                "opprettetAvPersonNavident":"A123456",
-                "opprettetAvPersonNavn":"Ola Nordmann",
-                "opprettetAvPersonBeskrivelse":"Veileder",
-                "sendesTilJobbsokerTidspunkt":"2025-06-05T12:00:00+02:00",
-                "htmlContent":"<p>Hei og velkommen til treffet!</p>",
-                "opprettetTidspunkt":"2025-06-05T10:00:00+02:00",
-                "sistOppdatertTidspunkt":"2025-06-05T10:00:00+02:00"
-              }
-            ]
-            """
-        )]
-    )],
-    path = INNLEGG_BASE_PATH,
-    methods = [HttpMethod.GET]
-)
 private fun hentAlleInnleggForTreff(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
     ctx.json(repo.hentForTreff(treffId).map(Innlegg::toResponseDto))
 }
 
-@OpenApi(
-    summary = "Hent ett innlegg",
-    operationId = "hentEttInnlegg",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [
-        OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class),
-        OpenApiParam(INNLEGG_ID_PARAM,            UUID::class)
-    ],
-    responses = [
-        OpenApiResponse(
-            "200", [OpenApiContent(
-                InnleggResponseDto::class,
-                example = """
-                {
-                  "id":"11111111-2222-3333-4444-555555555555",
-                  "treffId":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-                  "tittel":"Velkommen!",
-                  "opprettetAvPersonNavident":"A123456",
-                  "opprettetAvPersonNavn":"Ola Nordmann",
-                  "opprettetAvPersonBeskrivelse":"Veileder",
-                  "sendesTilJobbsokerTidspunkt":"2025-06-05T12:00:00+02:00",
-                  "htmlContent":"<p>Hei og velkommen til treffet!</p>",
-                  "opprettetTidspunkt":"2025-06-05T10:00:00+02:00",
-                  "sistOppdatertTidspunkt":"2025-06-05T10:00:00+02:00"
-                }
-                """
-            )]
-        ),
-        OpenApiResponse("404")
-    ],
-    path = INNLEGG_ITEM_PATH,
-    methods = [HttpMethod.GET]
-)
 private fun hentEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
     ctx.json(repo.hentById(id)?.toResponseDto() ?: throw NotFoundResponse())
 }
 
-@OpenApi(
-    summary = "Opprett nytt innlegg",
-    operationId = "opprettInnlegg",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class)],
-    requestBody = OpenApiRequestBody([OpenApiContent(
-        OpprettInnleggRequestDto::class,
-        example = """
-        {
-          "tittel":"Velkommen!",
-          "opprettetAvPersonNavident":"A123456",
-          "opprettetAvPersonNavn":"Ola Nordmann",
-          "opprettetAvPersonBeskrivelse":"Veileder",
-          "sendesTilJobbsokerTidspunkt":"2025-06-05T12:00:00+02:00",
-          "htmlContent":"<p>Hei og velkommen til treffet!</p>"
-        }
-        """
-    )]),
-    responses = [OpenApiResponse(
-        "201", [OpenApiContent(
-            InnleggResponseDto::class,
-            example = """
-            {
-              "id":"11111111-2222-3333-4444-555555555555",
-              "treffId":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-              "tittel":"Velkommen!",
-              "opprettetAvPersonNavident":"A123456",
-              "opprettetAvPersonNavn":"Ola Nordmann",
-              "opprettetAvPersonBeskrivelse":"Veileder",
-              "sendesTilJobbsokerTidspunkt":"2025-06-05T12:00:00+02:00",
-              "htmlContent":"<p>Hei og velkommen til treffet!</p>",
-              "opprettetTidspunkt":"2025-06-05T10:00:00+02:00",
-              "sistOppdatertTidspunkt":"2025-06-05T10:00:00+02:00"
-            }
-            """
-        )]
-    ),
-        OpenApiResponse("404")
-    ],
-    path = INNLEGG_BASE_PATH,
-    methods = [HttpMethod.POST]
-)
 private fun opprettInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
-    val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
-    val requestDto    = ctx.bodyAsClass<OpprettInnleggRequestDto>()
-
+    val treffId   = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
+    val dto       = ctx.bodyAsClass<OpprettInnleggRequestDto>()
+    val navIdent  = ctx.authenticatedUser().extractNavIdent()
     try {
-        val innlegg = repo.opprett(treffId, requestDto, ctx.authenticatedUser().extractNavIdent())
-        ctx.status(HTTP_CREATED).json(innlegg.toResponseDto())
+        ctx.status(HTTP_CREATED).json(repo.opprett(treffId, dto, navIdent).toResponseDto())
     } catch (e: IllegalStateException) {
         if (e.message?.contains("finnes ikke") == true)
             throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somUuid} ikke funnet.")
@@ -159,90 +52,24 @@ private fun opprettInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx -
     }
 }
 
-@OpenApi(
-    summary = "Oppdater et eksisterende innlegg",
-    operationId = "oppdaterEttInnlegg",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [
-        OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class),
-        OpenApiParam(INNLEGG_ID_PARAM,            UUID::class)
-    ],
-    requestBody = OpenApiRequestBody([OpenApiContent(
-        OpprettInnleggRequestDto::class,
-        example = """
-        {
-          "tittel":"Oppdatert tittel",
-          "opprettetAvPersonNavident":"A123456",
-          "opprettetAvPersonNavn":"Ola Nordmann",
-          "opprettetAvPersonBeskrivelse":"Veileder",
-          "sendesTilJobbsokerTidspunkt":"2025-06-05T13:00:00+02:00",
-          "htmlContent":"<p>Oppdatert innhold</p>"
-        }
-        """
-    )]),
-    responses = [
-        OpenApiResponse(
-            "200", [OpenApiContent(
-                InnleggResponseDto::class,
-                example = """
-                {
-                  "id":"11111111-2222-3333-4444-555555555555",
-                  "treffId":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-                  "tittel":"Oppdatert tittel",
-                  "opprettetAvPersonNavident":"A123456",
-                  "opprettetAvPersonNavn":"Ola Nordmann",
-                  "opprettetAvPersonBeskrivelse":"Veileder",
-                  "sendesTilJobbsokerTidspunkt":"2025-06-05T13:00:00+02:00",
-                  "htmlContent":"<p>Oppdatert innhold</p>",
-                  "opprettetTidspunkt":"2025-06-05T10:00:00+02:00",
-                  "sistOppdatertTidspunkt":"2025-06-05T13:00:00+02:00"
-                }
-                """
-            )]
-        ),
-        OpenApiResponse(
-            "201", [OpenApiContent( InnleggResponseDto::class )] // eksempelet over holder
-        ),
-        OpenApiResponse("404")
-    ],
-    path = INNLEGG_ITEM_PATH,
-    methods = [HttpMethod.PUT]
-)
 private fun oppdaterEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val treffId   = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
     val innleggId = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
-    val body      = ctx.bodyAsClass<OpprettInnleggRequestDto>()
-
+    val dto       = ctx.bodyAsClass<OppdaterInnleggRequestDto>()
     try {
-        val innlegg = repo.oppdater(innleggId, treffId, body)
-        ctx.status(HTTP_OK).json(innlegg.toResponseDto())
+        ctx.status(HTTP_OK).json(repo.oppdater(innleggId, treffId, dto).toResponseDto())
     } catch (e: IllegalStateException) {
-        if (e.message?.contains("finnes ikke") == true)
-            throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somUuid} ikke funnet.")
-        if (e.message?.contains("Update failed or not found") == true)
-            throw NotFoundResponse("Innlegg med id $innleggId ikke funnet for treff ${treffId.somUuid}.")
-        throw e
+        when {
+            e.message?.contains("Treff")   == true -> throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somUuid} ikke funnet.")
+            e.message?.contains("Update")  == true -> throw NotFoundResponse("Innlegg med id $innleggId ikke funnet for treff ${treffId.somUuid}.")
+            else -> throw e
+        }
     }
 }
 
-@OpenApi(
-    summary = "Slett innlegg",
-    operationId = "slettEttInnlegg",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [
-        OpenApiParam(REKRUTTERINGSTREFF_ID_PARAM, UUID::class),
-        OpenApiParam(INNLEGG_ID_PARAM,            UUID::class)
-    ],
-    responses = [
-        OpenApiResponse("204"),
-        OpenApiResponse("404")
-    ],
-    path = INNLEGG_ITEM_PATH,
-    methods = [HttpMethod.DELETE]
-)
 private fun slettEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
-    if (repo.slett(id)) ctx.status(204) else throw NotFoundResponse()
+    if (repo.slett(id)) ctx.status(HTTP_NO_CONTENT) else throw NotFoundResponse()
 }

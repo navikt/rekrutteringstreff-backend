@@ -18,7 +18,14 @@ data class Innlegg(
 
 data class OpprettInnleggRequestDto(
     val tittel: String,
-    val opprettetAvPersonNavident: String,
+    val opprettetAvPersonNavn: String,
+    val opprettetAvPersonBeskrivelse: String,
+    val sendesTilJobbsokerTidspunkt: ZonedDateTime?,
+    val htmlContent: String
+)
+
+data class OppdaterInnleggRequestDto(
+    val tittel: String,
     val opprettetAvPersonNavn: String,
     val opprettetAvPersonBeskrivelse: String,
     val sendesTilJobbsokerTidspunkt: ZonedDateTime?,
