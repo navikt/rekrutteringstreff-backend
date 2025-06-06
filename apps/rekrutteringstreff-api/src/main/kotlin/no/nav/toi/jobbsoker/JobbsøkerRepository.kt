@@ -114,13 +114,12 @@ class JobbsøkerRepository(
     }
 
     private fun Connection.treffDbId(treff: TreffId): Long =
-        prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
-            stmt.setObject(1, treff.somUuid)
-            stmt.executeQuery().use { rs ->
-                if (rs.next()) rs.getLong(1)
-                else error("Treff ${treff.somUuid} finnes ikke i databasen")
+        prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?")
+            .apply { setObject(1, treff.somUuid) }
+            .executeQuery().let {
+                if (it.next()) it.getLong(1)
+                else error("Treff ${treff.somUuid} finnes ikke")
             }
-        }
 
     fun hentJobbsøkere(treff: TreffId): List<Jobbsøker> =
         dataSource.connection.use { c ->

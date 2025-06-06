@@ -296,7 +296,6 @@ class JobbsøkerTest {
                 )
             )
         )
-        Thread.sleep(1000)
         db.leggTilJobbsøkere(
             listOf(
                 Jobbsøker(

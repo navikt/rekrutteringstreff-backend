@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff
 import com.fasterxml.jackson.core.type.TypeReference
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -330,6 +331,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         id = Kolonnenavn(id)
     )
 
+    val innleggRepository = InnleggRepository(dataSource)
+
     companion object {
         private const val tabellnavn = "rekrutteringstreff"
         private const val id = "id"
@@ -343,6 +346,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         private const val tiltid = "tiltid"
         private const val svarfrist = "svarfrist"
         private const val eiere = "eiere"
+        private const val innlegg = "innlegg"
         private const val gateadresse = "gateadresse"
         private const val postnummer = "postnummer"
         private const val poststed = "poststed"
