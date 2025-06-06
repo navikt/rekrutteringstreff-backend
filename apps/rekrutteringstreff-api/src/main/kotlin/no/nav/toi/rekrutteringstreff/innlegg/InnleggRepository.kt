@@ -6,13 +6,11 @@ import java.sql.ResultSet
 import java.sql.Types
 import java.util.UUID
 import javax.sql.DataSource
-import kotlin.io.use
 
 class InnleggRepository(private val dataSource: DataSource) {
 
     private object T {
         const val TABLE              = "innlegg"
-        const val COL_DB_ID          = "db_id"
         const val COL_ID             = "id"
         const val COL_TREFF_DB_ID    = "treff_db_id"
         const val COL_TITTEL         = "tittel"
@@ -130,8 +128,6 @@ class InnleggRepository(private val dataSource: DataSource) {
                 ps.executeUpdate() > 0
             }
         }
-
-    /* helpers */
 
     private fun java.sql.Connection.treffDbId(treff: TreffId): Long =
         prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").use { ps ->

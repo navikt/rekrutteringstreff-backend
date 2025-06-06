@@ -7,7 +7,6 @@ import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -15,7 +14,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.*
 import java.time.ZonedDateTime
 import java.util.UUID
-import kotlin.text.get
 
 
 private object InnleggDeserializer : ResponseDeserializable<InnleggResponseDto> {
