@@ -1,7 +1,8 @@
 package no.nav.toi.rekrutteringstreff.innlegg
 
-import io.javalin.Javalin
+import io.javalin.openapi.*
 import io.javalin.http.Context
+import io.javalin.Javalin
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import no.nav.toi.Rolle
@@ -25,18 +26,113 @@ fun Javalin.handleInnlegg(repo: InnleggRepository) {
     delete(INNLEGG_ITEM_PATH, slettEttInnlegg(repo))
 }
 
+@OpenApi(
+    summary = "Hent alle innlegg for et rekrutteringstreff",
+    operationId = "hentAlleInnleggForTreff",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true)],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = Array<InnleggResponseDto>::class,
+            example = """[
+                {
+                    "id": "11111111-1111-1111-1111-111111111111",
+                    "treffId": "22222222-2222-2222-2222-222222222222",
+                    "tittel": "Tittel",
+                    "opprettetAvPersonNavident": "A123456",
+                    "opprettetAvPersonNavn": "Ola",
+                    "opprettetAvPersonBeskrivelse": "Veileder",
+                    "sendesTilJobbsokerTidspunkt": "2025-06-07T10:00:00+02:00",
+                    "htmlContent": "<p>x</p>",
+                    "opprettetTidspunkt": "2025-06-07T09:00:00+02:00",
+                    "sistOppdatertTidspunkt": "2025-06-07T09:00:00+02:00"
+                }
+            ]"""
+        )]
+    )],
+    path = INNLEGG_BASE_PATH,
+    methods = [HttpMethod.GET]
+)
 private fun hentAlleInnleggForTreff(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
     ctx.json(repo.hentForTreff(treffId).map(Innlegg::toResponseDto))
 }
 
+@OpenApi(
+    summary = "Hent ett innlegg",
+    operationId = "hentEttInnlegg",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [
+        OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true),
+        OpenApiParam(name = INNLEGG_ID_PARAM, type = UUID::class, required = true)
+    ],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = InnleggResponseDto::class,
+            example = """{
+                "id": "11111111-1111-1111-1111-111111111111",
+                "treffId": "22222222-2222-2222-2222-222222222222",
+                "tittel": "Tittel",
+                "opprettetAvPersonNavident": "A123456",
+                "opprettetAvPersonNavn": "Ola",
+                "opprettetAvPersonBeskrivelse": "Veileder",
+                "sendesTilJobbsokerTidspunkt": "2025-06-07T10:00:00+02:00",
+                "htmlContent": "<p>x</p>",
+                "opprettetTidspunkt": "2025-06-07T09:00:00+02:00",
+                "sistOppdatertTidspunkt": "2025-06-07T09:00:00+02:00"
+            }"""
+        )]
+    )],
+    path = INNLEGG_ITEM_PATH,
+    methods = [HttpMethod.GET]
+)
 private fun hentEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
     ctx.json(repo.hentById(id)?.toResponseDto() ?: throw NotFoundResponse())
 }
 
+@OpenApi(
+    summary = "Opprett nytt innlegg",
+    operationId = "opprettInnlegg",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true)],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = OpprettInnleggRequestDto::class,
+            example = """{
+                "tittel": "Tittel",
+                "opprettetAvPersonNavn": "Ola",
+                "opprettetAvPersonBeskrivelse": "Veileder",
+                "sendesTilJobbsokerTidspunkt": "2025-06-07T10:00:00+02:00",
+                "htmlContent": "<p>x</p>"
+            }"""
+        )]
+    ),
+    responses = [OpenApiResponse(
+        status = "201",
+        content = [OpenApiContent(
+            from = InnleggResponseDto::class,
+            example = """{
+                "id": "11111111-1111-1111-1111-111111111111",
+                "treffId": "22222222-2222-2222-2222-222222222222",
+                "tittel": "Tittel",
+                "opprettetAvPersonNavident": "A123456",
+                "opprettetAvPersonNavn": "Ola",
+                "opprettetAvPersonBeskrivelse": "Veileder",
+                "sendesTilJobbsokerTidspunkt": "2025-06-07T10:00:00+02:00",
+                "htmlContent": "<p>x</p>",
+                "opprettetTidspunkt": "2025-06-07T09:00:00+02:00",
+                "sistOppdatertTidspunkt": "2025-06-07T09:00:00+02:00"
+            }"""
+        )]
+    )],
+    path = INNLEGG_BASE_PATH,
+    methods = [HttpMethod.POST]
+)
 private fun opprettInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val treffId   = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
@@ -51,6 +147,47 @@ private fun opprettInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx -
     }
 }
 
+@OpenApi(
+    summary = "Oppdater et innlegg",
+    operationId = "oppdaterInnlegg",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [
+        OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true),
+        OpenApiParam(name = INNLEGG_ID_PARAM, type = UUID::class, required = true)
+    ],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = OppdaterInnleggRequestDto::class,
+            example = """{
+                "tittel": "Ny tittel",
+                "opprettetAvPersonNavn": "Kari",
+                "opprettetAvPersonBeskrivelse": "Rådgiver",
+                "sendesTilJobbsokerTidspunkt": null,
+                "htmlContent": "<p>y</p>"
+            }"""
+        )]
+    ),
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = InnleggResponseDto::class,
+            example = """{
+                "id": "11111111-1111-1111-1111-111111111111",
+                "treffId": "22222222-2222-2222-2222-222222222222",
+                "tittel": "Ny tittel",
+                "opprettetAvPersonNavident": "A123456",
+                "opprettetAvPersonNavn": "Kari",
+                "opprettetAvPersonBeskrivelse": "Rådgiver",
+                "sendesTilJobbsokerTidspunkt": null,
+                "htmlContent": "<p>y</p>",
+                "opprettetTidspunkt": "2025-06-07T09:00:00+02:00",
+                "sistOppdatertTidspunkt": "2025-06-07T10:00:00+02:00"
+            }"""
+        )]
+    )],
+    path = INNLEGG_ITEM_PATH,
+    methods = [HttpMethod.PUT]
+)
 private fun oppdaterEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val treffId   = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
@@ -67,6 +204,18 @@ private fun oppdaterEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { c
     }
 }
 
+@OpenApi(
+    summary = "Slett et innlegg",
+    operationId = "slettInnlegg",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [
+        OpenApiParam(name = REKRUTTERINGSTREFF_ID_PARAM, type = UUID::class, required = true),
+        OpenApiParam(name = INNLEGG_ID_PARAM, type = UUID::class, required = true)
+    ],
+    responses = [OpenApiResponse(status = "204")],
+    path = INNLEGG_ITEM_PATH,
+    methods = [HttpMethod.DELETE]
+)
 private fun slettEttInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
