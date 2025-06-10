@@ -11,7 +11,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.SecureLogLogger.Companion.secure
 import java.time.ZonedDateTime
-import java.util.*
 
 class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, private val repository: Repository): River.PacketListener {
 
@@ -35,7 +34,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         meterRegistry: MeterRegistry
     ) {
         val fnr = packet["fnr"].asText()
-        packet["aktivitetskortuuid"] = repository.lagreRekrutteringstreffInvitasjon(
+        packet["aktivitetskortuuid"] = repository.opprettRekrutteringstreffInvitasjon(
             fnr = fnr,
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
@@ -43,7 +42,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             startDato = packet["startTid"].asZonedDateTime().toLocalDate(),
             sluttDato = packet["sluttTid"].asZonedDateTime().toLocalDate(),
             endretAv = packet["endretAv"].asText(),
-            endretAvType = packet["endretAvType"].asText(),
+            endretAvType = packet["endretAvType"].asText().let(::enumValueOf),
             endretTidspunkt = packet["endretTidspunkt"].asZonedDateTime()
         )
         context.publish(fnr, packet.toJson())

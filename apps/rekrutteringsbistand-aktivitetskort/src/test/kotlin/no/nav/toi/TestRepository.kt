@@ -20,7 +20,7 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
     @OptIn(InternalAPI::class)
     fun hentAlle() = databaseConfig.lagDatasource().connection.use { connection ->
         connection.prepareStatement(
-            "SELECT * FROM aktivitetskort"
+            "SELECT * FROM aktivitetskort JOIN aktivitetskort_hendelse ON aktivitetskort.aktivitetskort_id = aktivitetskort_hendelse.aktivitetskort_id"
         ).executeQuery().use { resultSet ->
             generateSequence {
                 if (resultSet.next()) {
@@ -33,9 +33,9 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
                         aktivitetskortId = UUID.fromString(resultSet.getString("aktivitetskort_id")),
                         rekrutteringstreffId = UUID.fromString(resultSet.getString("rekrutteringstreff_id")),
                         aktivitetsStatus = resultSet.getString("aktivitets_status"),
-                        endretAv = resultSet.getString("endret_av"),
-                        endretAvType = resultSet.getString("endret_av_type"),
-                        endretTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toZonedDateTime()
+                        opprettetAv = resultSet.getString("endret_av"),
+                        opprettetAvType = resultSet.getString("endret_av_type"),
+                        opprettetTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toZonedDateTime()
                     )
                 } else {
                     null
@@ -53,8 +53,8 @@ class RekrutteringstreffInvitasjon(
     val tilTid: LocalDate,
     val aktivitetskortId: UUID,
     val rekrutteringstreffId: UUID,
-    val aktivitetsStatus: String?,
-    val endretAv: String,
-    val endretAvType: String,
-    val endretTidspunkt: ZonedDateTime
+    val aktivitetsStatus: String,
+    val opprettetAv: String,
+    val opprettetAvType: String,
+    val opprettetTidspunkt: ZonedDateTime
 )

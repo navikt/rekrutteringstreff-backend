@@ -5,10 +5,21 @@ CREATE TABLE aktivitetskort (
     fnr                         TEXT NOT NULL,
     tittel                      TEXT NOT NULL,
     beskrivelse                 TEXT NOT NULL,
-    aktivitets_status           TEXT,
     start_dato                   date,
     slutt_dato                   date,
+    opprettet_av                   TEXT NOT NULL,
+    opprettet_av_type              TEXT NOT NULL,
+    opprettet_tidspunkt            timestamp with time zone NOT NULL
+);
+
+CREATE TABLE aktivitetskort_hendelse (
+    db_id                       bigserial PRIMARY KEY,
+    message_id                  uuid NOT NULL UNIQUE,
+    aktivitetskort_id           uuid NOT NULL,
+    action_type                 TEXT NOT NULL,
     endret_av                   TEXT NOT NULL,
     endret_av_type              TEXT NOT NULL,
-    endret_tidspunkt            timestamp with time zone NOT NULL
-);
+    endret_tidspunkt            timestamp with time zone NOT NULL,
+    aktivitets_status           TEXT NOT NULL,
+    sendt_tidspunkt             timestamp
+)

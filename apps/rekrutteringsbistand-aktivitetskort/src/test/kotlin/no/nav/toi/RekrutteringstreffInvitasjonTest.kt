@@ -4,6 +4,8 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.isMissingOrNull
 import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.EndretAvType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
@@ -63,7 +65,7 @@ class RekrutteringstreffInvitasjonTest {
         val startTid = ZonedDateTime.now().plusDays(1)
         val sluttTid = startTid.plusHours(2)
         val endretAv = "testuser"
-        val endretAvType = "bruker"
+        val endretAvType = EndretAvType.NAVIDENT
         val endretTidspunkt = ZonedDateTime.now()
 
         rapid.sendTestMessage(
@@ -91,10 +93,10 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].tilTid).isEqualTo(sluttTid.toLocalDate())
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
             assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
-            assertThat(this[0].aktivitetsStatus).isNull()
-            assertThat(this[0].endretAv).isEqualTo(endretAv)
-            assertThat(this[0].endretAvType).isEqualTo(endretAvType)
-            assertThat(this[0].endretTidspunkt).isEqualTo(endretTidspunkt.toString())
+            assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
+            assertThat(this[0].opprettetAv).isEqualTo(endretAv)
+            assertThat(this[0].opprettetAvType).isEqualTo(endretAvType.name)
+            assertThat(this[0].opprettetTidspunkt).isEqualTo(endretTidspunkt.toString())
         }
     }
 
@@ -107,7 +109,7 @@ class RekrutteringstreffInvitasjonTest {
         val startTid = ZonedDateTime.now().plusDays(1)
         val sluttTid = startTid.plusHours(2)
         val endretAv = "testuser"
-        val endretAvType = "bruker"
+        val endretAvType = EndretAvType.PERSONBRUKER
         val endretTidspunkt = ZonedDateTime.now()
 
         rapid.sendTestMessage(
@@ -135,7 +137,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(message["startTid"].asText()).isEqualTo(startTid.toString())
             assertThat(message["sluttTid"].asText()).isEqualTo(sluttTid.toString())
             assertThat(message["endretAv"].asText()).isEqualTo(endretAv)
-            assertThat(message["endretAvType"].asText()).isEqualTo(endretAvType)
+            assertThat(message["endretAvType"].asText()).isEqualTo(endretAvType.name)
             assertThat(message["endretTidspunkt"].asText()).isEqualTo(endretTidspunkt.toString())
             assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
         }
@@ -148,7 +150,7 @@ class RekrutteringstreffInvitasjonTest {
         startTid: ZonedDateTime,
         sluttTid: ZonedDateTime,
         endretAv: String,
-        endretAvType: String,
+        endretAvType: EndretAvType,
         endretTidspunkt: ZonedDateTime
     ): String = """
         {
@@ -161,7 +163,7 @@ class RekrutteringstreffInvitasjonTest {
             "startTid": "$startTid",
             "sluttTid": "$sluttTid",
             "endretAv": "$endretAv",
-            "endretAvType": "$endretAvType",
+            "endretAvType": "${endretAvType.name}",
             "endretTidspunkt": "$endretTidspunkt"
         }
         """.trimIndent()
