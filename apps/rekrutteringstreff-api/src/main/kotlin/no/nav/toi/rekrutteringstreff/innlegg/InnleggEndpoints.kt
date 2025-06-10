@@ -175,7 +175,6 @@ private fun opprettInnlegg(repo: InnleggRepository): (Context) -> Unit = { ctx -
                 "id": "11111111-1111-1111-1111-111111111111",
                 "treffId": "22222222-2222-2222-2222-222222222222",
                 "tittel": "Ny tittel",
-                "opprettetAvPersonNavident": "A123456",
                 "opprettetAvPersonNavn": "Kari",
                 "opprettetAvPersonBeskrivelse": "Rådgiver",
                 "sendesTilJobbsokerTidspunkt": null,

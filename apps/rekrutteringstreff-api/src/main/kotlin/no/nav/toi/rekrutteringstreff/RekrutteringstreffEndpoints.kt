@@ -66,7 +66,24 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
-            from = Array<RekrutteringstreffDTO>::class
+            from = Array<RekrutteringstreffDTO>::class,
+            example = """[
+                {
+                    "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
+                    "tittel": "Sommerjobbtreff",
+                    "beskrivelse": "Beskrivelse av Sommerjobbtreff",
+                    "fraTid": "2025-06-15T09:00:00+02:00",
+                    "tilTid": "2025-06-15T11:00:00+02:00",
+                    "svarfrist": "2025-06-14T11:00:00+02:00",
+                    "gateadresse": "Malmøgata 1",
+                    "postnummer": "0566",
+                    "poststed": "Oslo",
+                    "status": "Utkast",
+                    "opprettetAvPersonNavident": "A123456",
+                    "opprettetAvNavkontorEnhetId": "0318",
+                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
+                }
+            ]"""
         )]
     )],
     path = endepunktRekrutteringstreff,
@@ -85,7 +102,31 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
-            from = RekrutteringstreffDetaljOutboundDto::class
+            from = RekrutteringstreffDetaljOutboundDto::class,
+            example = """{
+               "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
+               "tittel":"Sommerjobbtreff",
+               "beskrivelse":null,
+               "fraTid":null,
+               "tilTid":null,
+               "svarfrist":null,
+               "gateadresse": null,
+               "postnummer": null,
+               "poststed": null,
+               "status":"Utkast",
+               "opprettetAvPersonNavident":"A123456",
+               "opprettetAvNavkontorEnhetId":"0318",
+               "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+               "hendelser":[
+                 {
+                   "id":"any-uuid",
+                   "tidspunkt":"2025-06-01T08:00:00Z",
+                   "hendelsestype":"OPPRETT",
+                   "opprettetAvAktørType":"ARRANGØR",
+                   "aktørIdentifikasjon":"A123456"
+                 }
+               ]
+            }"""
         )]
     )],
     path = "$endepunktRekrutteringstreff/{id}",
@@ -110,13 +151,38 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
     )],
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
-            from = OppdaterRekrutteringstreffDto::class
+            from = OppdaterRekrutteringstreffDto::class,
+            example = """{
+                "tittel": "Oppdatert tittel", 
+                "beskrivelse": "Oppdatert beskrivelse",
+                "fraTid": "2025-06-15T09:30:00+02:00", 
+                "tilTid": "2025-06-15T11:30:00+02:00", 
+                "svarfrist": "2025-06-14T11:30:00+02:00", 
+                "gateadresse": "Malmøgata 1",
+                "postnummer": "0566",
+                "poststed": "Oslo"
+            }"""
         )]
     ),
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
-            from = RekrutteringstreffDTO::class
+            from = RekrutteringstreffDTO::class,
+            example = """{
+                "id": "d6a587cd-8797-4b9a-a68b-575373f16d65", 
+                "tittel": "Oppdatert tittel", 
+                "beskrivelse": "Oppdatert beskrivelse", 
+                "fraTid": "2025-06-15T09:30:00+02:00", 
+                "tilTid": "2025-06-15T11:30:00+02:00", 
+                "svarfrist": "2025-06-14T11:30:00+02:00", 
+                "gateadresse": "Malmøgata 1",
+                "postnummer": "0566",
+                "poststed": "Oslo",
+                "status": "Utkast", 
+                "opprettetAvPersonNavident": "A123456", 
+                "opprettetAvNavkontorEnhetId": "0318",
+                "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
+            }"""
         )]
     )],
     path = "$endepunktRekrutteringstreff/{id}",
@@ -143,7 +209,10 @@ private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     )],
     responses = [OpenApiResponse(
         status = "200",
-        content = [OpenApiContent(from = String::class, example = "Rekrutteringstreff slettet")]
+        content = [OpenApiContent(
+            from = String::class,
+            example = "Rekrutteringstreff slettet"
+        )]
     )],
     path = "$endepunktRekrutteringstreff/{id}",
     methods = [HttpMethod.DELETE]
@@ -160,11 +229,23 @@ private fun slettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): 
     operationId = "validerRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
     requestBody = OpenApiRequestBody(
-        content = [OpenApiContent(from = ValiderRekrutteringstreffDto::class)]
+        content = [OpenApiContent(
+            from = ValiderRekrutteringstreffDto::class,
+            example = """{
+                "tittel": "Sommerjobbtreff",
+                "beskrivelse": "Vi arrangerer et sommerjobbtreff for flere arbeidsgivere."
+            }"""
+        )]
     ),
     responses = [OpenApiResponse(
         status = "200",
-        content = [OpenApiContent(from = Map::class)]
+        content = [OpenApiContent(
+            from = ValiderRekrutteringstreffResponsDto::class,
+            example = """{
+                "bryterRetningslinjer": true,
+                "begrunnelse": "Sensitiv personinformasjon funnet"
+            }"""
+        )]
     )],
     path = "$endepunktRekrutteringstreff/valider",
     methods = [HttpMethod.POST]

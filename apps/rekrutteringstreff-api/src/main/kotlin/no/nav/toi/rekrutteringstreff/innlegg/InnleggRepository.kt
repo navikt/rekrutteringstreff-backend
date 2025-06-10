@@ -59,65 +59,81 @@ class InnleggRepository(private val dataSource: DataSource) {
 
     fun opprett(treffId: TreffId, dto: OpprettInnleggRequestDto, navIdent: String): Innlegg =
         dataSource.connection.use { c ->
-            val treffDbId = c.treffDbId(treffId)
-            c.prepareStatement(
-                """
-                INSERT INTO ${T.TABLE} (
-                    id, treff_db_id, tittel, opprettet_av_person_navident,
-                    opprettet_av_person_navn, opprettet_av_person_beskrivelse,
-                    sendes_til_jobbsoker_tidspunkt, html_content
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                RETURNING id,
-                          (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = ${T.TABLE}.treff_db_id) AS treffId,
-                          tittel, opprettet_av_person_navident, opprettet_av_person_navn,
-                          opprettet_av_person_beskrivelse, ${T.COL_SENDES},
-                          html_content, ${T.COL_OPPRETTET}, ${T.COL_SIST_OPPDATERT}
-                """.trimIndent()
-            ).use { ps ->
-                ps.setObject(1, UUID.randomUUID())
-                ps.setLong(2, treffDbId)
-                ps.setString(3, dto.tittel)
-                ps.setString(4, navIdent)
-                ps.setString(5, dto.opprettetAvPersonNavn)
-                ps.setString(6, dto.opprettetAvPersonBeskrivelse)
-                dto.sendesTilJobbsokerTidspunkt
-                    ?.let { ps.setObject(7, java.time.OffsetDateTime.from(it)) }
-                    ?: ps.setNull(7, Types.TIMESTAMP_WITH_TIMEZONE)
-                ps.setString(8, dto.htmlContent)
-                ps.executeQuery().use { rs -> if (rs.next()) rs.toInnlegg() else error("Insert failed") }
+            c.autoCommit = false // Start transaction
+            try {
+                val treffDbId = c.treffDbId(treffId)
+                val innlegg = c.prepareStatement(
+                    """
+                    INSERT INTO ${T.TABLE} (
+                        id, treff_db_id, tittel, opprettet_av_person_navident,
+                        opprettet_av_person_navn, opprettet_av_person_beskrivelse,
+                        sendes_til_jobbsoker_tidspunkt, html_content
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    RETURNING id,
+                              (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = ${T.TABLE}.treff_db_id) AS treffId,
+                              tittel, opprettet_av_person_navident, opprettet_av_person_navn,
+                              opprettet_av_person_beskrivelse, ${T.COL_SENDES},
+                              html_content, ${T.COL_OPPRETTET}, ${T.COL_SIST_OPPDATERT}
+                    """.trimIndent()
+                ).use { ps ->
+                    ps.setObject(1, UUID.randomUUID())
+                    ps.setLong(2, treffDbId)
+                    ps.setString(3, dto.tittel)
+                    ps.setString(4, navIdent)
+                    ps.setString(5, dto.opprettetAvPersonNavn)
+                    ps.setString(6, dto.opprettetAvPersonBeskrivelse)
+                    dto.sendesTilJobbsokerTidspunkt
+                        ?.let { ps.setObject(7, java.time.OffsetDateTime.from(it)) }
+                        ?: ps.setNull(7, Types.TIMESTAMP_WITH_TIMEZONE)
+                    ps.setString(8, dto.htmlContent)
+                    ps.executeQuery().use { rs -> if (rs.next()) rs.toInnlegg() else error("Insert failed") }
+                }
+                c.commit() // Commit transaction
+                innlegg
+            } catch (e: Exception) {
+                c.rollback() // Rollback on error
+                throw e
             }
         }
 
     fun oppdater(innleggId: UUID, treffId: TreffId, dto: OppdaterInnleggRequestDto): Innlegg =
         dataSource.connection.use { c ->
-            val treffDbId = c.treffDbId(treffId)
-            c.prepareStatement(
-                """
-                UPDATE ${T.TABLE} SET
-                    tittel = ?,
-                    opprettet_av_person_navn = ?,
-                    opprettet_av_person_beskrivelse = ?,
-                    ${T.COL_SENDES} = ?,
-                    html_content = ?,
-                    ${T.COL_SIST_OPPDATERT} = NOW()
-                WHERE id = ? AND ${T.COL_TREFF_DB_ID} = ?
-                RETURNING id,
-                          (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = ${T.TABLE}.treff_db_id) AS treffId,
-                          tittel, opprettet_av_person_navident, opprettet_av_person_navn,
-                          opprettet_av_person_beskrivelse, ${T.COL_SENDES},
-                          html_content, ${T.COL_OPPRETTET}, ${T.COL_SIST_OPPDATERT}
-                """.trimIndent()
-            ).use { ps ->
-                ps.setString(1, dto.tittel)
-                ps.setString(2, dto.opprettetAvPersonNavn)
-                ps.setString(3, dto.opprettetAvPersonBeskrivelse)
-                dto.sendesTilJobbsokerTidspunkt
-                    ?.let { ps.setObject(4, java.time.OffsetDateTime.from(it)) }
-                    ?: ps.setNull(4, Types.TIMESTAMP_WITH_TIMEZONE)
-                ps.setString(5, dto.htmlContent)
-                ps.setObject(6, innleggId)
-                ps.setLong(7, treffDbId)
-                ps.executeQuery().use { rs -> if (rs.next()) rs.toInnlegg() else error("Update failed or not found") }
+            c.autoCommit = false // Start transaction
+            try {
+                val treffDbId = c.treffDbId(treffId)
+                val innlegg = c.prepareStatement(
+                    """
+                    UPDATE ${T.TABLE} SET
+                        tittel = ?,
+                        opprettet_av_person_navn = ?,
+                        opprettet_av_person_beskrivelse = ?,
+                        ${T.COL_SENDES} = ?,
+                        html_content = ?,
+                        ${T.COL_SIST_OPPDATERT} = NOW()
+                    WHERE id = ? AND ${T.COL_TREFF_DB_ID} = ?
+                    RETURNING id,
+                              (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = ${T.TABLE}.treff_db_id) AS treffId,
+                              tittel, opprettet_av_person_navident, opprettet_av_person_navn,
+                              opprettet_av_person_beskrivelse, ${T.COL_SENDES},
+                              html_content, ${T.COL_OPPRETTET}, ${T.COL_SIST_OPPDATERT}
+                    """.trimIndent()
+                ).use { ps ->
+                    ps.setString(1, dto.tittel)
+                    ps.setString(2, dto.opprettetAvPersonNavn)
+                    ps.setString(3, dto.opprettetAvPersonBeskrivelse)
+                    dto.sendesTilJobbsokerTidspunkt
+                        ?.let { ps.setObject(4, java.time.OffsetDateTime.from(it)) }
+                        ?: ps.setNull(4, Types.TIMESTAMP_WITH_TIMEZONE)
+                    ps.setString(5, dto.htmlContent)
+                    ps.setObject(6, innleggId)
+                    ps.setLong(7, treffDbId)
+                    ps.executeQuery().use { rs -> if (rs.next()) rs.toInnlegg() else error("Update failed or not found") }
+                }
+                c.commit() // Commit transaction
+                innlegg
+            } catch (e: Exception) {
+                c.rollback() // Rollback on error
+                throw e
             }
         }
 
