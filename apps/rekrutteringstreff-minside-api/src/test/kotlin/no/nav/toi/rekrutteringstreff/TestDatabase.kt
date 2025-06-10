@@ -33,12 +33,15 @@ class TestDatabase {
             )
         )
 
-    fun slettAlt() = dataSource.connection.use {
-        it.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
-        it.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
-        it.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
-        it.prepareStatement("DELETE FROM rekrutteringstreff_hendelse").executeUpdate()
-        it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
+    fun slettAlt() = dataSource.connection.use {c ->
+        listOf(
+            "DELETE FROM innlegg",
+            "DELETE FROM arbeidsgiver",
+            "DELETE FROM jobbsoker_hendelse",
+            "DELETE FROM jobbsoker",
+            "DELETE FROM rekrutteringstreff_hendelse",
+            "DELETE FROM rekrutteringstreff"
+        ).forEach { c.prepareStatement(it).executeUpdate() }
     }
 
     fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) = dataSource.connection.use {
@@ -147,8 +150,6 @@ class TestDatabase {
         generateSequence { if (rs.next()) konverterTilJobbsøker(rs) else null }.toList()
     }
 
-    /* ---------- helper-mappere ---------- */
-
     private fun konverterTilRekrutteringstreff(rs: ResultSet) = Rekrutteringstreff(
         id                       = TreffId(rs.getObject("id", UUID::class.java)),
         tittel                   = rs.getString("tittel"),
@@ -163,7 +164,6 @@ class TestDatabase {
         opprettetAvPersonNavident= rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
         opprettetAvTidspunkt     = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
-        poststed                 = rs.getString("poststed"),
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
@@ -183,7 +183,6 @@ class TestDatabase {
         veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent)
     )
 
-    /* ---------- insert-hjelpere ---------- */
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
@@ -239,7 +238,6 @@ class TestDatabase {
             }.executeUpdate()
         }
 
-    /* ---------- infra ---------- */
 
     companion object {
         private var lokalPostgres: PostgreSQLContainer<*>? = null
