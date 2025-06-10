@@ -16,7 +16,6 @@ CREATE TABLE rekrutteringstreff
 
 CREATE INDEX rekrutteringstreff_uuid_id_idx ON rekrutteringstreff (id);
 
-
 CREATE TABLE arbeidsgiver
 (
     db_id       bigserial PRIMARY KEY,
