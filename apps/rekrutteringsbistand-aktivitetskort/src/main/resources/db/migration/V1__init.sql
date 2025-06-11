@@ -9,7 +9,8 @@ CREATE TABLE aktivitetskort (
     slutt_dato                   date,
     opprettet_av                   TEXT NOT NULL,
     opprettet_av_type              TEXT NOT NULL,
-    opprettet_tidspunkt            timestamp with time zone NOT NULL
+    opprettet_tidspunkt            timestamp with time zone NOT NULL,
+    UNIQUE (rekrutteringstreff_id, fnr)
 );
 
 CREATE TABLE aktivitetskort_hendelse (

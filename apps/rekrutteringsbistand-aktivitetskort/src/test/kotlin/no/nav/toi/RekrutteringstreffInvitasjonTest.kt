@@ -1,5 +1,6 @@
 package no.nav.toi
 
+import com.github.dockerjava.api.exception.ConflictException
 import com.github.navikt.tbd_libs.rapids_and_rivers.isMissingOrNull
 import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
+import org.postgresql.util.PSQLException
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
@@ -98,6 +101,50 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].opprettetAvType).isEqualTo(endretAvType.name)
             assertThat(this[0].opprettetTidspunkt).isEqualTo(endretTidspunkt.toString())
         }
+    }
+
+    @Test
+    fun `lesing av rekrutteringsinvitasjon fra rapid med samme kandidat og stilling skal feile`() {
+        val fnr = "01010012345"
+        val rekrutteringstreffId = UUID.randomUUID()
+        val startTid = ZonedDateTime.now().plusDays(1)
+        val sluttTid = startTid.plusHours(2)
+        val endretAvType = EndretAvType.NAVIDENT
+        val endretTidspunkt = ZonedDateTime.now()
+
+        rapid.sendTestMessage(
+            rapidPeriodeMelding(
+                fnr,
+                rekrutteringstreffId,
+                "Tittel 1",
+                "Beskrivelse 1",
+                startTid,
+                sluttTid,
+                "Z0000001",
+                endretAvType,
+                endretTidspunkt
+            )
+        )
+        assertThrows<PSQLException> {
+            rapid.sendTestMessage(
+                rapidPeriodeMelding(
+                    fnr,
+                    rekrutteringstreffId,
+                    "Tittel 2",
+                    "Beskrivelse 2",
+                    startTid.plusDays(1),
+                    sluttTid.plusDays(1),
+                    "Z0000002",
+                    endretAvType,
+                    endretTidspunkt.plusHours(1)
+                )
+            )
+        }
+
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
+        val inspektør = rapid.inspektør
+        assertThat(inspektør.size).isEqualTo(1)
     }
 
     @Test
