@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
+import kotlin.text.get
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffTest {
@@ -519,4 +520,45 @@ class RekrutteringstreffTest {
             .responseString()
         assertStatuscodeEquals(401, response, result)
     }
+
+    @Test
+    fun `publiser rekrutteringstreff legger til hendelse`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        val (_, publiserResponse, publiserResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        when (publiserResult) {
+            is Failure -> throw publiserResult.error
+            is Success -> assertThat(publiserResponse.statusCode).isEqualTo(200)
+        }
+
+        val (_, hendelseResponse, hendelseResult) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/hendelser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffHendelseOutboundDto>> {
+                override fun deserialize(content: String): List<RekrutteringstreffHendelseOutboundDto> {
+                    val type = mapper.typeFactory.constructCollectionType(
+                        List::class.java, RekrutteringstreffHendelseOutboundDto::class.java
+                    )
+                    return mapper.readValue(content, type)
+                }
+            })
+
+        when (hendelseResult) {
+            is Failure -> throw hendelseResult.error
+            is Success -> {
+                assertThat(hendelseResponse.statusCode).isEqualTo(200)
+                val hendelser = hendelseResult.value
+                assertThat(hendelser).hasSize(2)
+                assertThat(hendelser.map { it.hendelsestype }).containsExactly("PUBLISER", "OPPRETT")
+                val publiserHendelse = hendelser.first { it.hendelsestype == "PUBLISER" }
+                assertThat(publiserHendelse.aktørIdentifikasjon).isEqualTo(navIdent)
+            }
+        }
+    }
+
+
 }

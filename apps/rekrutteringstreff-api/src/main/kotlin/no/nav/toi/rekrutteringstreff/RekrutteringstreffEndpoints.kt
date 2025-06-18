@@ -18,6 +18,7 @@ import java.util.*
 private const val pathParamTreffId = "id"
 const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/hendelser"
+private const val publiserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/publiser"
 private const val fellesPath =
     "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
 
@@ -300,6 +301,24 @@ private fun hentAlleHendelserHandler(repo: RekrutteringstreffRepository): (Conte
     ctx.status(200).json(list)
 }
 
+@OpenApi(
+    summary = "Publiserer et rekrutteringstreff ved å legge til en publiseringshendelse.",
+    operationId = "publiserRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    path = publiserPath,
+    methods = [HttpMethod.POST],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+    responses = [OpenApiResponse(status = "200", description = "Publiseringshendelse er lagt til.")]
+)
+private fun publiserRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val navIdent = ctx.extractNavIdent()
+
+    repo.publiser(treffId, navIdent)
+    ctx.status(200)
+}
+
 fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
@@ -309,6 +328,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post("$endepunktRekrutteringstreff/valider", validerRekrutteringstreffHandler())
     get(hendelserPath, hentHendelserHandler(repo))
     get(fellesPath, hentAlleHendelserHandler(repo))
+    post(publiserPath, publiserRekrutteringstreffHandler(repo))
     handleEiere(repo.eierRepository)
     handleInnlegg(repo.innleggRepository)
 }

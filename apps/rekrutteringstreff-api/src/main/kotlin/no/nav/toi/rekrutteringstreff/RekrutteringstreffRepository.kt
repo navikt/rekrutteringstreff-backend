@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
 import com.fasterxml.jackson.core.type.TypeReference
+import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
@@ -11,6 +12,7 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
+import kotlin.io.use
 
 data class RekrutteringstreffHendelse(
     val id: UUID,
@@ -284,6 +286,16 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             }
         }
 
+    fun publiser(treff: TreffId, publisertAv: String) {
+        dataSource.connection.use { c ->
+                val dbId = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id=?")
+                    .apply { setObject(1, treff.somUuid) }
+                    .executeQuery()
+                    .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
+
+                leggTilHendelse(c, dbId, Hendelsestype.PUBLISER, AktørType.ARRANGØR, publisertAv)
+        }
+    }
     private fun leggTilHendelse(
         c: Connection,
         treffDbId: Long,
