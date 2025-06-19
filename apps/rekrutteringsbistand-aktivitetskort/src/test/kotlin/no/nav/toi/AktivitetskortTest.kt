@@ -1,11 +1,17 @@
 package no.nav.toi
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import no.nav.toi.aktivitetskort.AktivitetsJobb
+import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
+import no.nav.toi.aktivitetskort.AktivitetskortJobb
 import no.nav.toi.aktivitetskort.EndretAvType
+import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.BeforeEach
@@ -17,11 +23,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
+import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortTest {
@@ -77,7 +83,7 @@ class AktivitetskortTest {
             endretTidspunkt = expectedEndretTidspunkt
         )
 
-        AktivitetsJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer).run()
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
         record.value().let (objectMapper::readTree).apply {
@@ -120,8 +126,8 @@ class AktivitetskortTest {
             endretTidspunkt = ZonedDateTime.now()
         )
 
-        AktivitetsJobb(repository, producer).run()
-        AktivitetsJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer).run()
 
         assertThat(producer.history()).hasSize(1)
     }
@@ -129,7 +135,33 @@ class AktivitetskortTest {
     @Test
     fun `AktivitetsJobb skal ikke feile ved tom database`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
-        AktivitetsJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer).run()
         assertThat(producer.history()).isEmpty()
+    }
+
+    @Test
+    fun `feil ved bestilling av aktivitetskort skal logges`() {
+        val logger = LoggerFactory.getLogger(AktivitetskortFeilJobb::class.java.name) as Logger
+        val listAppender = ListAppender<ILoggingEvent>()
+        listAppender.start()
+        logger.addAppender(listAppender)
+
+        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
+        consumer.assign(listOf(topicPartition))
+        consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
+
+        val jobb = AktivitetskortFeilJobb(consumer)
+        val value = """
+            {
+                "feil": "skriv feil her"
+            }
+        """.trimIndent()
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
+        jobb.run()
+        assertThat(listAppender.list).hasSize(3)
+        assertThat(listAppender.list[0].message).contains("Kjører AktivitetskortFeilJobb")
+        assertThat(listAppender.list[1].message).contains("Feil ved bestilling av aktivitetskort: (se securelog)")
+        assertThat(listAppender.list[2].message).contains("Feil ved bestilling av aktivitetskort: $value")
     }
 }
