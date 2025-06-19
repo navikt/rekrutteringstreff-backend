@@ -1,12 +1,13 @@
 package no.nav.toi
 
-import com.github.dockerjava.api.exception.ConflictException
 import com.github.navikt.tbd_libs.rapids_and_rivers.isMissingOrNull
 import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.EndretAvType
+import org.apache.kafka.clients.consumer.MockConsumer
+import org.apache.kafka.clients.producer.MockProducer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
@@ -44,7 +45,7 @@ class RekrutteringstreffInvitasjonTest {
     private val rapid = TestRapid()
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val app = App(rapid, Repository(databaseConfig))
+    private val app = App(rapid, Repository(databaseConfig), MockProducer(), MockConsumer(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST))
 
     @BeforeEach
     fun setup() {

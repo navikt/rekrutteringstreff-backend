@@ -16,30 +16,40 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 fun scheduler(
-    hour: Int,
-    minute: Int,
     second: Int,
     nano: Int,
     repository: Repository,
     producer: Producer<String, String>,
+    consumer: Consumer<String, String>
 ) = runBlocking {
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
+    val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
     val myJob = AktivitetskortJobb(repository, producer)
+    val myErrorJob = AktivitetskortFeilJobb(consumer)
 
     val now = ZonedDateTime.now().toInstant().atOslo()
-    val nextRun = now.withHour(hour).withMinute(minute).withSecond(second).withNano(nano)
-        .let { if (it <= now) it.plusDays(1) else it }
+    val nextRun = now.withSecond(second).withNano(nano)
+        .let { if (it <= now) it.plusMinutes(1) else it }
     val delay = MILLIS.between(now, nextRun)
 
     val task = Runnable {
         runBlocking {
             launch {
                 myJob.run()
+
+            }
+        }
+    }
+    val feilTask = Runnable {
+        runBlocking {
+            launch {
+                myErrorJob.run()
             }
         }
     }
 
     scheduledExecutor.scheduleAtFixedRate(task, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
+    scheduledFeilExecutor.scheduleAtFixedRate(feilTask, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
 }
 
 class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>) {
