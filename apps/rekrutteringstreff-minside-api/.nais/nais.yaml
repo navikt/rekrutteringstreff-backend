@@ -35,6 +35,8 @@ spec:
     inbound:
       rules:
         - application: rekrutteringstreff-bruker
+  tokenx:
+    enabled: true
   azure:
     application:
       enabled: true
