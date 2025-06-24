@@ -13,6 +13,8 @@ import java.util.*
 private const val pathParamTreffId = "id"
 private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
+private const val inviterPath = "$jobbsøkerPath/inviter"
+
 
 data class JobbsøkerDto(
     val fødselsnummer: String,
@@ -63,6 +65,10 @@ data class JobbsøkerOutboundDto(
     val veilederNavn: String?,
     val veilederNavIdent: String?,
     val hendelser: List<JobbsøkerHendelseOutboundDto>
+)
+
+data class InviterJobbsøkereDto(
+    val fødselsnumre: List<String>
 )
 
 @OpenApi(
@@ -212,6 +218,31 @@ private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context
     })
 }
 
+@OpenApi(
+    summary = "Inviterer en eller flere jobbsøkere til rekrutteringstreffet.",
+    operationId = "inviterJobbsøkere",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = InviterJobbsøkereDto::class,
+            example = """{ "fødselsnumre": ["12345678901", "10987654321"] }"""
+        )]
+    ),
+    responses = [OpenApiResponse("200", description = "Invitasjonshendelser er lagt til.")],
+    path = inviterPath,
+    methods = [HttpMethod.POST]
+)
+private fun inviterJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    val dto = ctx.bodyAsClass<InviterJobbsøkereDto>()
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val fødselsnumre = dto.fødselsnumre.map(::Fødselsnummer)
+    val navIdent = ctx.extractNavIdent()
+
+    repo.inviter(fødselsnumre, treffId, navIdent)
+    ctx.status(200)
+}
+
 private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     map {
         JobbsøkerOutboundDto(
@@ -238,4 +269,5 @@ fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     post(jobbsøkerPath, leggTilJobbsøkereHandler(repo))
     get(jobbsøkerPath, hentJobbsøkereHandler(repo))
     get(hendelserPath, hentJobbsøkerHendelserHandler(repo))
+    post(inviterPath, inviterJobbsøkereHandler(repo))
 }

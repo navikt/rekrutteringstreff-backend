@@ -342,4 +342,49 @@ class JobbsøkerTest {
             }
         }
     }
+
+    @Test
+    fun invitererJobbsøkere() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr1 = Fødselsnummer("12312312312")
+        val fnr2 = Fødselsnummer("45645645645")
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(treffId, fnr1, Kandidatnummer("K1"), Fornavn("F1"), Etternavn("E1"), null, null, null),
+                Jobbsøker(treffId, fnr2, Kandidatnummer("K2"), Fornavn("F2"), Etternavn("E2"), null, null, null)
+            )
+        )
+
+        assertThat(db.hentJobbsøkerHendelser(treffId)).hasSize(2)
+
+        val requestBody = """
+            { "fødselsnumre": ["${fnr1.asString}", "${fnr2.asString}"] }
+        """.trimIndent()
+
+        val (_, r, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_OK, r, res)
+
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser).hasSize(4)
+
+        val inviterHendelser = hendelser.filter { it.hendelsestype == Hendelsestype.INVITER }
+        assertThat(inviterHendelser).hasSize(2)
+        inviterHendelser.forEach {
+            assertThat(it.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+            assertThat(it.aktørIdentifikasjon).isEqualTo("A123456")
+        }
+
+        val inviterteFødselsnumre =
+            inviterHendelser.map { db.hentFødselsnummerForJobbsøkerHendelse(it.id)}
+
+        assertThat(inviterteFødselsnumre)
+            .containsExactlyInAnyOrder(fnr1, fnr2)
+    }
 }

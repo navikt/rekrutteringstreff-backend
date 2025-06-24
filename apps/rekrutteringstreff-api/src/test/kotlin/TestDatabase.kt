@@ -232,7 +232,22 @@ class TestDatabase {
             }.executeUpdate()
         }
 
-    /* ---------- infra ---------- */
+    fun hentFødselsnummerForJobbsøkerHendelse(hendelseId: UUID): Fødselsnummer? =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+            SELECT js.fodselsnummer
+              FROM jobbsoker_hendelse jh
+              JOIN jobbsoker js ON jh.jobbsoker_db_id = js.db_id
+             WHERE jh.id = ?
+            """
+            ).use { ps ->
+                ps.setObject(1, hendelseId)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) Fødselsnummer(rs.getString(1)) else null
+                }
+            }
+        }
 
     companion object {
         private var lokalPostgres: PostgreSQLContainer<*>? = null

@@ -52,7 +52,7 @@ class JobbsøkerRepository(
             try {
                 val treffId = c.treffDbId(treff)
                 val jsIds = c.batchInsertJobbsøkere(treffId, jobsøkere)
-                c.batchInsertHendelser(jsIds, opprettetAv)
+                c.batchInsertHendelser(Hendelsestype.OPPRETT,jsIds, opprettetAv)
                 c.commit()
             } catch (e: Exception) { c.rollback(); throw e }
         }
@@ -89,6 +89,7 @@ class JobbsøkerRepository(
     }
 
     private fun Connection.batchInsertHendelser(
+        hendelsestype: Hendelsestype,
         jobbsøkerIds: List<Long>,
         opprettetAv: String,
         size: Int = 500
@@ -104,7 +105,7 @@ class JobbsøkerRepository(
                 stmt.setObject  (1, UUID.randomUUID())
                 stmt.setLong    (2, id)
                 stmt.setTimestamp(3, Timestamp.from(Instant.now()))
-                stmt.setString  (4, Hendelsestype.OPPRETT.name)
+                stmt.setString  (4, hendelsestype.name)
                 stmt.setString  (5, AktørType.ARRANGØR.name)
                 stmt.setString  (6, opprettetAv)
                 stmt.addBatch(); if (++n == size) { stmt.executeBatch(); n = 0 }
@@ -162,6 +163,30 @@ class JobbsøkerRepository(
                 }
             }
         }
+
+    fun inviter(fødselsnumre: List<Fødselsnummer>, treff: TreffId, opprettetAv: String) {
+        dataSource.connection.use { c ->
+            try {
+                val treffDbId = c.treffDbId(treff)
+                val jobbsøkerDbIds = c.hentJobbsøkerDbIder(treffDbId, fødselsnumre)
+                c.batchInsertHendelser(Hendelsestype.INVITER,jobbsøkerDbIds, opprettetAv)
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
+
+
+    private fun Connection.hentJobbsøkerDbIder(treffDbId: Long, fødselsnumre: List<Fødselsnummer>): List<Long> {
+        val sql = "SELECT db_id FROM jobbsoker WHERE treff_db_id = ? AND fodselsnummer = ANY(?)"
+        return prepareStatement(sql).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setArray(2, createArrayOf("varchar", fødselsnumre.map { it.asString }.toTypedArray()))
+            stmt.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
+            }
+        }
+    }
 
     private fun ResultSet.toJobbsøker() = Jobbsøker(
         treffId        = TreffId(getString("treff_id")),
