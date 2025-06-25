@@ -11,4 +11,4 @@ cluster: dev-gcp
 min_replicas: 1
 max_replicas: 1
 rekrutteringstreff_scope: api://dev-gcp.toi.rekrutteringstreff-minside-api/.default
-rekrutteringstreff_audience: dev-gpc.toi.rekrutteringstreff-api
+rekrutteringstreff_audience: dev-gcp.toi.rekrutteringstreff-api
