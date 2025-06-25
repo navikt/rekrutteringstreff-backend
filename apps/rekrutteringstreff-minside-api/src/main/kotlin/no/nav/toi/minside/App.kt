@@ -72,9 +72,9 @@ fun main() {
         ),
         authConfigs = listOf(
             AuthenticationConfiguration(
-                audience = env("AZURE_APP_CLIENT_ID"),
-                issuer = env("AZURE_OPENID_CONFIG_ISSUER"),
-                jwksUri = env("AZURE_OPENID_CONFIG_JWKS_URI")
+                audience = env("TOKEN_X_CLIENT_ID."),
+                issuer = env("TOKEN_X_ISSUER"),
+                jwksUri = env("TOKEN_X_JWKS_URI")
             )
         )
     ).start()
