@@ -5,16 +5,17 @@ import io.javalin.config.JavalinConfig
 import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
-import no.nav.arbeid.cv.felles.token.AzureKlient
 import no.nav.toi.minside.arbeidsgiver.arbeidsgiverendepunkt
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
 import no.nav.toi.minside.rekrutteringstreff.rekrutteringstreffendepunkt
+import java.net.http.HttpClient
 
 
 class App(
     private val port: Int,
     private val rekrutteringstreffUrl: String,
-    private val azureKlient: AzureKlient,
+    private val rekrutteringstreffAudience: String,
+    private val tokenXKlient: TokenXKlient,
     private val authConfigs: List<AuthenticationConfiguration>
 ) {
     private lateinit var javalin: Javalin
@@ -27,7 +28,7 @@ class App(
         }
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
-        val rekrutteringstreffKlient = RekrutteringstreffKlient(rekrutteringstreffUrl, azureKlient)
+        val rekrutteringstreffKlient = RekrutteringstreffKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
         javalin.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
         javalin.arbeidsgiverendepunkt(rekrutteringstreffKlient)
         javalin.start(port)
@@ -61,14 +62,21 @@ private fun configureOpenApi(config: JavalinConfig) {
 private val log = noClassLogger()
 
 fun main() {
+    val httpClient: HttpClient = HttpClient.newBuilder()
+        .followRedirects(HttpClient.Redirect.ALWAYS)
+        .version(HttpClient.Version.HTTP_1_1)
+        .build()
+
     App(
         port = 8080,
         rekrutteringstreffUrl = "http://rekrutteringstreff-api",
-        azureKlient = AzureKlient(
-            clientId = env("AZURE_APP_CLIENT_ID"),
-            clientSecret = env("AZURE_APP_CLIENT_ID"),
-            tokenEndpoint = env("AZURE_APP_CLIENT_SECRET"),
-            scope = env("REKRUTTERINGSTREFF_SCOPE")
+        rekrutteringstreffAudience = env("REKRUTTERINGSTREFF_AUDIENCE"),
+        tokenXKlient = TokenXKlient(
+            clientId = env("TOKEN_X_CLIENT_ID"),
+            privateJwk = env("TOKEN_X_PRIVATE_JWK"),
+            tokenEndpoint = env("TOKEN_X_TOKEN_ENDPOINT"),
+            issuer = env("TOKEN_X_ISSUER"),
+            httpClient = httpClient
         ),
         authConfigs = listOf(
             AuthenticationConfiguration(

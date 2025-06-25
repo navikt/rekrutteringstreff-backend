@@ -35,12 +35,15 @@ spec:
     inbound:
       rules:
         - application: rekrutteringsbistand-frontend
+        - application: rekrutteringstreff-minside-api
     outbound:
       external:
         - host: fakedings.intern.dev.nav.no
         - host: {{ openai_azure_host }}
           ports:
             - port: 443
+  tokenx:
+    enabled: true
   azure:
     application:
       enabled: true

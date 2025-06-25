@@ -71,6 +71,11 @@ fun main() {
                 issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
                 jwksUri = getenv("AZURE_OPENID_CONFIG_JWKS_URI")
             ),
+            AuthenticationConfiguration(
+                audience = getenv("TOKEN_X_CLIENT_ID"),
+                issuer = getenv("TOKEN_X_ISSUER"),
+                jwksUri = getenv("TOKEN_X_JWKS_URI")
+            ),
             if (System.getenv("NAIS_CLUSTER_NAME") == "dev-gcp")
                 AuthenticationConfiguration(
                     audience = "dev-gcp:toi:rekrutteringstreff-api",

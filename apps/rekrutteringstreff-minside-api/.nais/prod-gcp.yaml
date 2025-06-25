@@ -5,3 +5,4 @@ kafka_pool: nav-prod
 cluster: prod-gcp
 min_replicas: 2
 max_replicas: 4
+rekrutteringstreff_audience: prod-gpc.toi.rekrutteringstreff-api

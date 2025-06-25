@@ -35,6 +35,9 @@ spec:
     inbound:
       rules:
         - application: rekrutteringstreff-bruker
+    outbound:
+      rules:
+        - application: rekrutteringstreff-api
   tokenx:
     enabled: true
   azure:
@@ -48,6 +51,8 @@ spec:
       value: {{adGruppeUtvikler}}
     - name: REKRUTTERINGSTREFF_SCOPE
       value: {{ rekrutteringstreff_scope }}
+    - name: REKRUTTERINGSTREFF_AUDIENCE
+      value: {{ rekrutteringstreff_audience }}
   observability:
     logging:
       destinations:

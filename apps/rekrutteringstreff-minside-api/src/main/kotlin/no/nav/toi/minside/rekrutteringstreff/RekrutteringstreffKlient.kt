@@ -5,15 +5,15 @@ import com.github.kittinunf.fuel.jackson.responseObject
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import io.javalin.http.Header
-import no.nav.arbeid.cv.felles.token.AzureKlient
+import no.nav.toi.minside.TokenXKlient
 import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto
 import java.time.ZonedDateTime
 import java.util.UUID
 
-class RekrutteringstreffKlient(private val url: String, private val azureKlient: AzureKlient) {
+class RekrutteringstreffKlient(private val url: String, private val tokenXKlient: TokenXKlient, private val rekrutteringstreffAudience: String) {
     fun hent(id: String, innkommendeToken: String): Rekrutteringstreff? {
         val (_, response, result) = "$url/api/rekrutteringstreff/$id".httpGet()
-            .header(Header.AUTHORIZATION, "Bearer ${azureKlient.onBehalfOfToken(innkommendeToken)}")
+            .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
             .responseObject<Rekrutteringstreff>()
 
         return when (result) {
@@ -27,7 +27,7 @@ class RekrutteringstreffKlient(private val url: String, private val azureKlient:
 
     fun hentArbeidsgivere(id: String, innkommendeToken: String): List<Arbeidsgiver>? {
         val (_, response, result) = "$url/api/rekrutteringstreff/$id/arbeidsgiver".httpGet()
-            .header(Header.AUTHORIZATION, "Bearer ${azureKlient.onBehalfOfToken(innkommendeToken)}")
+            .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
             .responseObject<List<Arbeidsgiver>>()
 
         return when (result) {
