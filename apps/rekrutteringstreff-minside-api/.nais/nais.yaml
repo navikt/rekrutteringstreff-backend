@@ -40,17 +40,11 @@ spec:
         - application: rekrutteringstreff-api
   tokenx:
     enabled: true
-  azure:
-    application:
-      enabled: true
-      allowAllUsers: false
   env:
     - name: REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET
       value: {{adGruppeArbeidsgiverrettet}}
     - name: REKRUTTERINGSBISTAND_UTVIKLER
       value: {{adGruppeUtvikler}}
-    - name: REKRUTTERINGSTREFF_SCOPE
-      value: {{ rekrutteringstreff_scope }}
     - name: REKRUTTERINGSTREFF_AUDIENCE
       value: {{ rekrutteringstreff_audience }}
   observability:
