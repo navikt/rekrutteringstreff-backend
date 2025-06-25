@@ -23,6 +23,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 import kotlin.text.get
@@ -521,44 +522,31 @@ class RekrutteringstreffTest {
         assertStatuscodeEquals(401, response, result)
     }
 
-    @Test
-    fun `publiser rekrutteringstreff legger til hendelse`() {
-        val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+    private fun hendelseEndepunktVarianter() = listOf(
+        Arguments.of("publiser", Hendelsestype.PUBLISER),
+        Arguments.of("avslutt-invitasjon", Hendelsestype.AVSLUTT_INVITASJON),
+        Arguments.of("avslutt-arrangement", Hendelsestype.AVSLUTT_ARRANGEMENT),
+        Arguments.of("avslutt-oppfolging", Hendelsestype.AVSLUTT_OPPFØLGING),
+        Arguments.of("avslutt", Hendelsestype.AVSLUTT)
+    )
 
-        val (_, publiserResponse, publiserResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/publiser")
+    @ParameterizedTest
+    @MethodSource("hendelseEndepunktVarianter")
+    fun `Endepunkter som kun legger til hendelse`(path: String, forventetHendelsestype: Hendelsestype) {
+        val navIdent = "Z999999"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent)
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/$path")
             .header("Authorization", "Bearer ${token.serialize()}")
             .response()
 
-        when (publiserResult) {
-            is Failure -> throw publiserResult.error
-            is Success -> assertThat(publiserResponse.statusCode).isEqualTo(200)
-        }
+        assertStatuscodeEquals(200, response, result)
 
-        val (_, hendelseResponse, hendelseResult) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/hendelser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffHendelseOutboundDto>> {
-                override fun deserialize(content: String): List<RekrutteringstreffHendelseOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(
-                        List::class.java, RekrutteringstreffHendelseOutboundDto::class.java
-                    )
-                    return mapper.readValue(content, type)
-                }
-            })
-
-        when (hendelseResult) {
-            is Failure -> throw hendelseResult.error
-            is Success -> {
-                assertThat(hendelseResponse.statusCode).isEqualTo(200)
-                val hendelser = hendelseResult.value
-                assertThat(hendelser).hasSize(2)
-                assertThat(hendelser.map { it.hendelsestype }).containsExactly("PUBLISER", "OPPRETT")
-                val publiserHendelse = hendelser.first { it.hendelsestype == "PUBLISER" }
-                assertThat(publiserHendelse.aktørIdentifikasjon).isEqualTo(navIdent)
-            }
-        }
+        val hendelser = db.hentHendelser(treffId)
+        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser.first().hendelsestype).isEqualTo(forventetHendelsestype)
+        assertThat(hendelser.first().aktørIdentifikasjon).isEqualTo(navIdent)
+        assertThat(hendelser.last().hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
     }
-
-
 }

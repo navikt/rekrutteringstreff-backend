@@ -137,9 +137,6 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
             }
         }
 
-    /**
-     * Brukt av GET /api/rekrutteringstreff/{id}
-     */
     fun hentMedHendelser(treff: TreffId): RekrutteringstreffDetaljOutboundDto? =
         dataSource.connection.use { c ->
             c.prepareStatement(
@@ -287,15 +284,36 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
 
     fun publiser(treff: TreffId, publisertAv: String) {
-        dataSource.connection.use { c ->
-                val dbId = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id=?")
-                    .apply { setObject(1, treff.somUuid) }
-                    .executeQuery()
-                    .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
+        leggTilHendelseForTreff(treff, Hendelsestype.PUBLISER, publisertAv)
+    }
 
-                leggTilHendelse(c, dbId, Hendelsestype.PUBLISER, AktørType.ARRANGØR, publisertAv)
+    fun avsluttInvitasjon(treff: TreffId, avsluttetAv: String) {
+        leggTilHendelseForTreff(treff, Hendelsestype.AVSLUTT_INVITASJON, avsluttetAv)
+    }
+
+    fun avsluttArrangement(treff: TreffId, avsluttetAv: String) {
+        leggTilHendelseForTreff(treff, Hendelsestype.AVSLUTT_ARRANGEMENT, avsluttetAv)
+    }
+
+    fun avsluttOppfolging(treff: TreffId, avsluttetAv: String) {
+        leggTilHendelseForTreff(treff, Hendelsestype.AVSLUTT_OPPFØLGING, avsluttetAv)
+    }
+
+    fun avslutt(treff: TreffId, avsluttetAv: String) {
+        leggTilHendelseForTreff(treff, Hendelsestype.AVSLUTT, avsluttetAv)
+    }
+
+    private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: Hendelsestype, ident: String) {
+        dataSource.connection.use { c ->
+            val dbId = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id=?")
+                .apply { setObject(1, treff.somUuid) }
+                .executeQuery()
+                .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
+
+            leggTilHendelse(c, dbId, hendelsestype, AktørType.ARRANGØR, ident)
         }
     }
+
     private fun leggTilHendelse(
         c: Connection,
         treffDbId: Long,

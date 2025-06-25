@@ -92,4 +92,32 @@ class RekrutteringstreffRepositoryTest {
             .isAfterOrEqualTo(hendelser.last().tidspunkt)
             .isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))
     }
+
+    @Test
+    fun `avslutt-metoder registrerer hendelser`() {
+        val navIdent = "A123456"
+        val id = repository.opprett(
+            OpprettRekrutteringstreffInternalDto(
+                tittel = "Test-treff",
+                opprettetAvPersonNavident = navIdent,
+                opprettetAvNavkontorEnhetId = "0318",
+                opprettetAvTidspunkt = nowOslo()
+            )
+        )
+
+        repository.avsluttInvitasjon(id, navIdent)
+        repository.avsluttArrangement(id, navIdent)
+        repository.avsluttOppfolging(id, navIdent)
+        repository.avslutt(id, navIdent)
+
+        val hendelser = repository.hentHendelser(id)
+        assertThat(hendelser).hasSize(5)
+        assertThat(hendelser.map { it.hendelsestype }).containsExactly(
+            Hendelsestype.AVSLUTT,
+            Hendelsestype.AVSLUTT_OPPFØLGING,
+            Hendelsestype.AVSLUTT_ARRANGEMENT,
+            Hendelsestype.AVSLUTT_INVITASJON,
+            Hendelsestype.OPPRETT
+        )
+    }
 }

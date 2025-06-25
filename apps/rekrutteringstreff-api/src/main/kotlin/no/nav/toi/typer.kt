@@ -1,4 +1,4 @@
 package no.nav.toi
 
- enum class Hendelsestype { OPPRETT, OPPDATER, SLETT, PUBLISER, INVITER }
+ enum class Hendelsestype { OPPRETT, OPPDATER, SLETT, PUBLISER, INVITER, AVSLUTT_INVITASJON, AVSLUTT_ARRANGEMENT, AVSLUTT_OPPFØLGING, AVSLUTT }
 enum class AktørType { ARRANGØR }

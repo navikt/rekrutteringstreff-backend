@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
@@ -14,11 +13,16 @@ import no.nav.toi.rekrutteringstreff.innlegg.handleInnlegg
 import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
 import java.time.ZonedDateTime
 import java.util.*
+import kotlin.text.get
 
 private const val pathParamTreffId = "id"
 const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/hendelser"
 private const val publiserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/publiser"
+private const val avsluttInvitasjonPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avslutt-invitasjon"
+private const val avsluttArrangementPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avslutt-arrangement"
+private const val avsluttOppfolgingPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avslutt-oppfolging"
+private const val avsluttPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avslutt"
 private const val fellesPath =
     "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
 
@@ -319,6 +323,74 @@ private fun publiserRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     ctx.status(200)
 }
 
+@OpenApi(
+    summary = "Avslutter invitasjonsfasen for et rekrutteringstreff.",
+    operationId = "avsluttInvitasjon",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    path = avsluttInvitasjonPath,
+    methods = [HttpMethod.POST],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+    responses = [OpenApiResponse(status = "200", description = "Hendelse for avsluttet invitasjon er lagt til.")]
+)
+private fun avsluttInvitasjonHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val navIdent = ctx.extractNavIdent()
+    repo.avsluttInvitasjon(treffId, navIdent)
+    ctx.status(200)
+}
+
+@OpenApi(
+    summary = "Avslutter arrangementsfasen for et rekrutteringstreff.",
+    operationId = "avsluttArrangement",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    path = avsluttArrangementPath,
+    methods = [HttpMethod.POST],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+    responses = [OpenApiResponse(status = "200", description = "Hendelse for avsluttet arrangement er lagt til.")]
+)
+private fun avsluttArrangementHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val navIdent = ctx.extractNavIdent()
+    repo.avsluttArrangement(treffId, navIdent)
+    ctx.status(200)
+}
+
+@OpenApi(
+    summary = "Avslutter oppfølgingsfasen for et rekrutteringstreff.",
+    operationId = "avsluttOppfolging",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    path = avsluttOppfolgingPath,
+    methods = [HttpMethod.POST],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+    responses = [OpenApiResponse(status = "200", description = "Hendelse for avsluttet oppfølging er lagt til.")]
+)
+private fun avsluttOppfolgingHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val navIdent = ctx.extractNavIdent()
+    repo.avsluttOppfolging(treffId, navIdent)
+    ctx.status(200)
+}
+
+@OpenApi(
+    summary = "Avslutter et rekrutteringstreff.",
+    operationId = "avsluttRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    path = avsluttPath,
+    methods = [HttpMethod.POST],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+    responses = [OpenApiResponse(status = "200", description = "Hendelse for avsluttet rekrutteringstreff er lagt til.")]
+)
+private fun avsluttRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val navIdent = ctx.extractNavIdent()
+    repo.avslutt(treffId, navIdent)
+    ctx.status(200)
+}
+
 fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
@@ -329,6 +401,10 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     get(hendelserPath, hentHendelserHandler(repo))
     get(fellesPath, hentAlleHendelserHandler(repo))
     post(publiserPath, publiserRekrutteringstreffHandler(repo))
+    post(avsluttInvitasjonPath, avsluttInvitasjonHandler(repo))
+    post(avsluttArrangementPath, avsluttArrangementHandler(repo))
+    post(avsluttOppfolgingPath, avsluttOppfolgingHandler(repo))
+    post(avsluttPath, avsluttRekrutteringstreffHandler(repo))
     handleEiere(repo.eierRepository)
     handleInnlegg(repo.innleggRepository)
 }

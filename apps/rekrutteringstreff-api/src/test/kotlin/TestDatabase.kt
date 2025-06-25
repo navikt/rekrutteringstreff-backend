@@ -11,6 +11,7 @@ import java.sql.ResultSet
 import java.time.ZoneId
 import java.util.*
 import javax.sql.DataSource
+import kotlin.io.use
 
 class TestDatabase {
 
@@ -272,4 +273,34 @@ class TestDatabase {
             validate()
         }
     )
+
+    fun hentHendelser(treff: TreffId): List<RekrutteringstreffHendelse> =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                SELECT  h.id                  AS hendelse_id,
+                        h.tidspunkt           AS tidspunkt,
+                        h.hendelsestype       AS hendelsestype,
+                        h.opprettet_av_aktortype AS aktørtype,
+                        h.aktøridentifikasjon AS ident
+                FROM    rekrutteringstreff_hendelse h
+                JOIN    rekrutteringstreff r ON h.rekrutteringstreff_db_id = r.db_id
+                WHERE   r.id = ?
+                ORDER BY h.tidspunkt DESC
+                """
+            ).use { s ->
+                s.setObject(1, treff.somUuid)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) RekrutteringstreffHendelse(
+                            id = UUID.fromString(rs.getString("hendelse_id")),
+                            tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atOslo(),
+                            hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                            opprettetAvAktørType = AktørType.valueOf(rs.getString("aktørtype")),
+                            aktørIdentifikasjon = rs.getString("ident")
+                        ) else null
+                    }.toList()
+                }
+            }
+        }
 }
