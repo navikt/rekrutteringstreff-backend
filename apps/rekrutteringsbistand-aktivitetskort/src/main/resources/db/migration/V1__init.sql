@@ -23,4 +23,13 @@ CREATE TABLE aktivitetskort_hendelse (
     endret_tidspunkt            timestamp with time zone NOT NULL,
     aktivitets_status           TEXT NOT NULL,
     sendt_tidspunkt             timestamp
-)
+);
+
+CREATE TABLE aktivitetskort_hendelse_feil (
+    db_id                       bigserial PRIMARY KEY,
+    message_id                  uuid NOT NULL,
+    timestamp                   timestamp with time zone NOT NULL,
+    failing_Message              TEXT NOT NULL,
+    error_message               TEXT NOT NULL,
+    error_type                  TEXT NOT NULL
+);

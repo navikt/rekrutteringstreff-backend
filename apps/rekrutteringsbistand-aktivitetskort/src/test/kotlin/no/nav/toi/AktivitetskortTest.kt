@@ -10,6 +10,7 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
 import no.nav.toi.aktivitetskort.AktivitetskortJobb
 import no.nav.toi.aktivitetskort.EndretAvType
+import no.nav.toi.aktivitetskort.ErrorType
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.producer.MockProducer
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
+import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -151,10 +153,18 @@ class AktivitetskortTest {
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val messageId = testRepository.hentAlle()[0].messageId
+
         val jobb = AktivitetskortFeilJobb(consumer)
         val value = """
             {
-                "feil": "skriv feil her"
+              "key": "$messageId",
+              "source": "REKRUTTERINGSBISTAND",
+              "timestamp": "2019-08-24T14:15:22Z",
+              "failingMessage": "string",
+              "errorMessage": "DuplikatMeldingFeil Melding allerede handtert, ignorer",
+              "errorType": "AKTIVITET_IKKE_FUNNET"
             }
         """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
@@ -164,4 +174,114 @@ class AktivitetskortTest {
         assertThat(listAppender.list[1].message).contains("Feil ved bestilling av aktivitetskort: (se securelog)")
         assertThat(listAppender.list[2].message).contains("Feil ved bestilling av aktivitetskort: $value")
     }
+
+    @Test
+    fun `ikke-relaterte feil i feil-kø skal ikke logges`() {
+        val logger = LoggerFactory.getLogger(AktivitetskortFeilJobb::class.java.name) as Logger
+        val listAppender = ListAppender<ILoggingEvent>()
+        listAppender.start()
+        logger.addAppender(listAppender)
+
+        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
+        consumer.assign(listOf(topicPartition))
+        consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
+
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val messageId = testRepository.hentAlle()[0].messageId
+
+        val jobb = AktivitetskortFeilJobb(consumer)
+        val value = """
+            {
+              "key": "$messageId",
+              "source": "ARENA_TILTAK_AKTIVITET_ACL",
+              "timestamp": "2019-08-24T14:15:22Z",
+              "failingMessage": "string",
+              "errorMessage": "DuplikatMeldingFeil Melding allerede handtert, ignorer",
+              "errorType": "AKTIVITET_IKKE_FUNNET"
+            }
+        """.trimIndent()
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
+        jobb.run()
+        assertThat(listAppender.list).hasSize(1)
+        assertThat(listAppender.list[0].message).contains("Kjører AktivitetskortFeilJobb")
+    }
+
+    @Test
+    fun `feil ved bestilling skal lagres i db`() {
+        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
+        consumer.assign(listOf(topicPartition))
+        consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val messageId = testRepository.hentAlle()[0].messageId
+        val timestamp = ZonedDateTime.now()
+        val failingMessage = "failingMessageString"
+        val errorMessage = "DuplikatMeldingFeil Melding allerede handtert, ignorer"
+        val errorType = ErrorType.DUPLIKATMELDINGFEIL
+
+        val jobb = AktivitetskortFeilJobb(consumer)
+        val value = """
+            {
+              "key": "$messageId",
+              "source": "REKRUTTERINGSBISTAND",
+              "timestamp": "$timestamp",
+              "failingMessage": "$failingMessage",
+              "errorMessage": "$errorMessage",
+              "errorType": "$errorType"
+            }
+        """.trimIndent()
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
+        jobb.run()
+        val meldinger = testRepository.hentAlle()
+        assertThat(meldinger).hasSize(1)
+        assertThat(meldinger[0].feil).isNotNull
+        meldinger[0].feil!!.apply {
+            assertThat(timestamp).isCloseTo(this.timestamp, within(10, ChronoUnit.MILLIS))
+            assertThat(failingMessage).isEqualTo(this.failingMessage)
+            assertThat(errorMessage).isEqualTo(this.errorMessage)
+            assertThat(errorType).isEqualTo(this.errorType)
+        }
+    }
+
+    @Test
+    fun `Urelaterte feil skal ikke lagres i db`() {
+        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
+        consumer.assign(listOf(topicPartition))
+        consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val messageId = testRepository.hentAlle()[0].messageId
+
+        val jobb = AktivitetskortFeilJobb(consumer)
+        val value = """
+            {
+              "key": "$messageId",
+              "source": "ARENA_TILTAK_AKTIVITET_ACL",
+              "timestamp": "2019-08-24T14:15:22Z",
+              "failingMessage": "string",
+              "errorMessage": "DuplikatMeldingFeil Melding allerede handtert, ignorer",
+              "errorType": "AKTIVITET_IKKE_FUNNET"
+            }
+        """.trimIndent()
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
+        jobb.run()
+        val meldinger = testRepository.hentAlle()
+        assertThat(meldinger).hasSize(1)
+        assertThat(meldinger[0].feil).isNull()
+    }
+}
+
+private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
+    opprettRekrutteringstreffInvitasjon(
+        "12345678910",
+        UUID.randomUUID(),
+        "Test Rekrutteringstreff",
+        "Dette er en testbeskrivelse for rekrutteringstreff.",
+        LocalDate.now().plusDays(1),
+        LocalDate.now().plusDays(2),
+        "testuser",
+        EndretAvType.NAVIDENT,
+        ZonedDateTime.now()
+    )
 }
