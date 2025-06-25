@@ -72,7 +72,7 @@ fun main() {
         ),
         authConfigs = listOf(
             AuthenticationConfiguration(
-                audience = env("TOKEN_X_CLIENT_ID."),
+                audience = env("TOKEN_X_CLIENT_ID"),
                 issuer = env("TOKEN_X_ISSUER"),
                 jwksUri = env("TOKEN_X_JWKS_URI")
             )
