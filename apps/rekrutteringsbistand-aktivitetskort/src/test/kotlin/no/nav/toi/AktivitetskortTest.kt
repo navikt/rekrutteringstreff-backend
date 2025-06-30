@@ -21,6 +21,7 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.fail
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
@@ -85,7 +86,7 @@ class AktivitetskortTest {
             endretTidspunkt = expectedEndretTidspunkt
         )
 
-        AktivitetskortJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer, {_,_->}).run()
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
         record.value().let (objectMapper::readTree).apply {
@@ -128,8 +129,8 @@ class AktivitetskortTest {
             endretTidspunkt = ZonedDateTime.now()
         )
 
-        AktivitetskortJobb(repository, producer).run()
-        AktivitetskortJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer,{_,_->}).run()
+        AktivitetskortJobb(repository, producer,{_,_->}).run()
 
         assertThat(producer.history()).hasSize(1)
     }
@@ -137,7 +138,7 @@ class AktivitetskortTest {
     @Test
     fun `AktivitetsJobb skal ikke feile ved tom database`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
-        AktivitetskortJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer,{_,_->}).run()
         assertThat(producer.history()).isEmpty()
     }
 
@@ -156,7 +157,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(consumer)
+        val jobb = AktivitetskortFeilJobb(consumer, repository)
         val value = """
             {
               "key": "$messageId",
@@ -190,7 +191,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(consumer)
+        val jobb = AktivitetskortFeilJobb(consumer, repository)
         val value = """
             {
               "key": "$messageId",
@@ -220,7 +221,7 @@ class AktivitetskortTest {
         val errorMessage = "DuplikatMeldingFeil Melding allerede handtert, ignorer"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
 
-        val jobb = AktivitetskortFeilJobb(consumer)
+        val jobb = AktivitetskortFeilJobb(consumer, repository)
         val value = """
             {
               "key": "$messageId",
@@ -253,7 +254,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(consumer)
+        val jobb = AktivitetskortFeilJobb(consumer, repository)
         val value = """
             {
               "key": "$messageId",
@@ -269,6 +270,11 @@ class AktivitetskortTest {
         val meldinger = testRepository.hentAlle()
         assertThat(meldinger).hasSize(1)
         assertThat(meldinger[0].feil).isNull()
+    }
+
+    @Test
+    fun `feilkø-hendelse skal føre til melding på rapid`() {
+        fail<Nothing>()
     }
 }
 

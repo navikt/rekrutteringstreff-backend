@@ -21,7 +21,7 @@ class App(private val rapidsConnection: RapidsConnection, private val repository
     }
     fun start() {
         rapidsConnection.start()
-        scheduler(0, 0, repository, producer, consumer)
+        scheduler(0, 0, repository, producer, consumer, rapidsConnection)
     }
 
     fun stop() {

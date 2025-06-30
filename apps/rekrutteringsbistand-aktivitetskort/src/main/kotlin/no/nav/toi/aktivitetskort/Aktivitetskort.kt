@@ -38,7 +38,7 @@ class Aktivitetskort(
             )
             try {
                 producer.send(record).get()
-                repository.markerSomSendt(messageId)
+                repository.markerAktivitetskorthendelseSomSendt(messageId)
             } catch (e: Exception) {
                 throw RuntimeException("Failed to send aktivitetskort hendelse ${aktivitetskort.aktivitetskortId}", e)
             }
@@ -53,6 +53,29 @@ class Aktivitetskort(
                 "aktivitetskort": ${aktivitetskort.tilAkaasJson(aktivitetsStatus, endretAv, endretAvType, endretTidspunkt)}
             }
         """.trimIndent()
+
+        class AktivitetskortHendelseFeil(
+            private val aktivitetskortHendelse: AktivitetskortHendelse,
+            private val errorMessage: String,
+            private val errorType: ErrorType
+        ) {
+            fun sendTilRapid(rapidPublish: (String, String) -> Unit) {
+                val now = ZonedDateTime.now()
+                rapidPublish(aktivitetskortHendelse.aktivitetskort.fnr,
+                    """
+                        {
+                            "@event_name": "aktivitetskort-feil",
+                            "fnr": "${aktivitetskortHendelse.aktivitetskort.fnr}",
+                            "aktivitetskortId": "${aktivitetskortHendelse.aktivitetskort.aktivitetskortId}",
+                            "messageId": "${aktivitetskortHendelse.messageId}",
+                            "errorMessage": "$errorMessage",
+                            "errorType": "${errorType.name}",
+                            "timestamp": "$now"
+                        }
+                    """.trimIndent())
+                aktivitetskortHendelse.repository.markerFeilkøhendelseSomSendt(aktivitetskortHendelse.messageId)
+            }
+        }
     }
 
     private fun tilAkaasJson(aktivitetsStatus: AktivitetsStatus, endretAv: String, endretAvType: EndretAvType, endretTidspunkt: ZonedDateTime) = """

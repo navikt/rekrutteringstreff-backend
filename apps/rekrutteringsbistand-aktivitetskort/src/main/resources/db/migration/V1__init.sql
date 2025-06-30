@@ -31,5 +31,6 @@ CREATE TABLE aktivitetskort_hendelse_feil (
     timestamp                   timestamp with time zone NOT NULL,
     failing_Message              TEXT NOT NULL,
     error_message               TEXT NOT NULL,
-    error_type                  TEXT NOT NULL
+    error_type                  TEXT NOT NULL,
+    sendt_til_tidspunkt         timestamp
 );
