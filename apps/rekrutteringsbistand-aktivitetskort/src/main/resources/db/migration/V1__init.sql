@@ -22,7 +22,7 @@ CREATE TABLE aktivitetskort_hendelse (
     endret_av_type              TEXT NOT NULL,
     endret_tidspunkt            timestamp with time zone NOT NULL,
     aktivitets_status           TEXT NOT NULL,
-    sendt_tidspunkt             timestamp
+    sendt_tidspunkt             timestamp with time zone
 );
 
 CREATE TABLE aktivitetskort_hendelse_feil (
@@ -32,5 +32,5 @@ CREATE TABLE aktivitetskort_hendelse_feil (
     failing_message             TEXT NOT NULL,
     error_message               TEXT NOT NULL,
     error_type                  TEXT NOT NULL,
-    sendt_tidspunkt             timestamp
+    sendt_tidspunkt             timestamp with time zone
 );

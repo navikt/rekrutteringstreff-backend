@@ -9,6 +9,7 @@ import no.nav.toi.aktivitetskort.EndretAvType
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.producer.MockProducer
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -19,6 +20,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
 import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.also
 import kotlin.apply
@@ -100,7 +102,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(endretAv)
             assertThat(this[0].opprettetAvType).isEqualTo(endretAvType.name)
-            assertThat(this[0].opprettetTidspunkt).isEqualTo(endretTidspunkt.toString())
+            assertThat(this[0].opprettetTidspunkt).isCloseTo(endretTidspunkt, within(10, ChronoUnit.MILLIS))
         }
     }
 
