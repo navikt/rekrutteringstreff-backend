@@ -1,10 +1,10 @@
-name: rekrutteringstreff-aktivitetskort
+name: rekrutteringsbistand-aktivitetskort
 
 on:
   push:
     paths:
-      - apps/rekrutteringstreff-aktivitetskort/**
-      - .github/workflows/deploy-rekrutteringstreff-aktivitetskort.yaml
+      - apps/rekrutteringsbistand-aktivitetskort/**
+      - .github/workflows/deploy-rekrutteringsbistand-aktivitetskort.yaml
       - .github/workflows/deploy-template.yaml
       - buildSrc/**
 
