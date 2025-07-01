@@ -31,6 +31,7 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
                 if (resultSet.next()) {
                     RekrutteringstreffInvitasjon(
                         id = resultSet.getString("db_id"),
+                        fnr = resultSet.getString("fnr"),
                         tittel = resultSet.getString("tittel"),
                         beskrivelse = resultSet.getString("beskrivelse"),
                         fraTid = resultSet.getObject("start_dato", LocalDate::class.java),
@@ -62,6 +63,7 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
 class RekrutteringstreffInvitasjon(
     val id: String,
     val tittel: String,
+    val fnr: String,
     val beskrivelse: String?,
     val fraTid: LocalDate,
     val tilTid: LocalDate,

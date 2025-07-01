@@ -274,7 +274,40 @@ class AktivitetskortTest {
 
     @Test
     fun `feilkø-hendelse skal føre til melding på rapid`() {
-        fail<Nothing>()
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val invitasjon = testRepository.hentAlle().first()
+        val errorMessage = "Duplikat prøvd opprettet"
+        val errorType = ErrorType.DUPLIKATMELDINGFEIL
+        repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
+
+        val rapid = TestRapid()
+        AktivitetskortJobb(repository, MockProducer(), rapid::publish).run()
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        rapid.inspektør.message(0).apply {
+            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
+            assertThat(this["fnr"].asText()).isEqualTo(invitasjon.fnr)
+            assertThat(this["aktivitetskortId"].asText()).isEqualTo(invitasjon.aktivitetskortId.toString())
+            assertThat(this["messageId"].asText()).isEqualTo(invitasjon.messageId.toString())
+            assertThat(this["errorMessage"].asText()).isEqualTo(errorMessage)
+            assertThat(this["errorType"].asText()).isEqualTo(errorType.name)
+            assertThat(this["timestamp"].asText().let(ZonedDateTime::parse)).isCloseTo(ZonedDateTime.now(), within(1, ChronoUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun `feilkø-hendelse skal bare sendes 1 gang på rapid`() {
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val invitasjon = testRepository.hentAlle().first()
+        val errorMessage = "Duplikat prøvd opprettet"
+        val errorType = ErrorType.DUPLIKATMELDINGFEIL
+        repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
+
+        val rapid = TestRapid()
+        AktivitetskortJobb(repository, MockProducer(), rapid::publish).apply {
+            run()
+            run()
+        }
+        assertThat(rapid.inspektør.size).isEqualTo(1)
     }
 }
 

@@ -29,8 +29,8 @@ CREATE TABLE aktivitetskort_hendelse_feil (
     db_id                       bigserial PRIMARY KEY,
     message_id                  uuid NOT NULL,
     timestamp                   timestamp with time zone NOT NULL,
-    failing_Message              TEXT NOT NULL,
+    failing_message             TEXT NOT NULL,
     error_message               TEXT NOT NULL,
     error_type                  TEXT NOT NULL,
-    sendt_til_tidspunkt         timestamp
+    sendt_tidspunkt             timestamp
 );

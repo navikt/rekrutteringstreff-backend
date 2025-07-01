@@ -132,7 +132,17 @@ class Repository(databaseConfig: DatabaseConfig) {
     }
 
     fun markerFeilkøhendelseSomSendt(messageId: String) {
-        TODO()
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                UPDATE aktivitetskort_hendelse_feil 
+                SET sendt_tidspunkt = CURRENT_TIMESTAMP
+                WHERE message_id = ?
+                """.trimIndent()
+            ).apply {
+                setObject(1, UUID.fromString(messageId))
+            }.executeUpdate()
+        }
     }
 
     fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortHendelse.AktivitetskortHendelseFeil> = dataSource.connection.use { connection ->
@@ -142,7 +152,7 @@ class Repository(databaseConfig: DatabaseConfig) {
             FROM aktivitetskort_hendelse_feil af
             JOIN aktivitetskort_hendelse ah ON af.message_id = ah.message_id
             JOIN aktivitetskort a ON ah.aktivitetskort_id = a.aktivitetskort_id
-            WHERE sendt_tidspunkt IS NULL
+            WHERE af.sendt_tidspunkt IS NULL
             """.trimIndent()
         ).executeQuery().use { resultSet ->
             generateSequence {
@@ -171,8 +181,8 @@ class Repository(databaseConfig: DatabaseConfig) {
                             aktivitetsStatus = resultSet.getString("aktivitets_status").let(::enumValueOf),
                             sendtTidspunkt = null
                         ),
-                        errorMessage = resultSet.getString("errorMessage"),
-                        errorType = resultSet.getString("errorType").let(::enumValueOf),
+                        errorMessage = resultSet.getString("error_message"),
+                        errorType = resultSet.getString("error_type").let(::enumValueOf),
                     )
                 } else {
                     null
