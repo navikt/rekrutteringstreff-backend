@@ -4,4 +4,4 @@ min_replicas: 2
 max_replicas: 4
 gcp_db_tier: db-custom-1-3840
 gcp_disk_autoresize: true
-postgres: POSTGRES_17
+postgres_versjon: POSTGRES_17
