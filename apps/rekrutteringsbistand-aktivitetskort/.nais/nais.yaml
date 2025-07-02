@@ -40,3 +40,8 @@ spec:
         diskAutoresize: {{ gcp_disk_autoresize }}
         databases:
           - name: aktivitetskort-db
+  env:
+    - name: KAFKA_RAPID_TOPIC
+      value: toi.rapid-1
+    - name: KAFKA_CONSUMER_GROUP_ID
+      value: {{ kafka_consumer_group_id }}
