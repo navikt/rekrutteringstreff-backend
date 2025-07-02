@@ -35,16 +35,16 @@ import java.time.temporal.ChronoUnit
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortTest {
     private val localEnv = mutableMapOf<String, String>(
-        "DB_DATABASE" to "test",
-        "DB_USERNAME" to "test",
-        "DB_PASSWORD" to "test"
+        "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_DATABASE" to "test",
+        "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_USERNAME" to "test",
+        "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_PASSWORD" to "test"
     )
     private val localPostgres = PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"))
         .waitingFor(Wait.forListeningPort())
         .apply { start() }
         .also { localConfig ->
-            localEnv["DB_HOST"] = localConfig.host
-            localEnv["DB_PORT"] = localConfig.getMappedPort(5432).toString()
+            localEnv["NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_HOST"] = localConfig.host
+            localEnv["NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_PORT"] = localConfig.getMappedPort(5432).toString()
         }
     private val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)

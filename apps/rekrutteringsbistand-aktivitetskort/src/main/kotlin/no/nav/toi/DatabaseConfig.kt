@@ -10,16 +10,16 @@ class DatabaseConfig(
     private val meterRegistry: PrometheusMeterRegistry =
         PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
 ) {
-    private val host = env.variable("DB_HOST")
-    private val port = env.variable("DB_PORT")
-    private val database = env.variable("DB_DATABASE")
-    private val user = env.variable("DB_USERNAME")
-    private val pw = env.variable("DB_PASSWORD")
+    private val host = env.variable("NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_HOST")
+    private val port = env.variable("NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_PORT")
+    private val database = env.variable("NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_DATABASE")
+    private val user = env.variable("NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_USERNAME")
+    private val pw = env.variable("NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_PASSWORD")
 
-    private val sslcert = env["DB_SSLCERT"]
-    private val sslkey = env["DB_SSLKEY_PK8"]
-    private val sslrootcert = env["DB_SSLROOTCERT"]
-    private val sslmode = env["DB_SSLMODE"]
+    private val sslcert = env["NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_SSLCERT"]
+    private val sslkey = env["NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_SSLKEY_PK8"]
+    private val sslrootcert = env["NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_SSLROOTCERT"]
+    private val sslmode = env["NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_SSLMODE"]
     private val sslsuffix = if (sslcert == null ) "" else
         "?ssl=on&sslrootcert=$sslrootcert&sslcert=$sslcert&sslmode=$sslmode&sslkey=$sslkey"
 
