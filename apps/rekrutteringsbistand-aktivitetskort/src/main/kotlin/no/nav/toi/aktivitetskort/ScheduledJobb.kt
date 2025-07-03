@@ -32,6 +32,7 @@ fun scheduler(
     val myJob = AktivitetskortJobb(repository, producer) { key, message ->
         rapidsConnection.publish(key, message)
     }
+    consumer.subscribe(listOf("dab.aktivitetskort-feil-v1"))
     val myErrorJob = AktivitetskortFeilJobb(consumer, repository)
 
     val now = ZonedDateTime.now().toInstant().atOslo()

@@ -32,7 +32,7 @@ class Aktivitetskort(
     ) {
         fun send(producer: Producer<String, String>) {
             val record = ProducerRecord(
-                "aktivitetskort-v1.1",
+                "dab.aktivitetskort-v1.1",
                 aktivitetskort.aktivitetskortId,
                 tilAkaasJson(),
             )
