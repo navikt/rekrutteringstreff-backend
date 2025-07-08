@@ -8,6 +8,7 @@ import io.javalin.http.Header
 import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.minside.TokenXKlient
 import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto
+import no.nav.toi.minside.innlegg.InnleggOutboundDto
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -39,9 +40,24 @@ class RekrutteringstreffKlient(private val url: String, private val tokenXKlient
             }
         }
     }
+
+     fun hentInnlegg(id: String, innkommendeToken: String): List<Innlegg>? {
+        val (_, response, result) = "$url/api/rekrutteringstreff/$id/innlegg".httpGet()
+            .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
+            .responseObject<List<Innlegg>>()
+
+        return when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                if (response.statusCode == 404) return null
+                else result.value
+            }
+        }
+    }
+
 }
 
-class Rekrutteringstreff(
+data class Rekrutteringstreff(
     private val id: UUID,
     private val tittel: String,
     private val beskrivelse: String?,
@@ -56,9 +72,16 @@ class Rekrutteringstreff(
     fun tilDTOForBruker() = RekrutteringstreffOutboundDto(id, tittel, beskrivelse, fraTid, tilTid, svarfrist, gateadresse, postnummer, poststed, status)
 }
 
-class Arbeidsgiver(
+data class Arbeidsgiver(
     private val organisasjonsnummer: String,
     private val navn: String,
 ) {
     fun tilDTOForBruker() = ArbeidsgiverOutboundDto(organisasjonsnummer, navn)
 }
+
+data class Innlegg(
+    val tittel: String,
+    val htmlContent: String) {
+    fun tilDTOForBruker() = InnleggOutboundDto(tittel, htmlContent)
+}
+

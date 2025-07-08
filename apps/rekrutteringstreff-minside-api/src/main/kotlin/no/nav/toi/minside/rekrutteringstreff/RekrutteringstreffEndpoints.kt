@@ -9,7 +9,9 @@ import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiParam
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
+import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto
 import no.nav.toi.minside.authenticatedUser
+import no.nav.toi.minside.innlegg.InnleggOutboundDto
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -46,12 +48,15 @@ private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathP
 )
 private fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
     val id = ctx.pathParam(pathParamTreffId)
-    treffKlient.hent(id, ctx.authenticatedUser().jwt)?.let { ctx.status(200).json(it.tilDTOForBruker().json()) }
-        ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker() ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    val arbeidsgivere = treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
+    val innlegg = treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
+    ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())
 }
+
 fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, hentRekrutteringstreffHandler(treffKlient))
 
-class RekrutteringstreffOutboundDto(
+data class RekrutteringstreffOutboundDto(
     private val id: UUID,
     private val tittel: String,
     private val beskrivelse: String?,
@@ -62,6 +67,8 @@ class RekrutteringstreffOutboundDto(
     private val postnummer: String?,
     private val poststed: String?,
     private val status: String?,
+    private val innlegg: List<InnleggOutboundDto> = emptyList(),
+    private val arbeidsgivere: List<ArbeidsgiverOutboundDto> = emptyList(),
 ) {
     fun json() = """
         {
@@ -74,7 +81,9 @@ class RekrutteringstreffOutboundDto(
             "gateadresse": ${gateadresse?.let { "\"$it\"" } },
             "postnummer": ${postnummer?.let { "\"$it\"" } },
             "poststed": ${poststed?.let { "\"$it\"" } },
-            "status": ${status?.let { "\"$it\"" } }
+            "status": ${status?.let { "\"$it\"" } },
+            "innlegg": [ ${innlegg.map { it.json() }.joinToString(",\n")} ],
+            "arbeidsgivere": [ ${arbeidsgivere.map { it.json() }.joinToString(",\n")} ]
         }
     """.trimIndent()
 }

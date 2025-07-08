@@ -57,7 +57,7 @@ private fun hentArbeidsgivereHandler(treffKlient: RekrutteringstreffKlient): (Co
 fun Javalin.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(arbeidsgiverPath, hentArbeidsgivereHandler(treffKlient))
 
 
-class ArbeidsgiverOutboundDto(
+data class ArbeidsgiverOutboundDto(
     private val organisasjonsnummer: String,
     private val navn: String
 ) {
