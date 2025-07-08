@@ -71,9 +71,9 @@ class RekrutteringstreffOutboundDto(
             "fraTid": ${fraTid?.let { "\"$it\"" } },
             "tilTid": ${tilTid?.let { "\"$it\"" } },
             "svarfrist": ${svarfrist?.let { "\"$it\"" } },
-            "gateadresse": ${gateadresse?.let { "\"$it\"" } }
-            "postnummer": ${postnummer?.let { "\"$it\"" } }
-            "poststed": ${poststed?.let { "\"$it\"" } }
+            "gateadresse": ${gateadresse?.let { "\"$it\"" } },
+            "postnummer": ${postnummer?.let { "\"$it\"" } },
+            "poststed": ${poststed?.let { "\"$it\"" } },
             "status": ${status?.let { "\"$it\"" } }
         }
     """.trimIndent()
