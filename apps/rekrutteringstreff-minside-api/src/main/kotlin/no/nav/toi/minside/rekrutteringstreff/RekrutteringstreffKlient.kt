@@ -47,9 +47,13 @@ class Rekrutteringstreff(
     private val beskrivelse: String?,
     private val fraTid: ZonedDateTime?,
     private val tilTid: ZonedDateTime?,
-    private val sted: String?,
+    private val svarfrist: ZonedDateTime?,
+    private val gateadresse: String?,
+    private val postnummer: String?,
+    private val poststed: String?,
+    private val status: String?,
 ) {
-    fun tilDTOForBruker() = RekrutteringstreffOutboundDto(id, tittel, beskrivelse, fraTid, tilTid, sted)
+    fun tilDTOForBruker() = RekrutteringstreffOutboundDto(id, tittel, beskrivelse, fraTid, tilTid, svarfrist, gateadresse, postnummer, poststed, status)
 }
 
 class Arbeidsgiver(

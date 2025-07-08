@@ -33,7 +33,11 @@ private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathP
                "beskrivelse":null,
                "fraTid":null,
                "tilTid":null,
-               "sted":null,
+               "svarfrist":null,
+               "gateadresse":null,
+               "postnummer":null,
+               "poststed":null,
+               "status":null
             }"""
         )]
     )],
@@ -53,7 +57,11 @@ class RekrutteringstreffOutboundDto(
     private val beskrivelse: String?,
     private val fraTid: ZonedDateTime?,
     private val tilTid: ZonedDateTime?,
-    private val sted: String?,
+    private val svarfrist: ZonedDateTime?,
+    private val gateadresse: String?,
+    private val postnummer: String?,
+    private val poststed: String?,
+    private val status: String?,
 ) {
     fun json() = """
         {
@@ -62,7 +70,11 @@ class RekrutteringstreffOutboundDto(
             "beskrivelse": ${beskrivelse?.let { "\"$it\"" } },
             "fraTid": ${fraTid?.let { "\"$it\"" } },
             "tilTid": ${tilTid?.let { "\"$it\"" } },
-            "sted": ${sted?.let { "\"$it\"" } }
+            "svarfrist": ${svarfrist?.let { "\"$it\"" } },
+            "gateadresse": ${gateadresse?.let { "\"$it\"" } }
+            "postnummer": ${postnummer?.let { "\"$it\"" } }
+            "poststed": ${poststed?.let { "\"$it\"" } }
+            "status": ${status?.let { "\"$it\"" } }
         }
     """.trimIndent()
 }
