@@ -93,8 +93,62 @@ class Aktivitetskort(
             },
             "endretTidspunkt": "$endretTidspunkt",
             "avtaltMedNav": false,
-            "detaljer": [],
-            "etiketter": []
+            "detaljer": [
+                {
+                    "label": "Sted",
+                    "verdi": "Quality Hotel, Bøngerudveien 23,<br>0123 Hafsrud"
+                },
+                {
+                    "label": "Antall plasser",
+                    "verdi": "42"
+                }
+            ],
+            "handlinger": [
+                {
+                    "tekst": "Handling intern",
+                    "subtekst": "Subtekst intern",
+                    "url": "https://example.nav.no/handling1",
+                    "lenkeType": "INTERN"
+                },
+                {
+                    "tekst": "Handling ekstern",
+                    "subtekst": "Subtekst ekstern",
+                    "url": "https://example.nav.no/handling2",
+                    "lenkeType": "EKSTERN"
+                },
+                {
+                    "tekst": "Handling felles",
+                    "subtekst": "Subtekst felles",
+                    "url": "https://example.nav.no/handling3",
+                    "lenkeType": "FELLES"
+                }
+            ],
+            "etiketter": [
+                {
+                    "tekst": "Eksempel Etikett positiv",
+                    "sentiment": "POSITIVE"
+                },
+                {
+                    "tekst": "Eksempel Etikett negativ",
+                    "sentiment": "NEGATIVE"
+                },
+                {
+                    "tekst": "Eksempel Etikett neural",
+                    "sentiment": "NEUTRAL"
+                }
+            ],
+            "oppgave": {
+                "ekstern": {
+                    "tekst": "Ekstern oppgave",
+                    "subtekst": "Subtekst ekstern oppgave",
+                    "url": "https://example.nav.no/oppgave",
+                },
+                "intern": {
+                    "tekst": "Intern oppgave",
+                    "subtekst": "Subtekst intern oppgave",
+                    "url": "https://example.nav.no/oppgave-intern"
+                }
+            }
         }
     """.trimIndent()
 }
