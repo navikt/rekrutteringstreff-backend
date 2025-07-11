@@ -141,7 +141,7 @@ class Aktivitetskort(
                 "ekstern": {
                     "tekst": "Ekstern oppgave",
                     "subtekst": "Subtekst ekstern oppgave",
-                    "url": "https://example.nav.no/oppgave",
+                    "url": "https://example.nav.no/oppgave"
                 },
                 "intern": {
                     "tekst": "Intern oppgave",
