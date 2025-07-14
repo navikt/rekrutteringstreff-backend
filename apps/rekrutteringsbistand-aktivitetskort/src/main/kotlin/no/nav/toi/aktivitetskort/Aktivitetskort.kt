@@ -1,5 +1,7 @@
 package no.nav.toi.aktivitetskort
 
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.toi.Repository
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -28,7 +30,11 @@ class Aktivitetskort(
         private val endretAvType: EndretAvType,
         private val endretTidspunkt: ZonedDateTime,
         private val aktivitetsStatus: AktivitetsStatus,
-        private val sendtTidspunkt: ZonedDateTime?
+        private val sendtTidspunkt: ZonedDateTime?,
+        private val detaljer: List<AktivitetskortDetalj>,
+        private val handlinger: List<AktivitetskortHandling>,
+        private val etiketter: List<AktivitetskortEtikett>,
+        private val oppgave: AktivitetskortOppgave?
     ) {
         fun send(producer: Producer<String, String>) {
             val record = ProducerRecord(
@@ -50,7 +56,7 @@ class Aktivitetskort(
                 "source": "REKRUTTERINGSBISTAND",
                 "aktivitetskortType": "REKRUTTERINGSTREFF",
                 "actionType": "${actionType.name}",
-                "aktivitetskort": ${aktivitetskort.tilAkaasJson(aktivitetsStatus, endretAv, endretAvType, endretTidspunkt)}
+                "aktivitetskort": ${aktivitetskort.tilAkaasJson(aktivitetsStatus, endretAv, endretAvType, endretTidspunkt, detaljer, handlinger, etiketter, oppgave)}
             }
         """.trimIndent()
 
@@ -78,7 +84,7 @@ class Aktivitetskort(
         }
     }
 
-    private fun tilAkaasJson(aktivitetsStatus: AktivitetsStatus, endretAv: String, endretAvType: EndretAvType, endretTidspunkt: ZonedDateTime) = """
+    private fun tilAkaasJson(aktivitetsStatus: AktivitetsStatus, endretAv: String, endretAvType: EndretAvType, endretTidspunkt: ZonedDateTime, detaljer: List<AktivitetskortDetalj>, handlinger: List<AktivitetskortHandling>, etiketter: List<AktivitetskortEtikett>, oppgave: AktivitetskortOppgave?) = """
         {
             "id": "$aktivitetskortId",
             "personIdent": "$fnr",
@@ -93,64 +99,122 @@ class Aktivitetskort(
             },
             "endretTidspunkt": "$endretTidspunkt",
             "avtaltMedNav": false,
-            "detaljer": [
-                {
-                    "label": "Sted",
-                    "verdi": "Quality Hotel, Bøngerudveien 23,<br>0123 Hafsrud"
-                },
-                {
-                    "label": "Antall plasser",
-                    "verdi": "42"
-                }
-            ],
-            "handlinger": [
-                {
-                    "tekst": "Handling intern",
-                    "subtekst": "Subtekst intern",
-                    "url": "https://example.nav.no/handling1",
-                    "lenkeType": "INTERN"
-                },
-                {
-                    "tekst": "Handling ekstern",
-                    "subtekst": "Subtekst ekstern",
-                    "url": "https://example.nav.no/handling2",
-                    "lenkeType": "EKSTERN"
-                },
-                {
-                    "tekst": "Handling felles",
-                    "subtekst": "Subtekst felles",
-                    "url": "https://example.nav.no/handling3",
-                    "lenkeType": "FELLES"
-                }
-            ],
-            "etiketter": [
-                {
-                    "tekst": "Eksempel Etikett positiv",
-                    "sentiment": "POSITIVE"
-                },
-                {
-                    "tekst": "Eksempel Etikett negativ",
-                    "sentiment": "NEGATIVE"
-                },
-                {
-                    "tekst": "Eksempel Etikett neural",
-                    "sentiment": "NEUTRAL"
-                }
-            ],
-            "oppgave": {
-                "ekstern": {
-                    "tekst": "Ekstern oppgave",
-                    "subtekst": "Subtekst ekstern oppgave",
-                    "url": "https://example.nav.no/oppgave"
-                },
-                "intern": {
-                    "tekst": "Intern oppgave",
-                    "subtekst": "Subtekst intern oppgave",
-                    "url": "https://example.nav.no/oppgave-intern"
-                }
-            }
+            "detaljer": ${detaljer.joinToJson(AktivitetskortDetalj::tilAkaasJson)},
+            "handlinger": ${handlinger.joinToJson(AktivitetskortHandling::tilAkaasJson)},
+            "etiketter": ${etiketter.joinToJson(AktivitetskortEtikett::tilAkaasJson)},
+            "oppgave": ${oppgave?.tilAkaasJson()}
         }
     """.trimIndent()
+}
+
+fun <T> List<T>.joinToJson(transform: (T) -> String) =
+    joinToString(prefix = "[", postfix = "]", separator = ",", transform = transform)
+
+private val objectMapper = jacksonObjectMapper()
+
+class AktivitetskortDetalj(
+    val label: String,
+    val verdi: String
+) {
+    fun tilAkaasJson() = """
+        {
+            "label": "$label",
+            "verdi": "$verdi"
+        }
+    """.trimIndent()
+
+    companion object {
+        fun fraAkaasJson(json: String) =
+            objectMapper.readValue(json, object : TypeReference<List<AktivitetskortDetalj>>(){})
+    }
+}
+
+class AktivitetskortHandling(
+    val tekst: String,
+    val subtekst: String,
+    val url: String,
+    val lenkeType: LenkeType
+) {
+    fun tilAkaasJson() = """
+        {
+            "tekst": "$tekst",
+            "subtekst": "$subtekst",
+            "url": "$url",
+            "lenkeType": "${lenkeType.name}"
+        }
+    """.trimIndent()
+
+    companion object {
+        fun fraAkaasJson(json: String) =
+            objectMapper.readValue(json, object : TypeReference<List<AktivitetskortHandling>>(){})
+    }
+}
+
+class AktivitetskortEtikett(
+    val tekst: String,
+    val label: Sentiment
+) {
+    fun tilAkaasJson() = """
+        {
+            "tekst": "$label",
+            "label": "$label"
+        }
+    """.trimIndent()
+
+    companion object {
+        fun fraAkaasJson(json: String) =
+            objectMapper.readValue(json, object : TypeReference<List<AktivitetskortEtikett>>(){})
+    }
+}
+
+class AktivitetskortOppgave(
+    val ekstern: AktivitetskortSubOppgave?,
+    val intern: AktivitetskortSubOppgave?
+) {
+    fun tilAkaasJson() = listOfNotNull(
+        ekstern?.let { "ekstern" to it.tilAkaasJson() },
+        intern?.let { "intern" to it.tilAkaasJson() }
+    ).map {
+        """
+            "${it.first}": ${it.second}
+        """.trimIndent()
+    }.let {
+        """
+            {
+                ${it.joinToString(",\n")
+            }
+        """.trimIndent()
+    }
+
+    companion object {
+        fun fraAkaasJson(json: String) = objectMapper.readValue(json, AktivitetskortOppgave::class.java)
+    }
+}
+
+class AktivitetskortSubOppgave(
+    val tekst: String,
+    val subtekst: String,
+    val url: String
+) {
+    fun tilAkaasJson() = """
+        {
+            "tekst": "$tekst",
+            "subtekst": "$subtekst",
+            "url": "$url"
+        }
+    """.trimIndent()
+}
+
+enum class Sentiment {
+    POSITIVE,
+    NEGATIVE,
+    NEUTRAL
+}
+
+enum class LenkeType {
+    INTERN,
+    EKSTERN,
+    FELLES
 }
 
 enum class AktivitetsStatus {

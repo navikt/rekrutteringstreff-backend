@@ -74,6 +74,8 @@ class AktivitetskortTest {
         val expectedEndretAv = "testuser"
         val expectedEndretTidspunkt = ZonedDateTime.now()
         val expectedEndretAvType = EndretAvType.PERSONBRUKER
+        val expectedAntallPlasser = 10
+        val expectedSted = "Test Sted"
         val expectedAktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
             fnr = expectedFnr,
             rekrutteringstreffId = expectedRekrutteringstreffId,
@@ -83,7 +85,9 @@ class AktivitetskortTest {
             sluttDato = expectedSluttDato,
             endretAv = expectedEndretAv,
             endretAvType = expectedEndretAvType,
-            endretTidspunkt = expectedEndretTidspunkt
+            endretTidspunkt = expectedEndretTidspunkt,
+            antallPlasser = expectedAntallPlasser,
+            sted = expectedSted
         )
 
         AktivitetskortJobb(repository, producer, {_,_->}).run()
@@ -107,9 +111,17 @@ class AktivitetskortTest {
                 .isCloseTo(expectedEndretTidspunkt, within (1, ChronoUnit.SECONDS))
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
-            //assertThat(this["aktivitetskort"]["detaljer"]).isEmpty()
+            val expectedDetaljer = objectMapper.readTree("""[{"label":"Antall plasser","verdi":"$expectedAntallPlasser"},{"label":"Sted","verdi":"$expectedSted"}]""")
+            assertThat(this["aktivitetskort"]["detaljer"]).containsExactlyInAnyOrder(*expectedDetaljer.toList().toTypedArray())
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
-            //assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
+            assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
+            assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
+            assertThat(this["aktivitetskort"]["handlinger"]).hasSize(1)
+            assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asText()).isEqualTo("Sjekk ut treffet")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["subtekst"].asText()).isEqualTo("Sjekk ut treffet og svar")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asText()).isEqualTo("https://rekrutteringstreff.dev.nav.no/test")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["lenkeType"].asText()).isEqualTo("FELLES")
+            assertThat(this["aktivitetskort"]["oppgave"].isNull).isTrue()
         }
     }
 
@@ -126,7 +138,9 @@ class AktivitetskortTest {
             sluttDato = LocalDate.now().plusDays(2),
             endretAv = "testuser",
             endretAvType = EndretAvType.NAVIDENT,
-            endretTidspunkt = ZonedDateTime.now()
+            endretTidspunkt = ZonedDateTime.now(),
+            antallPlasser = 10,
+            sted = "Test Sted"
         )
 
         AktivitetskortJobb(repository, producer,{_,_->}).run()
@@ -321,6 +335,8 @@ private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
         LocalDate.now().plusDays(2),
         "testuser",
         EndretAvType.NAVIDENT,
-        ZonedDateTime.now()
+        ZonedDateTime.now(),
+        15,
+        "Test Stedet"
     )
 }

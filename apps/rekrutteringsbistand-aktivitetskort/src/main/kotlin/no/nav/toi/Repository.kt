@@ -1,11 +1,19 @@
 package no.nav.toi
 
+import no.nav.toi.aktivitetskort.AktivitetskortDetalj
 import no.nav.toi.aktivitetskort.Aktivitetskort
+import no.nav.toi.aktivitetskort.AktivitetskortEtikett
+import no.nav.toi.aktivitetskort.AktivitetskortHandling
+import no.nav.toi.aktivitetskort.AktivitetskortOppgave
 import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.aktivitetskort.ErrorType
+import no.nav.toi.aktivitetskort.LenkeType
 import no.nav.toi.aktivitetskort.atOslo
+import no.nav.toi.aktivitetskort.joinToJson
 import org.flywaydb.core.Flyway
 import java.sql.Timestamp
+import java.sql.Types
+import java.sql.Types.VARCHAR
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -21,7 +29,9 @@ class Repository(databaseConfig: DatabaseConfig) {
         sluttDato: LocalDate,
         endretAv: String,
         endretAvType: EndretAvType,
-        endretTidspunkt: ZonedDateTime
+        endretTidspunkt: ZonedDateTime,
+        antallPlasser: Int,
+        sted: String
     ): UUID {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -49,6 +59,7 @@ class Repository(databaseConfig: DatabaseConfig) {
                     setTimestamp(10, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
                 }.executeUpdate()
 
+                val messageId = UUID.randomUUID()
                 connection.prepareStatement(
                     """
                     INSERT INTO aktivitetskort_hendelse (
@@ -59,10 +70,27 @@ class Repository(databaseConfig: DatabaseConfig) {
                     """.trimIndent()
                 ).apply {
                     setObject(1, aktivitietskortId)
-                    setObject(2, UUID.randomUUID())
+                    setObject(2, messageId)
                     setString(3, endretAv)
                     setString(4, endretAvType.name)
                     setTimestamp(5, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
+                }.executeUpdate()
+
+                connection.prepareStatement(
+                    """
+                    INSERT INTO aktivitetskort_dynamisk (
+                        message_id, detaljer, handlinger, etiketter, oppgave
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """.trimIndent()
+                ).apply {
+                    setObject(1, messageId)
+                    setString(2, listOf(
+                        AktivitetskortDetalj("Antall plasser", antallPlasser.toString()),
+                        AktivitetskortDetalj("Sted", sted)
+                    ).joinToJson(AktivitetskortDetalj::tilAkaasJson))
+                    setString(3, listOf(AktivitetskortHandling("Sjekk ut treffet", "Sjekk ut treffet og svar", "https://rekrutteringstreff.dev.nav.no/test", LenkeType.FELLES)).joinToJson(AktivitetskortHandling::tilAkaasJson))
+                    setString(4, "[]")
+                    setNull(5, VARCHAR)
                 }.executeUpdate()
 
                 connection.commit()
@@ -79,9 +107,10 @@ class Repository(databaseConfig: DatabaseConfig) {
     fun hentUsendteAktivitetskortHendelser() = dataSource.connection.use { connection ->
         connection.prepareStatement(
             """
-            SELECT ah.*, a.* 
+            SELECT ah.*, a.*, ad.*
             FROM aktivitetskort_hendelse ah
             JOIN aktivitetskort a ON ah.aktivitetskort_id = a.aktivitetskort_id
+            JOIN aktivitetskort_dynamisk ad ON ah.message_id = ad.message_id
             WHERE sendt_tidspunkt IS NULL
             """.trimIndent()
         ).executeQuery().use { resultSet ->
@@ -108,6 +137,10 @@ class Repository(databaseConfig: DatabaseConfig) {
                         endretAvType = resultSet.getString("endret_av_type").let(::enumValueOf),
                         endretTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toInstant().atOslo(),
                         aktivitetsStatus = resultSet.getString("aktivitets_status").let(::enumValueOf),
+                        detaljer = AktivitetskortDetalj.fraAkaasJson(resultSet.getString("detaljer")),
+                        handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
+                        etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
+                        oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
                         sendtTidspunkt = null
                     )
                 } else {
@@ -148,10 +181,11 @@ class Repository(databaseConfig: DatabaseConfig) {
     fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortHendelse.AktivitetskortHendelseFeil> = dataSource.connection.use { connection ->
         connection.prepareStatement(
             """
-            SELECT af.*, ah.*, a.*
+            SELECT af.*, ah.*, a.*, ad.*
             FROM aktivitetskort_hendelse_feil af
             JOIN aktivitetskort_hendelse ah ON af.message_id = ah.message_id
             JOIN aktivitetskort a ON ah.aktivitetskort_id = a.aktivitetskort_id
+            JOIN aktivitetskort_dynamisk ad ON ah.message_id = ad.message_id
             WHERE af.sendt_tidspunkt IS NULL
             """.trimIndent()
         ).executeQuery().use { resultSet ->
@@ -179,6 +213,10 @@ class Repository(databaseConfig: DatabaseConfig) {
                             endretAvType = resultSet.getString("endret_av_type").let(::enumValueOf),
                             endretTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toInstant().atOslo(),
                             aktivitetsStatus = resultSet.getString("aktivitets_status").let(::enumValueOf),
+                            detaljer = AktivitetskortDetalj.fraAkaasJson(resultSet.getString("detaljer")),
+                            handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
+                            etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
+                            oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
                             sendtTidspunkt = null
                         ),
                         errorMessage = resultSet.getString("error_message"),

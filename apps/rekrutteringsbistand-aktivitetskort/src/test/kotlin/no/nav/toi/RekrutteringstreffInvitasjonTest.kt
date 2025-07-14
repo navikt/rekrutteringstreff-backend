@@ -73,6 +73,8 @@ class RekrutteringstreffInvitasjonTest {
         val endretAv = "testuser"
         val endretAvType = EndretAvType.NAVIDENT
         val endretTidspunkt = ZonedDateTime.now()
+        val antallPlasser = 50
+        val sted = "Test Sted"
 
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -84,7 +86,9 @@ class RekrutteringstreffInvitasjonTest {
                 sluttTid,
                 endretAv,
                 endretAvType,
-                endretTidspunkt
+                endretTidspunkt,
+                antallPlasser,
+                sted
             )
         )
 
@@ -114,6 +118,8 @@ class RekrutteringstreffInvitasjonTest {
         val sluttTid = startTid.plusHours(2)
         val endretAvType = EndretAvType.NAVIDENT
         val endretTidspunkt = ZonedDateTime.now()
+        val antallPlasser = 53
+        val sted = "Test Ste"
 
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -125,7 +131,9 @@ class RekrutteringstreffInvitasjonTest {
                 sluttTid,
                 "Z0000001",
                 endretAvType,
-                endretTidspunkt
+                endretTidspunkt,
+                antallPlasser,
+                sted
             )
         )
         assertThrows<PSQLException> {
@@ -139,7 +147,9 @@ class RekrutteringstreffInvitasjonTest {
                     sluttTid.plusDays(1),
                     "Z0000002",
                     endretAvType,
-                    endretTidspunkt.plusHours(1)
+                    endretTidspunkt.plusHours(1),
+                    antallPlasser + 10,
+                    sted
                 )
             )
         }
@@ -161,6 +171,8 @@ class RekrutteringstreffInvitasjonTest {
         val endretAv = "testuser"
         val endretAvType = EndretAvType.PERSONBRUKER
         val endretTidspunkt = ZonedDateTime.now()
+        val antallPlasser = 1
+        val sted = "Oslo"
 
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -172,7 +184,9 @@ class RekrutteringstreffInvitasjonTest {
                 sluttTid,
                 endretAv,
                 endretAvType,
-                endretTidspunkt
+                endretTidspunkt,
+                antallPlasser,
+                sted
             )
         )
 
@@ -190,6 +204,8 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(message["endretAvType"].asText()).isEqualTo(endretAvType.name)
             assertThat(message["endretTidspunkt"].asText()).isEqualTo(endretTidspunkt.toString())
             assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
+            assertThat(message["antallPlasser"].asInt()).isEqualTo(antallPlasser)
+            assertThat(message["sted"].asText()).isEqualTo(sted)
         }
     }
     private fun rapidPeriodeMelding(
@@ -201,7 +217,9 @@ class RekrutteringstreffInvitasjonTest {
         sluttTid: ZonedDateTime,
         endretAv: String,
         endretAvType: EndretAvType,
-        endretTidspunkt: ZonedDateTime
+        endretTidspunkt: ZonedDateTime,
+        antallPlasser: Int,
+        sted: String
     ): String = """
         {
             "@event_name": "rekrutteringstreffinvitasjon",
@@ -214,7 +232,9 @@ class RekrutteringstreffInvitasjonTest {
             "sluttTid": "$sluttTid",
             "endretAv": "$endretAv",
             "endretAvType": "${endretAvType.name}",
-            "endretTidspunkt": "$endretTidspunkt"
+            "endretTidspunkt": "$endretTidspunkt",
+            "antallPlasser": $antallPlasser,
+            "sted": "$sted"
         }
         """.trimIndent()
 }
