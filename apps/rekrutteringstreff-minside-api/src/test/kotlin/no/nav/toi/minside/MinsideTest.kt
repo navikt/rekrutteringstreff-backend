@@ -176,6 +176,23 @@ class MinsideTest {
         }
     }
 
+    @Test
+    fun `hent om jobbsøker er et treff`() {
+        val ident = "12345678910"
+        val token = authServer.lagToken(authPort, pid = ident)
+
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                assertThat(response.statusCode).isEqualTo(200)
+                val dto = mapper.readTree(result.get())
+                assertThat(dto["påmeldt"].asText()).isIn("true", "false") // randomly generated boolean value
+            }
+        }
+    }
 
     fun endepunkter() =
         listOf(
