@@ -12,7 +12,8 @@ import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 data class OpenAiRequest(
     val messages: List<OpenAiMessage>,
     val temperature: Double,
-    val max_tokens: Int
+    val max_tokens: Int,
+    val top_p: Double,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -34,7 +35,9 @@ object OpenAiClient {
     private inline fun <reified R> call(
         systemMessage: String,
         userMessage: String,
-        temperature: Double
+        temperature: Double,
+        max_tokens: Int,
+        top_p: Double
     ): R {
         val body = objectMapper.writeValueAsString(
             OpenAiRequest(
@@ -43,7 +46,8 @@ object OpenAiClient {
                     OpenAiMessage("user", userMessage)
                 ),
                 temperature = temperature,
-                max_tokens = 1000
+                max_tokens = 800,
+                top_p = 0.95,
             )
         )
 
@@ -79,14 +83,18 @@ object OpenAiClient {
         call(
             VALIDATION_SYSTEM_MESSAGE,
             dto.tekst,
-            temperature = 0.5
+            max_tokens = 800,
+            temperature = 0.7,
+            top_p = 0.95
         )
 
     fun sanitizeValidationResponse(svar: ValiderRekrutteringstreffResponsDto): ValiderRekrutteringstreffResponsDto =
         call(
             SANITIZATION_SYSTEM_MESSAGE,
             objectMapper.writeValueAsString(svar),
-            temperature = 0.2
+            max_tokens = 800,
+            temperature = 0.7,
+            top_p = 0.95
         )
 
     private const val VALIDATION_SYSTEM_MESSAGE = """
