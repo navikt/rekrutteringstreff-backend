@@ -290,13 +290,26 @@ class RekrutteringstreffTest {
 
     @Test
     fun validerRekrutteringstreff() {
-        val openAiResponseBody = """
+        val validationResponseBody = """
              {
               "choices": [
                 {
                   "message": {
                     "role": "assistant",
-                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"Tittelen eller beskrivelsen inneholder potensielt diskriminerende uttrykk.\" }"
+                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"Beskrivelsen spesifiserer et geografisk område for søkere, noe som kan være diskriminerende.\" }"
+                  }
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val sanitizationResponseBody = """
+             {
+              "choices": [
+                {
+                  "message": {
+                    "role": "assistant",
+                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"Teksten spesifiserer et geografisk krav for kandidatene, noe som kan være diskriminerende.\" }"
                   }
                 }
               ]
@@ -305,19 +318,34 @@ class RekrutteringstreffTest {
 
         wireMockServer.stubFor(
             WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2023-03-15-preview"))
+                .inScenario("Validation and Sanitization")
+                .whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
                 .willReturn(
                     WireMock.aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody(openAiResponseBody)
+                        .withBody(validationResponseBody)
+                )
+                .willSetStateTo("Validation Complete")
+        )
+
+        wireMockServer.stubFor(
+            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2023-03-15-preview"))
+                .inScenario("Validation and Sanitization")
+                .whenScenarioStateIs("Validation Complete")
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(sanitizationResponseBody)
                 )
         )
 
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
         val payload = """
             {
-                "tittel": "Kritisk Tittel",
-                "beskrivelse": "Denne beskrivelsen kan oppfattes som diskriminerende."
+                "tekst": "Vi ser kun etter deltakere fra Oslo."
             }
         """.trimIndent()
 
@@ -332,7 +360,7 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val validationResult = mapper.readValue(result.get(), ValiderRekrutteringstreffResponsDto::class.java)
                 assertThat(validationResult.bryterRetningslinjer).isTrue()
-                assertThat(validationResult.begrunnelse).isEqualTo("Tittelen eller beskrivelsen inneholder potensielt diskriminerende uttrykk.")
+                assertThat(validationResult.begrunnelse).isEqualTo("Teksten spesifiserer et geografisk krav for kandidatene, noe som kan være diskriminerende.")
             }
         }
     }

@@ -256,9 +256,11 @@ private fun slettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): 
     methods = [HttpMethod.POST]
 )
 private fun validerRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val dto = ctx.bodyAsClass<ValiderRekrutteringstreffDto>()
     val validationResult = OpenAiClient.validateRekrutteringstreff(dto)
-    ctx.status(200).json(validationResult)
+    val sanitizedResult = OpenAiClient.sanitizeValidationResponse(validationResult)
+    ctx.status(200).json(sanitizedResult)
 }
 
 @OpenApi(
@@ -448,8 +450,7 @@ data class OppdaterRekrutteringstreffDto(
 )
 
 data class ValiderRekrutteringstreffDto(
-    val tittel: String?,
-    val beskrivelse: String?
+    val tekst: String,
 )
 
 data class ValiderRekrutteringstreffResponsDto(
