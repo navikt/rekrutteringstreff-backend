@@ -28,7 +28,7 @@ object OpenAiClient {
 
     fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto {
         val systemMessage = VALIDATION_SYSTEM_MESSAGE
-        val userMessage = "Tittel: ${dto.tittel}\nBeskrivelse: ${dto.beskrivelse}"
+        val userMessage = dto.tekst
         val request = OpenAiRequest(
             messages = listOf(
                 OpenAiMessage(role = "system", content = systemMessage),

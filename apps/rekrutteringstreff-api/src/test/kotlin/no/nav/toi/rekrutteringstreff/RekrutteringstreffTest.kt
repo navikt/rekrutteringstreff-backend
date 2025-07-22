@@ -296,7 +296,7 @@ class RekrutteringstreffTest {
                 {
                   "message": {
                     "role": "assistant",
-                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"Tittelen eller beskrivelsen inneholder potensielt diskriminerende uttrykk.\" }"
+                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"Beskrivelsen inneholder potensielt diskriminerende uttrykk.\" }"
                   }
                 }
               ]
@@ -316,8 +316,7 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val payload = """
             {
-                "tittel": "Kritisk Tittel",
-                "beskrivelse": "Denne beskrivelsen kan oppfattes som diskriminerende."
+                "tekst": "Denne beskrivelsen kan oppfattes som diskriminerende."
             }
         """.trimIndent()
 
@@ -332,7 +331,7 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val validationResult = mapper.readValue(result.get(), ValiderRekrutteringstreffResponsDto::class.java)
                 assertThat(validationResult.bryterRetningslinjer).isTrue()
-                assertThat(validationResult.begrunnelse).isEqualTo("Tittelen eller beskrivelsen inneholder potensielt diskriminerende uttrykk.")
+                assertThat(validationResult.begrunnelse).isEqualTo("Beskrivelsen inneholder potensielt diskriminerende uttrykk.")
             }
         }
     }
