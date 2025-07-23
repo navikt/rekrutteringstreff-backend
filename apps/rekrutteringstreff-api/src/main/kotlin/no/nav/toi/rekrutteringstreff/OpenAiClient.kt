@@ -1,6 +1,8 @@
 package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.fuel.httpPost
 import com.github.kittinunf.result.Result
@@ -9,100 +11,124 @@ import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+data class OpenAiMessage(val role: String, val content: String)
+
+data class JsonSchemaWrapper(
+    val name: String,
+    val schema: Map<String, Any>,
+    val strict: Boolean = true,
+)
+
+data class ResponseFormat(
+    val type: String = "json_schema",
+    val json_schema: JsonSchemaWrapper,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class OpenAiRequest(
     val messages: List<OpenAiMessage>,
     val temperature: Double,
     val max_tokens: Int,
     val top_p: Double,
+    val response_format: ResponseFormat,
 )
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class OpenAiMessage(val role: String, val content: String)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class OpenAiResponse(val choices: List<Choice>?)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Choice(val message: OpenAiMessage?)
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class OpenAiResponse(val choices: List<Choice>?)
+
 object OpenAiClient {
-    private val openAiApiUrl =
+    private val apiUrl =
         System.getenv("OPENAI_API_URL")
             ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2023-03-15-preview"
-    private val openAiApiKey = System.getenv("OPENAI_API_KEY") ?: "test-key"
-    private val objectMapper = JacksonConfig.mapper
+    private val apiKey = System.getenv("OPENAI_API_KEY") ?: "test-key"
+    private val mapper = JacksonConfig.mapper
+
+    private inline fun <reified T> schema(): Map<String, Any> {
+        val schemaObj = JsonSchemaGenerator(mapper).generateSchema(T::class.java)
+        val json = mapper.writeValueAsString(schemaObj)
+        return mapper.readValue(json, object : TypeReference<Map<String, Any>>() {})
+    }
+
+    private val responseFormat = ResponseFormat(
+        json_schema = JsonSchemaWrapper(
+            name = "rekrutteringstreff_validation",
+            schema = schema<ValiderRekrutteringstreffResponsDto>(),
+        )
+    )
 
     private inline fun <reified R> call(
         systemMessage: String,
         userMessage: String,
         temperature: Double,
-        max_tokens: Int,
-        top_p: Double
+        maxTokens: Int,
+        topP: Double,
     ): R {
-        val body = objectMapper.writeValueAsString(
+        val body = mapper.writeValueAsString(
             OpenAiRequest(
                 messages = listOf(
                     OpenAiMessage("system", systemMessage),
-                    OpenAiMessage("user", userMessage)
+                    OpenAiMessage("user", userMessage),
                 ),
                 temperature = temperature,
-                max_tokens = max_tokens,
-                top_p = top_p,
+                max_tokens = maxTokens,
+                top_p = topP,
+                response_format = responseFormat,
             )
         )
 
-        val (_, _, result) = openAiApiUrl.httpPost()
+        val (_, _, result) = apiUrl.httpPost()
             .header(
-                mapOf(
-                    "api-key" to openAiApiKey,
-                    "Content-Type" to "application/json"
-                )
+                "api-key" to apiKey,
+                "Content-Type" to "application/json",
             )
             .body(body)
             .responseString()
 
-        val rawJson = when (result) {
+        val raw = when (result) {
             is Result.Failure -> throw result.error
             is Result.Success -> result.get()
         }
 
-        val content = objectMapper
-            .readValue<OpenAiResponse>(rawJson)
+        val content = mapper
+            .readValue<OpenAiResponse>(raw)
             .choices?.firstOrNull()?.message?.content
             ?: error("Ingen respons fra OpenAI")
 
-        val cleaned = content
-            .removePrefix("```json")
-            .removeSuffix("```")
-            .trim()
-
-        return objectMapper.readValue(cleaned)
+        return mapper.readValue(content.trim())
     }
 
-    fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto =
+    fun validateRekrutteringstreff(
+        dto: ValiderRekrutteringstreffDto,
+    ): ValiderRekrutteringstreffResponsDto =
         call(
             VALIDATION_SYSTEM_MESSAGE,
             dto.tekst,
-            max_tokens = 800,
-            temperature = 0.7,
-            top_p = 0.95
+            temperature = 0.0,
+            maxTokens = 400,
+            topP = 1.0,
         )
 
     /*
-    TODO: Kallet kan fjernes dersom vi mot senere ki-modeller kan fjerne personino fra svar med instrukser i hovedprompten.
-    Brukes for å fjerne personopplysninger fra openai svar før det sendes til bruker av løsningen.
-    Eksempelvis vil personnavn  identifiseres som brudd på personvern i første prompt, og navnet blir returnert som en del av svaret der, men fjernes i andre prompt.
-    */
-    fun sanitizeValidationResponse(svar: ValiderRekrutteringstreffResponsDto): ValiderRekrutteringstreffResponsDto =
+       TODO: Kallet kan fjernes dersom vi mot senere ki-modeller kan fjerne personino fra svar med instrukser i hovedprompten.
+       Brukes for å fjerne personopplysninger fra openai svar før det sendes til bruker av løsningen.
+       Eksempelvis vil personnavn  identifiseres som brudd på personvern i første prompt, og navnet blir returnert som en del av svaret der, men fjernes i andre prompt.
+   */
+    fun sanitizeValidationResponse(
+        svar: ValiderRekrutteringstreffResponsDto,
+    ): ValiderRekrutteringstreffResponsDto =
         call(
             SANITIZATION_SYSTEM_MESSAGE,
-            objectMapper.writeValueAsString(svar),
-            max_tokens = 800,
-            temperature = 0.7,
-            top_p = 0.95
+            mapper.writeValueAsString(svar),
+            temperature = 0.0,
+            maxTokens = 400,
+            topP = 1.0,
         )
+}
 
-    private const val VALIDATION_SYSTEM_MESSAGE = """
+private const val VALIDATION_SYSTEM_MESSAGE = """
         Vurder om tittel og beskrivelse for et rekrutteringstreff overholder NAVs retningslinjer, gjeldende lovverk innenfor personvernlovgivning og likestillings- og diskrimineringsloven. Retningslinjene gjelder for både arbeidstaker og arbeidsgiver. Analyser teksten under for tegn på diskriminerende, biased, ekskluderende, umoralsk eller uetisk tekst i input eller biased språk basert på kjønn, alder, etnisitet, religion, alder eller funksjonsevne. Med bias menes forutinntatthet knyttet til spesifikke egenskaper hos brukergrupper eller enkeltindivider. Vurderingen må sikre at prinsippet om forklarbarhet, 
         Identifiser og forklar hvorfor teksten eventuelt bryter med inkluderende språkpraksis, og gi veiledning til en alternativ formulering og begrunnelse for alternativ formulering. Sikre at teksten og svaret:
         1. Ikke kompromitter andres personvern ved å avsløre, behandle, utlede eller generere personopplysninger, deltakere, ytelser eller brukergrupper.
@@ -123,7 +149,7 @@ object OpenAiClient {
         - begrunnelse (string)
     """
 
-    private const val SANITIZATION_SYSTEM_MESSAGE = """
+private const val SANITIZATION_SYSTEM_MESSAGE = """
         Du er en ekspert på personvern og anonymisering. 
         Returner kun det sanerte JSON‑objektet, uten noen omkringliggende tekst eller markdown.
         Begrens meldinger som ikke bryter retningslinjene til høyst to setninger, og de som bryter til høyst tre setninger.
@@ -132,4 +158,4 @@ object OpenAiClient {
         Eksempel på svar som ikke er akseptabel fordi den inneholder personnavn som Jenny Hansen : "Teksten inneholder personopplysninger, som navn ("Jenny Hansen") og telefonnummer. Dette er i strid med NAVs retningslinjer som krever at informasjon om enkeltpersoner ikke skal gjengis."
         Eksempel på svar som er akseptabelt: Teksten inneholder personopplysninger, som navn og telefonnummer. Dette er i strid med NAVs retningslinjer som krever at informasjon om enkeltpersoner ikke skal gjengis.
     """
-}
+

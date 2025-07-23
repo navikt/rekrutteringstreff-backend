@@ -33,6 +33,7 @@ dependencies {
     implementation("com.auth0:jwks-rsa:0.22.1")
     kapt("io.swagger.parser.v3:swagger-parser:$swaggerParserVersion")
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
+    implementation("com.fasterxml.jackson.module:jackson-module-jsonSchema:2.17.0")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
