@@ -243,4 +243,35 @@ class JobbsøkerRepositoryTest {
         assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("svar_ja_person")
         assertThat(svarJaHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
     }
+
+    @Test
+    fun `svarNeiTilInvitasjon lager en svar-nei-hendelse`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Nei")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Kandidatnummer("K123"),
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere.first().hendelser).hasSize(1)
+
+        repository.svarNeiTilInvitasjon(fødselsnummer, treffId, "svar_nei_person")
+
+        jobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere).hasSize(1)
+        val hendelser = jobbsøkere.first().hendelser
+        assertThat(hendelser).hasSize(2)
+
+        val svarNeiHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON }
+        assertThat(svarNeiHendelse).isNotNull
+        svarNeiHendelse!!
+        assertThat(svarNeiHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
+        assertThat(svarNeiHendelse.aktørIdentifikasjon).isEqualTo("svar_nei_person")
+        assertThat(svarNeiHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+    }
 }

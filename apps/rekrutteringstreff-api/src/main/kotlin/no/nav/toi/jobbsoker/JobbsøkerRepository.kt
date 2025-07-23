@@ -191,6 +191,19 @@ class JobbsøkerRepository(
         }
     }
 
+    fun svarNeiTilInvitasjon(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String) {
+        dataSource.connection.use { c ->
+            try {
+                val treffDbId = c.treffDbId(treff)
+                val jobbsøkerDbId = c.hentJobbsøkerDbIder(treffDbId, listOf(fødselsnummer)).firstOrNull()
+                    ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+                c.batchInsertHendelser(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON, listOf(jobbsøkerDbId), opprettetAv, AktørType.JOBBSØKER)
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
+
 
     private fun Connection.hentJobbsøkerDbIder(treffDbId: Long, fødselsnumre: List<Fødselsnummer>): List<Long> {
         val sql = "SELECT db_id FROM jobbsoker WHERE treff_db_id = ? AND fodselsnummer = ANY(?)"

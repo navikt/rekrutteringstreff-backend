@@ -436,4 +436,51 @@ class JobbsøkerTest {
         assertThat(svarJaFødselsnummer).isEqualTo(fnr)
     }
 
+    @Test
+    fun `svar nei til invitasjon`() {
+        val token = authServer.lagToken(authPort, navIdent = "A987654", groups = listOf(AzureAdRoller.utvikler))
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12345678901")
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(
+                    treffId,
+                    fnr,
+                    Kandidatnummer("K123"),
+                    Fornavn("Test"),
+                    Etternavn("Person"),
+                    null, null, null
+                )
+            )
+        )
+
+        assertThat(db.hentJobbsøkerHendelser(treffId)).hasSize(1)
+
+        val requestBody = """
+            { "fødselsnummer": "${fnr.asString}" }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/svar-nei")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_OK, response, result)
+
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser).hasSize(2)
+
+        val svarNeiHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON }
+        assertThat(svarNeiHendelse).isNotNull
+        svarNeiHendelse!!
+        assertThat(svarNeiHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
+        assertThat(svarNeiHendelse.aktørIdentifikasjon).isEqualTo("12345678901")
+        assertThat(svarNeiHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+
+        val svarNeiFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarNeiHendelse.id)
+        assertThat(svarNeiFødselsnummer).isEqualTo(fnr)
+    }
+
 }
