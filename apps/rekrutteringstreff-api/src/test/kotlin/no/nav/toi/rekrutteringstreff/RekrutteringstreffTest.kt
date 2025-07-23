@@ -316,7 +316,7 @@ class RekrutteringstreffTest {
         """.trimIndent()
 
         wireMockServer.stubFor(
-            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2023-03-15-preview"))
+            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"))
                 .inScenario("Validation and Sanitization")
                 .whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
                 .willReturn(
@@ -329,7 +329,7 @@ class RekrutteringstreffTest {
         )
 
         wireMockServer.stubFor(
-            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2023-03-15-preview"))
+            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"))
                 .inScenario("Validation and Sanitization")
                 .whenScenarioStateIs("Validation Complete")
                 .willReturn(

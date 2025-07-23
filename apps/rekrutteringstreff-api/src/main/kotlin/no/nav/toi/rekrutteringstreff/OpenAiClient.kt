@@ -1,8 +1,6 @@
 package no.nav.toi.rekrutteringstreff.rekrutteringstreff
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.fuel.httpPost
 import com.github.kittinunf.result.Result
@@ -13,16 +11,7 @@ import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpenAiMessage(val role: String, val content: String)
 
-data class JsonSchemaWrapper(
-    val name: String,
-    val schema: Map<String, Any>,
-    val strict: Boolean = true,
-)
-
-data class ResponseFormat(
-    val type: String = "json_schema",
-    val json_schema: JsonSchemaWrapper,
-)
+data class ResponseFormat(val type: String = "json_object")
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpenAiRequest(
@@ -42,24 +31,11 @@ data class OpenAiResponse(val choices: List<Choice>?)
 object OpenAiClient {
     private val apiUrl =
         System.getenv("OPENAI_API_URL")
-            ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2023-03-15-preview"
+            ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"
     private val apiKey = System.getenv("OPENAI_API_KEY") ?: "test-key"
     private val mapper = JacksonConfig.mapper
 
-    private inline fun <reified T> schema(): Map<String, Any> =
-        mapper.convertValue(
-            JsonSchemaGenerator(mapper).generateSchema(T::class.java),
-            object : TypeReference<Map<String, Any>>() {}
-        )
-
-    private val responseFormat: ResponseFormat by lazy {
-        ResponseFormat(
-            json_schema = JsonSchemaWrapper(
-                name = "rekrutteringstreff_validation",
-                schema = schema<ValiderRekrutteringstreffResponsDto>(),
-            )
-        )
-    }
+    private val responseFormat = ResponseFormat()   // {"type":"json_object"}
 
     private inline fun <reified R> call(
         systemMessage: String,
@@ -91,7 +67,8 @@ object OpenAiClient {
             is Result.Success -> result.get()
         }
 
-        val content = mapper.readValue<OpenAiResponse>(raw)
+        val content = mapper
+            .readValue<OpenAiResponse>(raw)
             .choices?.firstOrNull()?.message?.content
             ?: error("Ingen respons fra OpenAI")
 
