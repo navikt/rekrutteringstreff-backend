@@ -402,7 +402,7 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = result.value
                 assertThat(dto.hendelser).hasSize(1)
-                assertThat(dto.hendelser.first().hendelsestype).isEqualTo(Hendelsestype.OPPRETT.name)
+                assertThat(dto.hendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT.name)
             }
         }
     }
@@ -437,7 +437,7 @@ class RekrutteringstreffTest {
             )
         )
 
-        db.leggTilRekrutteringstreffHendelse(treff, Hendelsestype.OPPDATER, "A123456")
+        db.leggTilRekrutteringstreffHendelse(treff, RekrutteringstreffHendelsestype.OPPDATER, "A123456")
 
         val (_, res, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/allehendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -538,16 +538,16 @@ class RekrutteringstreffTest {
     }
 
     private fun hendelseEndepunktVarianter() = listOf(
-        Arguments.of("publiser", Hendelsestype.PUBLISER),
-        Arguments.of("avslutt-invitasjon", Hendelsestype.AVSLUTT_INVITASJON),
-        Arguments.of("avslutt-arrangement", Hendelsestype.AVSLUTT_ARRANGEMENT),
-        Arguments.of("avslutt-oppfolging", Hendelsestype.AVSLUTT_OPPFØLGING),
-        Arguments.of("avslutt", Hendelsestype.AVSLUTT)
+        Arguments.of("publiser", RekrutteringstreffHendelsestype.PUBLISER),
+        Arguments.of("avslutt-invitasjon", RekrutteringstreffHendelsestype.AVSLUTT_INVITASJON),
+        Arguments.of("avslutt-arrangement", RekrutteringstreffHendelsestype.AVSLUTT_ARRANGEMENT),
+        Arguments.of("avslutt-oppfolging", RekrutteringstreffHendelsestype.AVSLUTT_OPPFØLGING),
+        Arguments.of("avslutt", RekrutteringstreffHendelsestype.AVSLUTT)
     )
 
     @ParameterizedTest
     @MethodSource("hendelseEndepunktVarianter")
-    fun `Endepunkter som kun legger til hendelse`(path: String, forventetHendelsestype: Hendelsestype) {
+    fun `Endepunkter som kun legger til hendelse`(path: String, forventetHendelsestype: RekrutteringstreffHendelsestype) {
         val navIdent = "Z999999"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent)
@@ -562,6 +562,6 @@ class RekrutteringstreffTest {
         assertThat(hendelser).hasSize(2)
         assertThat(hendelser.first().hendelsestype).isEqualTo(forventetHendelsestype)
         assertThat(hendelser.first().aktørIdentifikasjon).isEqualTo(navIdent)
-        assertThat(hendelser.last().hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(hendelser.last().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT)
     }
 }

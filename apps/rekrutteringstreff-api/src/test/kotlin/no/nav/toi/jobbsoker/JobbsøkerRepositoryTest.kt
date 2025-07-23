@@ -1,8 +1,8 @@
 package no.nav.toi.jobbsoker
 
 import no.nav.toi.AktørType
-import no.nav.toi.Hendelsestype
 import no.nav.toi.JacksonConfig
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -61,7 +61,7 @@ class JobbsøkerRepositoryTest {
         val h = js.hendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
     }
@@ -93,7 +93,7 @@ class JobbsøkerRepositoryTest {
         val h = js.hendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
     }
@@ -145,7 +145,7 @@ class JobbsøkerRepositoryTest {
             val h = js.hendelser.first()
             assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
             assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-            assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+            assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT)
             assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
             assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
         }
@@ -175,7 +175,7 @@ class JobbsøkerRepositoryTest {
         assertThat(hendelse.kandidatnummer?.asString).isEqualTo("K7890")
         assertThat(hendelse.fornavn.asString).isEqualTo("Emil")
         assertThat(hendelse.etternavn.asString).isEqualTo("Hansen")
-        assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT)
         assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
         assertThat(hendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
@@ -204,12 +204,12 @@ class JobbsøkerRepositoryTest {
         val hendelser = jobbsøkere.first().hendelser
         assertThat(hendelser).hasSize(2)
 
-        val inviterHendelse = hendelser.find { it.hendelsestype == Hendelsestype.INVITER }
+        val inviterHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.INVITER }
         assertThat(inviterHendelse).isNotNull
         inviterHendelse!!
         assertThat(inviterHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(inviterHendelse.aktørIdentifikasjon).isEqualTo("inviterende_person")
         assertThat(inviterHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(hendelser.find { it.hendelsestype == Hendelsestype.OPPRETT }).isNotNull
+        assertThat(hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETT }).isNotNull
     }
 }

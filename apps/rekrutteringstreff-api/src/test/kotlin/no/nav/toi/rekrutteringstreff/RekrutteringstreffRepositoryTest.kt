@@ -1,7 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
-import no.nav.toi.Hendelsestype
 import no.nav.toi.JacksonConfig
+import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.nowOslo
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
@@ -50,7 +50,7 @@ class RekrutteringstreffRepositoryTest {
 
         val opprett = repository.hentHendelser(id)
         assertThat(opprett).hasSize(1)
-        assertThat(opprett.first().hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(opprett.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT)
 
         repository.oppdater(
             id,
@@ -85,9 +85,9 @@ class RekrutteringstreffRepositoryTest {
         val hendelser = repository.hentHendelser(id)
         assertThat(hendelser).hasSize(3)
 
-        assertThat(hendelser[0].hendelsestype).isEqualTo(Hendelsestype.OPPDATER)
-        assertThat(hendelser[1].hendelsestype).isEqualTo(Hendelsestype.OPPDATER)
-        assertThat(hendelser[2].hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(hendelser[0].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPDATER)
+        assertThat(hendelser[1].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPDATER)
+        assertThat(hendelser[2].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT)
         assertThat(hendelser.first().tidspunkt)
             .isAfterOrEqualTo(hendelser.last().tidspunkt)
             .isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))
@@ -113,11 +113,11 @@ class RekrutteringstreffRepositoryTest {
         val hendelser = repository.hentHendelser(id)
         assertThat(hendelser).hasSize(5)
         assertThat(hendelser.map { it.hendelsestype }).containsExactly(
-            Hendelsestype.AVSLUTT,
-            Hendelsestype.AVSLUTT_OPPFØLGING,
-            Hendelsestype.AVSLUTT_ARRANGEMENT,
-            Hendelsestype.AVSLUTT_INVITASJON,
-            Hendelsestype.OPPRETT
+            RekrutteringstreffHendelsestype.AVSLUTT,
+            RekrutteringstreffHendelsestype.AVSLUTT_OPPFØLGING,
+            RekrutteringstreffHendelsestype.AVSLUTT_ARRANGEMENT,
+            RekrutteringstreffHendelsestype.AVSLUTT_INVITASJON,
+            RekrutteringstreffHendelsestype.OPPRETT
         )
     }
 }

@@ -121,7 +121,7 @@ class ArbeidsgiverTest {
         val hendelser = db.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
         val h = hendelser.first()
-        assertThat(h.hendelsestype).isEqualTo(Hendelsestype.OPPRETT)
+        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktøridentifikasjon).isEqualTo("A123456")
     }
@@ -179,7 +179,7 @@ class ArbeidsgiverTest {
                 actualArbeidsgivere.forEach { arbeidsgiver ->
                     assertThat(arbeidsgiver.hendelser).hasSize(1)
                     val hendelse = arbeidsgiver.hendelser.first()
-                    assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.OPPRETT.toString())
+                    assertThat(hendelse.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT.toString())
                     assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                     assertThat(hendelse.aktøridentifikasjon).isEqualTo("testperson")
                 }
@@ -223,7 +223,7 @@ class ArbeidsgiverTest {
                 val hendelser = result.value
                 assertThat(hendelser).hasSize(1)
                 val hendelse = hendelser.first()
-                assertThat(hendelse.hendelsestype).isEqualTo(Hendelsestype.OPPRETT.name)
+                assertThat(hendelse.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT.name)
                 assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                 assertThat(hendelse.aktøridentifikasjon).isEqualTo("A123456")
                 assertThat(hendelse.orgnr).isEqualTo("777777777")

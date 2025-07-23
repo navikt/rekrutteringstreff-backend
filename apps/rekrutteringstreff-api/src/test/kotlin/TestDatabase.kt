@@ -86,7 +86,7 @@ class TestDatabase {
                     if (rs.next()) JobbsøkerHendelse(
                         id                    = UUID.fromString(rs.getString("id")),
                         tidspunkt             = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                        hendelsestype         = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                        hendelsestype         = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
                         opprettetAvAktørType  = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
                         aktørIdentifikasjon   = rs.getString("aktøridentifikasjon")
                     ) else null
@@ -115,7 +115,7 @@ class TestDatabase {
                     if (rs.next()) ArbeidsgiverHendelse(
                         id                    = UUID.fromString(rs.getString("id")),
                         tidspunkt             = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                        hendelsestype         = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                        hendelsestype         = ArbeidsgiverHendelsestype.valueOf(rs.getString("hendelsestype")),
                         opprettetAvAktørType  = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
                         aktøridentifikasjon   = rs.getString("aktøridentifikasjon")
                     ) else null
@@ -209,7 +209,7 @@ class TestDatabase {
             }
     }
 
-    fun leggTilRekrutteringstreffHendelse(treffId: TreffId, hendelsestype: Hendelsestype, aktørIdent: String) =
+    fun leggTilRekrutteringstreffHendelse(treffId: TreffId, hendelsestype: RekrutteringstreffHendelsestype, aktørIdent: String) =
         dataSource.connection.use { c ->
             val treffDbId = c.prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").apply {
                 setObject(1, treffId.somUuid)
@@ -295,7 +295,7 @@ class TestDatabase {
                         if (rs.next()) RekrutteringstreffHendelse(
                             id = UUID.fromString(rs.getString("hendelse_id")),
                             tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atOslo(),
-                            hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                            hendelsestype = RekrutteringstreffHendelsestype.valueOf(rs.getString("hendelsestype")),
                             opprettetAvAktørType = AktørType.valueOf(rs.getString("aktørtype")),
                             aktørIdentifikasjon = rs.getString("ident")
                         ) else null

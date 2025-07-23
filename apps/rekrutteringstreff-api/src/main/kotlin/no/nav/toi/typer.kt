@@ -1,4 +1,16 @@
 package no.nav.toi
 
- enum class Hendelsestype { OPPRETT, OPPDATER, SLETT, PUBLISER, INVITER, AVSLUTT_INVITASJON, AVSLUTT_ARRANGEMENT, AVSLUTT_OPPFØLGING, AVSLUTT }
+
+enum class JobbsøkerHendelsestype {
+    OPPRETT, OPPDATER, SLETT, INVITER, SVAR_JA_TIL_INVITASJON
+}
+
+enum class ArbeidsgiverHendelsestype {
+    OPPRETT, OPPDATER, SLETT
+}
+
+enum class RekrutteringstreffHendelsestype {
+    OPPRETT, OPPDATER, SLETT, PUBLISER, AVSLUTT, AVSLUTT_ARRANGEMENT, AVSLUTT_INVITASJON, AVSLUTT_OPPFØLGING
+}
+
 enum class AktørType { ARRANGØR }

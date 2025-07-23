@@ -3,7 +3,7 @@ package no.nav.toi.jobbsoker
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
-import no.nav.toi.Hendelsestype
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.Statement
@@ -18,7 +18,7 @@ import java.sql.ResultSet
 data class JobbsøkerHendelse(
     val id: UUID,
     val tidspunkt: ZonedDateTime,
-    val hendelsestype: Hendelsestype,
+    val hendelsestype: JobbsøkerHendelsestype,
     val opprettetAvAktørType: AktørType,
     val aktørIdentifikasjon: String?
 )
@@ -26,7 +26,7 @@ data class JobbsøkerHendelse(
 data class JobbsøkerHendelseMedJobbsøkerData(
     val id: UUID,
     val tidspunkt: ZonedDateTime,
-    val hendelsestype: Hendelsestype,
+    val hendelsestype: JobbsøkerHendelsestype,
     val opprettetAvAktørType: AktørType,
     val aktørIdentifikasjon: String?,
     val fødselsnummer: Fødselsnummer,
@@ -52,7 +52,7 @@ class JobbsøkerRepository(
             try {
                 val treffId = c.treffDbId(treff)
                 val jsIds = c.batchInsertJobbsøkere(treffId, jobsøkere)
-                c.batchInsertHendelser(Hendelsestype.OPPRETT,jsIds, opprettetAv)
+                c.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETT,jsIds, opprettetAv)
                 c.commit()
             } catch (e: Exception) { c.rollback(); throw e }
         }
@@ -89,7 +89,7 @@ class JobbsøkerRepository(
     }
 
     private fun Connection.batchInsertHendelser(
-        hendelsestype: Hendelsestype,
+        hendelsestype: JobbsøkerHendelsestype,
         jobbsøkerIds: List<Long>,
         opprettetAv: String,
         size: Int = 500
@@ -169,7 +169,7 @@ class JobbsøkerRepository(
             try {
                 val treffDbId = c.treffDbId(treff)
                 val jobbsøkerDbIds = c.hentJobbsøkerDbIder(treffDbId, fødselsnumre)
-                c.batchInsertHendelser(Hendelsestype.INVITER,jobbsøkerDbIds, opprettetAv)
+                c.batchInsertHendelser(JobbsøkerHendelsestype.INVITER,jobbsøkerDbIds, opprettetAv)
             } catch (e: Exception) {
                 throw e
             }
@@ -230,7 +230,7 @@ class JobbsøkerRepository(
                                 id = UUID.fromString(rs.getString("hendelse_id")),
                                 tidspunkt = rs.getTimestamp("tidspunkt").toInstant()
                                     .atZone(java.time.ZoneId.of("Europe/Oslo")),
-                                hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                                hendelsestype = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
                                 opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
                                 aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
                                 fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
@@ -258,7 +258,7 @@ class JobbsøkerRepository(
             JobbsøkerHendelse(
                 id = UUID.fromString(h.id),
                 tidspunkt = ZonedDateTime.parse(h.tidspunkt),
-                hendelsestype = Hendelsestype.valueOf(h.hendelsestype),
+                hendelsestype = JobbsøkerHendelsestype.valueOf(h.hendelsestype),
                 opprettetAvAktørType = AktørType.valueOf(h.opprettetAvAktortype),
                 aktørIdentifikasjon = h.aktøridentifikasjon
             )

@@ -17,7 +17,7 @@ import kotlin.io.use
 data class RekrutteringstreffHendelse(
     val id: UUID,
     val tidspunkt: ZonedDateTime,
-    val hendelsestype: Hendelsestype,
+    val hendelsestype: RekrutteringstreffHendelsestype,
     val opprettetAvAktørType: AktørType,
     val aktørIdentifikasjon: String?
 )
@@ -74,7 +74,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 setArray(++i, c.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
             }.executeQuery().run { next(); getLong(1) }
 
-            leggTilHendelse(c, dbId, Hendelsestype.OPPRETT, AktørType.ARRANGØR, dto.opprettetAvPersonNavident)
+            leggTilHendelse(c, dbId, RekrutteringstreffHendelsestype.OPPRETT, AktørType.ARRANGØR, dto.opprettetAvPersonNavident)
         }
         return nyTreffId
     }
@@ -105,7 +105,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 setObject(++i, treff.somUuid)
             }.executeUpdate()
 
-            leggTilHendelse(c, dbId, Hendelsestype.OPPDATER, AktørType.ARRANGØR, oppdatertAv)
+            leggTilHendelse(c, dbId, RekrutteringstreffHendelsestype.OPPDATER, AktørType.ARRANGØR, oppdatertAv)
         }
     }
 
@@ -213,7 +213,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                         if (rs.next()) RekrutteringstreffHendelse(
                             id = UUID.fromString(rs.getString("hendelse_id")),
                             tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atOslo(),
-                            hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                            hendelsestype = RekrutteringstreffHendelsestype.valueOf(rs.getString("hendelsestype")),
                             opprettetAvAktørType = AktørType.valueOf(rs.getString("aktørtype")),
                             aktørIdentifikasjon = rs.getString("ident")
                         ) else null
@@ -284,26 +284,26 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
 
     fun publiser(treff: TreffId, publisertAv: String) {
-        leggTilHendelseForTreff(treff, Hendelsestype.PUBLISER, publisertAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.PUBLISER, publisertAv)
     }
 
     fun avsluttInvitasjon(treff: TreffId, avsluttetAv: String) {
-        leggTilHendelseForTreff(treff, Hendelsestype.AVSLUTT_INVITASJON, avsluttetAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVSLUTT_INVITASJON, avsluttetAv)
     }
 
     fun avsluttArrangement(treff: TreffId, avsluttetAv: String) {
-        leggTilHendelseForTreff(treff, Hendelsestype.AVSLUTT_ARRANGEMENT, avsluttetAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVSLUTT_ARRANGEMENT, avsluttetAv)
     }
 
     fun avsluttOppfolging(treff: TreffId, avsluttetAv: String) {
-        leggTilHendelseForTreff(treff, Hendelsestype.AVSLUTT_OPPFØLGING, avsluttetAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVSLUTT_OPPFØLGING, avsluttetAv)
     }
 
     fun avslutt(treff: TreffId, avsluttetAv: String) {
-        leggTilHendelseForTreff(treff, Hendelsestype.AVSLUTT, avsluttetAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVSLUTT, avsluttetAv)
     }
 
-    private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: Hendelsestype, ident: String) {
+    private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
         dataSource.connection.use { c ->
             val dbId = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id=?")
                 .apply { setObject(1, treff.somUuid) }
@@ -317,7 +317,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     private fun leggTilHendelse(
         c: Connection,
         treffDbId: Long,
-        type: Hendelsestype,
+        type: RekrutteringstreffHendelsestype,
         aktørType: AktørType,
         ident: String
     ) {

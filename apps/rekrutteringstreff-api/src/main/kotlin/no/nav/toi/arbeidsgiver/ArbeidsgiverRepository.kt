@@ -3,7 +3,7 @@ package no.nav.toi.arbeidsgiver
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
-import no.nav.toi.Hendelsestype
+import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.SQLException
@@ -18,7 +18,7 @@ import javax.sql.DataSource
 data class ArbeidsgiverHendelse(
     val id: UUID,
     val tidspunkt: ZonedDateTime,
-    val hendelsestype: Hendelsestype,
+    val hendelsestype: ArbeidsgiverHendelsestype,
     val opprettetAvAktørType: AktørType,
     val aktøridentifikasjon: String?
 )
@@ -26,7 +26,7 @@ data class ArbeidsgiverHendelse(
 data class ArbeidsgiverHendelseMedArbeidsgiverData(
     val id: UUID,
     val tidspunkt: ZonedDateTime,
-    val hendelsestype: Hendelsestype,
+    val hendelsestype: ArbeidsgiverHendelsestype,
     val opprettetAvAktørType: AktørType,
     val aktøridentifikasjon: String?,
     val orgnr: Orgnr,
@@ -55,7 +55,7 @@ class ArbeidsgiverRepository(
             val treffDbId: Long = hentTreffDbId(connection, treff)
                 ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
             val arbeidsgiverDbId = leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
-            leggTilHendelse(connection, arbeidsgiverDbId, Hendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
+            leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
         }
     }
 
@@ -78,7 +78,7 @@ class ArbeidsgiverRepository(
     private fun leggTilHendelse(
         connection: Connection,
         arbeidsgiverDbId: Long,
-        hendelsestype: Hendelsestype,
+        hendelsestype: ArbeidsgiverHendelsestype,
         opprettetAvAktørType: AktørType,
         aktøridentifikasjon: String
     ) {
@@ -176,7 +176,7 @@ class ArbeidsgiverRepository(
                             ArbeidsgiverHendelseMedArbeidsgiverData(
                                 id = UUID.fromString(rs.getString("hendelse_id")),
                                 tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                                hendelsestype = Hendelsestype.valueOf(rs.getString("hendelsestype")),
+                                hendelsestype = ArbeidsgiverHendelsestype.valueOf(rs.getString("hendelsestype")),
                                 opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
                                 aktøridentifikasjon = rs.getString("aktøridentifikasjon"),
                                 orgnr = Orgnr(rs.getString("orgnr")),
@@ -202,7 +202,7 @@ class ArbeidsgiverRepository(
             ArbeidsgiverHendelse(
                 id = UUID.fromString(h.id),
                 tidspunkt = ZonedDateTime.parse(h.tidspunkt),
-                hendelsestype = Hendelsestype.valueOf(h.hendelsestype),
+                hendelsestype = ArbeidsgiverHendelsestype.valueOf(h.hendelsestype),
                 opprettetAvAktørType = AktørType.valueOf(h.opprettetAvAktortype),
                 aktøridentifikasjon = h.aktøridentifikasjon
             )
