@@ -428,8 +428,8 @@ class JobbsøkerTest {
         val svarJaHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON }
         assertThat(svarJaHendelse).isNotNull
         svarJaHendelse!!
-        assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
-        assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("A987654")
+        assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
+        assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("12345678901")
         assertThat(svarJaHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
 
         val svarJaFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarJaHendelse.id)

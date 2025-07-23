@@ -13,4 +13,4 @@ enum class RekrutteringstreffHendelsestype {
     OPPRETT, OPPDATER, SLETT, PUBLISER, AVSLUTT, AVSLUTT_ARRANGEMENT, AVSLUTT_INVITASJON, AVSLUTT_OPPFØLGING
 }
 
-enum class AktørType { ARRANGØR }
+enum class AktørType { ARRANGØR, JOBBSØKER, ARBEIDSGIVER }

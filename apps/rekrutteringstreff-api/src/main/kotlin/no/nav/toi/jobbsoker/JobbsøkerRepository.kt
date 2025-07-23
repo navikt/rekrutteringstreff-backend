@@ -93,6 +93,7 @@ class JobbsøkerRepository(
         hendelsestype: JobbsøkerHendelsestype,
         jobbsøkerIds: List<Long>,
         opprettetAv: String,
+        arrangørtype: AktørType = AktørType.ARRANGØR,
         size: Int = 500
     ) {
         val sql = """
@@ -107,7 +108,7 @@ class JobbsøkerRepository(
                 stmt.setLong    (2, id)
                 stmt.setTimestamp(3, Timestamp.from(Instant.now()))
                 stmt.setString  (4, hendelsestype.name)
-                stmt.setString  (5, AktørType.ARRANGØR.name)
+                stmt.setString  (5, arrangørtype.name)
                 stmt.setString  (6, opprettetAv)
                 stmt.addBatch(); if (++n == size) { stmt.executeBatch(); n = 0 }
             }
@@ -183,7 +184,7 @@ class JobbsøkerRepository(
                 val treffDbId = c.treffDbId(treff)
                 val jobbsøkerDbId = c.hentJobbsøkerDbIder(treffDbId, listOf(fødselsnummer)).firstOrNull()
                     ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
-                c.batchInsertHendelser(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON, listOf(jobbsøkerDbId), opprettetAv)
+                c.batchInsertHendelser(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON, listOf(jobbsøkerDbId), opprettetAv, AktørType.JOBBSØKER)
             } catch (e: Exception) {
                 throw e
             }

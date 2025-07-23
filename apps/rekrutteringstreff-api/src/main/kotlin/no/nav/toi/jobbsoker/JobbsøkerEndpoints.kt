@@ -274,9 +274,8 @@ private fun svarJaHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx
     val dto = ctx.bodyAsClass<SvarJaDto>()
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val fødselsnummer = Fødselsnummer(dto.fødselsnummer)
-    val navIdent = ctx.extractNavIdent()
 
-    repo.svarJaTilInvitasjon(fødselsnummer, treffId, navIdent)
+    repo.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
     ctx.status(200)
 }
 

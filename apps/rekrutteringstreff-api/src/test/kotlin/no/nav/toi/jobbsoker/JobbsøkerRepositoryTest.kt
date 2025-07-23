@@ -239,7 +239,7 @@ class JobbsøkerRepositoryTest {
         val svarJaHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON }
         assertThat(svarJaHendelse).isNotNull
         svarJaHendelse!!
-        assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+        assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
         assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("svar_ja_person")
         assertThat(svarJaHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
     }
