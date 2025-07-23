@@ -6,6 +6,7 @@ import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -390,7 +391,7 @@ class JobbsøkerTest {
 
     @Test
     fun `svar ja til invitasjon`() {
-        val token = authServer.lagToken(authPort, navIdent = "A987654")
+        val token = authServer.lagToken(authPort, navIdent = "A987654", groups = listOf(AzureAdRoller.utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
 

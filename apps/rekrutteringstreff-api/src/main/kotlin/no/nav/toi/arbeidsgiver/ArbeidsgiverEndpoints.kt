@@ -5,6 +5,8 @@ import io.javalin.http.Context
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.Rolle
+import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.time.ZonedDateTime
@@ -67,6 +69,7 @@ data class ArbeidsgiverOutboundDto(
     methods = [HttpMethod.POST]
 )
 private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass()
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     repo.leggTil(dto.somLeggTilArbeidsgiver(), treff, ctx.extractNavIdent())
@@ -113,6 +116,7 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
     methods = [HttpMethod.GET]
 )
 private fun hentArbeidsgivereHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     val arbeidsgivere = repo.hentArbeidsgivere(treff)
     ctx.status(200).json(arbeidsgivere.toOutboundDto())
@@ -166,6 +170,7 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
     methods = [HttpMethod.GET]
 )
 private fun hentArbeidsgiverHendelserHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     val hendelser = repo.hentArbeidsgiverHendelser(treff)
     ctx.status(200).json(hendelser.map { h ->

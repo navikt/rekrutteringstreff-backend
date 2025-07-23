@@ -5,6 +5,8 @@ import io.javalin.http.Context
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.Rolle
+import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.time.ZonedDateTime
@@ -112,6 +114,7 @@ data class SvarJaDto(
     methods = [HttpMethod.POST]
 )
 private fun leggTilJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()   // leser array
     val treff  = TreffId(ctx.pathParam(pathParamTreffId))
     repo.leggTil(dtoer.map { it.domene() }, treff, ctx.extractNavIdent())
@@ -168,6 +171,7 @@ private fun leggTilJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
     methods = [HttpMethod.GET]
 )
 private fun hentJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     val jobbsøkere = repo.hentJobbsøkere(treff)
     ctx.status(200).json(jobbsøkere.toOutboundDto())
@@ -206,6 +210,7 @@ private fun hentJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Uni
     methods = [HttpMethod.GET]
 )
 private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     val hendelser = repo.hentJobbsøkerHendelser(treff)
     ctx.status(200).json(hendelser.map { h ->
@@ -239,6 +244,7 @@ private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context
     methods = [HttpMethod.POST]
 )
 private fun inviterJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val dto = ctx.bodyAsClass<InviterJobbsøkereDto>()
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val fødselsnumre = dto.fødselsnumre.map(::Fødselsnummer)
@@ -264,6 +270,7 @@ private fun inviterJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
     methods = [HttpMethod.POST]
 )
 private fun svarJaHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon()
     val dto = ctx.bodyAsClass<SvarJaDto>()
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val fødselsnummer = Fødselsnummer(dto.fødselsnummer)
