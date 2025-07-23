@@ -14,6 +14,7 @@ private const val pathParamTreffId = "id"
 private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
 private const val inviterPath = "$jobbsøkerPath/inviter"
+private const val svarJaPath = "$jobbsøkerPath/svar-ja"
 
 
 data class JobbsøkerDto(
@@ -69,6 +70,10 @@ data class JobbsøkerOutboundDto(
 
 data class InviterJobbsøkereDto(
     val fødselsnumre: List<String>
+)
+
+data class SvarJaDto(
+    val fødselsnummer: String
 )
 
 @OpenApi(
@@ -140,7 +145,7 @@ private fun leggTilJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
                         {
                             "id": "any-uuid",
                             "tidspunkt": "2025-04-14T10:38:41Z",
-                            "hendelsestype": "LAGT_TIL",
+                            "hendelsestype": "OPPRETT",
                             "opprettetAvAktørType": "ARRANGØR",
                             "aktørIdentifikasjon": "testperson"
                         }
@@ -186,7 +191,7 @@ private fun hentJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Uni
                 {
                     "id": "any-uuid",
                     "tidspunkt": "2025-04-14T10:38:41Z",
-                    "hendelsestype": "LAGT_TIL",
+                    "hendelsestype": "OPPRETT",
                     "opprettetAvAktørType": "ARRANGØR",
                     "aktørIdentifikasjon": "testperson",
                     "fødselsnummer": "12345678901",
@@ -243,6 +248,32 @@ private fun inviterJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
     ctx.status(200)
 }
 
+@OpenApi(
+    summary = "Registrerer at en jobbsøker har takket ja til invitasjon.",
+    operationId = "svarJaTilInvitasjon",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = SvarJaDto::class,
+            example = """{ "fødselsnummer": "12345678901" }"""
+        )]
+    ),
+    responses = [OpenApiResponse("200", description = "Hendelse for 'svart ja' er lagt til.")],
+    path = svarJaPath,
+    methods = [HttpMethod.POST]
+)
+private fun svarJaHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    val dto = ctx.bodyAsClass<SvarJaDto>()
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val fødselsnummer = Fødselsnummer(dto.fødselsnummer)
+    val navIdent = ctx.extractNavIdent()
+
+    repo.svarJaTilInvitasjon(fødselsnummer, treffId, navIdent)
+    ctx.status(200)
+}
+
+
 private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     map {
         JobbsøkerOutboundDto(
@@ -270,4 +301,5 @@ fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     get(jobbsøkerPath, hentJobbsøkereHandler(repo))
     get(hendelserPath, hentJobbsøkerHendelserHandler(repo))
     post(inviterPath, inviterJobbsøkereHandler(repo))
+    post(svarJaPath, svarJaHandler(repo))
 }

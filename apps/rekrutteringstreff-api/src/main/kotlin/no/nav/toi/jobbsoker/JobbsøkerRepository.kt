@@ -14,6 +14,7 @@ import java.util.*
 import javax.sql.DataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import kotlin.io.use
 
 data class JobbsøkerHendelse(
     val id: UUID,
@@ -170,6 +171,19 @@ class JobbsøkerRepository(
                 val treffDbId = c.treffDbId(treff)
                 val jobbsøkerDbIds = c.hentJobbsøkerDbIder(treffDbId, fødselsnumre)
                 c.batchInsertHendelser(JobbsøkerHendelsestype.INVITER,jobbsøkerDbIds, opprettetAv)
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
+
+    fun svarJaTilInvitasjon(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String) {
+        dataSource.connection.use { c ->
+            try {
+                val treffDbId = c.treffDbId(treff)
+                val jobbsøkerDbId = c.hentJobbsøkerDbIder(treffDbId, listOf(fødselsnummer)).firstOrNull()
+                    ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+                c.batchInsertHendelser(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON, listOf(jobbsøkerDbId), opprettetAv)
             } catch (e: Exception) {
                 throw e
             }

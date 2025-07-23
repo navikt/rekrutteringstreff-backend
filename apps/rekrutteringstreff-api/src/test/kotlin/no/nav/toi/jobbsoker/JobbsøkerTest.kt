@@ -387,4 +387,52 @@ class JobbsøkerTest {
         assertThat(inviterteFødselsnumre)
             .containsExactlyInAnyOrder(fnr1, fnr2)
     }
+
+    @Test
+    fun `svar ja til invitasjon`() {
+        val token = authServer.lagToken(authPort, navIdent = "A987654")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12345678901")
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(
+                    treffId,
+                    fnr,
+                    Kandidatnummer("K123"),
+                    Fornavn("Test"),
+                    Etternavn("Person"),
+                    null, null, null
+                )
+            )
+        )
+
+        assertThat(db.hentJobbsøkerHendelser(treffId)).hasSize(1)
+
+        val requestBody = """
+            { "fødselsnummer": "${fnr.asString}" }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_OK, response, result)
+
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser).hasSize(2)
+
+        val svarJaHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON }
+        assertThat(svarJaHendelse).isNotNull
+        svarJaHendelse!!
+        assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+        assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("A987654")
+        assertThat(svarJaHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+
+        val svarJaFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarJaHendelse.id)
+        assertThat(svarJaFødselsnummer).isEqualTo(fnr)
+    }
+
 }
