@@ -50,7 +50,7 @@ class SvarEndpoints {
             ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
         // TODO: Gir foreløpig et tilfeldig svar for demonstrasjon i påvente av endelig endepunkt i rekrutteringstreff-api
-        val svar = RekrutteringstreffSvarOutboundDto(Random.nextBoolean())
+        val svar = RekrutteringstreffSvarOutboundDto(Random.nextBoolean(), Random.nextBoolean(), Random.nextBoolean())
 
         log.info("Henter svar for rekrutteringstreff med id: $id, svar: ${svar.json()}")
 
@@ -61,10 +61,14 @@ class SvarEndpoints {
 fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient) = get(HENT_REKRUTTERINGSTREFF_SVAR, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient))
 
 data class RekrutteringstreffSvarOutboundDto(
+    private val erInvitert: Boolean,
+    private val harSvart: Boolean,
     private val påmeldt: Boolean,
 ) {
     fun json() = """
         {
+            "erInvitert": $påmeldt,
+            "harSvart": $påmeldt,
             "påmeldt": $påmeldt
         }
     """.trimIndent()

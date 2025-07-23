@@ -189,7 +189,11 @@ class MinsideTest {
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = mapper.readTree(result.get())
-                assertThat(dto["påmeldt"].asText()).isIn("true", "false") // randomly generated boolean value
+
+                // The answer is randomly generated boolean values for now
+                assertThat(dto["erInvitert"].asText()).isIn("true", "false")
+                assertThat(dto["harSvart"].asText()).isIn("true", "false")
+                assertThat(dto["påmeldt"].asText()).isIn("true", "false")
             }
         }
     }
