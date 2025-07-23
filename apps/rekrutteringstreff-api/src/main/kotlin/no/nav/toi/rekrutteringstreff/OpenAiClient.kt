@@ -88,6 +88,11 @@ object OpenAiClient {
             top_p = 0.95
         )
 
+    /*
+    TODO: Kallet kan fjernes dersom vi mot senere ki-modeller kan fjerne personino fra svar med instrukser i hovedprompten.
+    Brukes for å fjerne personopplysninger fra openai svar før det sendes til bruker av løsningen.
+    Eksempelvis vil personnavn  identifiseres som brudd på personvern i første prompt, og navnet blir returnert som en del av svaret der, men fjernes i andre prompt.
+    */
     fun sanitizeValidationResponse(svar: ValiderRekrutteringstreffResponsDto): ValiderRekrutteringstreffResponsDto =
         call(
             SANITIZATION_SYSTEM_MESSAGE,
@@ -119,7 +124,6 @@ object OpenAiClient {
     """
 
     private const val SANITIZATION_SYSTEM_MESSAGE = """
-       
         Du er en ekspert på personvern og anonymisering. 
         Returner kun det sanerte JSON‑objektet, uten noen omkringliggende tekst eller markdown.
         Begrens meldinger som ikke bryter retningslinjene til høyst to setninger, og de som bryter til høyst tre setninger.
