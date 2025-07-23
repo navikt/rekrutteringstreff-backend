@@ -35,7 +35,7 @@ object OpenAiClient {
     private val apiKey = System.getenv("OPENAI_API_KEY") ?: "test-key"
     private val mapper = JacksonConfig.mapper
 
-    private val responseFormat = ResponseFormat()   // {"type":"json_object"}
+    private val responseFormat = ResponseFormat()
 
     private inline fun <reified R> call(
         systemMessage: String,
@@ -77,9 +77,6 @@ object OpenAiClient {
 
     fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto =
         call(VALIDATION_SYSTEM_MESSAGE, dto.tekst, 0.0, 400, 1.0)
-
-    fun sanitizeValidationResponse(svar: ValiderRekrutteringstreffResponsDto): ValiderRekrutteringstreffResponsDto =
-        call(SANITIZATION_SYSTEM_MESSAGE, mapper.writeValueAsString(svar), 0.0, 400, 1.0)
 }
 
 private const val VALIDATION_SYSTEM_MESSAGE = """
@@ -101,11 +98,7 @@ private const val VALIDATION_SYSTEM_MESSAGE = """
         Returner JSON uten markdown med feltene:
         - bryterRetningslinjer (boolean)
         - begrunnelse (string)
-    """
 
-private const val SANITIZATION_SYSTEM_MESSAGE = """
-        Du er en ekspert på personvern og anonymisering. 
-        Returner kun det sanerte JSON‑objektet, uten noen omkringliggende tekst eller markdown.
         Begrens meldinger som ikke bryter retningslinjene til høyst to setninger, og de som bryter til høyst tre setninger.
         
         Svaret skal ikke inneholde noen som helst personopplysninger (for eksempel navn, e-postadresse, telefonnummer, fødselsdato eller andre identifiserende opplysninger).  Du skal ikke gjengi, referere til, eller på noen måte bruke denne informasjonen i svaret ditt. Du skal ikke generere personopplysninger ved å gjengi det som er skrevet inn. 

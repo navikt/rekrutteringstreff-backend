@@ -259,8 +259,7 @@ private fun validerRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val dto = ctx.bodyAsClass<ValiderRekrutteringstreffDto>()
     val validationResult = OpenAiClient.validateRekrutteringstreff(dto)
-    val sanitizedResult = OpenAiClient.sanitizeValidationResponse(validationResult)
-    ctx.status(200).json(sanitizedResult)
+    ctx.status(200).json(validationResult)
 }
 
 @OpenApi(

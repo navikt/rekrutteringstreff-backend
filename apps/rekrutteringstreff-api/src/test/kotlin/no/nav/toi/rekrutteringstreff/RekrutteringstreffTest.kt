@@ -328,18 +328,6 @@ class RekrutteringstreffTest {
                 .willSetStateTo("Validation Complete")
         )
 
-        wireMockServer.stubFor(
-            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"))
-                .inScenario("Validation and Sanitization")
-                .whenScenarioStateIs("Validation Complete")
-                .willReturn(
-                    WireMock.aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody(sanitizationResponseBody)
-                )
-        )
-
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val payload = """
@@ -359,7 +347,7 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val validationResult = mapper.readValue(result.get(), ValiderRekrutteringstreffResponsDto::class.java)
                 assertThat(validationResult.bryterRetningslinjer).isTrue()
-                assertThat(validationResult.begrunnelse).isEqualTo("Teksten spesifiserer et geografisk krav for kandidatene, noe som kan være diskriminerende.")
+                assertThat(validationResult.begrunnelse).isEqualTo("Beskrivelsen spesifiserer et geografisk område for søkere, noe som kan være diskriminerende.")
             }
         }
     }
