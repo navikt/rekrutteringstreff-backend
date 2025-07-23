@@ -46,18 +46,20 @@ object OpenAiClient {
     private val apiKey = System.getenv("OPENAI_API_KEY") ?: "test-key"
     private val mapper = JacksonConfig.mapper
 
-    private inline fun <reified T> schema(): Map<String, Any> {
-        val schemaObj = JsonSchemaGenerator(mapper).generateSchema(T::class.java)
-        val json = mapper.writeValueAsString(schemaObj)
-        return mapper.readValue(json, object : TypeReference<Map<String, Any>>() {})
-    }
-
-    private val responseFormat = ResponseFormat(
-        json_schema = JsonSchemaWrapper(
-            name = "rekrutteringstreff_validation",
-            schema = schema<ValiderRekrutteringstreffResponsDto>(),
+    private inline fun <reified T> schema(): Map<String, Any> =
+        mapper.convertValue(
+            JsonSchemaGenerator(mapper).generateSchema(T::class.java),
+            object : TypeReference<Map<String, Any>>() {}
         )
-    )
+
+    private val responseFormat: ResponseFormat by lazy {
+        ResponseFormat(
+            json_schema = JsonSchemaWrapper(
+                name = "rekrutteringstreff_validation",
+                schema = schema<ValiderRekrutteringstreffResponsDto>(),
+            )
+        )
+    }
 
     private inline fun <reified R> call(
         systemMessage: String,
@@ -80,10 +82,7 @@ object OpenAiClient {
         )
 
         val (_, _, result) = apiUrl.httpPost()
-            .header(
-                "api-key" to apiKey,
-                "Content-Type" to "application/json",
-            )
+            .header("api-key" to apiKey, "Content-Type" to "application/json")
             .body(body)
             .responseString()
 
@@ -92,40 +91,18 @@ object OpenAiClient {
             is Result.Success -> result.get()
         }
 
-        val content = mapper
-            .readValue<OpenAiResponse>(raw)
+        val content = mapper.readValue<OpenAiResponse>(raw)
             .choices?.firstOrNull()?.message?.content
             ?: error("Ingen respons fra OpenAI")
 
         return mapper.readValue(content.trim())
     }
 
-    fun validateRekrutteringstreff(
-        dto: ValiderRekrutteringstreffDto,
-    ): ValiderRekrutteringstreffResponsDto =
-        call(
-            VALIDATION_SYSTEM_MESSAGE,
-            dto.tekst,
-            temperature = 0.0,
-            maxTokens = 400,
-            topP = 1.0,
-        )
+    fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto =
+        call(VALIDATION_SYSTEM_MESSAGE, dto.tekst, 0.0, 400, 1.0)
 
-    /*
-       TODO: Kallet kan fjernes dersom vi mot senere ki-modeller kan fjerne personino fra svar med instrukser i hovedprompten.
-       Brukes for å fjerne personopplysninger fra openai svar før det sendes til bruker av løsningen.
-       Eksempelvis vil personnavn  identifiseres som brudd på personvern i første prompt, og navnet blir returnert som en del av svaret der, men fjernes i andre prompt.
-   */
-    fun sanitizeValidationResponse(
-        svar: ValiderRekrutteringstreffResponsDto,
-    ): ValiderRekrutteringstreffResponsDto =
-        call(
-            SANITIZATION_SYSTEM_MESSAGE,
-            mapper.writeValueAsString(svar),
-            temperature = 0.0,
-            maxTokens = 400,
-            topP = 1.0,
-        )
+    fun sanitizeValidationResponse(svar: ValiderRekrutteringstreffResponsDto): ValiderRekrutteringstreffResponsDto =
+        call(SANITIZATION_SYSTEM_MESSAGE, mapper.writeValueAsString(svar), 0.0, 400, 1.0)
 }
 
 private const val VALIDATION_SYSTEM_MESSAGE = """
