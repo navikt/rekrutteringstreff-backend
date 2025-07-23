@@ -103,5 +103,7 @@ private const val VALIDATION_SYSTEM_MESSAGE = """
         - begrunnelse (string)
 
         Begrens meldinger som ikke bryter retningslinjene til høyst to setninger, og de som bryter til høyst tre setninger.
+        
+        Eksempel på svar som er akseptabelt: Teksten inneholder personopplysninger, som navn og telefonnummer. Dette er i strid med NAVs retningslinjer som krever at informasjon om enkeltpersoner ikke skal gjengis.
     """
 
