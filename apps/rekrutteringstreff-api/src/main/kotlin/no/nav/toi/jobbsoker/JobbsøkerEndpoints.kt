@@ -14,11 +14,10 @@ import java.time.ZonedDateTime
 import java.util.*
 
 private const val pathParamTreffId = "id"
-private const val pathParamFødselsnummer = "fødselsnummer"
 
 private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
-private const val enkeltJobbsøkerPath = jobbsøkerPath + "/{$pathParamFødselsnummer}"
+private const val enkeltJobbsøkerPath = jobbsøkerPath + "/enkeltJobbsoker"
 private const val inviterPath = "$jobbsøkerPath/inviter"
 private const val svarJaPath = "$jobbsøkerPath/svar-ja"
 private const val svarNeiPath = "$jobbsøkerPath/svar-nei"
@@ -43,6 +42,8 @@ data class JobbsøkerDto(
         veilederNavIdent?.let(::VeilederNavIdent)
     )
 }
+
+data class EnkeltJobbsøkerInboundDto(val fødselsnummer: String)
 
 data class JobbsøkerHendelseOutboundDto(
     val id: String,
@@ -326,9 +327,15 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
     operationId = "hentJobbsøker",
     security = [OpenApiSecurity(name = "BearerAuth")],
     pathParams = [
-        OpenApiParam(name = "treffId", type = String::class, description = "ID for rekrutteringstreffet", required = true),
-        OpenApiParam(name = "fødselsnummer", type = String::class, description = "Jobbsøkerens fødselsnummer", required = true)
+        OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet", required = true)
     ],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(from = EnkeltJobbsøkerInboundDto::class, example = """
+            {
+              "fødselsnummer": "12345678901"
+            }
+        """)]
+    ),
     responses = [
         OpenApiResponse(status = "200", description = "Jobbsøker funnet", content = [OpenApiContent(from = JobbsøkerMedPåmeldingstatusOutboundDto::class, example = """
             {
@@ -370,13 +377,16 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
         OpenApiResponse(status = "404", description = "Jobbsøker ikke funnet")
     ],
     path = enkeltJobbsøkerPath,
-    methods = [HttpMethod.GET]
+    methods = [HttpMethod.POST]
 )
 private fun hentJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.BORGER)
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-    val fødselsnummer = Fødselsnummer(ctx.pathParam(pathParamFødselsnummer))
-    val jobbsøker = repo.hentJobbsøker(treffId, fødselsnummer)
+    val fødselsnummerDto = ctx.bodyAsClass<EnkeltJobbsøkerInboundDto>()
+    if(fødselsnummerDto.fødselsnummer.isEmpty()) {
+        throw IllegalArgumentException("Fødselsnummer må oppgis for å hente jobbsøker")
+    }
+    val jobbsøker = repo.hentJobbsøker(treffId, Fødselsnummer(fødselsnummerDto.fødselsnummer))
     if (jobbsøker == null) {
         ctx.status(404)
     } else {
@@ -437,5 +447,5 @@ fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     post(inviterPath, inviterJobbsøkereHandler(repo))
     post(svarJaPath, svarJaHandler(repo))
     post(svarNeiPath, svarNeiHandler(repo))
-    get(enkeltJobbsøkerPath, hentJobbsøkerHandler(repo))
+    post(enkeltJobbsøkerPath, hentJobbsøkerHandler(repo))
 }

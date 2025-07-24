@@ -485,7 +485,7 @@ class JobbsøkerTest {
     }
 
     @Test
-    fun `hentEnketreffIdltJobbsøker returnerer jobbsøker med alle data`() {
+    fun `hentEnkeltJobbsøker returnerer jobbsøker med alle data`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("11111111111")
         val token = authServer.lagToken(authPort, navIdent = "testperson")
@@ -628,13 +628,14 @@ class JobbsøkerTest {
     }
 
     private fun hentEnkeltJobbsøker(treffId: TreffId, fødselsnummer: Fødselsnummer, token: com.nimbusds.jwt.SignedJWT) =
-        Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/${fødselsnummer.asString}")
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/enkeltJobbsoker")
+            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
+            .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<JobbsøkerMedPåmeldingstatusOutboundDto> {
                 override fun deserialize(content: String) =
                     mapper.readValue(content, JobbsøkerMedPåmeldingstatusOutboundDto::class.java)
             })
-
 
 
 }
