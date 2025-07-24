@@ -618,6 +618,75 @@ class JobbsøkerTest {
     }
 
     @Test
+    fun `hentEnkeltJobbsøker håndterer harSvart når bruker har svart ja`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("11111111111")
+        val token = authServer.lagToken(authPort, navIdent = "test")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
+            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${borgerToken.serialize()}")
+            .responseString()
+
+        val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
+        assertThat(result.get().harSvart).isTrue()
+    }
+
+    @Test
+    fun `hentEnkeltJobbsøker håndterer harSvart når bruker har svart nei`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("22222222222")
+        val token = authServer.lagToken(authPort, navIdent = "test")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-nei")
+            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${borgerToken.serialize()}")
+            .responseString()
+
+        val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
+        assertThat(result.get().harSvart).isTrue()
+    }
+
+    @Test
+    fun `hentEnkeltJobbsøker håndterer harSvart når bruker ikke har svart`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("33333333333")
+        val token = authServer.lagToken(authPort, navIdent = "test")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
+        assertThat(result.get().harSvart).isFalse()
+    }
+
+    @Test
     fun `hentEnkeltJobbsøker returnerer 404 for ukjent jobbsøker`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("44444444444")

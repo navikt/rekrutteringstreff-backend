@@ -74,8 +74,9 @@ data class JobbsøkerMedPåmeldingstatusOutboundDto(
     val navkontor: String?,
     val veilederNavn: String?,
     val veilederNavIdent: String?,
-    val erPåmeldt: Boolean,
-    val erInvitert: Boolean,
+    val erPåmeldt: Boolean = false,
+    val erInvitert: Boolean = false,
+    val harSvart: Boolean = false,
     val hendelser: List<JobbsøkerHendelseOutboundDto>
 )
 
@@ -349,6 +350,7 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
               "veilederNavIdent": "V123456",
               "erPåmeldt": true,
               "erInvitert": true,
+              "harSvart": true,
               "hendelser": [
                 {
                   "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
@@ -405,6 +407,7 @@ private fun Jobbsøker.toOutboundDtoMedPåmeldingstatus() = JobbsøkerMedPåmeld
     veilederNavIdent = veilederNavIdent?.asString,
     erPåmeldt = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON },
     erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITER },
+    harSvart = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON },
     hendelser = hendelser.map { it.toOutboundDto() }
 )
 
