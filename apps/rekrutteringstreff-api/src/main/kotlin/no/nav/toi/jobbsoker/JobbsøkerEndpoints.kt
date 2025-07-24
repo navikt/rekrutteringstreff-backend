@@ -65,7 +65,13 @@ data class JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
     val etternavn: String
 )
 
-data class JobbsøkerMedPåmeldingstatusOutboundDto(
+data class StatuserOutboundDto(
+    val erPåmeldt: Boolean,
+    val erInvitert: Boolean,
+    val harSvart: Boolean
+)
+
+data class JobbsøkerMedStatuserOutboundDto(
     val treffId: String,
     val fødselsnummer: String,
     val kandidatnummer: String?,
@@ -74,9 +80,7 @@ data class JobbsøkerMedPåmeldingstatusOutboundDto(
     val navkontor: String?,
     val veilederNavn: String?,
     val veilederNavIdent: String?,
-    val erPåmeldt: Boolean = false,
-    val erInvitert: Boolean = false,
-    val harSvart: Boolean = false,
+    val statuser: StatuserOutboundDto,
     val hendelser: List<JobbsøkerHendelseOutboundDto>
 )
 
@@ -338,7 +342,7 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
         """)]
     ),
     responses = [
-        OpenApiResponse(status = "200", description = "Jobbsøker funnet", content = [OpenApiContent(from = JobbsøkerMedPåmeldingstatusOutboundDto::class, example = """
+        OpenApiResponse(status = "200", description = "Jobbsøker funnet", content = [OpenApiContent(from = JobbsøkerMedStatuserOutboundDto::class, example = """
             {
               "treffId": "c1b2c3d4-e5f6-7890-1234-567890abcdef",
               "fødselsnummer": "12345678901",
@@ -348,9 +352,11 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
               "navkontor": "NAV Grünerløkka",
               "veilederNavn": "Vera Veileder",
               "veilederNavIdent": "V123456",
-              "erPåmeldt": true,
-              "erInvitert": true,
-              "harSvart": true,
+              "statuser": {
+                "erPåmeldt": true,
+                "erInvitert": true,
+                "harSvart": true
+              },
               "hendelser": [
                 {
                   "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
@@ -392,11 +398,11 @@ private fun hentJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit
     if (jobbsøker == null) {
         ctx.status(404)
     } else {
-        ctx.json(jobbsøker.toOutboundDtoMedPåmeldingstatus())
+        ctx.json(jobbsøker.toOutboundDtoMedStatuser())
     }
 }
 
-private fun Jobbsøker.toOutboundDtoMedPåmeldingstatus() = JobbsøkerMedPåmeldingstatusOutboundDto(
+private fun Jobbsøker.toOutboundDtoMedStatuser() = JobbsøkerMedStatuserOutboundDto(
     treffId = treffId.somString,
     fødselsnummer = fødselsnummer.asString,
     kandidatnummer = kandidatnummer?.asString,
@@ -405,9 +411,11 @@ private fun Jobbsøker.toOutboundDtoMedPåmeldingstatus() = JobbsøkerMedPåmeld
     navkontor = navkontor?.asString,
     veilederNavn = veilederNavn?.asString,
     veilederNavIdent = veilederNavIdent?.asString,
-    erPåmeldt = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON },
-    erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITER },
-    harSvart = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON },
+    statuser = StatuserOutboundDto(
+        erPåmeldt = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON },
+        erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITER },
+        harSvart = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON }
+    ),
     hendelser = hendelser.map { it.toOutboundDto() }
 )
 
@@ -418,8 +426,6 @@ private fun JobbsøkerHendelse.toOutboundDto() = JobbsøkerHendelseOutboundDto(
     opprettetAvAktørType = opprettetAvAktørType.name,
     aktørIdentifikasjon = aktørIdentifikasjon
 )
-
-
 
 private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     map {

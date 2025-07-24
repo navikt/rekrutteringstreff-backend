@@ -554,9 +554,10 @@ class JobbsøkerTest {
             .responseString()
 
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().erPåmeldt).isTrue()
-        assertThat(result.get().erInvitert).isTrue()
+        assertThat(result.get().statuser.erPåmeldt).isTrue()
+        assertThat(result.get().statuser.erInvitert).isTrue()
     }
+
 
     @Test
     fun `hentEnkeltJobbsøker håndterer status avmeldt`() {
@@ -580,8 +581,8 @@ class JobbsøkerTest {
             .responseString()
 
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().erPåmeldt).isFalse()
-        assertThat(result.get().erInvitert).isTrue()
+        assertThat(result.get().statuser.erPåmeldt).isFalse()
+        assertThat(result.get().statuser.erInvitert).isTrue()
     }
 
     @Test
@@ -600,8 +601,8 @@ class JobbsøkerTest {
             .responseString()
 
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().erPåmeldt).isFalse()
-        assertThat(result.get().erInvitert).isTrue()
+        assertThat(result.get().statuser.erPåmeldt).isFalse()
+        assertThat(result.get().statuser.erInvitert).isTrue()
     }
 
     @Test
@@ -613,8 +614,8 @@ class JobbsøkerTest {
         db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().erPåmeldt).isFalse()
-        assertThat(result.get().erInvitert).isFalse()
+        assertThat(result.get().statuser.erPåmeldt).isFalse()
+        assertThat(result.get().statuser.erInvitert).isFalse()
     }
 
     @Test
@@ -639,7 +640,7 @@ class JobbsøkerTest {
             .responseString()
 
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().harSvart).isTrue()
+        assertThat(result.get().statuser.harSvart).isTrue()
     }
 
     @Test
@@ -664,7 +665,7 @@ class JobbsøkerTest {
             .responseString()
 
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().harSvart).isTrue()
+        assertThat(result.get().statuser.harSvart).isTrue()
     }
 
     @Test
@@ -683,7 +684,7 @@ class JobbsøkerTest {
             .responseString()
 
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().harSvart).isFalse()
+        assertThat(result.get().statuser.harSvart).isFalse()
     }
 
     @Test
@@ -701,9 +702,9 @@ class JobbsøkerTest {
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<JobbsøkerMedPåmeldingstatusOutboundDto> {
+            .responseObject(object : ResponseDeserializable<JobbsøkerMedStatuserOutboundDto> {
                 override fun deserialize(content: String) =
-                    mapper.readValue(content, JobbsøkerMedPåmeldingstatusOutboundDto::class.java)
+                    mapper.readValue(content, JobbsøkerMedStatuserOutboundDto::class.java)
             })
 
 
