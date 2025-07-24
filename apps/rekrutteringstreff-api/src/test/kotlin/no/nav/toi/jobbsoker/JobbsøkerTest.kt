@@ -6,7 +6,6 @@ import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
-import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -17,6 +16,7 @@ import java.net.HttpURLConnection.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
+import kotlin.text.get
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -393,6 +393,7 @@ class JobbsøkerTest {
     fun `svar ja til invitasjon`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
+        //TODO: verifiser at det er bruker som svarer for seg selv
         val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -482,5 +483,158 @@ class JobbsøkerTest {
         val svarNeiFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarNeiHendelse.id)
         assertThat(svarNeiFødselsnummer).isEqualTo(fnr)
     }
+
+    @Test
+    fun `hentEnketreffIdltJobbsøker returnerer jobbsøker med alle data`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("11111111111")
+        val token = authServer.lagToken(authPort, navIdent = "testperson")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(
+                    treffId,
+                    fødselsnummer,
+                    Kandidatnummer("K1"),
+                    Fornavn("Test"),
+                    Etternavn("Person"),
+                    Navkontor("NAV En"),
+                    VeilederNavn("Veileder En"),
+                    VeilederNavIdent("V1")
+                )
+            )
+        )
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
+            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${borgerToken.serialize()}")
+            .responseString()
+
+
+        val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
+
+        val jobbsøker = result.get()
+        assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer.asString)
+        assertThat(jobbsøker.kandidatnummer).isEqualTo("K1")
+        assertThat(jobbsøker.fornavn).isEqualTo("Test")
+        assertThat(jobbsøker.etternavn).isEqualTo("Person")
+        assertThat(jobbsøker.navkontor).isEqualTo("NAV En")
+        assertThat(jobbsøker.veilederNavn).isEqualTo("Veileder En")
+        assertThat(jobbsøker.veilederNavIdent).isEqualTo("V1")
+        assertThat(jobbsøker.hendelser).hasSize(3)
+    }
+
+    @Test
+    fun `hentEnkeltJobbsøker håndterer status påmeldt`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("11111111111")
+        val token = authServer.lagToken(authPort, navIdent = "test")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
+            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${borgerToken.serialize()}")
+            .responseString()
+
+        val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
+        assertThat(result.get().erPåmeldt).isTrue()
+        assertThat(result.get().erInvitert).isTrue()
+    }
+
+    @Test
+    fun `hentEnkeltJobbsøker håndterer status avmeldt`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("22222222222")
+        val token = authServer.lagToken(authPort, navIdent = "test")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-nei")
+            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${borgerToken.serialize()}")
+            .responseString()
+
+        val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
+        assertThat(result.get().erPåmeldt).isFalse()
+        assertThat(result.get().erInvitert).isTrue()
+    }
+
+    @Test
+    fun `hentEnkeltJobbsøker håndterer status kun invitert`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("33333333333")
+        val token = authServer.lagToken(authPort, navIdent = "test")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
+        assertThat(result.get().erPåmeldt).isFalse()
+        assertThat(result.get().erInvitert).isTrue()
+    }
+
+    @Test
+    fun `hentEnkeltJobbsøker håndterer status ikke invitert`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("44444444444")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+
+        val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
+        assertThat(result.get().erPåmeldt).isFalse()
+        assertThat(result.get().erInvitert).isFalse()
+    }
+
+    @Test
+    fun `hentEnkeltJobbsøker returnerer 404 for ukjent jobbsøker`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("44444444444")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        val (_, response, _) = hentEnkeltJobbsøker(treffId, Fødselsnummer("99999999999"), token)
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    private fun hentEnkeltJobbsøker(treffId: TreffId, fødselsnummer: Fødselsnummer, token: com.nimbusds.jwt.SignedJWT) =
+        Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/${fødselsnummer.asString}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<JobbsøkerMedPåmeldingstatusOutboundDto> {
+                override fun deserialize(content: String) =
+                    mapper.readValue(content, JobbsøkerMedPåmeldingstatusOutboundDto::class.java)
+            })
+
+
 
 }

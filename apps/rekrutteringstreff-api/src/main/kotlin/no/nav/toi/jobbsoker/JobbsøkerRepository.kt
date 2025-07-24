@@ -274,6 +274,48 @@ class JobbsøkerRepository(
         }
     }
 
+    fun hentJobbsøker(treff: TreffId, fødselsnummer: Fødselsnummer): Jobbsøker? =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                SELECT 
+                    js.db_id,
+                    js.fodselsnummer,
+                    js.kandidatnummer,
+                    js.fornavn,
+                    js.etternavn,
+                    js.navkontor,
+                    js.veileder_navn,
+                    js.veileder_navident,
+                    rt.id as treff_id,
+                    COALESCE(
+                        json_agg(
+                            json_build_object(
+                                'id', jh.id,
+                                'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+                                'hendelsestype', jh.hendelsestype,
+                                'opprettetAvAktortype', jh.opprettet_av_aktortype,
+                                'aktøridentifikasjon', jh.aktøridentifikasjon
+                            )
+                        ) FILTER (WHERE jh.id IS NOT NULL),
+                        '[]'
+                    ) AS hendelser
+                FROM jobbsoker js
+                JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
+                LEFT JOIN jobbsoker_hendelse jh ON js.db_id = jh.jobbsoker_db_id
+                WHERE rt.id = ? AND js.fodselsnummer = ?
+                GROUP BY js.db_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, 
+                         js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+            """
+            ).use { ps ->
+                ps.setObject(1, treff.somUuid)
+                ps.setString(2, fødselsnummer.asString)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) rs.toJobbsøker() else null
+                }
+            }
+        }
+
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
         data class HendelseJson(
             val id: String,

@@ -5,6 +5,7 @@ import io.javalin.http.Context
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -13,8 +14,11 @@ import java.time.ZonedDateTime
 import java.util.*
 
 private const val pathParamTreffId = "id"
+private const val pathParamFødselsnummer = "fødselsnummer"
+
 private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
+private const val enkeltJobbsøkerPath = jobbsøkerPath + "/{$pathParamFødselsnummer}"
 private const val inviterPath = "$jobbsøkerPath/inviter"
 private const val svarJaPath = "$jobbsøkerPath/svar-ja"
 private const val svarNeiPath = "$jobbsøkerPath/svar-nei"
@@ -58,6 +62,20 @@ data class JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
     val kandidatnummer: String?,
     val fornavn: String,
     val etternavn: String
+)
+
+data class JobbsøkerMedPåmeldingstatusOutboundDto(
+    val treffId: String,
+    val fødselsnummer: String,
+    val kandidatnummer: String?,
+    val fornavn: String,
+    val etternavn: String,
+    val navkontor: String?,
+    val veilederNavn: String?,
+    val veilederNavIdent: String?,
+    val erPåmeldt: Boolean,
+    val erInvitert: Boolean,
+    val hendelser: List<JobbsøkerHendelseOutboundDto>
 )
 
 data class JobbsøkerOutboundDto(
@@ -303,6 +321,92 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
     ctx.status(200)
 }
 
+@OpenApi(
+    summary = "Hent en jobbsøker basert på fødselsnummer",
+    operationId = "hentJobbsøker",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [
+        OpenApiParam(name = "treffId", type = String::class, description = "ID for rekrutteringstreffet", required = true),
+        OpenApiParam(name = "fødselsnummer", type = String::class, description = "Jobbsøkerens fødselsnummer", required = true)
+    ],
+    responses = [
+        OpenApiResponse(status = "200", description = "Jobbsøker funnet", content = [OpenApiContent(from = JobbsøkerMedPåmeldingstatusOutboundDto::class, example = """
+            {
+              "treffId": "c1b2c3d4-e5f6-7890-1234-567890abcdef",
+              "fødselsnummer": "12345678901",
+              "kandidatnummer": "PA123456",
+              "fornavn": "Ola",
+              "etternavn": "Nordmann",
+              "navkontor": "NAV Grünerløkka",
+              "veilederNavn": "Vera Veileder",
+              "veilederNavIdent": "V123456",
+              "erPåmeldt": true,
+              "erInvitert": true,
+              "hendelser": [
+                {
+                  "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+                  "tidspunkt": "2023-05-15T10:30:00+02:00",
+                  "hendelsestype": "OPPRETT",
+                  "opprettetAvAktørType": "ARRANGØR",
+                  "aktørIdentifikasjon": "Z999999"
+                },
+                {
+                  "id": "d4e5f6a7-b8c9-0123-4567-890abcdef123",
+                  "tidspunkt": "2023-05-16T10:00:00+02:00",
+                  "hendelsestype": "INVITER",
+                  "opprettetAvAktørType": "ARRANGØR",
+                  "aktørIdentifikasjon": "Z999999"
+                },
+                {
+                  "id": "b2c3d4e5-f6a7-8901-2345-67890abcdef1",
+                  "tidspunkt": "2023-05-16T11:00:00+02:00",
+                  "hendelsestype": "SVAR_JA_TIL_INVITASJON",
+                  "opprettetAvAktørType": "JOBBSØKER",
+                  "aktørIdentifikasjon": "12345678901"
+                }
+              ]
+            }
+        """)]),
+        OpenApiResponse(status = "404", description = "Jobbsøker ikke funnet")
+    ],
+    path = enkeltJobbsøkerPath,
+    methods = [HttpMethod.GET]
+)
+private fun hentJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.BORGER)
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val fødselsnummer = Fødselsnummer(ctx.pathParam(pathParamFødselsnummer))
+    val jobbsøker = repo.hentJobbsøker(treffId, fødselsnummer)
+    if (jobbsøker == null) {
+        ctx.status(404)
+    } else {
+        ctx.json(jobbsøker.toOutboundDtoMedPåmeldingstatus())
+    }
+}
+
+private fun Jobbsøker.toOutboundDtoMedPåmeldingstatus() = JobbsøkerMedPåmeldingstatusOutboundDto(
+    treffId = treffId.somString,
+    fødselsnummer = fødselsnummer.asString,
+    kandidatnummer = kandidatnummer?.asString,
+    fornavn = fornavn.asString,
+    etternavn = etternavn.asString,
+    navkontor = navkontor?.asString,
+    veilederNavn = veilederNavn?.asString,
+    veilederNavIdent = veilederNavIdent?.asString,
+    erPåmeldt = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON },
+    erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITER },
+    hendelser = hendelser.map { it.toOutboundDto() }
+)
+
+private fun JobbsøkerHendelse.toOutboundDto() = JobbsøkerHendelseOutboundDto(
+    id = id.toString(),
+    tidspunkt = tidspunkt,
+    hendelsestype = hendelsestype.name,
+    opprettetAvAktørType = opprettetAvAktørType.name,
+    aktørIdentifikasjon = aktørIdentifikasjon
+)
+
+
 
 private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     map {
@@ -333,4 +437,5 @@ fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     post(inviterPath, inviterJobbsøkereHandler(repo))
     post(svarJaPath, svarJaHandler(repo))
     post(svarNeiPath, svarNeiHandler(repo))
+    get(enkeltJobbsøkerPath, hentJobbsøkerHandler(repo))
 }
