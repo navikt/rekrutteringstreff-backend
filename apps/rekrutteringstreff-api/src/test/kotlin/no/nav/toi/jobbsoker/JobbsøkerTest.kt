@@ -391,9 +391,9 @@ class JobbsøkerTest {
 
     @Test
     fun `svar ja til invitasjon`() {
-        val token = authServer.lagToken(authPort, navIdent = "A987654", groups = listOf(AzureAdRoller.utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
             listOf(
@@ -438,9 +438,9 @@ class JobbsøkerTest {
 
     @Test
     fun `svar nei til invitasjon`() {
-        val token = authServer.lagToken(authPort, navIdent = "A987654", groups = listOf(AzureAdRoller.utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
             listOf(

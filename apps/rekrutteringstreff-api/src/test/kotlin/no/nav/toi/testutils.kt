@@ -53,6 +53,23 @@ fun MockOAuth2Server.lagToken(
     audience = audience
 )
 
+private const val minSideAudience = "rekrutteringstreff-minside-audience"
+
+fun MockOAuth2Server.lagTokenBorger(
+    authPort: Int,
+    issuerId: String = "http://localhost:$authPort/default",
+    pid: String = "11111111111",
+    claims: Map<String, Any> = mapOf("pid" to pid),
+    expiry: Long = 3600,
+    audience: String = "rekrutteringstreff-audience"
+) = issueToken(
+    issuerId = issuerId,
+    subject = "subject",
+    claims = claims,
+    expiry = expiry,
+    audience = audience
+)
+
 
 enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server, Int) -> Request) {
     UgyldigToken({ authServer, authPort -> this.header("Authorization", "Bearer ugyldigtoken") }),
