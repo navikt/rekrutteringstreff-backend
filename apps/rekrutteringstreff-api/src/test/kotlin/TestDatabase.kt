@@ -145,8 +145,6 @@ class TestDatabase {
         generateSequence { if (rs.next()) konverterTilJobbsøker(rs) else null }.toList()
     }
 
-    /* ---------- helper-mappere ---------- */
-
     private fun konverterTilRekrutteringstreff(rs: ResultSet) = Rekrutteringstreff(
         id = TreffId(rs.getObject("id", UUID::class.java)),
         tittel = rs.getString("tittel"),
