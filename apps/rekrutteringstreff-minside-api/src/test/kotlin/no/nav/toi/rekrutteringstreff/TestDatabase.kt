@@ -167,12 +167,14 @@ class TestDatabase {
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
+        id      = ArbeidsgiverId(UUID.fromString(rs.getString("id"))),
         treffId = TreffId(rs.getString("treff_id")),
         orgnr   = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn"))
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
+        id             = JobbsøkerId(UUID.fromString(rs.getString("fodselsnummer"))),
         treffId        = TreffId(rs.getString("treff_id")),
         fødselsnummer  = Fødselsnummer(rs.getString("fodselsnummer")),
         kandidatnummer = rs.getString("kandidatnummer")?.let(::Kandidatnummer),

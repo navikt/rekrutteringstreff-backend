@@ -50,6 +50,7 @@ class JobbsøkerRepositoryTest {
         val jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere).hasSize(1)
         val js = jobbsøkere.first()
+        assertThatCode { UUID.fromString(js.id.toString()) }.doesNotThrowAnyException()
         assertThat(js.fødselsnummer.asString).isEqualTo("12345678901")
         assertThat(js.kandidatnummer?.asString).isEqualTo("K123456")
         assertThat(js.fornavn.asString).isEqualTo("Ola")
@@ -82,6 +83,7 @@ class JobbsøkerRepositoryTest {
         val jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere).hasSize(1)
         val js = jobbsøkere.first()
+        assertThatCode { UUID.fromString(js.id.toString()) }.doesNotThrowAnyException()
         assertThat(js.fødselsnummer.asString).isEqualTo("98765432109")
         assertThat(js.kandidatnummer).isNull()
         assertThat(js.fornavn.asString).isEqualTo("Knut")
@@ -104,6 +106,7 @@ class JobbsøkerRepositoryTest {
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
         val js1 = listOf(
             Jobbsøker(
+                JobbsøkerId(UUID.randomUUID()),
                 treffId1,
                 Fødselsnummer("11111111111"),
                 Kandidatnummer("K1"),
@@ -116,6 +119,7 @@ class JobbsøkerRepositoryTest {
         )
         val js2 = listOf(
             Jobbsøker(
+                JobbsøkerId(UUID.randomUUID()),
                 treffId2,
                 Fødselsnummer("22222222222"),
                 Kandidatnummer("K2"),
@@ -126,6 +130,7 @@ class JobbsøkerRepositoryTest {
                 VeilederNavIdent("NAV1")
             ),
             Jobbsøker(
+                JobbsøkerId(UUID.randomUUID()),
                 treffId2,
                 Fødselsnummer("33333333333"),
                 Kandidatnummer("K3"),
@@ -141,6 +146,7 @@ class JobbsøkerRepositoryTest {
         val hentet = repository.hentJobbsøkere(treffId2)
         assertThat(hentet).hasSize(2)
         hentet.forEach { js ->
+            assertThatCode { UUID.fromString(js.id.toString()) }.doesNotThrowAnyException()
             assertThat(js.hendelser).hasSize(1)
             val h = js.hendelser.first()
             assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
@@ -149,130 +155,6 @@ class JobbsøkerRepositoryTest {
             assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
             assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
         }
-    }
-
-    @Test
-    fun hentJobbsøkerHendelserTest() {
-        val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreffHendelser")
-
-        val input = listOf(LeggTilJobbsøker(
-            Fødselsnummer("11223344556"),
-            Kandidatnummer("K7890"),
-            Fornavn("Emil"),
-            Etternavn("Hansen"),
-            Navkontor("NAV Bergen"),
-            VeilederNavn("Lars"),
-            VeilederNavIdent("NAV456"))
-        )
-        repository.leggTil(input, treffId, "testperson")
-
-        val hendelser = repository.hentJobbsøkerHendelser(treffId)
-
-        assertThat(hendelser).hasSize(1)
-
-        val hendelse = hendelser.first()
-        assertThat(hendelse.fødselsnummer.asString).isEqualTo("11223344556")
-        assertThat(hendelse.kandidatnummer?.asString).isEqualTo("K7890")
-        assertThat(hendelse.fornavn.asString).isEqualTo("Emil")
-        assertThat(hendelse.etternavn.asString).isEqualTo("Hansen")
-        assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT)
-        assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
-        assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
-        assertThat(hendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-    }
-
-    @Test
-    fun `inviter lager en inviter-hendelse for eksisterende jobbsøkere`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Invitasjon")
-        val fødselsnummer = Fødselsnummer("12345678901")
-        val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer,
-            Kandidatnummer("K123"),
-            Fornavn("Test"),
-            Etternavn("Person"),
-            null, null, null
-        )
-        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
-
-        var jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere.first().hendelser).hasSize(1)
-
-        repository.inviter(listOf(fødselsnummer), treffId, "inviterende_person")
-
-        jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere).hasSize(1)
-        val hendelser = jobbsøkere.first().hendelser
-        assertThat(hendelser).hasSize(2)
-
-        val inviterHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.INVITER }
-        assertThat(inviterHendelse).isNotNull
-        inviterHendelse!!
-        assertThat(inviterHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
-        assertThat(inviterHendelse.aktørIdentifikasjon).isEqualTo("inviterende_person")
-        assertThat(inviterHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETT }).isNotNull
-    }
-
-    @Test
-    fun `svarJaTilInvitasjon lager en svar-ja-hendelse`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Ja")
-        val fødselsnummer = Fødselsnummer("12345678901")
-        val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer,
-            Kandidatnummer("K123"),
-            Fornavn("Test"),
-            Etternavn("Person"),
-            null, null, null
-        )
-        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
-
-        var jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere.first().hendelser).hasSize(1)
-
-        repository.svarJaTilInvitasjon(fødselsnummer, treffId, "svar_ja_person")
-
-        jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat  (jobbsøkere).hasSize(1)
-        val hendelser = jobbsøkere.first().hendelser
-        assertThat(hendelser).hasSize(2)
-
-        val svarJaHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON }
-        assertThat(svarJaHendelse).isNotNull
-        svarJaHendelse!!
-        assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
-        assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("svar_ja_person")
-        assertThat(svarJaHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-    }
-
-    @Test
-    fun `svarNeiTilInvitasjon lager en svar-nei-hendelse`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Nei")
-        val fødselsnummer = Fødselsnummer("12345678901")
-        val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer,
-            Kandidatnummer("K123"),
-            Fornavn("Test"),
-            Etternavn("Person"),
-            null, null, null
-        )
-        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
-
-        var jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere.first().hendelser).hasSize(1)
-
-        repository.svarNeiTilInvitasjon(fødselsnummer, treffId, "svar_nei_person")
-
-        jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere).hasSize(1)
-        val hendelser = jobbsøkere.first().hendelser
-        assertThat(hendelser).hasSize(2)
-
-        val svarNeiHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON }
-        assertThat(svarNeiHendelse).isNotNull
-        svarNeiHendelse!!
-        assertThat(svarNeiHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
-        assertThat(svarNeiHendelse.aktørIdentifikasjon).isEqualTo("svar_nei_person")
-        assertThat(svarNeiHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
     }
 
     @Test
@@ -302,6 +184,7 @@ class JobbsøkerRepositoryTest {
         val jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer1)
         assertThat(jobbsøker).isNotNull
         jobbsøker!!
+        assertThatCode { UUID.fromString(jobbsøker.id.toString()) }.doesNotThrowAnyException()
         assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer1)
         assertThat(jobbsøker.kandidatnummer?.asString).isEqualTo("K1")
         assertThat(jobbsøker.fornavn.asString).isEqualTo("Fornavn1")

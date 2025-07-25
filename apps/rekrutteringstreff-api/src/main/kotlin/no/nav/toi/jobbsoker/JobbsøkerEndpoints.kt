@@ -12,6 +12,7 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.time.ZonedDateTime
 import java.util.*
+import kotlin.toString
 
 private const val pathParamTreffId = "id"
 
@@ -72,6 +73,7 @@ data class StatuserOutboundDto(
 )
 
 data class JobbsøkerMedStatuserOutboundDto(
+    val id: String,
     val treffId: String,
     val fødselsnummer: String,
     val kandidatnummer: String?,
@@ -85,6 +87,7 @@ data class JobbsøkerMedStatuserOutboundDto(
 )
 
 data class JobbsøkerOutboundDto(
+    val id: String,
     val fødselsnummer: String,
     val kandidatnummer: String?,
     val fornavn: String,
@@ -403,6 +406,7 @@ private fun hentJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit
 }
 
 private fun Jobbsøker.toOutboundDtoMedStatuser() = JobbsøkerMedStatuserOutboundDto(
+    id = id.toString(),
     treffId = treffId.somString,
     fødselsnummer = fødselsnummer.asString,
     kandidatnummer = kandidatnummer?.asString,
@@ -430,6 +434,7 @@ private fun JobbsøkerHendelse.toOutboundDto() = JobbsøkerHendelseOutboundDto(
 private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     map {
         JobbsøkerOutboundDto(
+            id = it.id.toString(),
             fødselsnummer = it.fødselsnummer.asString,
             kandidatnummer = it.kandidatnummer?.asString,
             fornavn = it.fornavn.asString,

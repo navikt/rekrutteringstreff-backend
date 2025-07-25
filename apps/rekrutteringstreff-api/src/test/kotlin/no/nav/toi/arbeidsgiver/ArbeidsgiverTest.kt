@@ -22,7 +22,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
-import java.time.ZonedDateTime
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -117,6 +116,7 @@ class ArbeidsgiverTest {
         assertThat(ag.treffId).isEqualTo(treffId)
         assertThat(ag.orgnr).isEqualTo(orgnr)
         assertThat(ag.orgnavn).isEqualTo(orgnavn)
+        assertThat(ag.id).isInstanceOf(ArbeidsgiverId::class.java)
 
         val hendelser = db.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
@@ -143,14 +143,14 @@ class ArbeidsgiverTest {
         val orgnavn4 = Orgnavn("Orgnavn4")
 
         val arbeidsgivere1 = listOf(
-            Arbeidsgiver(treffId1, orgnr1, orgnavn1, emptyList())
+            Arbeidsgiver(ArbeidsgiverId(UUID.randomUUID()), treffId1, orgnr1, orgnavn1, emptyList())
         )
         val arbeidsgivere2 = listOf(
-            Arbeidsgiver(treffId2, orgnr2, orgnavn2, emptyList()),
-            Arbeidsgiver(treffId2, orgnr3, orgnavn3, emptyList())
+            Arbeidsgiver(ArbeidsgiverId(UUID.randomUUID()), treffId2, orgnr2, orgnavn2, emptyList()),
+            Arbeidsgiver(ArbeidsgiverId(UUID.randomUUID()), treffId2, orgnr3, orgnavn3, emptyList())
         )
         val arbeidsgivere3 = listOf(
-            Arbeidsgiver(treffId3, orgnr4, orgnavn4, emptyList())
+            Arbeidsgiver(ArbeidsgiverId(UUID.randomUUID()), treffId3, orgnr4, orgnavn4, emptyList())
         )
         db.leggTilArbeidsgivere(arbeidsgivere1)
         db.leggTilArbeidsgivere(arbeidsgivere2)
