@@ -19,7 +19,6 @@ const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val pathParamTreffId = "id"
 private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathParamTreffId}"
 
-
 @OpenApi(
     summary = "Hent ett rekrutteringstreff",
     operationId = "hentRekrutteringstreff",
