@@ -4,6 +4,7 @@ import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
+import no.nav.toi.AuthenticatedUser
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.Rolle
@@ -12,13 +13,12 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.time.ZonedDateTime
 import java.util.*
-import kotlin.toString
 
 private const val pathParamTreffId = "id"
 
 private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
-private const val enkeltJobbsøkerPath = jobbsøkerPath + "/enkeltJobbsoker"
+private const val minJobbsøkerPath = jobbsøkerPath + "/meg"
 private const val inviterPath = "$jobbsøkerPath/inviter"
 private const val svarJaPath = "$jobbsøkerPath/svar-ja"
 private const val svarNeiPath = "$jobbsøkerPath/svar-nei"
@@ -43,8 +43,6 @@ data class JobbsøkerDto(
         veilederNavIdent?.let(::VeilederNavIdent)
     )
 }
-
-data class EnkeltJobbsøkerInboundDto(val fødselsnummer: String)
 
 data class JobbsøkerHendelseOutboundDto(
     val id: String,
@@ -300,12 +298,16 @@ private fun inviterJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
 )
 private fun svarJaHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.BORGER)
-    val dto = ctx.bodyAsClass<SvarpåInvitasjonDto>()
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-    val fødselsnummer = Fødselsnummer(dto.fødselsnummer)
 
-    repo.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
-    ctx.status(200)
+    ctx.authenticatedUser().extractPid().let { pid ->
+        if (pid.isEmpty()) {
+            throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
+        }
+        repo.svarJaTilInvitasjon(Fødselsnummer(pid), treffId, pid)
+        ctx.status(200)
+    }
+
 }
 
 @OpenApi(
@@ -323,12 +325,15 @@ private fun svarJaHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx
 )
 private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.BORGER)
-    val dto = ctx.bodyAsClass<SvarpåInvitasjonDto>()
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-    val fødselsnummer = Fødselsnummer(dto.fødselsnummer)
+    ctx.authenticatedUser().extractPid().let { pid ->
+        if (pid.isEmpty()) {
+            throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
+        }
+        repo.svarNeiTilInvitasjon(Fødselsnummer(pid), treffId, pid)
+        ctx.status(200)
+    }
 
-    repo.svarNeiTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
-    ctx.status(200)
 }
 
 @OpenApi(
@@ -338,13 +343,6 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
     pathParams = [
         OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet", required = true)
     ],
-    requestBody = OpenApiRequestBody(
-        content = [OpenApiContent(from = EnkeltJobbsøkerInboundDto::class, example = """
-            {
-              "fødselsnummer": "12345678901"
-            }
-        """)]
-    ),
     responses = [
         OpenApiResponse(status = "200", description = "Jobbsøker funnet", content = [OpenApiContent(from = JobbsøkerMedStatuserOutboundDto::class, example = """
             {
@@ -388,22 +386,26 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
         """)]),
         OpenApiResponse(status = "404", description = "Jobbsøker ikke funnet")
     ],
-    path = enkeltJobbsøkerPath,
+    path = minJobbsøkerPath,
     methods = [HttpMethod.POST]
 )
-private fun hentJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+private fun hentMinJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.BORGER)
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-    val fødselsnummerDto = ctx.bodyAsClass<EnkeltJobbsøkerInboundDto>()
-    if(fødselsnummerDto.fødselsnummer.isEmpty()) {
-        throw IllegalArgumentException("Fødselsnummer må oppgis for å hente jobbsøker")
+
+    ctx.authenticatedUser().extractPid().let { pid ->
+        if (pid.isEmpty()) {
+            throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
+        }
+        val jobbsøker = repo.hentJobbsøker(treffId, Fødselsnummer(pid))
+        if (jobbsøker == null) {
+            ctx.status(404)
+        } else {
+            ctx.json(jobbsøker.toOutboundDtoMedStatuser())
+        }
     }
-    val jobbsøker = repo.hentJobbsøker(treffId, Fødselsnummer(fødselsnummerDto.fødselsnummer))
-    if (jobbsøker == null) {
-        ctx.status(404)
-    } else {
-        ctx.json(jobbsøker.toOutboundDtoMedStatuser())
-    }
+
+
 }
 
 private fun Jobbsøker.toOutboundDtoMedStatuser() = JobbsøkerMedStatuserOutboundDto(
@@ -462,5 +464,5 @@ fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     post(inviterPath, inviterJobbsøkereHandler(repo))
     post(svarJaPath, svarJaHandler(repo))
     post(svarNeiPath, svarNeiHandler(repo))
-    post(enkeltJobbsøkerPath, hentJobbsøkerHandler(repo))
+    get(minJobbsøkerPath, hentMinJobbsøkerHandler(repo))
 }
