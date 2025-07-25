@@ -118,7 +118,7 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
     methods = [HttpMethod.GET]
 )
 private fun hentArbeidsgivereHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
-    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     val arbeidsgivere = repo.hentArbeidsgivere(treff)
     ctx.status(200).json(arbeidsgivere.toOutboundDto())
