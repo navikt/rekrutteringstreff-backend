@@ -164,7 +164,8 @@ private fun leggTilJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
         content = [OpenApiContent(
             from = Array<JobbsøkerOutboundDto>::class,
             example = """[
-                {
+                {   
+                    "id": "any-uuid",
                     "fødselsnummer": "12345678901",
                     "kandidatnummer": "K123456",
                     "fornavn": "Ola",
