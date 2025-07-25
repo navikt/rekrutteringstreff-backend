@@ -11,6 +11,7 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.time.ZonedDateTime
 import java.util.*
+import kotlin.toString
 
 private const val pathParamTreffId = "id"
 private const val arbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver"
@@ -43,6 +44,7 @@ data class ArbeidsgiverHendelseOutboundDto(
 
 
 data class ArbeidsgiverOutboundDto(
+    val id: String,
     val organisasjonsnummer: String,
     val navn: String,
     val hendelser: List<ArbeidsgiverHendelseOutboundDto>
@@ -125,6 +127,7 @@ private fun hentArbeidsgivereHandler(repo: ArbeidsgiverRepository): (Context) ->
 private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
     map { arbeidsgiver ->
         ArbeidsgiverOutboundDto(
+            id = arbeidsgiver.id.somString,
             organisasjonsnummer = arbeidsgiver.orgnr.asString,
             navn = arbeidsgiver.orgnavn.asString,
             hendelser = arbeidsgiver.hendelser.map { h ->

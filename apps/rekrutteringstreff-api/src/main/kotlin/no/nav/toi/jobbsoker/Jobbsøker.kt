@@ -1,5 +1,8 @@
 package no.nav.toi.jobbsoker
 
+import no.nav.toi.rekrutteringstreff.TreffId
+import java.util.UUID
+
 data class Fødselsnummer(private val fødselsnummer: String) {
     init {
         if (!(fødselsnummer.length == 11 && fødselsnummer.all { it.isDigit() })) {
@@ -75,7 +78,8 @@ data class LeggTilJobbsøker(
 )
 
 data class Jobbsøker(
-    val treffId: no.nav.toi.rekrutteringstreff.TreffId,
+    val id: JobbsøkerId,
+    val treffId: TreffId,
     val fødselsnummer: Fødselsnummer,
     val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
@@ -85,3 +89,11 @@ data class Jobbsøker(
     val veilederNavIdent: VeilederNavIdent?,
     val hendelser: List<JobbsøkerHendelse> = emptyList()
 )
+
+data class JobbsøkerId(private val id: UUID) {
+    constructor(uuid: String) : this(UUID.fromString(uuid))
+
+    val somUuid = id
+    val somString = id.toString()
+    override fun toString() = somString
+}

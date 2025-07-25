@@ -1,6 +1,7 @@
 package no.nav.toi.arbeidsgiver
 
 import no.nav.toi.rekrutteringstreff.TreffId
+import java.util.UUID
 
 data class Orgnr(private val orgnr: String) {
     init {
@@ -25,8 +26,17 @@ data class LeggTilArbeidsgiver(
 )
 
 data class Arbeidsgiver(
+    val id: ArbeidsgiverId,
     val treffId: TreffId,
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
     val hendelser: List<ArbeidsgiverHendelse> = emptyList()
 )
+
+data class ArbeidsgiverId(private val id: UUID) {
+    constructor(uuid: String) : this(UUID.fromString(uuid))
+
+    val somUuid = id
+    val somString = id.toString()
+    override fun toString() = somString
+}

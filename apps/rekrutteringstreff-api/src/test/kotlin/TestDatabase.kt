@@ -21,14 +21,15 @@ class TestDatabase {
     ): TreffId =
         RekrutteringstreffRepository(dataSource).opprett(
             OpprettRekrutteringstreffInternalDto(
-                tittel                = tittel,
+                tittel = tittel,
                 opprettetAvNavkontorEnhetId = "Original Kontor",
-                opprettetAvPersonNavident   = navIdent,
-                opprettetAvTidspunkt        = nowOslo().minusDays(10),
+                opprettetAvPersonNavident = navIdent,
+                opprettetAvTidspunkt = nowOslo().minusDays(10),
             )
         )
 
     fun slettAlt() = dataSource.connection.use {
+        it.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
         it.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
         it.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
         it.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
@@ -57,7 +58,7 @@ class TestDatabase {
 
     fun hentAlleArbeidsgivere(): List<Arbeidsgiver> = dataSource.connection.use {
         val sql = """
-            SELECT ag.orgnr, ag.orgnavn, rt.id as treff_id
+            SELECT ag.id, ag.orgnr, ag.orgnavn, rt.id as treff_id
               FROM arbeidsgiver ag
               JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
              ORDER BY ag.db_id
@@ -84,19 +85,20 @@ class TestDatabase {
             stmt.executeQuery().use { rs ->
                 generateSequence {
                     if (rs.next()) JobbsøkerHendelse(
-                        id                    = UUID.fromString(rs.getString("id")),
-                        tidspunkt             = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                        hendelsestype         = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
-                        opprettetAvAktørType  = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
-                        aktørIdentifikasjon   = rs.getString("aktøridentifikasjon")
+                        id = UUID.fromString(rs.getString("id")),
+                        tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
+                        hendelsestype = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
+                        opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                        aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
                     ) else null
                 }.toList()
             }
         }
     }
 
-    fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> = dataSource.connection.use { connection ->
-        val sql = """
+    fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> =
+        dataSource.connection.use { connection ->
+            val sql = """
             SELECT ah.id,
                    ah.tidspunkt,
                    ah.hendelsestype,
@@ -108,25 +110,26 @@ class TestDatabase {
              WHERE rt.id = ?
              ORDER BY ah.tidspunkt
         """.trimIndent()
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setObject(1, treff.somUuid)
-            stmt.executeQuery().use { rs ->
-                generateSequence {
-                    if (rs.next()) ArbeidsgiverHendelse(
-                        id                    = UUID.fromString(rs.getString("id")),
-                        tidspunkt             = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                        hendelsestype         = ArbeidsgiverHendelsestype.valueOf(rs.getString("hendelsestype")),
-                        opprettetAvAktørType  = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
-                        aktøridentifikasjon   = rs.getString("aktøridentifikasjon")
-                    ) else null
-                }.toList()
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                stmt.executeQuery().use { rs ->
+                    generateSequence {
+                        if (rs.next()) ArbeidsgiverHendelse(
+                            id = UUID.fromString(rs.getString("id")),
+                            tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
+                            hendelsestype = ArbeidsgiverHendelsestype.valueOf(rs.getString("hendelsestype")),
+                            opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                            aktøridentifikasjon = rs.getString("aktøridentifikasjon")
+                        ) else null
+                    }.toList()
+                }
             }
         }
-    }
 
     fun hentAlleJobbsøkere(): List<Jobbsøker> = dataSource.connection.use {
         val sql = """
-            SELECT js.fodselsnummer,
+            SELECT js.id,
+                   js.fodselsnummer,
                    js.kandidatnummer,
                    js.fornavn,
                    js.etternavn,
@@ -142,38 +145,38 @@ class TestDatabase {
         generateSequence { if (rs.next()) konverterTilJobbsøker(rs) else null }.toList()
     }
 
-    /* ---------- helper-mappere ---------- */
-
     private fun konverterTilRekrutteringstreff(rs: ResultSet) = Rekrutteringstreff(
-        id                       = TreffId(rs.getObject("id", UUID::class.java)),
-        tittel                   = rs.getString("tittel"),
-        beskrivelse             = rs.getString("beskrivelse"),
-        fraTid                   = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
-        tilTid                   = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
-        svarfrist                = rs.getTimestamp("svarfrist")?.toInstant()?.atOslo(),
-        gateadresse              = rs.getString("gateadresse"),
-        postnummer               = rs.getString("postnummer"),
-        poststed                 = rs.getString("poststed"),
-        status                   = rs.getString("status"),
-        opprettetAvPersonNavident= rs.getString("opprettet_av_person_navident"),
+        id = TreffId(rs.getObject("id", UUID::class.java)),
+        tittel = rs.getString("tittel"),
+        beskrivelse = rs.getString("beskrivelse"),
+        fraTid = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
+        tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
+        svarfrist = rs.getTimestamp("svarfrist")?.toInstant()?.atOslo(),
+        gateadresse = rs.getString("gateadresse"),
+        postnummer = rs.getString("postnummer"),
+        poststed = rs.getString("poststed"),
+        status = rs.getString("status"),
+        opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
-        opprettetAvTidspunkt     = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo()
+        opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo()
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
+        id = ArbeidsgiverId(rs.getObject("id", UUID::class.java)),
         treffId = TreffId(rs.getString("treff_id")),
-        orgnr   = Orgnr(rs.getString("orgnr")),
+        orgnr = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn"))
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
-        treffId        = TreffId(rs.getString("treff_id")),
-        fødselsnummer  = Fødselsnummer(rs.getString("fodselsnummer")),
+        id = JobbsøkerId(rs.getObject("id", UUID::class.java)),
+        treffId = TreffId(rs.getString("treff_id")),
+        fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
         kandidatnummer = rs.getString("kandidatnummer")?.let(::Kandidatnummer),
-        fornavn        = Fornavn(rs.getString("fornavn")),
-        etternavn      = Etternavn(rs.getString("etternavn")),
-        navkontor      = rs.getString("navkontor")?.let(::Navkontor),
-        veilederNavn   = rs.getString("veileder_navn")?.let(::VeilederNavn),
+        fornavn = Fornavn(rs.getString("fornavn")),
+        etternavn = Etternavn(rs.getString("etternavn")),
+        navkontor = rs.getString("navkontor")?.let(::Navkontor),
+        veilederNavn = rs.getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent)
     )
 
@@ -209,7 +212,11 @@ class TestDatabase {
             }
     }
 
-    fun leggTilRekrutteringstreffHendelse(treffId: TreffId, hendelsestype: RekrutteringstreffHendelsestype, aktørIdent: String) =
+    fun leggTilRekrutteringstreffHendelse(
+        treffId: TreffId,
+        hendelsestype: RekrutteringstreffHendelsestype,
+        aktørIdent: String
+    ) =
         dataSource.connection.use { c ->
             val treffDbId = c.prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").apply {
                 setObject(1, treffId.somUuid)
@@ -226,7 +233,7 @@ class TestDatabase {
                 """.trimIndent()
             ).apply {
                 setObject(1, UUID.randomUUID())
-                setLong  (2, treffDbId)
+                setLong(2, treffDbId)
                 setString(3, hendelsestype.name)
                 setString(4, AktørType.ARRANGØR.name)
                 setString(5, aktørIdent)
@@ -263,12 +270,12 @@ class TestDatabase {
     val dataSource: DataSource = HikariDataSource(
         HikariConfig().apply {
             val pg = getLokalPostgres()
-            jdbcUrl                   = pg.jdbcUrl
-            username                  = pg.username
-            password                  = pg.password
-            driverClassName           = "org.postgresql.Driver"
-            minimumIdle               = 1
-            maximumPoolSize           = 10
+            jdbcUrl = pg.jdbcUrl
+            username = pg.username
+            password = pg.password
+            driverClassName = "org.postgresql.Driver"
+            minimumIdle = 1
+            maximumPoolSize = 10
             initializationFailTimeout = 5_000
             validate()
         }

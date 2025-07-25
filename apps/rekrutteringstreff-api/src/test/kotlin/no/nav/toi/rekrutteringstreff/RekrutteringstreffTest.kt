@@ -12,12 +12,14 @@ import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
+import no.nav.toi.arbeidsgiver.ArbeidsgiverId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Jobbsøker
+import no.nav.toi.jobbsoker.JobbsøkerId
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -246,6 +248,7 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(
             listOf(
                 Jobbsøker(
+                    id = JobbsøkerId(UUID.randomUUID()),
                     treffId = treff.id,
                     fødselsnummer = Fødselsnummer("01010112345"),
                     fornavn = Fornavn("Kari"),
@@ -260,6 +263,7 @@ class RekrutteringstreffTest {
         db.leggTilArbeidsgivere(
             listOf(
                 Arbeidsgiver(
+                    id = ArbeidsgiverId(UUID.randomUUID()),
                     treffId = treff.id,
                     orgnr = Orgnr("999888777"),
                     orgnavn = Orgnavn("Testbedrift AS")
@@ -415,6 +419,7 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(
             listOf(
                 Jobbsøker(
+                    id = JobbsøkerId(UUID.randomUUID()),
                     treff,
                     Fødselsnummer("11111111111"),
                     null,
@@ -430,6 +435,7 @@ class RekrutteringstreffTest {
         db.leggTilArbeidsgivere(
             listOf(
                 Arbeidsgiver(
+                    id = ArbeidsgiverId(UUID.randomUUID()),
                     treff,
                     Orgnr("999888777"),
                     Orgnavn("Test AS")

@@ -61,16 +61,17 @@ class ArbeidsgiverRepository(
 
     private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): Long {
         connection.prepareStatement(
-            "INSERT INTO arbeidsgiver (treff_db_id, orgnr, orgnavn) VALUES (?, ?, ?)",
+            "INSERT INTO arbeidsgiver (id, treff_db_id, orgnr, orgnavn) VALUES (?, ?, ?, ?)",
             Statement.RETURN_GENERATED_KEYS
         ).use { stmt ->
-            stmt.setLong(1, treffDbId)
-            stmt.setString(2, arbeidsgiver.orgnr.toString())
-            stmt.setString(3, arbeidsgiver.orgnavn.toString())
+            stmt.setObject(1, UUID.randomUUID())
+            stmt.setLong(2, treffDbId)
+            stmt.setString(3, arbeidsgiver.orgnr.asString)
+            stmt.setString(4, arbeidsgiver.orgnavn.asString)
             stmt.executeUpdate()
-            stmt.generatedKeys.use { keys ->
-                if (keys.next()) return keys.getLong(1)
-                else throw SQLException("Kunne ikke hente generert nøkkel for arbeidsgiver")
+            stmt.generatedKeys.use {
+                if (it.next()) return it.getLong(1)
+                else throw SQLException("Klarte ikke å hente db_id for arbeidsgiver")
             }
         }
     }
@@ -105,8 +106,8 @@ class ArbeidsgiverRepository(
                 throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
 
             val sql = """
-                SELECT 
-                    ag.db_id,
+                SELECT
+                    ag.id,
                     ag.orgnr,
                     ag.orgnavn,
                     rt.id as treff_id,
@@ -126,28 +127,26 @@ class ArbeidsgiverRepository(
                 JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
                 LEFT JOIN arbeidsgiver_hendelse ah ON ag.db_id = ah.arbeidsgiver_db_id
                 WHERE rt.id = ?
-                GROUP BY ag.db_id, ag.orgnr, ag.orgnavn, rt.id
-                ORDER BY ag.db_id ASC;
+                GROUP BY ag.id, ag.db_id, ag.orgnr, ag.orgnavn, rt.id
+                ORDER BY ag.db_id;
             """.trimIndent()
 
-            connection.prepareStatement(sql).use { stmt ->
-                stmt.setObject(1, treff.somUuid)
-                stmt.executeQuery().use { rs ->
-                    val result = mutableListOf<Arbeidsgiver>()
-                    while (rs.next()) {
-                        val arbeidsgiver = Arbeidsgiver(
-                            treffId = TreffId(rs.getString("treff_id")),
-                            orgnr = Orgnr(rs.getString("orgnr")),
-                            orgnavn = Orgnavn(rs.getString("orgnavn")),
-                            hendelser = parseHendelser(rs.getString("hendelser"))
-                        )
-                        result.add(arbeidsgiver)
-                    }
-                    return result
+            connection.prepareStatement(sql).use { preparedStatement ->
+                preparedStatement.setObject(1, treff.somUuid)
+                preparedStatement.executeQuery().use { resultSet ->
+                    return generateSequence { if (resultSet.next()) resultSet.toArbeidsgiver() else null }.toList()
                 }
             }
         }
     }
+
+    private fun java.sql.ResultSet.toArbeidsgiver() = Arbeidsgiver(
+        id = ArbeidsgiverId(UUID.fromString(getString("id"))),
+        treffId = TreffId(getString("treff_id")),
+        orgnr = Orgnr(getString("orgnr")),
+        orgnavn = Orgnavn(getString("orgnavn")),
+        hendelser = parseHendelser(getString("hendelser"))
+    )
 
     fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelseMedArbeidsgiverData> {
         dataSource.connection.use { connection ->

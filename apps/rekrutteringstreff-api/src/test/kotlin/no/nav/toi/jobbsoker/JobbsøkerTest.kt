@@ -2,6 +2,8 @@ package no.nav.toi.jobbsoker
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
+import com.github.kittinunf.fuel.core.extensions.authentication
+import com.github.kittinunf.result.Result
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
@@ -98,16 +100,16 @@ class JobbsøkerTest {
         val veilederNavIdent = VeilederNavIdent("NAV001")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
-            [{
-              "fødselsnummer" : "${fnr}",
-              "kandidatnummer" : "${kandidatnr}",
-              "fornavn" : "${fornavn}",
-              "etternavn" : "${etternavn}",
-              "navkontor" : "${navkontor}",
-              "veilederNavn" : "${veilederNavn}",
-              "veilederNavIdent" : "${veilederNavIdent}"
-            }]
-            """.trimIndent()
+        [{
+          "fødselsnummer" : "${fnr.asString}",
+          "kandidatnummer" : "${kandidatnr.asString}",
+          "fornavn" : "${fornavn.asString}",
+          "etternavn" : "${etternavn.asString}",
+          "navkontor" : "${navkontor.asString}",
+          "veilederNavn" : "${veilederNavn.asString}",
+          "veilederNavIdent" : "${veilederNavIdent.asString}"
+        }]
+        """.trimIndent()
         assertThat(db.hentAlleJobbsøkere()).isEmpty()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
@@ -119,6 +121,7 @@ class JobbsøkerTest {
         val actualJobbsøkere = db.hentAlleJobbsøkere()
         assertThat(actualJobbsøkere.size).isEqualTo(1)
         actualJobbsøkere.first().also { actual ->
+            assertThatCode { UUID.fromString(actual.id.toString()) }.doesNotThrowAnyException()
             assertThat(actual.treffId).isEqualTo(treffId)
             assertThat(actual.fødselsnummer).isEqualTo(fnr)
             assertThat(actual.kandidatnummer).isEqualTo(kandidatnr)
@@ -167,14 +170,14 @@ class JobbsøkerTest {
         val veilederNavIdent2 = VeilederNavIdent("NAV002")
         val veilederNavIdent3 = VeilederNavIdent("NAV003")
         val jobbsøkere1 = listOf(
-            Jobbsøker(treffId1, fnr1, kandidatnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1)
+            Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId1, fnr1, kandidatnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1)
         )
         val jobbsøkere2 = listOf(
-            Jobbsøker(treffId2, fnr2, kandidatnr2, fornavn2, etternavn2, navkontor1, veilederNavn1, veilederNavIdent1),
-            Jobbsøker(treffId2, fnr3, kandidatnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2)
+            Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId2, fnr2, kandidatnr2, fornavn2, etternavn2, navkontor1, veilederNavn1, veilederNavIdent1),
+            Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId2, fnr3, kandidatnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2)
         )
         val jobbsøkere3 = listOf(
-            Jobbsøker(treffId3, fnr4, kandidatnr1, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3)
+            Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId3, fnr4, kandidatnr1, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3)
         )
         db.leggTilJobbsøkere(jobbsøkere1)
         db.leggTilJobbsøkere(jobbsøkere2)
@@ -185,9 +188,7 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
                 override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
-                    val type =
-                        mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java)
-                    return mapper.readValue(content, type)
+                    return mapper.readValue(content, mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java))
                 }
             })
         assertStatuscodeEquals(HTTP_OK, response, result)
@@ -197,6 +198,7 @@ class JobbsøkerTest {
                 val actualJobbsøkere = result.value
                 assertThat(actualJobbsøkere.size).isEqualTo(2)
                 actualJobbsøkere.forEach { jobbsøker ->
+                    assertThatCode { UUID.fromString(jobbsøker.id) }.doesNotThrowAnyException()
                     assertThat(jobbsøker.hendelser.size).isEqualTo(1)
                     val hendelse = jobbsøker.hendelser.first()
                     assertThatCode { UUID.fromString(hendelse.id) }
@@ -217,16 +219,16 @@ class JobbsøkerTest {
         val token = authServer.lagToken(authPort, navIdent = "testperson")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val requestBody = """
-        [{
-          "fødselsnummer" : "77777777777",
-          "kandidatnummer" : "K777777",
-          "fornavn" : "Test",
-          "etternavn" : "Bruker",
-          "navkontor" : "Oslo",
-          "veilederNavn" : "Test Veileder",
-          "veilederNavIdent" : "NAV007"
-        }]
-    """.trimIndent()
+    [{
+      "fødselsnummer" : "77777777777",
+      "kandidatnummer" : "K777777",
+      "fornavn" : "Test",
+      "etternavn" : "Bruker",
+      "navkontor" : "Oslo",
+      "veilederNavn" : "Test Veileder",
+      "veilederNavIdent" : "NAV007"
+    }]
+""".trimIndent()
         val (_, postResponse, postResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
             .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -236,9 +238,7 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
                 override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
-                    val type =
-                        mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java)
-                    return mapper.readValue(content, type)
+                    return mapper.readValue(content, mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java))
                 }
             })
         assertStatuscodeEquals(HTTP_OK, getResponse, getResult)
@@ -248,6 +248,7 @@ class JobbsøkerTest {
                 val actualJobbsøkere = getResult.value
                 assertThat(actualJobbsøkere.size).isEqualTo(1)
                 val jobbsoeker = actualJobbsøkere.first()
+                assertThatCode { UUID.fromString(jobbsoeker.id) }.doesNotThrowAnyException()
                 assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
                 val hendelse = jobbsoeker.hendelser.first()
                 assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT.name)
@@ -285,41 +286,19 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(
-                    treffId,
-                    input1.fødselsnummer,
-                    input1.kandidatnummer,
-                    input1.fornavn,
-                    input1.etternavn,
-                    input1.navkontor,
-                    input1.veilederNavn,
-                    input1.veilederNavIdent
-                )
+                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.kandidatnummer, input1.fornavn, input1.etternavn, input1.navkontor, input1.veilederNavn, input1.veilederNavIdent)
             )
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(
-                    treffId,
-                    input2.fødselsnummer,
-                    input2.kandidatnummer,
-                    input2.fornavn,
-                    input2.etternavn,
-                    input2.navkontor,
-                    input2.veilederNavn,
-                    input2.veilederNavIdent
-                )
+                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.kandidatnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent)
             )
         )
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>> {
                 override fun deserialize(content: String): List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(
-                        List::class.java,
-                        JobbsøkerHendelseMedJobbsøkerDataOutboundDto::class.java
-                    )
-                    return mapper.readValue(content, type)
+                    return mapper.readValue(content, mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerHendelseMedJobbsøkerDataOutboundDto::class.java))
                 }
             })
         assertThat(response.statusCode).isEqualTo(200)
@@ -353,16 +332,16 @@ class JobbsøkerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(treffId, fnr1, Kandidatnummer("K1"), Fornavn("F1"), Etternavn("E1"), null, null, null),
-                Jobbsøker(treffId, fnr2, Kandidatnummer("K2"), Fornavn("F2"), Etternavn("E2"), null, null, null)
+                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fnr1, null, Fornavn("Fornavn1"), Etternavn("Etternavn1"), null, null, null),
+                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fnr2, null, Fornavn("Fornavn2"), Etternavn("Etternavn2"), null, null, null)
             )
         )
 
         assertThat(db.hentJobbsøkerHendelser(treffId)).hasSize(2)
 
         val requestBody = """
-            { "fødselsnumre": ["${fnr1.asString}", "${fnr2.asString}"] }
-        """.trimIndent()
+        { "fødselsnumre": ["${fnr1.asString}", "${fnr2.asString}"] }
+    """.trimIndent()
 
         val (_, r, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body(requestBody)
@@ -398,22 +377,15 @@ class JobbsøkerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(
-                    treffId,
-                    fnr,
-                    Kandidatnummer("K123"),
-                    Fornavn("Test"),
-                    Etternavn("Person"),
-                    null, null, null
-                )
+                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
             )
         )
 
         assertThat(db.hentJobbsøkerHendelser(treffId)).hasSize(1)
 
         val requestBody = """
-            { "fødselsnummer": "${fnr.asString}" }
-        """.trimIndent()
+        { "fødselsnummer": "${fnr.asString}" }
+    """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
             .body(requestBody)
@@ -445,22 +417,15 @@ class JobbsøkerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(
-                    treffId,
-                    fnr,
-                    Kandidatnummer("K123"),
-                    Fornavn("Test"),
-                    Etternavn("Person"),
-                    null, null, null
-                )
+                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
             )
         )
 
         assertThat(db.hentJobbsøkerHendelser(treffId)).hasSize(1)
 
         val requestBody = """
-            { "fødselsnummer": "${fnr.asString}" }
-        """.trimIndent()
+        { "fødselsnummer": "${fnr.asString}" }
+    """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/svar-nei")
             .body(requestBody)
@@ -493,16 +458,7 @@ class JobbsøkerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(
-                    treffId,
-                    fødselsnummer,
-                    Kandidatnummer("K1"),
-                    Fornavn("Test"),
-                    Etternavn("Person"),
-                    Navkontor("NAV En"),
-                    VeilederNavn("Veileder En"),
-                    VeilederNavIdent("V1")
-                )
+                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, Kandidatnummer("K1"), Fornavn("Test"), Etternavn("Person"), Navkontor("NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"))
             )
         )
 
@@ -522,6 +478,7 @@ class JobbsøkerTest {
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
 
         val jobbsøker = result.get()
+        assertThatCode { UUID.fromString(jobbsøker.id) }.doesNotThrowAnyException()
         assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer.asString)
         assertThat(jobbsøker.kandidatnummer).isEqualTo("K1")
         assertThat(jobbsøker.fornavn).isEqualTo("Test")
@@ -539,7 +496,7 @@ class JobbsøkerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -566,7 +523,7 @@ class JobbsøkerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -592,7 +549,7 @@ class JobbsøkerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -611,7 +568,7 @@ class JobbsøkerTest {
         val fødselsnummer = Fødselsnummer("44444444444")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         val (_, _, result) = hentEnkeltJobbsøker(treffId, fødselsnummer, borgerToken)
         assertThat(result.get().statuser.erPåmeldt).isFalse()
@@ -625,7 +582,7 @@ class JobbsøkerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -650,7 +607,7 @@ class JobbsøkerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -675,7 +632,7 @@ class JobbsøkerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")

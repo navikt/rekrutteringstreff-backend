@@ -66,22 +66,23 @@ class JobbsøkerRepository(
     ): List<Long> {
         val sql = """
             insert into jobbsoker
-              (treff_db_id,fodselsnummer,kandidatnummer,fornavn,etternavn,
+              (id, treff_db_id,fodselsnummer,kandidatnummer,fornavn,etternavn,
                navkontor,veileder_navn,veileder_navident)
-            values (?,?,?,?,?,?,?,?)
+            values (?,?,?,?,?,?,?,?,?)
         """.trimIndent()
         val ids = mutableListOf<Long>()
         prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
             var n = 0
             data.forEach {
-                stmt.setLong  (1, treffDbId)
-                stmt.setString(2, it.fødselsnummer.asString)
-                stmt.setString(3, it.kandidatnummer?.asString)
-                stmt.setString(4, it.fornavn.asString)
-                stmt.setString(5, it.etternavn.asString)
-                stmt.setString(6, it.navkontor?.asString)
-                stmt.setString(7, it.veilederNavn?.asString)
-                stmt.setString(8, it.veilederNavIdent?.asString)
+                stmt.setObject(1, UUID.randomUUID())
+                stmt.setLong  (2, treffDbId)
+                stmt.setString(3, it.fødselsnummer.asString)
+                stmt.setString(4, it.kandidatnummer?.asString)
+                stmt.setString(5, it.fornavn.asString)
+                stmt.setString(6, it.etternavn.asString)
+                stmt.setString(7, it.navkontor?.asString)
+                stmt.setString(8, it.veilederNavn?.asString)
+                stmt.setString(9, it.veilederNavIdent?.asString)
                 stmt.addBatch(); if (++n == size) { ids += stmt.execBatchReturnIds(); n = 0 }
             }
             if (n > 0) ids += stmt.execBatchReturnIds()
@@ -128,7 +129,8 @@ class JobbsøkerRepository(
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-                    SELECT 
+                    SELECT
+                        js.id,
                         js.db_id,
                         js.fodselsnummer,
                         js.kandidatnummer,
@@ -154,7 +156,7 @@ class JobbsøkerRepository(
                     JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
                     LEFT JOIN jobbsoker_hendelse jh ON js.db_id = jh.jobbsoker_db_id
                     WHERE rt.id = ?
-                    GROUP BY js.db_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, 
+                    GROUP BY js.id, js.db_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
                              js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
                     ORDER BY js.db_id;
                 """
@@ -217,6 +219,7 @@ class JobbsøkerRepository(
     }
 
     private fun ResultSet.toJobbsøker() = Jobbsøker(
+        id             = JobbsøkerId(UUID.fromString(getString("id"))),
         treffId        = TreffId(getString("treff_id")),
         fødselsnummer  = Fødselsnummer(getString("fodselsnummer")),
         kandidatnummer = getString("kandidatnummer")?.let(::Kandidatnummer),
@@ -231,7 +234,7 @@ class JobbsøkerRepository(
     fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {
         dataSource.connection.use { connection ->
             val sql = """
-                SELECT 
+                SELECT
                     jh.id as hendelse_id,
                     jh.tidspunkt,
                     jh.hendelsestype,
@@ -278,7 +281,8 @@ class JobbsøkerRepository(
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-                SELECT 
+                SELECT
+                    js.id,
                     js.db_id,
                     js.fodselsnummer,
                     js.kandidatnummer,
@@ -304,7 +308,7 @@ class JobbsøkerRepository(
                 JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
                 LEFT JOIN jobbsoker_hendelse jh ON js.db_id = jh.jobbsoker_db_id
                 WHERE rt.id = ? AND js.fodselsnummer = ?
-                GROUP BY js.db_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn, 
+                GROUP BY js.id, js.db_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
                          js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             """
             ).use { ps ->
