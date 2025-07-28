@@ -19,10 +19,9 @@ import java.util.UUID
 
 private const val pathParamTreffId = "id"
 
-private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
-private const val minJobbsøkerPath = jobbsøkerPath + "/borger"
-private const val svarJaPath = "$jobbsøkerPath/borger/svar-ja"
-private const val svarNeiPath = "$jobbsøkerPath/borger/svar-nei"
+private const val borgerJobbsøkerPath = jobbsøkerPath + "/borger"
+private const val svarJaPath = "$borgerJobbsøkerPath/svar-ja"
+private const val svarNeiPath = "$borgerJobbsøkerPath/svar-nei"
 
 data class JobbsøkerMedStatuserOutboundDto(
     val id: String,
@@ -143,10 +142,10 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
         """)]),
         OpenApiResponse(status = "404", description = "Jobbsøker ikke funnet")
     ],
-    path = minJobbsøkerPath,
+    path = borgerJobbsøkerPath,
     methods = [HttpMethod.GET]
 )
-private fun hentMinJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+private fun hentBorgerJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.BORGER)
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
 
@@ -187,5 +186,5 @@ private fun Jobbsøker.toOutboundDtoMedStatuser() = JobbsøkerMedStatuserOutboun
 fun Javalin.handleJobbsøkerInnloggetBorger(repo: JobbsøkerRepository) {
     post(svarJaPath, svarJaHandler(repo))
     post(svarNeiPath, svarNeiHandler(repo))
-    get(minJobbsøkerPath, hentMinJobbsøkerHandler(repo))
+    get(borgerJobbsøkerPath, hentBorgerJobbsøkerHandler(repo))
 }
