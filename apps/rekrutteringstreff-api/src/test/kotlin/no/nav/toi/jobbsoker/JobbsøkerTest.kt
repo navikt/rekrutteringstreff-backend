@@ -372,7 +372,6 @@ class JobbsøkerTest {
     fun `svar ja til invitasjon`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
-        //TODO: verifiser at det er bruker som svarer for seg selv
         val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
 
         db.leggTilJobbsøkere(
@@ -387,7 +386,7 @@ class JobbsøkerTest {
         { "fødselsnummer": "${fnr.asString}" }
     """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
             .body(requestBody)
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -427,7 +426,7 @@ class JobbsøkerTest {
         { "fødselsnummer": "${fnr.asString}" }
     """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/svar-nei")
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
             .body(requestBody)
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -468,7 +467,7 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${borgerToken.serialize()}")
@@ -504,7 +503,7 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${borgerToken.serialize()}")
@@ -531,7 +530,7 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-nei")
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${borgerToken.serialize()}")
@@ -590,7 +589,7 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-ja")
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${borgerToken.serialize()}")
@@ -615,7 +614,7 @@ class JobbsøkerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/svar-nei")
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${borgerToken.serialize()}")
@@ -655,7 +654,7 @@ class JobbsøkerTest {
     }
 
     private fun hentEnkeltJobbsøker(treffId: TreffId, fødselsnummer: Fødselsnummer, token: com.nimbusds.jwt.SignedJWT) =
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/enkeltJobbsoker")
+        Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/borger")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${token.serialize()}")

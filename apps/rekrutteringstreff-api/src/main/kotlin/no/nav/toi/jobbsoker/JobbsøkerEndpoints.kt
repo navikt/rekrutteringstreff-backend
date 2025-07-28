@@ -18,10 +18,10 @@ private const val pathParamTreffId = "id"
 
 private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
-private const val minJobbsøkerPath = jobbsøkerPath + "/meg"
 private const val inviterPath = "$jobbsøkerPath/inviter"
-private const val svarJaPath = "$jobbsøkerPath/svar-ja"
-private const val svarNeiPath = "$jobbsøkerPath/svar-nei"
+private const val minJobbsøkerPath = jobbsøkerPath + "/borger"
+private const val svarJaPath = "$jobbsøkerPath/borger/svar-ja"
+private const val svarNeiPath = "$jobbsøkerPath/borger/svar-nei"
 
 
 data class JobbsøkerDto(
@@ -387,7 +387,7 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
         OpenApiResponse(status = "404", description = "Jobbsøker ikke funnet")
     ],
     path = minJobbsøkerPath,
-    methods = [HttpMethod.POST]
+    methods = [HttpMethod.GET]
 )
 private fun hentMinJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.BORGER)
