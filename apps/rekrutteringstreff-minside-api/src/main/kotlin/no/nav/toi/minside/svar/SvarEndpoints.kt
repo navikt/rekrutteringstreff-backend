@@ -35,19 +35,30 @@ class SvarEndpoints {
             content = [OpenApiContent(
                 from = RekrutteringstreffSvarOutboundDto::class,
                 example = """{
-               "påmeldt":true,
-            }"""
+                    "erInvitert": true,
+                    "harSvart": true,
+                    "påmeldt": true
+                }"""
             )]
         )],
         path = HENT_REKRUTTERINGSTREFF_SVAR,
         methods = [HttpMethod.GET]
     )
-    fun hentRekrutteringstreffSvarHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
+    fun hentRekrutteringstreffSvarHandler(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient): (Context) -> Unit = { ctx ->
         val id = ctx.pathParam(PATH_PARAM_TREFFID)
 
         // Sjekker om treffet finnes
         treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
             ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+
+        // hent påmeldingsstatus for treffet
+        try {
+            val jobbsøkerMedStatuser = borgerKlient.hentJobbsøkerMedStatuser(id, ctx.authenticatedUser().jwt)
+            log.info("jobbsøkerMedStatuser: $jobbsøkerMedStatuser");
+            // TODO: Bruk statusen til å sende svar tilbake
+        } catch (e: Exception) {
+            log.error("Feil ved henting av svar for rekrutteringstreff med id: $id", e)
+        }
 
         // TODO: Gir foreløpig et tilfeldig svar for demonstrasjon i påvente av endelig endepunkt i rekrutteringstreff-api
         val svar = RekrutteringstreffSvarOutboundDto(Random.nextBoolean(), Random.nextBoolean(), Random.nextBoolean())
@@ -58,7 +69,7 @@ class SvarEndpoints {
     }
 }
 
-fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient) = get(HENT_REKRUTTERINGSTREFF_SVAR, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient))
+fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient) = get(HENT_REKRUTTERINGSTREFF_SVAR, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
 
 data class RekrutteringstreffSvarOutboundDto(
     private val erInvitert: Boolean,

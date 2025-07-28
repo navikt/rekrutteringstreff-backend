@@ -8,6 +8,7 @@ import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.toi.minside.arbeidsgiver.arbeidsgiverendepunkt
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
 import no.nav.toi.minside.rekrutteringstreff.rekrutteringstreffendepunkt
+import no.nav.toi.minside.svar.BorgerKlient
 import no.nav.toi.minside.svar.rekrutteringstreffSvarEndepunkt
 import java.net.http.HttpClient
 
@@ -30,8 +31,9 @@ class App(
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
         val rekrutteringstreffKlient = RekrutteringstreffKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
+        val borgerKlient = BorgerKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
         javalin.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
-        javalin.rekrutteringstreffSvarEndepunkt(rekrutteringstreffKlient)
+        javalin.rekrutteringstreffSvarEndepunkt(rekrutteringstreffKlient, borgerKlient)
         javalin.arbeidsgiverendepunkt(rekrutteringstreffKlient)
         javalin.start(port)
     }

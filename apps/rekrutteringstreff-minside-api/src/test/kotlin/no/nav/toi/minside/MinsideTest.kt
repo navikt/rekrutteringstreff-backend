@@ -180,7 +180,7 @@ class MinsideTest {
     }
 
     @Test
-    fun `hent om jobbsøker er et treff`() {
+    fun `hent svarstatus for jobbsøker på ett treff`() {
         val ident = "12345678910"
         val token = authServer.lagToken(authPort, pid = ident)
 
