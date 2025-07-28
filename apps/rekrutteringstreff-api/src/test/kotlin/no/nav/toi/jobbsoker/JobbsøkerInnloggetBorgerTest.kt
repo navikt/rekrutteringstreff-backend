@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
+import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -150,11 +151,8 @@ class JobbsøkerInnloggetBorgerTest {
             )
         )
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        inviter(jobbsøkere, treffId, token)
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
@@ -186,11 +184,8 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        inviter(jobbsøkere, treffId, token)
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
@@ -203,6 +198,26 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(result.get().statuser.erInvitert).isTrue()
     }
 
+    private fun inviter(
+        jobbsøkere: List<Jobbsøker>,
+        treffId: TreffId,
+        token: SignedJWT
+    ) {
+        val personTreffIder = jobbsøkere.toList().map { it.personTreffId }
+        assertThat(personTreffIder).hasSize(1)
+
+        val requestBody = """
+            { "personTreffIder": ["${personTreffIder.first()}", "${personTreffIder.last()}"] }
+        """.trimIndent()
+
+
+        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+    }
+
 
     @Test
     fun `hentJobbsøkerInnloggetBorger håndterer status avmeldt`() {
@@ -213,11 +228,8 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        inviter(jobbsøkere, treffId, token)
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
@@ -239,11 +251,8 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        inviter(jobbsøkere, treffId, token)
 
         val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
         assertThat(result.get().statuser.erPåmeldt).isFalse()

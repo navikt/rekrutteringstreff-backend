@@ -247,7 +247,9 @@ class JobbsøkerRepositoryTest {
         var jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere.first().hendelser).hasSize(1)
 
-        repository.inviter(listOf(fødselsnummer), treffId, "inviterende_person")
+        val personTreffId = jobbsøkere.first().personTreffId
+
+        repository.inviter(listOf(personTreffId), treffId, "inviterende_person")
 
         jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere).hasSize(1)

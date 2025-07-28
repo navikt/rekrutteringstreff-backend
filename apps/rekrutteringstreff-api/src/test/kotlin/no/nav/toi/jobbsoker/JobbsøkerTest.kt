@@ -336,8 +336,12 @@ class JobbsøkerTest {
 
         assertThat(db.hentJobbsøkerHendelser(treffId)).hasSize(2)
 
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        val personTreffIder = jobbsøkere.toList().map { it.personTreffId }
+        assertThat(personTreffIder).hasSize(2)
+
         val requestBody = """
-        { "fødselsnumre": ["${fnr1.asString}", "${fnr2.asString}"] }
+        { "personTreffIder": ["${personTreffIder.first()}", "${personTreffIder.last()}"] }
     """.trimIndent()
 
         val (_, r, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
