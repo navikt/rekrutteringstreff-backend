@@ -41,6 +41,7 @@ class AuthenticationConfiguration(
 interface AuthenticatedUser {
     fun extractNavIdent(): String
     fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle)
+    fun extractPid(): String
 
     companion object {
         fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon): AuthenticatedUser {
@@ -75,6 +76,7 @@ private class AuthenticatedNavUser(
 
     fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
     override fun extractNavIdent() = navIdent
+    override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
 }
 
 private class AuthenticatedCitizenUser(
@@ -84,6 +86,8 @@ private class AuthenticatedCitizenUser(
     override fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle) {
         if(Rolle.BORGER !in arbeidsgiverRettet) throw ForbiddenResponse()
     }
+
+    override fun extractPid(): String = pid
 }
 
 
