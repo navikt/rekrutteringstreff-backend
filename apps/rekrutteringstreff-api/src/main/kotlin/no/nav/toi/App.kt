@@ -5,7 +5,6 @@ import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
 import io.javalin.json.JavalinJackson
-import io.javalin.json.JsonMapper
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.toi.SecureLogLogger.Companion.secure
@@ -13,6 +12,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.handleJobbsøker
+import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
 import org.flywaydb.core.Flyway
@@ -45,6 +45,7 @@ class App(
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
         javalin.handleJobbsøker(JobbsøkerRepository(dataSource, JacksonConfig.mapper))
+        javalin.handleJobbsøkerInnloggetBorger(JobbsøkerRepository(dataSource, JacksonConfig.mapper))
         javalin.start(port)
     }
 
