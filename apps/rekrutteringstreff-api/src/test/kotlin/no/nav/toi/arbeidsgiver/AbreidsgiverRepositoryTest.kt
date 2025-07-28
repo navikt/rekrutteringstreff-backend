@@ -47,7 +47,7 @@ class ArbeidsgiverRepositoryTest {
         val arbeidsgivere = repository.hentArbeidsgivere(treffId)
         assertThat(arbeidsgivere).hasSize(1)
         val ag = arbeidsgivere.first()
-        assertThatCode { UUID.fromString(ag.id.toString()) }.doesNotThrowAnyException()
+        assertThatCode { UUID.fromString(ag.arbeidsgiverTreffId.toString()) }.doesNotThrowAnyException()
         assertThat(ag.orgnr.asString).isEqualTo("123456789")
         assertThat(ag.orgnavn.asString).isEqualTo("Example Company")
         assertThat(ag.hendelser).hasSize(1)
@@ -63,15 +63,15 @@ class ArbeidsgiverRepositoryTest {
     fun hentArbeidsgivereTest() {
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
-        val ag1 = Arbeidsgiver(ArbeidsgiverId(UUID.randomUUID()), treffId1, Orgnr("111111111"), Orgnavn("Company A"))
-        val ag2 = Arbeidsgiver(ArbeidsgiverId(UUID.randomUUID()), treffId2, Orgnr("222222222"), Orgnavn("Company B"))
-        val ag3 = Arbeidsgiver(ArbeidsgiverId(UUID.randomUUID()), treffId2, Orgnr("333333333"), Orgnavn("Company C"))
+        val ag1 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, Orgnr("111111111"), Orgnavn("Company A"))
+        val ag2 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("222222222"), Orgnavn("Company B"))
+        val ag3 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("333333333"), Orgnavn("Company C"))
         db.leggTilArbeidsgivere(listOf(ag1))
         db.leggTilArbeidsgivere(listOf(ag2, ag3))
         val hentet = repository.hentArbeidsgivere(treffId2)
         assertThat(hentet).hasSize(2)
         hentet.forEach {
-            assertThatCode { UUID.fromString(it.id.toString()) }.doesNotThrowAnyException()
+            assertThatCode { UUID.fromString(it.arbeidsgiverTreffId.toString()) }.doesNotThrowAnyException()
             assertThat(it.treffId).isEqualTo(treffId2)
         }
     }

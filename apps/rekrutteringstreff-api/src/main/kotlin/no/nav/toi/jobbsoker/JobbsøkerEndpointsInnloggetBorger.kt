@@ -13,7 +13,6 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.UUID
 
 
@@ -165,7 +164,7 @@ private fun hentBorgerJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -
 }
 
 private fun Jobbsøker.toOutboundDtoMedStatuser() = JobbsøkerMedStatuserOutboundDto(
-    id = id.toString(),
+    id = personTreffId.toString(),
     treffId = treffId.somString,
     fødselsnummer = fødselsnummer.asString,
     kandidatnummer = kandidatnummer?.asString,

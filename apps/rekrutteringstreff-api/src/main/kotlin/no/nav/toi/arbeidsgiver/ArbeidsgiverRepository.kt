@@ -141,7 +141,7 @@ class ArbeidsgiverRepository(
     }
 
     private fun java.sql.ResultSet.toArbeidsgiver() = Arbeidsgiver(
-        id = ArbeidsgiverId(UUID.fromString(getString("id"))),
+        arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(getString("id"))),
         treffId = TreffId(getString("treff_id")),
         orgnr = Orgnr(getString("orgnr")),
         orgnavn = Orgnavn(getString("orgnavn")),

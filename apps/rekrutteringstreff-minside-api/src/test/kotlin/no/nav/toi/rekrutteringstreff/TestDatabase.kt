@@ -10,7 +10,6 @@ import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.flywaydb.core.Flyway
-import org.junit.jupiter.api.BeforeAll
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
@@ -167,14 +166,14 @@ class TestDatabase {
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
-        id      = ArbeidsgiverId(UUID.fromString(rs.getString("id"))),
+        arbeidsgiverTreffId      = ArbeidsgiverTreffId(UUID.fromString(rs.getString("id"))),
         treffId = TreffId(rs.getString("treff_id")),
         orgnr   = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn"))
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
-        id             = JobbsøkerId(UUID.fromString(rs.getString("fodselsnummer"))),
+        personTreffId             = PersonTreffId(UUID.fromString(rs.getString("fodselsnummer"))),
         treffId        = TreffId(rs.getString("treff_id")),
         fødselsnummer  = Fødselsnummer(rs.getString("fodselsnummer")),
         kandidatnummer = rs.getString("kandidatnummer")?.let(::Kandidatnummer),

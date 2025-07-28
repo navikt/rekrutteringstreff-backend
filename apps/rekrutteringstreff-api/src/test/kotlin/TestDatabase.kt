@@ -11,7 +11,6 @@ import java.sql.ResultSet
 import java.time.ZoneId
 import java.util.*
 import javax.sql.DataSource
-import kotlin.io.use
 
 class TestDatabase {
 
@@ -162,14 +161,14 @@ class TestDatabase {
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
-        id = ArbeidsgiverId(rs.getObject("id", UUID::class.java)),
+        arbeidsgiverTreffId = ArbeidsgiverTreffId(rs.getObject("id", UUID::class.java)),
         treffId = TreffId(rs.getString("treff_id")),
         orgnr = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn"))
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
-        id = JobbsøkerId(rs.getObject("id", UUID::class.java)),
+        personTreffId = PersonTreffId(rs.getObject("id", UUID::class.java)),
         treffId = TreffId(rs.getString("treff_id")),
         fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
         kandidatnummer = rs.getString("kandidatnummer")?.let(::Kandidatnummer),

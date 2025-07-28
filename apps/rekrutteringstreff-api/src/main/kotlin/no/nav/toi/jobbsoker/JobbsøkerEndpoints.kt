@@ -4,9 +4,7 @@ import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
-import no.nav.toi.AuthenticatedUser
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
-import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -70,7 +68,7 @@ data class StatuserOutboundDto(
 
 
 data class JobbsøkerOutboundDto(
-    val id: String,
+    val personTreffId: String,
     val fødselsnummer: String,
     val kandidatnummer: String?,
     val fornavn: String,
@@ -148,7 +146,7 @@ private fun leggTilJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
             from = Array<JobbsøkerOutboundDto>::class,
             example = """[
                 {   
-                    "id": "any-uuid",
+                    "personTreffId": "any-uuid",
                     "fødselsnummer": "12345678901",
                     "kandidatnummer": "K123456",
                     "fornavn": "Ola",
@@ -277,7 +275,7 @@ fun JobbsøkerHendelse.toOutboundDto() = JobbsøkerHendelseOutboundDto(
 private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =
     map {
         JobbsøkerOutboundDto(
-            id = it.id.toString(),
+            personTreffId = it.personTreffId.toString(),
             fødselsnummer = it.fødselsnummer.asString,
             kandidatnummer = it.kandidatnummer?.asString,
             fornavn = it.fornavn.asString,

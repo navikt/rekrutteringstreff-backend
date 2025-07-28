@@ -65,7 +65,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
             )
         )
 
@@ -105,7 +105,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
             )
         )
 
@@ -146,7 +146,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, Kandidatnummer("K1"), Fornavn("Test"), Etternavn("Person"), Navkontor("NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"))
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Kandidatnummer("K1"), Fornavn("Test"), Etternavn("Person"), Navkontor("NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"))
             )
         )
 
@@ -184,7 +184,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -211,7 +211,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -237,7 +237,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -256,7 +256,7 @@ class JobbsøkerInnloggetBorgerTest {
         val fødselsnummer = Fødselsnummer("44444444444")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
         assertThat(result.get().statuser.erPåmeldt).isFalse()
@@ -270,7 +270,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -295,7 +295,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -320,7 +320,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")

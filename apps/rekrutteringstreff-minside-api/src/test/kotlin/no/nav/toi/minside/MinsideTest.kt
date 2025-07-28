@@ -3,12 +3,11 @@ package no.nav.toi.minside
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
-import junit.runner.Version.id
 import java.util.concurrent.atomic.AtomicInteger
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
-import no.nav.toi.arbeidsgiver.ArbeidsgiverId
+import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.*
@@ -97,7 +96,7 @@ class MinsideTest {
             }.apply {
                 val treffId = hentAlleRekrutteringstreff().first { tittel == it.tittel }.id
                 leggTilJobbsøkere(listOf(Jobbsøker(
-                    id = JobbsøkerId(UUID.randomUUID()),
+                    personTreffId = PersonTreffId(UUID.randomUUID()),
                     treffId = treffId,
                     fødselsnummer = Fødselsnummer(jobbsøkerFnr),
                     kandidatnummer = Kandidatnummer("123456"),
@@ -111,7 +110,7 @@ class MinsideTest {
                 ))
                 leggTilArbeidsgivere(listOf(
                     Arbeidsgiver(
-                        id = ArbeidsgiverId(UUID.randomUUID()),
+                        arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
                         treffId = treffId,
                         orgnr = Orgnr(arrangørOrgNr),
                         orgnavn = Orgnavn(arrangørOrgnavn)

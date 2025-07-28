@@ -76,7 +76,7 @@ class JobbsøkerTest {
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
-    fun autentiseringHentJobbsøkerr(autentiseringstest: UautentifiserendeTestCase) {
+    fun autentiseringHentJobbsøker(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
         val leggPåToken = autentiseringstest.leggPåToken
         val (_, response, result) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker")
@@ -118,7 +118,7 @@ class JobbsøkerTest {
         val actualJobbsøkere = db.hentAlleJobbsøkere()
         assertThat(actualJobbsøkere.size).isEqualTo(1)
         actualJobbsøkere.first().also { actual ->
-            assertThatCode { UUID.fromString(actual.id.toString()) }.doesNotThrowAnyException()
+            assertThatCode { UUID.fromString(actual.personTreffId.toString()) }.doesNotThrowAnyException()
             assertThat(actual.treffId).isEqualTo(treffId)
             assertThat(actual.fødselsnummer).isEqualTo(fnr)
             assertThat(actual.kandidatnummer).isEqualTo(kandidatnr)
@@ -167,14 +167,14 @@ class JobbsøkerTest {
         val veilederNavIdent2 = VeilederNavIdent("NAV002")
         val veilederNavIdent3 = VeilederNavIdent("NAV003")
         val jobbsøkere1 = listOf(
-            Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId1, fnr1, kandidatnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId1, fnr1, kandidatnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1)
         )
         val jobbsøkere2 = listOf(
-            Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId2, fnr2, kandidatnr2, fornavn2, etternavn2, navkontor1, veilederNavn1, veilederNavIdent1),
-            Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId2, fnr3, kandidatnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr2, kandidatnr2, fornavn2, etternavn2, navkontor1, veilederNavn1, veilederNavIdent1),
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr3, kandidatnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2)
         )
         val jobbsøkere3 = listOf(
-            Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId3, fnr4, kandidatnr1, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId3, fnr4, kandidatnr1, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3)
         )
         db.leggTilJobbsøkere(jobbsøkere1)
         db.leggTilJobbsøkere(jobbsøkere2)
@@ -195,7 +195,7 @@ class JobbsøkerTest {
                 val actualJobbsøkere = result.value
                 assertThat(actualJobbsøkere.size).isEqualTo(2)
                 actualJobbsøkere.forEach { jobbsøker ->
-                    assertThatCode { UUID.fromString(jobbsøker.id) }.doesNotThrowAnyException()
+                    assertThatCode { UUID.fromString(jobbsøker.personTreffId) }.doesNotThrowAnyException()
                     assertThat(jobbsøker.hendelser.size).isEqualTo(1)
                     val hendelse = jobbsøker.hendelser.first()
                     assertThatCode { UUID.fromString(hendelse.id) }
@@ -245,7 +245,7 @@ class JobbsøkerTest {
                 val actualJobbsøkere = getResult.value
                 assertThat(actualJobbsøkere.size).isEqualTo(1)
                 val jobbsoeker = actualJobbsøkere.first()
-                assertThatCode { UUID.fromString(jobbsoeker.id) }.doesNotThrowAnyException()
+                assertThatCode { UUID.fromString(jobbsoeker.personTreffId) }.doesNotThrowAnyException()
                 assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
                 val hendelse = jobbsoeker.hendelser.first()
                 assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT.name)
@@ -283,12 +283,12 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.kandidatnummer, input1.fornavn, input1.etternavn, input1.navkontor, input1.veilederNavn, input1.veilederNavIdent)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.kandidatnummer, input1.fornavn, input1.etternavn, input1.navkontor, input1.veilederNavn, input1.veilederNavIdent)
             )
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.kandidatnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.kandidatnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent)
             )
         )
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
@@ -329,8 +329,8 @@ class JobbsøkerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fnr1, null, Fornavn("Fornavn1"), Etternavn("Etternavn1"), null, null, null),
-                Jobbsøker(JobbsøkerId(UUID.randomUUID()), treffId, fnr2, null, Fornavn("Fornavn2"), Etternavn("Etternavn2"), null, null, null)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr1, null, Fornavn("Fornavn1"), Etternavn("Etternavn1"), null, null, null),
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr2, null, Fornavn("Fornavn2"), Etternavn("Etternavn2"), null, null, null)
             )
         )
 

@@ -78,7 +78,7 @@ data class LeggTilJobbsøker(
 )
 
 data class Jobbsøker(
-    val id: JobbsøkerId,
+    val personTreffId: PersonTreffId,
     val treffId: TreffId,
     val fødselsnummer: Fødselsnummer,
     val kandidatnummer: Kandidatnummer?,
@@ -90,7 +90,7 @@ data class Jobbsøker(
     val hendelser: List<JobbsøkerHendelse> = emptyList()
 )
 
-data class JobbsøkerId(private val id: UUID) {
+data class PersonTreffId(private val id: UUID) {
     constructor(uuid: String) : this(UUID.fromString(uuid))
 
     val somUuid = id

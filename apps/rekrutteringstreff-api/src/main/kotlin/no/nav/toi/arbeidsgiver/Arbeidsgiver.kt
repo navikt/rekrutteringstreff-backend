@@ -26,14 +26,14 @@ data class LeggTilArbeidsgiver(
 )
 
 data class Arbeidsgiver(
-    val id: ArbeidsgiverId,
+    val arbeidsgiverTreffId: ArbeidsgiverTreffId,
     val treffId: TreffId,
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
     val hendelser: List<ArbeidsgiverHendelse> = emptyList()
 )
 
-data class ArbeidsgiverId(private val id: UUID) {
+data class ArbeidsgiverTreffId(private val id: UUID) {
     constructor(uuid: String) : this(UUID.fromString(uuid))
 
     val somUuid = id

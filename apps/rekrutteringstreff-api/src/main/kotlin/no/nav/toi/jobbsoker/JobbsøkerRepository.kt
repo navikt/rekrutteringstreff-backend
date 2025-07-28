@@ -14,7 +14,6 @@ import java.util.*
 import javax.sql.DataSource
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import kotlin.io.use
 
 data class JobbsøkerHendelse(
     val id: UUID,
@@ -219,7 +218,7 @@ class JobbsøkerRepository(
     }
 
     private fun ResultSet.toJobbsøker() = Jobbsøker(
-        id             = JobbsøkerId(UUID.fromString(getString("id"))),
+        personTreffId             = PersonTreffId(UUID.fromString(getString("id"))),
         treffId        = TreffId(getString("treff_id")),
         fødselsnummer  = Fødselsnummer(getString("fodselsnummer")),
         kandidatnummer = getString("kandidatnummer")?.let(::Kandidatnummer),
