@@ -41,12 +41,6 @@ data class JobbsøkerMedStatuserOutboundDto(
     operationId = "svarJaTilInvitasjon",
     security = [OpenApiSecurity("BearerAuth")],
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
-    requestBody = OpenApiRequestBody(
-        content = [OpenApiContent(
-            from = SvarpåInvitasjonDto::class,
-            example = """{ "fødselsnummer": "12345678901" }"""
-        )]
-    ),
     responses = [OpenApiResponse("200", description = "Hendelse for 'svart ja' er lagt til.")],
     path = svarJaPath,
     methods = [HttpMethod.POST]
@@ -70,10 +64,6 @@ private fun svarJaHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx
     operationId = "svarNeiTilInvitasjon",
     security = [OpenApiSecurity("BearerAuth")],
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
-    requestBody = OpenApiRequestBody(
-        content = [OpenApiContent(from = SvarpåInvitasjonDto::class)],
-        description = "Fødselsnummer for jobbsøker som har takket nei."
-    ),
     responses = [OpenApiResponse("200", description = "Hendelse for 'svart nei' er lagt til.")],
     path = svarNeiPath,
     methods = [HttpMethod.POST]

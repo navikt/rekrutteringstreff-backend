@@ -80,11 +80,7 @@ data class JobbsøkerOutboundDto(
 )
 
 data class InviterJobbsøkereDto(
-    val fødselsnumre: List<String>
-)
-
-data class SvarpåInvitasjonDto(
-    val fødselsnummer: String
+    val personTreffIder: List<PersonTreffId>
 )
 
 @OpenApi(
@@ -246,7 +242,7 @@ private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = InviterJobbsøkereDto::class,
-            example = """{ "fødselsnumre": ["12345678901", "10987654321"] }"""
+            example = """{ "personTreffIder": ["2d4dcf50-2418-4085-9c5f-1390bc49a97f", "0aff1e80-cc11-4cdc-a495-ada1f0a8b3dd"] }"""
         )]
     ),
     responses = [OpenApiResponse("200", description = "Invitasjonshendelser er lagt til.")],
@@ -257,10 +253,10 @@ private fun inviterJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val dto = ctx.bodyAsClass<InviterJobbsøkereDto>()
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-    val fødselsnumre = dto.fødselsnumre.map(::Fødselsnummer)
+    val personTreffIder = dto.personTreffIder
     val navIdent = ctx.extractNavIdent()
 
-    repo.inviter(fødselsnumre, treffId, navIdent)
+    repo.inviter(personTreffIder, treffId, navIdent)
     ctx.status(200)
 }
 

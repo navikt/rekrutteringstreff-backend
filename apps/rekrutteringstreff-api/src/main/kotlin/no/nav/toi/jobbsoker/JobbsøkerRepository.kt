@@ -167,11 +167,11 @@ class JobbsøkerRepository(
             }
         }
 
-    fun inviter(fødselsnumre: List<Fødselsnummer>, treff: TreffId, opprettetAv: String) {
+    fun inviter(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             try {
                 val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbIds = c.hentJobbsøkerDbIder(treffDbId, fødselsnumre)
+                val jobbsøkerDbIds = c.hentJobbsøkerDbIder(treffDbId, personTreffIder)
                 c.batchInsertHendelser(JobbsøkerHendelsestype.INVITER,jobbsøkerDbIds, opprettetAv)
             } catch (e: Exception) {
                 throw e
@@ -183,7 +183,7 @@ class JobbsøkerRepository(
         dataSource.connection.use { c ->
             try {
                 val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbId = c.hentJobbsøkerDbIder(treffDbId, listOf(fødselsnummer)).firstOrNull()
+                val jobbsøkerDbId = c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId = treffDbId, fødselsnumre = listOf(fødselsnummer)).firstOrNull()
                     ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
                 c.batchInsertHendelser(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON, listOf(jobbsøkerDbId), opprettetAv, AktørType.JOBBSØKER)
             } catch (e: Exception) {
@@ -196,7 +196,7 @@ class JobbsøkerRepository(
         dataSource.connection.use { c ->
             try {
                 val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbId = c.hentJobbsøkerDbIder(treffDbId, listOf(fødselsnummer)).firstOrNull()
+                val jobbsøkerDbId = c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId, listOf(fødselsnummer)).firstOrNull()
                     ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
                 c.batchInsertHendelser(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON, listOf(jobbsøkerDbId), opprettetAv, AktørType.JOBBSØKER)
             } catch (e: Exception) {
@@ -206,11 +206,22 @@ class JobbsøkerRepository(
     }
 
 
-    private fun Connection.hentJobbsøkerDbIder(treffDbId: Long, fødselsnumre: List<Fødselsnummer>): List<Long> {
+    private fun Connection.hentJobbsøkerDbIderFraFødselsnummer(treffDbId: Long, fødselsnumre: List<Fødselsnummer>): List<Long> {
         val sql = "SELECT db_id FROM jobbsoker WHERE treff_db_id = ? AND fodselsnummer = ANY(?)"
         return prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
             stmt.setArray(2, createArrayOf("varchar", fødselsnumre.map { it.asString }.toTypedArray()))
+            stmt.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
+            }
+        }
+    }
+
+    private fun Connection.hentJobbsøkerDbIder(treffDbId: Long, personTreffIder: List<PersonTreffId>): List<Long> {
+        val sql = "SELECT db_id FROM jobbsoker WHERE treff_db_id = ? AND id = ANY(?)"
+        return prepareStatement(sql).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setArray(2, createArrayOf("uuid", personTreffIder.map { it.somString }.toTypedArray()))
             stmt.executeQuery().use { rs ->
                 generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
             }
