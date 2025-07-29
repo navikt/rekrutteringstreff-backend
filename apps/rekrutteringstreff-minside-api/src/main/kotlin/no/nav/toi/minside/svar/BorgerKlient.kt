@@ -27,7 +27,7 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
 
         // TODO: Kun inviterte jobbsøkere finnes i databasen. Vurder om dette skal håndteres i rekrutteringstreff-api
         if (response.statusCode == 404) {
-            JobbsøkerMedStatuserOutboundDto(
+            return JobbsøkerMedStatuserOutboundDto(
                 id = "ukjent",
                 treffId = id,
                 fødselsnummer = "",
