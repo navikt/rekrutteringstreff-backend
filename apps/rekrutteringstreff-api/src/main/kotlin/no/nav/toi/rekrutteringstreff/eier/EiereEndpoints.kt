@@ -9,9 +9,9 @@ import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.*
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilJson
-import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.*
 
+private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"
 private const val slettEiereEndepunkt = "$eiereEndepunkt/{navIdent}"
 

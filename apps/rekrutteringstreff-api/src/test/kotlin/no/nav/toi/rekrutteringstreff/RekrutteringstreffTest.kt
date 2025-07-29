@@ -32,6 +32,8 @@ import java.util.*
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffTest {
 
+    val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+
     private val mapper = JacksonConfig.mapper
 
     companion object {

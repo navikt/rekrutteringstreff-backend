@@ -16,7 +16,7 @@ import java.util.*
 import kotlin.text.get
 
 private const val pathParamTreffId = "id"
-const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/hendelser"
 private const val publiserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/publiser"
 private const val avsluttInvitasjonPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avslutt-invitasjon"
