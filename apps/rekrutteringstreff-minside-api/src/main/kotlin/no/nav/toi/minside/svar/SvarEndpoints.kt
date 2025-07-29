@@ -118,8 +118,8 @@ class SvarEndpoints {
 }
 
 fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient) {
-    get(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
     post(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().postRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
+    get(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
 }
 
 data class RekrutteringstreffSvarOutboundDto(
