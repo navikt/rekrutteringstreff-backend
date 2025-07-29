@@ -13,6 +13,7 @@ import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.minside.authenticatedUser
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
+import no.nav.toi.minside.svar.SvarEndpoints.Companion.REKRUTTERINGSTREFF_ENDRE_SVAR_URL
 import no.nav.toi.minside.svar.SvarEndpoints.Companion.REKRUTTERINGSTREFF_SVAR_URL
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -24,6 +25,7 @@ class SvarEndpoints {
         private const val ENDEPUNKT_REKRUTTERINGSTREFF = "/api/rekrutteringstreff"
         private const val PATH_PARAM_TREFFID = "id"
         const val REKRUTTERINGSTREFF_SVAR_URL = "$ENDEPUNKT_REKRUTTERINGSTREFF/{$PATH_PARAM_TREFFID}/svar"
+        const val REKRUTTERINGSTREFF_ENDRE_SVAR_URL = "$ENDEPUNKT_REKRUTTERINGSTREFF/svar"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
@@ -95,30 +97,29 @@ class SvarEndpoints {
                 }"""
             )]
         )],
-        path = REKRUTTERINGSTREFF_SVAR_URL,
+        path = REKRUTTERINGSTREFF_ENDRE_SVAR_URL,
         methods = [HttpMethod.PUT]
     )
-    fun postRekrutteringstreffSvarHandler(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient): (Context) -> Unit = { ctx ->
-        val id = ctx.pathParam(PATH_PARAM_TREFFID)
+    fun putRekrutteringstreffSvarHandler(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient): (Context) -> Unit = { ctx ->
+        log.info("putRekrutteringstreffSvarHandler()")
         val inputDto = ctx.bodyAsClass<AvgiSvarInputDto>()
-
-        log.info("Mottatt svar for rekrutteringstreff med id: $id erPåmeldt: ${inputDto.erPåmeldt}")
+        log.info("Mottatt svar for rekrutteringstreff med id: ${inputDto.rekrutteringstreffId} erPåmeldt: ${inputDto.erPåmeldt}")
 
         // Sjekker om treffet finnes
-        treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
+        treffKlient.hent(inputDto.rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
         // TODO: Kall på rekrutteringstreff-api for å lagre påmeldingsstatus. Foreløpig bare en stub for å teste frontend
 
         ctx.status(200).json(AvgiSvarOutputDto(
-            rekrutteringstreffId = id,
+            rekrutteringstreffId = inputDto.rekrutteringstreffId,
             erPåmeldt = inputDto.erPåmeldt
         ))
     }
 }
 
 fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient) {
-    put(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().postRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
+    put(REKRUTTERINGSTREFF_ENDRE_SVAR_URL, SvarEndpoints().putRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
     get(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
 }
 
@@ -137,6 +138,7 @@ data class RekrutteringstreffSvarOutboundDto(
 }
 
 data class AvgiSvarInputDto(
+    val rekrutteringstreffId: String,
     val erPåmeldt: Boolean,
 )
 
