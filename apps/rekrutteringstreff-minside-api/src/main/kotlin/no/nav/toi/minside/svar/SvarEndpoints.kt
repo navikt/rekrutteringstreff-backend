@@ -70,7 +70,7 @@ class SvarEndpoints {
         ctx.status(200).json(svar.json())
     }
 
-       @OpenApi(
+    @OpenApi(
         summary = "Abgi svar for ett rekrutteringstreff",
         operationId = "avgiSvar",
         security = [OpenApiSecurity("BearerAuth")],

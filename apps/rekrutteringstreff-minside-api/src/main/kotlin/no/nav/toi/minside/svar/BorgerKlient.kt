@@ -7,8 +7,14 @@ import com.github.kittinunf.result.Result.Success
 import io.javalin.http.Header
 import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.minside.TokenXKlient
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlient, private val rekrutteringstreffAudience: String) {
+
+     companion object {
+        val log: Logger = LoggerFactory.getLogger(this::class.java)
+    }
 
     fun jobbsøkerPath(treffId: String) = "$url/api/rekrutteringstreff/$treffId/jobbsoker"
 
@@ -17,12 +23,31 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
             .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
             .responseObject<JobbsøkerMedStatuserOutboundDto>(JacksonConfig.mapper)
 
+        log.info("Hentet jobbsøker med statuser for treffId: $id, status: ${response.statusCode}, result: $result")
+
+        // TODO: Kun inviterte jobbsøkere finnes i databasen. Vurder om dette skal håndteres i rekrutteringstreff-api
+        if (response.statusCode == 404) {
+            JobbsøkerMedStatuserOutboundDto(
+                id = "ukjent",
+                treffId = id,
+                fødselsnummer = "",
+                kandidatnummer = null,
+                fornavn = "",
+                etternavn = "",
+                navkontor = null,
+                veilederNavn = null,
+                veilederNavIdent = null,
+                statuser = StatuserOutboundDto(
+                    erPåmeldt = false,
+                    erInvitert = false,
+                    harSvart = false
+                )
+            )
+        }
+
         return when (result) {
             is Failure -> throw result.error
-            is Success -> {
-                if (response.statusCode == 404) return null
-                else result.value
-            }
+            is Success -> result.value
         }
     }
 }
