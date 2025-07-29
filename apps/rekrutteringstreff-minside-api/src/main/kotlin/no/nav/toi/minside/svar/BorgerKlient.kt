@@ -23,7 +23,7 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
             .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
             .responseObject<JobbsøkerMedStatuserOutboundDto>(JacksonConfig.mapper)
 
-        log.info("Hentet jobbsøker med statuser for treffId: $id, status: ${response.statusCode}, result: $result")
+        log.info("Hentet jobbsøker med statuser for treffId: $id, status: ${response.statusCode}")
 
         // TODO: Kun inviterte jobbsøkere finnes i databasen. Vurder om dette skal håndteres i rekrutteringstreff-api
         if (response.statusCode == 404) {
