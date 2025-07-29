@@ -9,7 +9,8 @@ import no.nav.toi.minside.arbeidsgiver.arbeidsgiverendepunkt
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
 import no.nav.toi.minside.rekrutteringstreff.rekrutteringstreffendepunkt
 import no.nav.toi.minside.svar.BorgerKlient
-import no.nav.toi.minside.svar.rekrutteringstreffSvarEndepunkt
+import no.nav.toi.minside.svar.rekrutteringstreffSvarGETEndepunkt
+import no.nav.toi.minside.svar.rekrutteringstreffSvarPUTEndepunkt
 import java.net.http.HttpClient
 
 
@@ -32,7 +33,8 @@ class App(
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
         val rekrutteringstreffKlient = RekrutteringstreffKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
         val borgerKlient = BorgerKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
-        javalin.rekrutteringstreffSvarEndepunkt(rekrutteringstreffKlient, borgerKlient)
+        javalin.rekrutteringstreffSvarPUTEndepunkt(rekrutteringstreffKlient, borgerKlient)
+        javalin.rekrutteringstreffSvarGETEndepunkt(rekrutteringstreffKlient, borgerKlient)
         javalin.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
         javalin.arbeidsgiverendepunkt(rekrutteringstreffKlient)
         javalin.start(port)

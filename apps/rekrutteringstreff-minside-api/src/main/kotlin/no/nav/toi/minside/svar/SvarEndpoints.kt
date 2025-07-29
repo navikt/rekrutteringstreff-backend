@@ -123,6 +123,12 @@ fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlien
     get(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
 }
 
+fun Javalin.rekrutteringstreffSvarPUTEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient)  =
+    put(REKRUTTERINGSTREFF_ENDRE_SVAR_URL, SvarEndpoints().putRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
+
+fun Javalin.rekrutteringstreffSvarGETEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient)  =
+    get(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
+
 data class RekrutteringstreffSvarOutboundDto(
     private val erInvitert: Boolean,
     private val erPåmeldt: Boolean,
