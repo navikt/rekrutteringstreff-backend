@@ -3,15 +3,17 @@ package no.nav.toi.minside.svar
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
+import io.javalin.http.bodyAsClass
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiParam
+import io.javalin.openapi.OpenApiRequestBody
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.minside.authenticatedUser
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
-import no.nav.toi.minside.svar.SvarEndpoints.Companion.HENT_REKRUTTERINGSTREFF_SVAR
+import no.nav.toi.minside.svar.SvarEndpoints.Companion.REKRUTTERINGSTREFF_SVAR_URL
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -21,7 +23,7 @@ class SvarEndpoints {
     companion object {
         private const val ENDEPUNKT_REKRUTTERINGSTREFF = "/api/rekrutteringstreff"
         private const val PATH_PARAM_TREFFID = "id"
-        const val HENT_REKRUTTERINGSTREFF_SVAR = "$ENDEPUNKT_REKRUTTERINGSTREFF/{$PATH_PARAM_TREFFID}/svar"
+        const val REKRUTTERINGSTREFF_SVAR_URL = "$ENDEPUNKT_REKRUTTERINGSTREFF/{$PATH_PARAM_TREFFID}/svar"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
@@ -41,7 +43,7 @@ class SvarEndpoints {
                 }"""
             )]
         )],
-        path = HENT_REKRUTTERINGSTREFF_SVAR,
+        path = REKRUTTERINGSTREFF_SVAR_URL,
         methods = [HttpMethod.GET]
     )
     fun hentRekrutteringstreffSvarHandler(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient): (Context) -> Unit = { ctx ->
@@ -67,9 +69,56 @@ class SvarEndpoints {
 
         ctx.status(200).json(svar.json())
     }
+
+       @OpenApi(
+        summary = "Abgi svar for ett rekrutteringstreff",
+        operationId = "avgiSvar",
+        security = [OpenApiSecurity("BearerAuth")],
+        pathParams = [OpenApiParam(name = PATH_PARAM_TREFFID, type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = AvgiSvarInputDto::class,
+            example = """
+                {
+                    "erPåmeldt": true
+                }
+            """
+        )]
+        ),
+        responses = [OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(
+                from = RekrutteringstreffSvarOutboundDto::class,
+                example = """{
+                    "rekrutteringstreffId": 123,
+                    "erPåmeldt": true
+                }"""
+            )]
+        )],
+        path = REKRUTTERINGSTREFF_SVAR_URL,
+        methods = [HttpMethod.POST]
+    )
+    fun postRekrutteringstreffSvarHandler(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient): (Context) -> Unit = { ctx ->
+        val id = ctx.pathParam(PATH_PARAM_TREFFID)
+        val inputDto = ctx.bodyAsClass<AvgiSvarInputDto>()
+
+        // Sjekker om treffet finnes
+        treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
+           ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+
+        // TODO: Kall på rekrutteringstreff-api for å lagre påmeldingsstatus. Foreløpig bare en stub for å teste frontend
+
+        ctx.status(200).json(AvgiSvarOutputDto(
+            rekrutteringstreffId = id,
+            erPåmeldt = inputDto.erPåmeldt
+        ))
+    }
 }
 
-fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient) = get(HENT_REKRUTTERINGSTREFF_SVAR, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
+fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient) {
+    get(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
+    post(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().postRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
+}
 
 data class RekrutteringstreffSvarOutboundDto(
     private val erInvitert: Boolean,
@@ -84,3 +133,12 @@ data class RekrutteringstreffSvarOutboundDto(
         }
     """.trimIndent()
 }
+
+data class AvgiSvarInputDto(
+    val erPåmeldt: Boolean,
+)
+
+data class AvgiSvarOutputDto(
+    val rekrutteringstreffId: String,
+    val erPåmeldt: Boolean,
+)
