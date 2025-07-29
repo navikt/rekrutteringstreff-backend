@@ -10,8 +10,8 @@ spec:
   port: 8080
   ingresses:
   {{#each ingress as |url|}}
-    - {{url}}
-  {{/each}}
+    {{/each}}
+  - {{url}}
   liveness:
     path: /isalive
   readiness:
@@ -37,12 +37,13 @@ spec:
         - application: rekrutteringsbistand-frontend
         - application: rekrutteringstreff-minside-api
     outbound:
+      rules:
+        - application: rekrutteringsbistand-kandidatsok-api
       external:
         - host: fakedings.intern.dev.nav.no
         - host: {{ openai_azure_host }}
           ports:
             - port: 443
-        - host: {{ kandidatsok_api_host }}
   tokenx:
     enabled: true
   azure:
