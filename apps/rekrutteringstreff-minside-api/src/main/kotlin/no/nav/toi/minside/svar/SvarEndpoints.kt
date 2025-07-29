@@ -38,8 +38,8 @@ class SvarEndpoints {
                 from = RekrutteringstreffSvarOutboundDto::class,
                 example = """{
                     "erInvitert": true,
-                    "harSvart": true,
-                    "påmeldt": true
+                    "erPåmeldt": true,
+                    "harSvart": true
                 }"""
             )]
         )],
@@ -124,14 +124,14 @@ fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlien
 
 data class RekrutteringstreffSvarOutboundDto(
     private val erInvitert: Boolean,
+    private val erPåmeldt: Boolean,
     private val harSvart: Boolean,
-    private val påmeldt: Boolean,
 ) {
     fun json() = """
         {
-            "erInvitert": $påmeldt,
-            "harSvart": $påmeldt,
-            "påmeldt": $påmeldt
+            "erInvitert": $erInvitert,
+            "erPåmeldt": $erPåmeldt,
+            "harSvart": $harSvart
         }
     """.trimIndent()
 }
