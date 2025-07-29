@@ -10,7 +10,8 @@ import no.nav.toi.kandidatsok.KandidatsøkKlient
 import java.util.*
 
 private const val pathParamPersonTreffId = "personTreffId"
-private const val eksternKandidatnummerPath = "/api/jobbsoker/{$pathParamPersonTreffId}/kandidatnummer"
+private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+private const val eksternKandidatnummerPath = "$endepunktRekrutteringstreff/jobbsoker/{$pathParamPersonTreffId}/kandidatnummer"
 
 data class KandidatnummerDto(val kandidatnummer: String)
 

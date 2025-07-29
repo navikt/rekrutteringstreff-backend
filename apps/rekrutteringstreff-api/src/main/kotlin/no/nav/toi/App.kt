@@ -31,20 +31,20 @@ class App(
     private val dataSource: DataSource,
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
-    private val kandidatsokApiUrl: String,                    // NEW
-    private val kandidatsokScope: String,                     // NEW
-    private val azureClientId: String,                        // NEW
-    private val azureClientSecret: String,                    // NEW
-    private val azureTokenEndpoint: String                    // NEW
+    private val kandidatsokApiUrl: String,
+    private val kandidatsokScope: String,
+    private val azureClientId: String,
+    private val azureClientSecret: String,
+    private val azureTokenEndpoint: String
 ) {
-    private val accessTokenClient = AccessTokenClient(        // NEW
+    private val accessTokenClient = AccessTokenClient(
         secret = azureClientSecret,
         clientId = azureClientId,
         scope = kandidatsokScope,
         azureUrl = azureTokenEndpoint,
     )
 
-    private val kandidatsokKlient = KandidatsøkKlient(        // NEW
+    private val kandidatsokKlient = KandidatsøkKlient(
         kandidatsokApiUrl = kandidatsokApiUrl,
         tokenProvider = { accessTokenClient.hentAccessToken(TokenHolder.current()) }
     )
@@ -77,7 +77,7 @@ class App(
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
         javalin.handleJobbsøker(jobbRepo)
         javalin.handleJobbsøkerInnloggetBorger(jobbRepo)
-        javalin.handleJobbsøkerOutbound(jobbRepo, kandidatsokKlient) // NEW
+        javalin.handleJobbsøkerOutbound(jobbRepo, kandidatsokKlient)
 
         javalin.start(port)
     }
@@ -122,11 +122,11 @@ fun main() {
         dataSource = dataSource,
         arbeidsgiverrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET")),
         utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER")),
-        kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),          // NEW
-        kandidatsokScope = getenv("KANDIDATSOK_SCOPE"),            // NEW
-        azureClientId = getenv("AZURE_APP_CLIENT_ID"),             // NEW
-        azureClientSecret = getenv("AZURE_APP_CLIENT_SECRET"),     // NEW
-        azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT") // NEW
+        kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
+        kandidatsokScope = getenv("KANDIDATSOK_SCOPE"),
+        azureClientId = getenv("AZURE_APP_CLIENT_ID"),
+        azureClientSecret = getenv("AZURE_APP_CLIENT_SECRET"),
+        azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")
     ).start()
 }
 
