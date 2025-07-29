@@ -195,8 +195,8 @@ class MinsideTest {
 
                 // The answer is randomly generated boolean values for now
                 assertThat(dto["erInvitert"].asText()).isIn("true", "false")
+                assertThat(dto["erPåmeldt"].asText()).isIn("true", "false")
                 assertThat(dto["harSvart"].asText()).isIn("true", "false")
-                assertThat(dto["påmeldt"].asText()).isIn("true", "false")
             }
         }
     }
