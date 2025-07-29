@@ -102,6 +102,8 @@ class SvarEndpoints {
         val id = ctx.pathParam(PATH_PARAM_TREFFID)
         val inputDto = ctx.bodyAsClass<AvgiSvarInputDto>()
 
+        log.info("Mottatt svar for rekrutteringstreff med id: $id erPåmeldt: ${inputDto.erPåmeldt}")
+
         // Sjekker om treffet finnes
         treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
