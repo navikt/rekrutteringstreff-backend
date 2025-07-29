@@ -32,8 +32,8 @@ class App(
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
         val rekrutteringstreffKlient = RekrutteringstreffKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
         val borgerKlient = BorgerKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
-        javalin.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
         javalin.rekrutteringstreffSvarEndepunkt(rekrutteringstreffKlient, borgerKlient)
+        javalin.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
         javalin.arbeidsgiverendepunkt(rekrutteringstreffKlient)
         javalin.start(port)
     }

@@ -96,7 +96,7 @@ class SvarEndpoints {
             )]
         )],
         path = REKRUTTERINGSTREFF_SVAR_URL,
-        methods = [HttpMethod.POST]
+        methods = [HttpMethod.PUT]
     )
     fun postRekrutteringstreffSvarHandler(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient): (Context) -> Unit = { ctx ->
         val id = ctx.pathParam(PATH_PARAM_TREFFID)
@@ -118,7 +118,7 @@ class SvarEndpoints {
 }
 
 fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient) {
-    post(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().postRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
+    put(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().postRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
     get(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
 }
 
