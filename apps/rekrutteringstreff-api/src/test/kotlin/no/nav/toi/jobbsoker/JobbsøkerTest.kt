@@ -315,6 +315,7 @@ class JobbsøkerTest {
                     assertThat(h.fornavn).isIn("Ola", "Kari")
                     assertThat(h.etternavn).isEqualTo("Nordmann")
                     assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+                    assertThat(h.personTreffId).isNotNull()
                 }
             }
         }

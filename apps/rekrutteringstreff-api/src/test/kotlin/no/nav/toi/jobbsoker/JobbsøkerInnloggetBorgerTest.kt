@@ -164,7 +164,7 @@ class JobbsøkerInnloggetBorgerTest {
         val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
 
         val jobbsøker = result.get()
-        assertThatCode { UUID.fromString(jobbsøker.id) }.doesNotThrowAnyException()
+        assertThatCode { UUID.fromString(jobbsøker.personTreffId) }.doesNotThrowAnyException()
         assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer.asString)
         assertThat(jobbsøker.kandidatnummer).isEqualTo("K1")
         assertThat(jobbsøker.fornavn).isEqualTo("Test")

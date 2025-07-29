@@ -229,6 +229,7 @@ class JobbsøkerRepositoryTest {
         assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
         assertThat(hendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+        assertThatCode { UUID.fromString(hendelse.personTreffId.toString()) }.doesNotThrowAnyException()
     }
 
     @Test

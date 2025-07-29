@@ -17,13 +17,14 @@ import java.util.UUID
 
 
 private const val pathParamTreffId = "id"
+private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
-private const val borgerJobbsøkerPath = jobbsøkerPath + "/borger"
+private const val borgerJobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/borger"
 private const val svarJaPath = "$borgerJobbsøkerPath/svar-ja"
 private const val svarNeiPath = "$borgerJobbsøkerPath/svar-nei"
 
 data class JobbsøkerMedStatuserOutboundDto(
-    val id: String,
+    val personTreffId: String,
     val treffId: String,
     val fødselsnummer: String,
     val kandidatnummer: String?,
@@ -78,7 +79,6 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
         repo.svarNeiTilInvitasjon(Fødselsnummer(pid), treffId, pid)
         ctx.status(200)
     }
-
 }
 
 @OpenApi(
@@ -149,12 +149,10 @@ private fun hentBorgerJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -
             ctx.json(jobbsøker.toOutboundDtoMedStatuser())
         }
     }
-
-
 }
 
 private fun Jobbsøker.toOutboundDtoMedStatuser() = JobbsøkerMedStatuserOutboundDto(
-    id = personTreffId.toString(),
+    personTreffId = personTreffId.toString(),
     treffId = treffId.somString,
     fødselsnummer = fødselsnummer.asString,
     kandidatnummer = kandidatnummer?.asString,

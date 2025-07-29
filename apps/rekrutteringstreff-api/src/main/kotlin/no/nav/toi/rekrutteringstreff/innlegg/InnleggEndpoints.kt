@@ -8,12 +8,13 @@ import io.javalin.http.bodyAsClass
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.net.HttpURLConnection.*
 import java.util.UUID
 
 private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
 private const val INNLEGG_ID_PARAM            = "innleggId"
+
+private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
 private const val INNLEGG_BASE_PATH = "$endepunktRekrutteringstreff/{$REKRUTTERINGSTREFF_ID_PARAM}/innlegg"
 private const val INNLEGG_ITEM_PATH = "$INNLEGG_BASE_PATH/{$INNLEGG_ID_PARAM}"

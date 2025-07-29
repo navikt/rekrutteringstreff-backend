@@ -5,15 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId
-import java.sql.Connection
-import java.sql.Statement
-import java.sql.Timestamp
+import java.sql.*
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
-import java.sql.PreparedStatement
-import java.sql.ResultSet
 
 data class JobbsøkerHendelse(
     val id: UUID,
@@ -32,7 +28,8 @@ data class JobbsøkerHendelseMedJobbsøkerData(
     val fødselsnummer: Fødselsnummer,
     val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
-    val etternavn: Etternavn
+    val etternavn: Etternavn,
+    val personTreffId: PersonTreffId
 )
 
 class JobbsøkerRepository(
@@ -52,9 +49,11 @@ class JobbsøkerRepository(
             try {
                 val treffId = c.treffDbId(treff)
                 val jsIds = c.batchInsertJobbsøkere(treffId, jobsøkere)
-                c.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETT,jsIds, opprettetAv)
+                c.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETT, jsIds, opprettetAv)
                 c.commit()
-            } catch (e: Exception) { c.rollback(); throw e }
+            } catch (e: Exception) {
+                c.rollback(); throw e
+            }
         }
     }
 
@@ -74,7 +73,7 @@ class JobbsøkerRepository(
             var n = 0
             data.forEach {
                 stmt.setObject(1, UUID.randomUUID())
-                stmt.setLong  (2, treffDbId)
+                stmt.setLong(2, treffDbId)
                 stmt.setString(3, it.fødselsnummer.asString)
                 stmt.setString(4, it.kandidatnummer?.asString)
                 stmt.setString(5, it.fornavn.asString)
@@ -82,7 +81,9 @@ class JobbsøkerRepository(
                 stmt.setString(7, it.navkontor?.asString)
                 stmt.setString(8, it.veilederNavn?.asString)
                 stmt.setString(9, it.veilederNavIdent?.asString)
-                stmt.addBatch(); if (++n == size) { ids += stmt.execBatchReturnIds(); n = 0 }
+                stmt.addBatch(); if (++n == size) {
+                ids += stmt.execBatchReturnIds(); n = 0
+            }
             }
             if (n > 0) ids += stmt.execBatchReturnIds()
         }
@@ -104,13 +105,15 @@ class JobbsøkerRepository(
         prepareStatement(sql).use { stmt ->
             var n = 0
             jobbsøkerIds.forEach { id ->
-                stmt.setObject  (1, UUID.randomUUID())
-                stmt.setLong    (2, id)
+                stmt.setObject(1, UUID.randomUUID())
+                stmt.setLong(2, id)
                 stmt.setTimestamp(3, Timestamp.from(Instant.now()))
-                stmt.setString  (4, hendelsestype.name)
-                stmt.setString  (5, arrangørtype.name)
-                stmt.setString  (6, opprettetAv)
-                stmt.addBatch(); if (++n == size) { stmt.executeBatch(); n = 0 }
+                stmt.setString(4, hendelsestype.name)
+                stmt.setString(5, arrangørtype.name)
+                stmt.setString(6, opprettetAv)
+                stmt.addBatch(); if (++n == size) {
+                stmt.executeBatch(); n = 0
+            }
             }
             if (n > 0) stmt.executeBatch()
         }
@@ -172,7 +175,7 @@ class JobbsøkerRepository(
             try {
                 val treffDbId = c.treffDbId(treff)
                 val jobbsøkerDbIds = c.hentJobbsøkerDbIder(treffDbId, personTreffIder)
-                c.batchInsertHendelser(JobbsøkerHendelsestype.INVITER,jobbsøkerDbIds, opprettetAv)
+                c.batchInsertHendelser(JobbsøkerHendelsestype.INVITER, jobbsøkerDbIds, opprettetAv)
             } catch (e: Exception) {
                 throw e
             }
@@ -183,9 +186,16 @@ class JobbsøkerRepository(
         dataSource.connection.use { c ->
             try {
                 val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbId = c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId = treffDbId, fødselsnumre = listOf(fødselsnummer)).firstOrNull()
-                    ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
-                c.batchInsertHendelser(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON, listOf(jobbsøkerDbId), opprettetAv, AktørType.JOBBSØKER)
+                val jobbsøkerDbId =
+                    c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId = treffDbId, fødselsnumre = listOf(fødselsnummer))
+                        .firstOrNull()
+                        ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+                c.batchInsertHendelser(
+                    JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON,
+                    listOf(jobbsøkerDbId),
+                    opprettetAv,
+                    AktørType.JOBBSØKER
+                )
             } catch (e: Exception) {
                 throw e
             }
@@ -196,9 +206,15 @@ class JobbsøkerRepository(
         dataSource.connection.use { c ->
             try {
                 val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbId = c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId, listOf(fødselsnummer)).firstOrNull()
-                    ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
-                c.batchInsertHendelser(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON, listOf(jobbsøkerDbId), opprettetAv, AktørType.JOBBSØKER)
+                val jobbsøkerDbId =
+                    c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId, listOf(fødselsnummer)).firstOrNull()
+                        ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+                c.batchInsertHendelser(
+                    JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON,
+                    listOf(jobbsøkerDbId),
+                    opprettetAv,
+                    AktørType.JOBBSØKER
+                )
             } catch (e: Exception) {
                 throw e
             }
@@ -206,7 +222,10 @@ class JobbsøkerRepository(
     }
 
 
-    private fun Connection.hentJobbsøkerDbIderFraFødselsnummer(treffDbId: Long, fødselsnumre: List<Fødselsnummer>): List<Long> {
+    private fun Connection.hentJobbsøkerDbIderFraFødselsnummer(
+        treffDbId: Long,
+        fødselsnumre: List<Fødselsnummer>
+    ): List<Long> {
         val sql = "SELECT db_id FROM jobbsoker WHERE treff_db_id = ? AND fodselsnummer = ANY(?)"
         return prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
@@ -229,16 +248,16 @@ class JobbsøkerRepository(
     }
 
     private fun ResultSet.toJobbsøker() = Jobbsøker(
-        personTreffId             = PersonTreffId(UUID.fromString(getString("id"))),
-        treffId        = TreffId(getString("treff_id")),
-        fødselsnummer  = Fødselsnummer(getString("fodselsnummer")),
+        personTreffId = PersonTreffId(UUID.fromString(getString("id"))),
+        treffId = TreffId(getString("treff_id")),
+        fødselsnummer = Fødselsnummer(getString("fodselsnummer")),
         kandidatnummer = getString("kandidatnummer")?.let(::Kandidatnummer),
-        fornavn        = Fornavn(getString("fornavn")),
-        etternavn      = Etternavn(getString("etternavn")),
-        navkontor      = getString("navkontor")?.let(::Navkontor),
-        veilederNavn   = getString("veileder_navn")?.let(::VeilederNavn),
+        fornavn = Fornavn(getString("fornavn")),
+        etternavn = Etternavn(getString("etternavn")),
+        navkontor = getString("navkontor")?.let(::Navkontor),
+        veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
-        hendelser      = parseHendelser(getString("hendelser"))
+        hendelser = parseHendelser(getString("hendelser"))
     )
 
     fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {
@@ -253,7 +272,8 @@ class JobbsøkerRepository(
                     js.fodselsnummer,
                     js.kandidatnummer,
                     js.fornavn,
-                    js.etternavn
+                    js.etternavn,
+                    js.id as person_treff_id
                 FROM jobbsoker_hendelse jh
                 JOIN jobbsoker js ON jh.jobbsoker_db_id = js.db_id
                 JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
@@ -277,7 +297,10 @@ class JobbsøkerRepository(
                                 fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
                                 kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
                                 fornavn = Fornavn(rs.getString("fornavn")),
-                                etternavn = Etternavn(rs.getString("etternavn"))
+                                etternavn = Etternavn(rs.getString("etternavn")),
+                                personTreffId = PersonTreffId(
+                                    UUID.fromString(rs.getString("person_treff_id"))
+                                )
                             )
                         )
                     }

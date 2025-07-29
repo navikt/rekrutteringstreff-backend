@@ -8,11 +8,12 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.endepunktRekrutteringstreff
 import java.time.ZonedDateTime
 import java.util.*
 
 private const val pathParamTreffId = "id"
+
+private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
 const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
@@ -56,7 +57,8 @@ data class JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
     val fødselsnummer: String,
     val kandidatnummer: String?,
     val fornavn: String,
-    val etternavn: String
+    val etternavn: String,
+    val personTreffId: String
 )
 
 data class StatuserOutboundDto(
@@ -207,7 +209,8 @@ private fun hentJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Uni
                     "fødselsnummer": "12345678901",
                     "kandidatnummer": "K123456",
                     "fornavn": "Ola",
-                    "etternavn": "Nordmann"
+                    "etternavn": "Nordmann",
+                    "personTreffId": "any-uuid"
                 }
             ]"""
         )]
@@ -229,7 +232,8 @@ private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context
             fødselsnummer = h.fødselsnummer.asString,
             kandidatnummer = h.kandidatnummer?.asString,
             fornavn = h.fornavn.asString,
-            etternavn = h.etternavn.asString
+            etternavn = h.etternavn.asString,
+            personTreffId = h.personTreffId.somString
         )
     })
 }
