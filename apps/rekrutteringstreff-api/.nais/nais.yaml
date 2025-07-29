@@ -42,6 +42,7 @@ spec:
         - host: {{ openai_azure_host }}
           ports:
             - port: 443
+        - host: {{ kandidatsok_api_host }}
   tokenx:
     enabled: true
   azure:
@@ -70,6 +71,10 @@ spec:
       value: {{adGruppeArbeidsgiverrettet}}
     - name: REKRUTTERINGSBISTAND_UTVIKLER
       value: {{adGruppeUtvikler}}
+    - name: KANDIDATSOK_API_URL
+      value: {{kandidatsok_api_url}}
+    - name: KANDIDATSOK_API_SCOPE
+      value: {{kandidatsok_api_scope}}
   observability:
     logging:
       destinations:

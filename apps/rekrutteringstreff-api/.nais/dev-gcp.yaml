@@ -16,3 +16,6 @@ postgres: POSTGRES_15
 adGruppeUtvikler: "a1749d9a-52e0-4116-bb9f-935c38f6c74a"
 openai_azure_host: "arbeidsmarked-dev.openai.azure.com"
 adGruppeArbeidsgiverrettet: "52bc2af7-38d1-468b-b68d-0f3a4de45af2"
+kandidatsok_api_host: "rekrutteringsbistand-kandidatsok-api.intern.dev.nav.no"
+kandidatsok_api_url: "https://rekrutteringsbistand-kandidatsok-api.intern.dev.nav.no"
+kandidatsok_api_scope: "api://dev-gcp.toi.rekrutteringsbistand-kandidatsok-api/.default"

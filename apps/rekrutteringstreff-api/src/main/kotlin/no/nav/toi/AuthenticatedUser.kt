@@ -100,10 +100,15 @@ fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<
             val token = ctx.header(HttpHeader.AUTHORIZATION.name)
                 ?.removePrefix("Bearer ")
                 ?.trim() ?: throw UnauthorizedResponse("Missing token")
+
+            TokenHolder.set(token)
+
             val decoded = verifyJwt(verifiers, token)
             ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon))
         }
     }
+
+    after { TokenHolder.clear() }
     return this
 }
 

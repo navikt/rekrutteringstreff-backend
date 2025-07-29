@@ -35,7 +35,12 @@ class JobbsøkerInnloggetBorgerTest {
             ),
             dataSource = db.dataSource,
             arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler
+            utvikler = AzureAdRoller.utvikler,
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+            azureClientId = "",
+            azureClientSecret = "",
+            azureTokenEndpoint = "",
         )
 
         val mapper = JacksonConfig.mapper

@@ -60,7 +60,12 @@ class RekrutteringstreffTest {
         ),
         db.dataSource,
         arbeidsgiverrettet,
-        utvikler
+        utvikler,
+        kandidatsokApiUrl = "",
+        kandidatsokScope = "",
+        azureClientId = "",
+        azureClientSecret = "",
+        azureTokenEndpoint = "",
     )
 
     @BeforeAll
