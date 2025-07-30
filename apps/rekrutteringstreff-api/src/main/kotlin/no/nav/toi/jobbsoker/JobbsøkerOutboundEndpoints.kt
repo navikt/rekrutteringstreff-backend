@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.HttpStatus
+import io.javalin.http.InternalServerErrorResponse
 import io.javalin.openapi.*
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
@@ -38,9 +39,11 @@ private fun hentKandidatnummerHandler(
 ): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
     val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
+    val userToken = ctx.attribute<String>("raw_token")
+        ?: throw InternalServerErrorResponse("Raw token not found in context")
 
     repo.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->
-        client.hentKandidatnummer(fødselsnummer)?.let { kandidatnummer ->
+        client.hentKandidatnummer(fødselsnummer, userToken)?.let { kandidatnummer ->
             ctx.json(KandidatnummerDto(kandidatnummer.asString))
         } ?: ctx.status(HttpStatus.NOT_FOUND)
     } ?: ctx.status(HttpStatus.NOT_FOUND)

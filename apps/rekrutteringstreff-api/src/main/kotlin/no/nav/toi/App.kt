@@ -12,17 +12,16 @@ import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.handleJobbsøker
 import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
-import no.nav.toi.jobbsoker.handleJobbsøkerOutbound          // NEW
-import no.nav.toi.kandidatsok.KandidatsøkKlient              // NEW
+import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
+import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
-import org.eclipse.jetty.http.HttpHeader                      // NEW
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MILLIS
-import java.util.UUID
+import java.util.*
 import javax.sql.DataSource
 
 class App(
@@ -31,22 +30,35 @@ class App(
     private val dataSource: DataSource,
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
-    private val kandidatsokApiUrl: String,
-    private val kandidatsokScope: String,
-    private val azureClientId: String,
-    private val azureClientSecret: String,
-    private val azureTokenEndpoint: String
+    private val kandidatsokKlient: KandidatsøkKlient // Add this parameter
 ) {
-    private val accessTokenClient = AccessTokenClient(
-        secret = azureClientSecret,
-        clientId = azureClientId,
-        scope = kandidatsokScope,
-        azureUrl = azureTokenEndpoint,
-    )
-
-    private val kandidatsokKlient = KandidatsøkKlient(
-        kandidatsokApiUrl = kandidatsokApiUrl,
-        tokenProvider = { accessTokenClient.hentAccessToken(TokenHolder.current()) }
+    // Add a secondary constructor for production use
+    constructor(
+        port: Int,
+        authConfigs: List<AuthenticationConfiguration>,
+        dataSource: DataSource,
+        arbeidsgiverrettet: UUID,
+        utvikler: UUID,
+        kandidatsokApiUrl: String,
+        kandidatsokScope: String,
+        azureClientId: String,
+        azureClientSecret: String,
+        azureTokenEndpoint: String
+    ) : this(
+        port = port,
+        authConfigs = authConfigs,
+        dataSource = dataSource,
+        arbeidsgiverrettet = arbeidsgiverrettet,
+        utvikler = utvikler,
+        kandidatsokKlient = KandidatsøkKlient(
+            kandidatsokApiUrl = kandidatsokApiUrl,
+            accessTokenClient = AccessTokenClient(
+                secret = azureClientSecret,
+                clientId = azureClientId,
+                scope = kandidatsokScope,
+                azureUrl = azureTokenEndpoint,
+            )
+        )
     )
 
     private lateinit var javalin: Javalin
@@ -56,14 +68,6 @@ class App(
         javalin = Javalin.create { config ->
             config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
             configureOpenApi(config)
-        }
-
-        javalin.before { ctx ->                               // NEW
-            TokenHolder.set(
-                ctx.header(HttpHeader.AUTHORIZATION.name)
-                    ?.removePrefix("Bearer ")
-                    ?.trim()
-            )
         }
 
         javalin.handleHealth()
@@ -85,13 +89,6 @@ class App(
     fun close() {
         if (::javalin.isInitialized) javalin.stop()
     }
-}
-
-object TokenHolder {
-    private val tl = ThreadLocal<String?>()
-    fun set(t: String?) = tl.set(t)
-    fun current(): String = tl.get() ?: error("Missing incoming token")
-    fun clear() = tl.remove()
 }
 
 private val log = noClassLogger()

@@ -8,6 +8,7 @@ import com.github.kittinunf.fuel.jackson.responseObject
 import com.github.kittinunf.result.Result
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
+import no.nav.toi.SecureLogLogger.Companion.secure
 import org.ehcache.CacheManager
 import org.ehcache.config.builders.CacheConfigurationBuilder
 import org.ehcache.config.builders.CacheManagerBuilder
@@ -42,11 +43,12 @@ class AccessTokenClient(
         return when (result) {
             is Result.Success -> result.get()
             is Result.Failure -> {
-                /*secureLog.error(
+
+                secure(log).error(
                     "Noe feil skjedde ved henting av access_token. msg: ${
                         response.body().asString("application/json")
                     }", result.getException()
-                )*/
+                )
 
                 throw RuntimeException("Noe feil skjedde ved henting av access_token: ", result.getException())
             }

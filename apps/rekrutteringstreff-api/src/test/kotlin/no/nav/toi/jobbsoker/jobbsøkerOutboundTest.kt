@@ -20,7 +20,7 @@ private const val WIREMOCK_BASE = "http://localhost:$WIREMOCK_PORT"
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest(httpPort = WIREMOCK_PORT)
-class JobbsøkerOutboundWireMockTest {
+class JobbsøkerOutboundTest {
 
     private val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
@@ -34,16 +34,16 @@ class JobbsøkerOutboundWireMockTest {
     private lateinit var app: App
 
     @BeforeAll
-    fun setUp(wmInfo: WireMockRuntimeInfo) {
+    fun startApp(wmInfo: WireMockRuntimeInfo) {
         authServer.start(authPort)
 
         app = App(
             port = appPort,
             authConfigs = listOf(
                 AuthenticationConfiguration(
+                    audience = audience,
                     issuer = issuerId,
-                    jwksUri = authServer.jwksUrl(issuerId).toString(),
-                    audience = audience
+                    jwksUri = authServer.jwksUrl(issuerId.substringAfterLast("/")).toString()
                 )
             ),
             dataSource = db.dataSource,
@@ -53,8 +53,18 @@ class JobbsøkerOutboundWireMockTest {
             kandidatsokScope = "scope",
             azureClientId = "client-id",
             azureClientSecret = "secret",
-            azureTokenEndpoint = authServer.tokenEndpointUrl(issuerId).toString()
+            azureTokenEndpoint = "${wmInfo.httpBaseUrl}/token"
         ).also { it.start() }
+    }
+
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            post(urlPathEqualTo("/token"))
+                .willReturn(
+                    aResponse().withBody("""{"access_token": "obo-token", "expires_in": 3600}""")
+                )
+        )
     }
 
     @AfterAll
@@ -71,7 +81,7 @@ class JobbsøkerOutboundWireMockTest {
     }
 
     @Test
-    fun `GET kandidatnummer returnerer forventet kandidatnummer`(wmInfo: WireMockRuntimeInfo) {
+    fun `GET kandidatnummer returnerer forventet kandidatnummer`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678910")
         val forventetKandidatnummer = "K123456"
@@ -79,7 +89,7 @@ class JobbsøkerOutboundWireMockTest {
         db.leggTilJobbsøkere(
             listOf(
                 Jobbsøker(
-                    personTreffId = PersonTreffId(UUID.randomUUID()), // Denne ignoreres av repo-laget
+                    personTreffId = PersonTreffId(UUID.randomUUID()),
                     treffId = treffId,
                     fødselsnummer = fnr,
                     kandidatnummer = null,
@@ -94,9 +104,9 @@ class JobbsøkerOutboundWireMockTest {
 
         val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
 
-        wmInfo.wireMock.register(
+        stubFor(
             post("/api/arena-kandidatnr")
-                .withHeader("Authorization", matching("Bearer .*"))
+                .withHeader("Authorization", equalTo("Bearer obo-token"))
                 .withRequestBody(equalToJson("""{"fodselsnummer":"${fnr.asString}"}"""))
                 .willReturn(
                     okJson("""{"arenaKandidatnr":"$forventetKandidatnummer"}""")
@@ -121,9 +131,7 @@ class JobbsøkerOutboundWireMockTest {
         assertThat((result as Result.Success).get().kandidatnummer)
             .isEqualTo(forventetKandidatnummer)
 
-        wmInfo.wireMock.verifyThat(
-            1,
-            postRequestedFor(urlEqualTo("/api/arena-kandidatnr"))
-        )
+        verify(1, postRequestedFor(urlEqualTo("/api/arena-kandidatnr")))
+        verify(1, postRequestedFor(urlEqualTo("/token")))
     }
 }
