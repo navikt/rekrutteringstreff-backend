@@ -206,11 +206,10 @@ class MinsideTest {
         val ident = "12345678910"
         val token = authServer.lagToken(authPort, pid = ident)
 
-        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/svar")
+        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar")
             .header("Authorization", "Bearer ${token.serialize()}")
             .body("""
                 {
-                    "rekrutteringstreffId": "${rekrutteringstreffMeldtPå.id}",
                     "erPåmeldt": true
                 }
                 """.trimIndent()
