@@ -25,7 +25,7 @@ class SvarEndpoints {
         private const val ENDEPUNKT_REKRUTTERINGSTREFF = "/api/rekrutteringstreff"
         private const val PATH_PARAM_TREFFID = "id"
         const val REKRUTTERINGSTREFF_SVAR_URL = "$ENDEPUNKT_REKRUTTERINGSTREFF/{$PATH_PARAM_TREFFID}/svar"
-        const val REKRUTTERINGSTREFF_ENDRE_SVAR_URL = "$ENDEPUNKT_REKRUTTERINGSTREFF/svar"
+        const val REKRUTTERINGSTREFF_ENDRE_SVAR_URL = "/api/svar"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 

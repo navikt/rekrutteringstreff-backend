@@ -56,7 +56,7 @@ fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<
     log.info("Starter autentiseringoppsett")
     val verifiers = authConfigs.map { it.jwtVerifier() }
     before { ctx ->
-        if (ctx.path().matches(Regex("""/api/rekrutteringstreff(?:$|/.*)"""))) {
+        if (ctx.path().matches(Regex("""/api/(rekrutteringstreff|svar)(?:$|/.*)"""))) {
             val token = ctx.header(HttpHeader.AUTHORIZATION.name)
                 ?.removePrefix("Bearer ")
                 ?.trim() ?: throw UnauthorizedResponse("Missing token")
