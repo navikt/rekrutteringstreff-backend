@@ -30,9 +30,8 @@ class App(
     private val dataSource: DataSource,
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
-    private val kandidatsokKlient: KandidatsøkKlient // Add this parameter
+    private val kandidatsokKlient: KandidatsøkKlient
 ) {
-    // Add a secondary constructor for production use
     constructor(
         port: Int,
         authConfigs: List<AuthenticationConfiguration>,

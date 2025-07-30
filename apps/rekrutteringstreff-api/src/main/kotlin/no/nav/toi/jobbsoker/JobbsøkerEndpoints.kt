@@ -122,7 +122,7 @@ data class InviterJobbsøkereDto(
 )
 private fun leggTilJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-    val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()   // leser array
+    val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>() 
     val treff = TreffId(ctx.pathParam(pathParamTreffId))
     repo.leggTil(dtoer.map { it.domene() }, treff, ctx.extractNavIdent())
     ctx.status(201)

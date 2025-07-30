@@ -14,7 +14,6 @@ import org.junit.jupiter.api.*
 import java.net.HttpURLConnection
 import java.util.*
 
-/** WireMock kjører på port 10010 (slipper å hente runtime‑info i @BeforeAll) */
 private const val WIREMOCK_PORT = 10010
 private const val WIREMOCK_BASE = "http://localhost:$WIREMOCK_PORT"
 
