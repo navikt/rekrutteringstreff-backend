@@ -123,7 +123,7 @@ fun main() {
         arbeidsgiverrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET")),
         utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER")),
         kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
-        kandidatsokScope = getenv("KANDIDATSOK_SCOPE"),
+        kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
         azureClientId = getenv("AZURE_APP_CLIENT_ID"),
         azureClientSecret = getenv("AZURE_APP_CLIENT_SECRET"),
         azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")
