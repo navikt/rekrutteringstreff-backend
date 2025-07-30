@@ -1,6 +1,7 @@
 package no.nav.toi.minside.svar
 
 import com.github.kittinunf.fuel.httpGet
+import com.github.kittinunf.fuel.httpPost
 import com.github.kittinunf.fuel.jackson.responseObject
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
@@ -18,7 +19,7 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
 
     fun jobbsøkerPath(treffId: String) = "$url/api/rekrutteringstreff/$treffId/jobbsoker"
 
-    fun hentJobbsøkerMedStatuser(id: String, innkommendeToken: String): JobbsøkerMedStatuserOutboundDto? {
+    fun hentJobbsøkerMedStatuser(id: String, innkommendeToken: String): JobbsøkerMedStatuserOutboundDto {
         val (_, response, result) = "${jobbsøkerPath(id)}/borger".httpGet()
             .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
             .responseObject<JobbsøkerMedStatuserOutboundDto>(JacksonConfig.mapper)
@@ -49,6 +50,25 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
             is Failure -> throw result.error
             is Success -> result.value
         }
+    }
+
+    fun svarPåTreff(rekrutterinstreffId: String, innkommendeToken: String, erPåmeldt: Boolean) {
+        val påmeldtSomStreng = if (erPåmeldt) "ja" else "nei"
+
+        "${jobbsøkerPath(rekrutterinstreffId)}/borger/svar-ja".httpPost()
+            .header(
+                Header.AUTHORIZATION,
+                "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}"
+            )
+            .responseString { _, response, result ->
+                log.info("Svarte ${påmeldtSomStreng} på jobbtreff: $rekrutterinstreffId, status: ${response.statusCode}")
+                when (result) {
+                    is Failure -> throw result.error
+                    is Success -> {
+                        log.info("Jobbsøker har svart ${påmeldtSomStreng} på rekrutteringstreff med id: $rekrutterinstreffId")
+                    }
+                }
+            }
     }
 }
 

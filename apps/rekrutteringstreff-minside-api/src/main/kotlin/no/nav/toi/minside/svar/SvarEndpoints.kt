@@ -17,7 +17,6 @@ import no.nav.toi.minside.svar.SvarEndpoints.Companion.REKRUTTERINGSTREFF_SVAR_U
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.UUID
-import kotlin.random.Random
 
 class SvarEndpoints {
     companion object {
@@ -54,19 +53,17 @@ class SvarEndpoints {
             ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
         // hent påmeldingsstatus for treffet
-        try {
-            val jobbsøkerMedStatuser = borgerKlient.hentJobbsøkerMedStatuser(rekrutteringstreffId, ctx.authenticatedUser().jwt)
-            log.info("jobbsøkerMedStatuser: $jobbsøkerMedStatuser");
-            // TODO: Bruk statusen til å sende svar tilbake
-        } catch (e: Exception) {
-            log.error("Feil ved henting av svar for rekrutteringstreff med id: $rekrutteringstreffId", e)
-        }
+        val jobbsøkerMedStatuser = borgerKlient.hentJobbsøkerMedStatuser(rekrutteringstreffId, ctx.authenticatedUser().jwt)
+        log.info("jobbsøkerMedStatuser: $jobbsøkerMedStatuser");
+        val statuser = jobbsøkerMedStatuser.statuser
 
-        // TODO: Gir foreløpig et tilfeldig svar for demonstrasjon i påvente av endelig endepunkt i rekrutteringstreff-api
-        val svar = RekrutteringstreffSvarOutboundDto(Random.nextBoolean(), Random.nextBoolean(), Random.nextBoolean())
+        val svar = RekrutteringstreffSvarOutboundDto(
+            erInvitert = statuser.erInvitert,
+            erPåmeldt = statuser.erPåmeldt,
+            harSvart = statuser.harSvart,
+        )
 
-        log.info("Henter svar for rekrutteringstreff med id: $rekrutteringstreffId, svar: ${svar.json()}")
-
+        log.info("Jobbsøker har svart følgende på rekkrutterinstreffet med id: $rekrutteringstreffId, svar: ${svar.json()}")
         ctx.status(200).json(svar.json())
     }
 
@@ -108,7 +105,7 @@ class SvarEndpoints {
         treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
-        // TODO: Kall på rekrutteringstreff-api for å lagre påmeldingsstatus. Foreløpig bare en stub for å teste frontend
+        borgerKlient.svarPåTreff(rekrutteringstreffId, ctx.authenticatedUser().jwt, inputDto.erPåmeldt)
 
         ctx.status(200).json(AvgiSvarOutputDto(
             rekrutteringstreffId = rekrutteringstreffId,
