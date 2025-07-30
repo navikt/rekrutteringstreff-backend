@@ -53,7 +53,7 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
 }
 
 data class JobbsøkerMedStatuserOutboundDto(
-    val id: String,
+    val id: String?,
     val treffId: String,
     val fødselsnummer: String,
     val kandidatnummer: String?,
