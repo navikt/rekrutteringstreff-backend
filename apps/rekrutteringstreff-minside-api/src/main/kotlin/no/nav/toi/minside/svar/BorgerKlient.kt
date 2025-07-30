@@ -55,7 +55,7 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
     fun svarPåTreff(rekrutterinstreffId: String, innkommendeToken: String, erPåmeldt: Boolean) {
         val påmeldtSomStreng = if (erPåmeldt) "ja" else "nei"
 
-        "${jobbsøkerPath(rekrutterinstreffId)}/borger/svar-ja".httpPost()
+        "${jobbsøkerPath(rekrutterinstreffId)}/borger/svar-${påmeldtSomStreng}".httpPost()
             .header(
                 Header.AUTHORIZATION,
                 "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}"
