@@ -37,6 +37,8 @@ spec:
         - application: rekrutteringsbistand-frontend
         - application: rekrutteringstreff-minside-api
     outbound:
+      rules:
+        - application: rekrutteringsbistand-kandidatsok-api
       external:
         - host: fakedings.intern.dev.nav.no
         - host: {{ openai_azure_host }}
@@ -70,6 +72,10 @@ spec:
       value: {{adGruppeArbeidsgiverrettet}}
     - name: REKRUTTERINGSBISTAND_UTVIKLER
       value: {{adGruppeUtvikler}}
+    - name: KANDIDATSOK_API_URL
+      value: {{kandidatsok_api_url}}
+    - name: KANDIDATSOK_API_SCOPE
+      value: {{kandidatsok_api_scope}}
   observability:
     logging:
       destinations:

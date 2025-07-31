@@ -248,6 +248,16 @@ class JobbsøkerRepository(
         }
     }
 
+    fun hentFødselsnummer(personTreffId: PersonTreffId): Fødselsnummer? =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT fodselsnummer FROM jobbsoker WHERE id = ?").use { ps ->
+                ps.setObject(1, personTreffId.somUuid)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) Fødselsnummer(rs.getString("fodselsnummer")) else null
+                }
+            }
+        }
+
     private fun ResultSet.toJobbsøker() = Jobbsøker(
         personTreffId = PersonTreffId(UUID.fromString(getString("id"))),
         treffId = TreffId(getString("treff_id")),

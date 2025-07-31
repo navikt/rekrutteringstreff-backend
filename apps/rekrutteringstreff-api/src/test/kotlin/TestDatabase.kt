@@ -179,7 +179,6 @@ class TestDatabase {
         veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent)
     )
 
-    /* ---------- insert-hjelpere ---------- */
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)

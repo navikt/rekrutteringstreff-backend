@@ -7,12 +7,13 @@ import io.javalin.config.JavalinConfig
 import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
-import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.handleJobbsøker
 import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
+import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
+import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
 import org.flywaydb.core.Flyway
@@ -20,7 +21,7 @@ import java.time.Instant
 import java.time.ZoneId.of
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MILLIS
-import java.util.UUID
+import java.util.*
 import javax.sql.DataSource
 
 class App(
@@ -28,45 +29,75 @@ class App(
     private val authConfigs: List<AuthenticationConfiguration>,
     private val dataSource: DataSource,
     private val arbeidsgiverrettet: UUID,
-    private val utvikler: UUID
+    private val utvikler: UUID,
+    private val kandidatsokKlient: KandidatsøkKlient
 ) {
+    constructor(
+        port: Int,
+        authConfigs: List<AuthenticationConfiguration>,
+        dataSource: DataSource,
+        arbeidsgiverrettet: UUID,
+        utvikler: UUID,
+        kandidatsokApiUrl: String,
+        kandidatsokScope: String,
+        azureClientId: String,
+        azureClientSecret: String,
+        azureTokenEndpoint: String
+    ) : this(
+        port = port,
+        authConfigs = authConfigs,
+        dataSource = dataSource,
+        arbeidsgiverrettet = arbeidsgiverrettet,
+        utvikler = utvikler,
+        kandidatsokKlient = KandidatsøkKlient(
+            kandidatsokApiUrl = kandidatsokApiUrl,
+            accessTokenClient = AccessTokenClient(
+                secret = azureClientSecret,
+                clientId = azureClientId,
+                scope = kandidatsokScope,
+                azureUrl = azureTokenEndpoint,
+            )
+        )
+    )
+
     private lateinit var javalin: Javalin
     fun start() {
-        log.info("Starter app")
         kjørFlywayMigreringer(dataSource)
-        log.info("Har kjørt flyway migreringer")
+
         javalin = Javalin.create { config ->
             config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
             configureOpenApi(config)
-            log.info("Javalin opprettet")
         }
+
         javalin.handleHealth()
-        javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs, RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler))
+        javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
+            authConfigs,
+            RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler)
+        )
+
+        val jobbRepo = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
-        javalin.handleJobbsøker(JobbsøkerRepository(dataSource, JacksonConfig.mapper))
-        javalin.handleJobbsøkerInnloggetBorger(JobbsøkerRepository(dataSource, JacksonConfig.mapper))
+        javalin.handleJobbsøker(jobbRepo)
+        javalin.handleJobbsøkerInnloggetBorger(jobbRepo)
+        javalin.handleJobbsøkerOutbound(jobbRepo, kandidatsokKlient)
+
         javalin.start(port)
     }
 
     fun close() {
-        if (::javalin.isInitialized) {
-            javalin.stop()
-        }
+        if (::javalin.isInitialized) javalin.stop()
     }
 }
 
 private val log = noClassLogger()
 
 fun main() {
-    log.info("Starter app.")
-    secure(log).info("Starter app. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
     val dataSource = createDataSource()
-    log.info("Datasource opprettet")
 
     App(
-        8080,
-        listOfNotNull(
+        port = 8080,
+        authConfigs = listOfNotNull(
             AuthenticationConfiguration(
                 audience = getenv("AZURE_APP_CLIENT_ID"),
                 issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
@@ -82,15 +113,19 @@ fun main() {
                     audience = "dev-gcp:toi:rekrutteringstreff-api",
                     issuer = "https://fakedings.intern.dev.nav.no/fake",
                     jwksUri = "https://fakedings.intern.dev.nav.no/fake/jwks",
-                )
-            else
-                null
+                ) else null
         ),
-        dataSource,
-        System.getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET").let(UUID::fromString),
-        System.getenv("REKRUTTERINGSBISTAND_UTVIKLER").let(UUID::fromString)
+        dataSource = dataSource,
+        arbeidsgiverrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET")),
+        utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER")),
+        kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
+        kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
+        azureClientId = getenv("AZURE_APP_CLIENT_ID"),
+        azureClientSecret = getenv("AZURE_APP_CLIENT_SECRET"),
+        azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")
     ).start()
 }
+
 
 private fun kjørFlywayMigreringer(dataSource: DataSource) {
     Flyway.configure()

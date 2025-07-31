@@ -47,7 +47,13 @@ class MinsideTest {
             ),
             dataSource = db.dataSource,
             arbeidsgiverrettet = UUID.randomUUID(),
-            utvikler = UUID.randomUUID()
+            utvikler = UUID.randomUUID(),
+            azureTokenEndpoint = "",
+            azureClientId = "",
+            azureClientSecret = "",
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+
         )
         private val httpClient: HttpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.ALWAYS)

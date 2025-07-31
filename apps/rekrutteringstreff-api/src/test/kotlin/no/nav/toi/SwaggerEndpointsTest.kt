@@ -17,7 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource
 class SwaggerEndpointsTest {
 
     private val appPort = ubruktPortnr()
-    private val app = App(port = appPort, listOf(), TestDatabase().dataSource, arbeidsgiverrettet, utvikler)
+    private val app = App(port = appPort, listOf(), TestDatabase().dataSource, arbeidsgiverrettet, utvikler, "", "", "", "", "")
 
     @BeforeAll
     fun setUp() {

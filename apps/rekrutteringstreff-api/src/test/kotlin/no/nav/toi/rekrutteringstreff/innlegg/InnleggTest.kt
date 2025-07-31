@@ -48,7 +48,12 @@ class InnleggTest {
         ),
         dataSource         = db.dataSource,
         arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-        utvikler           = AzureAdRoller.utvikler
+        utvikler           = AzureAdRoller.utvikler,
+        kandidatsokApiUrl = "",
+        kandidatsokScope = "",
+        azureClientId = "",
+        azureClientSecret = "",
+        azureTokenEndpoint = "",
     )
 
     @BeforeAll fun start() { auth.start(port = authPort); app.start() }

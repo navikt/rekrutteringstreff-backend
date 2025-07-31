@@ -42,7 +42,12 @@ private class AutorisasjonsTest {
         ),
         database.dataSource,
         arbeidsgiverrettet,
-        utvikler
+        utvikler,
+        kandidatsokApiUrl = "",
+        kandidatsokScope = "",
+        azureClientId = "",
+        azureClientSecret = "",
+        azureTokenEndpoint = "",
     )
 
     @BeforeAll
