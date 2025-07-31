@@ -14,6 +14,7 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.util.UUID
+import kotlin.toString
 
 
 private const val pathParamTreffId = "id"
@@ -151,23 +152,29 @@ private fun hentBorgerJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -
     }
 }
 
-private fun Jobbsøker.toOutboundDtoMedStatuser() = JobbsøkerMedStatuserOutboundDto(
-    personTreffId = personTreffId.toString(),
-    treffId = treffId.somString,
-    fødselsnummer = fødselsnummer.asString,
-    kandidatnummer = kandidatnummer?.asString,
-    fornavn = fornavn.asString,
-    etternavn = etternavn.asString,
-    navkontor = navkontor?.asString,
-    veilederNavn = veilederNavn?.asString,
-    veilederNavIdent = veilederNavIdent?.asString,
-    statuser = StatuserOutboundDto(
-        erPåmeldt = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON },
-        erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITER },
-        harSvart = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON }
-    ),
-    hendelser = hendelser.map { it.toOutboundDto() }
-)
+private fun Jobbsøker.toOutboundDtoMedStatuser(): JobbsøkerMedStatuserOutboundDto {
+    val sisteSvar = hendelser.findLast {
+        it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON
+    }
+
+    return JobbsøkerMedStatuserOutboundDto(
+        personTreffId = personTreffId.toString(),
+        treffId = treffId.somString,
+        fødselsnummer = fødselsnummer.asString,
+        kandidatnummer = kandidatnummer?.asString,
+        fornavn = fornavn.asString,
+        etternavn = etternavn.asString,
+        navkontor = navkontor?.asString,
+        veilederNavn = veilederNavn?.asString,
+        veilederNavIdent = veilederNavIdent?.asString,
+        statuser = StatuserOutboundDto(
+            erPåmeldt = sisteSvar?.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON,
+            erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITER },
+            harSvart = sisteSvar != null
+        ),
+        hendelser = hendelser.map { it.toOutboundDto() }
+    )
+}
 
 
 fun Javalin.handleJobbsøkerInnloggetBorger(repo: JobbsøkerRepository) {

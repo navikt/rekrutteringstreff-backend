@@ -13,6 +13,8 @@ import java.net.HttpURLConnection.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
+import kotlin.text.contains
+import kotlin.text.get
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -349,6 +351,92 @@ class JobbsøkerInnloggetBorgerTest {
 
         val (_, response, _) = hentJobbsøkerInnloggetBorger(treffId, Fødselsnummer("99999999999"), token)
         assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
+    fun `kan endre svar fra ja til nei`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+            .also { (_, response, _) -> assertThat(response.statusCode).isEqualTo(HTTP_OK) }
+
+        hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
+            assertThat(it.statuser.erPåmeldt).isTrue()
+            assertThat(it.statuser.harSvart).isTrue()
+        }
+
+        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+            .also { (_, response, _) -> assertThat(response.statusCode).isEqualTo(HTTP_OK) }
+
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser).hasSize(3)
+        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON, JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON)
+
+        hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
+            assertThat(it.statuser.erPåmeldt).isFalse()
+            assertThat(it.statuser.harSvart).isTrue()
+        }
+    }
+
+    @Test
+    fun `kan endre svar fra nei til ja`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+            .also { (_, response, _) -> assertThat(response.statusCode).isEqualTo(HTTP_OK) }
+
+        hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
+            assertThat(it.statuser.erPåmeldt).isFalse()
+            assertThat(it.statuser.harSvart).isTrue()
+        }
+
+        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+            .also { (_, response, _) -> assertThat(response.statusCode).isEqualTo(HTTP_OK) }
+
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser).hasSize(3)
+        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON, JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON)
+
+        hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
+            assertThat(it.statuser.erPåmeldt).isTrue()
+            assertThat(it.statuser.harSvart).isTrue()
+        }
     }
 
     private fun hentJobbsøkerInnloggetBorger(treffId: TreffId, fødselsnummer: Fødselsnummer, token: com.nimbusds.jwt.SignedJWT) =

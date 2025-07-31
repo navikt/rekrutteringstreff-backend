@@ -10,6 +10,7 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
+import kotlin.io.use
 
 data class JobbsøkerHendelse(
     val id: UUID,
@@ -150,7 +151,7 @@ class JobbsøkerRepository(
                                     'hendelsestype', jh.hendelsestype,
                                     'opprettetAvAktortype', jh.opprettet_av_aktortype,
                                     'aktøridentifikasjon', jh.aktøridentifikasjon
-                                )
+                                ) ORDER BY jh.tidspunkt
                             ) FILTER (WHERE jh.id IS NOT NULL),
                             '[]'
                         ) AS hendelser
