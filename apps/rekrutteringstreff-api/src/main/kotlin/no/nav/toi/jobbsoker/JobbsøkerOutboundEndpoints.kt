@@ -40,7 +40,7 @@ private fun hentKandidatnummerHandler(
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
     val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
     val userToken = ctx.attribute<String>("raw_token")
-        ?: throw InternalServerErrorResponse("Raw token not found in context")
+        ?: throw InternalServerErrorResponse("Raw token ikke funnet i context")
 
     repo.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->
         client.hentKandidatnummer(fødselsnummer, userToken)?.let { kandidatnummer ->
