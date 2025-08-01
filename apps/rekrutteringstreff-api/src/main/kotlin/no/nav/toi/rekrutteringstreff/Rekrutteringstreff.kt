@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
+import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -32,6 +33,19 @@ class Rekrutteringstreff(
         opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
         opprettetAvTidspunkt = opprettetAvTidspunkt,
         id = id.somUuid
+    )
+    fun aktivitetskortInvitasjonFor(fnr: String) = Aktivitetskortinvitasjon(
+        fnr = fnr,
+        rekrutteringstreffId = id,
+        tittel = tittel,
+        beskrivelse = beskrivelse,
+        fraTid = fraTid,
+        tilTid = tilTid,
+        opprettetAv = opprettetAvPersonNavident,
+        opprettetTidspunkt = opprettetAvTidspunkt,
+        gateadresse = gateadresse,
+        postnummer = postnummer,
+        poststed = poststed
     )
 }
 

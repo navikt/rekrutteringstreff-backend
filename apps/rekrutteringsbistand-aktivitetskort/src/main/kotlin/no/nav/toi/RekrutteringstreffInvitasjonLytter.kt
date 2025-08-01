@@ -21,8 +21,8 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
                 it.forbid("aktivitetskortuuid")
             }
             validate {
-                it.requireKey("fnr", "rekrutteringstreffId", "tittel", "beskrivelse", "startTid", "sluttTid",
-                    "endretAv", "endretAvType", "endretTidspunkt", "antallPlasser", "sted")
+                it.requireKey("fnr", "rekrutteringstreffId", "tittel", "beskrivelse", "fraTid", "tilTid",
+                    "opprettetAv", "opprettetAvType", "opprettetTidspunkt", "antallPlasser", "sted")
             }
         }.register(this)
     }
@@ -39,11 +39,11 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
             beskrivelse = packet["beskrivelse"].asText(),
-            startDato = packet["startTid"].asZonedDateTime().toLocalDate(),
-            sluttDato = packet["sluttTid"].asZonedDateTime().toLocalDate(),
-            endretAv = packet["endretAv"].asText(),
-            endretAvType = packet["endretAvType"].asText().let(::enumValueOf),
-            endretTidspunkt = packet["endretTidspunkt"].asZonedDateTime(),
+            startDato = packet["fraTid"].asZonedDateTime().toLocalDate(),
+            sluttDato = packet["tilTid"].asZonedDateTime().toLocalDate(),
+            endretAv = packet["opprettetAv"].asText(),
+            endretAvType = packet["opprettetAvType"].asText().let(::enumValueOf),
+            endretTidspunkt = packet["opprettetTidspunkt"].asZonedDateTime(),
             antallPlasser = packet["antallPlasser"].asInt(),
             sted = packet["sted"].asText()
         )

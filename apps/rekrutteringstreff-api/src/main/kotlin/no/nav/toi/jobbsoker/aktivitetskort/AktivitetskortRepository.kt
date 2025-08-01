@@ -1,7 +1,9 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import java.sql.ResultSet
 import java.time.ZonedDateTime
+import java.util.UUID
 import javax.sql.DataSource
 
 class AktivitetskortRepository(private val dataSource: DataSource) {
@@ -9,10 +11,11 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
     fun hentUsendteInvitasjoner(): List<UsendtInvitasjon> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
             """
-            select j.db_id, j.jobbsoker_aktor_id, j.rekrutteringstreff_uuid from jobbsoker_hendelse j
-            left join aktivitetskort_polling p on j.db_id = p.jobbsoker_hendelse_db_id
-            where p.db_id is null and j.hendelse_type = 'INVITASJON'
-            order by j.tidspunkt
+            select jh.db_id, j.fodselsnummer, jh.rekrutteringstreff_uuid from jobbsoker_hendelse jh
+            left join aktivitetskort_polling p on jh.db_id = p.jobbsoker_hendelse_db_id
+            left join jobbsoker j on jh.jobbsoker_db_id = j.db_id
+            where p.db_id is null and jh.hendelse_type = 'INVITASJON'
+            order by jh.tidspunkt
             """
         )
         statement.use {
@@ -38,13 +41,13 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
 
     private fun ResultSet.tilUsendtInvitasjon() = UsendtInvitasjon(
         jobbsokerHendelseDbId = getLong("db_id"),
-        aktørId = getString("jobbsoker_aktor_id"),
+        fnr = getString("fnr"),
         rekrutteringstreffUuid = getString("rekrutteringstreff_uuid")
     )
 }
 
 data class UsendtInvitasjon(
     val jobbsokerHendelseDbId: Long,
-    val aktørId: String,
+    val fnr: String,
     val rekrutteringstreffUuid: String
 )
