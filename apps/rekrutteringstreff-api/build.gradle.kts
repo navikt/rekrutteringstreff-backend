@@ -1,5 +1,5 @@
 plugins {
-    id("toi.common")
+    id("toi.rapids-and-rivers")
     kotlin("kapt")
 }
 
@@ -15,6 +15,7 @@ val nimbusVersion = "10.0.1"
 val wiremockVersion = "3.12.0"
 val jacksonDatatypeJsr310Version = "2.18.2" // JavaTimeModule, se https://github.com/FasterXML/jackson-modules-java8
 val resilience4jVersion = "2.2.0"
+
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
