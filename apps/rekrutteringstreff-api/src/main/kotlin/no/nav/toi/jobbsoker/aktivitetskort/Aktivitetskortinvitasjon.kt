@@ -25,15 +25,15 @@ class Aktivitetskortinvitasjon(
                 "fnr": "$fnr",
                 "rekrutteringstreffId": "${rekrutteringstreffId.somUuid}",
                 "tittel": "$tittel",
-                "beskrivelse": ${beskrivelse?.let { "\"$it\"" } ?: "null"},
-                "fraTid": ${fraTid?.let { "\"$it" } ?: "null"},
-                "tilTid": ${tilTid?.let { "\"$it\"" } ?: "null"},
+                "beskrivelse": ${beskrivelse?.let { "\"$it\"" } },
+                "fraTid": ${fraTid?.let { "\"$it\"" } },
+                "tilTid": ${tilTid?.let { "\"$it\"" } },
                 "opprettetAv": "$opprettetAv",
                 "opprettetTidspunkt": "$opprettetTidspunkt",
-                "svarfrist": ${svarfrist},
-                "gateadresse": ${gateadresse?.let { "\"$it\"" } ?: "null"},
-                "postnummer": ${postnummer?.let { "\"$it\"" } ?: "null"},
-                "poststed": ${poststed?.let { "\"$it\"" } ?: "null"}
+                "svarfrist": "$svarfrist",
+                "gateadresse": ${gateadresse?.let { "\"$it\"" } },
+                "postnummer": ${postnummer?.let { "\"$it\"" } },
+                "poststed": ${poststed?.let { "\"$it\"" } }
             }
         """.trimIndent())
     }
