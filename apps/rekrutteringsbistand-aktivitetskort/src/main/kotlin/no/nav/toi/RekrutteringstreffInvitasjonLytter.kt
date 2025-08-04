@@ -57,6 +57,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
     ) {
         log.error("Feil ved behandling av rekrutteringstreffinvitasjon: $problems")
         secure(log).error("Feil ved behandling av rekrutteringstreffinvitasjon: ${problems.toExtendedReport()}")
+        throw Exception(problems.toString())
     }
 }
 
