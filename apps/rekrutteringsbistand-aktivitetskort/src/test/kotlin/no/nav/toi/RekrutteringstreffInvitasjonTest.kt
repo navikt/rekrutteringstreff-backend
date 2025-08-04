@@ -71,9 +71,7 @@ class RekrutteringstreffInvitasjonTest {
         val fraTid = ZonedDateTime.now().plusDays(1)
         val tilTid = fraTid.plusHours(2)
         val opprettetAv = "testuser"
-        val opprettetAvType = EndretAvType.NAVIDENT
         val opprettetTidspunkt = ZonedDateTime.now()
-        val antallPlasser = 50
         val gateadresse = "Test Sted"
         val postnummer = "1234"
         val poststed = "Test Poststed"
@@ -87,9 +85,7 @@ class RekrutteringstreffInvitasjonTest {
                 fraTid,
                 tilTid,
                 opprettetAv,
-                opprettetAvType,
                 opprettetTidspunkt,
-                antallPlasser,
                 gateadresse,
                 postnummer,
                 poststed
@@ -109,7 +105,6 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
-            assertThat(this[0].opprettetAvType).isEqualTo(opprettetAvType.name)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
         }
     }
@@ -120,9 +115,7 @@ class RekrutteringstreffInvitasjonTest {
         val rekrutteringstreffId = UUID.randomUUID()
         val fraTid = ZonedDateTime.now().plusDays(1)
         val tilTid = fraTid.plusHours(2)
-        val opprettetAvType = EndretAvType.NAVIDENT
         val opprettetTidspunkt = ZonedDateTime.now()
-        val antallPlasser = 53
         val gateadresse = "Test Sted"
         val postnummer = "1234"
         val poststed = "Test Poststed"
@@ -136,9 +129,7 @@ class RekrutteringstreffInvitasjonTest {
                 fraTid,
                 tilTid,
                 "Z0000001",
-                opprettetAvType,
                 opprettetTidspunkt,
-                antallPlasser,
                 gateadresse,
                 postnummer,
                 poststed
@@ -154,9 +145,7 @@ class RekrutteringstreffInvitasjonTest {
                     fraTid.plusDays(1),
                     tilTid.plusDays(1),
                     "Z0000002",
-                    opprettetAvType,
                     opprettetTidspunkt.plusHours(1),
-                    antallPlasser + 10,
                     gateadresse,
                     postnummer,
                     poststed
@@ -179,9 +168,7 @@ class RekrutteringstreffInvitasjonTest {
         val fraTid = ZonedDateTime.now().plusDays(1)
         val tilTid = fraTid.plusHours(2)
         val opprettetAv = "testuser"
-        val opprettetAvType = EndretAvType.PERSONBRUKER
         val opprettetTidspunkt = ZonedDateTime.now()
-        val antallPlasser = 1
         val gateadresse = "Test Sted"
         val postnummer = "1234"
         val poststed = "Test Poststed"
@@ -195,9 +182,7 @@ class RekrutteringstreffInvitasjonTest {
                 fraTid,
                 tilTid,
                 opprettetAv,
-                opprettetAvType,
                 opprettetTidspunkt,
-                antallPlasser,
                 gateadresse,
                 postnummer,
                 poststed
@@ -215,10 +200,8 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(message["fraTid"].asText()).isEqualTo(fraTid.toString())
             assertThat(message["tilTid"].asText()).isEqualTo(tilTid.toString())
             assertThat(message["opprettetAv"].asText()).isEqualTo(opprettetAv)
-            assertThat(message["opprettetAvType"].asText()).isEqualTo(opprettetAvType.name)
             assertThat(message["opprettetTidspunkt"].asText()).isEqualTo(opprettetTidspunkt.toString())
             assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
-            assertThat(message["antallPlasser"].asInt()).isEqualTo(antallPlasser)
             assertThat(message["gateadresse"].asText()).isEqualTo(gateadresse)
             assertThat(message["postnummer"].asText()).isEqualTo(postnummer)
             assertThat(message["poststed"].asText()).isEqualTo(poststed)
@@ -232,9 +215,7 @@ class RekrutteringstreffInvitasjonTest {
         fraTid: ZonedDateTime,
         tilTid: ZonedDateTime,
         opprettetAv: String,
-        opprettetAvType: EndretAvType,
         opprettetTidspunkt: ZonedDateTime,
-        antallPlasser: Int,
         gateadresse: String,
         postnummer: String,
         poststed: String
@@ -249,9 +230,7 @@ class RekrutteringstreffInvitasjonTest {
             "fraTid": "$fraTid",
             "tilTid": "$tilTid",
             "opprettetAv": "$opprettetAv",
-            "opprettetAvType": "${opprettetAvType.name}",
             "opprettetTidspunkt": "$opprettetTidspunkt",
-            "antallPlasser": $antallPlasser,
             "gateadresse": "$gateadresse",
             "postnummer": "$postnummer",
             "poststed": "$poststed"

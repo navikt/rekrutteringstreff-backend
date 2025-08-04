@@ -28,9 +28,7 @@ class Repository(databaseConfig: DatabaseConfig) {
         startDato: LocalDate,
         sluttDato: LocalDate,
         endretAv: String,
-        endretAvType: EndretAvType,
         endretTidspunkt: ZonedDateTime,
-        antallPlasser: Int,
         gateAdresse: String,
         postnummer: String,
         poststed: String
@@ -57,7 +55,7 @@ class Repository(databaseConfig: DatabaseConfig) {
                     setObject(6, aktivitietskortId)
                     setObject(7, rekrutteringstreffId)
                     setString(8, endretAv)
-                    setString(9, endretAvType.name)
+                    setString(9, EndretAvType.NAVIDENT.name)
                     setTimestamp(10, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
                 }.executeUpdate()
 
@@ -74,7 +72,7 @@ class Repository(databaseConfig: DatabaseConfig) {
                     setObject(1, aktivitietskortId)
                     setObject(2, messageId)
                     setString(3, endretAv)
-                    setString(4, endretAvType.name)
+                    setString(4, EndretAvType.NAVIDENT.name)
                     setTimestamp(5, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
                 }.executeUpdate()
 
@@ -87,7 +85,6 @@ class Repository(databaseConfig: DatabaseConfig) {
                 ).apply {
                     setObject(1, messageId)
                     setString(2, listOf(
-                        AktivitetskortDetalj("Antall plasser", antallPlasser.toString()),
                         AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
                     ).joinToJson(AktivitetskortDetalj::tilAkaasJson))
                     setString(3, listOf(AktivitetskortHandling("Sjekk ut treffet", "Sjekk ut treffet og svar", "https://rekrutteringstreff.dev.nav.no/test", LenkeType.FELLES)).joinToJson(AktivitetskortHandling::tilAkaasJson))

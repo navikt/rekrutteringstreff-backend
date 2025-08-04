@@ -73,8 +73,6 @@ class AktivitetskortTest {
         val expectedSluttDato = LocalDate.now().plusDays(2)
         val expectedEndretAv = "testuser"
         val expectedEndretTidspunkt = ZonedDateTime.now()
-        val expectedEndretAvType = EndretAvType.PERSONBRUKER
-        val expectedAntallPlasser = 10
         val expectedGateAdresse = "Test Sted"
         val expectedPostnummer = "1234"
         val expectedPoststed = "Test Poststed"
@@ -86,9 +84,7 @@ class AktivitetskortTest {
             startDato = expectedStartDato,
             sluttDato = expectedSluttDato,
             endretAv = expectedEndretAv,
-            endretAvType = expectedEndretAvType,
             endretTidspunkt = expectedEndretTidspunkt,
-            antallPlasser = expectedAntallPlasser,
             gateAdresse = expectedGateAdresse,
             postnummer = expectedPostnummer,
             poststed = expectedPoststed
@@ -110,12 +106,11 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["sluttDato"].asText()).isEqualTo(expectedSluttDato.toString())
             assertThat(this["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(expectedBeskrivelse)
             assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedEndretAv)
-            assertThat(this["aktivitetskort"]["endretAv"]["identType"].asText()).isEqualTo(expectedEndretAvType.name)
             assertThat(this["aktivitetskort"]["endretTidspunkt"].asText().let(ZonedDateTime::parse))
                 .isCloseTo(expectedEndretTidspunkt, within (1, ChronoUnit.SECONDS))
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
-            val expectedDetaljer = objectMapper.readTree("""[{"label":"Antall plasser","verdi":"$expectedAntallPlasser"},{"label":"Sted","verdi":"$expectedGateAdresse, $expectedPostnummer $expectedPoststed"}]""")
+            val expectedDetaljer = objectMapper.readTree("""[{"label":"Sted","verdi":"$expectedGateAdresse, $expectedPostnummer $expectedPoststed"}]""")
             assertThat(this["aktivitetskort"]["detaljer"]).containsExactlyInAnyOrder(*expectedDetaljer.toList().toTypedArray())
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
@@ -141,9 +136,7 @@ class AktivitetskortTest {
             startDato = LocalDate.now().plusDays(1),
             sluttDato = LocalDate.now().plusDays(2),
             endretAv = "testuser",
-            endretAvType = EndretAvType.NAVIDENT,
             endretTidspunkt = ZonedDateTime.now(),
-            antallPlasser = 10,
             gateAdresse = "Test Sted",
             postnummer = "1234",
             poststed = "Test Poststed"
@@ -340,9 +333,7 @@ private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
         LocalDate.now().plusDays(1),
         LocalDate.now().plusDays(2),
         "testuser",
-        EndretAvType.NAVIDENT,
         ZonedDateTime.now(),
-        15,
         "Test Sted",
         "1234",
         "Test Poststed"

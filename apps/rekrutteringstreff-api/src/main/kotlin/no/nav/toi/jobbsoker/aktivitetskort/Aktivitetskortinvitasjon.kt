@@ -30,7 +30,6 @@ class Aktivitetskortinvitasjon(
                 "tilTid": ${tilTid?.let { "\"$it\"" } ?: "null"},
                 "opprettetAv": "$opprettetAv",
                 "opprettetTidspunkt": "$opprettetTidspunkt",
-                "antallPlasser": 10,
                 "svarfrist": ${svarfrist},
                 "gateadresse": ${gateadresse?.let { "\"$it\"" } ?: "null"},
                 "postnummer": ${postnummer?.let { "\"$it\"" } ?: "null"},
