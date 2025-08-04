@@ -41,7 +41,7 @@ class AktivitetskortInvitasjonScheduler(
         }
     }
 
-    private fun behandleInvitasjoner() {
+     fun behandleInvitasjoner() {
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av AktivitetskortScheduler er ikke ferdig, skipper denne kjøringen.")
             return
