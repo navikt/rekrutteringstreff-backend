@@ -21,8 +21,8 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
                 it.forbid("aktivitetskortuuid")
             }
             validate {
-                it.requireKey("fnr", "rekrutteringstreffId", "tittel", "beskrivelse", "startTid", "sluttTid",
-                    "endretAv", "endretAvType", "endretTidspunkt", "antallPlasser", "sted")
+                it.requireKey("fnr", "rekrutteringstreffId", "tittel", "beskrivelse", "fraTid", "tilTid",
+                    "opprettetAv", "opprettetTidspunkt", "gateadresse", "postnummer", "poststed")
             }
         }.register(this)
     }
@@ -39,13 +39,13 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
             beskrivelse = packet["beskrivelse"].asText(),
-            startDato = packet["startTid"].asZonedDateTime().toLocalDate(),
-            sluttDato = packet["sluttTid"].asZonedDateTime().toLocalDate(),
-            endretAv = packet["endretAv"].asText(),
-            endretAvType = packet["endretAvType"].asText().let(::enumValueOf),
-            endretTidspunkt = packet["endretTidspunkt"].asZonedDateTime(),
-            antallPlasser = packet["antallPlasser"].asInt(),
-            sted = packet["sted"].asText()
+            startDato = packet["fraTid"].asZonedDateTime().toLocalDate(),
+            sluttDato = packet["tilTid"].asZonedDateTime().toLocalDate(),
+            endretAv = packet["opprettetAv"].asText(),
+            endretTidspunkt = packet["opprettetTidspunkt"].asZonedDateTime(),
+            gateAdresse = packet["gateadresse"].asText(),
+            postnummer = packet["postnummer"].asText(),
+            poststed = packet["poststed"].asText()
         )
         context.publish(fnr, packet.toJson())
     }
@@ -57,6 +57,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
     ) {
         log.error("Feil ved behandling av rekrutteringstreffinvitasjon: $problems")
         secure(log).error("Feil ved behandling av rekrutteringstreffinvitasjon: ${problems.toExtendedReport()}")
+        throw Exception(problems.toString())
     }
 }
 

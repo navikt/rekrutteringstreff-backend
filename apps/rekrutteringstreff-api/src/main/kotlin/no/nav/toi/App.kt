@@ -7,9 +7,12 @@ import io.javalin.config.JavalinConfig
 import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
+import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonRepository
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
 import no.nav.toi.jobbsoker.handleJobbsøker
 import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
 import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
@@ -94,6 +97,11 @@ private val log = noClassLogger()
 
 fun main() {
     val dataSource = createDataSource()
+    AktivitetskortInvitasjonScheduler(
+        aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(dataSource),
+        rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+        rapidsConnection = RapidApplication.create(System.getenv())
+    ).start()
 
     App(
         port = 8080,
