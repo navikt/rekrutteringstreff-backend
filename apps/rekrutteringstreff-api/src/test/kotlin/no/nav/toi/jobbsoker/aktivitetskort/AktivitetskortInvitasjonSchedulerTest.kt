@@ -69,7 +69,19 @@ class AktivitetskortInvitasjonSchedulerTest {
         // Arrange
         val rapid = TestRapid()
         val scheduler = AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
-        testRepository.opprettUsendtInvitasjon()
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("12345678901")
+        jobbsøkerRepository.leggTil(listOf(LeggTilJobbsøker(
+            fødselsnummer = fødselsnummer,
+            kandidatnummer = Kandidatnummer("ABC123"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("Oslo"),
+            veilederNavn = VeilederNavn("Kari Veileder"),
+            veilederNavIdent = VeilederNavIdent("Z123456"),
+        )), treffId, "Z123456")
+        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
+        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
 
         // Act
         scheduler.behandleInvitasjoner()
