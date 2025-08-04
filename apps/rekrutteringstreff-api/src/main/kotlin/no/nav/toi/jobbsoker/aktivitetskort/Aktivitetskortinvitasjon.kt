@@ -1,7 +1,6 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
-import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.ZonedDateTime
 
@@ -37,6 +36,6 @@ class Aktivitetskortinvitasjon(
                 "postnummer": ${postnummer?.let { "\"$it\"" } ?: "null"},
                 "poststed": ${poststed?.let { "\"$it\"" } ?: "null"}
             }
-        """.trimIndent())   
+        """.trimIndent())
     }
 }
