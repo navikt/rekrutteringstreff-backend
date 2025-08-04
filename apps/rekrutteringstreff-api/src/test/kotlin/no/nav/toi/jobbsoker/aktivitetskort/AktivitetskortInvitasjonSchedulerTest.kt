@@ -1,37 +1,35 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.toi.*
+import no.nav.toi.jobbsoker.Etternavn
+import no.nav.toi.jobbsoker.Fornavn
+import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.Kandidatnummer
+import no.nav.toi.jobbsoker.LeggTilJobbsøker
+import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.VeilederNavIdent
+import no.nav.toi.jobbsoker.VeilederNavn
+import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.containers.wait.strategy.Wait
-import org.testcontainers.utility.DockerImageName
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortInvitasjonSchedulerTest {
 
-    private val localPostgres = PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"))
-        .waitingFor(Wait.forListeningPort())
-        .apply { start() }
+    private val testDatabase = TestDatabase()
+    private val jobbsøkerRepository = JobbsøkerRepository(testDatabase.dataSource, jacksonObjectMapper())
 
-    private val dataSource = TestDatabase(localPostgres).dataSource
-
-    private val testRepository = TestRepository(dataSource)
-    private val aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(dataSource)
-    private val rekrutteringstreffRepository = no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository(dataSource)
+    private val aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(testDatabase.dataSource)
+    private val rekrutteringstreffRepository = no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository(testDatabase.dataSource)
 
     @BeforeEach
     fun setup() {
-        testRepository.slettAlt()
-    }
-
-    @AfterAll
-    fun teardown() {
-        localPostgres.close()
+        testDatabase.slettAlt()
     }
 
     @Test
@@ -39,7 +37,19 @@ class AktivitetskortInvitasjonSchedulerTest {
         // Arrange
         val rapid = TestRapid()
         val scheduler = AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
-        val (treffId, _, hendelseId) = testRepository.opprettUsendtInvitasjon()
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("12345678901")
+        jobbsøkerRepository.leggTil(listOf(LeggTilJobbsøker(
+            fødselsnummer = fødselsnummer,
+            kandidatnummer = Kandidatnummer("ABC123"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("Oslo"),
+            veilederNavn = VeilederNavn("Kari Veileder"),
+            veilederNavIdent = VeilederNavIdent("Z123456"),
+        )), treffId, "Z123456")
+        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
+        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
 
         // Act
         scheduler.behandleInvitasjoner()
