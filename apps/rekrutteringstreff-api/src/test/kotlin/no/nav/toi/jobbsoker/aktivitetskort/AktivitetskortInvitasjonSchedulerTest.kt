@@ -23,21 +23,22 @@ class AktivitetskortInvitasjonSchedulerTest {
         private val mapper = JacksonConfig.mapper
 
 
-        @BeforeAll
-        @JvmStatic
-        fun setup() {
-            Flyway.configure().dataSource(db.dataSource).load().migrate()
-            jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-            aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(db.dataSource)
-            rekrutteringstreffRepository =
-                RekrutteringstreffRepository(db.dataSource)
 
-        }
+    }
+
+    @BeforeAll
+    fun beforeAll() {
+        Flyway.configure().dataSource(db.dataSource).load().migrate()
+        jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+        aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(db.dataSource)
+        rekrutteringstreffRepository =
+            RekrutteringstreffRepository(db.dataSource)
+
     }
 
 
     @BeforeEach
-    fun setup() {
+    fun beforeEach() {
         db.slettAlt()
     }
 
@@ -67,7 +68,6 @@ class AktivitetskortInvitasjonSchedulerTest {
 
         // Act
         scheduler.behandleInvitasjoner()
-
         // Assert
         assertThat(rapid.inspektør.size).isEqualTo(1)
         val melding = rapid.inspektør.message(0)

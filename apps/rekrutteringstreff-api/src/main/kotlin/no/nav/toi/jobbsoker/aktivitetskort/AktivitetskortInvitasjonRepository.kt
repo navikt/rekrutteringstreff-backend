@@ -9,10 +9,11 @@ class AktivitetskortInvitasjonRepository(private val dataSource: DataSource) {
     fun hentUsendteInvitasjoner(): List<UsendtInvitasjon> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
             """
-            select jh.db_id, j.fodselsnummer, jh.rekrutteringstreff_uuid from jobbsoker_hendelse jh
+            select jh.db_id, j.fodselsnummer, rt.id from jobbsoker_hendelse jh
             left join aktivitetskort_polling p on jh.db_id = p.jobbsoker_hendelse_db_id
             left join jobbsoker j on jh.jobbsoker_db_id = j.db_id
-            where p.db_id is null and jh.hendelse_type = 'INVITASJON'
+            left join rekrutteringstreff rt on j.treff_db_id = rt.db_id
+            where p.db_id is null and jh.hendelsestype = 'INVITASJON'
             order by jh.tidspunkt
             """
         )
@@ -40,7 +41,7 @@ class AktivitetskortInvitasjonRepository(private val dataSource: DataSource) {
     private fun ResultSet.tilUsendtInvitasjon() = UsendtInvitasjon(
         jobbsokerHendelseDbId = getLong("db_id"),
         fnr = getString("fnr"),
-        rekrutteringstreffUuid = getString("rekrutteringstreff_uuid")
+        rekrutteringstreffUuid = getString("id")
     )
 }
 
