@@ -25,15 +25,15 @@ class Aktivitetskortinvitasjon(
                 "fnr": "$fnr",
                 "rekrutteringstreffId": "${rekrutteringstreffId.somUuid}",
                 "tittel": "$tittel",
-                "beskrivelse": ${beskrivelse?.let { "\"$it\"" } },
-                "fraTid": ${fraTid?.let { "\"$it\"" } },
-                "tilTid": ${tilTid?.let { "\"$it\"" } },
+                "beskrivelse": ${beskrivelse?.let { "\"$it\"" } ?: "TODO" },
+                "fraTid": ${fraTid?.let { "\"$it\"" } ?: throw IllegalArgumentException("fraTid er required") },
+                "tilTid": ${tilTid?.let { "\"$it\"" } ?: throw IllegalArgumentException("tilTid er required") },
                 "opprettetAv": "$opprettetAv",
                 "opprettetTidspunkt": "$opprettetTidspunkt",
                 "svarfrist": "$svarfrist",
-                "gateadresse": ${gateadresse?.let { "\"$it\"" } },
-                "postnummer": ${postnummer?.let { "\"$it\"" } },
-                "poststed": ${poststed?.let { "\"$it\"" } }
+                "gateadresse": ${gateadresse?.let { "\"$it\"" } ?: throw IllegalArgumentException("gateadresseer er required") },
+                "postnummer": ${postnummer?.let { "\"$it\"" } ?: throw IllegalArgumentException("postnummer er required") },
+                "poststed": ${poststed?.let { "\"$it\"" } ?: throw IllegalArgumentException("poststed er required") }
             }
         """.trimIndent())
     }
