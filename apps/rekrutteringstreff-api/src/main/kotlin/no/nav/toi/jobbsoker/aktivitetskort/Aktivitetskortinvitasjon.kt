@@ -16,7 +16,7 @@ class Aktivitetskortinvitasjon(
     private val gateadresse: String?,
     private val postnummer: String?,
     private val poststed: String?,
-    private val svarfrist: ZonedDateTime
+    private val svarfrist: ZonedDateTime?
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
         rapidsConnection.publish(fnr, """

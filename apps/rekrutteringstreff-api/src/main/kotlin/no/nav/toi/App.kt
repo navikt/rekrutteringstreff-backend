@@ -11,7 +11,7 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
 import no.nav.toi.jobbsoker.handleJobbsøker
 import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
@@ -98,7 +98,7 @@ private val log = noClassLogger()
 fun main() {
     val dataSource = createDataSource()
     AktivitetskortInvitasjonScheduler(
-        aktivitetskortRepository = AktivitetskortRepository(dataSource),
+        aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(dataSource),
         rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
         rapidsConnection = RapidApplication.create(System.getenv())
     ).start()

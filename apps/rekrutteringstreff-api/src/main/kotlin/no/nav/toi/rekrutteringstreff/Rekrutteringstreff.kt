@@ -45,7 +45,8 @@ class Rekrutteringstreff(
         opprettetTidspunkt = opprettetAvTidspunkt,
         gateadresse = gateadresse,
         postnummer = postnummer,
-        poststed = poststed
+        poststed = poststed,
+        svarfrist = svarfrist
     )
 }
 
