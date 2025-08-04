@@ -68,13 +68,15 @@ class RekrutteringstreffInvitasjonTest {
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val beskrivelse = "Beskrivelse av rekrutteringstreff"
-        val startTid = ZonedDateTime.now().plusDays(1)
-        val sluttTid = startTid.plusHours(2)
-        val endretAv = "testuser"
-        val endretAvType = EndretAvType.NAVIDENT
-        val endretTidspunkt = ZonedDateTime.now()
+        val fraTid = ZonedDateTime.now().plusDays(1)
+        val tilTid = fraTid.plusHours(2)
+        val opprettetAv = "testuser"
+        val opprettetAvType = EndretAvType.NAVIDENT
+        val opprettetTidspunkt = ZonedDateTime.now()
         val antallPlasser = 50
-        val sted = "Test Sted"
+        val gateadresse = "Test Sted"
+        val postnummer = "1234"
+        val poststed = "Test Poststed"
 
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -82,13 +84,15 @@ class RekrutteringstreffInvitasjonTest {
                 rekrutteringstreffId,
                 tittel,
                 beskrivelse,
-                startTid,
-                sluttTid,
-                endretAv,
-                endretAvType,
-                endretTidspunkt,
+                fraTid,
+                tilTid,
+                opprettetAv,
+                opprettetAvType,
+                opprettetTidspunkt,
                 antallPlasser,
-                sted
+                gateadresse,
+                postnummer,
+                poststed
             )
         )
 
@@ -99,14 +103,14 @@ class RekrutteringstreffInvitasjonTest {
         rekrutteringstreffInvitasjoner.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
             assertThat(this[0].beskrivelse).isEqualTo(beskrivelse)
-            assertThat(this[0].fraTid).isEqualTo(startTid.toLocalDate())
-            assertThat(this[0].tilTid).isEqualTo(sluttTid.toLocalDate())
+            assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
+            assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
             assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
-            assertThat(this[0].opprettetAv).isEqualTo(endretAv)
-            assertThat(this[0].opprettetAvType).isEqualTo(endretAvType.name)
-            assertThat(this[0].opprettetTidspunkt).isCloseTo(endretTidspunkt, within(10, ChronoUnit.MILLIS))
+            assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
+            assertThat(this[0].opprettetAvType).isEqualTo(opprettetAvType.name)
+            assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
         }
     }
 
@@ -114,12 +118,14 @@ class RekrutteringstreffInvitasjonTest {
     fun `lesing av rekrutteringsinvitasjon fra rapid med samme kandidat og stilling skal feile`() {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
-        val startTid = ZonedDateTime.now().plusDays(1)
-        val sluttTid = startTid.plusHours(2)
-        val endretAvType = EndretAvType.NAVIDENT
-        val endretTidspunkt = ZonedDateTime.now()
+        val fraTid = ZonedDateTime.now().plusDays(1)
+        val tilTid = fraTid.plusHours(2)
+        val opprettetAvType = EndretAvType.NAVIDENT
+        val opprettetTidspunkt = ZonedDateTime.now()
         val antallPlasser = 53
-        val sted = "Test Ste"
+        val gateadresse = "Test Sted"
+        val postnummer = "1234"
+        val poststed = "Test Poststed"
 
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -127,13 +133,15 @@ class RekrutteringstreffInvitasjonTest {
                 rekrutteringstreffId,
                 "Tittel 1",
                 "Beskrivelse 1",
-                startTid,
-                sluttTid,
+                fraTid,
+                tilTid,
                 "Z0000001",
-                endretAvType,
-                endretTidspunkt,
+                opprettetAvType,
+                opprettetTidspunkt,
                 antallPlasser,
-                sted
+                gateadresse,
+                postnummer,
+                poststed
             )
         )
         assertThrows<PSQLException> {
@@ -143,13 +151,15 @@ class RekrutteringstreffInvitasjonTest {
                     rekrutteringstreffId,
                     "Tittel 2",
                     "Beskrivelse 2",
-                    startTid.plusDays(1),
-                    sluttTid.plusDays(1),
+                    fraTid.plusDays(1),
+                    tilTid.plusDays(1),
                     "Z0000002",
-                    endretAvType,
-                    endretTidspunkt.plusHours(1),
+                    opprettetAvType,
+                    opprettetTidspunkt.plusHours(1),
                     antallPlasser + 10,
-                    sted
+                    gateadresse,
+                    postnummer,
+                    poststed
                 )
             )
         }
@@ -166,13 +176,15 @@ class RekrutteringstreffInvitasjonTest {
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
         val beskrivelse = "Beskrivelse av rekrutteringstreff"
-        val startTid = ZonedDateTime.now().plusDays(1)
-        val sluttTid = startTid.plusHours(2)
-        val endretAv = "testuser"
-        val endretAvType = EndretAvType.PERSONBRUKER
-        val endretTidspunkt = ZonedDateTime.now()
+        val fraTid = ZonedDateTime.now().plusDays(1)
+        val tilTid = fraTid.plusHours(2)
+        val opprettetAv = "testuser"
+        val opprettetAvType = EndretAvType.PERSONBRUKER
+        val opprettetTidspunkt = ZonedDateTime.now()
         val antallPlasser = 1
-        val sted = "Oslo"
+        val gateadresse = "Test Sted"
+        val postnummer = "1234"
+        val poststed = "Test Poststed"
 
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -180,13 +192,15 @@ class RekrutteringstreffInvitasjonTest {
                 rekrutteringstreffId,
                 tittel,
                 beskrivelse,
-                startTid,
-                sluttTid,
-                endretAv,
-                endretAvType,
-                endretTidspunkt,
+                fraTid,
+                tilTid,
+                opprettetAv,
+                opprettetAvType,
+                opprettetTidspunkt,
                 antallPlasser,
-                sted
+                gateadresse,
+                postnummer,
+                poststed
             )
         )
 
@@ -198,14 +212,16 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(message["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffId.toString())
             assertThat(message["tittel"].asText()).isEqualTo(tittel)
             assertThat(message["beskrivelse"].asText()).isEqualTo(beskrivelse)
-            assertThat(message["startTid"].asText()).isEqualTo(startTid.toString())
-            assertThat(message["sluttTid"].asText()).isEqualTo(sluttTid.toString())
-            assertThat(message["endretAv"].asText()).isEqualTo(endretAv)
-            assertThat(message["endretAvType"].asText()).isEqualTo(endretAvType.name)
-            assertThat(message["endretTidspunkt"].asText()).isEqualTo(endretTidspunkt.toString())
+            assertThat(message["fraTid"].asText()).isEqualTo(fraTid.toString())
+            assertThat(message["tilTid"].asText()).isEqualTo(tilTid.toString())
+            assertThat(message["opprettetAv"].asText()).isEqualTo(opprettetAv)
+            assertThat(message["opprettetAvType"].asText()).isEqualTo(opprettetAvType.name)
+            assertThat(message["opprettetTidspunkt"].asText()).isEqualTo(opprettetTidspunkt.toString())
             assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
             assertThat(message["antallPlasser"].asInt()).isEqualTo(antallPlasser)
-            assertThat(message["sted"].asText()).isEqualTo(sted)
+            assertThat(message["gateadresse"].asText()).isEqualTo(gateadresse)
+            assertThat(message["postnummer"].asText()).isEqualTo(postnummer)
+            assertThat(message["poststed"].asText()).isEqualTo(poststed)
         }
     }
     private fun rapidPeriodeMelding(
@@ -213,13 +229,15 @@ class RekrutteringstreffInvitasjonTest {
         rekrutteringstreffId: UUID,
         tittel: String,
         beskrivelse: String,
-        startTid: ZonedDateTime,
-        sluttTid: ZonedDateTime,
-        endretAv: String,
-        endretAvType: EndretAvType,
-        endretTidspunkt: ZonedDateTime,
+        fraTid: ZonedDateTime,
+        tilTid: ZonedDateTime,
+        opprettetAv: String,
+        opprettetAvType: EndretAvType,
+        opprettetTidspunkt: ZonedDateTime,
         antallPlasser: Int,
-        sted: String
+        gateadresse: String,
+        postnummer: String,
+        poststed: String
     ): String = """
         {
             "@event_name": "rekrutteringstreffinvitasjon",
@@ -228,13 +246,15 @@ class RekrutteringstreffInvitasjonTest {
             "rekrutteringstreffId":"$rekrutteringstreffId",
             "tittel": "$tittel",
             "beskrivelse": "$beskrivelse",
-            "startTid": "$startTid",
-            "sluttTid": "$sluttTid",
-            "endretAv": "$endretAv",
-            "endretAvType": "${endretAvType.name}",
-            "endretTidspunkt": "$endretTidspunkt",
+            "fraTid": "$fraTid",
+            "tilTid": "$tilTid",
+            "opprettetAv": "$opprettetAv",
+            "opprettetAvType": "${opprettetAvType.name}",
+            "opprettetTidspunkt": "$opprettetTidspunkt",
             "antallPlasser": $antallPlasser,
-            "sted": "$sted"
+            "gateadresse": "$gateadresse",
+            "postnummer": "$postnummer",
+            "poststed": "$poststed"
         }
         """.trimIndent()
 }
