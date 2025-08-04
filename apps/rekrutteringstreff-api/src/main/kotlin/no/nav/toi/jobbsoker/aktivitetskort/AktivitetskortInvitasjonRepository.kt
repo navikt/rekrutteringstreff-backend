@@ -1,6 +1,8 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
+import no.nav.toi.JobbsøkerHendelsestype
 import java.sql.ResultSet
+import java.sql.Timestamp
 import java.time.ZonedDateTime
 import javax.sql.DataSource
 
@@ -13,7 +15,7 @@ class AktivitetskortInvitasjonRepository(private val dataSource: DataSource) {
             left join aktivitetskort_polling p on jh.db_id = p.jobbsoker_hendelse_db_id
             left join jobbsoker j on jh.jobbsoker_db_id = j.db_id
             left join rekrutteringstreff rt on j.treff_db_id = rt.db_id
-            where p.db_id is null and jh.hendelsestype = 'INVITASJON'
+            where p.db_id is null and jh.hendelsestype = '${JobbsøkerHendelsestype.INVITER.name}'
             order by jh.tidspunkt
             """
         )
@@ -32,7 +34,7 @@ class AktivitetskortInvitasjonRepository(private val dataSource: DataSource) {
             )
             statement.use {
                 it.setLong(1, jobbsokerHendelseDbId)
-                it.setObject(2, ZonedDateTime.now())
+                it.setTimestamp(2, Timestamp.from(ZonedDateTime.now().toInstant()))
                 it.executeUpdate()
             }
         }
@@ -40,7 +42,7 @@ class AktivitetskortInvitasjonRepository(private val dataSource: DataSource) {
 
     private fun ResultSet.tilUsendtInvitasjon() = UsendtInvitasjon(
         jobbsokerHendelseDbId = getLong("db_id"),
-        fnr = getString("fnr"),
+        fnr = getString("fodselsnummer"),
         rekrutteringstreffUuid = getString("id")
     )
 }

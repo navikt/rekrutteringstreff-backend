@@ -66,6 +66,7 @@ class AktivitetskortInvitasjonScheduler(
             log.info("Ferdig med behandling av usendte invitasjoner for aktivitetskort")
         } catch (e: Exception) {
             log.error("Feil under kjøring av AktivitetskortScheduler", e)
+            throw e
         } finally {
             isRunning.set(false)
         }
