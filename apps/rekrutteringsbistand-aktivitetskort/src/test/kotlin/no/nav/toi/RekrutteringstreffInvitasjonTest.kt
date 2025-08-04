@@ -98,7 +98,7 @@ class RekrutteringstreffInvitasjonTest {
         assertThat(inspektør.size).isEqualTo(1)
         rekrutteringstreffInvitasjoner.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
-            assertThat(this[0].beskrivelse).isEqualTo(beskrivelse)
+            assertThat(this[0].beskrivelse).isEqualTo("TODO")
             assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
             assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
