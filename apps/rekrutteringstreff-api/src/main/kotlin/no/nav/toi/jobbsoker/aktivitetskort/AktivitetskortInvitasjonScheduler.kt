@@ -1,7 +1,6 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
-import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -12,8 +11,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-class AktivitetskortScheduler(
-    private val aktivitetskortRepository: AktivitetskortRepository,
+class AktivitetskortInvitasjonScheduler(
+    private val aktivitetskortInvitasjonRepository: AktivitetskortInvitasjonRepository,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val rapidsConnection: RapidsConnection
 ) {
@@ -49,7 +48,7 @@ class AktivitetskortScheduler(
         }
 
         try {
-            val usendteInvitasjoner = aktivitetskortRepository.hentUsendteInvitasjoner()
+            val usendteInvitasjoner = aktivitetskortInvitasjonRepository.hentUsendteInvitasjoner()
 
             if (usendteInvitasjoner.isEmpty()) {
                 log.info("Ingen usendte invitasjoner å behandle.")
@@ -62,7 +61,7 @@ class AktivitetskortScheduler(
                 val treff = rekrutteringstreffRepository.hent(TreffId(usendtInvitasjon.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtInvitasjon.rekrutteringstreffUuid}")
                 treff.aktivitetskortInvitasjonFor(usendtInvitasjon.fnr)
                     .publiserTilRapids(rapidsConnection)
-                aktivitetskortRepository.lagrePollingstatus(usendtInvitasjon.jobbsokerHendelseDbId)
+                aktivitetskortInvitasjonRepository.lagrePollingstatus(usendtInvitasjon.jobbsokerHendelseDbId)
             }
             log.info("Ferdig med behandling av usendte invitasjoner for aktivitetskort")
         } catch (e: Exception) {

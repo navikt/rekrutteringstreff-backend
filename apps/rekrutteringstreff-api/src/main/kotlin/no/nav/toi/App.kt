@@ -12,7 +12,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortScheduler
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
 import no.nav.toi.jobbsoker.handleJobbsøker
 import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
 import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
@@ -97,7 +97,7 @@ private val log = noClassLogger()
 
 fun main() {
     val dataSource = createDataSource()
-    AktivitetskortScheduler(
+    AktivitetskortInvitasjonScheduler(
         aktivitetskortRepository = AktivitetskortRepository(dataSource),
         rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
         rapidsConnection = RapidApplication.create(System.getenv())

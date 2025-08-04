@@ -1,12 +1,10 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
-import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import java.sql.ResultSet
 import java.time.ZonedDateTime
-import java.util.UUID
 import javax.sql.DataSource
 
-class AktivitetskortRepository(private val dataSource: DataSource) {
+class AktivitetskortInvitasjonRepository(private val dataSource: DataSource) {
 
     fun hentUsendteInvitasjoner(): List<UsendtInvitasjon> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
