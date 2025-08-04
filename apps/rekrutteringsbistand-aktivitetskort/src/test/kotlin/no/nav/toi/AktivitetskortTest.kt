@@ -75,7 +75,9 @@ class AktivitetskortTest {
         val expectedEndretTidspunkt = ZonedDateTime.now()
         val expectedEndretAvType = EndretAvType.PERSONBRUKER
         val expectedAntallPlasser = 10
-        val expectedSted = "Test Sted"
+        val expectedGateAdresse = "Test Sted"
+        val expectedPostnummer = "1234"
+        val expectedPoststed = "Test Poststed"
         val expectedAktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
             fnr = expectedFnr,
             rekrutteringstreffId = expectedRekrutteringstreffId,
@@ -87,7 +89,9 @@ class AktivitetskortTest {
             endretAvType = expectedEndretAvType,
             endretTidspunkt = expectedEndretTidspunkt,
             antallPlasser = expectedAntallPlasser,
-            sted = expectedSted
+            gateAdresse = expectedGateAdresse,
+            postnummer = expectedPostnummer,
+            poststed = expectedPoststed
         )
 
         AktivitetskortJobb(repository, producer, {_,_->}).run()
@@ -111,7 +115,7 @@ class AktivitetskortTest {
                 .isCloseTo(expectedEndretTidspunkt, within (1, ChronoUnit.SECONDS))
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
-            val expectedDetaljer = objectMapper.readTree("""[{"label":"Antall plasser","verdi":"$expectedAntallPlasser"},{"label":"Sted","verdi":"$expectedSted"}]""")
+            val expectedDetaljer = objectMapper.readTree("""[{"label":"Antall plasser","verdi":"$expectedAntallPlasser"},{"label":"Sted","verdi":"$expectedGateAdresse, $expectedPostnummer $expectedPoststed"}]""")
             assertThat(this["aktivitetskort"]["detaljer"]).containsExactlyInAnyOrder(*expectedDetaljer.toList().toTypedArray())
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
@@ -140,7 +144,9 @@ class AktivitetskortTest {
             endretAvType = EndretAvType.NAVIDENT,
             endretTidspunkt = ZonedDateTime.now(),
             antallPlasser = 10,
-            sted = "Test Sted"
+            gateAdresse = "Test Sted",
+            postnummer = "1234",
+            poststed = "Test Poststed"
         )
 
         AktivitetskortJobb(repository, producer,{_,_->}).run()
@@ -337,6 +343,8 @@ private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
         EndretAvType.NAVIDENT,
         ZonedDateTime.now(),
         15,
-        "Test Stedet"
+        "Test Sted",
+        "1234",
+        "Test Poststed"
     )
 }

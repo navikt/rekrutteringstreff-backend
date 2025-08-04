@@ -45,9 +45,9 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             endretAvType = packet["opprettetAvType"].asText().let(::enumValueOf),
             endretTidspunkt = packet["opprettetTidspunkt"].asZonedDateTime(),
             antallPlasser = packet["antallPlasser"].asInt(),
-            gateadresse = packet["gateadresse"].asText(),
+            gateAdresse = packet["gateadresse"].asText(),
             postnummer = packet["postnummer"].asText(),
-            poststed = packet["poststed"].asText(),
+            poststed = packet["poststed"].asText()
         )
         context.publish(fnr, packet.toJson())
     }
