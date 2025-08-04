@@ -16,7 +16,8 @@ class Aktivitetskortinvitasjon(
     private val opprettetTidspunkt: ZonedDateTime,
     private val gateadresse: String?,
     private val postnummer: String?,
-    private val poststed: String?
+    private val poststed: String?,
+    private val svarfrist: ZonedDateTime
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
         rapidsConnection.publish(fnr, """
@@ -29,11 +30,13 @@ class Aktivitetskortinvitasjon(
                 "fraTid": ${fraTid?.let { "\"$it" } ?: "null"},
                 "tilTid": ${tilTid?.let { "\"$it\"" } ?: "null"},
                 "opprettetAv": "$opprettetAv",
-                "opprettetAvType": "NAVIDENT",
                 "opprettetTidspunkt": "$opprettetTidspunkt",
-                "antallPlasser": ${TODO("Hvor finnes antall plasser?")},
-                "sted": ${TODO("Skal sted formateres før avsending, eller etter?")},
+                "antallPlasser": 10,
+                "svarfrist": ${svarfrist},
+                "gateadresse": ${gateadresse?.let { "\"$it\"" } ?: "null"},
+                "postnummer": ${postnummer?.let { "\"$it\"" } ?: "null"},
+                "poststed": ${poststed?.let { "\"$it\"" } ?: "null"}
             }
-        """.trimIndent())   // TODO: Må opprettetAvType settes en plass.. men kan kanskje settes i toi-aktivitetskort. At man gjør en antagelse på at alle rekrutteringstreffinvitasjon-hendelser kommer fra veiledere?
+        """.trimIndent())   
     }
 }
