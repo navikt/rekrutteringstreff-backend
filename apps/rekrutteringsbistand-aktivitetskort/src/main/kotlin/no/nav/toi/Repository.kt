@@ -31,7 +31,9 @@ class Repository(databaseConfig: DatabaseConfig) {
         endretAvType: EndretAvType,
         endretTidspunkt: ZonedDateTime,
         antallPlasser: Int,
-        sted: String
+        gateAdresse: String,
+        postnummer: String,
+        poststed: String
     ): UUID {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -86,7 +88,7 @@ class Repository(databaseConfig: DatabaseConfig) {
                     setObject(1, messageId)
                     setString(2, listOf(
                         AktivitetskortDetalj("Antall plasser", antallPlasser.toString()),
-                        AktivitetskortDetalj("Sted", sted)
+                        AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
                     ).joinToJson(AktivitetskortDetalj::tilAkaasJson))
                     setString(3, listOf(AktivitetskortHandling("Sjekk ut treffet", "Sjekk ut treffet og svar", "https://rekrutteringstreff.dev.nav.no/test", LenkeType.FELLES)).joinToJson(AktivitetskortHandling::tilAkaasJson))
                     setString(4, "[]")

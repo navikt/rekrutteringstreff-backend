@@ -22,7 +22,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             }
             validate {
                 it.requireKey("fnr", "rekrutteringstreffId", "tittel", "beskrivelse", "fraTid", "tilTid",
-                    "opprettetAv", "opprettetAvType", "opprettetTidspunkt", "antallPlasser", "sted")
+                    "opprettetAv", "opprettetAvType", "opprettetTidspunkt", "antallPlasser", "gateadresse", "postnummer", "poststed")
             }
         }.register(this)
     }
@@ -45,7 +45,9 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             endretAvType = packet["opprettetAvType"].asText().let(::enumValueOf),
             endretTidspunkt = packet["opprettetTidspunkt"].asZonedDateTime(),
             antallPlasser = packet["antallPlasser"].asInt(),
-            sted = packet["sted"].asText()
+            gateadresse = packet["gateadresse"].asText(),
+            postnummer = packet["postnummer"].asText(),
+            poststed = packet["poststed"].asText(),
         )
         context.publish(fnr, packet.toJson())
     }
