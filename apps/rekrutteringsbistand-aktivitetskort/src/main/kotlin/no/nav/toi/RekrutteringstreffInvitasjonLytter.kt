@@ -21,9 +21,10 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
                 it.forbid("aktivitetskortuuid")
             }
             validate {
-                it.requireKey("fnr", "rekrutteringstreffId", "tittel", "beskrivelse", "fraTid", "tilTid",
+                it.requireKey("fnr", "rekrutteringstreffId", "tittel", "fraTid", "tilTid",
                     "opprettetAv", "opprettetTidspunkt", "gateadresse", "postnummer", "poststed")
             }
+
         }.register(this)
     }
 
@@ -38,7 +39,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             fnr = fnr,
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
-            beskrivelse = packet["beskrivelse"].asText(),
+            beskrivelse = "TODO",
             startDato = packet["fraTid"].asZonedDateTime().toLocalDate(),
             sluttDato = packet["tilTid"].asZonedDateTime().toLocalDate(),
             endretAv = packet["opprettetAv"].asText(),
