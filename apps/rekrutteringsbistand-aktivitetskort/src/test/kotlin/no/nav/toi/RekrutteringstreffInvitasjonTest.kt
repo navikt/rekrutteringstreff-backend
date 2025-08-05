@@ -110,7 +110,7 @@ class RekrutteringstreffInvitasjonTest {
     }
 
     @Test
-    fun `lesing av rekrutteringsinvitasjon fra rapid med samme kandidat og stilling skal feile`() {
+    fun `lesing av rekrutteringsinvitasjon fra rapid med samme kandidat og stilling skal ignoreres`() {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
         val fraTid = ZonedDateTime.now().plusDays(1)
@@ -135,26 +135,27 @@ class RekrutteringstreffInvitasjonTest {
                 poststed
             )
         )
-        assertThrows<PSQLException> {
-            rapid.sendTestMessage(
-                rapidPeriodeMelding(
-                    fnr,
-                    rekrutteringstreffId,
-                    "Tittel 2",
-                    "Beskrivelse 2",
-                    fraTid.plusDays(1),
-                    tilTid.plusDays(1),
-                    "Z0000002",
-                    opprettetTidspunkt.plusHours(1),
-                    gateadresse,
-                    postnummer,
-                    poststed
-                )
+        val expectedRekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        assertThat(expectedRekrutteringstreffInvitasjoner).hasSize(1)
+        rapid.sendTestMessage(
+            rapidPeriodeMelding(
+                fnr,
+                rekrutteringstreffId,
+                "Tittel 2",
+                "Beskrivelse 2",
+                fraTid.plusDays(1),
+                tilTid.plusDays(1),
+                "Z0000002",
+                opprettetTidspunkt.plusHours(1),
+                gateadresse,
+                postnummer,
+                poststed
             )
-        }
+        )
 
-        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
-        assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
+        val actualRekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        assertThat(actualRekrutteringstreffInvitasjoner).hasSize(1)
+        assertThat(actualRekrutteringstreffInvitasjoner.first()).usingRecursiveComparison().isEqualTo(expectedRekrutteringstreffInvitasjoner.first())
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
     }

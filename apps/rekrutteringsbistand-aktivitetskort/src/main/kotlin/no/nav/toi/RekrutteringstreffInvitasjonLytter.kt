@@ -36,7 +36,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         meterRegistry: MeterRegistry
     ) {
         val fnr = packet["fnr"].asText()
-        packet["aktivitetskortuuid"] = repository.opprettRekrutteringstreffInvitasjon(
+        val aktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
             fnr = fnr,
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
@@ -49,7 +49,10 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             postnummer = packet["postnummer"].asText(),
             poststed = packet["poststed"].asText()
         )
-        context.publish(fnr, packet.toJson())
+        if(aktivitetskortId != null) {
+            packet["aktivitetskortuuid"] = aktivitetskortId
+            context.publish(fnr, packet.toJson())
+        }
     }
 
     override fun onError(

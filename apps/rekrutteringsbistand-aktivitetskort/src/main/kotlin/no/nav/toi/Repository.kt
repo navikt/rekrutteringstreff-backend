@@ -32,19 +32,20 @@ class Repository(databaseConfig: DatabaseConfig) {
         gateAdresse: String,
         postnummer: String,
         poststed: String
-    ): UUID {
+    ): UUID? {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
             try {
                 connection.autoCommit = false
 
-                connection.prepareStatement(
+                val endredeLinjer = connection.prepareStatement(
                     """
                     INSERT INTO aktivitetskort (
                         fnr, tittel, beskrivelse, start_dato, slutt_dato, 
                         aktivitetskort_id, rekrutteringstreff_id, 
                         opprettet_av, opprettet_av_type, opprettet_tidspunkt
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (fnr, rekrutteringstreff_id) DO NOTHING
                     """.trimIndent()
                 ).apply {
                     setString(1, fnr)
@@ -59,40 +60,57 @@ class Repository(databaseConfig: DatabaseConfig) {
                     setTimestamp(10, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
                 }.executeUpdate()
 
-                val messageId = UUID.randomUUID()
-                connection.prepareStatement(
-                    """
+                if(endredeLinjer==0) {
+                    log.error("Prøvde å opprette aktivitetskort for person på treff som allerede har aktivitetskort: $rekrutteringstreffId")
+                    return null
+                } else {
+                    val messageId = UUID.randomUUID()
+                    connection.prepareStatement(
+                        """
                     INSERT INTO aktivitetskort_hendelse (
                         aktivitetskort_id, message_id, action_type,
                         endret_av, endret_av_type, endret_tidspunkt, 
                         aktivitets_status
                     ) VALUES (?, ?, 'UPSERT_AKTIVITETSKORT_V1', ?, ?, ?, 'FORSLAG')
                     """.trimIndent()
-                ).apply {
-                    setObject(1, aktivitietskortId)
-                    setObject(2, messageId)
-                    setString(3, endretAv)
-                    setString(4, EndretAvType.NAVIDENT.name)
-                    setTimestamp(5, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
-                }.executeUpdate()
+                    ).apply {
+                        setObject(1, aktivitietskortId)
+                        setObject(2, messageId)
+                        setString(3, endretAv)
+                        setString(4, EndretAvType.NAVIDENT.name)
+                        setTimestamp(5, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
+                    }.executeUpdate()
 
-                connection.prepareStatement(
-                    """
+                    connection.prepareStatement(
+                        """
                     INSERT INTO aktivitetskort_dynamisk (
                         message_id, detaljer, handlinger, etiketter, oppgave
                     ) VALUES (?, ?, ?, ?, ?)
                     """.trimIndent()
-                ).apply {
-                    setObject(1, messageId)
-                    setString(2, listOf(
-                        AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
-                    ).joinToJson(AktivitetskortDetalj::tilAkaasJson))
-                    setString(3, listOf(AktivitetskortHandling("Sjekk ut treffet", "Sjekk ut treffet og svar", "https://rekrutteringstreff.dev.nav.no/test", LenkeType.FELLES)).joinToJson(AktivitetskortHandling::tilAkaasJson))
-                    setString(4, "[]")
-                    setNull(5, VARCHAR)
-                }.executeUpdate()
+                    ).apply {
+                        setObject(1, messageId)
+                        setString(
+                            2, listOf(
+                                AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
+                            ).joinToJson(AktivitetskortDetalj::tilAkaasJson)
+                        )
+                        setString(
+                            3,
+                            listOf(
+                                AktivitetskortHandling(
+                                    "Sjekk ut treffet",
+                                    "Sjekk ut treffet og svar",
+                                    "https://rekrutteringstreff.dev.nav.no/test",
+                                    LenkeType.FELLES
+                                )
+                            ).joinToJson(AktivitetskortHandling::tilAkaasJson)
+                        )
+                        setString(4, "[]")
+                        setNull(5, VARCHAR)
+                    }.executeUpdate()
 
-                connection.commit()
+                    connection.commit()
+                }
             } catch (e: Exception) {
                 connection.rollback()
                 throw e
