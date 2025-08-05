@@ -8,7 +8,9 @@ import no.nav.toi.jobbsoker.*
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
+import java.sql.Timestamp
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
 
@@ -26,6 +28,54 @@ class TestDatabase {
                 opprettetAvTidspunkt = nowOslo().minusDays(10),
             )
         )
+
+    fun opprettRekrutteringstreffMedAlleFelter(
+        navIdent: String = "Z999999",
+        tittel: String = "Et komplett rekrutteringstreff",
+        beskrivelse: String = "En fin beskrivelse av treffet",
+        fraTid: ZonedDateTime = nowOslo().plusDays(7),
+        tilTid: ZonedDateTime = nowOslo().plusDays(7).plusHours(2),
+        svarfrist: ZonedDateTime = nowOslo().plusDays(3),
+        gateadresse: String = "Testgata 123",
+        postnummer: String = "0484",
+        poststed: String = "OSLO",
+        status: String = "ÅPEN",
+        opprettetAvNavkontorEnhetId: String = "0315"
+    ): TreffId {
+        val treffId = opprettRekrutteringstreffIDatabase(
+            navIdent = navIdent,
+            tittel = tittel
+        )
+
+        dataSource.connection.use {
+            val sql = """
+            UPDATE rekrutteringstreff
+            SET beskrivelse = ?,
+                fratid = ?,
+                tiltid = ?,
+                svarfrist = ?,
+                gateadresse = ?,
+                postnummer = ?,
+                poststed = ?,
+                status = ?,
+                opprettet_av_kontor_enhetid = ?
+            WHERE id = ?
+        """.trimIndent()
+            it.prepareStatement(sql).apply {
+                setString(1, beskrivelse)
+                setTimestamp(2, Timestamp.from(fraTid.toInstant()))
+                setTimestamp(3, Timestamp.from(tilTid.toInstant()))
+                setTimestamp(4, Timestamp.from(svarfrist.toInstant()))
+                setString(5, gateadresse)
+                setString(6, postnummer)
+                setString(7, poststed)
+                setString(8, status)
+                setString(9, opprettetAvNavkontorEnhetId)
+                setObject(10, treffId.somUuid)
+            }.executeUpdate()
+        }
+        return treffId
+    }
 
     fun slettAlt() = dataSource.connection.use {
         it.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
