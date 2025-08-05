@@ -34,11 +34,10 @@ class Rekrutteringstreff(
         opprettetAvTidspunkt = opprettetAvTidspunkt,
         id = id.somUuid
     )
-    fun aktivitetskortInvitasjonFor(fnr: String) = Aktivitetskortinvitasjon(
+    fun aktivitetskortInvitasjonFor(fnr: String) = Aktivitetskortinvitasjon.opprett(
         fnr = fnr,
         rekrutteringstreffId = id,
         tittel = tittel,
-        beskrivelse = beskrivelse,
         fraTid = fraTid,
         tilTid = tilTid,
         opprettetAv = opprettetAvPersonNavident,
@@ -49,7 +48,6 @@ class Rekrutteringstreff(
         svarfrist = svarfrist
     )
 }
-
 
 data class TreffId(private val id: UUID) {
     constructor(uuid: String) : this(UUID.fromString(uuid))

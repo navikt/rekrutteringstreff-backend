@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -21,9 +22,6 @@ class AktivitetskortInvitasjonSchedulerTest {
         private lateinit var aktivitetskortInvitasjonRepository: AktivitetskortInvitasjonRepository
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private val mapper = JacksonConfig.mapper
-
-
-
     }
 
     @BeforeAll
@@ -43,12 +41,13 @@ class AktivitetskortInvitasjonSchedulerTest {
     }
 
     @Test
-    fun `skal sende invitasjoner på rapid og markere dem som pollet`() {
-        // Arrange
+    fun `skal sende invitasjoner på rapid og markere dem som pollet dersom vi har nok data`() {
         val rapid = TestRapid()
         val scheduler =
             AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
-        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+
+
         val fødselsnummer = Fødselsnummer("12345678901")
         jobbsøkerRepository.leggTil(
             listOf(
@@ -66,9 +65,7 @@ class AktivitetskortInvitasjonSchedulerTest {
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
 
-        // Act
         scheduler.behandleInvitasjoner()
-        // Assert
         assertThat(rapid.inspektør.size).isEqualTo(1)
         val melding = rapid.inspektør.message(0)
         assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
@@ -79,8 +76,7 @@ class AktivitetskortInvitasjonSchedulerTest {
     }
 
     @Test
-    fun `skal ikke sende samme invitasjon to ganger`() {
-        // Arrange
+    fun `skal ikke sende invitasjoner på rapid dersom vi mangler prerequisites for invitasjon`() {
         val rapid = TestRapid()
         val scheduler =
             AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
@@ -102,25 +98,52 @@ class AktivitetskortInvitasjonSchedulerTest {
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
 
-        // Act
+        val exception = assertThrows<IllegalArgumentException> {
+            scheduler.behandleInvitasjoner()
+        }
+        assertThat(exception.message).isEqualTo("FraTid kan ikke være null når vi inviterer")
+
+
+    }
+
+
+    @Test
+    fun `skal ikke sende samme invitasjon to ganger`() {
+        val rapid = TestRapid()
+        val scheduler =
+            AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+        jobbsøkerRepository.leggTil(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer = fødselsnummer,
+                    kandidatnummer = Kandidatnummer("ABC123"),
+                    fornavn = Fornavn("Ola"),
+                    etternavn = Etternavn("Nordmann"),
+                    navkontor = Navkontor("Oslo"),
+                    veilederNavn = VeilederNavn("Kari Veileder"),
+                    veilederNavIdent = VeilederNavIdent("Z123456"),
+                )
+            ), treffId, "Z123456"
+        )
+        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
+        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+
         scheduler.behandleInvitasjoner()
         scheduler.behandleInvitasjoner()
 
-        // Assert
         assertThat(rapid.inspektør.size).isEqualTo(1)
     }
 
     @Test
     fun `skal ikke gjøre noe hvis det ikke er noen usendte invitasjoner`() {
-        // Arrange
         val rapid = TestRapid()
         val scheduler =
             AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
 
-        // Act
         scheduler.behandleInvitasjoner()
 
-        // Assert
         assertThat(rapid.inspektør.size).isEqualTo(0)
     }
 }

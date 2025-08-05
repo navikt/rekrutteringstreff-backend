@@ -5,36 +5,66 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.ZonedDateTime
 
-class Aktivitetskortinvitasjon(
+class Aktivitetskortinvitasjon private constructor(
     private val fnr: String,
     private val rekrutteringstreffId: TreffId,
     private val tittel: String,
-    private val beskrivelse: String?,
-    private val fraTid: ZonedDateTime?,
-    private val tilTid: ZonedDateTime?,
+    private val fraTid: ZonedDateTime,
+    private val tilTid: ZonedDateTime,
     private val opprettetAv: String,
     private val opprettetTidspunkt: ZonedDateTime,
-    private val gateadresse: String?,
-    private val postnummer: String?,
-    private val poststed: String?,
-    private val svarfrist: ZonedDateTime?
+    private val gateadresse: String,
+    private val postnummer: String,
+    private val poststed: String,
+    private val svarfrist: ZonedDateTime
 ) {
+    companion object {
+        fun opprett(
+            fnr: String,
+            rekrutteringstreffId: TreffId,
+            tittel: String,
+            fraTid: ZonedDateTime?,
+            tilTid: ZonedDateTime?,
+            opprettetAv: String,
+            opprettetTidspunkt: ZonedDateTime,
+            gateadresse: String?,
+            postnummer: String?,
+            poststed: String?,
+            svarfrist: ZonedDateTime?
+        ) = Aktivitetskortinvitasjon(
+            fnr = fnr,
+            rekrutteringstreffId = rekrutteringstreffId,
+            tittel = tittel,
+            opprettetAv = opprettetAv,
+            opprettetTidspunkt = opprettetTidspunkt,
+            fraTid = requireNotNull(fraTid) { "FraTid kan ikke være null når vi inviterer" },
+            tilTid = requireNotNull(tilTid) { "TilTid kan ikke være null når vi inviterer" },
+            gateadresse = requireNotNull(gateadresse) { "Gateadresse kan ikke være null når vi inviterer" },
+            postnummer = requireNotNull(postnummer) { "Postnummer kan ikke være null når vi inviterer" },
+            poststed = requireNotNull(poststed) { "Poststed kan ikke være null når vi inviterer" },
+            svarfrist = requireNotNull(svarfrist) { "Svarfrist kan ikke være null når vi inviterer" }
+        )
+    }
+
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
-        rapidsConnection.publish(fnr, JsonMessage.newMessage("rekrutteringstreffinvitasjon",
-            mapOf(
+        val message = JsonMessage.newMessage(
+            eventName = "rekrutteringstreffinvitasjon",
+            map = mapOf<String, Any>(
                 "fnr" to fnr,
-                "rekrutteringstreffId" to "${rekrutteringstreffId.somUuid}",
+                "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
                 "tittel" to tittel,
                 "beskrivelse" to "TODO",
-                "fraTid" to (fraTid?.let { "\"$it\"" } ?: throw IllegalArgumentException("fraTid er required")),
-                "tilTid" to (tilTid?.let { "\"$it\"" } ?: throw IllegalArgumentException("tilTid er required")),
+                "fraTid" to fraTid,
+                "tilTid" to tilTid,
                 "opprettetAv" to opprettetAv,
-                "opprettetTidspunkt" to "$opprettetTidspunkt",
-                "svarfrist" to "$svarfrist",
-                "gateadresse" to (gateadresse?.let { "\"$it\"" } ?: throw IllegalArgumentException("gateadresseer er required")),
-                "postnummer" to (postnummer?.let { "\"$it\"" } ?: throw IllegalArgumentException("postnummer er required")),
-                "poststed" to (poststed?.let { "\"$it\"" } ?: throw IllegalArgumentException("poststed er required"))
+                "opprettetTidspunkt" to opprettetTidspunkt,
+                "svarfrist" to svarfrist,
+                "gateadresse" to gateadresse,
+                "postnummer" to postnummer,
+                "poststed" to poststed
             )
-        ).toJson())
+        )
+
+        rapidsConnection.publish(fnr, message.toJson())
     }
 }
