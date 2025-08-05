@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
+import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.ZonedDateTime
@@ -19,22 +20,21 @@ class Aktivitetskortinvitasjon(
     private val svarfrist: ZonedDateTime?
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
-        rapidsConnection.publish(fnr, """
-            {
-                "@event_name": "rekrutteringstreffinvitasjon",
-                "fnr": "$fnr",
-                "rekrutteringstreffId": "${rekrutteringstreffId.somUuid}",
-                "tittel": "$tittel",
-                "beskrivelse": ${beskrivelse?.let { "\"$it\"" } ?: "TODO" },
-                "fraTid": ${fraTid?.let { "\"$it\"" } ?: throw IllegalArgumentException("fraTid er required") },
-                "tilTid": ${tilTid?.let { "\"$it\"" } ?: throw IllegalArgumentException("tilTid er required") },
-                "opprettetAv": "$opprettetAv",
-                "opprettetTidspunkt": "$opprettetTidspunkt",
-                "svarfrist": "$svarfrist",
-                "gateadresse": ${gateadresse?.let { "\"$it\"" } ?: throw IllegalArgumentException("gateadresseer er required") },
-                "postnummer": ${postnummer?.let { "\"$it\"" } ?: throw IllegalArgumentException("postnummer er required") },
-                "poststed": ${poststed?.let { "\"$it\"" } ?: throw IllegalArgumentException("poststed er required") }
-            }
-        """.trimIndent())
+        rapidsConnection.publish(fnr, JsonMessage.newMessage("rekrutteringstreffinvitasjon",
+            mapOf(
+                "fnr" to fnr,
+                "rekrutteringstreffId" to "${rekrutteringstreffId.somUuid}",
+                "tittel" to tittel,
+                "beskrivelse" to "TODO",
+                "fraTid" to (fraTid?.let { "\"$it\"" } ?: throw IllegalArgumentException("fraTid er required")),
+                "tilTid" to (tilTid?.let { "\"$it\"" } ?: throw IllegalArgumentException("tilTid er required")),
+                "opprettetAv" to opprettetAv,
+                "opprettetTidspunkt" to "$opprettetTidspunkt",
+                "svarfrist" to "$svarfrist",
+                "gateadresse" to (gateadresse?.let { "\"$it\"" } ?: throw IllegalArgumentException("gateadresseer er required")),
+                "postnummer" to (postnummer?.let { "\"$it\"" } ?: throw IllegalArgumentException("postnummer er required")),
+                "poststed" to (poststed?.let { "\"$it\"" } ?: throw IllegalArgumentException("poststed er required"))
+            )
+        ).toJson())
     }
 }
