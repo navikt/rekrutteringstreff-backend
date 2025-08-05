@@ -223,7 +223,6 @@ class RekrutteringstreffInvitasjonTest {
     ): String = """
         {
             "@event_name": "rekrutteringstreffinvitasjon",
-            "aktørId": "123456789",
             "fnr":"$fnr",
             "rekrutteringstreffId":"$rekrutteringstreffId",
             "tittel": "$tittel",
