@@ -31,7 +31,7 @@ class App(private val rapidsConnection: RapidsConnection, private val repository
 
 fun main() {
     val env = System.getenv()
-    val app = App(RapidApplication.create(env), Repository(DatabaseConfig(env)),
+    val app = App(RapidApplication.create(env), Repository(DatabaseConfig(env), env.variable("MIN_SIDE_URL")),
         KafkaProducer(producerConfig(env)),
         KafkaConsumer(consumerConfig(env)),
     )

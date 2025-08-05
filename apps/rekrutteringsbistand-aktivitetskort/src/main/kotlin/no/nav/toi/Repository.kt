@@ -18,7 +18,7 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 
-class Repository(databaseConfig: DatabaseConfig) {
+class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String) {
     private val dataSource = databaseConfig.lagDatasource()
     fun opprettRekrutteringstreffInvitasjon(
         fnr: String,
@@ -100,7 +100,7 @@ class Repository(databaseConfig: DatabaseConfig) {
                                 AktivitetskortHandling(
                                     "Sjekk ut treffet",
                                     "Sjekk ut treffet og svar",
-                                    "https://rekrutteringstreff.dev.nav.no/test",
+                                    "$minsideUrl/rekrutteringstreff/$rekrutteringstreffId",
                                     LenkeType.FELLES
                                 )
                             ).joinToJson(AktivitetskortHandling::tilAkaasJson)

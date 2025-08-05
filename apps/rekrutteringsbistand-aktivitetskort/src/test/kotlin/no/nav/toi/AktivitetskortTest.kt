@@ -49,7 +49,7 @@ class AktivitetskortTest {
     private val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val repository = Repository(databaseConfig)
+    private val repository = Repository(databaseConfig, "http://url")
     private val objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
 
     @BeforeEach
@@ -118,7 +118,7 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["handlinger"]).hasSize(1)
             assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asText()).isEqualTo("Sjekk ut treffet")
             assertThat(this["aktivitetskort"]["handlinger"][0]["subtekst"].asText()).isEqualTo("Sjekk ut treffet og svar")
-            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asText()).isEqualTo("https://rekrutteringstreff.dev.nav.no/test")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asText()).isEqualTo("http://url/rekrutteringstreff/$expectedRekrutteringstreffId")
             assertThat(this["aktivitetskort"]["handlinger"][0]["lenkeType"].asText()).isEqualTo("FELLES")
             assertThat(this["aktivitetskort"]["oppgave"].isNull).isTrue()
         }

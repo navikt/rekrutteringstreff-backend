@@ -6,3 +6,4 @@ gcp_db_tier: db-f1-micro
 gcp_disk_autoresize: false
 postgres_versjon: POSTGRES_17
 kafka_consumer_group_id: rekrutteringsbistand-aktivitetskort-rapid-1
+min_side_url: https://rekrutteringstreff-bruker.intern.dev.nav.no/rekrutteringstreff
