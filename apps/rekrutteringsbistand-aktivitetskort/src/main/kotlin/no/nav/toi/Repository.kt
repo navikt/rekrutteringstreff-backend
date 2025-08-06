@@ -1,5 +1,7 @@
 package no.nav.toi
 
+import no.nav.toi.aktivitetskort.ActionType
+import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.AktivitetskortDetalj
 import no.nav.toi.aktivitetskort.Aktivitetskort
 import no.nav.toi.aktivitetskort.AktivitetskortEtikett
@@ -40,24 +42,15 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
 
                 val endredeLinjer = connection.prepareStatement(
                     """
-                    INSERT INTO aktivitetskort (
-                        fnr, tittel, beskrivelse, start_dato, slutt_dato, 
-                        aktivitetskort_id, rekrutteringstreff_id, 
-                        opprettet_av, opprettet_av_type, opprettet_tidspunkt
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO rekrutteringstreff (
+                        aktivitetskort_id, fnr, rekrutteringstreff_id
+                    ) VALUES (?, ?, ?)
                     ON CONFLICT (fnr, rekrutteringstreff_id) DO NOTHING
                     """.trimIndent()
                 ).apply {
-                    setString(1, fnr)
-                    setString(2, tittel)
-                    setString(3, beskrivelse)
-                    setObject(4, startDato)
-                    setObject(5, sluttDato)
-                    setObject(6, aktivitietskortId)
-                    setObject(7, rekrutteringstreffId)
-                    setString(8, endretAv)
-                    setString(9, EndretAvType.NAVIDENT.name)
-                    setTimestamp(10, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
+                    setObject(1, aktivitietskortId)
+                    setString(2, fnr)
+                    setObject(3, rekrutteringstreffId)
                 }.executeUpdate()
 
                 if(endredeLinjer==0) {
@@ -65,37 +58,33 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                     return null
                 } else {
                     val messageId = UUID.randomUUID()
-                    connection.prepareStatement(
-                        """
-                    INSERT INTO aktivitetskort_hendelse (
-                        aktivitetskort_id, message_id, action_type,
-                        endret_av, endret_av_type, endret_tidspunkt, 
-                        aktivitets_status
-                    ) VALUES (?, ?, 'UPSERT_AKTIVITETSKORT_V1', ?, ?, ?, 'FORSLAG')
-                    """.trimIndent()
-                    ).apply {
-                        setObject(1, aktivitietskortId)
-                        setObject(2, messageId)
-                        setString(3, endretAv)
-                        setString(4, EndretAvType.NAVIDENT.name)
-                        setTimestamp(5, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
-                    }.executeUpdate()
 
-                    connection.prepareStatement(
+                    val endredeLinjer = connection.prepareStatement(
                         """
-                    INSERT INTO aktivitetskort_dynamisk (
-                        message_id, detaljer, handlinger, etiketter, oppgave
-                    ) VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO aktivitetskort (
+                        fnr, tittel, beskrivelse, start_dato, slutt_dato, 
+                        message_id, aktivitetskort_id, aktivitets_status,
+                        endret_av, endret_av_type, endret_tidspunkt,
+                        detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}', ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json, ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false)
                     """.trimIndent()
                     ).apply {
-                        setObject(1, messageId)
+                        setString(1, fnr)
+                        setString(2, tittel)
+                        setString(3, beskrivelse)
+                        setObject(4, startDato)
+                        setObject(5, sluttDato)
+                        setObject(6, messageId)
+                        setObject(7, aktivitietskortId)
+                        setString(8, endretAv)
+                        setTimestamp(9, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
                         setString(
-                            2, listOf(
+                            10, listOf(
                                 AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
                             ).joinToJson(AktivitetskortDetalj::tilAkaasJson)
                         )
                         setString(
-                            3,
+                            11,
                             listOf(
                                 AktivitetskortHandling(
                                     "Sjekk ut treffet",
@@ -105,8 +94,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                                 )
                             ).joinToJson(AktivitetskortHandling::tilAkaasJson)
                         )
-                        setString(4, "[]")
-                        setNull(5, VARCHAR)
+                        setString(12, "[]")
+                        setNull(13, VARCHAR)
                     }.executeUpdate()
 
                     connection.commit()
@@ -124,31 +113,22 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
     fun hentUsendteAktivitetskortHendelser() = dataSource.connection.use { connection ->
         connection.prepareStatement(
             """
-            SELECT ah.*, a.*, ad.*
-            FROM aktivitetskort_hendelse ah
-            JOIN aktivitetskort a ON ah.aktivitetskort_id = a.aktivitetskort_id
-            JOIN aktivitetskort_dynamisk ad ON ah.message_id = ad.message_id
+            SELECT *
+            FROM aktivitetskort
             WHERE sendt_tidspunkt IS NULL
             """.trimIndent()
         ).executeQuery().use { resultSet ->
             generateSequence {
                 if (resultSet.next()) {
-                    Aktivitetskort.AktivitetskortHendelse(
+                    Aktivitetskort(
                         repository = this,
                         messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
-                        aktivitetskort = Aktivitetskort(
-                            aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString(),
-                            rekrutteringstreffId = resultSet.getObject("rekrutteringstreff_id", UUID::class.java)
-                                .toString(),
-                            fnr = resultSet.getString("fnr"),
-                            tittel = resultSet.getString("tittel"),
-                            beskrivelse = resultSet.getString("beskrivelse"),
-                            startDato = resultSet.getTimestamp("start_dato").toLocalDateTime().toLocalDate(),
-                            sluttDato = resultSet.getTimestamp("slutt_dato").toLocalDateTime().toLocalDate(),
-                            opprettetAv = resultSet.getString("opprettet_av"),
-                            opprettetAvType = resultSet.getString("opprettet_av_type"),
-                            opprettetTidspunkt = resultSet.getTimestamp("opprettet_tidspunkt").toInstant().atOslo(),
-                        ),
+                        aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString(),
+                        fnr = resultSet.getString("fnr"),
+                        tittel = resultSet.getString("tittel"),
+                        beskrivelse = resultSet.getString("beskrivelse"),
+                        startDato = resultSet.getTimestamp("start_dato")?.toLocalDateTime()?.toLocalDate(),
+                        sluttDato = resultSet.getTimestamp("slutt_dato")?.toLocalDateTime()?.toLocalDate(),
                         actionType = resultSet.getString("action_type").let(::enumValueOf),
                         endretAv = resultSet.getString("endret_av"),
                         endretAvType = resultSet.getString("endret_av_type").let(::enumValueOf),
@@ -158,6 +138,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                         handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
                         etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
                         oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
+                        avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
                         sendtTidspunkt = null
                     )
                 } else {
@@ -171,7 +152,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
-                UPDATE aktivitetskort_hendelse 
+                UPDATE aktivitetskort 
                 SET sendt_tidspunkt = CURRENT_TIMESTAMP
                 WHERE message_id = ?
                 """.trimIndent()
@@ -195,36 +176,27 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         }
     }
 
-    fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortHendelse.AktivitetskortHendelseFeil> = dataSource.connection.use { connection ->
+    fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortHendelseFeil> = dataSource.connection.use { connection ->
         connection.prepareStatement(
             """
-            SELECT af.*, ah.*, a.*, ad.*
+            SELECT af.*, a.*
             FROM aktivitetskort_hendelse_feil af
-            JOIN aktivitetskort_hendelse ah ON af.message_id = ah.message_id
-            JOIN aktivitetskort a ON ah.aktivitetskort_id = a.aktivitetskort_id
-            JOIN aktivitetskort_dynamisk ad ON ah.message_id = ad.message_id
+            JOIN aktivitetskort a ON af.message_id = a.message_id
             WHERE af.sendt_tidspunkt IS NULL
             """.trimIndent()
         ).executeQuery().use { resultSet ->
             generateSequence {
                 if (resultSet.next()) {
-                    Aktivitetskort.AktivitetskortHendelse.AktivitetskortHendelseFeil(
-                        Aktivitetskort.AktivitetskortHendelse(
+                    Aktivitetskort.AktivitetskortHendelseFeil(
+                        Aktivitetskort(
                             repository = this,
                             messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
-                            aktivitetskort = Aktivitetskort(
-                                aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString(),
-                                rekrutteringstreffId = resultSet.getObject("rekrutteringstreff_id", UUID::class.java)
-                                    .toString(),
-                                fnr = resultSet.getString("fnr"),
-                                tittel = resultSet.getString("tittel"),
-                                beskrivelse = resultSet.getString("beskrivelse"),
-                                startDato = resultSet.getTimestamp("start_dato").toLocalDateTime().toLocalDate(),
-                                sluttDato = resultSet.getTimestamp("slutt_dato").toLocalDateTime().toLocalDate(),
-                                opprettetAv = resultSet.getString("opprettet_av"),
-                                opprettetAvType = resultSet.getString("opprettet_av_type"),
-                                opprettetTidspunkt = resultSet.getTimestamp("opprettet_tidspunkt").toInstant().atOslo(),
-                            ),
+                            aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString(),
+                            fnr = resultSet.getString("fnr"),
+                            tittel = resultSet.getString("tittel"),
+                            beskrivelse = resultSet.getString("beskrivelse"),
+                            startDato = resultSet.getTimestamp("start_dato").toLocalDateTime().toLocalDate(),
+                            sluttDato = resultSet.getTimestamp("slutt_dato").toLocalDateTime().toLocalDate(),
                             actionType = resultSet.getString("action_type").let(::enumValueOf),
                             endretAv = resultSet.getString("endret_av"),
                             endretAvType = resultSet.getString("endret_av_type").let(::enumValueOf),
@@ -234,6 +206,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                             handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
                             etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
                             oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
+                            avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
                             sendtTidspunkt = null
                         ),
                         errorMessage = resultSet.getString("error_message"),

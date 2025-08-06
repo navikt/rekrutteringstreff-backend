@@ -8,71 +8,83 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.LocalDate
 import java.time.ZonedDateTime
 
-class Aktivitetskort(
+class Aktivitetskort (
+    private val repository: Repository,
     private val aktivitetskortId: String,
-    private val rekrutteringstreffId: String,
+    private val messageId: String,
     private val fnr: String,
     private val tittel: String,
-    private val beskrivelse: String,
-    private val startDato: LocalDate,
-    private val sluttDato: LocalDate,
-    private val opprettetAv: String,
-    private val opprettetAvType: String,
-    private val opprettetTidspunkt: ZonedDateTime
+    private val aktivitetsStatus: AktivitetsStatus,
+    private val beskrivelse: String?,
+    private val startDato: LocalDate?,
+    private val sluttDato: LocalDate?,
+    private val detaljer: List<AktivitetskortDetalj>,
+    private val handlinger: List<AktivitetskortHandling>?,
+    private val etiketter: List<AktivitetskortEtikett>,
+    private val oppgave: AktivitetskortOppgave?,
+    private val actionType: ActionType,
+    private val avtaltMedNav: Boolean,
+    private val endretAv: String,
+    private val endretAvType: EndretAvType,
+    private val endretTidspunkt: ZonedDateTime,
+    private val sendtTidspunkt: ZonedDateTime?
 ) {
 
-    class AktivitetskortHendelse(
-        private val repository: Repository,
-        private val messageId: String,
-        private val aktivitetskort: Aktivitetskort,
-        private val actionType: ActionType,
-        private val endretAv: String,
-        private val endretAvType: EndretAvType,
-        private val endretTidspunkt: ZonedDateTime,
-        private val aktivitetsStatus: AktivitetsStatus,
-        private val sendtTidspunkt: ZonedDateTime?,
-        private val detaljer: List<AktivitetskortDetalj>,
-        private val handlinger: List<AktivitetskortHandling>,
-        private val etiketter: List<AktivitetskortEtikett>,
-        private val oppgave: AktivitetskortOppgave?
-    ) {
-        fun send(producer: Producer<String, String>) {
-            val record = ProducerRecord(
-                "dab.aktivitetskort-v1.1",
-                aktivitetskort.aktivitetskortId,
-                tilAkaasJson(),
-            )
-            try {
-                producer.send(record).get()
-                repository.markerAktivitetskorthendelseSomSendt(messageId)
-            } catch (e: Exception) {
-                throw RuntimeException("Failed to send aktivitetskort hendelse ${aktivitetskort.aktivitetskortId}", e)
-            }
+    fun send(producer: Producer<String, String>) {
+        val record = ProducerRecord(
+            "dab.aktivitetskort-v1.1",
+            aktivitetskortId,
+            tilAkaasJson(),
+        )
+        try {
+            producer.send(record).get()
+            repository.markerAktivitetskorthendelseSomSendt(messageId)
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to send aktivitetskort hendelse ${aktivitetskortId}", e)
         }
+    }
 
-        private fun tilAkaasJson() = """
+    private fun tilAkaasJson() = """
             {
                 "messageId": "$messageId",
                 "source": "REKRUTTERINGSBISTAND",
                 "aktivitetskortType": "REKRUTTERINGSTREFF",
                 "actionType": "${actionType.name}",
-                "aktivitetskort": ${aktivitetskort.tilAkaasJson(aktivitetsStatus, endretAv, endretAvType, endretTidspunkt, detaljer, handlinger, etiketter, oppgave)}
+                "aktivitetskort": {
+                    "id": "$aktivitetskortId",
+                    "personIdent": "$fnr",
+                    "tittel": "$tittel",
+                    "aktivitetStatus": "$aktivitetsStatus",
+                    "startDato": "$startDato",
+                    "sluttDato": "$sluttDato",
+                    "beskrivelse": "$beskrivelse",
+                    "endretAv": {
+                        "ident": "$endretAv",
+                        "identType": "$endretAvType"
+                    },
+                    "endretTidspunkt": "$endretTidspunkt",
+                    "avtaltMedNav": false,
+                    "detaljer": ${detaljer.joinToJson(AktivitetskortDetalj::tilAkaasJson)},
+                    "handlinger": ${handlinger?.joinToJson(AktivitetskortHandling::tilAkaasJson)},
+                    "etiketter": ${etiketter.joinToJson(AktivitetskortEtikett::tilAkaasJson)},
+                    "oppgave": ${oppgave?.tilAkaasJson()}
+                }
             }
         """.trimIndent()
 
         class AktivitetskortHendelseFeil(
-            private val aktivitetskortHendelse: AktivitetskortHendelse,
+            private val aktivitetskortHendelse: Aktivitetskort,
             private val errorMessage: String,
             private val errorType: ErrorType
         ) {
             fun sendTilRapid(rapidPublish: (String, String) -> Unit) {
                 val now = ZonedDateTime.now()
-                rapidPublish(aktivitetskortHendelse.aktivitetskort.fnr,
+                rapidPublish(aktivitetskortHendelse.fnr,
                     """
                         {
                             "@event_name": "aktivitetskort-feil",
-                            "fnr": "${aktivitetskortHendelse.aktivitetskort.fnr}",
-                            "aktivitetskortId": "${aktivitetskortHendelse.aktivitetskort.aktivitetskortId}",
+                            "fnr": "${aktivitetskortHendelse.fnr}",
+                            "aktivitetskortId": "${aktivitetskortHendelse.aktivitetskortId}",
                             "messageId": "${aktivitetskortHendelse.messageId}",
                             "errorMessage": "$errorMessage",
                             "errorType": "${errorType.name}",
@@ -82,29 +94,6 @@ class Aktivitetskort(
                 aktivitetskortHendelse.repository.markerFeilkøhendelseSomSendt(aktivitetskortHendelse.messageId)
             }
         }
-    }
-
-    private fun tilAkaasJson(aktivitetsStatus: AktivitetsStatus, endretAv: String, endretAvType: EndretAvType, endretTidspunkt: ZonedDateTime, detaljer: List<AktivitetskortDetalj>, handlinger: List<AktivitetskortHandling>, etiketter: List<AktivitetskortEtikett>, oppgave: AktivitetskortOppgave?) = """
-        {
-            "id": "$aktivitetskortId",
-            "personIdent": "$fnr",
-            "tittel": "$tittel",
-            "aktivitetStatus": "$aktivitetsStatus",
-            "startDato": "$startDato",
-            "sluttDato": "$sluttDato",
-            "beskrivelse": "$beskrivelse",
-            "endretAv": {
-                "ident": "$endretAv",
-                "identType": "$endretAvType"
-            },
-            "endretTidspunkt": "$endretTidspunkt",
-            "avtaltMedNav": false,
-            "detaljer": ${detaljer.joinToJson(AktivitetskortDetalj::tilAkaasJson)},
-            "handlinger": ${handlinger.joinToJson(AktivitetskortHandling::tilAkaasJson)},
-            "etiketter": ${etiketter.joinToJson(AktivitetskortEtikett::tilAkaasJson)},
-            "oppgave": ${oppgave?.tilAkaasJson()}
-        }
-    """.trimIndent()
 }
 
 fun <T> List<T>.joinToJson(transform: (T) -> String) =
@@ -113,8 +102,8 @@ fun <T> List<T>.joinToJson(transform: (T) -> String) =
 private val objectMapper = jacksonObjectMapper()
 
 class AktivitetskortDetalj(
-    val label: String,
-    val verdi: String
+    private val label: String,
+    private val verdi: String
 ) {
     fun tilAkaasJson() = """
         {
@@ -130,10 +119,10 @@ class AktivitetskortDetalj(
 }
 
 class AktivitetskortHandling(
-    val tekst: String,
-    val subtekst: String,
-    val url: String,
-    val lenkeType: LenkeType
+    private val tekst: String,
+    private val subtekst: String,
+    private val url: String,
+    private val lenkeType: LenkeType
 ) {
     fun tilAkaasJson() = """
         {
@@ -151,8 +140,8 @@ class AktivitetskortHandling(
 }
 
 class AktivitetskortEtikett(
-    val tekst: String,
-    val label: Sentiment
+    private val tekst: String,
+    private val label: Sentiment
 ) {
     fun tilAkaasJson() = """
         {
@@ -168,8 +157,8 @@ class AktivitetskortEtikett(
 }
 
 class AktivitetskortOppgave(
-    val ekstern: AktivitetskortSubOppgave?,
-    val intern: AktivitetskortSubOppgave?
+    private val ekstern: AktivitetskortSubOppgave?,
+    private val intern: AktivitetskortSubOppgave?
 ) {
     fun tilAkaasJson() = listOfNotNull(
         ekstern?.let { "ekstern" to it.tilAkaasJson() },
@@ -192,9 +181,9 @@ class AktivitetskortOppgave(
 }
 
 class AktivitetskortSubOppgave(
-    val tekst: String,
-    val subtekst: String,
-    val url: String
+    private val tekst: String,
+    private val subtekst: String,
+    private val url: String
 ) {
     fun tilAkaasJson() = """
         {

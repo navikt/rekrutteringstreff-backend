@@ -23,8 +23,8 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
         connection.prepareStatement(
             """
                     SELECT * FROM aktivitetskort 
-                    JOIN aktivitetskort_hendelse ON aktivitetskort.aktivitetskort_id = aktivitetskort_hendelse.aktivitetskort_id
-                    LEFT JOIN aktivitetskort_hendelse_feil ON aktivitetskort_hendelse.message_id = aktivitetskort_hendelse_feil.message_id
+                    LEFT JOIN rekrutteringstreff ON aktivitetskort.aktivitetskort_id = rekrutteringstreff.aktivitetskort_id
+                    LEFT JOIN aktivitetskort_hendelse_feil ON aktivitetskort.message_id = aktivitetskort_hendelse_feil.message_id
                 """.trimIndent()
         ).executeQuery().use { resultSet ->
             generateSequence {
