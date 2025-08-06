@@ -2,6 +2,7 @@ package no.nav.toi
 
 import io.ktor.server.util.toZonedDateTime
 import io.ktor.utils.io.InternalAPI
+import no.nav.toi.aktivitetskort.AktivitetskortDetalj
 import no.nav.toi.aktivitetskort.ErrorType
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -36,6 +37,7 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
                         beskrivelse = resultSet.getString("beskrivelse"),
                         fraTid = resultSet.getObject("start_dato", LocalDate::class.java),
                         tilTid = resultSet.getObject("slutt_dato", LocalDate::class.java),
+                        detaljer = resultSet.getString("detaljer"),
                         aktivitetskortId = UUID.fromString(resultSet.getString("aktivitetskort_id")),
                         rekrutteringstreffId = UUID.fromString(resultSet.getString("rekrutteringstreff_id")),
                         aktivitetsStatus = resultSet.getString("aktivitets_status"),
@@ -67,6 +69,7 @@ class RekrutteringstreffInvitasjon(
     val beskrivelse: String?,
     val fraTid: LocalDate,
     val tilTid: LocalDate,
+    val detaljer: String,
     val aktivitetskortId: UUID,
     val rekrutteringstreffId: UUID,
     val aktivitetsStatus: String,

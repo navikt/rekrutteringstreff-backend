@@ -11,6 +11,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.SecureLogLogger.Companion.secure
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, private val repository: Repository): River.PacketListener {
 
@@ -37,13 +38,18 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         meterRegistry: MeterRegistry
     ) {
         val fnr = packet["fnr"].asText()
+
+        val startDato = packet["fraTid"].asZonedDateTime()
+        val sluttDato = packet["tilTid"].asZonedDateTime()
+
         val aktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
             fnr = fnr,
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
-            beskrivelse = "TODO",
-            startDato = packet["fraTid"].asZonedDateTime().toLocalDate(),
-            sluttDato = packet["tilTid"].asZonedDateTime().toLocalDate(),
+            beskrivelse = "Nav arrangerer rekrutteringstreff, og vil gjerne ha deg med hvis du vil. På treffet møter du arbeidsgivere som leter etter folk å ansette. Kanskje finner du jobbmuligheten du ikke visste fantes? Følg lenken under for å lese mer om treffet og svare på invitasjonen.",
+            startDato = startDato.toLocalDate(),
+            sluttDato = sluttDato.toLocalDate(),
+            tid = formaterTidsperiode(startDato, sluttDato),
             endretAv = packet["opprettetAv"].asText(),
             endretTidspunkt = packet["opprettetTidspunkt"].asZonedDateTime(),
             gateAdresse = packet["gateadresse"].asText(),
@@ -68,3 +74,20 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
 }
 
 private fun JsonNode.asZonedDateTime() = ZonedDateTime.parse(asText())
+
+private fun formaterTidsperiode(startTid: ZonedDateTime, sluttTid: ZonedDateTime): String {
+    val datoFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+    val klokkeslettFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+    val formatertStartDato = datoFormatter.format(startTid)
+    val formatertStartKlokkeslett = klokkeslettFormatter.format(startTid)
+
+    val formatertSluttDato = datoFormatter.format(sluttTid)
+    val formatertSluttKlokkeslett = klokkeslettFormatter.format(sluttTid)
+
+    return if (startTid.toLocalDate().isEqual(sluttTid.toLocalDate())) {
+        "$formatertStartDato kl. $formatertStartKlokkeslett–$formatertSluttKlokkeslett"
+    } else {
+        "$formatertStartDato kl. $formatertStartKlokkeslett til $formatertSluttDato kl. $formatertSluttKlokkeslett"
+    }
+}

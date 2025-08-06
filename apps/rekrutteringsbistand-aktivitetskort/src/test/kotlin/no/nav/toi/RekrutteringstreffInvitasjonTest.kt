@@ -19,6 +19,7 @@ import org.postgresql.util.PSQLException
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -67,8 +68,7 @@ class RekrutteringstreffInvitasjonTest {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
-        val beskrivelse = "Beskrivelse av rekrutteringstreff"
-        val fraTid = ZonedDateTime.now().plusDays(1)
+        val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
         val tilTid = fraTid.plusHours(2)
         val opprettetAv = "testuser"
         val opprettetTidspunkt = ZonedDateTime.now()
@@ -81,7 +81,6 @@ class RekrutteringstreffInvitasjonTest {
                 fnr,
                 rekrutteringstreffId,
                 tittel,
-                beskrivelse,
                 fraTid,
                 tilTid,
                 opprettetAv,
@@ -96,16 +95,60 @@ class RekrutteringstreffInvitasjonTest {
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
+
+        val expectedDetaljer = """[{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"},{"label":"Tid","verdi":"01.10.2025 kl. 08:00–10:00"}]"""
         rekrutteringstreffInvitasjoner.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
-            assertThat(this[0].beskrivelse).isEqualTo("TODO")
+            assertThat(this[0].beskrivelse).isEqualTo("Nav arrangerer rekrutteringstreff, og vil gjerne ha deg med hvis du vil. På treffet møter du arbeidsgivere som leter etter folk å ansette. Kanskje finner du jobbmuligheten du ikke visste fantes? Følg lenken under for å lese mer om treffet og svare på invitasjonen.")
             assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
             assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
+            assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
             assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
+        }
+    }
+
+    @Test
+    fun `lesing av rekrutteringstreffinvitasjon fra rapid skal lagres i database når tidsperioden er over flere dager`() {
+        val fnr = "01010012345"
+        val rekrutteringstreffId = UUID.randomUUID()
+        val tittel = "Test Rekrutteringstreff"
+        val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
+        val tilTid = fraTid.plusHours(2).plusDays(1)
+        val opprettetAv = "testuser"
+        val opprettetTidspunkt = ZonedDateTime.now()
+        val gateadresse = "Test Sted"
+        val postnummer = "1234"
+        val poststed = "Test Poststed"
+
+        rapid.sendTestMessage(
+            rapidPeriodeMelding(
+                fnr,
+                rekrutteringstreffId,
+                tittel,
+                fraTid,
+                tilTid,
+                opprettetAv,
+                opprettetTidspunkt,
+                gateadresse,
+                postnummer,
+                poststed
+            )
+        )
+
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
+        val inspektør = rapid.inspektør
+        assertThat(inspektør.size).isEqualTo(1)
+
+        val expectedDetaljer = """[{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"},{"label":"Tid","verdi":"01.10.2025 kl. 08:00 til 02.10.2025 kl. 10:00"}]"""
+        rekrutteringstreffInvitasjoner.apply {
+            assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
+            assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
+            assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
         }
     }
 
@@ -125,7 +168,6 @@ class RekrutteringstreffInvitasjonTest {
                 fnr,
                 rekrutteringstreffId,
                 "Tittel 1",
-                "Beskrivelse 1",
                 fraTid,
                 tilTid,
                 "Z0000001",
@@ -142,7 +184,6 @@ class RekrutteringstreffInvitasjonTest {
                 fnr,
                 rekrutteringstreffId,
                 "Tittel 2",
-                "Beskrivelse 2",
                 fraTid.plusDays(1),
                 tilTid.plusDays(1),
                 "Z0000002",
@@ -179,7 +220,6 @@ class RekrutteringstreffInvitasjonTest {
                 fnr,
                 rekrutteringstreffId,
                 tittel,
-                beskrivelse,
                 fraTid,
                 tilTid,
                 opprettetAv,
@@ -197,7 +237,6 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(message["fnr"].asText()).isEqualTo(fnr)
             assertThat(message["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffId.toString())
             assertThat(message["tittel"].asText()).isEqualTo(tittel)
-            assertThat(message["beskrivelse"].asText()).isEqualTo(beskrivelse)
             assertThat(message["fraTid"].asText()).isEqualTo(fraTid.toString())
             assertThat(message["tilTid"].asText()).isEqualTo(tilTid.toString())
             assertThat(message["opprettetAv"].asText()).isEqualTo(opprettetAv)
@@ -212,7 +251,6 @@ class RekrutteringstreffInvitasjonTest {
         fnr: String,
         rekrutteringstreffId: UUID,
         tittel: String,
-        beskrivelse: String,
         fraTid: ZonedDateTime,
         tilTid: ZonedDateTime,
         opprettetAv: String,
@@ -226,7 +264,6 @@ class RekrutteringstreffInvitasjonTest {
             "fnr":"$fnr",
             "rekrutteringstreffId":"$rekrutteringstreffId",
             "tittel": "$tittel",
-            "beskrivelse": "$beskrivelse",
             "fraTid": "$fraTid",
             "tilTid": "$tilTid",
             "opprettetAv": "$opprettetAv",

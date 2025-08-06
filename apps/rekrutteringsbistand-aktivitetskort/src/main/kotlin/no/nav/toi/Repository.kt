@@ -29,6 +29,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         beskrivelse: String,
         startDato: LocalDate,
         sluttDato: LocalDate,
+        tid: String,
         endretAv: String,
         endretTidspunkt: ZonedDateTime,
         gateAdresse: String,
@@ -81,6 +82,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                         setString(
                             10, listOf(
                                 AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
+                                AktivitetskortDetalj("Tid", tid),
                             ).joinToJson(AktivitetskortDetalj::tilAkaasJson)
                         )
                         setString(

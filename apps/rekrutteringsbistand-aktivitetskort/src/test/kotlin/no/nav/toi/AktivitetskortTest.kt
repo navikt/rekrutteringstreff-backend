@@ -21,7 +21,6 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.fail
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.TestInstance
@@ -76,6 +75,7 @@ class AktivitetskortTest {
         val expectedGateAdresse = "Test Sted"
         val expectedPostnummer = "1234"
         val expectedPoststed = "Test Poststed"
+        val expectedTid = "18.08.25 kl 08:00-10:00"
         val expectedAktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
             fnr = expectedFnr,
             rekrutteringstreffId = expectedRekrutteringstreffId,
@@ -83,6 +83,7 @@ class AktivitetskortTest {
             beskrivelse = expectedBeskrivelse,
             startDato = expectedStartDato,
             sluttDato = expectedSluttDato,
+            tid = expectedTid,
             endretAv = expectedEndretAv,
             endretTidspunkt = expectedEndretTidspunkt,
             gateAdresse = expectedGateAdresse,
@@ -110,7 +111,7 @@ class AktivitetskortTest {
                 .isCloseTo(expectedEndretTidspunkt, within (1, ChronoUnit.SECONDS))
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
-            val expectedDetaljer = objectMapper.readTree("""[{"label":"Sted","verdi":"$expectedGateAdresse, $expectedPostnummer $expectedPoststed"}]""")
+            val expectedDetaljer = objectMapper.readTree("""[{"label":"Sted","verdi":"$expectedGateAdresse, $expectedPostnummer $expectedPoststed"},{"label":"Tid","verdi":"$expectedTid"}]""")
             assertThat(this["aktivitetskort"]["detaljer"]).containsExactlyInAnyOrder(*expectedDetaljer.toList().toTypedArray())
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
@@ -135,6 +136,7 @@ class AktivitetskortTest {
             beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
             startDato = LocalDate.now().plusDays(1),
             sluttDato = LocalDate.now().plusDays(2),
+            tid = "Whatever",
             endretAv = "testuser",
             endretTidspunkt = ZonedDateTime.now(),
             gateAdresse = "Test Sted",
@@ -332,6 +334,7 @@ private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
         "Dette er en testbeskrivelse for rekrutteringstreff.",
         LocalDate.now().plusDays(1),
         LocalDate.now().plusDays(2),
+        tid = "Whatever",
         "testuser",
         ZonedDateTime.now(),
         "Test Sted",
