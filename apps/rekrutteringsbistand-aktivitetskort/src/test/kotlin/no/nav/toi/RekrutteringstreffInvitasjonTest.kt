@@ -66,6 +66,7 @@ class RekrutteringstreffInvitasjonTest {
     }
 
     @Test
+    @Test
     fun `lesing av rekrutteringstreffinvitasjon fra rapid skal lagres i database`() {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
@@ -98,7 +99,7 @@ class RekrutteringstreffInvitasjonTest {
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
 
-        val expectedDetaljer = """[{"label":"Tid","verdi":"01. oktober 2025, kl. 08:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
+        val expectedDetaljer = """[{"label":"Tid","verdi":"01. oktober 2025, kl. 08:00–10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
         rekrutteringstreffInvitasjoner.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
             assertThat(this[0].beskrivelse).isEqualTo("Nav arrangerer rekrutteringstreff, og vil gjerne ha deg med hvis du vil. På treffet møter du arbeidsgivere som leter etter folk å ansette. Kanskje finner du jobbmuligheten du ikke visste fantes? Følg lenken under for å lese mer om treffet og svare på invitasjonen.")
@@ -112,7 +113,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
         }
     }
-
+    
     @Test
     fun `lesing av rekrutteringstreffinvitasjon fra rapid skal lagres i database når tidsperioden er over flere dager`() {
         val fnr = "01010012345"
