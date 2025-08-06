@@ -81,8 +81,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                         setTimestamp(9, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
                         setString(
                             10, listOf(
-                                AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
                                 AktivitetskortDetalj("Tid", tid),
+                                AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
                             ).joinToJson(AktivitetskortDetalj::tilAkaasJson)
                         )
                         setString(
