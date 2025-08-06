@@ -12,6 +12,11 @@ import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.SecureLogLogger.Companion.secure
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.text.format
+
+private val klokkeslettFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val datoMedMånedFormatter = DateTimeFormatter.ofPattern("dd.\u00A0MMMM\u00A0yyyy", Locale.forLanguageTag("no-NO"))
 
 class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, private val repository: Repository): River.PacketListener {
 
@@ -30,7 +35,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         }.register(this)
     }
 
-    
+
     override fun onPacket(
         packet: JsonMessage,
         context: MessageContext,
@@ -76,18 +81,15 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
 private fun JsonNode.asZonedDateTime() = ZonedDateTime.parse(asText())
 
 private fun formaterTidsperiode(startTid: ZonedDateTime, sluttTid: ZonedDateTime): String {
-    val datoFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-    val klokkeslettFormatter = DateTimeFormatter.ofPattern("HH:mm")
-
-    val formatertStartDato = datoFormatter.format(startTid)
     val formatertStartKlokkeslett = klokkeslettFormatter.format(startTid)
-
-    val formatertSluttDato = datoFormatter.format(sluttTid)
     val formatertSluttKlokkeslett = klokkeslettFormatter.format(sluttTid)
 
     return if (startTid.toLocalDate().isEqual(sluttTid.toLocalDate())) {
-        "$formatertStartDato kl. $formatertStartKlokkeslett–$formatertSluttKlokkeslett"
+        val formatertStartDato = datoMedMånedFormatter.format(startTid)
+        "$formatertStartDato\u00A0•\u00A0$formatertStartKlokkeslett–$formatertSluttKlokkeslett"
     } else {
-        "$formatertStartDato kl. $formatertStartKlokkeslett til $formatertSluttDato kl. $formatertSluttKlokkeslett"
+        val startDatoMedMåned = datoMedMånedFormatter.format(startTid)
+        val sluttDatoMedMåned = datoMedMånedFormatter.format(sluttTid)
+        "$startDatoMedMåned\u00A0•\u00A0$formatertStartKlokkeslett til $sluttDatoMedMåned\u00A0•\u00A0$formatertSluttKlokkeslett"
     }
 }

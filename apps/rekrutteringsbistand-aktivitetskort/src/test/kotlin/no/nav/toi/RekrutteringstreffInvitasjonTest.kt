@@ -96,7 +96,7 @@ class RekrutteringstreffInvitasjonTest {
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
 
-        val expectedDetaljer = """[{"label":"Tid","verdi":"01.10.2025 kl. 08:00–10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
+        val expectedDetaljer = """[{"label":"Tid","verdi":"01. oktober 2025 • 08:00–10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
         rekrutteringstreffInvitasjoner.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
             assertThat(this[0].beskrivelse).isEqualTo("Nav arrangerer rekrutteringstreff, og vil gjerne ha deg med hvis du vil. På treffet møter du arbeidsgivere som leter etter folk å ansette. Kanskje finner du jobbmuligheten du ikke visste fantes? Følg lenken under for å lese mer om treffet og svare på invitasjonen.")
@@ -144,7 +144,7 @@ class RekrutteringstreffInvitasjonTest {
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
 
-        val expectedDetaljer = """[{"label":"Tid","verdi":"01.10.2025 kl. 08:00 til 02.10.2025 kl. 10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
+        val expectedDetaljer = """[{"label":"Tid","verdi":"01. oktober 2025 • 08:00 til 02. oktober 2025 • 10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
         rekrutteringstreffInvitasjoner.apply {
             assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
             assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
@@ -274,4 +274,3 @@ class RekrutteringstreffInvitasjonTest {
         }
         """.trimIndent()
 }
-
