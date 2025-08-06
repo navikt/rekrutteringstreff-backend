@@ -90,8 +90,8 @@ class Aktivitetskort(
             "personIdent": "$fnr",
             "tittel": "$tittel",
             "aktivitetStatus": "$aktivitetsStatus",
-            "startDato": "$startDato",
-            "sluttDato": "$sluttDato",
+            "startDato": null,
+            "sluttDato": null,
             "beskrivelse": "$beskrivelse",
             "endretAv": {
                 "ident": "$endretAv",
