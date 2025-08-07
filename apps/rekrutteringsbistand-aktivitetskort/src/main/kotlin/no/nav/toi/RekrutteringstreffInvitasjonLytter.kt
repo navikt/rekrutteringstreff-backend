@@ -86,9 +86,9 @@ private fun formaterTidsperiode(startTid: ZonedDateTime, sluttTid: ZonedDateTime
     val formatertStartDato = datoMedMånedFormatter.format(startTid)
 
     return if (startTid.toLocalDate().isEqual(sluttTid.toLocalDate())) {
-        "$formatertStartDato,\u00A0kl.\u00A0$formatertStartKlokkeslett–$formatertSluttKlokkeslett"
+        "$formatertStartDato, kl.\u00A0$formatertStartKlokkeslett–$formatertSluttKlokkeslett"
     } else {
         val formatertSluttDato = datoMedMånedFormatter.format(sluttTid)
-        "$formatertStartDato,\u00A0kl.\u00A0$formatertStartKlokkeslett til $formatertSluttDato,\u00A0kl.\u00A0$formatertSluttKlokkeslett"
+        "$formatertStartDato, kl.\u00A0$formatertStartKlokkeslett til $formatertSluttDato, kl.\u00A0$formatertSluttKlokkeslett"
     }
 }
