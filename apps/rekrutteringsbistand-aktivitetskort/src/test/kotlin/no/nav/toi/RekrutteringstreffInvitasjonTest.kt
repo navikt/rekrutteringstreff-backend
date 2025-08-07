@@ -66,7 +66,6 @@ class RekrutteringstreffInvitasjonTest {
     }
 
     @Test
-    @Test
     fun `lesing av rekrutteringstreffinvitasjon fra rapid skal lagres i database`() {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
@@ -113,7 +112,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
         }
     }
-    
+
     @Test
     fun `lesing av rekrutteringstreffinvitasjon fra rapid skal lagres i database når tidsperioden er over flere dager`() {
         val fnr = "01010012345"
