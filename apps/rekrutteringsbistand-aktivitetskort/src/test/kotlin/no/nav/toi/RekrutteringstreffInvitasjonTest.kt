@@ -146,7 +146,7 @@ class RekrutteringstreffInvitasjonTest {
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
 
-        val expectedDetaljer = """[{"label":"Tid","verdi":"01. oktober 2025 • 08:00 til 02. oktober 2025 • 10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
+        val expectedDetaljer = """[{"label":"Tid","verdi":"01. oktober 2025, kl. 08:00 til 02. oktober 2025, kl. 10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
         rekrutteringstreffInvitasjoner.apply {
             assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
             assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())

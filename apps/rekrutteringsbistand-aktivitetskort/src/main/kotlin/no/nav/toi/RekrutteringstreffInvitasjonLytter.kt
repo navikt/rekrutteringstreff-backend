@@ -83,13 +83,12 @@ private fun JsonNode.asZonedDateTime() = ZonedDateTime.parse(asText())
 private fun formaterTidsperiode(startTid: ZonedDateTime, sluttTid: ZonedDateTime): String {
     val formatertStartKlokkeslett = klokkeslettFormatter.format(startTid)
     val formatertSluttKlokkeslett = klokkeslettFormatter.format(sluttTid)
+    val formatertStartDato = datoMedMånedFormatter.format(startTid)
 
     return if (startTid.toLocalDate().isEqual(sluttTid.toLocalDate())) {
-        val formatertStartDato = datoMedMånedFormatter.format(startTid)
         "$formatertStartDato,\u00A0kl.\u00A0$formatertStartKlokkeslett–$formatertSluttKlokkeslett"
     } else {
-        val startDatoMedMåned = datoMedMånedFormatter.format(startTid)
-        val sluttDatoMedMåned = datoMedMånedFormatter.format(sluttTid)
-        "$startDatoMedMåned\u00A0•\u00A0$formatertStartKlokkeslett til $sluttDatoMedMåned\u00A0•\u00A0$formatertSluttKlokkeslett"
+        val formatertSluttDato = datoMedMånedFormatter.format(sluttTid)
+        "$formatertStartDato,\u00A0kl.\u00A0$formatertStartKlokkeslett til $formatertSluttDato,\u00A0kl.\u00A0$formatertSluttKlokkeslett"
     }
 }
