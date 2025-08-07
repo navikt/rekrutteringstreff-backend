@@ -170,7 +170,9 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val invitasjon = testRepository.hentAlle()[0]
+        val messageId = invitasjon.messageId
+        val rekrutteringstreffId = invitasjon.rekrutteringstreffId
 
         val jobb = AktivitetskortFeilJobb(consumer, repository)
         val value = """
@@ -302,6 +304,7 @@ class AktivitetskortTest {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
             assertThat(this["fnr"].asText()).isEqualTo(invitasjon.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(invitasjon.aktivitetskortId.toString())
+            assertThat(this["rekrutteringstreffId"].asText()).isEqualTo(invitasjon.rekrutteringstreffId.toString())
             assertThat(this["messageId"].asText()).isEqualTo(invitasjon.messageId.toString())
             assertThat(this["errorMessage"].asText()).isEqualTo(errorMessage)
             assertThat(this["errorType"].asText()).isEqualTo(errorType.name)

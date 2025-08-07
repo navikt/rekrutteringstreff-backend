@@ -181,9 +181,10 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
     fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortHendelseFeil> = dataSource.connection.use { connection ->
         connection.prepareStatement(
             """
-            SELECT af.*, a.*
+            SELECT af.*, a.*, rt.rekrutteringstreff_id
             FROM aktivitetskort_hendelse_feil af
             JOIN aktivitetskort a ON af.message_id = a.message_id
+            JOIN rekrutteringstreff rt ON a.aktivitetskort_id = rt.aktivitetskort_id
             WHERE af.sendt_tidspunkt IS NULL
             """.trimIndent()
         ).executeQuery().use { resultSet ->
@@ -209,8 +210,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                             etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
                             oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
                             avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
-                            sendtTidspunkt = null
+                            sendtTidspunkt = null,
                         ),
+                        rekrutteringstreffId = resultSet.getObject("rekrutteringstreff_id", UUID::class.java).toString(),
                         errorMessage = resultSet.getString("error_message"),
                         errorType = resultSet.getString("error_type").let(::enumValueOf),
                     )

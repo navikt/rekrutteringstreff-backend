@@ -74,6 +74,7 @@ class Aktivitetskort (
 
         class AktivitetskortHendelseFeil(
             private val aktivitetskortHendelse: Aktivitetskort,
+            private val rekrutteringstreffId: String,
             private val errorMessage: String,
             private val errorType: ErrorType
         ) {
@@ -85,6 +86,7 @@ class Aktivitetskort (
                             "@event_name": "aktivitetskort-feil",
                             "fnr": "${aktivitetskortHendelse.fnr}",
                             "aktivitetskortId": "${aktivitetskortHendelse.aktivitetskortId}",
+                            "rekrutteringstreffId": "$rekrutteringstreffId",
                             "messageId": "${aktivitetskortHendelse.messageId}",
                             "errorMessage": "$errorMessage",
                             "errorType": "${errorType.name}",
