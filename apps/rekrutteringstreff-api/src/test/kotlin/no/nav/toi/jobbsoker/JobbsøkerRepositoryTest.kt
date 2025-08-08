@@ -327,4 +327,36 @@ class JobbsøkerRepositoryTest {
         assertThat(svarNeiHendelse.aktørIdentifikasjon).isEqualTo("svar_nei_person")
         assertThat(svarNeiHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
     }
+
+    @Test
+    fun `registrerAktivitetskortOpprettelseFeilet lager en feil-hendelse`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Feil")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val endretAvIdent = "Z987654"
+
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Kandidatnummer("K123"),
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker!!.hendelser).hasSize(1)
+
+        repository.registrerAktivitetskortOpprettelseFeilet(fødselsnummer, treffId, endretAvIdent)
+
+        jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker!!.hendelser).hasSize(2)
+
+        val feilHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEILET }
+        assertThat(feilHendelse).isNotNull
+        feilHendelse!!.apply {
+            assertThat(opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+            assertThat(aktørIdentifikasjon).isEqualTo(endretAvIdent)
+            assertThat(tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+        }
+    }
 }

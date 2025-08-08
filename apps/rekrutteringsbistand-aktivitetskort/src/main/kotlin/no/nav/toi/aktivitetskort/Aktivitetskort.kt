@@ -87,6 +87,7 @@ class Aktivitetskort (
                             "fnr": "${aktivitetskortHendelse.fnr}",
                             "aktivitetskortId": "${aktivitetskortHendelse.aktivitetskortId}",
                             "rekrutteringstreffId": "$rekrutteringstreffId",
+                            "endretAv": "${aktivitetskortHendelse.endretAv}",
                             "messageId": "${aktivitetskortHendelse.messageId}",
                             "errorMessage": "$errorMessage",
                             "errorType": "${errorType.name}",

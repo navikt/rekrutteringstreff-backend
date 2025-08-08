@@ -305,6 +305,7 @@ class AktivitetskortTest {
             assertThat(this["fnr"].asText()).isEqualTo(invitasjon.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(invitasjon.aktivitetskortId.toString())
             assertThat(this["rekrutteringstreffId"].asText()).isEqualTo(invitasjon.rekrutteringstreffId.toString())
+            assertThat(this["endretAv"].asText()).isEqualTo(invitasjon.endretAv)
             assertThat(this["messageId"].asText()).isEqualTo(invitasjon.messageId.toString())
             assertThat(this["errorMessage"].asText()).isEqualTo(errorMessage)
             assertThat(this["errorType"].asText()).isEqualTo(errorType.name)

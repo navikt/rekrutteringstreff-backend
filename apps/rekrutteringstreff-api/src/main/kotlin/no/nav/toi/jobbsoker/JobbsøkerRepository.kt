@@ -364,6 +364,28 @@ class JobbsøkerRepository(
             }
         }
 
+    fun registrerAktivitetskortOpprettelseFeilet(fødselsnummer: Fødselsnummer, treff: TreffId, endretAv: String) {
+        dataSource.connection.use { c ->
+            try {
+                val treffDbId = c.treffDbId(treff)
+                val jobbsøkerDbId =
+                    c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId = treffDbId, fødselsnumre = listOf(fødselsnummer))
+                        .firstOrNull()
+                        ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+
+
+                c.batchInsertHendelser(
+                    JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEILET,
+                    listOf(jobbsøkerDbId),
+                    endretAv,
+                    AktørType.ARRANGØR
+                )
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
+
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
         data class HendelseJson(
             val id: String,
