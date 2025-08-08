@@ -58,8 +58,8 @@ fun consumerConfig(env: Map<String, String>) = Properties().apply {
     val keyStorePath = env.variable("KAFKA_KEYSTORE_PATH")
 
     put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100)
-    put(ConsumerConfig.GROUP_ID_CONFIG, "rekrutteringsbistand-aktivitetskort-feil-2")
-    put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false)
+    put(ConsumerConfig.GROUP_ID_CONFIG, "rekrutteringsbistand-aktivitetskort-feil-3")
+    put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true)
     put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java)
     put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java)
