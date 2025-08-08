@@ -159,7 +159,6 @@ class AktivitetskortTest {
     }
 
     @Test
-    @Disabled // TODO Midlertidig deaktivert pga. testing
     fun `feil ved bestilling av aktivitetskort skal logges`() {
         val logger = LoggerFactory.getLogger(AktivitetskortFeilJobb::class.java.name) as Logger
         val listAppender = ListAppender<ILoggingEvent>()
@@ -196,7 +195,6 @@ class AktivitetskortTest {
     }
 
     @Test
-    @Disabled // TODO Midlertidig deaktivert pga. testing
     fun `ikke-relaterte feil i feil-kø skal ikke logges`() {
         val logger = LoggerFactory.getLogger(AktivitetskortFeilJobb::class.java.name) as Logger
         val listAppender = ListAppender<ILoggingEvent>()
@@ -224,8 +222,9 @@ class AktivitetskortTest {
         """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
         jobb.run()
-        assertThat(listAppender.list).hasSize(1)
+        assertThat(listAppender.list).hasSize(2)
         assertThat(listAppender.list[0].message).contains("Kjører AktivitetskortFeilJobb")
+        assertThat(listAppender.list[1].message).contains("Hendelse med source ARENA_TILTAK_AKTIVITET_ACL ignoreres.")
     }
 
     @Test

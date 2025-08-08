@@ -79,9 +79,7 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
 class AktivitetskortFeilJobb(private val consumer: Consumer<String, String>, private val repository: Repository) {
     fun run() {
         log.info("Kjører AktivitetskortFeilJobb")
-        log.info("Konsument subscribed til: ${consumer.subscription()}")
         val records = consumer.poll(Duration.ofSeconds(10))
-        log.info("Antall feil funnet: ${records.count()}")
         records.forEach { consumerRecord ->
             consumerRecord.value().let {
                 class FeilKøHendelse(
