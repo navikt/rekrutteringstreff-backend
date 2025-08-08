@@ -100,7 +100,7 @@ class AktivitetskortFeilJobb(private val consumer: Consumer<String, String>, pri
                         errorMessage = hendelse.errorMessage,
                         errorType = hendelse.errorType
                     )
-                }
+                } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
             }
         }
     }
