@@ -375,7 +375,7 @@ class JobbsøkerRepository(
 
 
                 c.batchInsertHendelser(
-                    JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEILET,
+                    JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEIL,
                     listOf(jobbsøkerDbId),
                     endretAv,
                     AktørType.ARRANGØR

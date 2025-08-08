@@ -351,7 +351,7 @@ class JobbsøkerRepositoryTest {
         jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer)
         assertThat(jobbsøker!!.hendelser).hasSize(2)
 
-        val feilHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEILET }
+        val feilHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEIL }
         assertThat(feilHendelse).isNotNull
         feilHendelse!!.apply {
             assertThat(opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)

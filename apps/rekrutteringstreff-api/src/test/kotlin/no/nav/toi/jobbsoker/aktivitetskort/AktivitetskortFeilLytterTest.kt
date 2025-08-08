@@ -78,7 +78,7 @@ class AktivitetskortFeilLytterTest {
             assertThat(aktørIdentifikasjon).isEqualTo(endretAvIdent)
         }
 
-        val feilHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEILET }
+        val feilHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEIL }
         assertThat(feilHendelse).isNotNull
         feilHendelse!!.apply {
             assertThat(id).isNotNull()
