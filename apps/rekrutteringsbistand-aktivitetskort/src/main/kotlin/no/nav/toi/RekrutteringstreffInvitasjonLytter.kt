@@ -42,7 +42,9 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        val fnr = packet["fnr"].asText()
+        // TODO: Midlertidig hardkod fnr for å fremprovosere feil fra aktivitetsplanen til feiltesting
+        //val fnr = packet["fnr"].asText()
+        val fnr = "12345678901" 
 
         val startDato = packet["fraTid"].asZonedDateTime()
         val sluttDato = packet["tilTid"].asZonedDateTime()
