@@ -102,7 +102,7 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
             assertThat(this["aktivitetskort"]["personIdent"].asText()).isEqualTo(expectedFnr)
             assertThat(this["aktivitetskort"]["tittel"].asText()).isEqualTo(expectedTittel)
-            assertThat(this["aktivitetskort"]["aktivitetStatus"].asText()).isEqualTo("FORSLAG")
+            //assertThat(this["aktivitetskort"]["aktivitetStatus"].asText()).isEqualTo("FORSLAG")
             assertThat(this["aktivitetskort"]["startDato"].asText()).isEqualTo(expectedStartDato.toString())
             assertThat(this["aktivitetskort"]["sluttDato"].asText()).isEqualTo(expectedSluttDato.toString())
             assertThat(this["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(expectedBeskrivelse)

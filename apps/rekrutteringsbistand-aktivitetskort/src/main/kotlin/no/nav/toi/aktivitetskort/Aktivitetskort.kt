@@ -14,7 +14,7 @@ class Aktivitetskort (
     private val messageId: String,
     private val fnr: String,
     private val tittel: String,
-    private val aktivitetsStatus: AktivitetsStatus,
+    private val aktivitetsStatus: String,
     private val beskrivelse: String?,
     private val startDato: LocalDate?,
     private val sluttDato: LocalDate?,
