@@ -3,7 +3,6 @@ package no.nav.toi.aktivitetskort
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import no.nav.toi.Repository
 import no.nav.toi.SecureLogLogger.Companion.secure
@@ -29,39 +28,23 @@ fun scheduler(
 ) = runBlocking {
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
-    val myJob = AktivitetskortJobb(repository, producer) { key, message ->
+    val myJob = AktivitetskortJobb(repository, producer)
+    consumer.subscribe(listOf("dab.aktivitetskort-feil-v1"))
+    val myErrorJob = AktivitetskortFeilJobb(consumer, repository) { key, message ->
         rapidsConnection.publish(key, message)
     }
-    consumer.subscribe(listOf("dab.aktivitetskort-feil-v1"))
-    val myErrorJob = AktivitetskortFeilJobb(consumer, repository)
 
     val now = ZonedDateTime.now().toInstant().atOslo()
     val nextRun = now.withSecond(second).withNano(nano)
         .let { if (it <= now) it.plusMinutes(1) else it }
     val delay = MILLIS.between(now, nextRun)
 
-    val task = Runnable {
-        runBlocking {
-            launch {
-                myJob.run()
-
-            }
-        }
-    }
-    val feilTask = Runnable {
-        runBlocking {
-            launch {
-                myErrorJob.run()
-            }
-        }
-    }
-
-    scheduledExecutor.scheduleAtFixedRate(task, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
-    scheduledFeilExecutor.scheduleAtFixedRate(feilTask, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
+    scheduledExecutor.scheduleAtFixedRate(myJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
+    scheduledFeilExecutor.scheduleAtFixedRate(myErrorJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
 }
 
-class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>, private val rapidPublish: (String, String) -> Unit) {
-    fun run() {
+class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>): Runnable {
+    override fun run() {
         log.info("Kjører AktivitetsJobb")
         repository.hentUsendteAktivitetskortHendelser().forEach { usendtHendelse ->
             try {
@@ -70,15 +53,19 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
                 secure(log).error("Feil ved sending av Aktivitetskorthendelse", e)
             }
         }
-        repository.hentUsendteFeilkøHendelser().forEach { usendtFeil ->
-            usendtFeil.sendTilRapid(rapidPublish)
-        }
     }
 }
 
-class AktivitetskortFeilJobb(private val consumer: Consumer<String, String>, private val repository: Repository) {
-    fun run() {
-        log.info("Kjører AktivitetskortFeilJobb")
+class AktivitetskortFeilJobb(
+    private val consumer: Consumer<String, String>,
+    private val repository: Repository,
+    private val rapidPublish: (String, String) -> Unit
+): Runnable {
+    override fun run() {
+        lagreFeilKøHendelser()
+        sendFeilKøHendelserPåRapid()
+    }
+    fun lagreFeilKøHendelser() {
         val records = consumer.poll(Duration.ofSeconds(10))
         records.forEach { consumerRecord ->
             consumerRecord.value().let {
@@ -103,6 +90,11 @@ class AktivitetskortFeilJobb(private val consumer: Consumer<String, String>, pri
                     )
                 } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
             }
+        }
+    }
+    fun sendFeilKøHendelserPåRapid() {
+        repository.hentUsendteFeilkøHendelser().forEach { usendtFeil ->
+            usendtFeil.sendTilRapid(rapidPublish)
         }
     }
 }
