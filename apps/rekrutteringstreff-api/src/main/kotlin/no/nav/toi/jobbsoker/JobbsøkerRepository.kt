@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.*
@@ -416,7 +417,7 @@ class JobbsøkerRepository(
         dataSource.connection.use { c ->
             try {
                 log.info("Skal oppdatere hendelse for aktiviteskortfeil for Treffid: ${treff}")
-
+                secure(log).error("Henter jobbsøker persontreffid for treff: ${treff.somString} og fødselsnummer: ${fødselsnummer.asString}")
                 val personTreffIds =
                     c.hentPersonTreffIderFraFødselsnummer(treffId = treff, fødselsnumre = listOf(fødselsnummer))
                         .firstOrNull()
