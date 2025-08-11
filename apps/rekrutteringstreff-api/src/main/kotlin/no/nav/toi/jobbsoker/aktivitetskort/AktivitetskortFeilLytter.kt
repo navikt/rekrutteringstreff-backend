@@ -19,6 +19,7 @@ class AktivitetskortFeilLytter(
             precondition {
                 it.requireValue("@event_name", "aktivitetskort-feil")
                 it.requireKey("rekrutteringstreffId", "fnr", "endretAv")
+                it.forbid("aktørId")
             }
         }.register(this)
     }
