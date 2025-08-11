@@ -421,7 +421,12 @@ class JobbsøkerRepository(
                 val personTreffIds =
                     c.hentPersonTreffIderFraFødselsnummer(treffId = treff, fødselsnumre = listOf(fødselsnummer))
                         .firstOrNull()
-                        ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+
+                if(personTreffIds == null) {
+                    log.error("Fant ingen jobbsøker med treffId: ${treff.somString} og fødselsnummer: (se securelog)")
+                    secure(log).error("Fant ingen jobbsøker med treffId: ${treff.somString} og fødselsnummer: ${fødselsnummer.asString}")
+                    return
+                }
 
                 log.info("Skal oppdatere feil fra aktivitetsplanen for  jobbsøkerdbId: $personTreffIds")
                 c.batchInsertHendelserFraPersonTreffIder(
@@ -430,6 +435,7 @@ class JobbsøkerRepository(
                     endretAv,
                     AktørType.ARRANGØR
                 )
+                log.info("Registrerte hendelse om at opprettelse av aktivitetskort feilet for rekrutteringstreffId: ${treff.somString}")
             } catch (e: Exception) {
                 throw e
             }

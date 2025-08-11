@@ -38,7 +38,6 @@ class AktivitetskortFeilLytter(
 
         try {
             jobbsøkerRepository.registrerAktivitetskortOpprettelseFeilet(fødselsnummer, rekrutteringstreffId, endretAv)
-            log.info("Registrerte hendelse om at opprettelse av aktivitetskort feilet for rekrutteringstreffId: $rekrutteringstreffId")
         } catch (e: Exception) {
             log.error(
                 "Klarte ikke å registrere feil-hendelse for aktivitetskort for rekrutteringstreffId $rekrutteringstreffId",
