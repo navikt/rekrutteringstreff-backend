@@ -14,7 +14,6 @@ import no.nav.toi.aktivitetskort.atOslo
 import no.nav.toi.aktivitetskort.joinToJson
 import org.flywaydb.core.Flyway
 import java.sql.Timestamp
-import java.sql.Types
 import java.sql.Types.VARCHAR
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -178,7 +177,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         }
     }
 
-    fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortHendelseFeil> = dataSource.connection.use { connection ->
+    fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortFeil> = dataSource.connection.use { connection ->
         connection.prepareStatement(
             """
             SELECT af.*, a.*, rt.rekrutteringstreff_id
@@ -190,7 +189,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         ).executeQuery().use { resultSet ->
             generateSequence {
                 if (resultSet.next()) {
-                    Aktivitetskort.AktivitetskortHendelseFeil(
+                    Aktivitetskort.AktivitetskortFeil(
                         Aktivitetskort(
                             repository = this,
                             messageId = resultSet.getObject("message_id", UUID::class.java).toString(),

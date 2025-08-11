@@ -73,7 +73,7 @@ class Aktivitetskort (
             }
         """.trimIndent()
 
-        class AktivitetskortHendelseFeil(
+        class AktivitetskortFeil(
             private val aktivitetskortHendelse: Aktivitetskort,
             private val rekrutteringstreffId: String,
             private val errorMessage: String,

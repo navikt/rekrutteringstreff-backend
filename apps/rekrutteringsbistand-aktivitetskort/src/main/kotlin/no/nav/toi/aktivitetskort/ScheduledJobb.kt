@@ -30,7 +30,7 @@ fun scheduler(
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
     val myJob = AktivitetskortJobb(repository, producer)
     consumer.subscribe(listOf("dab.aktivitetskort-feil-v1"))
-    val myErrorJob = AktivitetskortFeilJobb(consumer, repository) { key, message ->
+    val myErrorJob = AktivitetskortFeilJobb(repository, consumer) { key, message ->
         rapidsConnection.publish(key, message)
     }
 
@@ -57,11 +57,12 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
 }
 
 class AktivitetskortFeilJobb(
-    private val consumer: Consumer<String, String>,
     private val repository: Repository,
+    private val consumer: Consumer<String, String>,
     private val rapidPublish: (String, String) -> Unit
 ): Runnable {
     override fun run() {
+        log.info("Kjører AktivitetskortFeilJobb")
         lagreFeilKøHendelser()
         sendFeilKøHendelserPåRapid()
     }
@@ -70,7 +71,6 @@ class AktivitetskortFeilJobb(
         records.forEach { consumerRecord ->
             consumerRecord.value().let {
                 class FeilKøHendelse(
-                    val key: UUID,
                     val source: String,
                     val failingMessage: String,
                     val errorMessage: String,
@@ -83,7 +83,7 @@ class AktivitetskortFeilJobb(
                     log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
                     secure(log).error("Feil ved bestilling av aktivitetskort: $it")
                     repository.lagreFeilkøHendelse(
-                        messageId = hendelse.key,
+                        messageId = hendelse.failingMessage.hentMessageId(),
                         failingMessage = hendelse.failingMessage,
                         errorMessage = hendelse.errorMessage,
                         errorType = hendelse.errorType
@@ -98,5 +98,11 @@ class AktivitetskortFeilJobb(
         }
     }
 }
+
+private val jacksonObjectMapper = jacksonObjectMapper()
+
+private fun String.hentMessageId() = jacksonObjectMapper.readTree(this)["messageId"]?.asText()?.let {
+    UUID.fromString(it)
+} ?: error("Kunne ikke hente messageId fra hendelse: $this")
 
 fun Instant.atOslo(): ZonedDateTime = this.atZone(of("Europe/Oslo")).truncatedTo(MILLIS)

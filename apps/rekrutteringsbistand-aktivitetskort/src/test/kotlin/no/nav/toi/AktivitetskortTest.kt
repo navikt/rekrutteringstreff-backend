@@ -154,7 +154,7 @@ class AktivitetskortTest {
     @Test
     fun `AktivitetsJobb skal ikke feile ved tom database`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
-        AktivitetskortJobb(repository, producer,{_,_->}).run()
+        AktivitetskortJobb(repository, producer).run()
         assertThat(producer.history()).isEmpty()
     }
 
@@ -175,13 +175,13 @@ class AktivitetskortTest {
         val messageId = invitasjon.messageId
         val rekrutteringstreffId = invitasjon.rekrutteringstreffId
 
-        val jobb = AktivitetskortFeilJobb(consumer, repository)
+        val jobb = AktivitetskortFeilJobb(repository, consumer, {_,_->})
         val value = """
             {
-              "key": "$messageId",
+              "key": "${UUID.randomUUID()}",
               "source": "REKRUTTERINGSBISTAND",
               "timestamp": "2019-08-24T14:15:22Z",
-              "failingMessage": "string",
+              "failingMessage": "{\"messageId\":\"$messageId\"}",
               "errorMessage": "DuplikatMeldingFeil Melding allerede handtert, ignorer",
               "errorType": "AKTIVITET_IKKE_FUNNET"
             }
@@ -209,7 +209,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(consumer, repository)
+        val jobb = AktivitetskortFeilJobb(repository, consumer, {_,_->})
         val value = """
             {
               "key": "$messageId",
@@ -236,31 +236,31 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
         val timestamp = ZonedDateTime.now()
-        val failingMessage = "failingMessageString"
+        val failingMessage = """{"messageId":"$messageId"}"""
         val errorMessage = "DuplikatMeldingFeil Melding allerede handtert, ignorer"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
 
-        val jobb = AktivitetskortFeilJobb(consumer, repository)
+        val jobb = AktivitetskortFeilJobb(repository, consumer) { _, _ -> }
         val value = """
-            {
-              "key": "$messageId",
-              "source": "REKRUTTERINGSBISTAND",
-              "timestamp": "$timestamp",
-              "failingMessage": "$failingMessage",
-              "errorMessage": "$errorMessage",
-              "errorType": "$errorType"
-            }
-        """.trimIndent()
+        {
+          "key": "${UUID.randomUUID()}",
+          "source": "REKRUTTERINGSBISTAND",
+          "timestamp": "$timestamp",
+          "failingMessage": "${failingMessage.replace("\"", "\\\"")}",
+          "errorMessage": "$errorMessage",
+          "errorType": "$errorType"
+        }
+    """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
         jobb.run()
         val meldinger = testRepository.hentAlle()
         assertThat(meldinger).hasSize(1)
         assertThat(meldinger[0].feil).isNotNull
         meldinger[0].feil!!.apply {
-            assertThat(timestamp).isCloseTo(this.timestamp, within(10, ChronoUnit.MILLIS))
-            assertThat(failingMessage).isEqualTo(this.failingMessage)
-            assertThat(errorMessage).isEqualTo(this.errorMessage)
-            assertThat(errorType).isEqualTo(this.errorType)
+            assertThat(this.timestamp).isCloseTo(timestamp, within(10, ChronoUnit.MILLIS))
+            assertThat(this.failingMessage).isEqualTo(failingMessage)
+            assertThat(this.errorMessage).isEqualTo(errorMessage)
+            assertThat(this.errorType).isEqualTo(errorType)
         }
     }
 
@@ -273,7 +273,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(consumer, repository)
+        val jobb = AktivitetskortFeilJobb(repository,consumer, {_,_->})
         val value = """
             {
               "key": "$messageId",
@@ -300,7 +300,8 @@ class AktivitetskortTest {
         repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
 
         val rapid = TestRapid()
-        AktivitetskortJobb(repository, MockProducer(), rapid::publish).run()
+        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        AktivitetskortFeilJobb(repository, consumer, rapid::publish).run()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
@@ -324,7 +325,8 @@ class AktivitetskortTest {
         repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
 
         val rapid = TestRapid()
-        AktivitetskortJobb(repository, MockProducer(), rapid::publish).apply {
+        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        AktivitetskortFeilJobb(repository, consumer, rapid::publish).apply {
             run()
             run()
         }
