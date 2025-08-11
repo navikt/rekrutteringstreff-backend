@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.*
@@ -12,7 +11,6 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
-import kotlin.io.use
 
 data class JobbsøkerHendelse(
     val id: UUID,
@@ -93,6 +91,7 @@ class JobbsøkerRepository(
         return ids
     }
 
+    @Deprecated("Bruk heller PersonTreffId enn db_id")
     private fun Connection.batchInsertHendelser(
         hendelsestype: JobbsøkerHendelsestype,
         jobbsøkerIds: List<Long>,
@@ -110,6 +109,35 @@ class JobbsøkerRepository(
             jobbsøkerIds.forEach { id ->
                 stmt.setObject(1, UUID.randomUUID())
                 stmt.setLong(2, id)
+                stmt.setTimestamp(3, Timestamp.from(Instant.now()))
+                stmt.setString(4, hendelsestype.name)
+                stmt.setString(5, arrangørtype.name)
+                stmt.setString(6, opprettetAv)
+                stmt.addBatch(); if (++n == size) {
+                stmt.executeBatch(); n = 0
+            }
+            }
+            if (n > 0) stmt.executeBatch()
+        }
+    }
+
+    private fun Connection.batchInsertHendelserFraPersonTreffIder(
+        hendelsestype: JobbsøkerHendelsestype,
+        personTreffIds: List<PersonTreffId>,
+        opprettetAv: String,
+        arrangørtype: AktørType = AktørType.ARRANGØR,
+        size: Int = 500
+    ) {
+        val sql = """
+            insert into jobbsoker_hendelse
+              (id,jobbsoker_db_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon)
+            values (?,(select db_id from jobbsoker where id = ?),?,?,?,?)
+        """.trimIndent()
+        prepareStatement(sql).use { stmt ->
+            var n = 0
+            personTreffIds.forEach { id ->
+                stmt.setObject(1, UUID.randomUUID())
+                stmt.setObject(2, id.somUuid)
                 stmt.setTimestamp(3, Timestamp.from(Instant.now()))
                 stmt.setString(4, hendelsestype.name)
                 stmt.setString(5, arrangørtype.name)
@@ -239,12 +267,12 @@ class JobbsøkerRepository(
         }
     }
 
-    private fun Connection.hentJobbsøkerDbIderFraFødselsnummer(
+    private fun Connection.hentPersonTreffIderFraFødselsnummer(
         treffId: TreffId,
         fødselsnumre: List<Fødselsnummer>
-    ): List<Long> {
+    ): List<PersonTreffId> {
 
-        val sql = "SELECT j.db_id " +
+        val sql = "SELECT j.id " +
                 "FROM jobbsoker j  " +
                     "JOIN rekrutteringstreff rt ON j.treff_db_id = rt.db_id " +
                 "WHERE rt.id = ? AND j.fodselsnummer = ANY(?)"
@@ -252,7 +280,7 @@ class JobbsøkerRepository(
             stmt.setObject(1, treffId.somUuid)
             stmt.setArray(2, createArrayOf("varchar", fødselsnumre.map { it.asString }.toTypedArray()))
             stmt.executeQuery().use { rs ->
-                generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
+                generateSequence { if (rs.next()) PersonTreffId(UUID.fromString(rs.getString("id"))) else null }.toList()
             }
         }
     }
@@ -389,15 +417,15 @@ class JobbsøkerRepository(
             try {
                 log.info("Skal oppdatere hendelse for aktiviteskortfeil for Treffid: ${treff}")
 
-                val jobbsøkerDbId =
-                    c.hentJobbsøkerDbIderFraFødselsnummer(treffId = treff, fødselsnumre = listOf(fødselsnummer))
+                val personTreffIds =
+                    c.hentPersonTreffIderFraFødselsnummer(treffId = treff, fødselsnumre = listOf(fødselsnummer))
                         .firstOrNull()
                         ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
 
-                log.info("Skal oppdatere feil fra aktivitetsplanen for  jobbsøkerdbId: $jobbsøkerDbId")
-                c.batchInsertHendelser(
+                log.info("Skal oppdatere feil fra aktivitetsplanen for  jobbsøkerdbId: $personTreffIds")
+                c.batchInsertHendelserFraPersonTreffIder(
                     JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEIL,
-                    listOf(jobbsøkerDbId),
+                    listOf(personTreffIds),
                     endretAv,
                     AktørType.ARRANGØR
                 )
