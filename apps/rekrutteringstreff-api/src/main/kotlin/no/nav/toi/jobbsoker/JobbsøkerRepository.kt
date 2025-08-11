@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.*
 import java.time.Instant
@@ -237,6 +239,24 @@ class JobbsøkerRepository(
         }
     }
 
+    private fun Connection.hentJobbsøkerDbIderFraFødselsnummer(
+        treffId: TreffId,
+        fødselsnumre: List<Fødselsnummer>
+    ): List<Long> {
+
+        val sql = "SELECT j.db_id " +
+                "FROM jobbsoker j  " +
+                    "JOIN rekrutteringstreff rt ON j.treff_db_id = rt.db_id " +
+                "WHERE rt.id = ? AND j.fodselsnummer = ANY(?)"
+        return prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.setArray(2, createArrayOf("varchar", fødselsnumre.map { it.asString }.toTypedArray()))
+            stmt.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
+            }
+        }
+    }
+
     private fun Connection.hentJobbsøkerDbIder(treffDbId: Long, personTreffIder: List<PersonTreffId>): List<Long> {
         val sql = "SELECT db_id FROM jobbsoker WHERE treff_db_id = ? AND id = ANY(?)"
         return prepareStatement(sql).use { stmt ->
@@ -367,13 +387,14 @@ class JobbsøkerRepository(
     fun registrerAktivitetskortOpprettelseFeilet(fødselsnummer: Fødselsnummer, treff: TreffId, endretAv: String) {
         dataSource.connection.use { c ->
             try {
-                val treffDbId = c.treffDbId(treff)
+                log.info("Skal oppdatere hendelse for aktiviteskortfeil for Treffid: ${treff}")
+
                 val jobbsøkerDbId =
-                    c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId = treffDbId, fødselsnumre = listOf(fødselsnummer))
+                    c.hentJobbsøkerDbIderFraFødselsnummer(treffId = treff, fødselsnumre = listOf(fødselsnummer))
                         .firstOrNull()
                         ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
 
-
+                log.info("Skal oppdatere feil fra aktivitetsplanen for  jobbsøkerdbId: $jobbsøkerDbId")
                 c.batchInsertHendelser(
                     JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEIL,
                     listOf(jobbsøkerDbId),
