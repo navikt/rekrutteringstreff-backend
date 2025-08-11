@@ -1,5 +1,6 @@
 package no.nav.toi
 
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
@@ -10,6 +11,7 @@ import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
+import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
@@ -33,8 +35,15 @@ class App(
     private val dataSource: DataSource,
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
-    private val kandidatsokKlient: KandidatsøkKlient
+    private val kandidatsokKlient: KandidatsøkKlient,
+    rapidsConnection: RapidsConnection,
 ) {
+
+    private val jobbsøkerRepository: JobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
+    init {
+        AktivitetskortFeilLytter(rapidsConnection, jobbsøkerRepository)
+        rapidsConnection.start()
+    }
     constructor(
         port: Int,
         authConfigs: List<AuthenticationConfiguration>,
@@ -45,7 +54,8 @@ class App(
         kandidatsokScope: String,
         azureClientId: String,
         azureClientSecret: String,
-        azureTokenEndpoint: String
+        azureTokenEndpoint: String,
+        rapidsConnection: RapidsConnection,
     ) : this(
         port = port,
         authConfigs = authConfigs,
@@ -60,7 +70,9 @@ class App(
                 scope = kandidatsokScope,
                 azureUrl = azureTokenEndpoint,
             )
-        )
+        ),
+        rapidsConnection= rapidsConnection
+
     )
 
     private lateinit var javalin: Javalin
@@ -78,12 +90,12 @@ class App(
             RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler)
         )
 
-        val jobbRepo = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
+
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
-        javalin.handleJobbsøker(jobbRepo)
-        javalin.handleJobbsøkerInnloggetBorger(jobbRepo)
-        javalin.handleJobbsøkerOutbound(jobbRepo, kandidatsokKlient)
+        javalin.handleJobbsøker(jobbsøkerRepository)
+        javalin.handleJobbsøkerInnloggetBorger(jobbsøkerRepository)
+        javalin.handleJobbsøkerOutbound(jobbsøkerRepository, kandidatsokKlient)
 
         javalin.start(port)
     }
@@ -97,10 +109,11 @@ private val log = noClassLogger()
 
 fun main() {
     val dataSource = createDataSource()
+    val rapidsConnection = RapidApplication.create(System.getenv())
     AktivitetskortInvitasjonScheduler(
         aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(dataSource),
         rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
-        rapidsConnection = RapidApplication.create(System.getenv())
+        rapidsConnection = rapidsConnection
     ).start()
 
     App(
@@ -130,7 +143,8 @@ fun main() {
         kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
         azureClientId = getenv("AZURE_APP_CLIENT_ID"),
         azureClientSecret = getenv("AZURE_APP_CLIENT_SECRET"),
-        azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")
+        azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT"),
+        rapidsConnection = rapidsConnection
     ).start()
 }
 

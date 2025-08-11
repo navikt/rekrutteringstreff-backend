@@ -49,6 +49,7 @@ class RekrutteringstreffEierTest {
             azureClientId = "",
             azureClientSecret = "",
             azureTokenEndpoint = "",
+            TestRapid()
         )
     }
 

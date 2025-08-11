@@ -1,5 +1,5 @@
 plugins {
-    id("toi.common")
+    id("toi.rapids-and-rivers")
     kotlin("kapt")
 }
 
@@ -44,4 +44,5 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("org.flywaydb:flyway-core:${flywayVersion}")
     testImplementation("org.flywaydb:flyway-database-postgresql:${flywayVersion}")
+    testImplementation(project(":technical-libs:testrapid"))
 }

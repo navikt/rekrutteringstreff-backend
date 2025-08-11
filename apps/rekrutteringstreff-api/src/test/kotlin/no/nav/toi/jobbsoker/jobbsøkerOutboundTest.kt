@@ -52,7 +52,8 @@ class JobbsøkerOutboundTest {
             kandidatsokScope = "scope",
             azureClientId = "client-id",
             azureClientSecret = "secret",
-            azureTokenEndpoint = "${wmInfo.httpBaseUrl}/token"
+            azureTokenEndpoint = "${wmInfo.httpBaseUrl}/token",
+            TestRapid()
         ).also { it.start() }
     }
 

@@ -43,6 +43,7 @@ class JobbsøkerInnloggetBorgerTest {
             azureClientId = "",
             azureClientSecret = "",
             azureTokenEndpoint = "",
+            TestRapid()
         )
 
         val mapper = JacksonConfig.mapper

@@ -44,7 +44,7 @@ class ArbeidsgiverTest {
             ),
             db.dataSource,
             arbeidsgiverrettet,
-            utvikler, "", "", "", "", "",
+            utvikler, "", "", "", "", "", TestRapid()
         )
     }
 

@@ -44,6 +44,7 @@ class JobbsøkerTest {
             azureClientId = "",
             azureClientSecret = "",
             azureTokenEndpoint = "",
+            TestRapid()
         )
 
         val mapper = JacksonConfig.mapper

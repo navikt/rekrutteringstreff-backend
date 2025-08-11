@@ -48,6 +48,7 @@ private class AutorisasjonsTest {
         azureClientId = "",
         azureClientSecret = "",
         azureTokenEndpoint = "",
+        TestRapid()
     )
 
     @BeforeAll

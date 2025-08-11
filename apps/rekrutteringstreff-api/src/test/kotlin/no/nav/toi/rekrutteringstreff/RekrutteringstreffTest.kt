@@ -66,6 +66,7 @@ class RekrutteringstreffTest {
         azureClientId = "",
         azureClientSecret = "",
         azureTokenEndpoint = "",
+        TestRapid()
     )
 
     @BeforeAll

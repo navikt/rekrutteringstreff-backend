@@ -6,6 +6,7 @@ import com.github.kittinunf.result.Result.Success
 import java.util.concurrent.atomic.AtomicInteger
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
@@ -53,6 +54,7 @@ class MinsideTest {
             azureClientSecret = "",
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
+            rapidsConnection = TestRapid()
 
         )
         private val httpClient: HttpClient = HttpClient.newBuilder()

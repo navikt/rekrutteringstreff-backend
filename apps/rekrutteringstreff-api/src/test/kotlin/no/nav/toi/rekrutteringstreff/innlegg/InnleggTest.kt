@@ -54,6 +54,7 @@ class InnleggTest {
         azureClientId = "",
         azureClientSecret = "",
         azureTokenEndpoint = "",
+        TestRapid()
     )
 
     @BeforeAll fun start() { auth.start(port = authPort); app.start() }
