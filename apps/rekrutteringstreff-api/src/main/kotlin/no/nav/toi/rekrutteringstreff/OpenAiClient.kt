@@ -5,6 +5,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.fuel.httpPost
 import com.github.kittinunf.result.Result
 import no.nav.toi.JacksonConfig
+import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
@@ -46,6 +48,7 @@ object OpenAiClient {
         topP: Double,
     ): R {
         val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(userMessage)
+        secure(log).info("melding før filter: $userMessage etter filter: $userMessageFiltered")
         val body = mapper.writeValueAsString(
             OpenAiRequest(
                 messages = listOf(
