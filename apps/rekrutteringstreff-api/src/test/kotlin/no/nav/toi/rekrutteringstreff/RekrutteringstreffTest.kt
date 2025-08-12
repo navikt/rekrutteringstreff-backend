@@ -364,6 +364,72 @@ class RekrutteringstreffTest {
         }
     }
 
+    @Test
+    fun `validerRekrutteringstreff skal filtrere bort personsensitiv informasjon før kall til OpenAI`() {
+        val fodselsnummer = "12345678901"
+        val originalTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer $fodselsnummer."
+        val forventetFiltrertTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer ."
+        val begrunnelseFraOpenAi = "Beskrivelsen spesifiserer et geografisk område for søkere, noe som kan være diskriminerende."
+
+        val responseBody = """
+         {
+          "choices": [
+            {
+              "message": {
+                "role": "assistant",
+                "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"$begrunnelseFraOpenAi\" }"
+              }
+            }
+          ]
+        }
+    """.trimIndent()
+
+        // Stub for det forventede, filtrerte kallet.
+        // Hvis kallet inneholder fødselsnummeret, vil det ikke matche denne stubben, og WireMock vil returnere 404.
+        wireMockServer.stubFor(
+            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"))
+                .withRequestBody(WireMock.containing(forventetFiltrertTekst))
+                .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(responseBody)
+                )
+        )
+
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val payload = """
+        {
+            "tekst": "$originalTekst"
+        }
+    """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/valider")
+            .body(payload)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                assertThat(response.statusCode).isEqualTo(200)
+                val validationResult = mapper.readValue(result.get(), ValiderRekrutteringstreffResponsDto::class.java)
+                assertThat(validationResult.bryterRetningslinjer).isTrue()
+                assertThat(validationResult.begrunnelse).isEqualTo(begrunnelseFraOpenAi)
+            }
+        }
+
+        // Verifiser at kallet til OpenAI ble gjort med filtrert innhold.
+        wireMockServer.verify(
+            1,
+            WireMock.postRequestedFor(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"))
+                .withRequestBody(WireMock.containing(forventetFiltrertTekst))
+                .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
+        )
+    }
+
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
 
     @Test

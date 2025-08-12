@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.fuel.httpPost
 import com.github.kittinunf.result.Result
 import no.nav.toi.JacksonConfig
+import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 
@@ -44,11 +45,12 @@ object OpenAiClient {
         maxTokens: Int,
         topP: Double,
     ): R {
+        val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(userMessage)
         val body = mapper.writeValueAsString(
             OpenAiRequest(
                 messages = listOf(
                     OpenAiMessage("system", systemMessage),
-                    OpenAiMessage("user", userMessage),
+                    OpenAiMessage("user", userMessageFiltered),
                 ),
                 temperature = temperature,
                 max_tokens = maxTokens,
@@ -121,4 +123,7 @@ Personopplysnigner er kun tillatt dersom det er navn på arrangør av treff, ell
 Eksempel på svar som er akseptabelt: Teksten inneholder personopplysninger, som navn og telefonnummer. Dette er i strid med NAVs retningslinjer som krever at informasjon om enkeltpersoner ikke skal gjengis.
 
 """
+
+
+
 
