@@ -36,14 +36,8 @@ class App(
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
     private val kandidatsokKlient: KandidatsøkKlient,
-    rapidsConnection: RapidsConnection,
+    private val rapidsConnection: RapidsConnection,
 ) {
-
-    private val jobbsøkerRepository: JobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
-    init {
-        AktivitetskortFeilLytter(rapidsConnection, jobbsøkerRepository)
-        rapidsConnection.start()
-    }
     constructor(
         port: Int,
         authConfigs: List<AuthenticationConfiguration>,
@@ -77,6 +71,14 @@ class App(
 
     private lateinit var javalin: Javalin
     fun start() {
+        val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
+        startJavalin(jobbsøkerRepository)
+        startScheduler()
+        startRR(jobbsøkerRepository)
+        log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
+    }
+    fun startJavalin(jobbsøkerRepository: JobbsøkerRepository) {
+        log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
 
         javalin = Javalin.create { config ->
@@ -99,6 +101,20 @@ class App(
 
         javalin.start(port)
     }
+    fun startScheduler() {
+        log.info("Starting scheduler")
+        AktivitetskortInvitasjonScheduler(
+            aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(dataSource),
+            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+            rapidsConnection = rapidsConnection
+        ).start()
+    }
+
+    fun startRR(jobbsøkerRepository: JobbsøkerRepository) {
+        log.info("Starting RapidsConnection")
+        AktivitetskortFeilLytter(rapidsConnection, jobbsøkerRepository)
+        Thread(rapidsConnection::start).start()
+    }
 
     fun close() {
         if (::javalin.isInitialized) javalin.stop()
@@ -110,11 +126,6 @@ private val log = noClassLogger()
 fun main() {
     val dataSource = createDataSource()
     val rapidsConnection = RapidApplication.create(System.getenv())
-    AktivitetskortInvitasjonScheduler(
-        aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(dataSource),
-        rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
-        rapidsConnection = rapidsConnection
-    ).start()
 
     App(
         port = 8080,
