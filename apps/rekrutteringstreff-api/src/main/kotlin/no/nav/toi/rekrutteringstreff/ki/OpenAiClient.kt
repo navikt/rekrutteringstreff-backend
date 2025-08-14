@@ -1,3 +1,4 @@
+// kotlin
 package no.nav.toi.rekrutteringstreff.ki
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
@@ -7,148 +8,11 @@ import com.github.kittinunf.result.Result
 import no.nav.toi.JacksonConfig
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
+import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 import java.util.UUID
 import kotlin.system.measureTimeMillis
-
-object OpenAiClient {
-    private val mapper = JacksonConfig.mapper
-
-    private val chatUrl: String =
-        System.getenv("OPENAI_CHAT_COMPLETIONS_URL")
-            ?: System.getenv("AZURE_OPENAI_CHAT_URL")
-            ?: System.getenv("OPENAI_URL")
-            ?: "http://localhost:1234/v1/chat/completions"
-
-    private val bearerKey: String? = System.getenv("OPENAI_API_KEY")
-    private val azureKey: String? = System.getenv("AZURE_OPENAI_API_KEY")
-
-    // Metadata for logging
-    private val modelOrDeployment: String =
-        System.getenv("OPENAI_MODEL")
-            ?: System.getenv("AZURE_OPENAI_DEPLOYMENT")
-            ?: "unknown"
-
-    private const val temperature = 0.0
-    private const val maxTokens = 200
-    private const val topP = 1.0
-
-
-    @Volatile
-    private var repo: KiLoggRepository? = null
-
-    fun configureKiLoggRepository(repo: KiLoggRepository) {
-        this.repo = repo
-    }
-
-    fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto {
-        val (_, result) = callOpenAi(dto.tekst)
-        return result ?: ValiderRekrutteringstreffResponsDto(
-            bryterRetningslinjer = false,
-            begrunnelse = "KI utilgjengelig – ingen brudd registrert"
-        )
-    }
-
-    fun validateRekrutteringstreffOgLogg(
-        treffDbId: Long,
-        feltType: String,
-        tekst: String
-    ): Pair<ValiderRekrutteringstreffResponsDto, UUID?> {
-        val (elapsedMs, result) = callOpenAi(tekst)
-
-        val response = result ?: ValiderRekrutteringstreffResponsDto(
-            bryterRetningslinjer = false,
-            begrunnelse = "KI utilgjengelig – ingen brudd registrert"
-        )
-
-        val insert = KiLoggInsert(
-            treffDbId = treffDbId,
-            feltType = feltType,
-            sporringFraFrontend = tekst,
-            sporringFiltrert = tekst,
-            systemprompt = VALIDATION_SYSTEM_MESSAGE,
-            ekstraParametre = mapOf(
-                "temperature" to temperature,
-                "max_tokens" to maxTokens,
-                "top_p" to topP,
-                "model" to modelOrDeployment
-            ),
-            bryterRetningslinjer = response.bryterRetningslinjer,
-            begrunnelse = response.begrunnelse,
-            kiNavn = "openai",
-            kiVersjon = modelOrDeployment,
-            svartidMs = elapsedMs.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-        )
-
-        val id = try {
-            repo?.insert(insert)
-        } catch (e: Exception) {
-            log.warn("KI-logg insert feilet")
-            secure(log).error("KI-logg insert feilet", e)
-            null
-        }
-
-        return response to id
-    }
-
-
-    private fun callOpenAi(tekst: String): Pair<Long, ValiderRekrutteringstreffResponsDto?> {
-        var parsed: ValiderRekrutteringstreffResponsDto? = null
-        val req = OpenAiRequest(
-            messages = listOf(
-                OpenAiMessage(role = "system", content = VALIDATION_SYSTEM_MESSAGE),
-                OpenAiMessage(role = "user", content = tekst)
-            ),
-            temperature = temperature,
-            max_tokens = maxTokens,
-            top_p = topP,
-            response_format = ResponseFormat(type = "json_object")
-        )
-
-        val elapsed = measureTimeMillis {
-            try {
-                val payload = mapper.writeValueAsString(req)
-                val headers = mutableMapOf(
-                    "Content-Type" to "application/json"
-                ).apply {
-                    bearerKey?.let { put("Authorization", "Bearer $it") }
-                    azureKey?.let { put("api-key", it) }
-                }
-
-                val (_, response, result) = chatUrl
-                    .httpPost()
-                    .header(headers)
-                    .body(payload)
-                    .responseString()
-
-                when (result) {
-                    is Result.Success -> {
-                        val body = result.get()
-                        val chat = mapper.readValue<OpenAiChatResponse>(body)
-                        val content = chat.choices?.firstOrNull()?.message?.content
-                        if (!content.isNullOrBlank()) {
-                            // content skal være et JSON-objekt
-                            parsed = mapper.readValue<ValiderRekrutteringstreffResponsDto>(content)
-                        } else {
-                            log.warn("Tomt KI-svar (status ${response.statusCode})")
-                            secure(log).warn("Tomt KI-svar: $body")
-                        }
-                    }
-                    is Result.Failure -> {
-                        log.warn("KI-kall feilet (status ${response.statusCode})")
-                        secure(log).error("KI-kall feilet", result.getException())
-                    }
-                }
-            } catch (e: Exception) {
-                log.warn("Uventet feil ved KI-kall")
-                secure(log).error("Uventet feil ved KI-kall", e)
-            }
-        }
-        return elapsed to parsed
-    }
-}
-
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpenAiMessage(val role: String, val content: String)
@@ -165,17 +29,130 @@ data class OpenAiRequest(
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class OpenAiChatResponse(
-    val choices: List<OpenAiChoice>?
-)
+data class Choice(val message: OpenAiMessage?)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class OpenAiChoice(
-    val message: OpenAiMessage?
-)
+data class OpenAiResponse(val choices: List<Choice>?)
+
+object OpenAiClient {
+    private val mapper = JacksonConfig.mapper
+
+    // Defaults match WireMock stubs used in tests
+    private val apiUrl: String =
+        System.getenv("OPENAI_API_URL")
+            ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"
+    private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key"
+
+    // Stable KI metadata for logging
+    private const val kiNavn = "azure-openai"
+    private const val kiVersjon = "toi-gpt-4o"
+
+    private const val temperature = 0.0
+    private const val maxTokens = 400
+    private const val topP = 1.0
+    private val responseFormat = ResponseFormat()
+
+    @Volatile
+    private var repo: KiLoggRepository? = null
+
+    fun configureKiLoggRepository(repo: KiLoggRepository) {
+        this.repo = repo
+    }
+
+    // Public: pure validation (no logging)
+    fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto =
+        callWithFiltered<ValiderRekrutteringstreffResponsDto>(
+            systemMessage = VALIDATION_SYSTEM_MESSAGE,
+            userMessage = dto.tekst,
+            temperature = temperature,
+            maxTokens = maxTokens,
+            topP = topP
+        ).first
+
+    // Public: validation + logging
+    fun validateRekrutteringstreffOgLogg(
+        treffDbId: Long,
+        feltType: String,
+        tekst: String
+    ): Pair<ValiderRekrutteringstreffResponsDto, UUID?> {
+        var result: ValiderRekrutteringstreffResponsDto
+        var filtered: String
+        val elapsedMs = measureTimeMillis {
+            val (r, f) = callWithFiltered<ValiderRekrutteringstreffResponsDto>(
+                systemMessage = VALIDATION_SYSTEM_MESSAGE,
+                userMessage = tekst,
+                temperature = temperature,
+                maxTokens = maxTokens,
+                topP = topP
+            )
+            result = r
+            filtered = f
+        }
+
+        val id = repo?.insert(
+            KiLoggInsert(
+                treffDbId = treffDbId,
+                feltType = feltType,
+                sporringFraFrontend = tekst,
+                sporringFiltrert = filtered,
+                systemprompt = VALIDATION_SYSTEM_MESSAGE,
+                ekstraParametre = null,
+                bryterRetningslinjer = result.bryterRetningslinjer,
+                begrunnelse = result.begrunnelse,
+                kiNavn = kiNavn,
+                kiVersjon = kiVersjon,
+                svartidMs = elapsedMs.toInt()
+            )
+        )
+
+        return result to id
+    }
+
+    // Internal: performs the HTTP call and returns the parsed result and the filtered text
+    private inline fun <reified R> callWithFiltered(
+        systemMessage: String,
+        userMessage: String,
+        temperature: Double,
+        maxTokens: Int,
+        topP: Double
+    ): Pair<R, String> {
+        val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(userMessage)
+        secure(log).info("melding før filter: $userMessage etter filter: $userMessageFiltered")
+
+        val body = mapper.writeValueAsString(
+            OpenAiRequest(
+                messages = listOf(
+                    OpenAiMessage(role = "system", content = systemMessage),
+                    OpenAiMessage(role = "user", content = userMessageFiltered)
+                ),
+                temperature = temperature,
+                max_tokens = maxTokens,
+                top_p = topP,
+                response_format = responseFormat
+            )
+        )
+
+        val (_, _, result) = apiUrl.httpPost()
+            .header("api-key" to apiKey, "Content-Type" to "application/json")
+            .body(body)
+            .responseString()
+
+        val raw = when (result) {
+            is Result.Failure -> throw result.error
+            is Result.Success -> result.get()
+        }
+
+        val content = mapper
+            .readValue<OpenAiResponse>(raw)
+            .choices?.firstOrNull()?.message?.content
+            ?: error("Ingen respons fra OpenAI")
+
+        return mapper.readValue<R>(content.trim()) to userMessageFiltered
+    }
+}
 
 private const val VALIDATION_SYSTEM_MESSAGE = """
-    
+
 
 Du er en ekspert på å vurdere informasjon, og på å aldri oppgi personsensitiv informasjon som for eksempel navn, e-postadresse, telefonnummer, fødselsdato eller andre identifiserende opplysninger i begrunnelsen din. 
 
