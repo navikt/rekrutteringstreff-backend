@@ -1,8 +1,8 @@
-import no.nav.toi.rekrutteringstreff.ki.ValiderMedLoggResponseDto
-
-ackage no.nav.toi.rekrutteringstreff.ki
+// kotlin
+package no.nav.toi.rekrutteringstreff.ki
 
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
@@ -12,16 +12,27 @@ import no.nav.toi.App
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.JacksonConfig
 import no.nav.toi.TestRapid
-import no.nav.toi.nowOslo
+import no.nav.toi.lagToken
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.DisplayNameGeneration
+import org.junit.jupiter.api.DisplayNameGenerator
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.util.*
-import javax.sql.DataSource
+import java.sql.ResultSet
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.UUID
 
+@DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiLoggTest {
 
@@ -33,13 +44,12 @@ class KiLoggTest {
             .build()
     }
 
+    private val mapper = JacksonConfig.mapper
     private val authServer = MockOAuth2Server()
-    private val authPort = 18022
-
+    private val authPort = 18013
     private val db = TestDatabase()
-    private val dataSource: DataSource get() = db.dataSource
-
-    private val appPort = no.nav.toi.ubruktPortnrFra10000.ubruktPortnr()
+    private val appPort = ubruktPortnr()
+    private val base = "/api/rekrutteringstreff/ki"
 
     private val app = App(
         port = appPort,
@@ -50,15 +60,15 @@ class KiLoggTest {
                 audience = "rekrutteringstreff-audience"
             )
         ),
-        dataSource = dataSource,
-        arbeidsgiverrettet = arbeidsgiverrettet,
-        utvikler = utvikler,
+        db.dataSource,
+        arbeidsgiverrettet,
+        utvikler,
         kandidatsokApiUrl = "",
         kandidatsokScope = "",
         azureClientId = "",
         azureClientSecret = "",
         azureTokenEndpoint = "",
-        rapid = TestRapid()
+        TestRapid()
     )
 
     @BeforeAll
@@ -76,20 +86,119 @@ class KiLoggTest {
     @AfterEach
     fun reset() {
         db.slettAlt()
-        wireMockServer.resetAll()
     }
 
     @Test
-    fun `POST \\/api\\/ki\\/valider lagrer logg og returnerer loggId`() {
-        // Stub OpenAI completion
-        val begrunnelse = "Beskrivelsen spesifiserer et geografisk område for søkere, noe som kan være diskriminerende."
+    fun validerer_tekst_og_returnerer_logg_id() {
+        stubOpenAi()
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val requestBody = """
+            {
+              "treffDbId": $treffDbId,
+              "feltType": "tittel",
+              "tekst": "Dette er en uskyldig tittel"
+            }
+        """.trimIndent()
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
+                override fun deserialize(content: String): ValiderMedLoggResponseDto =
+                    mapper.readValue(content, ValiderMedLoggResponseDto::class.java)
+            })
+        assertThat(response.statusCode).isEqualTo(200)
+        result as Result.Success
+        assertThat(result.value.loggId).isNotBlank()
+    }
+
+    @Test
+    fun returnerer_opprettet_logglinje_med_id() {
+        stubOpenAi()
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val loggId = opprettLogg(treffDbId, token)
+        val (_, getRes, getResult) = Fuel.get("http://localhost:$appPort$base/logg/$loggId")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<KiLoggOutboundDto> {
+                override fun deserialize(content: String): KiLoggOutboundDto =
+                    mapper.readValue(content, KiLoggOutboundDto::class.java)
+            })
+        assertThat(getRes.statusCode).isEqualTo(200)
+        getResult as Result.Success
+        val logg = getResult.value
+        assertThat(logg.id).isEqualTo(loggId)
+        assertThat(logg.treffDbId).isEqualTo(treffDbId)
+        assertThat(logg.feltType).isEqualTo("tittel")
+        assertThat(logg.bryterRetningslinjer).isFalse()
+    }
+
+    @Test
+    fun markerer_logglinje_som_lagret() {
+        stubOpenAi()
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val loggId = opprettLogg(treffDbId, token)
+        val (_, patchRes, _) = Fuel.patch("http://localhost:$appPort$base/logg/$loggId/lagret")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .body("""{"lagret": true}""")
+            .response()
+        assertThat(patchRes.statusCode).isEqualTo(204)
+        assertThat(hentLagret(UUID.fromString(loggId))).isTrue()
+    }
+
+    @Test
+    fun registrerer_resultat_av_manuell_kontroll_for_logglinje() {
+        stubOpenAi()
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val loggId = opprettLogg(treffDbId, token)
+        val (_, patchRes, _) = Fuel.patch("http://localhost:$appPort$base/logg/$loggId/manuell")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .body("""{"bryterRetningslinjer": true}""")
+            .response()
+        assertThat(patchRes.statusCode).isEqualTo(204)
+        val manuell = hentManuell(UUID.fromString(loggId))
+        assertThat(manuell.bryter).isTrue()
+        assertThat(manuell.utfortAv).isEqualTo(navIdent)
+        assertThat(manuell.tidspunkt).isNotNull()
+    }
+
+    @Test
+    fun lister_logglinjer_for_valgt_treff() {
+        stubOpenAi()
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val loggId = opprettLogg(treffDbId, token)
+        val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?treffDbId=$treffDbId")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
+                override fun deserialize(content: String): List<KiLoggOutboundDto> {
+                    val type = mapper.typeFactory.constructCollectionType(
+                        List::class.java,
+                        KiLoggOutboundDto::class.java
+                    )
+                    return mapper.readValue(content, type)
+                }
+            })
+        assertThat(listRes.statusCode).isEqualTo(200)
+        listResult as Result.Success
+        assertThat(listResult.value.any { it.id == loggId }).isTrue()
+    }
+
+    private fun stubOpenAi(bryter: Boolean = false, begrunnelse: String = "OK") {
         val responseBody = """
             {
               "choices": [
                 {
                   "message": {
                     "role": "assistant",
-                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"$begrunnelse\" }"
+                    "content": "{ \"bryterRetningslinjer\": ${bryter}, \"begrunnelse\": \"${begrunnelse}\" }"
                   }
                 }
               ]
@@ -98,89 +207,83 @@ class KiLoggTest {
 
         wireMockServer.stubFor(
             WireMock.post(
-                WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
-            ).willReturn(
-                WireMock.aResponse()
-                    .withStatus(200)
-                    .withHeader("Content-Type", "application/json")
-                    .withBody(responseBody)
+                WireMock.urlEqualTo(
+                    "/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"
+                )
             )
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(responseBody)
+                )
         )
+    }
 
-        // Arrange: create a rekrutteringstreff and fetch its internal db_id (long)
-        val navIdent = "A123456"
-        val token = authServer.issueToken(
-            issuerId = "default",
-            subject = "test-subject",
-            audience = "rekrutteringstreff-audience",
-            claims = mapOf("NAVident" to navIdent)
-        )
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "KI-logg test ${nowOslo()}")
-        val treffDbId = hentTreffDbId(treffId)
-
-        // Act: call POST /api/ki/valider
-        val requestJson = """
+    private fun opprettLogg(treffDbId: Long, token: com.nimbusds.jwt.SignedJWT): String {
+        val requestBody = """
             {
               "treffDbId": $treffDbId,
               "feltType": "tittel",
-              "tekst": "Vi ser kun etter deltakere fra Oslo."
+              "tekst": "En uskyldig tittel"
             }
         """.trimIndent()
 
-        val (req, res, result) = Fuel.post("http://localhost:$appPort/api/ki/valider")
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
+            .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
-            .body(requestJson)
-            .responseString()
+            .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
+                override fun deserialize(content: String): ValiderMedLoggResponseDto =
+                    mapper.readValue(content, ValiderMedLoggResponseDto::class.java)
+            })
 
-        // Assert response
-        when (result) {
-            is Result.Failure -> throw result.error
-            is Result.Success -> {
-                assertThat(res.statusCode).isEqualTo(200)
-                val dto = no.nav.toi.JacksonConfig.mapper.readValue(
-                    result.get(),
-                    ValiderMedLoggResponseDto::class.java
-                )
-                assertThat(dto.bryterRetningslinjer).isTrue()
-                assertThat(dto.begrunnelse).isEqualTo(begrunnelse)
-                assertThat(dto.loggId).isNotBlank()
-                val loggId = UUID.fromString(dto.loggId)
-
-                // Assert DB: row exists and fields are persisted
-                dataSource.connection.use { c ->
-                    c.prepareStatement(
-                        """
-                        SELECT treff_db_id, felt_type, bryter_retningslinjer, lagret,
-                               manuell_kontroll_bryter_retningslinjer, manuell_kontroll_utført_av, manuell_kontroll_tidspunkt
-                          FROM ki_sporring_logg
-                         WHERE id = ?
-                        """.trimIndent()
-                    ).use { ps ->
-                        ps.setObject(1, loggId)
-                        ps.executeQuery().use { rs ->
-                            assertThat(rs.next()).isTrue()
-                            assertThat(rs.getLong("treff_db_id")).isEqualTo(treffDbId)
-                            assertThat(rs.getString("felt_type")).isEqualTo("tittel")
-                            assertThat(rs.getBoolean("bryter_retningslinjer")).isTrue()
-                            assertThat(rs.getBoolean("lagret")).isFalse()
-                            assertThat(rs.getObject("manuell_kontroll_bryter_retningslinjer")).isNull()
-                            assertThat(rs.getString("manuell_kontroll_utført_av")).isNull()
-                            assertThat(rs.getTimestamp("manuell_kontroll_tidspunkt")).isNull()
-                            assertThat(rs.next()).isFalse()
-                        }
-                    }
-                }
-            }
-        }
+        require(response.statusCode == 200) { "Opprett logg feilet med ${response.statusCode}" }
+        result as Result.Success
+        return result.value.loggId
     }
 
     private fun hentTreffDbId(treffId: TreffId): Long =
-        dataSource.connection.use { c ->
-            c.prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").use { ps ->
+        db.dataSource.connection.use { c ->
+            c.prepareStatement("select db_id from rekrutteringstreff where id = ?").use { ps ->
                 ps.setObject(1, treffId.somUuid)
                 ps.executeQuery().use { rs ->
-                    check(rs.next()) { "Fant ikke rekrutteringstreff ${treffId.somUuid}" }
+                    rs.next()
                     rs.getLong(1)
+                }
+            }
+        }
+
+    private fun hentLagret(id: UUID): Boolean =
+        db.dataSource.connection.use { c ->
+            c.prepareStatement("select lagret from ki_sporring_logg where id = ?").use { ps ->
+                ps.setObject(1, id)
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getBoolean(1)
+                }
+            }
+        }
+
+    private data class Manuell(val bryter: Boolean?, val utfortAv: String?, val tidspunkt: ZonedDateTime?)
+
+    private fun hentManuell(id: UUID): Manuell =
+        db.dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                select manuell_kontroll_bryter_retningslinjer,
+                       manuell_kontroll_utført_av,
+                       manuell_kontroll_tidspunkt
+                from ki_sporring_logg where id = ?
+                """.trimIndent()
+            ).use { ps ->
+                ps.setObject(1, id)
+                ps.executeQuery().use { rs ->
+                    rs.next()
+                    Manuell(
+                        bryter = rs.getObject(1) as Boolean?,
+                        utfortAv = rs.getString(2),
+                        tidspunkt = rs.getTimestamp(3)?.toInstant()?.atZone(ZoneOffset.UTC)
+                    )
                 }
             }
         }

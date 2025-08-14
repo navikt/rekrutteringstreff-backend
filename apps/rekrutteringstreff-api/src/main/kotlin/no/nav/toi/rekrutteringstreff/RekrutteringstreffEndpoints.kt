@@ -10,10 +10,9 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.eier.handleEiere
 import no.nav.toi.rekrutteringstreff.innlegg.handleInnlegg
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
 import java.time.ZonedDateTime
 import java.util.*
-import kotlin.text.get
 
 private const val pathParamTreffId = "id"
 private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"

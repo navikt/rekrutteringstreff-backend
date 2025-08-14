@@ -21,6 +21,8 @@ import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
+import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
+import no.nav.toi.rekrutteringstreff.ki.handleKiLogg
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
@@ -98,6 +100,7 @@ class App(
         javalin.handleJobbsøker(jobbsøkerRepository)
         javalin.handleJobbsøkerInnloggetBorger(jobbsøkerRepository)
         javalin.handleJobbsøkerOutbound(jobbsøkerRepository, kandidatsokKlient)
+        javalin.handleKiLogg( KiLoggRepository(dataSource))
 
         javalin.start(port)
     }
