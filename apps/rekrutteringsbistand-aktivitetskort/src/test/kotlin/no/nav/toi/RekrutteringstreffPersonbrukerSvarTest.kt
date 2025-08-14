@@ -1,7 +1,5 @@
 package no.nav.toi
 
-import com.github.navikt.tbd_libs.rapids_and_rivers.isMissingOrNull
-import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
@@ -30,7 +28,7 @@ import kotlin.text.trimIndent
 import kotlin.to
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class RekrutteringstreffBrukerSvarTest {
+class RekrutteringstreffPersonbrukerSvarTest {
     private val localEnv = mutableMapOf<String, String>(
         "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_DATABASE" to "test",
         "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_USERNAME" to "test",
@@ -66,16 +64,16 @@ class RekrutteringstreffBrukerSvarTest {
     }
 
     @Test
-    fun `svar ja fra bruker skal flytte aktivitetskort til gjennomføres`() {
-        testSvartJaFraBruker(svartJa = true, aktivitetsStatus = AktivitetsStatus.GJENNOMFORES)
+    fun `svar ja fra personbruker skal flytte aktivitetskort til gjennomføres`() {
+        testSvartJaFraPersonbruker(svartJa = true, aktivitetsStatus = AktivitetsStatus.GJENNOMFORES)
     }
 
     @Test
-    fun `svar nei fra bruker skal flytte aktivitetskort til avbrutt`() {
-        testSvartJaFraBruker(svartJa = false, aktivitetsStatus = AktivitetsStatus.AVBRUTT)
+    fun `svar nei fra personbruker skal flytte aktivitetskort til avbrutt`() {
+        testSvartJaFraPersonbruker(svartJa = false, aktivitetsStatus = AktivitetsStatus.AVBRUTT)
     }
 
-    fun testSvartJaFraBruker(svartJa: Boolean, aktivitetsStatus: AktivitetsStatus) {
+    fun testSvartJaFraPersonbruker(svartJa: Boolean, aktivitetsStatus: AktivitetsStatus) {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
@@ -86,19 +84,20 @@ class RekrutteringstreffBrukerSvarTest {
         val gateadresse = "Test Sted"
         val postnummer = "1234"
         val poststed = "Test Poststed"
-        val endretAv = "sluttbruker som svarte"
+        val endretAv = "Personbruker som svarte"
 
         repository.opprettRekrutteringstreffInvitasjon(fnr, rekrutteringstreffId, tittel, "Beskrivelse av rekrutteringstreff",
             fraTid.toLocalDate(), tilTid.toLocalDate(), "formatertTid", opprettetAv,
             gateadresse, postnummer, poststed)
 
+        val nowFørSendTestmessage = ZonedDateTime.now()
         rapid.sendTestMessage(
             rapidMelding(
                 fnr = fnr,
                 rekrutteringstreffId = rekrutteringstreffId,
                 svartJa = svartJa,
                 endretAv = endretAv,
-                endretAvSluttbruker = true
+                endretAvPersonbruker = true
             )
         )
 
@@ -120,12 +119,12 @@ class RekrutteringstreffBrukerSvarTest {
             assertThat(this[1].aktivitetsStatus).isEqualTo(aktivitetsStatus.name)
             assertThat(this[1].opprettetAv).isEqualTo(endretAv)
             assertThat(this[1].opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKER.name)
-            assertThat(this[1].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(100, ChronoUnit.MILLIS))
+            assertThat(this[1].opprettetTidspunkt).isCloseTo(nowFørSendTestmessage, within(100, ChronoUnit.MILLIS))
         }
     }
 
     @Test
-    fun `Om bruker har svart ja på aktivitetskort som ikke er opprettet skal vi feile for nå`() {
+    fun `Om personbruker har svart ja på aktivitetskort som ikke er opprettet skal vi feile for nå`() {
         assertThrows<IllegalArgumentException> {
             rapid.sendTestMessage(
                 rapidMelding(
@@ -133,7 +132,7 @@ class RekrutteringstreffBrukerSvarTest {
                     rekrutteringstreffId = UUID.randomUUID(),
                     svartJa = true,
                     endretAv = "12345678910",
-                    endretAvSluttbruker = true
+                    endretAvPersonbruker = true
                 )
             )
         }
@@ -144,7 +143,7 @@ class RekrutteringstreffBrukerSvarTest {
         rekrutteringstreffId: UUID,
         svartJa: Boolean,
         endretAv: String,
-        endretAvSluttbruker: Boolean
+        endretAvPersonbruker: Boolean
     ): String = """
         {
             "@event_name": "rekrutteringstreffsvar",
@@ -152,7 +151,7 @@ class RekrutteringstreffBrukerSvarTest {
             "rekrutteringstreffId":"$rekrutteringstreffId",
             "svartJa": $svartJa,
             "endretAv": "$endretAv",
-            "endretAvSluttbruker": $endretAvSluttbruker
+            "endretAvPersonbruker": $endretAvPersonbruker
         }
         """.trimIndent()
 }

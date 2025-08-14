@@ -19,7 +19,7 @@ import java.util.Locale
 private val klokkeslettFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val datoMedMånedFormatter = DateTimeFormatter.ofPattern("dd.\u00A0MMMM\u00A0yyyy", Locale.forLanguageTag("no-NO"))
 
-class RekrutteringstreffBrukerSvartJaLytter(rapidsConnection: RapidsConnection, private val repository: Repository): River.PacketListener {
+class RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection: RapidsConnection, private val repository: Repository): River.PacketListener {
 
     init {
         River(rapidsConnection).apply {
@@ -29,7 +29,7 @@ class RekrutteringstreffBrukerSvartJaLytter(rapidsConnection: RapidsConnection, 
                 it.requireKey("svartJa")
             }
             validate {
-                it.requireKey("fnr", "rekrutteringstreffId", "endretAv", "endretAvSluttbruker")
+                it.requireKey("fnr", "rekrutteringstreffId", "endretAv", "endretAvPersonbruker")
             }
 
         }.register(this)
@@ -52,7 +52,7 @@ class RekrutteringstreffBrukerSvartJaLytter(rapidsConnection: RapidsConnection, 
             aktivitetskortId = aktivitetskortId,
             aktivitetsStatus = if(packet["svartJa"].asBoolean()) AktivitetsStatus.GJENNOMFORES else AktivitetsStatus.AVBRUTT,
             endretAv = packet["endretAv"].asText(),
-            endretAvType = if(packet["endretAvSluttbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
+            endretAvType = if(packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
         )
     }
 
@@ -61,8 +61,8 @@ class RekrutteringstreffBrukerSvartJaLytter(rapidsConnection: RapidsConnection, 
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
-        log.error("Feil ved behandling av rekrutteringstreff der bruker har svart ja: $problems")
-        secure(log).error("Feil ved behandling av rekrutteringstreff der bruker har svart ja: ${problems.toExtendedReport()}")
+        log.error("Feil ved behandling av rekrutteringstreff der personbruker har svart ja: $problems")
+        secure(log).error("Feil ved behandling av rekrutteringstreff der personbruker har svart ja: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 
