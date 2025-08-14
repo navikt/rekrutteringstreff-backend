@@ -1,4 +1,4 @@
-package no.nav.toi
+package no.nav.toi.rekrutteringstreff
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
@@ -9,11 +9,12 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
+import no.nav.toi.Repository
 import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.log
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.text.format
 
 private val klokkeslettFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val datoMedMånedFormatter = DateTimeFormatter.ofPattern("dd.\u00A0MMMM\u00A0yyyy", Locale.forLanguageTag("no-NO"))
@@ -56,7 +57,6 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             sluttDato = sluttDato.toLocalDate(),
             tid = formaterTidsperiode(startDato, sluttDato),
             endretAv = packet["opprettetAv"].asText(),
-            endretTidspunkt = packet["opprettetTidspunkt"].asZonedDateTime(),
             gateAdresse = packet["gateadresse"].asText(),
             postnummer = packet["postnummer"].asText(),
             poststed = packet["poststed"].asText()

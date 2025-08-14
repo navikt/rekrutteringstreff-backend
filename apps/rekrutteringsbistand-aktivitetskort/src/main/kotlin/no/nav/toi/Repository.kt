@@ -16,6 +16,7 @@ import org.flywaydb.core.Flyway
 import java.sql.Timestamp
 import java.sql.Types.VARCHAR
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -30,7 +31,6 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         sluttDato: LocalDate,
         tid: String,
         endretAv: String,
-        endretTidspunkt: ZonedDateTime,
         gateAdresse: String,
         postnummer: String,
         poststed: String
@@ -77,7 +77,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                         setObject(6, messageId)
                         setObject(7, aktivitietskortId)
                         setString(8, endretAv)
-                        setTimestamp(9, Timestamp.valueOf(endretTidspunkt.toLocalDateTime()))
+                        setTimestamp(9, Timestamp.valueOf(LocalDateTime.now()))
                         setString(
                             10, listOf(
                                 AktivitetskortDetalj("Tid", tid),
@@ -238,6 +238,65 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                 setTimestamp(5, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
             }.executeUpdate()
         }
+
+    fun hentAktivitetskortId(fnr: String, rekrutteringstreffId: UUID) = dataSource.connection.use { connection ->
+        connection.prepareStatement("""
+                SELECT aktivitetskort_id FROM rekrutteringstreff
+                WHERE fnr = ? AND rekrutteringstreff_id = ?
+            """.trimIndent()
+        ).apply {
+            setString(1, fnr)
+            setObject(2, rekrutteringstreffId)
+        }.executeQuery().use { resultSet ->
+            if(!resultSet.next()) {
+                throw IllegalArgumentException("Fant ikke rekrutteringstreff for fnr: $fnr og rekrutteringstreffId: $rekrutteringstreffId")
+            }
+            resultSet.getString("aktivitetskort_id")?.let { UUID.fromString(it) }
+                ?: throw IllegalArgumentException("Fant ikke aktivitetskort for fnr: $fnr og rekrutteringstreffId: $rekrutteringstreffId")
+        }
+    }
+
+    fun oppdaterAktivitetsstatus(aktivitetskortId: UUID, aktivitetsStatus: AktivitetsStatus, endretAv: String, endretAvType: EndretAvType) {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                INSERT INTO aktivitetskort
+                (message_id, aktivitetskort_id, fnr, tittel, aktivitets_status, beskrivelse, start_dato, 
+                slutt_dato, detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav, endret_av, 
+                endret_av_type, endret_tidspunkt)
+                SELECT
+                    ?,
+                    aktivitetskort_id,
+                    fnr,
+                    tittel,
+                    ?,
+                    beskrivelse,
+                    start_dato,
+                    slutt_dato,
+                    detaljer,
+                    handlinger,
+                    etiketter,
+                    oppgave,
+                    action_type,
+                    avtalt_med_nav,
+                    ?,
+                    ?,
+                    ?
+                FROM aktivitetskort
+                WHERE aktivitetskort_id = ?
+                ORDER BY endret_tidspunkt DESC
+                LIMIT 1
+                """.trimIndent()
+            ).apply {
+                setObject(1, UUID.randomUUID())
+                setString(2, aktivitetsStatus.name)
+                setString(3, endretAv)
+                setString(4, endretAvType.name)
+                setTimestamp(5, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
+                setObject(6, aktivitetskortId)
+            }.executeUpdate()
+        }
+    }
 
     init {
         Flyway.configure()

@@ -336,17 +336,16 @@ class AktivitetskortTest {
 
 private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
     opprettRekrutteringstreffInvitasjon(
-        "12345678910",
-        UUID.randomUUID(),
-        "Test Rekrutteringstreff",
-        "Dette er en testbeskrivelse for rekrutteringstreff.",
-        LocalDate.now().plusDays(1),
-        LocalDate.now().plusDays(2),
+        fnr = "12345678910",
+        rekrutteringstreffId = UUID.randomUUID(),
+        tittel = "Test Rekrutteringstreff",
+        beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
+        startDato = LocalDate.now().plusDays(1),
+        sluttDato = LocalDate.now().plusDays(2),
         tid = "Whatever",
-        "testuser",
-        ZonedDateTime.now(),
-        "Test Sted",
-        "1234",
-        "Test Poststed"
+        endretAv = "testuser",
+        gateAdresse = "Test Sted",
+        postnummer = "1234",
+        poststed = "Test Poststed"
     )
 }
