@@ -8,29 +8,20 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.App
-import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
-import no.nav.toi.JacksonConfig
-import no.nav.toi.TestRapid
-import no.nav.toi.lagToken
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.DisplayNameGeneration
-import org.junit.jupiter.api.DisplayNameGenerator
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.RegisterExtension
-import java.sql.ResultSet
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
+import kotlin.text.get
+import kotlin.text.isNotBlank
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -111,6 +102,148 @@ class KiLoggTest {
         assertThat(response.statusCode).isEqualTo(200)
         result as Result.Success
         assertThat(result.value.loggId).isNotBlank()
+    }
+
+    @Test
+    fun filtrerer_personsensitiv_info_for_OpenAI_og_logger_original_og_filtrert() {
+        val fodselsnummer = "12345678901"
+        val originalTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer $fodselsnummer."
+        val forventetFiltrertTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer ."
+        val begrunnelseFraOpenAi =
+            "Beskrivelsen spesifiserer et geografisk område for søkere, noe som kan være diskriminerende."
+
+        val responseBody = """
+        {
+          "choices": [
+            {
+              "message": {
+                "role": "assistant",
+                "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"$begrunnelseFraOpenAi\" }"
+              }
+            }
+          ]
+        }
+    """.trimIndent()
+
+        // Stub OpenAI: must receive filtered text, and must NOT contain FNR
+        wireMockServer.stubFor(
+            WireMock.post(
+                WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
+            )
+                .withRequestBody(WireMock.containing(forventetFiltrertTekst))
+                .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(responseBody)
+                )
+        )
+
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+
+        val requestBody = """
+        {
+          "treffDbId": $treffDbId,
+          "feltType": "tittel",
+          "tekst": "$originalTekst"
+        }
+    """.trimIndent()
+
+        val (_, postRes, postResult) = Fuel.post("http://localhost:$appPort$base/valider")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
+                override fun deserialize(content: String): ValiderMedLoggResponseDto =
+                    mapper.readValue(content, ValiderMedLoggResponseDto::class.java)
+            })
+
+        assertThat(postRes.statusCode).isEqualTo(200)
+        postResult as Result.Success
+        val dto = postResult.value
+        assertThat(dto.loggId).isNotBlank()
+        assertThat(dto.bryterRetningslinjer).isTrue()
+        assertThat(dto.begrunnelse).isEqualTo(begrunnelseFraOpenAi)
+
+        val (_, getRes, getResult) = Fuel.get("http://localhost:$appPort$base/logg/${dto.loggId}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<KiLoggOutboundDto> {
+                override fun deserialize(content: String): KiLoggOutboundDto =
+                    mapper.readValue(content, KiLoggOutboundDto::class.java)
+            })
+
+        assertThat(getRes.statusCode).isEqualTo(200)
+        getResult as Result.Success
+        val logg = getResult.value
+
+        // Capture what was actually sent to OpenAI
+        val sentToOpenAi: String = try {
+            wireMockServer.serveEvents.serveEvents
+                .filter { it.request.url.contains("/openai/deployments/toi-gpt-4o/chat/completions") }
+                .joinToString("\n----\n") { it.request.bodyAsString }
+        } catch (_: Throwable) {
+            "<could not capture WireMock serve events>"
+        }
+
+        // Helpful debug log
+        println(
+            """
+        [KI debug]
+        Original: <${logg.sporringFraFrontend}>
+        Filtered: <${logg.sporringFiltrert}>
+        Expected filtered: <${forventetFiltrertTekst}>
+        FNR: <${fodselsnummer}>
+        Sent to OpenAI:
+        $sentToOpenAi
+        """.trimIndent()
+        )
+
+        // Original should contain FNR
+        assertThat(logg.sporringFraFrontend.contains(fodselsnummer))
+            .withFailMessage(
+                "Original text should contain FNR.\nOriginal: <%s>\nFiltered: <%s>\nOpenAI:\n%s",
+                logg.sporringFraFrontend, logg.sporringFiltrert, sentToOpenAi
+            )
+            .isTrue()
+
+        // Filtered should NOT contain FNR
+        assertThat(logg.sporringFiltrert.contains(fodselsnummer))
+            .withFailMessage(
+                "Filtered text should NOT contain FNR.\nOriginal: <%s>\nFiltered: <%s>\nOpenAI:\n%s",
+                logg.sporringFraFrontend, logg.sporringFiltrert, sentToOpenAi
+            )
+            .isFalse()
+
+        // Filtered should contain placeholder (or be equal to the expected filtered text)
+        assertThat(
+            logg.sporringFiltrert.contains("fødselsnummer .") ||
+                    logg.sporringFiltrert.contains(forventetFiltrertTekst)
+        )
+            .withFailMessage(
+                "Expected filtered text to contain placeholder or expected content.\nOriginal: <%s>\nFiltered: <%s>\nExpected: <%s>\nOpenAI:\n%s",
+                logg.sporringFraFrontend, logg.sporringFiltrert, forventetFiltrertTekst, sentToOpenAi
+            )
+            .isTrue()
+
+        // Ensure the OpenAI request body didn't include FNR
+        assertThat(sentToOpenAi.contains(fodselsnummer))
+            .withFailMessage(
+                "OpenAI request body still contains FNR: %s\nBody:\n%s",
+                fodselsnummer, sentToOpenAi
+            )
+            .isFalse()
+
+        // Verify the OpenAI stub was hit with filtered content
+        wireMockServer.verify(
+            1,
+            WireMock.postRequestedFor(
+                WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
+            )
+                .withRequestBody(WireMock.containing(forventetFiltrertTekst))
+                .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
+        )
     }
 
     @Test
