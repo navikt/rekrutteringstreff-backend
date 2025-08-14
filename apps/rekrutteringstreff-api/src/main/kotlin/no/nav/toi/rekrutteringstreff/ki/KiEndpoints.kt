@@ -5,17 +5,17 @@ import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
+import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 import java.time.ZonedDateTime
 import java.util.*
 
 private const val base = "/api/rekrutteringstreff/ki"
 
-fun Javalin.handleKiLogg(repo: KiLoggRepository) {
-    OpenAiClient.configureKiLoggRepository(repo)
+fun Javalin.handleKi(repo: KiLoggRepository) {
+    OpenAiClient.configureKiRepository(repo)
 
     post("$base/valider", validerOgLoggHandler())
     patch("$base/logg/{id}/lagret", oppdaterLagretHandler(repo))

@@ -9,7 +9,6 @@ import no.nav.toi.JacksonConfig
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
-import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 import java.util.UUID
 import kotlin.system.measureTimeMillis
@@ -37,13 +36,11 @@ data class OpenAiResponse(val choices: List<Choice>?)
 object OpenAiClient {
     private val mapper = JacksonConfig.mapper
 
-    // Defaults match WireMock stubs used in tests
     private val apiUrl: String =
         System.getenv("OPENAI_API_URL")
             ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"
     private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key"
 
-    // Stable KI metadata for logging
     private const val kiNavn = "azure-openai"
     private const val kiVersjon = "toi-gpt-4o"
 
@@ -55,21 +52,10 @@ object OpenAiClient {
     @Volatile
     private var repo: KiLoggRepository? = null
 
-    fun configureKiLoggRepository(repo: KiLoggRepository) {
+    fun configureKiRepository(repo: KiLoggRepository) {
         this.repo = repo
     }
 
-    // Public: pure validation (no logging)
-    fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto =
-        callWithFiltered<ValiderRekrutteringstreffResponsDto>(
-            systemMessage = VALIDATION_SYSTEM_MESSAGE,
-            userMessage = dto.tekst,
-            temperature = temperature,
-            maxTokens = maxTokens,
-            topP = topP
-        ).first
-
-    // Public: validation + logging
     fun validateRekrutteringstreffOgLogg(
         treffDbId: Long,
         feltType: String,
@@ -108,7 +94,6 @@ object OpenAiClient {
         return result to id
     }
 
-    // Internal: performs the HTTP call and returns the parsed result and the filtered text
     private inline fun <reified R> callWithFiltered(
         systemMessage: String,
         userMessage: String,

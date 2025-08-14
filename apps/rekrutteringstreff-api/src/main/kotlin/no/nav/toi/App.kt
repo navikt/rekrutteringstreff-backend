@@ -11,18 +11,14 @@ import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
-import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
-import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
-import no.nav.toi.jobbsoker.handleJobbsøker
-import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
-import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
-import no.nav.toi.rekrutteringstreff.ki.handleKiLogg
+import no.nav.toi.rekrutteringstreff.ki.handleKi
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
@@ -67,7 +63,7 @@ class App(
                 azureUrl = azureTokenEndpoint,
             )
         ),
-        rapidsConnection= rapidsConnection
+        rapidsConnection = rapidsConnection
 
     )
 
@@ -79,6 +75,7 @@ class App(
         startRR(jobbsøkerRepository)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
+
     fun startJavalin(jobbsøkerRepository: JobbsøkerRepository) {
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
@@ -100,10 +97,11 @@ class App(
         javalin.handleJobbsøker(jobbsøkerRepository)
         javalin.handleJobbsøkerInnloggetBorger(jobbsøkerRepository)
         javalin.handleJobbsøkerOutbound(jobbsøkerRepository, kandidatsokKlient)
-        javalin.handleKiLogg( KiLoggRepository(dataSource))
+        javalin.handleKi(KiLoggRepository(dataSource))
 
         javalin.start(port)
     }
+
     fun startScheduler() {
         log.info("Starting scheduler")
         AktivitetskortInvitasjonScheduler(

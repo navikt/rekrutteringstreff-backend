@@ -20,12 +20,10 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.*
-import kotlin.text.get
-import kotlin.text.isNotBlank
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class KiLoggTest {
+class KiTest {
 
     companion object {
         @JvmStatic
