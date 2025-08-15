@@ -28,7 +28,7 @@ import kotlin.text.trimIndent
 import kotlin.to
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class RekrutteringstreffPersonbrukerSvarTest {
+class RekrutteringstreffPersonbrukerSvarLytterTest {
     private val localEnv = mutableMapOf<String, String>(
         "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_DATABASE" to "test",
         "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_USERNAME" to "test",
