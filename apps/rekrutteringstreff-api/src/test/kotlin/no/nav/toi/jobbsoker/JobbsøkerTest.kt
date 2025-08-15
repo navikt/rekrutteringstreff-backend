@@ -375,4 +375,53 @@ class JobbsøkerTest {
         assertThat(inviterteFødselsnumre)
             .containsExactlyInAnyOrder(fnr1, fnr2)
     }
+
+    @Test
+    fun registrerOppmøteForJobbsøkere() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr1 = Fødselsnummer("12312312312")
+        val fnr2 = Fødselsnummer("45645645645")
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr1, null, Fornavn("Fornavn1"), Etternavn("Etternavn1"), null, null, null),
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr2, null, Fornavn("Fornavn2"), Etternavn("Etternavn2"), null, null, null)
+            )
+        )
+
+        assertThat(db.hentJobbsøkerHendelser(treffId)).hasSize(2)
+
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        val personTreffIder = jobbsøkere.toList().map { it.personTreffId }
+        assertThat(personTreffIder).hasSize(2)
+
+        val requestBody = """
+        { "personTreffIder": ["${personTreffIder.first()}", "${personTreffIder.last()}"] }
+    """.trimIndent()
+
+        val (_, r, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/registrer-oppmote")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_OK, r, res)
+
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser).hasSize(4)
+
+        val oppmøteHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.MØT_OPP }
+        assertThat(oppmøteHendelser).hasSize(2)
+        oppmøteHendelser.forEach {
+            assertThat(it.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+            assertThat(it.aktørIdentifikasjon).isEqualTo("A123456")
+        }
+
+        val registrertOmmmøteFødselsnumre =
+            oppmøteHendelser.map { db.hentFødselsnummerForJobbsøkerHendelse(it.id)}
+
+        assertThat(registrertOmmmøteFødselsnumre)
+            .containsExactlyInAnyOrder(fnr1, fnr2)
+    }
 }
