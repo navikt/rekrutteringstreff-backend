@@ -96,21 +96,20 @@ class KiLoggRepository(private val dataSource: DataSource) {
             }
         }
 
-    fun listByTreff(treffDbId: Long, feltType: String?, limit: Int, offset: Int): List<KiLoggRow> =
+    fun list(treffDbId: Long?, feltType: String?, limit: Int, offset: Int): List<KiLoggRow> =
         dataSource.connection.use { c ->
-            val hasFelt = !feltType.isNullOrBlank()
-            val sql =
-                """
+            val sql = """
                 SELECT * FROM $TABELL
-                WHERE $COL_TREFF_DB_ID=? ${if (hasFelt) "AND $COL_FELT_TYPE=?" else ""}
+                WHERE ($COL_TREFF_DB_ID = COALESCE(?, $COL_TREFF_DB_ID))
+                  AND ($COL_FELT_TYPE = COALESCE(?, $COL_FELT_TYPE))
                 ORDER BY $COL_OPPRETTET DESC
                 LIMIT ? OFFSET ?
-                """.trimIndent()
+            """.trimIndent()
 
             c.prepareStatement(sql).use { ps ->
                 var i = 0
-                ps.setLong(++i, treffDbId)
-                if (hasFelt) ps.setString(++i, feltType)
+                if (treffDbId == null) ps.setNull(++i, Types.BIGINT) else ps.setLong(++i, treffDbId)
+                if (feltType.isNullOrBlank()) ps.setNull(++i, Types.VARCHAR) else ps.setString(++i, feltType)
                 ps.setInt(++i, limit)
                 ps.setInt(++i, offset)
 

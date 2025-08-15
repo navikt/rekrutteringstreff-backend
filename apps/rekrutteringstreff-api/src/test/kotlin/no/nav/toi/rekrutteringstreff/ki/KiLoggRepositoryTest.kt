@@ -6,6 +6,7 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import kotlin.text.insert
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiLoggRepositoryTest {
@@ -193,16 +194,59 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val alle = repo.listByTreff(treffDbId, feltType = null, limit = 50, offset = 0)
+        val alle = repo.list(treffDbId, feltType = null, limit = 50, offset = 0)
         assertThat(alle.map { it.id }).containsExactly(id3, id2, id1)
 
-        val bareTittel = repo.listByTreff(treffDbId, feltType = "tittel", limit = 50, offset = 0)
+        val bareTittel = repo.list(treffDbId, feltType = "tittel", limit = 50, offset = 0)
         assertThat(bareTittel.map { it.id }).containsExactly(id3, id1)
 
-        val side1 = repo.listByTreff(treffDbId, feltType = null, limit = 1, offset = 0)
-        val side2 = repo.listByTreff(treffDbId, feltType = null, limit = 1, offset = 1)
+        val side1 = repo.list(treffDbId, feltType = null, limit = 1, offset = 0)
+        val side2 = repo.list(treffDbId, feltType = null, limit = 1, offset = 1)
         assertThat(side1.map { it.id }).containsExactly(id3)
         assertThat(side2.map { it.id }).containsExactly(id2)
+    }
+
+    @Test
+    fun kan_liste_logg_for_alle_treff_nar_treffDbId_er_null() {
+        val treffDbId1 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("A123456"))
+        val treffDbId2 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("B654321"))
+
+        val id1 = repo.insert(
+            KiLoggInsert(
+                treffDbId = treffDbId1,
+                feltType = "tittel",
+                sporringFraFrontend = "fra1",
+                sporringFiltrert = "fil1",
+                systemprompt = null,
+                ekstraParametre = null,
+                bryterRetningslinjer = false,
+                begrunnelse = null,
+                kiNavn = "gpt-4o",
+                kiVersjon = "2025-01-01",
+                svartidMs = 1
+            )
+        )
+        val id2 = repo.insert(
+            KiLoggInsert(
+                treffDbId = treffDbId2,
+                feltType = "innlegg",
+                sporringFraFrontend = "fra2",
+                sporringFiltrert = "fil2",
+                systemprompt = null,
+                ekstraParametre = null,
+                bryterRetningslinjer = true,
+                begrunnelse = "B",
+                kiNavn = "gpt-4o",
+                kiVersjon = "2025-01-01",
+                svartidMs = 2
+            )
+        )
+
+        val alle = repo.list(treffDbId = null, feltType = null, limit = 50, offset = 0)
+
+        assertThat(alle.map { it.id }).containsExactly(id2, id1) // newest first
+        assertThat(alle.map { it.treffDbId }.toSet())
+            .containsExactlyInAnyOrder(treffDbId1, treffDbId2)
     }
 
     private fun hentTreffDbId(treffId: TreffId): Long =

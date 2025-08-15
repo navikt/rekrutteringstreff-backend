@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.*
+import kotlin.text.get
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -264,6 +265,41 @@ class KiTest {
         assertThat(logg.treffDbId).isEqualTo(treffDbId)
         assertThat(logg.feltType).isEqualTo("tittel")
         assertThat(logg.bryterRetningslinjer).isFalse()
+    }
+
+    @Test
+    fun lister_logglinjer_for_alle_treff_nar_treffDbId_er_utelatt() {
+        stubOpenAi()
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+
+        val treffDbId1 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val treffDbId2 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+
+        val id1 = opprettLogg(treffDbId1, token)
+        Thread.sleep(5) // ensure deterministic DESC ordering by opprettet
+        val id2 = opprettLogg(treffDbId2, token)
+
+        val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?limit=50&offset=0")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
+                override fun deserialize(content: String): List<KiLoggOutboundDto> {
+                    val type = mapper.typeFactory.constructCollectionType(
+                        List::class.java,
+                        KiLoggOutboundDto::class.java
+                    )
+                    return mapper.readValue(content, type)
+                }
+            })
+
+        assertThat(listRes.statusCode).isEqualTo(200)
+        listResult as Result.Success
+        val alle = listResult.value
+
+        assertThat(alle.map { it.id }).containsExactly(id2, id1) // newest first
+        assertThat(alle.size).isEqualTo(2)
+        assertThat(alle.map { it.treffDbId }.toSet())
+            .containsExactlyInAnyOrder(treffDbId1, treffDbId2)
     }
 
     @Test

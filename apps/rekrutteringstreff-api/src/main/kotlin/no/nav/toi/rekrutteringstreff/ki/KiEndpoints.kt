@@ -88,7 +88,7 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
     summary = "List logglinjer for et rekrutteringstreff.",
     security = [OpenApiSecurity(name = "BearerAuth")],
     queryParams = [
-        OpenApiParam(name = "treffDbId", type = Long::class, required = true),
+        OpenApiParam(name = "treffDbId", type = Long::class, required = false),
         OpenApiParam(name = "feltType", type = String::class, required = false),
         OpenApiParam(name = "limit", type = Int::class, required = false),
         OpenApiParam(name = "offset", type = Int::class, required = false)
@@ -99,11 +99,13 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
 )
 private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-    val treffDbId = ctx.queryParam("treffDbId")?.toLong() ?: throw IllegalArgumentException("treffDbId mangler")
+    val treffDbId = ctx.queryParam("treffDbId")?.toLong()
     val feltType = ctx.queryParam("feltType")
     val limit = ctx.queryParam("limit")?.toInt() ?: 50
     val offset = ctx.queryParam("offset")?.toInt() ?: 0
-    val rows = repo.listByTreff(treffDbId, feltType, limit, offset)
+
+    val rows = repo.list(treffDbId, feltType, limit, offset)
+    
     val out = rows.map {
         KiLoggOutboundDto(
             id = it.id.toString(),
