@@ -17,9 +17,13 @@ import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.*
+import java.util.stream.Stream
 import kotlin.text.get
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
@@ -140,7 +144,7 @@ class KiTest {
         )
 
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
         val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
 
         val requestBody = """
@@ -249,7 +253,7 @@ class KiTest {
     fun returnerer_opprettet_logglinje_med_id() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
         val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
         val loggId = opprettLogg(treffDbId, token)
         val (_, getRes, getResult) = Fuel.get("http://localhost:$appPort$base/logg/$loggId")
@@ -271,7 +275,7 @@ class KiTest {
     fun lister_logglinjer_for_alle_treff_nar_treffDbId_er_utelatt() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
 
         val treffDbId1 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
         val treffDbId2 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
@@ -306,7 +310,7 @@ class KiTest {
     fun markerer_logglinje_som_lagret() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
         val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
         val loggId = opprettLogg(treffDbId, token)
         val (_, patchRes, _) = Fuel.patch("http://localhost:$appPort$base/logg/$loggId/lagret")
@@ -321,7 +325,7 @@ class KiTest {
     fun registrerer_resultat_av_manuell_kontroll_for_logglinje() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
         val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
         val loggId = opprettLogg(treffDbId, token)
         val (_, patchRes, _) = Fuel.patch("http://localhost:$appPort$base/logg/$loggId/manuell")
@@ -339,7 +343,7 @@ class KiTest {
     fun lister_logglinjer_for_valgt_treff() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
         val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
         val loggId = opprettLogg(treffDbId, token)
         val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?treffDbId=$treffDbId")
@@ -356,6 +360,28 @@ class KiTest {
         assertThat(listRes.statusCode).isEqualTo(200)
         listResult as Result.Success
         assertThat(listResult.value.any { it.id == loggId }).isTrue()
+    }
+
+    fun forbudteKiEndepunkt(): Stream<Arguments> = Stream.of(
+        Arguments.of("GET", "/logg?limit=10&offset=0"),
+        Arguments.of("GET", "/logg/123"),
+        Arguments.of("PATCH", "/logg/123/lagret"),
+        Arguments.of("PATCH", "/logg/123/manuell")
+    )
+
+    @ParameterizedTest(name = "{index}: {0} {1} -> 403")
+    @MethodSource("forbudteKiEndepunkt")
+    fun arbeidsgiverrettet_faar_403_pa_alle_ki_logg_endepunkt(method: String, path: String) {
+        val token = authServer.lagToken(authPort, navIdent = "A123456", groups = listOf(arbeidsgiverrettet))
+        val url = "http://localhost:$appPort$base$path"
+
+        val (_, res, _) = when (method) {
+            "GET" -> Fuel.get(url)
+            "PATCH" -> Fuel.patch(url)
+            "POST" -> Fuel.post(url)
+            else -> error("Unsupported method: $method")
+        }.header("Authorization", "Bearer ${token.serialize()}").response()
+        assertThat(res.statusCode).isEqualTo(403)
     }
 
     private fun stubOpenAi(bryter: Boolean = false, begrunnelse: String = "OK") {

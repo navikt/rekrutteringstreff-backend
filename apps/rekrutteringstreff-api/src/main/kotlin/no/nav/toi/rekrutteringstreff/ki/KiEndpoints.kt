@@ -56,7 +56,7 @@ private fun validerOgLoggHandler(): (Context) -> Unit = { ctx ->
     methods = [HttpMethod.PATCH]
 )
 private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
-    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
     val id = UUID.fromString(ctx.pathParam("id"))
     val req = ctx.bodyAsClass<OppdaterLagretRequestDto>()
     if (repo.setLagret(id, req.lagret) == 0) throw NotFoundResponse("Logg ikke funnet")
@@ -73,7 +73,7 @@ private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = {
     methods = [HttpMethod.PATCH]
 )
 private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
-    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
     val id = UUID.fromString(ctx.pathParam("id"))
     val req = ctx.bodyAsClass<OppdaterManuellRequestDto>()
     val ident = ctx.extractNavIdent()
@@ -98,14 +98,14 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
     methods = [HttpMethod.GET]
 )
 private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
-    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
     val treffDbId = ctx.queryParam("treffDbId")?.toLong()
     val feltType = ctx.queryParam("feltType")
     val limit = ctx.queryParam("limit")?.toInt() ?: 50
     val offset = ctx.queryParam("offset")?.toInt() ?: 0
 
     val rows = repo.list(treffDbId, feltType, limit, offset)
-    
+
     val out = rows.map {
         KiLoggOutboundDto(
             id = it.id.toString(),
@@ -139,7 +139,7 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     methods = [HttpMethod.GET]
 )
 private fun getHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
-    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
     val id = UUID.fromString(ctx.pathParam("id"))
     val it = repo.findById(id) ?: throw NotFoundResponse("Logg ikke funnet")
     ctx.status(200).json(
