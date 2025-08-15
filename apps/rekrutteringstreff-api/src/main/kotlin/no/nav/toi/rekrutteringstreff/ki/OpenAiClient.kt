@@ -1,4 +1,5 @@
-package no.nav.toi.rekrutteringstreff.rekrutteringstreff
+// kotlin
+package no.nav.toi.rekrutteringstreff.ki
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -8,8 +9,9 @@ import no.nav.toi.JacksonConfig
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
-import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
+import java.util.UUID
+import kotlin.system.measureTimeMillis
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpenAiMessage(val role: String, val content: String)
@@ -22,7 +24,7 @@ data class OpenAiRequest(
     val temperature: Double,
     val max_tokens: Int,
     val top_p: Double,
-    val response_format: ResponseFormat,
+    val response_format: ResponseFormat
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -32,33 +34,86 @@ data class Choice(val message: OpenAiMessage?)
 data class OpenAiResponse(val choices: List<Choice>?)
 
 object OpenAiClient {
-    private val apiUrl =
-        System.getenv("OPENAI_API_URL")
-            ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"
-    private val apiKey = System.getenv("OPENAI_API_KEY") ?: "test-key"
     private val mapper = JacksonConfig.mapper
 
+    private val apiUrl: String =
+        System.getenv("OPENAI_API_URL")
+            ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"
+    private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key"
+
+    private const val kiNavn = "azure-openai"
+    private const val kiVersjon = "toi-gpt-4o"
+
+    private const val temperature = 0.0
+    private const val maxTokens = 400
+    private const val topP = 1.0
     private val responseFormat = ResponseFormat()
 
-    private inline fun <reified R> call(
+    @Volatile
+    private var repo: KiLoggRepository? = null
+
+    fun configureKiRepository(repo: KiLoggRepository) {
+        this.repo = repo
+    }
+
+    fun validateRekrutteringstreffOgLogg(
+        treffDbId: Long,
+        feltType: String,
+        tekst: String
+    ): Pair<ValiderRekrutteringstreffResponsDto, UUID?> {
+        var result: ValiderRekrutteringstreffResponsDto
+        var filtered: String
+        val elapsedMs = measureTimeMillis {
+            val (r, f) = callWithFiltered<ValiderRekrutteringstreffResponsDto>(
+                systemMessage = VALIDATION_SYSTEM_MESSAGE,
+                userMessage = tekst,
+                temperature = temperature,
+                maxTokens = maxTokens,
+                topP = topP
+            )
+            result = r
+            filtered = f
+        }
+
+        val id = repo?.insert(
+            KiLoggInsert(
+                treffDbId = treffDbId,
+                feltType = feltType,
+                sporringFraFrontend = tekst,
+                sporringFiltrert = filtered,
+                systemprompt = VALIDATION_SYSTEM_MESSAGE,
+                ekstraParametre = null,
+                bryterRetningslinjer = result.bryterRetningslinjer,
+                begrunnelse = result.begrunnelse,
+                kiNavn = kiNavn,
+                kiVersjon = kiVersjon,
+                svartidMs = elapsedMs.toInt()
+            )
+        )
+
+        return result to id
+    }
+
+    private inline fun <reified R> callWithFiltered(
         systemMessage: String,
         userMessage: String,
         temperature: Double,
         maxTokens: Int,
-        topP: Double,
-    ): R {
+        topP: Double
+    ): Pair<R, String> {
         val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(userMessage)
         secure(log).info("melding før filter: $userMessage etter filter: $userMessageFiltered")
+
         val body = mapper.writeValueAsString(
             OpenAiRequest(
                 messages = listOf(
-                    OpenAiMessage("system", systemMessage),
-                    OpenAiMessage("user", userMessageFiltered),
+                    OpenAiMessage(role = "system", content = systemMessage),
+                    OpenAiMessage(role = "user", content = userMessageFiltered)
                 ),
                 temperature = temperature,
                 max_tokens = maxTokens,
                 top_p = topP,
-                response_format = responseFormat,
+                response_format = responseFormat
             )
         )
 
@@ -77,16 +132,12 @@ object OpenAiClient {
             .choices?.firstOrNull()?.message?.content
             ?: error("Ingen respons fra OpenAI")
 
-        return mapper.readValue(content.trim())
+        return mapper.readValue<R>(content.trim()) to userMessageFiltered
     }
-
-    fun validateRekrutteringstreff(dto: ValiderRekrutteringstreffDto): ValiderRekrutteringstreffResponsDto =
-        call(VALIDATION_SYSTEM_MESSAGE, dto.tekst, 0.0, 400, 1.0)
-
 }
 
 private const val VALIDATION_SYSTEM_MESSAGE = """
-    
+
 
 Du er en ekspert på å vurdere informasjon, og på å aldri oppgi personsensitiv informasjon som for eksempel navn, e-postadresse, telefonnummer, fødselsdato eller andre identifiserende opplysninger i begrunnelsen din. 
 
@@ -126,7 +177,3 @@ Personopplysnigner er kun tillatt dersom det er navn på arrangør av treff, ell
 Eksempel på svar som er akseptabelt: Teksten inneholder personopplysninger, som navn og telefonnummer. Dette er i strid med NAVs retningslinjer som krever at informasjon om enkeltpersoner ikke skal gjengis.
 
 """
-
-
-
-
