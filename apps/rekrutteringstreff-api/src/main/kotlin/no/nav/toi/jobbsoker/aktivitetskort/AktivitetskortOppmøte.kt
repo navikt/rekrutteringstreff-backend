@@ -12,12 +12,12 @@ class AktivitetskortOppmøte(
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
         val message = JsonMessage.newMessage(
-            eventName = "rekrutteringstreffsvar",
+            eventName = "rekrutteringstreffoppmøte",
             map = mapOf<String, Any>(
                 "fnr" to fnr,
                 "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
                 "endretAv" to endretAv,
-                "endretAvPersonbruker" to true,
+                "endretAvPersonbruker" to false,
                 "møttOpp" to møttOpp,
             )
         )

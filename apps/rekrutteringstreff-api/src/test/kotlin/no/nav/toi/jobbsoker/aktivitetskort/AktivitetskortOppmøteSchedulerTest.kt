@@ -68,7 +68,7 @@ class AktivitetskortOppmøteSchedulerTest {
         Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         Assertions.assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
-        Assertions.assertThat(melding["oppmøte"].asBoolean()).isTrue
+        Assertions.assertThat(melding["møttOpp"].asBoolean()).isTrue
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.MØT_OPP)
         Assertions.assertThat(usendteEtterpå).isEmpty()
@@ -91,7 +91,7 @@ class AktivitetskortOppmøteSchedulerTest {
         Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         Assertions.assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
-        Assertions.assertThat(melding["oppmøte"].asBoolean()).isFalse
+        Assertions.assertThat(melding["møttOpp"].asBoolean()).isFalse
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_MØT_OPP)
         Assertions.assertThat(usendteEtterpå).isEmpty()
