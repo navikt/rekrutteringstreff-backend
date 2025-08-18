@@ -63,7 +63,6 @@ class AktivitetskortSvarSchedulerTest {
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(2)
         val melding = rapid.inspektør.message(1)
         Assertions.assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
-        Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
         Assertions.assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
         Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         Assertions.assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
@@ -87,7 +86,6 @@ class AktivitetskortSvarSchedulerTest {
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(2)
         val melding = rapid.inspektør.message(1)
         Assertions.assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
-        Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
         Assertions.assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
         Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         Assertions.assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
@@ -100,7 +98,9 @@ class AktivitetskortSvarSchedulerTest {
 
     @Test
     fun `skal ikke sende samme invitasjon to ganger`() {
-        val (rapid, scheduler) = opprettPersonOgInviter(Fødselsnummer("12345678901"))
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val (rapid, treffId) = opprettPersonOgInviter(fødselsnummer)
+        jobbsøkerRepository.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(1)
         AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
         AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()

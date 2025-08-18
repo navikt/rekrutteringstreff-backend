@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
+import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortsvar
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -46,6 +47,12 @@ class Rekrutteringstreff(
         postnummer = postnummer,
         poststed = poststed,
         svarfrist = svarfrist
+    )
+    fun aktivitetskortSvarFor(fnr: String, svar: Boolean) = Aktivitetskortsvar(
+        fnr = fnr,
+        rekrutteringstreffId = id,
+        endretAv = fnr,
+        svartJa = svar
     )
 }
 

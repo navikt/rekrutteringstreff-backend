@@ -62,7 +62,7 @@ class AktivitetskortSvarScheduler(
 
             usendteSvarJa.forEach { usendtSvar ->
                 val treff = rekrutteringstreffRepository.hent(TreffId(usendtSvar.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtSvar.rekrutteringstreffUuid}")
-                treff.aktivitetskortInvitasjonFor(usendtSvar.fnr)
+                treff.aktivitetskortSvarFor(fnr = usendtSvar.fnr, svar = true)
                     .publiserTilRapids(rapidsConnection)
                 aktivitetskortRepository.lagrePollingstatus(usendtSvar.jobbsokerHendelseDbId)
             }
@@ -70,7 +70,7 @@ class AktivitetskortSvarScheduler(
 
             usendteSvarNei.forEach { usendtSvar ->
                 val treff = rekrutteringstreffRepository.hent(TreffId(usendtSvar.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtSvar.rekrutteringstreffUuid}")
-                treff.aktivitetskortInvitasjonFor(usendtSvar.fnr)
+                treff.aktivitetskortSvarFor(fnr = usendtSvar.fnr, svar = false)
                     .publiserTilRapids(rapidsConnection)
                 aktivitetskortRepository.lagrePollingstatus(usendtSvar.jobbsokerHendelseDbId)
             }
