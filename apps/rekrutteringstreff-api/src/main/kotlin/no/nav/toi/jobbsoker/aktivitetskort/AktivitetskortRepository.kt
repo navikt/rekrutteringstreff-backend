@@ -6,7 +6,7 @@ import java.sql.Timestamp
 import java.time.ZonedDateTime
 import javax.sql.DataSource
 
-class AktivitetskortInvitasjonRepository(private val dataSource: DataSource) {
+class AktivitetskortRepository(private val dataSource: DataSource) {
 
     fun hentUsendteInvitasjoner(): List<UsendtInvitasjon> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
@@ -26,6 +26,8 @@ class AktivitetskortInvitasjonRepository(private val dataSource: DataSource) {
             }.toList()
         }
     }
+
+    fun hentUsendteSvar(): List<UsendtSvar> = TODO()
 
     fun lagrePollingstatus(jobbsokerHendelseDbId: Long) {
         dataSource.connection.use { connection ->
@@ -52,3 +54,5 @@ data class UsendtInvitasjon(
     val fnr: String,
     val rekrutteringstreffUuid: String
 )
+
+class UsendtSvar()

@@ -13,7 +13,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonRepository
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
 import no.nav.toi.jobbsoker.handleJobbsøker
 import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
@@ -104,7 +104,7 @@ class App(
     fun startScheduler() {
         log.info("Starting scheduler")
         AktivitetskortInvitasjonScheduler(
-            aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(dataSource),
+            aktivitetskortRepository = AktivitetskortRepository(dataSource),
             rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
             rapidsConnection = rapidsConnection
         ).start()

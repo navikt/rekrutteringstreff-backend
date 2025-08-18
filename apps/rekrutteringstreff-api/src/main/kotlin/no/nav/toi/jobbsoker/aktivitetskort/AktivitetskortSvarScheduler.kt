@@ -11,26 +11,23 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-class AktivitetskortInvitasjonScheduler(
-    private val aktivitetskortRepository: AktivitetskortRepository,
-    private val rekrutteringstreffRepository: RekrutteringstreffRepository,
-    private val rapidsConnection: RapidsConnection
+class AktivitetskortSvarScheduler(
 ) {
 
     private val scheduler = Executors.newScheduledThreadPool(1)
     private val isRunning = AtomicBoolean(false)
 
     fun start() {
-        log.info("Starter AktivitetskortInvitasjonScheduler")
+        log.info("Starter AktivitetskortSvarScheduler")
 
         val now = LocalDateTime.now()
         val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
 
-        scheduler.scheduleAtFixedRate(::behandleInvitasjoner, initialDelay, 60, TimeUnit.SECONDS)
+        scheduler.scheduleAtFixedRate(::behandleSvar, initialDelay, 60, TimeUnit.SECONDS)
     }
 
     fun stop() {
-        log.info("Stopper AktivitetskortInvitasjonScheduler")
+        log.info("Stopper AktivitetskortSvarScheduler")
         scheduler.shutdown()
         try {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -41,14 +38,15 @@ class AktivitetskortInvitasjonScheduler(
         }
     }
 
-     fun behandleInvitasjoner() {
+     fun behandleSvar() {
         if (isRunning.getAndSet(true)) {
-            log.info("Forrige kjøring av AktivitetskortInvitasjonScheduler er ikke ferdig, skipper denne kjøringen.")
+            log.info("Forrige kjøring av AktivitetskortSvarScheduler er ikke ferdig, skipper denne kjøringen.")
             return
         }
 
         try {
-            val usendteInvitasjoner = aktivitetskortRepository.hentUsendteInvitasjoner()
+            TODO()
+            /*val usendteInvitasjoner = aktivitetskortInvitasjonRepository.hentUsendteInvitasjoner()
 
             if (usendteInvitasjoner.isEmpty()) {
                 log.info("Ingen usendte invitasjoner å behandle.")
@@ -61,11 +59,11 @@ class AktivitetskortInvitasjonScheduler(
                 val treff = rekrutteringstreffRepository.hent(TreffId(usendtInvitasjon.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtInvitasjon.rekrutteringstreffUuid}")
                 treff.aktivitetskortInvitasjonFor(usendtInvitasjon.fnr)
                     .publiserTilRapids(rapidsConnection)
-                aktivitetskortRepository.lagrePollingstatus(usendtInvitasjon.jobbsokerHendelseDbId)
+                aktivitetskortInvitasjonRepository.lagrePollingstatus(usendtInvitasjon.jobbsokerHendelseDbId)
             }
-            log.info("Ferdig med behandling av usendte invitasjoner for aktivitetskort")
+            log.info("Ferdig med behandling av usendte invitasjoner for aktivitetskort")*/
         } catch (e: Exception) {
-            log.error("Feil under kjøring av AktivitetskortInvitasjonScheduler", e)
+            log.error("Feil under kjøring av AktivitetskortSvarScheduler", e)
             throw e
         } finally {
             isRunning.set(false)

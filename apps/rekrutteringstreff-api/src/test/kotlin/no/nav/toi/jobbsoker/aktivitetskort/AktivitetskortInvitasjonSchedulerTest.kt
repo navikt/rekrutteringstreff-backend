@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
-import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortInvitasjonSchedulerTest {
@@ -19,7 +18,7 @@ class AktivitetskortInvitasjonSchedulerTest {
     companion object {
         private val db = TestDatabase()
         private lateinit var jobbsøkerRepository: JobbsøkerRepository
-        private lateinit var aktivitetskortInvitasjonRepository: AktivitetskortInvitasjonRepository
+        private lateinit var aktivitetskortRepository: AktivitetskortRepository
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private val mapper = JacksonConfig.mapper
     }
@@ -28,7 +27,7 @@ class AktivitetskortInvitasjonSchedulerTest {
     fun beforeAll() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-        aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(db.dataSource)
+        aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository =
             RekrutteringstreffRepository(db.dataSource)
 
@@ -44,7 +43,7 @@ class AktivitetskortInvitasjonSchedulerTest {
     fun `skal sende invitasjoner på rapid og markere dem som pollet dersom vi har nok data`() {
         val rapid = TestRapid()
         val scheduler =
-            AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
+            AktivitetskortInvitasjonScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
 
@@ -71,7 +70,7 @@ class AktivitetskortInvitasjonSchedulerTest {
         assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
         assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
 
-        val usendteEtterpå = aktivitetskortInvitasjonRepository.hentUsendteInvitasjoner()
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteInvitasjoner()
         assertThat(usendteEtterpå).isEmpty()
     }
 
@@ -79,7 +78,7 @@ class AktivitetskortInvitasjonSchedulerTest {
     fun `skal ikke sende invitasjoner på rapid dersom vi mangler prerequisites for invitasjon`() {
         val rapid = TestRapid()
         val scheduler =
-            AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
+            AktivitetskortInvitasjonScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         jobbsøkerRepository.leggTil(
@@ -111,7 +110,7 @@ class AktivitetskortInvitasjonSchedulerTest {
     fun `skal ikke sende samme invitasjon to ganger`() {
         val rapid = TestRapid()
         val scheduler =
-            AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
+            AktivitetskortInvitasjonScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
         jobbsøkerRepository.leggTil(
@@ -140,7 +139,7 @@ class AktivitetskortInvitasjonSchedulerTest {
     fun `skal ikke gjøre noe hvis det ikke er noen usendte invitasjoner`() {
         val rapid = TestRapid()
         val scheduler =
-            AktivitetskortInvitasjonScheduler(aktivitetskortInvitasjonRepository, rekrutteringstreffRepository, rapid)
+            AktivitetskortInvitasjonScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
 
         scheduler.behandleInvitasjoner()
 
