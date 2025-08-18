@@ -22,16 +22,16 @@ class AktivitetskortOppmøteScheduler(
     private val isRunning = AtomicBoolean(false)
 
     fun start() {
-        log.info("Starter AktivitetskortSvarScheduler")
+        log.info("Starter AktivitetskortOppmøteScheduler")
 
         val now = LocalDateTime.now()
         val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
 
-        scheduler.scheduleAtFixedRate(::behandleSvar, initialDelay, 60, TimeUnit.SECONDS)
+        scheduler.scheduleAtFixedRate(::behandleOppmøte, initialDelay, 60, TimeUnit.SECONDS)
     }
 
     fun stop() {
-        log.info("Stopper AktivitetskortSvarScheduler")
+        log.info("Stopper AktivitetskortOppmøteScheduler")
         scheduler.shutdown()
         try {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -42,44 +42,48 @@ class AktivitetskortOppmøteScheduler(
         }
     }
 
-     fun behandleSvar() {
+     fun behandleOppmøte() {
         if (isRunning.getAndSet(true)) {
-            log.info("Forrige kjøring av AktivitetskortSvarScheduler er ikke ferdig, skipper denne kjøringen.")
+            log.info("Forrige kjøring av AktivitetskortOppmøteScheduler er ikke ferdig, skipper denne kjøringen.")
             return
         }
 
         try {
-            TODO()
-            /*val usendteSvarJa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON)
-            val usendteSvarNei = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON)
+
+            val usendteOppmøte = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.MØT_OPP)
+            val usendteIkkeOppmøte = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_MØT_OPP)
 
 
-            if (usendteSvarNei.isEmpty() && usendteSvarJa.isEmpty()) {
-                log.info("Ingen usendte svar å behandle.")
+            if (usendteOppmøte.isEmpty() && usendteIkkeOppmøte.isEmpty()) {
+                log.info("Ingen usendte oppmøte å behandle.")
                 return
             }
 
-            log.info("Starter behandling av ${usendteSvarJa.size + usendteSvarNei.size} usendte svar for aktivitetskort")
+            log.info("Starter behandling av ${usendteOppmøte.size + usendteIkkeOppmøte.size} usendte oppmøte/ikke oppmøte for aktivitetskort")
 
-            usendteSvarJa.forEach { usendtSvar ->
-                val treff = rekrutteringstreffRepository.hent(TreffId(usendtSvar.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtSvar.rekrutteringstreffUuid}")
-                treff.aktivitetskortSvarFor(fnr = usendtSvar.fnr, svar = true)
+            usendteOppmøte.forEach { usendtOppmøte ->
+                val treff = rekrutteringstreffRepository.hent(TreffId(usendtOppmøte.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtOppmøte.rekrutteringstreffUuid}")
+                treff.aktivitetskortOppmøteFor(fnr = usendtOppmøte.fnr, møttOpp = true)
                     .publiserTilRapids(rapidsConnection)
-                aktivitetskortRepository.lagrePollingstatus(usendtSvar.jobbsokerHendelseDbId)
+                aktivitetskortRepository.lagrePollingstatus(usendtOppmøte.jobbsokerHendelseDbId)
             }
-            log.info("Ferdig med behandling av usendte svar ja for aktivitetskort")
+            log.info("Ferdig med behandling av usendte oppmøte for aktivitetskort")
 
-            usendteSvarNei.forEach { usendtSvar ->
-                val treff = rekrutteringstreffRepository.hent(TreffId(usendtSvar.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtSvar.rekrutteringstreffUuid}")
-                treff.aktivitetskortSvarFor(fnr = usendtSvar.fnr, svar = false)
+            usendteIkkeOppmøte.forEach { usendtOppmøte ->
+                val treff = rekrutteringstreffRepository.hent(TreffId(usendtOppmøte.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtOppmøte.rekrutteringstreffUuid}")
+                treff.aktivitetskortOppmøteFor(fnr = usendtOppmøte.fnr, møttOpp = false)
                     .publiserTilRapids(rapidsConnection)
-                aktivitetskortRepository.lagrePollingstatus(usendtSvar.jobbsokerHendelseDbId)
-            }*/
+                aktivitetskortRepository.lagrePollingstatus(usendtOppmøte.jobbsokerHendelseDbId)
+            }
+            log.info("Ferdig med behandling av usendte ikke oppmøte for aktivitetskort")
+
         } catch (e: Exception) {
-            log.error("Feil under kjøring av AktivitetskortSvarScheduler", e)
+            log.error("Feil under kjøring av AktivitetskortOppmøteScheduler", e)
             throw e
         } finally {
             isRunning.set(false)
         }
     }
+
+
 }

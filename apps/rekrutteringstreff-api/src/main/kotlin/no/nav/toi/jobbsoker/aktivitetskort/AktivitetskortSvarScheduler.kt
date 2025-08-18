@@ -74,6 +74,8 @@ class AktivitetskortSvarScheduler(
                     .publiserTilRapids(rapidsConnection)
                 aktivitetskortRepository.lagrePollingstatus(usendtSvar.jobbsokerHendelseDbId)
             }
+            log.info("Ferdig med behandling av usendte svar nei for aktivitetskort")
+
         } catch (e: Exception) {
             log.error("Feil under kjøring av AktivitetskortSvarScheduler", e)
             throw e
