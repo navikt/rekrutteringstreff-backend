@@ -1,6 +1,7 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -12,6 +13,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 class AktivitetskortSvarScheduler(
+    private val aktivitetskortRepository: AktivitetskortRepository,
+    private val rekrutteringstreffRepository: RekrutteringstreffRepository,
+    private val rapidsConnection: RapidsConnection
 ) {
 
     private val scheduler = Executors.newScheduledThreadPool(1)
@@ -45,23 +49,31 @@ class AktivitetskortSvarScheduler(
         }
 
         try {
-            TODO()
-            /*val usendteInvitasjoner = aktivitetskortInvitasjonRepository.hentUsendteInvitasjoner()
+            val usendteSvarJa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON)
+            val usendteSvarNei = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON)
 
-            if (usendteInvitasjoner.isEmpty()) {
-                log.info("Ingen usendte invitasjoner å behandle.")
+
+            if (usendteSvarNei.isEmpty() && usendteSvarJa.isEmpty()) {
+                log.info("Ingen usendte svar å behandle.")
                 return
             }
 
-            log.info("Starter behandling av ${usendteInvitasjoner.size} usendte invitasjoner for aktivitetskort")
+            log.info("Starter behandling av ${usendteSvarJa.size + usendteSvarNei.size} usendte svar for aktivitetskort")
 
-            usendteInvitasjoner.forEach { usendtInvitasjon ->
-                val treff = rekrutteringstreffRepository.hent(TreffId(usendtInvitasjon.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtInvitasjon.rekrutteringstreffUuid}")
-                treff.aktivitetskortInvitasjonFor(usendtInvitasjon.fnr)
+            usendteSvarJa.forEach { usendtSvar ->
+                val treff = rekrutteringstreffRepository.hent(TreffId(usendtSvar.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtSvar.rekrutteringstreffUuid}")
+                treff.aktivitetskortInvitasjonFor(usendtSvar.fnr)
                     .publiserTilRapids(rapidsConnection)
-                aktivitetskortInvitasjonRepository.lagrePollingstatus(usendtInvitasjon.jobbsokerHendelseDbId)
+                aktivitetskortRepository.lagrePollingstatus(usendtSvar.jobbsokerHendelseDbId)
             }
-            log.info("Ferdig med behandling av usendte invitasjoner for aktivitetskort")*/
+            log.info("Ferdig med behandling av usendte svar ja for aktivitetskort")
+
+            usendteSvarNei.forEach { usendtSvar ->
+                val treff = rekrutteringstreffRepository.hent(TreffId(usendtSvar.rekrutteringstreffUuid)) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendtSvar.rekrutteringstreffUuid}")
+                treff.aktivitetskortInvitasjonFor(usendtSvar.fnr)
+                    .publiserTilRapids(rapidsConnection)
+                aktivitetskortRepository.lagrePollingstatus(usendtSvar.jobbsokerHendelseDbId)
+            }
         } catch (e: Exception) {
             log.error("Feil under kjøring av AktivitetskortSvarScheduler", e)
             throw e

@@ -27,7 +27,24 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun hentUsendteSvar(): List<UsendtSvar> = TODO()
+    fun hentUsendteHendelse(hendelsestype: JobbsøkerHendelsestype): List<UsendtHendelse> = dataSource.connection.use { connection ->
+        val statement = connection.prepareStatement(
+            """
+            select jh.db_id, j.fodselsnummer, rt.id from jobbsoker_hendelse jh
+            left join aktivitetskort_polling p on jh.db_id = p.jobbsoker_hendelse_db_id
+            left join jobbsoker j on jh.jobbsoker_db_id = j.db_id
+            left join rekrutteringstreff rt on j.treff_db_id = rt.db_id
+            where p.db_id is null and jh.hendelsestype = '${hendelsestype.name}' 
+            order by jh.tidspunkt
+            """
+        )
+        statement.use {
+            val resultSet = it.executeQuery()
+            return@use generateSequence {
+                if (resultSet.next()) resultSet.tilUsendtHendelse() else null
+            }.toList()
+        }
+    }
 
     fun lagrePollingstatus(jobbsokerHendelseDbId: Long) {
         dataSource.connection.use { connection ->
@@ -47,6 +64,12 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
         fnr = getString("fodselsnummer"),
         rekrutteringstreffUuid = getString("id")
     )
+
+    private fun ResultSet.tilUsendtHendelse() = UsendtHendelse(
+        jobbsokerHendelseDbId = getLong("db_id"),
+        fnr = getString("fodselsnummer"),
+        rekrutteringstreffUuid = getString("id")
+    )
 }
 
 data class UsendtInvitasjon(
@@ -55,4 +78,8 @@ data class UsendtInvitasjon(
     val rekrutteringstreffUuid: String
 )
 
-class UsendtSvar()
+data class UsendtHendelse(
+    val jobbsokerHendelseDbId: Long,
+    val fnr: String,
+    val rekrutteringstreffUuid: String
+)

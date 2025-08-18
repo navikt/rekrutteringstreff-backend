@@ -1,6 +1,7 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import no.nav.toi.JacksonConfig
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.TestRapid
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
@@ -50,6 +51,7 @@ class AktivitetskortSvarSchedulerTest {
 
     @Test
     fun `skal sende ja-svar på rapid og markere dem som pollet`() {
+
         val expectedFnr = Fødselsnummer("12345678901")
         val (rapid, treffId) = opprettPersonOgInviter(fødselsnummer = expectedFnr)
         jobbsøkerRepository.svarJaTilInvitasjon(
@@ -57,7 +59,7 @@ class AktivitetskortSvarSchedulerTest {
             treffId,
             expectedFnr.asString
         )
-        AktivitetskortSvarScheduler().behandleSvar()
+        AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(2)
         val melding = rapid.inspektør.message(1)
         Assertions.assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
@@ -68,7 +70,7 @@ class AktivitetskortSvarSchedulerTest {
         Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isTrue
         Assertions.assertThat(melding["svartJa"].asBoolean()).isTrue
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteSvar()
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON)
         Assertions.assertThat(usendteEtterpå).isEmpty()
     }
 
@@ -81,7 +83,7 @@ class AktivitetskortSvarSchedulerTest {
             treffId,
             expectedFnr.asString
         )
-        AktivitetskortSvarScheduler().behandleSvar()
+        AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(2)
         val melding = rapid.inspektør.message(1)
         Assertions.assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
@@ -92,7 +94,7 @@ class AktivitetskortSvarSchedulerTest {
         Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isTrue
         Assertions.assertThat(melding["svartJa"].asBoolean()).isFalse
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteSvar()
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON)
         Assertions.assertThat(usendteEtterpå).isEmpty()
     }
 
@@ -100,8 +102,8 @@ class AktivitetskortSvarSchedulerTest {
     fun `skal ikke sende samme invitasjon to ganger`() {
         val (rapid, scheduler) = opprettPersonOgInviter(Fødselsnummer("12345678901"))
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(1)
-        AktivitetskortSvarScheduler().behandleSvar()
-        AktivitetskortSvarScheduler().behandleSvar()
+        AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
+        AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(2)
     }
 
@@ -134,7 +136,7 @@ class AktivitetskortSvarSchedulerTest {
     @Test
     fun `skal ikke gjøre noe hvis det ikke er noen usendte invitasjoner`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortSvarScheduler()
+        val scheduler = AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
 
         scheduler.behandleSvar()
 
