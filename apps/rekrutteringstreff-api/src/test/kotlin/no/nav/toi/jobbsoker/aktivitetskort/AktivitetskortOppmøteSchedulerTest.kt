@@ -10,6 +10,7 @@ import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.Kandidatnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -24,7 +25,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class AktivitetskortSvarSchedulerTest {
+class AktivitetskortOppmøteSchedulerTest {
 
     companion object {
         private val db = TestDatabase()
@@ -50,64 +51,64 @@ class AktivitetskortSvarSchedulerTest {
     }
 
     @Test
-    fun `skal sende ja-svar på rapid og markere dem som pollet`() {
+    fun `skal sende oppmøte på rapid og markere dem som pollet`() {
 
         val expectedFnr = Fødselsnummer("12345678901")
-        val (rapid, treffId) = opprettPersonOgInviter(fødselsnummer = expectedFnr)
-        jobbsøkerRepository.svarJaTilInvitasjon(
-            expectedFnr,
+        val (rapid, personTreffId, treffId) = opprettPersonOgInviter(fødselsnummer = expectedFnr)
+        jobbsøkerRepository.registrerOppmøte(
+            listOf(personTreffId),
             treffId,
             expectedFnr.asString
         )
-        AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
+        AktivitetskortOppmøteScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(2)
         val melding = rapid.inspektør.message(1)
-        Assertions.assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
+        Assertions.assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppmøte")
         Assertions.assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
         Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         Assertions.assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
-        Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isTrue
-        Assertions.assertThat(melding["svartJa"].asBoolean()).isTrue
+        Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
+        Assertions.assertThat(melding["oppmøte"].asBoolean()).isTrue
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON)
         Assertions.assertThat(usendteEtterpå).isEmpty()
     }
 
     @Test
-    fun `skal sende nei-svar på rapid og markere dem som pollet`() {
+    fun `skal sende ikke oppmøte på rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
-        val (rapid, treffId) = opprettPersonOgInviter(fødselsnummer = expectedFnr)
-        jobbsøkerRepository.svarNeiTilInvitasjon(
-            expectedFnr,
+        val (rapid, personTreffId, treffId) = opprettPersonOgInviter(fødselsnummer = expectedFnr)
+        jobbsøkerRepository.registrerIkkeOppmøte(
+            listOf(personTreffId),
             treffId,
             expectedFnr.asString
         )
-        AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
+        AktivitetskortOppmøteScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(2)
         val melding = rapid.inspektør.message(1)
-        Assertions.assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
+        Assertions.assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppmøte")
         Assertions.assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
         Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         Assertions.assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
-        Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isTrue
-        Assertions.assertThat(melding["svartJa"].asBoolean()).isFalse
+        Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
+        Assertions.assertThat(melding["oppmøte"].asBoolean()).isFalse
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON)
         Assertions.assertThat(usendteEtterpå).isEmpty()
     }
 
     @Test
-    fun `skal ikke sende samme svar to ganger`() {
+    fun `skal ikke sende oppmøte-svar to ganger`() {
         val fødselsnummer = Fødselsnummer("12345678901")
-        val (rapid, treffId) = opprettPersonOgInviter(fødselsnummer)
-        jobbsøkerRepository.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
+        val (rapid, personTreffid, treffid) = opprettPersonOgInviter(fødselsnummer)
+        jobbsøkerRepository.registrerOppmøte(listOf(personTreffid), treffid, fødselsnummer.asString)
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(1)
-        AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
-        AktivitetskortSvarScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
+        AktivitetskortOppmøteScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
+        AktivitetskortOppmøteScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid).behandleSvar()
         Assertions.assertThat(rapid.inspektør.size).isEqualTo(2)
     }
 
-    private fun opprettPersonOgInviter(fødselsnummer: Fødselsnummer): Pair<TestRapid, TreffId> {
+    private fun opprettPersonOgInviter(fødselsnummer: Fødselsnummer): Triple<TestRapid, PersonTreffId, TreffId> {
         val rapid = TestRapid()
         val invitasjonScheduler =
             AktivitetskortInvitasjonScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
@@ -130,7 +131,7 @@ class AktivitetskortSvarSchedulerTest {
         jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
 
         invitasjonScheduler.behandleInvitasjoner()
-        return Pair(rapid, treffId)
+        return Triple(rapid, personTreffId, treffId)
     }
 
     @Test
