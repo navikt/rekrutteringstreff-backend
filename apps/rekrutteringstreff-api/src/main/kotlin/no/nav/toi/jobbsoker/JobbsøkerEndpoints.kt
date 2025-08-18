@@ -19,6 +19,7 @@ const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/job
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
 private const val inviterPath = "$jobbsøkerPath/inviter"
 private const val registrerOppmøtePath = "$jobbsøkerPath/registrer-oppmote"
+private const val registrerIkkeOppmøtePath = "$jobbsøkerPath/registrer-ikke-oppmote"
 
 
 data class JobbsøkerDto(
@@ -291,6 +292,32 @@ private fun registrerOppmøteHandler(repo: JobbsøkerRepository): (Context) -> U
     ctx.status(200)
 }
 
+@OpenApi(
+    summary = "Registrer ikke oppmøte for en eller flere jobbsøkere til rekrutteringstreffet.",
+    operationId = "registrerIkkeOppmøteForJobbsøkere",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = PersonTreffIderDto::class,
+            example = """{ "personTreffIder": ["2d4dcf50-2418-4085-9c5f-1390bc49a97f", "0aff1e80-cc11-4cdc-a495-ada1f0a8b3dd"] }"""
+        )]
+    ),
+    responses = [OpenApiResponse("200", description = "Oppmøtehendelser er lagt til.")],
+    path = registrerIkkeOppmøtePath,
+    methods = [HttpMethod.POST]
+)
+private fun registrerIkkeOppmøteHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val dto = ctx.bodyAsClass<PersonTreffIderDto>()
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val personTreffIder = dto.personTreffIder
+    val navIdent = ctx.extractNavIdent()
+
+    repo.registrerIkkeOppmøte(personTreffIder, treffId, navIdent)
+    ctx.status(200)
+}
+
 fun JobbsøkerHendelse.toOutboundDto() = JobbsøkerHendelseOutboundDto(
     id = id.toString(),
     tidspunkt = tidspunkt,
@@ -328,4 +355,5 @@ fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     get(hendelserPath, hentJobbsøkerHendelserHandler(repo))
     post(inviterPath, inviterJobbsøkereHandler(repo))
     post(registrerOppmøtePath, registrerOppmøteHandler(repo))
+    post(registrerIkkeOppmøtePath, registrerIkkeOppmøteHandler(repo))
 }

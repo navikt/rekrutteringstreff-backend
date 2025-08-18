@@ -217,9 +217,17 @@ class JobbsøkerRepository(
     fun registrerOppmøte(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             try {
-                val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbIds = c.hentJobbsøkerDbIder(treffDbId, personTreffIder)
-                c.batchInsertHendelser(JobbsøkerHendelsestype.MØT_OPP, jobbsøkerDbIds, opprettetAv)
+                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.MØT_OPP, personTreffIder, opprettetAv)
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
+
+    fun registrerIkkeOppmøte(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
+        dataSource.connection.use { c ->
+            try {
+                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.IKKE_MØT_OPP, personTreffIder, opprettetAv)
             } catch (e: Exception) {
                 throw e
             }
