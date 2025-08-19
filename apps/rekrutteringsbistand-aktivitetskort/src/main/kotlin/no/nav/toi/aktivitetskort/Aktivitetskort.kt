@@ -38,7 +38,6 @@ class Aktivitetskort (
         )
         try {
             producer.send(record).get()
-            producer.send(record).get() //TODO Fjern etter feiltesting
             repository.markerAktivitetskorthendelseSomSendt(messageId)
         } catch (e: Exception) {
             throw RuntimeException("Failed to send aktivitetskort hendelse ${aktivitetskortId}", e)
