@@ -49,7 +49,7 @@ class RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection: RapidsConnectio
             rekrutteringstreffId = rekrutteringstreffId.toUUID()
         )
         if( aktivitetskortId == null ) {
-            log.info("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId (se secure log)")
+            log.error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId (se secure log)")
             secure(log).error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr")
             return
         } else {
