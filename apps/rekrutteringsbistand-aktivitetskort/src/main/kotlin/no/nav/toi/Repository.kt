@@ -250,10 +250,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
             setObject(2, rekrutteringstreffId)
         }.executeQuery().use { resultSet ->
             if(!resultSet.next()) {
-                throw IllegalArgumentException("Fant ikke rekrutteringstreff for fnr: $fnr og rekrutteringstreffId: $rekrutteringstreffId")
+                return@use null
             }
             resultSet.getString("aktivitetskort_id")?.let { UUID.fromString(it) }
-                ?: throw IllegalArgumentException("Fant ikke aktivitetskort for fnr: $fnr og rekrutteringstreffId: $rekrutteringstreffId")
         }
     }
 

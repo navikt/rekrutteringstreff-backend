@@ -48,14 +48,20 @@ class RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection: RapidsConnectio
             fnr = fnr,
             rekrutteringstreffId = rekrutteringstreffId.toUUID()
         )
-        val svartJa = packet["svartJa"].asBoolean()
-        secure(log).info("Oppdaterer aktivitetsstatus for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr som har svart ${if(svartJa) "ja" else "nei"}")
-        repository.oppdaterAktivitetsstatus(
-            aktivitetskortId = aktivitetskortId,
-            aktivitetsStatus = if(svartJa) AktivitetsStatus.GJENNOMFORES else AktivitetsStatus.AVBRUTT,
-            endretAv = packet["endretAv"].asText(),
-            endretAvType = if(packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
-        )
+        if( aktivitetskortId == null ) {
+            log.info("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId (se secure log)")
+            secure(log).error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr")
+            return
+        } else {
+            val svartJa = packet["svartJa"].asBoolean()
+            secure(log).info("Oppdaterer aktivitetsstatus for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr som har svart ${if (svartJa) "ja" else "nei"}")
+            repository.oppdaterAktivitetsstatus(
+                aktivitetskortId = aktivitetskortId,
+                aktivitetsStatus = if (svartJa) AktivitetsStatus.GJENNOMFORES else AktivitetsStatus.AVBRUTT,
+                endretAv = packet["endretAv"].asText(),
+                endretAvType = if (packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
+            )
+        }
     }
 
     override fun onError(
