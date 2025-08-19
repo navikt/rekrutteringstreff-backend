@@ -43,16 +43,23 @@ class RekrutteringstreffPersonbrukerMøttOppLytter(rapidsConnection: RapidsConne
     ) {
         val fnr = packet["fnr"].asText()
 
+        val rekrutteringstreffId = packet["rekrutteringstreffId"].asText()
         val aktivitetskortId = repository.hentAktivitetskortId(
             fnr = fnr,
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID()
         )
-        repository.oppdaterAktivitetsstatus(
-            aktivitetskortId = aktivitetskortId,
-            aktivitetsStatus = if(packet["møttOpp"].asBoolean()) AktivitetsStatus.FULLFORT else AktivitetsStatus.AVBRUTT,
-            endretAv = packet["endretAv"].asText(),
-            endretAvType = if(packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
-        )
+        if( aktivitetskortId == null ) {
+            log.error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId (se secure log)")
+            secure(log).error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr")
+            return
+        } else {
+            repository.oppdaterAktivitetsstatus(
+                aktivitetskortId = aktivitetskortId,
+                aktivitetsStatus = if(packet["møttOpp"].asBoolean()) AktivitetsStatus.FULLFORT else AktivitetsStatus.AVBRUTT,
+                endretAv = packet["endretAv"].asText(),
+                endretAvType = if(packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
+            )
+            }
     }
 
     override fun onError(

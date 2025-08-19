@@ -125,17 +125,19 @@ class RekrutteringstreffPersonbrukerOppmøteLytterTest {
 
     @Test
     fun `Om personbruker har møtt opp med aktivitetskort som ikke er opprettet skal vi feile for nå`() {
-        assertThrows<IllegalArgumentException> {
-            rapid.sendTestMessage(
-                rapidMelding(
-                    fnr = "12345678910",
-                    rekrutteringstreffId = UUID.randomUUID(),
-                    møttOpp = true,
-                    endretAv = "12345678910",
-                    endretAvPersonbruker = true
-                )
+        rapid.sendTestMessage(
+            rapidMelding(
+                fnr = "12345678910",
+                rekrutteringstreffId = UUID.randomUUID(),
+                møttOpp = true,
+                endretAv = "12345678910",
+                endretAvPersonbruker = true
             )
-        }
+        )
+        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        assertThat(rekrutteringstreffHendelser).hasSize(0)
+        val inspektør = rapid.inspektør
+        assertThat(inspektør.size).isEqualTo(0)
     }
 
     private fun rapidMelding(
