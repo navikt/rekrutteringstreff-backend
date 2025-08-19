@@ -59,7 +59,7 @@ class RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection: RapidsConnectio
                 aktivitetskortId = aktivitetskortId,
                 aktivitetsStatus = if (svartJa) AktivitetsStatus.GJENNOMFORES else AktivitetsStatus.AVBRUTT,
                 endretAv = packet["endretAv"].asText(),
-                endretAvType = if (packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
+                endretAvType = if (packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKERIDENT else EndretAvType.NAVIDENT
             )
         }
     }

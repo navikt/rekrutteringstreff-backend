@@ -225,8 +225,8 @@ enum class ActionType {
 enum class EndretAvType {
     ARENAIDENT,
     NAVIDENT,
-    PERSONBRUKER,
-    TILTAKSARRAGOER,
+    PERSONBRUKERIDENT,
+    TILTAKSARRANGOER,
     ARBEIDSGIVER,
     SYSTEM
 }

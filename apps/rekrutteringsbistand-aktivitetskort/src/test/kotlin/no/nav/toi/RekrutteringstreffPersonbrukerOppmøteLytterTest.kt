@@ -118,7 +118,7 @@ class RekrutteringstreffPersonbrukerOppmøteLytterTest {
             assertThat(this[1].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[1].aktivitetsStatus).isEqualTo(aktivitetsStatus.name)
             assertThat(this[1].opprettetAv).isEqualTo(endretAv)
-            assertThat(this[1].opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKER.name)
+            assertThat(this[1].opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
             assertThat(this[1].opprettetTidspunkt).isCloseTo(nowFørSendTestmessage, within(100, ChronoUnit.MILLIS))
         }
     }

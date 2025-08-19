@@ -57,7 +57,7 @@ class RekrutteringstreffPersonbrukerMøttOppLytter(rapidsConnection: RapidsConne
                 aktivitetskortId = aktivitetskortId,
                 aktivitetsStatus = if(packet["møttOpp"].asBoolean()) AktivitetsStatus.FULLFORT else AktivitetsStatus.AVBRUTT,
                 endretAv = packet["endretAv"].asText(),
-                endretAvType = if(packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
+                endretAvType = if(packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKERIDENT else EndretAvType.NAVIDENT
             )
             }
     }
