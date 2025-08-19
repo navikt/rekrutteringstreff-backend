@@ -12,6 +12,7 @@ import no.nav.toi.aktivitetskort.ErrorType
 import no.nav.toi.aktivitetskort.LenkeType
 import no.nav.toi.aktivitetskort.atOslo
 import no.nav.toi.aktivitetskort.joinToJson
+import no.nav.toi.SecureLogLogger.Companion.secure
 import org.flywaydb.core.Flyway
 import java.sql.Timestamp
 import java.sql.Types.VARCHAR
@@ -295,6 +296,12 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                 setTimestamp(5, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
                 setObject(6, aktivitetskortId)
             }.executeUpdate()
+        }.let { rowsUpdated ->
+            if(rowsUpdated != 1){
+                secure(log).error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
+            } else {
+                secure(log).info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
+            }
         }
     }
 

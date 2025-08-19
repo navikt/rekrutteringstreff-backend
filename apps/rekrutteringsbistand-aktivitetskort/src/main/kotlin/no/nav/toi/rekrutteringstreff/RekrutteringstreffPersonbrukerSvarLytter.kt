@@ -43,13 +43,16 @@ class RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection: RapidsConnectio
     ) {
         val fnr = packet["fnr"].asText()
 
+        val rekrutteringstreffId = packet["rekrutteringstreffId"].asText()
         val aktivitetskortId = repository.hentAktivitetskortId(
             fnr = fnr,
-            rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID()
+            rekrutteringstreffId = rekrutteringstreffId.toUUID()
         )
+        val svartJa = packet["svartJa"].asBoolean()
+        secure(log).info("Oppdaterer aktivitetsstatus for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr som har svart ${if(svartJa) "ja" else "nei"}")
         repository.oppdaterAktivitetsstatus(
             aktivitetskortId = aktivitetskortId,
-            aktivitetsStatus = if(packet["svartJa"].asBoolean()) AktivitetsStatus.GJENNOMFORES else AktivitetsStatus.AVBRUTT,
+            aktivitetsStatus = if(svartJa) AktivitetsStatus.GJENNOMFORES else AktivitetsStatus.AVBRUTT,
             endretAv = packet["endretAv"].asText(),
             endretAvType = if(packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKER else EndretAvType.NAVIDENT
         )

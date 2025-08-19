@@ -146,12 +146,24 @@ class RekrutteringstreffPersonbrukerSvarLytterTest {
         endretAvPersonbruker: Boolean
     ): String = """
         {
-            "@event_name": "rekrutteringstreffsvar",
-            "fnr":"$fnr",
-            "rekrutteringstreffId":"$rekrutteringstreffId",
-            "svartJa": $svartJa,
-            "endretAv": "$endretAv",
-            "endretAvPersonbruker": $endretAvPersonbruker
+          "@event_name": "rekrutteringstreffsvar",
+          "fnr": "$fnr",
+          "rekrutteringstreffId": "$rekrutteringstreffId",
+          "endretAv": "$endretAv",
+          "endretAvPersonbruker": $endretAvPersonbruker,
+          "svartJa": $svartJa,
+          "@id": "36c16f5f-36a1-4031-9694-160c79361cc0",
+          "@opprettet": "2025-08-19T13:51:59.519003665",
+          "system_read_count": 0,
+          "system_participating_services": [
+            {
+              "id": "36c16f5f-36a1-4031-9694-160c79361cc0",
+              "time": "2025-08-19T13:51:59.519003665",
+              "service": "rekrutteringstreff-api",
+              "instance": "rekrutteringstreff-api-868d8cc6fc-4pcjk",
+              "image": "europe-north1-docker.pkg.dev/nais-management-233d/toi/rekrutteringstreff-backend-rekrutteringstreff-api:2025.08.19-11.49-fe004d7"
+            }
+          ]
         }
         """.trimIndent()
 }
