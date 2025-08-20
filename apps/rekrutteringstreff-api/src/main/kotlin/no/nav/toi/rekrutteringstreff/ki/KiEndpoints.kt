@@ -15,9 +15,8 @@ import java.util.*
 private const val base = "/api/rekrutteringstreff/ki"
 
 fun Javalin.handleKi(repo: KiLoggRepository) {
-    OpenAiClient.configureKiRepository(repo)
 
-    post("$base/valider", validerOgLoggHandler())
+    post("$base/valider", validerOgLoggHandler(repo))
     patch("$base/logg/{id}/lagret", oppdaterLagretHandler(repo))
     patch("$base/logg/{id}/manuell", oppdaterManuellHandler(repo))
     get("$base/logg", listHandler(repo))
@@ -49,11 +48,11 @@ fun Javalin.handleKi(repo: KiLoggRepository) {
     path = "$base/valider",
     methods = [HttpMethod.POST]
 )
-private fun validerOgLoggHandler(): (Context) -> Unit = { ctx ->
+private fun validerOgLoggHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val req = ctx.bodyAsClass<ValiderMedLoggRequestDto>()
     val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =
-        OpenAiClient.validateRekrutteringstreffOgLogg(req.treffDbId, req.feltType, req.tekst)
+        OpenAiClient(repo = repo).validateRekrutteringstreffOgLogg(req.treffDbId, req.feltType, req.tekst)
     ctx.status(200).json(
         ValiderMedLoggResponseDto(
             loggId = loggId?.toString() ?: "",
