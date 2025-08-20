@@ -160,7 +160,6 @@ class KiLoggRepositoryTest {
                 svartidMs = 1
             )
         )
-        Thread.sleep(5)
         val id2 = repo.insert(
             KiLoggInsert(
                 treffDbId = treffDbId,
@@ -176,7 +175,6 @@ class KiLoggRepositoryTest {
                 svartidMs = 2
             )
         )
-        Thread.sleep(5)
         val id3 = repo.insert(
             KiLoggInsert(
                 treffDbId = treffDbId,

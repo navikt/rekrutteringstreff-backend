@@ -27,8 +27,25 @@ fun Javalin.handleKi(repo: KiLoggRepository) {
 @OpenApi(
     summary = "Valider tekst via KI og logg spørringen.",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    requestBody = OpenApiRequestBody([OpenApiContent(from = ValiderMedLoggRequestDto::class)]),
-    responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = ValiderMedLoggResponseDto::class)])],
+    requestBody = OpenApiRequestBody([OpenApiContent(
+        from = ValiderMedLoggRequestDto::class,
+        example = """{
+          "treffDbId": 12345,
+          "feltType": "tittel",
+          "tekst": "Vi søker etter en blid og motivert medarbeider."
+        }"""
+    )]),
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = ValiderMedLoggResponseDto::class,
+            example = """{
+              "loggId": "550e8400-e29b-41d4-a716-446655440000",
+              "bryterRetningslinjer": false,
+              "begrunnelse": "Teksten inneholder ingen sensitive opplysninger eller diskriminerende formuleringer."
+            }"""
+        )]
+    )],
     path = "$base/valider",
     methods = [HttpMethod.POST]
 )
@@ -49,8 +66,16 @@ private fun validerOgLoggHandler(): (Context) -> Unit = { ctx ->
 @OpenApi(
     summary = "Oppdater 'lagret' for en logglinje.",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-    requestBody = OpenApiRequestBody([OpenApiContent(from = OppdaterLagretRequestDto::class)]),
+    pathParams = [OpenApiParam(
+        name = "id",
+        type = UUID::class,
+        required = true,
+        example = "3f9e8f0a-12ab-4c3d-9f45-2b34c6d7e890"
+    )],
+    requestBody = OpenApiRequestBody([OpenApiContent(
+        from = OppdaterLagretRequestDto::class,
+        example = """{ "lagret": true }"""
+    )]),
     responses = [OpenApiResponse(status = "204")],
     path = "$base/logg/{id}/lagret",
     methods = [HttpMethod.PATCH]
@@ -66,8 +91,16 @@ private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = {
 @OpenApi(
     summary = "Registrer resultat av manuell kontroll.",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-    requestBody = OpenApiRequestBody([OpenApiContent(from = OppdaterManuellRequestDto::class)]),
+    pathParams = [OpenApiParam(
+        name = "id",
+        type = UUID::class,
+        required = true,
+        example = "3f9e8f0a-12ab-4c3d-9f45-2b34c6d7e890"
+    )],
+    requestBody = OpenApiRequestBody([OpenApiContent(
+        from = OppdaterManuellRequestDto::class,
+        example = """{ "bryterRetningslinjer": true }"""
+    )]),
     responses = [OpenApiResponse(status = "204")],
     path = "$base/logg/{id}/manuell",
     methods = [HttpMethod.PATCH]
@@ -88,12 +121,36 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
     summary = "List logglinjer for et rekrutteringstreff.",
     security = [OpenApiSecurity(name = "BearerAuth")],
     queryParams = [
-        OpenApiParam(name = "treffDbId", type = Long::class, required = false),
-        OpenApiParam(name = "feltType", type = String::class, required = false),
-        OpenApiParam(name = "limit", type = Int::class, required = false),
-        OpenApiParam(name = "offset", type = Int::class, required = false)
+        OpenApiParam(name = "treffDbId", type = Long::class, required = false, example = "12345"),
+        OpenApiParam(name = "feltType", type = String::class, required = false, example = "innlegg"),
+        OpenApiParam(name = "limit", type = Int::class, required = false, example = "50"),
+        OpenApiParam(name = "offset", type = Int::class, required = false, example = "0")
     ],
-    responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = Array<KiLoggOutboundDto>::class)])],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = Array<KiLoggOutboundDto>::class,
+            example = """[{
+              "id": "3f9e8f0a-12ab-4c3d-9f45-2b34c6d7e890",
+              "opprettetTidspunkt": "2025-08-20T12:34:56.789+02:00[Europe/Oslo]",
+              "treffDbId": 12345,
+              "feltType": "innlegg",
+              "spørringFraFrontend": "{\"treffDbId\":12345,\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
+              "spørringFiltrert": "{\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
+              "systemprompt": "Du er en hjelpsom assistent som validerer tekst i henhold til retningslinjer.",
+              "ekstraParametreJson": "{\"temperature\":0.2}",
+              "bryterRetningslinjer": false,
+              "begrunnelse": "Ingen brudd oppdaget.",
+              "kiNavn": "gpt-4o-mini",
+              "kiVersjon": "2025-08-01",
+              "svartidMs": 420,
+              "lagret": true,
+              "manuellKontrollBryterRetningslinjer": null,
+              "manuellKontrollUtfortAv": null,
+              "manuellKontrollTidspunkt": null
+            }]"""
+        )]
+    )],
     path = "$base/logg",
     methods = [HttpMethod.GET]
 )
@@ -133,8 +190,37 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
 @OpenApi(
     summary = "Hent én logglinje.",
     security = [OpenApiSecurity(name = "BearerAuth")],
-    pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-    responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = KiLoggOutboundDto::class)])],
+    pathParams = [OpenApiParam(
+        name = "id",
+        type = UUID::class,
+        required = true,
+        example = "3f9e8f0a-12ab-4c3d-9f45-2b34c6d7e890"
+    )],
+    responses = [OpenApiResponse(
+        status = "200",
+        content = [OpenApiContent(
+            from = KiLoggOutboundDto::class,
+            example = """{
+              "id": "3f9e8f0a-12ab-4c3d-9f45-2b34c6d7e890",
+              "opprettetTidspunkt": "2025-08-20T12:34:56.789+02:00[Europe/Oslo]",
+              "treffDbId": 12345,
+              "feltType": "innlegg",
+              "spørringFraFrontend": "{\"treffDbId\":12345,\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
+              "spørringFiltrert": "{\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
+              "systemprompt": "Du er en hjelpsom assistent som validerer tekst i henhold til retningslinjer.",
+              "ekstraParametreJson": "{\"temperature\":0.2}",
+              "bryterRetningslinjer": false,
+              "begrunnelse": "Ingen brudd oppdaget.",
+              "kiNavn": "gpt-4o-mini",
+              "kiVersjon": "2025-08-01",
+              "svartidMs": 420,
+              "lagret": true,
+              "manuellKontrollBryterRetningslinjer": null,
+              "manuellKontrollUtfortAv": null,
+              "manuellKontrollTidspunkt": null
+            }"""
+        )]
+    )],
     path = "$base/logg/{id}",
     methods = [HttpMethod.GET]
 )
