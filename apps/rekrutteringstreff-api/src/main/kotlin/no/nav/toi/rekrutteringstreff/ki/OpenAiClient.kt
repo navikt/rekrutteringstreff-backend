@@ -79,8 +79,8 @@ object OpenAiClient {
             KiLoggInsert(
                 treffDbId = treffDbId,
                 feltType = feltType,
-                sporringFraFrontend = tekst,
-                sporringFiltrert = filtered,
+                spørringFraFrontend = tekst,
+                spørringFiltrert = filtered,
                 systemprompt = VALIDATION_SYSTEM_MESSAGE,
                 ekstraParametre = null,
                 bryterRetningslinjer = result.bryterRetningslinjer,

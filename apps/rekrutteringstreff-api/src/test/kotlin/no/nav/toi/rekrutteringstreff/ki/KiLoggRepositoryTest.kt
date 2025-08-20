@@ -6,7 +6,6 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
-import kotlin.text.insert
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiLoggRepositoryTest {
@@ -32,8 +31,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId,
                 feltType = "tittel",
-                sporringFraFrontend = "Original tekst",
-                sporringFiltrert = "Filtrert tekst",
+                spørringFraFrontend = "Original tekst",
+                spørringFiltrert = "Filtrert tekst",
                 systemprompt = "prompt",
                 ekstraParametre = mapOf("nøkkel" to "verdi"),
                 bryterRetningslinjer = false,
@@ -54,8 +53,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId,
                 feltType = "innlegg",
-                sporringFraFrontend = "Hei verden",
-                sporringFiltrert = "Hei",
+                spørringFraFrontend = "Hei verden",
+                spørringFiltrert = "Hei",
                 systemprompt = null,
                 ekstraParametre = null,
                 bryterRetningslinjer = true,
@@ -72,8 +71,8 @@ class KiLoggRepositoryTest {
         assertThat(row.id).isEqualTo(id)
         assertThat(row.treffDbId).isEqualTo(treffDbId)
         assertThat(row.feltType).isEqualTo("innlegg")
-        assertThat(row.sporringFraFrontend).isEqualTo("Hei verden")
-        assertThat(row.sporringFiltrert).isEqualTo("Hei")
+        assertThat(row.spørringFraFrontend).isEqualTo("Hei verden")
+        assertThat(row.spørringFiltrert).isEqualTo("Hei")
         assertThat(row.systemprompt).isNull()
         assertThat(row.ekstraParametreJson).isNull()
         assertThat(row.bryterRetningslinjer).isTrue()
@@ -94,8 +93,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId,
                 feltType = "tittel",
-                sporringFraFrontend = "A",
-                sporringFiltrert = "A",
+                spørringFraFrontend = "A",
+                spørringFiltrert = "A",
                 systemprompt = null,
                 ekstraParametre = null,
                 bryterRetningslinjer = false,
@@ -120,8 +119,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId,
                 feltType = "tittel",
-                sporringFraFrontend = "Tekst",
-                sporringFiltrert = "Tekst",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
                 systemprompt = null,
                 ekstraParametre = null,
                 bryterRetningslinjer = false,
@@ -150,8 +149,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId,
                 feltType = "tittel",
-                sporringFraFrontend = "1",
-                sporringFiltrert = "1",
+                spørringFraFrontend = "1",
+                spørringFiltrert = "1",
                 systemprompt = null,
                 ekstraParametre = null,
                 bryterRetningslinjer = false,
@@ -166,8 +165,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId,
                 feltType = "innlegg",
-                sporringFraFrontend = "2",
-                sporringFiltrert = "2",
+                spørringFraFrontend = "2",
+                spørringFiltrert = "2",
                 systemprompt = null,
                 ekstraParametre = null,
                 bryterRetningslinjer = true,
@@ -182,8 +181,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId,
                 feltType = "tittel",
-                sporringFraFrontend = "3",
-                sporringFiltrert = "3",
+                spørringFraFrontend = "3",
+                spørringFiltrert = "3",
                 systemprompt = null,
                 ekstraParametre = null,
                 bryterRetningslinjer = false,
@@ -215,8 +214,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId1,
                 feltType = "tittel",
-                sporringFraFrontend = "fra1",
-                sporringFiltrert = "fil1",
+                spørringFraFrontend = "fra1",
+                spørringFiltrert = "fil1",
                 systemprompt = null,
                 ekstraParametre = null,
                 bryterRetningslinjer = false,
@@ -230,8 +229,8 @@ class KiLoggRepositoryTest {
             KiLoggInsert(
                 treffDbId = treffDbId2,
                 feltType = "innlegg",
-                sporringFraFrontend = "fra2",
-                sporringFiltrert = "fil2",
+                spørringFraFrontend = "fra2",
+                spørringFiltrert = "fil2",
                 systemprompt = null,
                 ekstraParametre = null,
                 bryterRetningslinjer = true,

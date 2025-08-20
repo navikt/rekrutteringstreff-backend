@@ -17,7 +17,7 @@ class KiLoggRepository(private val dataSource: DataSource) {
             c.prepareStatement(
                 """
                 INSERT INTO $TABELL
-                    ($COL_TREFF_DB_ID, $COL_FELT_TYPE, $COL_SPORRING_FRA_FRONTEND, $COL_SPORRING_FILTRERT, $COL_SYSTEMPROMPT, $COL_EKSTRA_PARAMETRE,
+                    ($COL_TREFF_DB_ID, $COL_FELT_TYPE, $COL_SPØRRING_FRA_FRONTEND, $COL_SPØRRING_FILTRERT, $COL_SYSTEMPROMPT, $COL_EKSTRA_PARAMETRE,
                      $COL_BRYTER_RETNINGSLINJER, $COL_BEGRUNNELSE, $COL_KI_NAVN, $COL_KI_VERSJON, $COL_SVARTID_MS)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING $COL_ID
@@ -26,8 +26,8 @@ class KiLoggRepository(private val dataSource: DataSource) {
                 var i = 0
                 ps.setLong(++i, entry.treffDbId)
                 ps.setString(++i, entry.feltType)
-                ps.setString(++i, entry.sporringFraFrontend)
-                ps.setString(++i, entry.sporringFiltrert)
+                ps.setString(++i, entry.spørringFraFrontend)
+                ps.setString(++i, entry.spørringFiltrert)
                 ps.setString(++i, entry.systemprompt)
 
                 if (entry.ekstraParametre == null) {
@@ -125,8 +125,8 @@ class KiLoggRepository(private val dataSource: DataSource) {
             opprettetTidspunkt = getTimestamp(COL_OPPRETTET).toInstant().atZone(ZoneOffset.UTC),
             treffDbId = getLong(COL_TREFF_DB_ID),
             feltType = getString(COL_FELT_TYPE),
-            sporringFraFrontend = getString(COL_SPORRING_FRA_FRONTEND),
-            sporringFiltrert = getString(COL_SPORRING_FILTRERT),
+            spørringFraFrontend = getString(COL_SPØRRING_FRA_FRONTEND),
+            spørringFiltrert = getString(COL_SPØRRING_FILTRERT),
             systemprompt = getString(COL_SYSTEMPROMPT),
             ekstraParametreJson = getString(COL_EKSTRA_PARAMETRE),
             bryterRetningslinjer = getBoolean(COL_BRYTER_RETNINGSLINJER),
@@ -141,15 +141,15 @@ class KiLoggRepository(private val dataSource: DataSource) {
         )
 
     companion object {
-        private const val TABELL = "ki_sporring_logg"
+        private const val TABELL = "ki_spørring_logg"
 
         private const val COL_ID = "id"
         private const val COL_OPPRETTET = "opprettet_tidspunkt"
         private const val COL_TREFF_DB_ID = "treff_db_id"
         private const val COL_FELT_TYPE = "felt_type"
 
-        private const val COL_SPORRING_FRA_FRONTEND = "sporring_fra_frontend"
-        private const val COL_SPORRING_FILTRERT = "sporring_filtrert"
+        private const val COL_SPØRRING_FRA_FRONTEND = "spørring_fra_frontend"
+        private const val COL_SPØRRING_FILTRERT = "spørring_filtrert"
         private const val COL_SYSTEMPROMPT = "systemprompt"
         private const val COL_EKSTRA_PARAMETRE = "ekstra_parametre"
 
@@ -171,8 +171,8 @@ class KiLoggRepository(private val dataSource: DataSource) {
 data class KiLoggInsert(
     val treffDbId: Long,
     val feltType: String, // 'tittel' | 'innlegg'
-    val sporringFraFrontend: String,
-    val sporringFiltrert: String,
+    val spørringFraFrontend: String,
+    val spørringFiltrert: String,
     val systemprompt: String?,
     val ekstraParametre: Map<String, Any?>?,
     val bryterRetningslinjer: Boolean,
@@ -187,8 +187,8 @@ data class KiLoggRow(
     val opprettetTidspunkt: ZonedDateTime,
     val treffDbId: Long,
     val feltType: String,
-    val sporringFraFrontend: String,
-    val sporringFiltrert: String,
+    val spørringFraFrontend: String,
+    val spørringFiltrert: String,
     val systemprompt: String?,
     val ekstraParametreJson: String?,
     val bryterRetningslinjer: Boolean,

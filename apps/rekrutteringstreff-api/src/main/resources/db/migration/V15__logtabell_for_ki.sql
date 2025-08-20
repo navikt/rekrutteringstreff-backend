@@ -1,5 +1,5 @@
 -- sql
-CREATE TABLE ki_sporring_logg
+CREATE TABLE ki_spørring_logg
 (
     db_id                                              bigserial PRIMARY KEY,
     id                                                 uuid                     NOT NULL DEFAULT gen_random_uuid(),
@@ -8,8 +8,8 @@ CREATE TABLE ki_sporring_logg
     treff_db_id                                        bigint                   NOT NULL REFERENCES rekrutteringstreff (db_id) ON DELETE CASCADE,
     felt_type                                          text                     NOT NULL,
 
-    sporring_fra_frontend                              text                     NOT NULL,
-    sporring_filtrert                                  text                     NOT NULL,
+    spørring_fra_frontend                              text                     NOT NULL,
+    spørring_filtrert                                  text                     NOT NULL,
     systemprompt                                       text,
     ekstra_parametre                                   jsonb,
 
@@ -30,4 +30,4 @@ CREATE TABLE ki_sporring_logg
     CHECK (felt_type IN ('tittel', 'innlegg'))
 );
 
-CREATE INDEX ki_sporring_logg_treff_idx ON ki_sporring_logg (treff_db_id);
+CREATE INDEX ki_spørring_logg_treff_idx ON ki_spørring_logg (treff_db_id);

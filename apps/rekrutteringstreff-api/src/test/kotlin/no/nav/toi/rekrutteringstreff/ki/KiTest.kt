@@ -24,7 +24,6 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.*
 import java.util.stream.Stream
-import kotlin.text.get
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -194,8 +193,8 @@ class KiTest {
         println(
             """
         [KI debug]
-        Original: <${logg.sporringFraFrontend}>
-        Filtered: <${logg.sporringFiltrert}>
+        Original: <${logg.spørringFraFrontend}>
+        Filtered: <${logg.spørringFiltrert}>
         Expected filtered: <${forventetFiltrertTekst}>
         FNR: <${fodselsnummer}>
         Sent to OpenAI:
@@ -204,29 +203,29 @@ class KiTest {
         )
 
         // Original should contain FNR
-        assertThat(logg.sporringFraFrontend.contains(fodselsnummer))
+        assertThat(logg.spørringFraFrontend.contains(fodselsnummer))
             .withFailMessage(
                 "Original text should contain FNR.\nOriginal: <%s>\nFiltered: <%s>\nOpenAI:\n%s",
-                logg.sporringFraFrontend, logg.sporringFiltrert, sentToOpenAi
+                logg.spørringFraFrontend, logg.spørringFiltrert, sentToOpenAi
             )
             .isTrue()
 
         // Filtered should NOT contain FNR
-        assertThat(logg.sporringFiltrert.contains(fodselsnummer))
+        assertThat(logg.spørringFiltrert.contains(fodselsnummer))
             .withFailMessage(
                 "Filtered text should NOT contain FNR.\nOriginal: <%s>\nFiltered: <%s>\nOpenAI:\n%s",
-                logg.sporringFraFrontend, logg.sporringFiltrert, sentToOpenAi
+                logg.spørringFraFrontend, logg.spørringFiltrert, sentToOpenAi
             )
             .isFalse()
 
         // Filtered should contain placeholder (or be equal to the expected filtered text)
         assertThat(
-            logg.sporringFiltrert.contains("fødselsnummer .") ||
-                    logg.sporringFiltrert.contains(forventetFiltrertTekst)
+            logg.spørringFiltrert.contains("fødselsnummer .") ||
+                    logg.spørringFiltrert.contains(forventetFiltrertTekst)
         )
             .withFailMessage(
                 "Expected filtered text to contain placeholder or expected content.\nOriginal: <%s>\nFiltered: <%s>\nExpected: <%s>\nOpenAI:\n%s",
-                logg.sporringFraFrontend, logg.sporringFiltrert, forventetFiltrertTekst, sentToOpenAi
+                logg.spørringFraFrontend, logg.spørringFiltrert, forventetFiltrertTekst, sentToOpenAi
             )
             .isTrue()
 
@@ -448,7 +447,7 @@ class KiTest {
 
     private fun hentLagret(id: UUID): Boolean =
         db.dataSource.connection.use { c ->
-            c.prepareStatement("select lagret from ki_sporring_logg where id = ?").use { ps ->
+            c.prepareStatement("select lagret from ki_spørring_logg where id = ?").use { ps ->
                 ps.setObject(1, id)
                 ps.executeQuery().use { rs ->
                     rs.next()
@@ -466,7 +465,7 @@ class KiTest {
                 select manuell_kontroll_bryter_retningslinjer,
                        manuell_kontroll_utført_av,
                        manuell_kontroll_tidspunkt
-                from ki_sporring_logg where id = ?
+                from ki_spørring_logg where id = ?
                 """.trimIndent()
             ).use { ps ->
                 ps.setObject(1, id)
