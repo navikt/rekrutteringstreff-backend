@@ -28,7 +28,7 @@ import kotlin.text.trimIndent
 import kotlin.to
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class RekrutteringstreffPersonbrukerSvarTest {
+class RekrutteringstreffPersonbrukerOppmøteLytterTest {
     private val localEnv = mutableMapOf<String, String>(
         "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_DATABASE" to "test",
         "NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_USERNAME" to "test",
@@ -64,16 +64,16 @@ class RekrutteringstreffPersonbrukerSvarTest {
     }
 
     @Test
-    fun `svar ja fra personbruker skal flytte aktivitetskort til gjennomføres`() {
-        testSvartJaFraPersonbruker(svartJa = true, aktivitetsStatus = AktivitetsStatus.GJENNOMFORES)
+    fun `møtt opp fra personbruker skal flytte aktivitetskort til fullført`() {
+        testMøttOppFraPersonbruker(møttOpp = true, aktivitetsStatus = AktivitetsStatus.FULLFORT)
     }
 
     @Test
-    fun `svar nei fra personbruker skal flytte aktivitetskort til avbrutt`() {
-        testSvartJaFraPersonbruker(svartJa = false, aktivitetsStatus = AktivitetsStatus.AVBRUTT)
+    fun `ikke møtt opp fra personbruker skal flytte aktivitetskort til avbrutt`() {
+        testMøttOppFraPersonbruker(møttOpp = false, aktivitetsStatus = AktivitetsStatus.AVBRUTT)
     }
 
-    fun testSvartJaFraPersonbruker(svartJa: Boolean, aktivitetsStatus: AktivitetsStatus) {
+    fun testMøttOppFraPersonbruker(møttOpp: Boolean, aktivitetsStatus: AktivitetsStatus) {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
@@ -84,7 +84,7 @@ class RekrutteringstreffPersonbrukerSvarTest {
         val gateadresse = "Test Sted"
         val postnummer = "1234"
         val poststed = "Test Poststed"
-        val endretAv = "Personbruker som svarte"
+        val endretAv = "Arrangør som svarte"
 
         repository.opprettRekrutteringstreffInvitasjon(fnr, rekrutteringstreffId, tittel, "Beskrivelse av rekrutteringstreff",
             fraTid.toLocalDate(), tilTid.toLocalDate(), "formatertTid", opprettetAv,
@@ -95,7 +95,7 @@ class RekrutteringstreffPersonbrukerSvarTest {
             rapidMelding(
                 fnr = fnr,
                 rekrutteringstreffId = rekrutteringstreffId,
-                svartJa = svartJa,
+                møttOpp = møttOpp,
                 endretAv = endretAv,
                 endretAvPersonbruker = true
             )
@@ -118,38 +118,40 @@ class RekrutteringstreffPersonbrukerSvarTest {
             assertThat(this[1].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[1].aktivitetsStatus).isEqualTo(aktivitetsStatus.name)
             assertThat(this[1].opprettetAv).isEqualTo(endretAv)
-            assertThat(this[1].opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKER.name)
+            assertThat(this[1].opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
             assertThat(this[1].opprettetTidspunkt).isCloseTo(nowFørSendTestmessage, within(100, ChronoUnit.MILLIS))
         }
     }
 
     @Test
-    fun `Om personbruker har svart ja på aktivitetskort som ikke er opprettet skal vi feile for nå`() {
-        assertThrows<IllegalArgumentException> {
-            rapid.sendTestMessage(
-                rapidMelding(
-                    fnr = "12345678910",
-                    rekrutteringstreffId = UUID.randomUUID(),
-                    svartJa = true,
-                    endretAv = "12345678910",
-                    endretAvPersonbruker = true
-                )
+    fun `Om personbruker har møtt opp med aktivitetskort som ikke er opprettet skal vi feile for nå`() {
+        rapid.sendTestMessage(
+            rapidMelding(
+                fnr = "12345678910",
+                rekrutteringstreffId = UUID.randomUUID(),
+                møttOpp = true,
+                endretAv = "12345678910",
+                endretAvPersonbruker = true
             )
-        }
+        )
+        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        assertThat(rekrutteringstreffHendelser).hasSize(0)
+        val inspektør = rapid.inspektør
+        assertThat(inspektør.size).isEqualTo(0)
     }
 
     private fun rapidMelding(
         fnr: String,
         rekrutteringstreffId: UUID,
-        svartJa: Boolean,
+        møttOpp: Boolean,
         endretAv: String,
         endretAvPersonbruker: Boolean
     ): String = """
         {
-            "@event_name": "rekrutteringstreffsvar",
+            "@event_name": "rekrutteringstreffoppmøte",
             "fnr":"$fnr",
             "rekrutteringstreffId":"$rekrutteringstreffId",
-            "svartJa": $svartJa,
+            "møttOpp": $møttOpp,
             "endretAv": "$endretAv",
             "endretAvPersonbruker": $endretAvPersonbruker
         }

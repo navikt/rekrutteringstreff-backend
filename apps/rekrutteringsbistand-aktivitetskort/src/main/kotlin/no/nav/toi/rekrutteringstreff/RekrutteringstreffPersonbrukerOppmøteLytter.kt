@@ -19,16 +19,16 @@ import java.util.Locale
 private val klokkeslettFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val datoMedMånedFormatter = DateTimeFormatter.ofPattern("dd.\u00A0MMMM\u00A0yyyy", Locale.forLanguageTag("no-NO"))
 
-class RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection: RapidsConnection, private val repository: Repository): River.PacketListener {
+class RekrutteringstreffPersonbrukerMøttOppLytter(rapidsConnection: RapidsConnection, private val repository: Repository): River.PacketListener {
 
     init {
         River(rapidsConnection).apply {
             precondition{
-                it.requireValue("@event_name", "rekrutteringstreffsvar")
+                it.requireValue("@event_name", "rekrutteringstreffoppmøte")
                 it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
-                it.requireKey("fnr", "rekrutteringstreffId", "endretAv", "endretAvPersonbruker", "svartJa")
+                it.requireKey("fnr", "rekrutteringstreffId", "endretAv", "endretAvPersonbruker", "møttOpp")
             }
 
         }.register(this)
@@ -46,22 +46,20 @@ class RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection: RapidsConnectio
         val rekrutteringstreffId = packet["rekrutteringstreffId"].asText()
         val aktivitetskortId = repository.hentAktivitetskortId(
             fnr = fnr,
-            rekrutteringstreffId = rekrutteringstreffId.toUUID()
+            rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID()
         )
         if( aktivitetskortId == null ) {
             log.error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId (se secure log)")
             secure(log).error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr")
             return
         } else {
-            val svartJa = packet["svartJa"].asBoolean()
-            secure(log).info("Oppdaterer aktivitetsstatus for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr som har svart ${if (svartJa) "ja" else "nei"}")
             repository.oppdaterAktivitetsstatus(
                 aktivitetskortId = aktivitetskortId,
-                aktivitetsStatus = if (svartJa) AktivitetsStatus.GJENNOMFORES else AktivitetsStatus.AVBRUTT,
+                aktivitetsStatus = if(packet["møttOpp"].asBoolean()) AktivitetsStatus.FULLFORT else AktivitetsStatus.AVBRUTT,
                 endretAv = packet["endretAv"].asText(),
-                endretAvType = if (packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKERIDENT else EndretAvType.NAVIDENT
+                endretAvType = if(packet["endretAvPersonbruker"].asBoolean()) EndretAvType.PERSONBRUKERIDENT else EndretAvType.NAVIDENT
             )
-        }
+            }
     }
 
     override fun onError(

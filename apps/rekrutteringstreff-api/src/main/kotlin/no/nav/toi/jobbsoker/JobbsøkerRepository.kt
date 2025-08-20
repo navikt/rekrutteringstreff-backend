@@ -214,6 +214,26 @@ class JobbsøkerRepository(
         }
     }
 
+    fun registrerOppmøte(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
+        dataSource.connection.use { c ->
+            try {
+                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.MØT_OPP, personTreffIder, opprettetAv)
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
+
+    fun registrerIkkeOppmøte(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
+        dataSource.connection.use { c ->
+            try {
+                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.IKKE_MØT_OPP, personTreffIder, opprettetAv)
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
+
     fun svarJaTilInvitasjon(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             try {

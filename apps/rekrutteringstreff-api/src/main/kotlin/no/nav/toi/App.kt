@@ -11,9 +11,15 @@ import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
-import no.nav.toi.jobbsoker.*
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonRepository
+import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppmøteScheduler
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvarScheduler
+import no.nav.toi.jobbsoker.handleJobbsøker
+import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
+import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
@@ -71,12 +77,12 @@ class App(
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         startJavalin(jobbsøkerRepository)
-        startScheduler()
+        startSchedulere()
         startRR(jobbsøkerRepository)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
 
-    fun startJavalin(jobbsøkerRepository: JobbsøkerRepository) {
+    private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository) {
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
 
@@ -102,10 +108,20 @@ class App(
         javalin.start(port)
     }
 
-    fun startScheduler() {
+    private fun startSchedulere() {
         log.info("Starting scheduler")
         AktivitetskortInvitasjonScheduler(
-            aktivitetskortInvitasjonRepository = AktivitetskortInvitasjonRepository(dataSource),
+            aktivitetskortRepository = AktivitetskortRepository(dataSource),
+            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+            rapidsConnection = rapidsConnection
+        ).start()
+        AktivitetskortSvarScheduler(
+            aktivitetskortRepository = AktivitetskortRepository(dataSource),
+            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+            rapidsConnection = rapidsConnection
+        ).start()
+        AktivitetskortOppmøteScheduler(
+            aktivitetskortRepository = AktivitetskortRepository(dataSource),
             rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
             rapidsConnection = rapidsConnection
         ).start()

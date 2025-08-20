@@ -267,6 +267,74 @@ class JobbsøkerRepositoryTest {
     }
 
     @Test
+    fun `verifiser at oppmøte lager en registrer-oppmøte-hendelse for eksisterende jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for registrering av oppmøte")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Kandidatnummer("K123"),
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere.first().hendelser).hasSize(1)
+
+        val personTreffId = jobbsøkere.first().personTreffId
+
+        repository.registrerOppmøte(listOf(personTreffId), treffId, "oppmøtt_person")
+
+        jobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere).hasSize(1)
+        val hendelser = jobbsøkere.first().hendelser
+        assertThat(hendelser).hasSize(2)
+
+        val oppmøteHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MØT_OPP }
+        assertThat(oppmøteHendelse).isNotNull
+        oppmøteHendelse!!
+        assertThat(oppmøteHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+        assertThat(oppmøteHendelse.aktørIdentifikasjon).isEqualTo("oppmøtt_person")
+        assertThat(oppmøteHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+        assertThat(hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETT }).isNotNull
+    }
+
+    @Test
+    fun `verifiser at ikke oppmøte lager en registrer-ikke-oppmøte-hendelse for eksisterende jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for registrering av oppmøte")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Kandidatnummer("K123"),
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere.first().hendelser).hasSize(1)
+
+        val personTreffId = jobbsøkere.first().personTreffId
+
+        repository.registrerIkkeOppmøte(listOf(personTreffId), treffId, "ikke-oppmøtt_person")
+
+        jobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere).hasSize(1)
+        val hendelser = jobbsøkere.first().hendelser
+        assertThat(hendelser).hasSize(2)
+
+        val oppmøteHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.IKKE_MØT_OPP }
+        assertThat(oppmøteHendelse).isNotNull
+        oppmøteHendelse!!
+        assertThat(oppmøteHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+        assertThat(oppmøteHendelse.aktørIdentifikasjon).isEqualTo("ikke-oppmøtt_person")
+        assertThat(oppmøteHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+        assertThat(hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETT }).isNotNull
+    }
+
+    @Test
     fun `svarJaTilInvitasjon lager en svar-ja-hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Ja")
         val fødselsnummer = Fødselsnummer("12345678901")

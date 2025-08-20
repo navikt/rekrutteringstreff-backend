@@ -18,6 +18,8 @@ private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
 private const val inviterPath = "$jobbsøkerPath/inviter"
+private const val registrerOppmøtePath = "$jobbsøkerPath/registrer-oppmote"
+private const val registrerIkkeOppmøtePath = "$jobbsøkerPath/registrer-ikke-oppmote"
 
 
 data class JobbsøkerDto(
@@ -81,7 +83,7 @@ data class JobbsøkerOutboundDto(
     val hendelser: List<JobbsøkerHendelseOutboundDto>
 )
 
-data class InviterJobbsøkereDto(
+data class PersonTreffIderDto(
     val personTreffIder: List<PersonTreffId>
 )
 
@@ -245,7 +247,7 @@ private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
-            from = InviterJobbsøkereDto::class,
+            from = PersonTreffIderDto::class,
             example = """{ "personTreffIder": ["2d4dcf50-2418-4085-9c5f-1390bc49a97f", "0aff1e80-cc11-4cdc-a495-ada1f0a8b3dd"] }"""
         )]
     ),
@@ -255,12 +257,64 @@ private fun hentJobbsøkerHendelserHandler(repo: JobbsøkerRepository): (Context
 )
 private fun inviterJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-    val dto = ctx.bodyAsClass<InviterJobbsøkereDto>()
+    val dto = ctx.bodyAsClass<PersonTreffIderDto>()
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val personTreffIder = dto.personTreffIder
     val navIdent = ctx.extractNavIdent()
 
     repo.inviter(personTreffIder, treffId, navIdent)
+    ctx.status(200)
+}
+
+@OpenApi(
+    summary = "Registrer oppmøte for en eller flere jobbsøkere til rekrutteringstreffet.",
+    operationId = "registrerOppmøteForJobbsøkere",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = PersonTreffIderDto::class,
+            example = """{ "personTreffIder": ["2d4dcf50-2418-4085-9c5f-1390bc49a97f", "0aff1e80-cc11-4cdc-a495-ada1f0a8b3dd"] }"""
+        )]
+    ),
+    responses = [OpenApiResponse("200", description = "Oppmøtehendelser er lagt til.")],
+    path = registrerOppmøtePath,
+    methods = [HttpMethod.POST]
+)
+private fun registrerOppmøteHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val dto = ctx.bodyAsClass<PersonTreffIderDto>()
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val personTreffIder = dto.personTreffIder
+    val navIdent = ctx.extractNavIdent()
+
+    repo.registrerOppmøte(personTreffIder, treffId, navIdent)
+    ctx.status(200)
+}
+
+@OpenApi(
+    summary = "Registrer ikke oppmøte for en eller flere jobbsøkere til rekrutteringstreffet.",
+    operationId = "registrerIkkeOppmøteForJobbsøkere",
+    security = [OpenApiSecurity("BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = PersonTreffIderDto::class,
+            example = """{ "personTreffIder": ["2d4dcf50-2418-4085-9c5f-1390bc49a97f", "0aff1e80-cc11-4cdc-a495-ada1f0a8b3dd"] }"""
+        )]
+    ),
+    responses = [OpenApiResponse("200", description = "Oppmøtehendelser er lagt til.")],
+    path = registrerIkkeOppmøtePath,
+    methods = [HttpMethod.POST]
+)
+private fun registrerIkkeOppmøteHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val dto = ctx.bodyAsClass<PersonTreffIderDto>()
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val personTreffIder = dto.personTreffIder
+    val navIdent = ctx.extractNavIdent()
+
+    repo.registrerIkkeOppmøte(personTreffIder, treffId, navIdent)
     ctx.status(200)
 }
 
@@ -300,4 +354,6 @@ fun Javalin.handleJobbsøker(repo: JobbsøkerRepository) {
     get(jobbsøkerPath, hentJobbsøkereHandler(repo))
     get(hendelserPath, hentJobbsøkerHendelserHandler(repo))
     post(inviterPath, inviterJobbsøkereHandler(repo))
+    post(registrerOppmøtePath, registrerOppmøteHandler(repo))
+    post(registrerIkkeOppmøtePath, registrerIkkeOppmøteHandler(repo))
 }

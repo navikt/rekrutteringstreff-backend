@@ -4,6 +4,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.aktivitetskort.scheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerMøttOppLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerSvarLytter
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.producer.Producer
@@ -21,6 +22,7 @@ class App(private val rapidsConnection: RapidsConnection, private val repository
     init {
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection, repository)
+        RekrutteringstreffPersonbrukerMøttOppLytter(rapidsConnection, repository)
     }
     fun start() {
         scheduler(0, 0, repository, producer, consumer, rapidsConnection)
