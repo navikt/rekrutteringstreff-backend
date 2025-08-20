@@ -11,6 +11,7 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.eier.handleEiere
 import no.nav.toi.rekrutteringstreff.innlegg.handleInnlegg
 import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClientGammel
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -25,6 +26,14 @@ private const val avsluttPath = "$endepunktRekrutteringstreff/{$pathParamTreffId
 private const val fellesPath =
     "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
 
+
+@Deprecated("Bruk ki endepunkt i steden, denne er bare midlertidig for bakoverkompabilitet")
+private fun validerRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val dto = ctx.bodyAsClass<ValiderRekrutteringstreffDto>()
+    val validationResult = OpenAiClientGammel.validateRekrutteringstreff(dto)
+    ctx.status(200).json(validationResult)
+}
 
 @OpenApi(
     summary = "Opprett rekrutteringstreff",
@@ -373,6 +382,12 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(avsluttPath, avsluttRekrutteringstreffHandler(repo))
     handleEiere(repo.eierRepository)
     handleInnlegg(repo.innleggRepository)
+
+    // TODO fjern denne når vi har byttet til å bruke ki endepunktet
+    post("$endepunktRekrutteringstreff/valider", validerRekrutteringstreffHandler())
+
+
+
 }
 
 data class RekrutteringstreffDTO(

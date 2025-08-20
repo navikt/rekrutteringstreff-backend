@@ -25,9 +25,7 @@ CREATE TABLE ki_spørring_logg
 
     manuell_kontroll_bryter_retningslinjer             boolean,
     manuell_kontroll_utført_av                         text,
-    manuell_kontroll_tidspunkt                         timestamp with time zone,
-
-    CHECK (felt_type IN ('tittel', 'innlegg'))
+    manuell_kontroll_tidspunkt                         timestamp with time zone
 );
 
 CREATE INDEX ki_spørring_logg_treff_idx ON ki_spørring_logg (treff_db_id);
