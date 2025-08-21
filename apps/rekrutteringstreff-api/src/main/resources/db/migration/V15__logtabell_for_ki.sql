@@ -5,7 +5,7 @@ CREATE TABLE ki_spørring_logg
     id                                                 uuid                     NOT NULL DEFAULT gen_random_uuid(),
     opprettet_tidspunkt                                timestamp with time zone NOT NULL DEFAULT now(),
 
-    treff_db_id                                        bigint                   NOT NULL REFERENCES rekrutteringstreff (db_id) ON DELETE CASCADE,
+    treff_db_id                                        bigint REFERENCES rekrutteringstreff (db_id) ON DELETE SET NULL,
     felt_type                                          text                     NOT NULL,
 
     spørring_fra_frontend                              text                     NOT NULL,
