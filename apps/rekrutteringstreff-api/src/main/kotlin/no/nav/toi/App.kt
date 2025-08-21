@@ -23,6 +23,8 @@ import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
+import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
+import no.nav.toi.rekrutteringstreff.ki.handleKi
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
@@ -67,7 +69,7 @@ class App(
                 azureUrl = azureTokenEndpoint,
             )
         ),
-        rapidsConnection= rapidsConnection
+        rapidsConnection = rapidsConnection
 
     )
 
@@ -79,6 +81,7 @@ class App(
         startRR(jobbsøkerRepository)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
+
     private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository) {
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
@@ -100,9 +103,11 @@ class App(
         javalin.handleJobbsøker(jobbsøkerRepository)
         javalin.handleJobbsøkerInnloggetBorger(jobbsøkerRepository)
         javalin.handleJobbsøkerOutbound(jobbsøkerRepository, kandidatsokKlient)
+        javalin.handleKi(KiLoggRepository(dataSource))
 
         javalin.start(port)
     }
+
     private fun startSchedulere() {
         log.info("Starting scheduler")
         AktivitetskortInvitasjonScheduler(

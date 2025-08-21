@@ -10,10 +10,10 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.eier.handleEiere
 import no.nav.toi.rekrutteringstreff.innlegg.handleInnlegg
-import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
+import no.nav.toi.rekrutteringstreff.rekrutteringstreff.OpenAiClientGammel
 import java.time.ZonedDateTime
 import java.util.*
-import kotlin.text.get
 
 private const val pathParamTreffId = "id"
 private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -26,6 +26,14 @@ private const val avsluttPath = "$endepunktRekrutteringstreff/{$pathParamTreffId
 private const val fellesPath =
     "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
 
+
+@Deprecated("Bruk ki endepunkt i steden, denne er bare midlertidig for bakoverkompabilitet")
+private fun validerRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val dto = ctx.bodyAsClass<ValiderRekrutteringstreffDto>()
+    val validationResult = OpenAiClientGammel.validateRekrutteringstreff(dto)
+    ctx.status(200).json(validationResult)
+}
 
 @OpenApi(
     summary = "Opprett rekrutteringstreff",
@@ -230,39 +238,6 @@ private fun slettRekrutteringstreffHandler(repo: RekrutteringstreffRepository): 
 }
 
 @OpenApi(
-    summary = "Valider tittel og beskrivelse",
-    operationId = "validerRekrutteringstreff",
-    security = [OpenApiSecurity(name = "BearerAuth")],
-    requestBody = OpenApiRequestBody(
-        content = [OpenApiContent(
-            from = ValiderRekrutteringstreffDto::class,
-            example = """{
-                "tittel": "Sommerjobbtreff",
-                "beskrivelse": "Vi arrangerer et sommerjobbtreff for flere arbeidsgivere."
-            }"""
-        )]
-    ),
-    responses = [OpenApiResponse(
-        status = "200",
-        content = [OpenApiContent(
-            from = ValiderRekrutteringstreffResponsDto::class,
-            example = """{
-                "bryterRetningslinjer": true,
-                "begrunnelse": "Sensitiv personinformasjon funnet"
-            }"""
-        )]
-    )],
-    path = "$endepunktRekrutteringstreff/valider",
-    methods = [HttpMethod.POST]
-)
-private fun validerRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
-    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-    val dto = ctx.bodyAsClass<ValiderRekrutteringstreffDto>()
-    val validationResult = OpenAiClient.validateRekrutteringstreff(dto)
-    ctx.status(200).json(validationResult)
-}
-
-@OpenApi(
     summary = "Hent hendelser for rekrutteringstreff, nyeste først",
     operationId = "hentRekrutteringstreffHendelser",
     security = [OpenApiSecurity("BearerAuth")],
@@ -398,7 +373,6 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
     put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
-    post("$endepunktRekrutteringstreff/valider", validerRekrutteringstreffHandler())
     get(hendelserPath, hentHendelserHandler(repo))
     get(fellesPath, hentAlleHendelserHandler(repo))
     post(publiserPath, publiserRekrutteringstreffHandler(repo))
@@ -408,6 +382,12 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(avsluttPath, avsluttRekrutteringstreffHandler(repo))
     handleEiere(repo.eierRepository)
     handleInnlegg(repo.innleggRepository)
+
+    // TODO fjern denne når vi har byttet til å bruke ki endepunktet
+    post("$endepunktRekrutteringstreff/valider", validerRekrutteringstreffHandler())
+
+
+
 }
 
 data class RekrutteringstreffDTO(
