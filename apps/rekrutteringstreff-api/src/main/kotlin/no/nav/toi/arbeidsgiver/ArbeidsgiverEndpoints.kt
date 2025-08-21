@@ -19,7 +19,7 @@ private const val hendelserArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pa
 private data class LeggTilArbeidsgiverDto(
     val organisasjonsnummer: String,
     val navn: String,
-    val næringskoder: List<NæringskodeDto> = emptyList()
+    val næringskoder: List<Næringskode> = emptyList()
 ) {
     fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
         Næringskode(it.kode, it.beskrivelse)
@@ -44,17 +44,11 @@ data class ArbeidsgiverHendelseOutboundDto(
     val aktøridentifikasjon: String?,
 )
 
-data class NæringskodeDto(
-    val kode: String,
-    val beskrivelse: String
-)
-
-
 data class ArbeidsgiverOutboundDto(
     val arbeidsgiverTreffId: String,
     val organisasjonsnummer: String,
     val navn: String,
-    val næringskoder: List<NæringskodeDto>,
+    val næringskoder: List<Næringskode>,
     val hendelser: List<ArbeidsgiverHendelseOutboundDto>
 )
 
@@ -138,7 +132,7 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
         ArbeidsgiverOutboundDto(
             arbeidsgiverTreffId = arbeidsgiver.arbeidsgiverTreffId.somString,
             organisasjonsnummer = arbeidsgiver.orgnr.asString,
-            næringskoder = arbeidsgiver.næringskoder.map { n -> NæringskodeDto(n.kode, n.beskrivelse) },
+            næringskoder = arbeidsgiver.næringskoder.map { n -> Næringskode(n.kode, n.beskrivelse) },
             navn = arbeidsgiver.orgnavn.asString,
             hendelser = arbeidsgiver.hendelser.map { h ->
                 ArbeidsgiverHendelseOutboundDto(
