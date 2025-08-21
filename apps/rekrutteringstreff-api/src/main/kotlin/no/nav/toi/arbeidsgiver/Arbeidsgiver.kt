@@ -24,14 +24,14 @@ data class Orgnavn(private val orgnavn: String) {
 }
 
 data class Næringskode(
-    val kode: String,
-    val beskrivelse: String,
+    val kode: String?,
+    val beskrivelse: String?,
 )
 
 data class LeggTilArbeidsgiver(
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
-    val næringskoder: List<Næringskode>
+    val næringskoder: List<Næringskode>?
 )
 
 data class Arbeidsgiver(
@@ -39,7 +39,7 @@ data class Arbeidsgiver(
     val treffId: TreffId,
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
-    val næringskoder: List<Næringskode> = emptyList(),
+    val næringskoder: List<Næringskode>?,
     val hendelser: List<ArbeidsgiverHendelse> = emptyList()
 )
 

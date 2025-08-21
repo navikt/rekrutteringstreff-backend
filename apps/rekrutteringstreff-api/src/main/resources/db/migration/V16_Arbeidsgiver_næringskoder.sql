@@ -1,2 +1,2 @@
 ALTER TABLE arbeidsgiver
-    ADD COLUMN naeringskoder naringskode[];
+    ADD COLUMN naringskoder naringskode[];

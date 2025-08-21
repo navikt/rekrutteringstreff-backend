@@ -33,7 +33,8 @@ data class ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
     val opprettetAvAktørType: String,
     val aktøridentifikasjon: String?,
     val orgnr: String,
-    val orgnavn: String
+    val orgnavn: String,
+    val næringskoder: List<Næringskode>?
 )
 
 data class ArbeidsgiverHendelseOutboundDto(
@@ -48,7 +49,7 @@ data class ArbeidsgiverOutboundDto(
     val arbeidsgiverTreffId: String,
     val organisasjonsnummer: String,
     val navn: String,
-    val næringskoder: List<Næringskode>,
+    val næringskoder: List<Næringskode>?,
     val hendelser: List<ArbeidsgiverHendelseOutboundDto>
 )
 
@@ -112,6 +113,12 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
                 {
                     "organisasjonsnummer": "987654321",
                     "navn": "Another Company",
+                    "narinskoder": [
+                        {
+                            "kode": "47.111",
+                            "beskrivelse": "Butikkhandel med bredt vareutvalg med hovedvekt på nærings- og nytelsesmidler"
+                        }
+                    ]
                     "hendelser": []
                 }
             ]"""
@@ -132,7 +139,7 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
         ArbeidsgiverOutboundDto(
             arbeidsgiverTreffId = arbeidsgiver.arbeidsgiverTreffId.somString,
             organisasjonsnummer = arbeidsgiver.orgnr.asString,
-            næringskoder = arbeidsgiver.næringskoder.map { n -> Næringskode(n.kode, n.beskrivelse) },
+            næringskoder = arbeidsgiver.næringskoder?.map { n -> Næringskode(n.kode.toString(), n.beskrivelse.toString()) },
             navn = arbeidsgiver.orgnavn.asString,
             hendelser = arbeidsgiver.hendelser.map { h ->
                 ArbeidsgiverHendelseOutboundDto(
@@ -168,7 +175,13 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
                     "opprettetAvAktørType": "ARRANGØR",
                     "aktøridentifikasjon": "testperson",
                     "orgnr": "123456789",
-                    "orgnavn": "Example Company"
+                    "orgnavn": "Example Company",
+                    "næringskoder": [
+                        {
+                            "kode": "47.111",
+                            "beskrivelse": "Butikkhandel med bredt vareutvalg med hovedvekt på nærings- og nytelsesmidler"
+                        }
+                    ]
                 }
             ]"""
         )]
@@ -188,7 +201,8 @@ private fun hentArbeidsgiverHendelserHandler(repo: ArbeidsgiverRepository): (Con
             opprettetAvAktørType = h.opprettetAvAktørType.toString(),
             aktøridentifikasjon = h.aktøridentifikasjon,
             orgnr = h.orgnr.asString,
-            orgnavn = h.orgnavn.asString
+            orgnavn = h.orgnavn.asString,
+            næringskoder = h.næringskoder
         )
     })
 }
