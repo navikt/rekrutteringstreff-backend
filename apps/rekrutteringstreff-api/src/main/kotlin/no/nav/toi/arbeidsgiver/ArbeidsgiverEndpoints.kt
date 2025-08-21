@@ -18,9 +18,12 @@ private const val hendelserArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pa
 
 private data class LeggTilArbeidsgiverDto(
     val organisasjonsnummer: String,
-    val navn: String
+    val navn: String,
+    val næringskoder: List<NæringskodeOutboundDto> = emptyList()
 ) {
-    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn))
+    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
+        Næringskode(it.kode, it.beskrivelse)
+    })
 }
 
 data class ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
@@ -41,11 +44,17 @@ data class ArbeidsgiverHendelseOutboundDto(
     val aktøridentifikasjon: String?,
 )
 
+data class NæringskodeOutboundDto(
+    val kode: String,
+    val beskrivelse: String
+)
+
 
 data class ArbeidsgiverOutboundDto(
     val arbeidsgiverTreffId: String,
     val organisasjonsnummer: String,
     val navn: String,
+    val næringskoder: List<NæringskodeOutboundDto>,
     val hendelser: List<ArbeidsgiverHendelseOutboundDto>
 )
 
@@ -62,7 +71,7 @@ data class ArbeidsgiverOutboundDto(
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = LeggTilArbeidsgiverDto::class,
-            example = """{"organisasjonsnummer": "123456789", "navn": "Example Company"}"""
+            example = """{"organisasjonsnummer": "123456789", "navn": "Example Company", næringskoder: [{"kode": "47.111", "beskrivelse": "Butikkhandel med bredt vareutvalg med hovedvekt på nærings- og nytelsesmidler"}]}"""
         )]
     ),
     responses = [OpenApiResponse(status = "201")],
@@ -129,6 +138,7 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
         ArbeidsgiverOutboundDto(
             arbeidsgiverTreffId = arbeidsgiver.arbeidsgiverTreffId.somString,
             organisasjonsnummer = arbeidsgiver.orgnr.asString,
+            næringskoder = arbeidsgiver.næringskoder.map { n -> NæringskodeOutboundDto(n.kode, n.beskrivelse) },
             navn = arbeidsgiver.orgnavn.asString,
             hendelser = arbeidsgiver.hendelser.map { h ->
                 ArbeidsgiverHendelseOutboundDto(

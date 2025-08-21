@@ -233,7 +233,7 @@ class TestDatabase {
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         arbeidsgivere.forEach {
-            repo.leggTil(LeggTilArbeidsgiver(it.orgnr, it.orgnavn), it.treffId, "testperson")
+            repo.leggTil(LeggTilArbeidsgiver(it.orgnr, it.orgnavn, it.næringskoder), it.treffId, "testperson")
         }
     }
 
