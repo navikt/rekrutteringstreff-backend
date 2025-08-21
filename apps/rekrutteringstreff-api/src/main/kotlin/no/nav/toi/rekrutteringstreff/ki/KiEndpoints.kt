@@ -5,19 +5,20 @@ import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
+import io.ktor.util.PlatformUtils
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 
 private const val base = "/api/rekrutteringstreff/ki"
 
 fun Javalin.handleKi(repo: KiLoggRepository) {
     post("$base/valider", validerOgLoggHandler(repo))
-    post("$base/logg/{id}/lagret", oppdaterLagretHandler(repo))
-    post("$base/logg/{id}/manuell", oppdaterManuellHandler(repo))
+    put("$base/logg/{id}/lagret", oppdaterLagretHandler(repo))
+    put("$base/logg/{id}/manuell", oppdaterManuellHandler(repo))
     get("$base/logg", listHandler(repo))
     get("$base/logg/{id}", getHandler(repo))
 }
@@ -80,16 +81,16 @@ private fun validerOgLoggHandler(repo: KiLoggRepository): (Context) -> Unit = { 
         )],
         required = true
     ),
-    responses = [OpenApiResponse(status = "204", description = "Oppdatert.")],
+    responses = [OpenApiResponse(status = "200", description = "Oppdatert.")],
     path = "$base/logg/{id}/lagret",
-    methods = [HttpMethod.POST]
+    methods = [HttpMethod.PUT]
 )
 private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
     val id = UUID.fromString(ctx.pathParam("id"))
     val req = ctx.bodyAsClass<OppdaterLagretRequestDto>()
     if (repo.setLagret(id, req.lagret) == 0) throw NotFoundResponse("Logg ikke funnet")
-    ctx.status(204)
+    ctx.status(200).json(emptyMap<String, String>())
 }
 
 @OpenApi(
@@ -106,9 +107,9 @@ private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = {
         )],
         required = true
     ),
-    responses = [OpenApiResponse(status = "204", description = "Registrert.")],
+    responses = [OpenApiResponse(status = "200", description = "Oppdatert.")],
     path = "$base/logg/{id}/manuell",
-    methods = [HttpMethod.POST]
+    methods = [HttpMethod.PUT]
 )
 private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
@@ -119,15 +120,19 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
     if (repo.setManuellKontroll(id, req.bryterRetningslinjer, ident, now) == 0) {
         throw NotFoundResponse("Logg ikke funnet")
     }
-    ctx.status(204)
+    ctx.status(200).json(
+        emptyMap<String, String>()
+    )
 }
 
 @OpenApi(
     summary = "List logglinjer (filtrerbar på TreffId og feltType).",
     security = [OpenApiSecurity(name = "BearerAuth")],
     queryParams = [
-        OpenApiParam(name = "treffId", type = String::class, required = false,
-            example = "550e8400-e29b-41d4-a716-446655440000"),
+        OpenApiParam(
+            name = "treffId", type = String::class, required = false,
+            example = "550e8400-e29b-41d4-a716-446655440000"
+        ),
         OpenApiParam(name = "feltType", type = String::class, required = false, example = "innlegg"),
         OpenApiParam(name = "limit", type = Int::class, required = false, example = "50"),
         OpenApiParam(name = "offset", type = Int::class, required = false, example = "0")
