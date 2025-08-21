@@ -1,3 +1,4 @@
+// kotlin
 package no.nav.toi.rekrutteringstreff.ki
 
 import no.nav.toi.rekrutteringstreff.*
@@ -26,15 +27,15 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_lagre_logg_og_faa_id() {
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("A123456"))
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
         val id = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId,
+                treffId = treffId,
                 feltType = "tittel",
                 spørringFraFrontend = "Original tekst",
                 spørringFiltrert = "Filtrert tekst",
                 systemprompt = "prompt",
-                ekstraParametre = mapOf("nøkkel" to "verdi"),
+                ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = "OK",
                 kiNavn = "gpt-4o",
@@ -48,15 +49,15 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_hente_logg_med_id() {
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("A123456"))
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
         val id = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId,
+                treffId = treffId,
                 feltType = "innlegg",
                 spørringFraFrontend = "Hei verden",
                 spørringFiltrert = "Hei",
                 systemprompt = null,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = true,
                 begrunnelse = "Begrunnelse",
                 kiNavn = "gpt-4o",
@@ -65,11 +66,9 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val row = repo.findById(id)
-        assertThat(row).isNotNull
-        row!!
+        val row = repo.findById(id)!!
         assertThat(row.id).isEqualTo(id)
-        assertThat(row.treffDbId).isEqualTo(treffDbId)
+        assertThat(row.treffId).isEqualTo(treffId)
         assertThat(row.feltType).isEqualTo("innlegg")
         assertThat(row.spørringFraFrontend).isEqualTo("Hei verden")
         assertThat(row.spørringFiltrert).isEqualTo("Hei")
@@ -88,15 +87,15 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_markere_logg_som_lagret() {
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("A123456"))
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
         val id = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId,
+                treffId = treffId,
                 feltType = "tittel",
                 spørringFraFrontend = "A",
                 spørringFiltrert = "A",
                 systemprompt = null,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = null,
                 kiNavn = "gpt-4o",
@@ -114,15 +113,15 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_registrere_manuell_kontroll() {
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("A123456"))
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
         val id = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId,
+                treffId = treffId,
                 feltType = "tittel",
                 spørringFraFrontend = "Tekst",
                 spørringFiltrert = "Tekst",
                 systemprompt = null,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = "OK",
                 kiNavn = "gpt-4o",
@@ -143,16 +142,16 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_liste_logg_for_treff_med_filter_og_paginering() {
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("A123456"))
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
 
         val id1 = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId,
+                treffId = treffId,
                 feltType = "tittel",
                 spørringFraFrontend = "1",
                 spørringFiltrert = "1",
                 systemprompt = null,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = null,
                 kiNavn = "gpt-4o",
@@ -162,12 +161,12 @@ class KiLoggRepositoryTest {
         )
         val id2 = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId,
+                treffId = treffId,
                 feltType = "innlegg",
                 spørringFraFrontend = "2",
                 spørringFiltrert = "2",
                 systemprompt = null,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = true,
                 begrunnelse = "B",
                 kiNavn = "gpt-4o",
@@ -177,12 +176,12 @@ class KiLoggRepositoryTest {
         )
         val id3 = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId,
+                treffId = treffId,
                 feltType = "tittel",
                 spørringFraFrontend = "3",
                 spørringFiltrert = "3",
                 systemprompt = null,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = "C",
                 kiNavn = "gpt-4o",
@@ -191,31 +190,31 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val alle = repo.list(treffDbId, feltType = null, limit = 50, offset = 0)
+        val alle = repo.list(treffId, feltType = null, limit = 50, offset = 0)
         assertThat(alle.map { it.id }).containsExactly(id3, id2, id1)
 
-        val bareTittel = repo.list(treffDbId, feltType = "tittel", limit = 50, offset = 0)
+        val bareTittel = repo.list(treffId, feltType = "tittel", limit = 50, offset = 0)
         assertThat(bareTittel.map { it.id }).containsExactly(id3, id1)
 
-        val side1 = repo.list(treffDbId, feltType = null, limit = 1, offset = 0)
-        val side2 = repo.list(treffDbId, feltType = null, limit = 1, offset = 1)
+        val side1 = repo.list(treffId, feltType = null, limit = 1, offset = 0)
+        val side2 = repo.list(treffId, feltType = null, limit = 1, offset = 1)
         assertThat(side1.map { it.id }).containsExactly(id3)
         assertThat(side2.map { it.id }).containsExactly(id2)
     }
 
     @Test
-    fun kan_liste_logg_for_alle_treff_nar_treffDbId_er_null() {
-        val treffDbId1 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("A123456"))
-        val treffDbId2 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase("B654321"))
+    fun kan_liste_logg_for_alle_treff_nar_treffId_er_null() {
+        val treffId1 = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val treffId2 = db.opprettRekrutteringstreffIDatabase("B654321").somUuid
 
         val id1 = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId1,
+                treffId = treffId1,
                 feltType = "tittel",
                 spørringFraFrontend = "fra1",
                 spørringFiltrert = "fil1",
                 systemprompt = null,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = null,
                 kiNavn = "gpt-4o",
@@ -225,12 +224,12 @@ class KiLoggRepositoryTest {
         )
         val id2 = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId2,
+                treffId = treffId2,
                 feltType = "innlegg",
                 spørringFraFrontend = "fra2",
                 spørringFiltrert = "fil2",
                 systemprompt = null,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = true,
                 begrunnelse = "B",
                 kiNavn = "gpt-4o",
@@ -239,21 +238,10 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val alle = repo.list(treffDbId = null, feltType = null, limit = 50, offset = 0)
+        val alle = repo.list(treffId = null, feltType = null, limit = 50, offset = 0)
 
-        assertThat(alle.map { it.id }).containsExactly(id2, id1) // newest first
-        assertThat(alle.map { it.treffDbId }.toSet())
-            .containsExactlyInAnyOrder(treffDbId1, treffDbId2)
+        assertThat(alle.map { it.id }).containsExactly(id2, id1)
+        assertThat(alle.map { it.treffId }.toSet())
+            .containsExactlyInAnyOrder(treffId1, treffId2)
     }
-
-    private fun hentTreffDbId(treffId: TreffId): Long =
-        db.dataSource.connection.use { c ->
-            c.prepareStatement("select db_id from rekrutteringstreff where id = ?").use { ps ->
-                ps.setObject(1, treffId.somUuid)
-                ps.executeQuery().use { rs ->
-                    rs.next()
-                    rs.getLong(1)
-                }
-            }
-        }
 }

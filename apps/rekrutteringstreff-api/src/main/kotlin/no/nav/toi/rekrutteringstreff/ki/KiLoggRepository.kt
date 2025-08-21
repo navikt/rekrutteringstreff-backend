@@ -1,79 +1,77 @@
 package no.nav.toi.rekrutteringstreff.ki
-import no.nav.toi.JacksonConfig
-import org.postgresql.util.PGobject
+
 import java.sql.ResultSet
 import java.sql.Timestamp
-import java.sql.Types
-import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.UUID
 import javax.sql.DataSource
 
 class KiLoggRepository(private val dataSource: DataSource) {
-    private val mapper = JacksonConfig.mapper
 
-    fun insert(entry: KiLoggInsert): UUID =
+    fun insert(i: KiLoggInsert): UUID =
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-                INSERT INTO $TABELL
-                    ($COL_TREFF_DB_ID, $COL_FELT_TYPE, $COL_SPØRRING_FRA_FRONTEND, $COL_SPØRRING_FILTRERT, $COL_SYSTEMPROMPT, $COL_EKSTRA_PARAMETRE,
-                     $COL_BRYTER_RETNINGSLINJER, $COL_BEGRUNNELSE, $COL_KI_NAVN, $COL_KI_VERSJON, $COL_SVARTID_MS)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                RETURNING $COL_ID
-                """.trimIndent()
+            insert into ki_spørring_logg(
+                id,
+                opprettet_tidspunkt,
+                treff_id,
+                felt_type,
+                spørring_fra_frontend,
+                spørring_filtrert,
+                systemprompt,
+                ekstra_parametre,
+                bryter_retningslinjer,
+                begrunnelse,
+                ki_navn,
+                ki_versjon,
+                svartid_ms,
+                lagret
+            ) values (?, now(), ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, false)
+            returning id
+            """.trimIndent()
             ).use { ps ->
-                var i = 0
-                ps.setLong(++i, entry.treffDbId)
-                ps.setString(++i, entry.feltType)
-                ps.setString(++i, entry.spørringFraFrontend)
-                ps.setString(++i, entry.spørringFiltrert)
-                ps.setString(++i, entry.systemprompt)
-
-                if (entry.ekstraParametre == null) {
-                    ps.setNull(++i, Types.OTHER)
-                } else {
-                    val json = mapper.writeValueAsString(entry.ekstraParametre)
-                    val pg = PGobject().apply { type = "jsonb"; value = json }
-                    ps.setObject(++i, pg)
-                }
-
-                ps.setBoolean(++i, entry.bryterRetningslinjer)
-                ps.setString(++i, entry.begrunnelse)
-                ps.setString(++i, entry.kiNavn)
-                ps.setString(++i, entry.kiVersjon)
-                ps.setInt(++i, entry.svartidMs)
+                val id = UUID.randomUUID()
+                var p = 0
+                ps.setObject(++p, id)
+                ps.setObject(++p, i.treffId)                            // <-- bruk treffId (UUID)
+                ps.setString(++p, i.feltType)
+                ps.setString(++p, i.spørringFraFrontend)
+                ps.setString(++p, i.spørringFiltrert)
+                ps.setString(++p, i.systemprompt)
+                ps.setString(++p, i.ekstraParametreJson)                 // cast(? as jsonb) håndterer null -> NULL::jsonb
+                ps.setBoolean(++p, i.bryterRetningslinjer)
+                ps.setString(++p, i.begrunnelse)
+                ps.setString(++p, i.kiNavn)
+                ps.setString(++p, i.kiVersjon)
+                ps.setInt(++p, i.svartidMs)
 
                 ps.executeQuery().use { rs ->
                     rs.next()
-                    rs.getObject(1, UUID::class.java)
+                    rs.getObject(1, UUID::class.java)                    // valider retur fra DB
                 }
+                id
             }
         }
 
     fun setLagret(id: UUID, lagret: Boolean): Int =
         dataSource.connection.use { c ->
-            c.prepareStatement(
-                "UPDATE $TABELL SET $COL_LAGRET=? WHERE $COL_ID = ?"
-            ).use { ps ->
+            c.prepareStatement("update ki_spørring_logg set lagret = ? where id = ?").use { ps ->
                 ps.setBoolean(1, lagret)
                 ps.setObject(2, id)
                 ps.executeUpdate()
             }
         }
 
-    fun setManuellKontroll(
-        id: UUID,
-        bryterRetningslinjer: Boolean,
-        utfortAv: String,
-        tidspunkt: ZonedDateTime
-    ): Int =
+    fun setManuellKontroll(id: UUID, bryterRetningslinjer: Boolean, utfortAv: String, tidspunkt: ZonedDateTime): Int =
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-                UPDATE $TABELL
-                SET $COL_MAN_KONTROLL_BRYTER=?, $COL_MAN_KONTROLL_UTFORT_AV=?, $COL_MAN_KONTROLL_TIDSPUNKT=?
-                WHERE $COL_ID=?
+                update ki_spørring_logg set
+                    manuell_kontroll_bryter_retningslinjer = ?,
+                    manuell_kontroll_utført_av = ?,
+                    manuell_kontroll_tidspunkt = ?
+                where id = ?
                 """.trimIndent()
             ).use { ps ->
                 ps.setBoolean(1, bryterRetningslinjer)
@@ -84,97 +82,81 @@ class KiLoggRepository(private val dataSource: DataSource) {
             }
         }
 
-    fun findById(id: UUID): KiLoggRow? =
+    fun list(treffId: UUID?, feltType: String?, limit: Int, offset: Int): List<KiLoggMedTreff> =
         dataSource.connection.use { c ->
-            c.prepareStatement(
-                "SELECT * FROM $TABELL WHERE $COL_ID = ?"
-            ).use { ps ->
-                ps.setObject(1, id)
-                ps.executeQuery().use { rs ->
-                    if (rs.next()) rs.toRow() else null
-                }
-            }
-        }
-
-    fun list(treffDbId: Long?, feltType: String?, limit: Int, offset: Int): List<KiLoggRow> =
-        dataSource.connection.use { c ->
+            val cond = mutableListOf<String>()
+            val params = mutableListOf<Any>()
+            if (treffId != null) { cond += "k.treff_id = ?"; params += treffId }
+            if (feltType != null) { cond += "k.felt_type = ?"; params += feltType }
+            val whereClause = if (cond.isNotEmpty()) "where ${cond.joinToString(" and ")}" else ""
             val sql = """
-                SELECT * FROM $TABELL
-                WHERE ($COL_TREFF_DB_ID = COALESCE(?, $COL_TREFF_DB_ID))
-                  AND ($COL_FELT_TYPE = COALESCE(?, $COL_FELT_TYPE))
-                ORDER BY $COL_OPPRETTET DESC
-                LIMIT ? OFFSET ?
+            select
+                k.*,
+                r.tittel as treff_tittel
+            from ki_spørring_logg k
+            left join rekrutteringstreff r on r.id = k.treff_id
+            $whereClause
+            order by k.opprettet_tidspunkt desc, k.db_id desc
+            limit ? offset ?
             """.trimIndent()
 
             c.prepareStatement(sql).use { ps ->
-                var i = 0
-                if (treffDbId == null) ps.setNull(++i, Types.BIGINT) else ps.setLong(++i, treffDbId)
-                if (feltType.isNullOrBlank()) ps.setNull(++i, Types.VARCHAR) else ps.setString(++i, feltType)
-                ps.setInt(++i, limit)
-                ps.setInt(++i, offset)
-
+                var idx = 0
+                params.forEach { ps.setObject(++idx, it) }
+                ps.setInt(++idx, limit)
+                ps.setInt(++idx, offset)
                 ps.executeQuery().use { rs ->
-                    generateSequence { if (rs.next()) rs.toRow() else null }.toList()
+                    generateSequence { if (rs.next()) fromResultSet(rs) else null }.toList()
                 }
             }
         }
 
-    private fun ResultSet.toRow(): KiLoggRow =
-        KiLoggRow(
-            id = getObject(COL_ID, UUID::class.java),
-            opprettetTidspunkt = getTimestamp(COL_OPPRETTET).toInstant().atZone(ZoneOffset.UTC),
-            treffDbId = getLong(COL_TREFF_DB_ID),
-            feltType = getString(COL_FELT_TYPE),
-            spørringFraFrontend = getString(COL_SPØRRING_FRA_FRONTEND),
-            spørringFiltrert = getString(COL_SPØRRING_FILTRERT),
-            systemprompt = getString(COL_SYSTEMPROMPT),
-            ekstraParametreJson = getString(COL_EKSTRA_PARAMETRE),
-            bryterRetningslinjer = getBoolean(COL_BRYTER_RETNINGSLINJER),
-            begrunnelse = getString(COL_BEGRUNNELSE),
-            kiNavn = getString(COL_KI_NAVN),
-            kiVersjon = getString(COL_KI_VERSJON),
-            svartidMs = getInt(COL_SVARTID_MS),
-            lagret = getBoolean(COL_LAGRET),
-            manuellKontrollBryterRetningslinjer = getObject(COL_MAN_KONTROLL_BRYTER) as Boolean?,
-            manuellKontrollUtfortAv = getString(COL_MAN_KONTROLL_UTFORT_AV),
-            manuellKontrollTidspunkt = getTimestamp(COL_MAN_KONTROLL_TIDSPUNKT)?.toInstant()?.atZone(ZoneOffset.UTC)
-        )
+    fun findById(id: UUID): KiLoggMedTreff? =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                select
+                    k.*,
+                    r.tittel as treff_tittel
+                from ki_spørring_logg k
+                left join rekrutteringstreff r on r.id = k.treff_id
+                where k.id = ?
+                """.trimIndent()
+            ).use { ps ->
+                ps.setObject(1, id)
+                ps.executeQuery().use { rs -> if (rs.next()) fromResultSet(rs) else null }
+            }
+        }
 
-    companion object {
-        private const val TABELL = "ki_spørring_logg"
-
-        private const val COL_ID = "id"
-        private const val COL_OPPRETTET = "opprettet_tidspunkt"
-        private const val COL_TREFF_DB_ID = "treff_db_id"
-        private const val COL_FELT_TYPE = "felt_type"
-
-        private const val COL_SPØRRING_FRA_FRONTEND = "spørring_fra_frontend"
-        private const val COL_SPØRRING_FILTRERT = "spørring_filtrert"
-        private const val COL_SYSTEMPROMPT = "systemprompt"
-        private const val COL_EKSTRA_PARAMETRE = "ekstra_parametre"
-
-        private const val COL_BRYTER_RETNINGSLINJER = "bryter_retningslinjer"
-        private const val COL_BEGRUNNELSE = "begrunnelse"
-
-        private const val COL_KI_NAVN = "ki_navn"
-        private const val COL_KI_VERSJON = "ki_versjon"
-
-        private const val COL_SVARTID_MS = "svartid_ms"
-        private const val COL_LAGRET = "lagret"
-
-        private const val COL_MAN_KONTROLL_BRYTER = "manuell_kontroll_bryter_retningslinjer"
-        private const val COL_MAN_KONTROLL_UTFORT_AV = "manuell_kontroll_utført_av"
-        private const val COL_MAN_KONTROLL_TIDSPUNKT = "manuell_kontroll_tidspunkt"
-    }
+    private fun fromResultSet(rs: ResultSet) = KiLoggMedTreff(
+        id = rs.getObject("id", UUID::class.java),
+        opprettetTidspunkt = rs.getTimestamp("opprettet_tidspunkt").toInstant().atZone(ZonedDateTime.now().zone),
+        treffId = rs.getObject("treff_id", UUID::class.java),
+        tittel = rs.getString("treff_tittel"),
+        feltType = rs.getString("felt_type"),
+        spørringFraFrontend = rs.getString("spørring_fra_frontend"),
+        spørringFiltrert = rs.getString("spørring_filtrert"),
+        systemprompt = rs.getString("systemprompt"),
+        ekstraParametreJson = rs.getString("ekstra_parametre"),
+        bryterRetningslinjer = rs.getBoolean("bryter_retningslinjer"),
+        begrunnelse = rs.getString("begrunnelse"),
+        kiNavn = rs.getString("ki_navn"),
+        kiVersjon = rs.getString("ki_versjon"),
+        svartidMs = rs.getInt("svartid_ms"),
+        lagret = rs.getBoolean("lagret"),
+        manuellKontrollBryterRetningslinjer = rs.getObject("manuell_kontroll_bryter_retningslinjer") as? Boolean,
+        manuellKontrollUtfortAv = rs.getString("manuell_kontroll_utført_av"),
+        manuellKontrollTidspunkt = rs.getTimestamp("manuell_kontroll_tidspunkt")?.toInstant()?.atZone(ZonedDateTime.now().zone)
+    )
 }
 
 data class KiLoggInsert(
-    val treffDbId: Long,
-    val feltType: String, // 'tittel' | 'innlegg'
+    val treffId: UUID?,
+    val feltType: String,
     val spørringFraFrontend: String,
     val spørringFiltrert: String,
     val systemprompt: String?,
-    val ekstraParametre: Map<String, Any?>?,
+    val ekstraParametreJson: String?,
     val bryterRetningslinjer: Boolean,
     val begrunnelse: String?,
     val kiNavn: String,
@@ -182,10 +164,11 @@ data class KiLoggInsert(
     val svartidMs: Int
 )
 
-data class KiLoggRow(
+data class KiLoggMedTreff(
     val id: UUID,
     val opprettetTidspunkt: ZonedDateTime,
-    val treffDbId: Long,
+    val treffId: UUID?,
+    val tittel: String?,
     val feltType: String,
     val spørringFraFrontend: String,
     val spørringFiltrert: String,
