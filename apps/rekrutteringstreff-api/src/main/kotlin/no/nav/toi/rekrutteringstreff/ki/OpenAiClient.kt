@@ -42,7 +42,7 @@ class OpenAiClient(
     private val mapper = JacksonConfig.mapper
 
     fun validateRekrutteringstreffOgLogg(
-        treffDbId: Long,
+        treffId: UUID,
         feltType: String,
         tekst: String
     ): Pair<ValiderRekrutteringstreffResponsDto, UUID?> {
@@ -81,18 +81,18 @@ class OpenAiClient(
                 .choices?.firstOrNull()?.message?.content
                 ?: error("Ingen respons fra OpenAI")
 
-            result = mapper.readValue<ValiderRekrutteringstreffResponsDto>(content.trim())
+            result = mapper.readValue(content.trim())
             filtered = userMessageFiltered
         }
 
         val id = repo.insert(
             KiLoggInsert(
-                treffDbId = treffDbId,
+                treffId = treffId,
                 feltType = feltType,
                 spørringFraFrontend = tekst,
                 spørringFiltrert = filtered,
                 systemprompt = VALIDATION_SYSTEM_MESSAGE,
-                ekstraParametre = null,
+                ekstraParametreJson = null,
                 bryterRetningslinjer = result.bryterRetningslinjer,
                 begrunnelse = result.begrunnelse,
                 kiNavn = kiNavn,
@@ -107,7 +107,6 @@ class OpenAiClient(
     companion object {
         private const val kiNavn = "azure-openai"
         private const val kiVersjon = "toi-gpt-4o"
-
         private const val temperature = 0.0
         private const val maxTokens = 400
         private const val topP = 1.0

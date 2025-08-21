@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff.ki
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
+import com.github.kittinunf.fuel.core.extensions.cUrlString
 import com.github.kittinunf.result.Result
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
@@ -86,15 +87,15 @@ class KiTest {
         stubOpenAi()
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val requestBody = """
             {
-              "treffDbId": $treffDbId,
+              "treffId": "$treffId",
               "feltType": "tittel",
               "tekst": "Dette er en uskyldig tittel"
             }
         """.trimIndent()
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
+        val (req, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
             .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
@@ -125,9 +126,8 @@ class KiTest {
             }
           ]
         }
-    """.trimIndent()
+        """.trimIndent()
 
-        // Stub OpenAI: must receive filtered text, and must NOT contain FNR
         wireMockServer.stubFor(
             WireMock.post(
                 WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
@@ -143,16 +143,16 @@ class KiTest {
         )
 
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
 
         val requestBody = """
         {
-          "treffDbId": $treffDbId,
+          "treffId": "$treffId",
           "feltType": "tittel",
           "tekst": "$originalTekst"
         }
-    """.trimIndent()
+        """.trimIndent()
 
         val (_, postRes, postResult) = Fuel.post("http://localhost:$appPort$base/valider")
             .body(requestBody)
@@ -180,7 +180,6 @@ class KiTest {
         getResult as Result.Success
         val logg = getResult.value
 
-        // Capture what was actually sent to OpenAI
         val sentToOpenAi: String = try {
             wireMockServer.serveEvents.serveEvents
                 .filter { it.request.url.contains("/openai/deployments/toi-gpt-4o/chat/completions") }
@@ -189,7 +188,6 @@ class KiTest {
             "<could not capture WireMock serve events>"
         }
 
-        // Helpful debug log
         println(
             """
         [KI debug]
@@ -202,42 +200,14 @@ class KiTest {
         """.trimIndent()
         )
 
-        // Original should contain FNR
-        assertThat(logg.spørringFraFrontend.contains(fodselsnummer))
-            .withFailMessage(
-                "Original text should contain FNR.\nOriginal: <%s>\nFiltered: <%s>\nOpenAI:\n%s",
-                logg.spørringFraFrontend, logg.spørringFiltrert, sentToOpenAi
-            )
-            .isTrue()
-
-        // Filtered should NOT contain FNR
-        assertThat(logg.spørringFiltrert.contains(fodselsnummer))
-            .withFailMessage(
-                "Filtered text should NOT contain FNR.\nOriginal: <%s>\nFiltered: <%s>\nOpenAI:\n%s",
-                logg.spørringFraFrontend, logg.spørringFiltrert, sentToOpenAi
-            )
-            .isFalse()
-
-        // Filtered should contain placeholder (or be equal to the expected filtered text)
+        assertThat(logg.spørringFraFrontend.contains(fodselsnummer)).isTrue()
+        assertThat(logg.spørringFiltrert.contains(fodselsnummer)).isFalse()
         assertThat(
             logg.spørringFiltrert.contains("fødselsnummer .") ||
                     logg.spørringFiltrert.contains(forventetFiltrertTekst)
-        )
-            .withFailMessage(
-                "Expected filtered text to contain placeholder or expected content.\nOriginal: <%s>\nFiltered: <%s>\nExpected: <%s>\nOpenAI:\n%s",
-                logg.spørringFraFrontend, logg.spørringFiltrert, forventetFiltrertTekst, sentToOpenAi
-            )
-            .isTrue()
+        ).isTrue()
+        assertThat(sentToOpenAi.contains(fodselsnummer)).isFalse()
 
-        // Ensure the OpenAI request body didn't include FNR
-        assertThat(sentToOpenAi.contains(fodselsnummer))
-            .withFailMessage(
-                "OpenAI request body still contains FNR: %s\nBody:\n%s",
-                fodselsnummer, sentToOpenAi
-            )
-            .isFalse()
-
-        // Verify the OpenAI stub was hit with filtered content
         wireMockServer.verify(
             1,
             WireMock.postRequestedFor(
@@ -252,9 +222,9 @@ class KiTest {
     fun returnerer_opprettet_logglinje_med_id() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
-        val loggId = opprettLogg(treffDbId, token)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val loggId = opprettLogg(treffId, token)
         val (_, getRes, getResult) = Fuel.get("http://localhost:$appPort$base/logg/$loggId")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<KiLoggOutboundDto> {
@@ -265,23 +235,23 @@ class KiTest {
         getResult as Result.Success
         val logg = getResult.value
         assertThat(logg.id).isEqualTo(loggId)
-        assertThat(logg.treffDbId).isEqualTo(treffDbId)
+        assertThat(logg.treffId).isEqualTo(treffId.toString())
         assertThat(logg.feltType).isEqualTo("tittel")
         assertThat(logg.bryterRetningslinjer).isFalse()
     }
 
     @Test
-    fun lister_logglinjer_for_alle_treff_nar_treffDbId_er_utelatt() {
+    fun lister_logglinjer_for_alle_treff_nar_treffId_er_utelatt() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
 
-        val treffDbId1 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
-        val treffDbId2 = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
+        val treffId1 = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val treffId2 = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
 
-        val id1 = opprettLogg(treffDbId1, token)
-        Thread.sleep(5) // ensure deterministic DESC ordering by opprettet
-        val id2 = opprettLogg(treffDbId2, token)
+        val id1 = opprettLogg(treffId1, token)
+        Thread.sleep(5)
+        val id2 = opprettLogg(treffId2, token)
 
         val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?limit=50&offset=0")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -299,19 +269,19 @@ class KiTest {
         listResult as Result.Success
         val alle = listResult.value
 
-        assertThat(alle.map { it.id }).containsExactly(id2, id1) // newest first
+        assertThat(alle.map { it.id }).containsExactly(id2, id1)
         assertThat(alle.size).isEqualTo(2)
-        assertThat(alle.map { it.treffDbId }.toSet())
-            .containsExactlyInAnyOrder(treffDbId1, treffDbId2)
+        assertThat(alle.map { it.treffId }.toSet())
+            .containsExactlyInAnyOrder(treffId1.toString(), treffId2.toString())
     }
 
     @Test
     fun markerer_logglinje_som_lagret() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
-        val loggId = opprettLogg(treffDbId, token)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val loggId = opprettLogg(treffId, token)
         val (_, patchRes, _) = Fuel.patch("http://localhost:$appPort$base/logg/$loggId/lagret")
             .header("Authorization", "Bearer ${token.serialize()}")
             .body("""{"lagret": true}""")
@@ -324,9 +294,9 @@ class KiTest {
     fun registrerer_resultat_av_manuell_kontroll_for_logglinje() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
-        val loggId = opprettLogg(treffDbId, token)
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val loggId = opprettLogg(treffId, token)
         val (_, patchRes, _) = Fuel.patch("http://localhost:$appPort$base/logg/$loggId/manuell")
             .header("Authorization", "Bearer ${token.serialize()}")
             .body("""{"bryterRetningslinjer": true}""")
@@ -342,10 +312,10 @@ class KiTest {
     fun lister_logglinjer_for_valgt_treff() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups= listOf(utvikler))
-        val treffDbId = hentTreffDbId(db.opprettRekrutteringstreffIDatabase(navIdent))
-        val loggId = opprettLogg(treffDbId, token)
-        val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?treffDbId=$treffDbId")
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val loggId = opprettLogg(treffId, token)
+        val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?treffId=$treffId")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
                 override fun deserialize(content: String): List<KiLoggOutboundDto> {
@@ -412,10 +382,10 @@ class KiTest {
         )
     }
 
-    private fun opprettLogg(treffDbId: Long, token: com.nimbusds.jwt.SignedJWT): String {
+    private fun opprettLogg(treffId: UUID, token: com.nimbusds.jwt.SignedJWT): String {
         val requestBody = """
             {
-              "treffDbId": $treffDbId,
+              "treffId": "$treffId",
               "feltType": "tittel",
               "tekst": "En uskyldig tittel"
             }
@@ -433,17 +403,6 @@ class KiTest {
         result as Result.Success
         return result.value.loggId
     }
-
-    private fun hentTreffDbId(treffId: TreffId): Long =
-        db.dataSource.connection.use { c ->
-            c.prepareStatement("select db_id from rekrutteringstreff where id = ?").use { ps ->
-                ps.setObject(1, treffId.somUuid)
-                ps.executeQuery().use { rs ->
-                    rs.next()
-                    rs.getLong(1)
-                }
-            }
-        }
 
     private fun hentLagret(id: UUID): Boolean =
         db.dataSource.connection.use { c ->
