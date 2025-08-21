@@ -282,11 +282,11 @@ class KiTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val loggId = opprettLogg(treffId, token)
-        val (_, patchRes, _) = Fuel.patch("http://localhost:$appPort$base/logg/$loggId/lagret")
+        val (_, postRes, _) = Fuel.post("http://localhost:$appPort$base/logg/$loggId/lagret")
             .header("Authorization", "Bearer ${token.serialize()}")
             .body("""{"lagret": true}""")
             .response()
-        assertThat(patchRes.statusCode).isEqualTo(204)
+        assertThat(postRes.statusCode).isEqualTo(204)
         assertThat(hentLagret(UUID.fromString(loggId))).isTrue()
     }
 
@@ -297,11 +297,11 @@ class KiTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val loggId = opprettLogg(treffId, token)
-        val (_, patchRes, _) = Fuel.patch("http://localhost:$appPort$base/logg/$loggId/manuell")
+        val (_, postRes, _) = Fuel.post("http://localhost:$appPort$base/logg/$loggId/manuell")
             .header("Authorization", "Bearer ${token.serialize()}")
             .body("""{"bryterRetningslinjer": true}""")
             .response()
-        assertThat(patchRes.statusCode).isEqualTo(204)
+        assertThat(postRes.statusCode).isEqualTo(204)
         val manuell = hentManuell(UUID.fromString(loggId))
         assertThat(manuell.bryter).isTrue()
         assertThat(manuell.utfortAv).isEqualTo(navIdent)
@@ -334,8 +334,8 @@ class KiTest {
     fun forbudteKiEndepunkt(): Stream<Arguments> = Stream.of(
         Arguments.of("GET", "/logg?limit=10&offset=0"),
         Arguments.of("GET", "/logg/123"),
-        Arguments.of("PATCH", "/logg/123/lagret"),
-        Arguments.of("PATCH", "/logg/123/manuell")
+        Arguments.of("POST", "/logg/123/lagret"),
+        Arguments.of("POST", "/logg/123/manuell")
     )
 
     @ParameterizedTest(name = "{index}: {0} {1} -> 403")
@@ -346,7 +346,6 @@ class KiTest {
 
         val (_, res, _) = when (method) {
             "GET" -> Fuel.get(url)
-            "PATCH" -> Fuel.patch(url)
             "POST" -> Fuel.post(url)
             else -> error("Unsupported method: $method")
         }.header("Authorization", "Bearer ${token.serialize()}").response()

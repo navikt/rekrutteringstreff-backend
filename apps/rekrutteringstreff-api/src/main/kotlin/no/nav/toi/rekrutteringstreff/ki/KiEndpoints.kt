@@ -16,8 +16,8 @@ private const val base = "/api/rekrutteringstreff/ki"
 
 fun Javalin.handleKi(repo: KiLoggRepository) {
     post("$base/valider", validerOgLoggHandler(repo))
-    patch("$base/logg/{id}/lagret", oppdaterLagretHandler(repo))
-    patch("$base/logg/{id}/manuell", oppdaterManuellHandler(repo))
+    post("$base/logg/{id}/lagret", oppdaterLagretHandler(repo))
+    post("$base/logg/{id}/manuell", oppdaterManuellHandler(repo))
     get("$base/logg", listHandler(repo))
     get("$base/logg/{id}", getHandler(repo))
 }
@@ -82,7 +82,7 @@ private fun validerOgLoggHandler(repo: KiLoggRepository): (Context) -> Unit = { 
     ),
     responses = [OpenApiResponse(status = "204", description = "Oppdatert.")],
     path = "$base/logg/{id}/lagret",
-    methods = [HttpMethod.PATCH]
+    methods = [HttpMethod.POST]
 )
 private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
@@ -108,7 +108,7 @@ private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = {
     ),
     responses = [OpenApiResponse(status = "204", description = "Registrert.")],
     path = "$base/logg/{id}/manuell",
-    methods = [HttpMethod.PATCH]
+    methods = [HttpMethod.POST]
 )
 private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
