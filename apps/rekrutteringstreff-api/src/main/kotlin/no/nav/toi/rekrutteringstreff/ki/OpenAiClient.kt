@@ -35,7 +35,7 @@ private data class Choice(val message: OpenAiMessage?)
 private data class OpenAiResponse(val choices: List<Choice>?)
 
 data class EkstraMetaDbJson(
-    val promptVersjonsnummer: String,
+    val promptVersjonsnummer: Int,
     val promptEndretTidspunkt: String,
     val promptHash: String
 )

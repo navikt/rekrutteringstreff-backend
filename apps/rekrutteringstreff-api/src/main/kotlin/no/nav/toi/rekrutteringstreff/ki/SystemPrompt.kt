@@ -7,7 +7,7 @@ import java.time.ZonedDateTime
 import kotlin.text.Charsets.UTF_8
 
 object SystemPrompt {
-    const val versjonsnummer = "1"
+    const val versjonsnummer = 1
     private const val tidsstempelUtenSone = "2025-08-22T12:00:00"
     const val hash = "a61803"
 

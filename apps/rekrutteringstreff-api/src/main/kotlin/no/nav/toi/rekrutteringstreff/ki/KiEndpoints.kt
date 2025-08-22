@@ -193,7 +193,7 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
 
     val out = rows.map { row ->
         val meta = row.ekstraParametreJson?.let {
-            try { mapper.readValue<EkstraMeta>(it) } catch (_: Exception) { null }
+            try { mapper.readValue<EkstraMetaOutbound>(it) } catch (_: Exception) { null }
         }
         KiLoggOutboundDto(
             id = row.id.toString(),
@@ -268,7 +268,7 @@ private fun getHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
 
     val mapper = JacksonConfig.mapper
     val meta = row.ekstraParametreJson?.let {
-        try { mapper.readValue<EkstraMeta>(it) } catch (_: Exception) { null }
+        try { mapper.readValue<EkstraMetaOutbound>(it) } catch (_: Exception) { null }
     }
 
     val dto = KiLoggOutboundDto(
@@ -297,8 +297,8 @@ private fun getHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.status(200).json(dto)
 }
 
-private data class EkstraMeta(
-    val promptVersjonsnummer: String?,
+private data class EkstraMetaOutbound(
+    val promptVersjonsnummer: Int?,
     val promptEndretTidspunkt: String?,
     val promptHash: String?
 )
@@ -337,7 +337,7 @@ data class KiLoggOutboundDto(
     val manuellKontrollBryterRetningslinjer: Boolean?,
     val manuellKontrollUtfortAv: String?,
     val manuellKontrollTidspunkt: ZonedDateTime?,
-    val promptVersjonsnummer: String,
+    val promptVersjonsnummer: Int,
     val promptEndretTidspunkt: ZonedDateTime,
     val promptHash: String
 )

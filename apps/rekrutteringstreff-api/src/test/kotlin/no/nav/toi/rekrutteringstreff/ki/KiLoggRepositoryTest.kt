@@ -277,17 +277,11 @@ class KiLoggRepositoryTest {
         val row = repo.findById(id)!!
         assertThat(row.ekstraParametreJson).isNotNull()
 
-        val meta: MetaJson = JacksonConfig.mapper.readValue(row.ekstraParametreJson!!)
+        val meta: EkstraMetaDbJson = JacksonConfig.mapper.readValue(row.ekstraParametreJson!!)
         assertThat(meta.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
         assertThat(meta.promptHash).isEqualTo(SystemPrompt.hash)
 
         val parsed = ZonedDateTime.parse(meta.promptEndretTidspunkt)
         assertThat(parsed.toLocalDate()).isEqualTo(SystemPrompt.endretTidspunkt.toLocalDate())
     }
-
-    data class MetaJson(
-        val promptVersjonsnummer: String,
-        val promptEndretTidspunkt: String,
-        val promptHash: String
-    )
 }
