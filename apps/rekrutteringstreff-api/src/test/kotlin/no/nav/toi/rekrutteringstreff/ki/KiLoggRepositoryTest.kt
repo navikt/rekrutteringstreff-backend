@@ -1,12 +1,14 @@
-// kotlin
 package no.nav.toi.rekrutteringstreff.ki
 
+import no.nav.toi.JacksonConfig
 import no.nav.toi.rekrutteringstreff.*
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import com.fasterxml.jackson.module.kotlin.readValue
+
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiLoggRepositoryTest {
@@ -244,4 +246,48 @@ class KiLoggRepositoryTest {
         assertThat(alle.map { it.treffId }.toSet())
             .containsExactlyInAnyOrder(treffId1, treffId2)
     }
+
+    @Test
+    fun lagrer_og_henter_ekstra_parametre_json() {
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val ekstraJson = """
+        {
+          "promptVersjonsnummer": "${SystemPrompt.versjonsnummer}",
+          "promptEndretTidspunkt": "${SystemPrompt.endretTidspunkt}",
+          "promptHash": "${SystemPrompt.hash}"
+        }
+    """.trimIndent()
+
+        val id = repo.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = ekstraJson,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "toi-gpt-4o",
+                svartidMs = 42
+            )
+        )
+
+        val row = repo.findById(id)!!
+        assertThat(row.ekstraParametreJson).isNotNull()
+
+        val meta: MetaJson = JacksonConfig.mapper.readValue(row.ekstraParametreJson!!)
+        assertThat(meta.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
+        assertThat(meta.promptHash).isEqualTo(SystemPrompt.hash)
+
+        val parsed = ZonedDateTime.parse(meta.promptEndretTidspunkt)
+        assertThat(parsed.toLocalDate()).isEqualTo(SystemPrompt.endretTidspunkt.toLocalDate())
+    }
+
+    data class MetaJson(
+        val promptVersjonsnummer: String,
+        val promptEndretTidspunkt: String,
+        val promptHash: String
+    )
 }

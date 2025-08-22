@@ -34,12 +34,12 @@ class KiLoggRepository(private val dataSource: DataSource) {
                 val id = UUID.randomUUID()
                 var p = 0
                 ps.setObject(++p, id)
-                ps.setObject(++p, i.treffId)                            // <-- bruk treffId (UUID)
+                ps.setObject(++p, i.treffId)
                 ps.setString(++p, i.feltType)
                 ps.setString(++p, i.spørringFraFrontend)
                 ps.setString(++p, i.spørringFiltrert)
                 ps.setString(++p, i.systemprompt)
-                ps.setString(++p, i.ekstraParametreJson)                 // cast(? as jsonb) håndterer null -> NULL::jsonb
+                ps.setString(++p, i.ekstraParametreJson)
                 ps.setBoolean(++p, i.bryterRetningslinjer)
                 ps.setString(++p, i.begrunnelse)
                 ps.setString(++p, i.kiNavn)
@@ -48,7 +48,7 @@ class KiLoggRepository(private val dataSource: DataSource) {
 
                 ps.executeQuery().use { rs ->
                     rs.next()
-                    rs.getObject(1, UUID::class.java)                    // valider retur fra DB
+                    rs.getObject(1, UUID::class.java)
                 }
                 id
             }

@@ -1,12 +1,13 @@
 package no.nav.toi.rekrutteringstreff.ki
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
-import io.ktor.util.PlatformUtils
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
@@ -27,6 +28,7 @@ fun Javalin.handleKi(repo: KiLoggRepository) {
     summary = "Valider tekst via KI og logg spørringen.",
     security = [OpenApiSecurity(name = "BearerAuth")],
     requestBody = OpenApiRequestBody(
+        required = true,
         content = [OpenApiContent(
             from = ValiderMedLoggRequestDto::class,
             example = """{
@@ -34,8 +36,7 @@ fun Javalin.handleKi(repo: KiLoggRepository) {
               "feltType": "tittel",
               "tekst": "Vi søker etter en blid og motivert medarbeider."
             }"""
-        )],
-        required = true
+        )]
     ),
     responses = [OpenApiResponse(
         status = "200",
@@ -75,13 +76,20 @@ private fun validerOgLoggHandler(repo: KiLoggRepository): (Context) -> Unit = { 
         example = "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d"
     )],
     requestBody = OpenApiRequestBody(
+        required = true,
         content = [OpenApiContent(
             from = OppdaterLagretRequestDto::class,
             example = """{ "lagret": true }"""
-        )],
-        required = true
+        )]
     ),
-    responses = [OpenApiResponse(status = "200", description = "Oppdatert.")],
+    responses = [OpenApiResponse(
+        status = "200",
+        description = "Oppdatert.",
+        content = [OpenApiContent(
+            from = Map::class,
+            example = "{}"
+        )]
+    )],
     path = "$base/logg/{id}/lagret",
     methods = [HttpMethod.PUT]
 )
@@ -101,13 +109,20 @@ private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = {
         example = "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d"
     )],
     requestBody = OpenApiRequestBody(
+        required = true,
         content = [OpenApiContent(
             from = OppdaterManuellRequestDto::class,
             example = """{ "bryterRetningslinjer": false }"""
-        )],
-        required = true
+        )]
     ),
-    responses = [OpenApiResponse(status = "200", description = "Oppdatert.")],
+    responses = [OpenApiResponse(
+        status = "200",
+        description = "Oppdatert.",
+        content = [OpenApiContent(
+            from = Map::class,
+            example = "{}"
+        )]
+    )],
     path = "$base/logg/{id}/manuell",
     methods = [HttpMethod.PUT]
 )
@@ -120,26 +135,21 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
     if (repo.setManuellKontroll(id, req.bryterRetningslinjer, ident, now) == 0) {
         throw NotFoundResponse("Logg ikke funnet")
     }
-    ctx.status(200).json(
-        emptyMap<String, String>()
-    )
+    ctx.status(200).json(emptyMap<String, String>())
 }
 
 @OpenApi(
     summary = "List logglinjer (filtrerbar på TreffId og feltType).",
     security = [OpenApiSecurity(name = "BearerAuth")],
     queryParams = [
-        OpenApiParam(
-            name = "treffId", type = String::class, required = false,
-            example = "550e8400-e29b-41d4-a716-446655440000"
-        ),
+        OpenApiParam(name = "treffId", type = String::class, required = false, example = "550e8400-e29b-41d4-a716-446655440000"),
         OpenApiParam(name = "feltType", type = String::class, required = false, example = "innlegg"),
         OpenApiParam(name = "limit", type = Int::class, required = false, example = "50"),
         OpenApiParam(name = "offset", type = Int::class, required = false, example = "0")
     ],
     responses = [OpenApiResponse(
         status = "200",
-        description = "Liste over logglinjer.",
+        description = "Liste over logglinjer. Feltene promptVersjonsnummer, promptEndretTidspunkt og promptHash flates ut fra ekstra_parametre.",
         content = [OpenApiContent(
             from = Array<KiLoggOutboundDto>::class,
             example = """[
@@ -151,17 +161,19 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
                 "feltType": "innlegg",
                 "spørringFraFrontend": "{\"treffId\":\"550e8400-e29b-41d4-a716-446655440000\",\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
                 "spørringFiltrert": "{\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
-                "systemprompt": "Du er en hjelpsom assistent som validerer tekst.",
-                "ekstraParametreJson": "{\"temperature\":0.2}",
+                "systemprompt": "Du er en ekspert på å vurdere informasjon, ...",
                 "bryterRetningslinjer": false,
                 "begrunnelse": "Ingen brudd oppdaget.",
-                "kiNavn": "gpt-4o-mini",
-                "kiVersjon": "2025-08-01",
+                "kiNavn": "azure-openai",
+                "kiVersjon": "toi-gpt-4o",
                 "svartidMs": 420,
                 "lagret": true,
                 "manuellKontrollBryterRetningslinjer": null,
                 "manuellKontrollUtfortAv": null,
-                "manuellKontrollTidspunkt": null
+                "manuellKontrollTidspunkt": null,
+                "promptVersjonsnummer": "1",
+                "promptEndretTidspunkt": "2025-08-22T12:00:00+02:00[Europe/Oslo]",
+                "promptHash": "a61803"
               }
             ]"""
         )]
@@ -177,29 +189,36 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     val offset = ctx.queryParam("offset")?.toInt() ?: 0
 
     val rows = repo.list(treffId, feltType, limit, offset)
+    val mapper = JacksonConfig.mapper
 
-    val out = rows.map {
+    val out = rows.map { row ->
+        val meta = row.ekstraParametreJson?.let {
+            try { mapper.readValue<EkstraMeta>(it) } catch (_: Exception) { null }
+        }
         KiLoggOutboundDto(
-            id = it.id.toString(),
-            opprettetTidspunkt = it.opprettetTidspunkt,
-            treffId = it.treffId?.toString() ?: "",
-            tittel = it.tittel,
-            feltType = it.feltType,
-            spørringFraFrontend = it.spørringFraFrontend,
-            spørringFiltrert = it.spørringFiltrert,
-            systemprompt = it.systemprompt,
-            ekstraParametreJson = it.ekstraParametreJson,
-            bryterRetningslinjer = it.bryterRetningslinjer,
-            begrunnelse = it.begrunnelse,
-            kiNavn = it.kiNavn,
-            kiVersjon = it.kiVersjon,
-            svartidMs = it.svartidMs,
-            lagret = it.lagret,
-            manuellKontrollBryterRetningslinjer = it.manuellKontrollBryterRetningslinjer,
-            manuellKontrollUtfortAv = it.manuellKontrollUtfortAv,
-            manuellKontrollTidspunkt = it.manuellKontrollTidspunkt
+            id = row.id.toString(),
+            opprettetTidspunkt = row.opprettetTidspunkt,
+            treffId = row.treffId?.toString() ?: "",
+            tittel = row.tittel,
+            feltType = row.feltType,
+            spørringFraFrontend = row.spørringFraFrontend,
+            spørringFiltrert = row.spørringFiltrert,
+            systemprompt = row.systemprompt,
+            bryterRetningslinjer = row.bryterRetningslinjer,
+            begrunnelse = row.begrunnelse,
+            kiNavn = row.kiNavn,
+            kiVersjon = row.kiVersjon,
+            svartidMs = row.svartidMs,
+            lagret = row.lagret,
+            manuellKontrollBryterRetningslinjer = row.manuellKontrollBryterRetningslinjer,
+            manuellKontrollUtfortAv = row.manuellKontrollUtfortAv,
+            manuellKontrollTidspunkt = row.manuellKontrollTidspunkt,
+            promptVersjonsnummer = meta?.promptVersjonsnummer ?: SystemPrompt.versjonsnummer,
+            promptEndretTidspunkt = meta?.promptEndretTidspunkt?.let(ZonedDateTime::parse) ?: SystemPrompt.endretTidspunkt,
+            promptHash = meta?.promptHash ?: SystemPrompt.hash
         )
     }
+
     ctx.status(200).json(out)
 }
 
@@ -212,7 +231,7 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     )],
     responses = [OpenApiResponse(
         status = "200",
-        description = "Returnerer logglinje med treff-info.",
+        description = "Returnerer logglinje. Feltene promptVersjonsnummer, promptEndretTidspunkt og promptHash flates ut fra ekstra_parametre.",
         content = [OpenApiContent(
             from = KiLoggOutboundDto::class,
             example = """{
@@ -223,17 +242,19 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
               "feltType": "innlegg",
               "spørringFraFrontend": "{\"treffId\":\"550e8400-e29b-41d4-a716-446655440000\",\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
               "spørringFiltrert": "{\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
-              "systemprompt": "Du er en hjelpsom assistent som validerer tekst.",
-              "ekstraParametreJson": "{\"temperature\":0.2}",
+              "systemprompt": "Du er en ekspert på å vurdere informasjon, ...",
               "bryterRetningslinjer": false,
               "begrunnelse": "Ingen brudd oppdaget.",
-              "kiNavn": "gpt-4o-mini",
-              "kiVersjon": "2025-08-01",
+              "kiNavn": "azure-openai",
+              "kiVersjon": "toi-gpt-4o",
               "svartidMs": 420,
               "lagret": true,
               "manuellKontrollBryterRetningslinjer": null,
               "manuellKontrollUtfortAv": null,
-              "manuellKontrollTidspunkt": null
+              "manuellKontrollTidspunkt": null,
+              "promptVersjonsnummer": "1",
+              "promptEndretTidspunkt": "2025-08-22T12:00:00+02:00[Europe/Oslo]",
+              "promptHash": "a61803"
             }"""
         )]
     )],
@@ -243,32 +264,45 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
 private fun getHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
     val id = UUID.fromString(ctx.pathParam("id"))
-    val it = repo.findById(id) ?: throw NotFoundResponse("Logg ikke funnet")
-    ctx.status(200).json(
-        KiLoggOutboundDto(
-            id = it.id.toString(),
-            opprettetTidspunkt = it.opprettetTidspunkt,
-            treffId = it.treffId?.toString() ?: "",
-            tittel = it.tittel,
-            feltType = it.feltType,
-            spørringFraFrontend = it.spørringFraFrontend,
-            spørringFiltrert = it.spørringFiltrert,
-            systemprompt = it.systemprompt,
-            ekstraParametreJson = it.ekstraParametreJson,
-            bryterRetningslinjer = it.bryterRetningslinjer,
-            begrunnelse = it.begrunnelse,
-            kiNavn = it.kiNavn,
-            kiVersjon = it.kiVersjon,
-            svartidMs = it.svartidMs,
-            lagret = it.lagret,
-            manuellKontrollBryterRetningslinjer = it.manuellKontrollBryterRetningslinjer,
-            manuellKontrollUtfortAv = it.manuellKontrollUtfortAv,
-            manuellKontrollTidspunkt = it.manuellKontrollTidspunkt
-        )
+    val row = repo.findById(id) ?: throw NotFoundResponse("Logg ikke funnet")
+
+    val mapper = JacksonConfig.mapper
+    val meta = row.ekstraParametreJson?.let {
+        try { mapper.readValue<EkstraMeta>(it) } catch (_: Exception) { null }
+    }
+
+    val dto = KiLoggOutboundDto(
+        id = row.id.toString(),
+        opprettetTidspunkt = row.opprettetTidspunkt,
+        treffId = row.treffId?.toString() ?: "",
+        tittel = row.tittel,
+        feltType = row.feltType,
+        spørringFraFrontend = row.spørringFraFrontend,
+        spørringFiltrert = row.spørringFiltrert,
+        systemprompt = row.systemprompt,
+        bryterRetningslinjer = row.bryterRetningslinjer,
+        begrunnelse = row.begrunnelse,
+        kiNavn = row.kiNavn,
+        kiVersjon = row.kiVersjon,
+        svartidMs = row.svartidMs,
+        lagret = row.lagret,
+        manuellKontrollBryterRetningslinjer = row.manuellKontrollBryterRetningslinjer,
+        manuellKontrollUtfortAv = row.manuellKontrollUtfortAv,
+        manuellKontrollTidspunkt = row.manuellKontrollTidspunkt,
+        promptVersjonsnummer = meta?.promptVersjonsnummer ?: SystemPrompt.versjonsnummer,
+        promptEndretTidspunkt = meta?.promptEndretTidspunkt?.let(ZonedDateTime::parse) ?: SystemPrompt.endretTidspunkt,
+        promptHash = meta?.promptHash ?: SystemPrompt.hash
     )
+
+    ctx.status(200).json(dto)
 }
 
-/* DTOs */
+private data class EkstraMeta(
+    val promptVersjonsnummer: String?,
+    val promptEndretTidspunkt: String?,
+    val promptHash: String?
+)
+
 
 data class OppdaterManuellRequestDto(val bryterRetningslinjer: Boolean)
 data class OppdaterLagretRequestDto(val lagret: Boolean)
@@ -294,7 +328,6 @@ data class KiLoggOutboundDto(
     val spørringFraFrontend: String,
     val spørringFiltrert: String,
     val systemprompt: String?,
-    val ekstraParametreJson: String?,
     val bryterRetningslinjer: Boolean,
     val begrunnelse: String?,
     val kiNavn: String,
@@ -303,5 +336,8 @@ data class KiLoggOutboundDto(
     val lagret: Boolean,
     val manuellKontrollBryterRetningslinjer: Boolean?,
     val manuellKontrollUtfortAv: String?,
-    val manuellKontrollTidspunkt: ZonedDateTime?
+    val manuellKontrollTidspunkt: ZonedDateTime?,
+    val promptVersjonsnummer: String,
+    val promptEndretTidspunkt: ZonedDateTime,
+    val promptHash: String
 )

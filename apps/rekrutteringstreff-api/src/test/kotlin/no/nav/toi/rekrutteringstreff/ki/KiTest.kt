@@ -1,9 +1,7 @@
-// kotlin
 package no.nav.toi.rekrutteringstreff.ki
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
-import com.github.kittinunf.fuel.core.extensions.cUrlString
 import com.github.kittinunf.result.Result
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
@@ -13,7 +11,6 @@ import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -21,7 +18,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.*
 import java.util.stream.Stream
@@ -29,7 +25,6 @@ import java.util.stream.Stream
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiTest {
-
     companion object {
         @JvmStatic
         @RegisterExtension
@@ -95,7 +90,7 @@ class KiTest {
               "tekst": "Dette er en uskyldig tittel"
             }
         """.trimIndent()
-        val (req, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
             .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
@@ -188,18 +183,6 @@ class KiTest {
             "<could not capture WireMock serve events>"
         }
 
-        println(
-            """
-        [KI debug]
-        Original: <${logg.spørringFraFrontend}>
-        Filtered: <${logg.spørringFiltrert}>
-        Expected filtered: <${forventetFiltrertTekst}>
-        FNR: <${fodselsnummer}>
-        Sent to OpenAI:
-        $sentToOpenAi
-        """.trimIndent()
-        )
-
         assertThat(logg.spørringFraFrontend.contains(fodselsnummer)).isTrue()
         assertThat(logg.spørringFiltrert.contains(fodselsnummer)).isFalse()
         assertThat(
@@ -207,6 +190,11 @@ class KiTest {
                     logg.spørringFiltrert.contains(forventetFiltrertTekst)
         ).isTrue()
         assertThat(sentToOpenAi.contains(fodselsnummer)).isFalse()
+
+
+        assertThat(logg.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
+        assertThat(logg.promptHash).isEqualTo(SystemPrompt.hash)
+        assertThat(logg.promptEndretTidspunkt).isEqualTo(SystemPrompt.endretTidspunkt)
 
         wireMockServer.verify(
             1,
@@ -238,6 +226,10 @@ class KiTest {
         assertThat(logg.treffId).isEqualTo(treffId.toString())
         assertThat(logg.feltType).isEqualTo("tittel")
         assertThat(logg.bryterRetningslinjer).isFalse()
+
+        assertThat(logg.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
+        assertThat(logg.promptHash).isEqualTo(SystemPrompt.hash)
+        assertThat(logg.promptEndretTidspunkt).isEqualTo(SystemPrompt.endretTidspunkt)
     }
 
     @Test
@@ -273,6 +265,13 @@ class KiTest {
         assertThat(alle.size).isEqualTo(2)
         assertThat(alle.map { it.treffId }.toSet())
             .containsExactlyInAnyOrder(treffId1.toString(), treffId2.toString())
+
+        // Flatede ekstrafelter finnes og matcher
+        alle.forEach { it ->
+            assertThat(it.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
+            assertThat(it.promptHash).isEqualTo(SystemPrompt.hash)
+            assertThat(it.promptEndretTidspunkt).isEqualTo(SystemPrompt.endretTidspunkt)
+        }
     }
 
     @Test
@@ -328,7 +327,13 @@ class KiTest {
             })
         assertThat(listRes.statusCode).isEqualTo(200)
         listResult as Result.Success
-        assertThat(listResult.value.any { it.id == loggId }).isTrue()
+        val items = listResult.value
+        assertThat(items.any { it.id == loggId }).isTrue()
+        items.forEach {
+            assertThat(it.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
+            assertThat(it.promptHash).isEqualTo(SystemPrompt.hash)
+            assertThat(it.promptEndretTidspunkt).isEqualTo(SystemPrompt.endretTidspunkt)
+        }
     }
 
     fun forbudteKiEndepunkt(): Stream<Arguments> = Stream.of(
@@ -433,7 +438,7 @@ class KiTest {
                     Manuell(
                         bryter = rs.getObject(1) as Boolean?,
                         utfortAv = rs.getString(2),
-                        tidspunkt = rs.getTimestamp(3)?.toInstant()?.atZone(ZoneOffset.UTC)
+                        tidspunkt = rs.getTimestamp(3)?.toInstant()?.atZone(SystemPrompt.endretTidspunkt.zone)
                     )
                 }
             }

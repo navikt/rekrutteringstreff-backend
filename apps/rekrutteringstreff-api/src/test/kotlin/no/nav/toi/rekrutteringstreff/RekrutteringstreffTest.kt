@@ -4,7 +4,6 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
-import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import no.nav.security.mock.oauth2.MockOAuth2Server
@@ -15,11 +14,7 @@ import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
-import no.nav.toi.jobbsoker.Etternavn
-import no.nav.toi.jobbsoker.Fornavn
-import no.nav.toi.jobbsoker.Fødselsnummer
-import no.nav.toi.jobbsoker.Jobbsøker
-import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.jobbsoker.*
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -496,7 +491,10 @@ class RekrutteringstreffTest {
 
     @ParameterizedTest
     @MethodSource("hendelseEndepunktVarianter")
-    fun `Endepunkter som kun legger til hendelse`(path: String, forventetHendelsestype: RekrutteringstreffHendelsestype) {
+    fun `Endepunkter som kun legger til hendelse`(
+        path: String,
+        forventetHendelsestype: RekrutteringstreffHendelsestype
+    ) {
         val navIdent = "Z999999"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent)
@@ -512,136 +510,5 @@ class RekrutteringstreffTest {
         assertThat(hendelser.first().hendelsestype).isEqualTo(forventetHendelsestype)
         assertThat(hendelser.first().aktørIdentifikasjon).isEqualTo(navIdent)
         assertThat(hendelser.last().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT)
-    }
-
-    @Test
-    fun validerRekrutteringstreff() {
-        val validationResponseBody = """
-             {
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"Beskrivelsen spesifiserer et geografisk område for søkere, noe som kan være diskriminerende.\" }"
-                  }
-                }
-              ]
-            }
-        """.trimIndent()
-
-        val sanitizationResponseBody = """
-             {
-              "choices": [
-                {
-                  "message": {
-                    "role": "assistant",
-                    "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"Teksten spesifiserer et geografisk krav for kandidatene, noe som kan være diskriminerende.\" }"
-                  }
-                }
-              ]
-            }
-        """.trimIndent()
-
-        wireMockServer.stubFor(
-            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"))
-                .inScenario("Validation and Sanitization")
-                .whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
-                .willReturn(
-                    WireMock.aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody(validationResponseBody)
-                )
-                .willSetStateTo("Validation Complete")
-        )
-
-        val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val payload = """
-            {
-                "tekst": "Vi ser kun etter deltakere fra Oslo."
-            }
-        """.trimIndent()
-
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/valider")
-            .body(payload)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val validationResult = mapper.readValue(result.get(), ValiderRekrutteringstreffResponsDto::class.java)
-                assertThat(validationResult.bryterRetningslinjer).isTrue()
-                assertThat(validationResult.begrunnelse).isEqualTo("Beskrivelsen spesifiserer et geografisk område for søkere, noe som kan være diskriminerende.")
-            }
-        }
-    }
-
-    @Test
-    fun `validerRekrutteringstreff skal filtrere bort personsensitiv informasjon før kall til OpenAI`() {
-        val fodselsnummer = "12345678901"
-        val originalTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer $fodselsnummer."
-        val forventetFiltrertTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer ."
-        val begrunnelseFraOpenAi = "Beskrivelsen spesifiserer et geografisk område for søkere, noe som kan være diskriminerende."
-
-        val responseBody = """
-         {
-          "choices": [
-            {
-              "message": {
-                "role": "assistant",
-                "content": "{ \"bryterRetningslinjer\": true, \"begrunnelse\": \"$begrunnelseFraOpenAi\" }"
-              }
-            }
-          ]
-        }
-    """.trimIndent()
-
-        // Stub for det forventede, filtrerte kallet.
-        // Hvis kallet inneholder fødselsnummeret, vil det ikke matche denne stubben, og WireMock vil returnere 404.
-        wireMockServer.stubFor(
-            WireMock.post(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"))
-                .withRequestBody(WireMock.containing(forventetFiltrertTekst))
-                .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
-                .willReturn(
-                    WireMock.aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody(responseBody)
-                )
-        )
-
-        val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val payload = """
-        {
-            "tekst": "$originalTekst"
-        }
-    """.trimIndent()
-
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/valider")
-            .body(payload)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val validationResult = mapper.readValue(result.get(), ValiderRekrutteringstreffResponsDto::class.java)
-                assertThat(validationResult.bryterRetningslinjer).isTrue()
-                assertThat(validationResult.begrunnelse).isEqualTo(begrunnelseFraOpenAi)
-            }
-        }
-
-        // Verifiser at kallet til OpenAI ble gjort med filtrert innhold.
-        wireMockServer.verify(
-            1,
-            WireMock.postRequestedFor(WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"))
-                .withRequestBody(WireMock.containing(forventetFiltrertTekst))
-                .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
-        )
     }
 }
