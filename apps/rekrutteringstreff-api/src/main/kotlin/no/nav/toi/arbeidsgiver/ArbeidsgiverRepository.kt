@@ -30,7 +30,8 @@ data class ArbeidsgiverHendelseMedArbeidsgiverData(
     val opprettetAvAktørType: AktørType,
     val aktøridentifikasjon: String?,
     val orgnr: Orgnr,
-    val orgnavn: Orgnavn
+    val orgnavn: Orgnavn,
+    val næringskoder: List<Næringskode>?,
 )
 
 class ArbeidsgiverRepository(
@@ -68,6 +69,7 @@ class ArbeidsgiverRepository(
             stmt.setLong(2, treffDbId)
             stmt.setString(3, arbeidsgiver.orgnr.asString)
             stmt.setString(4, arbeidsgiver.orgnavn.asString)
+            stmt.setObject(5, arbeidsgiver.næringskoder)
             stmt.executeUpdate()
             stmt.generatedKeys.use {
                 if (it.next()) return it.getLong(1)
@@ -110,6 +112,7 @@ class ArbeidsgiverRepository(
                     ag.id,
                     ag.orgnr,
                     ag.orgnavn,
+                    ag.naringskoder,
                     rt.id as treff_id,
                     COALESCE(
                         json_agg(
@@ -127,7 +130,7 @@ class ArbeidsgiverRepository(
                 JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
                 LEFT JOIN arbeidsgiver_hendelse ah ON ag.db_id = ah.arbeidsgiver_db_id
                 WHERE rt.id = ?
-                GROUP BY ag.id, ag.db_id, ag.orgnr, ag.orgnavn, rt.id
+                GROUP BY ag.id, ag.db_id, ag.orgnr, ag.orgnavn, ag.naringskoder, rt.id
                 ORDER BY ag.db_id;
             """.trimIndent()
 
@@ -145,6 +148,7 @@ class ArbeidsgiverRepository(
         treffId = TreffId(getString("treff_id")),
         orgnr = Orgnr(getString("orgnr")),
         orgnavn = Orgnavn(getString("orgnavn")),
+        næringskoder = getObject("naringskoder") as List<Næringskode>?,
         hendelser = parseHendelser(getString("hendelser"))
     )
 
@@ -158,7 +162,8 @@ class ArbeidsgiverRepository(
                     ah.opprettet_av_aktortype,
                     ah.aktøridentifikasjon,
                     ag.orgnr,
-                    ag.orgnavn
+                    ag.orgnavn,
+                    ag.naringskoder,
                 FROM arbeidsgiver_hendelse ah
                 JOIN arbeidsgiver ag ON ah.arbeidsgiver_db_id = ag.db_id
                 JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
@@ -179,13 +184,27 @@ class ArbeidsgiverRepository(
                                 opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
                                 aktøridentifikasjon = rs.getString("aktøridentifikasjon"),
                                 orgnr = Orgnr(rs.getString("orgnr")),
-                                orgnavn = Orgnavn(rs.getString("orgnavn"))
+                                orgnavn = Orgnavn(rs.getString("orgnavn")),
+                                næringskoder = parseNæringskoder(rs.getString("naringskoder") ?: "[]"),
                             )
                         )
                     }
                     return result
                 }
             }
+        }
+    }
+
+    private fun parseNæringskoder(json: String): List<Næringskode> {
+        data class NæringskodeJson(
+            val kode: String?,
+            val beskrivelse: String?
+        )
+        return objectMapper.readValue(json, object : TypeReference<List<NæringskodeJson>>() {}).map { n ->
+            Næringskode(
+                kode = n.kode,
+                beskrivelse = n.beskrivelse
+            )
         }
     }
 
