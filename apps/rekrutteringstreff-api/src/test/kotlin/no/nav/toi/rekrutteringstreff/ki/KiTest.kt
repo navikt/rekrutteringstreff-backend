@@ -25,6 +25,7 @@ import java.util.stream.Stream
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiTest {
+
     companion object {
         @JvmStatic
         @RegisterExtension
@@ -103,7 +104,7 @@ class KiTest {
     }
 
     @Test
-    fun filtrerer_personsensitiv_info_for_OpenAI_og_logger_original_og_filtrert() {
+    fun filtrerer_personsensitiv_info_for_OpenAI_og_logger_original_og_filtrert__og_returnerer_lagret_promptmeta() {
         val fodselsnummer = "12345678901"
         val originalTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer $fodselsnummer."
         val forventetFiltrertTekst = "Vi ser kun etter deltakere fra Oslo med fødselsnummer ."
@@ -164,6 +165,16 @@ class KiTest {
         assertThat(dto.bryterRetningslinjer).isTrue()
         assertThat(dto.begrunnelse).isEqualTo(begrunnelseFraOpenAi)
 
+        // Fake en eldre promptmeta og lagre i DB for denne loggen
+        val oldMeta = """
+            {
+              "promptVersjonsnummer": 0,
+              "promptEndretTidspunkt": "2024-05-01T08:00:00+02:00[Europe/Oslo]",
+              "promptHash": "deadbe"
+            }
+        """.trimIndent()
+        oppdaterEkstra(UUID.fromString(dto.loggId), oldMeta)
+
         val (_, getRes, getResult) = Fuel.get("http://localhost:$appPort$base/logg/${dto.loggId}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<KiLoggOutboundDto> {
@@ -191,10 +202,9 @@ class KiTest {
         ).isTrue()
         assertThat(sentToOpenAi.contains(fodselsnummer)).isFalse()
 
-
-        assertThat(logg.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
-        assertThat(logg.promptHash).isEqualTo(SystemPrompt.hash)
-        assertThat(logg.promptEndretTidspunkt).isEqualTo(SystemPrompt.endretTidspunkt)
+        assertThat(logg.promptVersjonsnummer).isEqualTo(0)
+        assertThat(logg.promptHash).isEqualTo("deadbe")
+        assertThat(logg.promptEndretTidspunkt).isEqualTo(ZonedDateTime.parse("2024-05-01T08:00:00+02:00[Europe/Oslo]"))
 
         wireMockServer.verify(
             1,
@@ -207,12 +217,22 @@ class KiTest {
     }
 
     @Test
-    fun returnerer_opprettet_logglinje_med_id() {
+    fun returnerer_opprettet_logglinje_med_id__og_lagret_promptmeta() {
         stubOpenAi()
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val loggId = opprettLogg(treffId, token)
+
+        val fake = """
+            {
+              "promptVersjonsnummer": 0,
+              "promptEndretTidspunkt": "2024-06-02T10:00:00+02:00[Europe/Oslo]",
+              "promptHash": "beef00"
+            }
+        """.trimIndent()
+        oppdaterEkstra(UUID.fromString(loggId), fake)
+
         val (_, getRes, getResult) = Fuel.get("http://localhost:$appPort$base/logg/$loggId")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<KiLoggOutboundDto> {
@@ -222,28 +242,38 @@ class KiTest {
         assertThat(getRes.statusCode).isEqualTo(200)
         getResult as Result.Success
         val logg = getResult.value
+
         assertThat(logg.id).isEqualTo(loggId)
         assertThat(logg.treffId).isEqualTo(treffId.toString())
         assertThat(logg.feltType).isEqualTo("tittel")
         assertThat(logg.bryterRetningslinjer).isFalse()
 
-        assertThat(logg.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
-        assertThat(logg.promptHash).isEqualTo(SystemPrompt.hash)
-        assertThat(logg.promptEndretTidspunkt).isEqualTo(SystemPrompt.endretTidspunkt)
+        assertThat(logg.promptVersjonsnummer).isEqualTo(0)
+        assertThat(logg.promptHash).isEqualTo("beef00")
+        assertThat(logg.promptEndretTidspunkt).isEqualTo(ZonedDateTime.parse("2024-06-02T10:00:00+02:00[Europe/Oslo]"))
     }
 
     @Test
-    fun lister_logglinjer_for_alle_treff_nar_treffId_er_utelatt() {
+    fun lister_logglinjer_for_alle_treff_nar_treffId_er_utelatt__og_respekterer_lagret_promptmeta_eller_null() {
         stubOpenAi()
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
 
         val treffId1 = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val treffId2 = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
-
         val id1 = opprettLogg(treffId1, token)
         Thread.sleep(5)
         val id2 = opprettLogg(treffId2, token)
+
+        val meta1 = """
+            {
+              "promptVersjonsnummer": 0,
+              "promptEndretTidspunkt": "2024-04-10T09:00:00+02:00[Europe/Oslo]",
+              "promptHash": "c0ffee"
+            }
+        """.trimIndent()
+        oppdaterEkstra(UUID.fromString(id1), meta1)
+        oppdaterEkstra(UUID.fromString(id2), null) // simuler gammel rad uten ekstra -> null
 
         val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?limit=50&offset=0")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -261,17 +291,20 @@ class KiTest {
         listResult as Result.Success
         val alle = listResult.value
 
-        assertThat(alle.map { it.id }).containsExactly(id2, id1)
+        assertThat(alle.map { it.id }).containsExactly(id2, id1) // rekkefølge (nyeste først)
         assertThat(alle.size).isEqualTo(2)
-        assertThat(alle.map { it.treffId }.toSet())
-            .containsExactlyInAnyOrder(treffId1.toString(), treffId2.toString())
 
-        // Flatede ekstrafelter finnes og matcher
-        alle.forEach { it ->
-            assertThat(it.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
-            assertThat(it.promptHash).isEqualTo(SystemPrompt.hash)
-            assertThat(it.promptEndretTidspunkt).isEqualTo(SystemPrompt.endretTidspunkt)
-        }
+        val byId = alle.associateBy { it.id }
+        val r1 = byId[id1]!!
+        val r2 = byId[id2]!!
+
+        assertThat(r1.promptVersjonsnummer).isEqualTo(0)
+        assertThat(r1.promptHash).isEqualTo("c0ffee")
+        assertThat(r1.promptEndretTidspunkt).isEqualTo(ZonedDateTime.parse("2024-04-10T09:00:00+02:00[Europe/Oslo]"))
+
+        assertThat(r2.promptVersjonsnummer).isNull()
+        assertThat(r2.promptHash).isNull()
+        assertThat(r2.promptEndretTidspunkt).isNull()
     }
 
     @Test
@@ -308,12 +341,15 @@ class KiTest {
     }
 
     @Test
-    fun lister_logglinjer_for_valgt_treff() {
+    fun lister_logglinjer_for_valgt_treff__null_promptmeta_for_eldre_rad() {
         stubOpenAi()
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val loggId = opprettLogg(treffId, token)
+
+        oppdaterEkstra(UUID.fromString(loggId), null) // fjerne ekstra
+
         val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?treffId=$treffId")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
@@ -328,12 +364,11 @@ class KiTest {
         assertThat(listRes.statusCode).isEqualTo(200)
         listResult as Result.Success
         val items = listResult.value
-        assertThat(items.any { it.id == loggId }).isTrue()
-        items.forEach {
-            assertThat(it.promptVersjonsnummer).isEqualTo(SystemPrompt.versjonsnummer)
-            assertThat(it.promptHash).isEqualTo(SystemPrompt.hash)
-            assertThat(it.promptEndretTidspunkt).isEqualTo(SystemPrompt.endretTidspunkt)
-        }
+        val row = items.first { it.id == loggId }
+
+        assertThat(row.promptVersjonsnummer).isNull()
+        assertThat(row.promptHash).isNull()
+        assertThat(row.promptEndretTidspunkt).isNull()
     }
 
     fun forbudteKiEndepunkt(): Stream<Arguments> = Stream.of(
@@ -407,6 +442,16 @@ class KiTest {
         require(response.statusCode == 200) { "Opprett logg feilet med ${response.statusCode}" }
         result as Result.Success
         return result.value.loggId
+    }
+
+    private fun oppdaterEkstra(id: UUID, nyJson: String?) {
+        db.dataSource.connection.use { c ->
+            c.prepareStatement("update ki_spørring_logg set ekstra_parametre = cast(? as jsonb) where id = ?").use { ps ->
+                if (nyJson == null) ps.setNull(1, java.sql.Types.OTHER) else ps.setString(1, nyJson)
+                ps.setObject(2, id)
+                ps.executeUpdate()
+            }
+        }
     }
 
     private fun hentLagret(id: UUID): Boolean =

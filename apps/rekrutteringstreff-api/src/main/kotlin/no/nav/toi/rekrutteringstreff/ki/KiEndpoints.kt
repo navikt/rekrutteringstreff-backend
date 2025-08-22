@@ -85,10 +85,7 @@ private fun validerOgLoggHandler(repo: KiLoggRepository): (Context) -> Unit = { 
     responses = [OpenApiResponse(
         status = "200",
         description = "Oppdatert.",
-        content = [OpenApiContent(
-            from = Map::class,
-            example = "{}"
-        )]
+        content = [OpenApiContent(from = Map::class, example = "{}")]
     )],
     path = "$base/logg/{id}/lagret",
     methods = [HttpMethod.PUT]
@@ -118,10 +115,7 @@ private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = {
     responses = [OpenApiResponse(
         status = "200",
         description = "Oppdatert.",
-        content = [OpenApiContent(
-            from = Map::class,
-            example = "{}"
-        )]
+        content = [OpenApiContent(from = Map::class, example = "{}")]
     )],
     path = "$base/logg/{id}/manuell",
     methods = [HttpMethod.PUT]
@@ -149,7 +143,7 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
     ],
     responses = [OpenApiResponse(
         status = "200",
-        description = "Liste over logglinjer. Feltene promptVersjonsnummer, promptEndretTidspunkt og promptHash flates ut fra ekstra_parametre.",
+        description = "Liste over logglinjer. prompt*-feltene returneres slik de ble lagret. For gamle rader kan de være null.",
         content = [OpenApiContent(
             from = Array<KiLoggOutboundDto>::class,
             example = """[
@@ -159,8 +153,8 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
                 "treffId": "550e8400-e29b-41d4-a716-446655440000",
                 "tittel": "Sommerjobbmesse på NAV",
                 "feltType": "innlegg",
-                "spørringFraFrontend": "{\"treffId\":\"550e8400-e29b-41d4-a716-446655440000\",\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
-                "spørringFiltrert": "{\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
+                "spørringFraFrontend": "{\"treffId\":\"...\"}",
+                "spørringFiltrert": "{\"feltType\":\"...\"}",
                 "systemprompt": "Du er en ekspert på å vurdere informasjon, ...",
                 "bryterRetningslinjer": false,
                 "begrunnelse": "Ingen brudd oppdaget.",
@@ -174,6 +168,28 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
                 "promptVersjonsnummer": "1",
                 "promptEndretTidspunkt": "2025-08-22T12:00:00+02:00[Europe/Oslo]",
                 "promptHash": "a61803"
+              },
+              {
+                "id": "old-row-without-extra",
+                "opprettetTidspunkt": "2024-05-01T08:00:00+02:00[Europe/Oslo]",
+                "treffId": "",
+                "tittel": null,
+                "feltType": "tittel",
+                "spørringFraFrontend": "…",
+                "spørringFiltrert": "…",
+                "systemprompt": null,
+                "bryterRetningslinjer": false,
+                "begrunnelse": null,
+                "kiNavn": "azure-openai",
+                "kiVersjon": "toi-gpt-4o",
+                "svartidMs": 200,
+                "lagret": false,
+                "manuellKontrollBryterRetningslinjer": null,
+                "manuellKontrollUtfortAv": null,
+                "manuellKontrollTidspunkt": null,
+                "promptVersjonsnummer": null,
+                "promptEndretTidspunkt": null,
+                "promptHash": null
               }
             ]"""
         )]
@@ -193,7 +209,7 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
 
     val out = rows.map { row ->
         val meta = row.ekstraParametreJson?.let {
-            try { mapper.readValue<EkstraMetaOutbound>(it) } catch (_: Exception) { null }
+            try { mapper.readValue<EkstraMeta>(it) } catch (_: Exception) { null }
         }
         KiLoggOutboundDto(
             id = row.id.toString(),
@@ -213,9 +229,9 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
             manuellKontrollBryterRetningslinjer = row.manuellKontrollBryterRetningslinjer,
             manuellKontrollUtfortAv = row.manuellKontrollUtfortAv,
             manuellKontrollTidspunkt = row.manuellKontrollTidspunkt,
-            promptVersjonsnummer = meta?.promptVersjonsnummer ?: SystemPrompt.versjonsnummer,
-            promptEndretTidspunkt = meta?.promptEndretTidspunkt?.let(ZonedDateTime::parse) ?: SystemPrompt.endretTidspunkt,
-            promptHash = meta?.promptHash ?: SystemPrompt.hash
+            promptVersjonsnummer = meta?.promptVersjonsnummer,
+            promptEndretTidspunkt = meta?.promptEndretTidspunkt?.let(ZonedDateTime::parse),
+            promptHash = meta?.promptHash
         )
     }
 
@@ -231,7 +247,7 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     )],
     responses = [OpenApiResponse(
         status = "200",
-        description = "Returnerer logglinje. Feltene promptVersjonsnummer, promptEndretTidspunkt og promptHash flates ut fra ekstra_parametre.",
+        description = "Returnerer logglinje. prompt*-feltene er de lagrede verdiene (kan være null for eldre rader).",
         content = [OpenApiContent(
             from = KiLoggOutboundDto::class,
             example = """{
@@ -240,8 +256,8 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
               "treffId": "550e8400-e29b-41d4-a716-446655440000",
               "tittel": "Sommerjobbmesse på NAV",
               "feltType": "innlegg",
-              "spørringFraFrontend": "{\"treffId\":\"550e8400-e29b-41d4-a716-446655440000\",\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
-              "spørringFiltrert": "{\"feltType\":\"innlegg\",\"tekst\":\"Eksempeltekst\"}",
+              "spørringFraFrontend": "{\"treffId\":\"...\"}",
+              "spørringFiltrert": "{\"feltType\":\"...\"}",
               "systemprompt": "Du er en ekspert på å vurdere informasjon, ...",
               "bryterRetningslinjer": false,
               "begrunnelse": "Ingen brudd oppdaget.",
@@ -268,7 +284,7 @@ private fun getHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
 
     val mapper = JacksonConfig.mapper
     val meta = row.ekstraParametreJson?.let {
-        try { mapper.readValue<EkstraMetaOutbound>(it) } catch (_: Exception) { null }
+        try { mapper.readValue<EkstraMeta>(it) } catch (_: Exception) { null }
     }
 
     val dto = KiLoggOutboundDto(
@@ -289,15 +305,15 @@ private fun getHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
         manuellKontrollBryterRetningslinjer = row.manuellKontrollBryterRetningslinjer,
         manuellKontrollUtfortAv = row.manuellKontrollUtfortAv,
         manuellKontrollTidspunkt = row.manuellKontrollTidspunkt,
-        promptVersjonsnummer = meta?.promptVersjonsnummer ?: SystemPrompt.versjonsnummer,
-        promptEndretTidspunkt = meta?.promptEndretTidspunkt?.let(ZonedDateTime::parse) ?: SystemPrompt.endretTidspunkt,
-        promptHash = meta?.promptHash ?: SystemPrompt.hash
+        promptVersjonsnummer = meta?.promptVersjonsnummer,
+        promptEndretTidspunkt = meta?.promptEndretTidspunkt?.let(ZonedDateTime::parse),
+        promptHash = meta?.promptHash
     )
 
     ctx.status(200).json(dto)
 }
 
-private data class EkstraMetaOutbound(
+private data class EkstraMeta(
     val promptVersjonsnummer: Int?,
     val promptEndretTidspunkt: String?,
     val promptHash: String?
@@ -337,7 +353,7 @@ data class KiLoggOutboundDto(
     val manuellKontrollBryterRetningslinjer: Boolean?,
     val manuellKontrollUtfortAv: String?,
     val manuellKontrollTidspunkt: ZonedDateTime?,
-    val promptVersjonsnummer: Int,
-    val promptEndretTidspunkt: ZonedDateTime,
-    val promptHash: String
+    val promptVersjonsnummer: Int?,
+    val promptEndretTidspunkt: ZonedDateTime?,
+    val promptHash: String?
 )
