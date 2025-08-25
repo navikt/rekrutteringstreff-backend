@@ -143,6 +143,39 @@ class KiLoggRepositoryTest {
     }
 
     @Test
+    fun kan_nullstille_manuell_kontroll_til_null() {
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val id = repo.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "tittel",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = null,
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "gpt-4o",
+                kiVersjon = "2025-01-01",
+                svartidMs = 11
+            )
+        )
+
+        val nå = ZonedDateTime.now(ZoneOffset.UTC)
+        assertThat(repo.setManuellKontroll(id, true, "Z123456", nå)).isEqualTo(1)
+        val s1 = repo.findById(id)!!
+        assertThat(s1.manuellKontrollBryterRetningslinjer).isTrue()
+        assertThat(s1.manuellKontrollUtfortAv).isEqualTo("Z123456")
+        assertThat(s1.manuellKontrollTidspunkt).isNotNull()
+
+        assertThat(repo.setManuellKontroll(id, null, null, null)).isEqualTo(1)
+        val s2 = repo.findById(id)!!
+        assertThat(s2.manuellKontrollBryterRetningslinjer).isNull()
+        assertThat(s2.manuellKontrollUtfortAv).isNull()
+        assertThat(s2.manuellKontrollTidspunkt).isNull()
+    }
+
+    @Test
     fun kan_liste_logg_for_treff_med_filter_og_paginering() {
         val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
 

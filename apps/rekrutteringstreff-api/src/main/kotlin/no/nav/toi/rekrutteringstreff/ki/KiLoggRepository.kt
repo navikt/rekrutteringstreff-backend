@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff.ki
 
 import java.sql.ResultSet
 import java.sql.Timestamp
+import java.sql.Types
 import java.time.ZonedDateTime
 import java.util.UUID
 import javax.sql.DataSource
@@ -63,7 +64,7 @@ class KiLoggRepository(private val dataSource: DataSource) {
             }
         }
 
-    fun setManuellKontroll(id: UUID, bryterRetningslinjer: Boolean, utfortAv: String, tidspunkt: ZonedDateTime): Int =
+    fun setManuellKontroll(id: UUID, bryterRetningslinjer: Boolean?, utfortAv: String?, tidspunkt: ZonedDateTime?): Int =
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
@@ -74,9 +75,18 @@ class KiLoggRepository(private val dataSource: DataSource) {
                 where id = ?
                 """.trimIndent()
             ).use { ps ->
-                ps.setBoolean(1, bryterRetningslinjer)
-                ps.setString(2, utfortAv)
-                ps.setTimestamp(3, Timestamp.from(tidspunkt.toInstant()))
+                if (bryterRetningslinjer == null)
+                    ps.setNull(1, Types.BOOLEAN)
+                else
+                    ps.setBoolean(1, bryterRetningslinjer)
+                if (utfortAv == null)
+                    ps.setNull(2, Types.VARCHAR)
+                else
+                    ps.setString(2, utfortAv)
+                if (tidspunkt == null)
+                    ps.setNull(3, Types.TIMESTAMP_WITH_TIMEZONE)
+                else
+                    ps.setTimestamp(3, Timestamp.from(tidspunkt.toInstant()))
                 ps.setObject(4, id)
                 ps.executeUpdate()
             }

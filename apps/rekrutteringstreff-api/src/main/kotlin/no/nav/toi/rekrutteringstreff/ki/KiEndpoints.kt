@@ -124,8 +124,18 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
     val id = UUID.fromString(ctx.pathParam("id"))
     val req = ctx.bodyAsClass<OppdaterManuellRequestDto>()
-    val ident = ctx.extractNavIdent()
-    val now = ZonedDateTime.now()
+
+    val ident: String?
+    val now: ZonedDateTime?
+
+    if (req.bryterRetningslinjer == null) {
+        ident = null
+        now = null
+    } else {
+        ident = ctx.extractNavIdent()
+        now = ZonedDateTime.now()
+    }
+
     if (repo.setManuellKontroll(id, req.bryterRetningslinjer, ident, now) == 0) {
         throw NotFoundResponse("Logg ikke funnet")
     }
@@ -320,7 +330,7 @@ private data class EkstraMeta(
 )
 
 
-data class OppdaterManuellRequestDto(val bryterRetningslinjer: Boolean)
+data class OppdaterManuellRequestDto(val bryterRetningslinjer: Boolean?)
 data class OppdaterLagretRequestDto(val lagret: Boolean)
 
 data class ValiderMedLoggResponseDto(
