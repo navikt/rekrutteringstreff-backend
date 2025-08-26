@@ -56,24 +56,39 @@ class ArbeidsgiverRepository(
                 ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
             val arbeidsgiverDbId = leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
             leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
+            leggTilNaringskoder(connection, arbeidsgiverDbId, arbeidsgiver.næringskoder)
         }
     }
 
     private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): Long {
         connection.prepareStatement(
-            "INSERT INTO arbeidsgiver (id, treff_db_id, orgnr, orgnavn, naringskoder) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO arbeidsgiver (id, treff_db_id, orgnr, orgnavn) VALUES (?, ?, ?, ?)",
             Statement.RETURN_GENERATED_KEYS
         ).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
             stmt.setLong(2, treffDbId)
             stmt.setString(3, arbeidsgiver.orgnr.asString)
             stmt.setString(4, arbeidsgiver.orgnavn.asString)
-            stmt.setObject(5, arbeidsgiver.næringskoder)
             stmt.executeUpdate()
             stmt.generatedKeys.use {
                 if (it.next()) return it.getLong(1)
                 else throw SQLException("Klarte ikke å hente db_id for arbeidsgiver")
             }
+        }
+    }
+
+    private fun leggTilNaringskoder(connection: Connection, arbeidsgiverDbId: Long, koder: List<Næringskode>) {
+        if (koder.isEmpty()) return
+        connection.prepareStatement(
+            "INSERT INTO naringskode (arbeidsgiver_db_id, kode, beskrivelse) VALUES (?, ?, ?)"
+        ).use { stmt ->
+            for (nk in koder) {
+                stmt.setLong(1, arbeidsgiverDbId)
+                stmt.setString(2, nk.kode)
+                stmt.setString(3, nk.beskrivelse)
+                stmt.addBatch()
+            }
+            stmt.executeBatch()
         }
     }
 
