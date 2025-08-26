@@ -19,9 +19,9 @@ private const val hendelserArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pa
 private data class LeggTilArbeidsgiverDto(
     val organisasjonsnummer: String,
     val navn: String,
-    val næringskoder: List<Næringskode> = emptyList()
+    val næringskoder: List<Næringskode>? = emptyList()
 ) {
-    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
+    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder?.map {
         Næringskode(it.kode, it.beskrivelse)
     })
 }
@@ -34,7 +34,6 @@ data class ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
     val aktøridentifikasjon: String?,
     val orgnr: String,
     val orgnavn: String,
-    val næringskoder: List<Næringskode>?
 )
 
 data class ArbeidsgiverHendelseOutboundDto(
@@ -49,7 +48,6 @@ data class ArbeidsgiverOutboundDto(
     val arbeidsgiverTreffId: String,
     val organisasjonsnummer: String,
     val navn: String,
-    val næringskoder: List<Næringskode>?,
     val hendelser: List<ArbeidsgiverHendelseOutboundDto>
 )
 
@@ -66,7 +64,7 @@ data class ArbeidsgiverOutboundDto(
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = LeggTilArbeidsgiverDto::class,
-            example = """{"organisasjonsnummer": "123456789", "navn": "Example Company", næringskoder: [{"kode": "47.111", "beskrivelse": "Butikkhandel med bredt vareutvalg med hovedvekt på nærings- og nytelsesmidler"}]}"""
+            example = """{"organisasjonsnummer": "123456789", "navn": "Example Company", næringskoder: [{"kode": "47.111", "beskrivelse": "Detaljhandel med bredt varesortiment uten salg av drivstoff"}]}"""
         )]
     ),
     responses = [OpenApiResponse(status = "201")],
@@ -113,12 +111,6 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
                 {
                     "organisasjonsnummer": "987654321",
                     "navn": "Another Company",
-                    "narinskoder": [
-                        {
-                            "kode": "47.111",
-                            "beskrivelse": "Butikkhandel med bredt vareutvalg med hovedvekt på nærings- og nytelsesmidler"
-                        }
-                    ]
                     "hendelser": []
                 }
             ]"""
@@ -139,7 +131,6 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
         ArbeidsgiverOutboundDto(
             arbeidsgiverTreffId = arbeidsgiver.arbeidsgiverTreffId.somString,
             organisasjonsnummer = arbeidsgiver.orgnr.asString,
-            næringskoder = arbeidsgiver.næringskoder?.map { n -> Næringskode(n.kode.toString(), n.beskrivelse.toString()) },
             navn = arbeidsgiver.orgnavn.asString,
             hendelser = arbeidsgiver.hendelser.map { h ->
                 ArbeidsgiverHendelseOutboundDto(
@@ -176,12 +167,6 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
                     "aktøridentifikasjon": "testperson",
                     "orgnr": "123456789",
                     "orgnavn": "Example Company",
-                    "næringskoder": [
-                        {
-                            "kode": "47.111",
-                            "beskrivelse": "Butikkhandel med bredt vareutvalg med hovedvekt på nærings- og nytelsesmidler"
-                        }
-                    ]
                 }
             ]"""
         )]
@@ -202,7 +187,6 @@ private fun hentArbeidsgiverHendelserHandler(repo: ArbeidsgiverRepository): (Con
             aktøridentifikasjon = h.aktøridentifikasjon,
             orgnr = h.orgnr.asString,
             orgnavn = h.orgnavn.asString,
-            næringskoder = h.næringskoder
         )
     })
 }
