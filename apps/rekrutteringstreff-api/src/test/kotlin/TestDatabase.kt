@@ -194,6 +194,34 @@ class TestDatabase {
         generateSequence { if (rs.next()) konverterTilJobbsøker(rs) else null }.toList()
     }
 
+    fun hentAlleNæringskoder(): List<Næringskode> = dataSource.connection.use {
+        val sql = """
+            SELECT nk.kode, nk.beskrivelse
+              FROM naringskode nk
+              JOIN arbeidsgiver ag ON ag.db_id = nk.arbeidsgiver_db_id
+             ORDER BY nk.db_id
+        """.trimIndent()
+        val rs = it.prepareStatement(sql).executeQuery()
+        generateSequence { if (rs.next()) konverterTilNæringskoder(rs) else null }.toList()
+    }
+
+    fun hentNæringskodeForArbeidsgiverPåTreff(treffId: TreffId, orgnr: Orgnr): List<Næringskode> = dataSource.connection.use {
+        val sql = """
+            SELECT nk.kode, nk.beskrivelse
+              FROM naringskode nk
+              JOIN arbeidsgiver ag ON ag.db_id = nk.arbeidsgiver_db_id
+              JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
+             WHERE rt.id = ? AND ag.orgnr = ?
+             ORDER BY nk.db_id
+        """.trimIndent()
+        val ps = it.prepareStatement(sql).apply {
+            setObject(1, treffId.somUuid)
+            setString(2, orgnr.asString)
+        }
+        val rs = ps.executeQuery()
+        generateSequence { if (rs.next()) konverterTilNæringskoder(rs) else null }.toList()
+    }
+
     private fun konverterTilRekrutteringstreff(rs: ResultSet) = Rekrutteringstreff(
         id = TreffId(rs.getObject("id", UUID::class.java)),
         tittel = rs.getString("tittel"),
@@ -215,6 +243,11 @@ class TestDatabase {
         treffId = TreffId(rs.getString("treff_id")),
         orgnr = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn"))
+    )
+
+    private fun konverterTilNæringskoder(rs: ResultSet) = Næringskode(
+        kode = rs.getString("kode"),
+        beskrivelse = rs.getString("beskrivelse")
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
