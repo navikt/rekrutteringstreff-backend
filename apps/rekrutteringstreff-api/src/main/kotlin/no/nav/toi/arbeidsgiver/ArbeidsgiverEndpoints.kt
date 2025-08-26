@@ -19,9 +19,9 @@ private const val hendelserArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pa
 private data class LeggTilArbeidsgiverDto(
     val organisasjonsnummer: String,
     val navn: String,
-    val næringskoder: List<Næringskode>? = emptyList()
+    val næringskoder: List<Næringskode> = emptyList()
 ) {
-    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder?.map {
+    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
         Næringskode(it.kode, it.beskrivelse)
     })
 }

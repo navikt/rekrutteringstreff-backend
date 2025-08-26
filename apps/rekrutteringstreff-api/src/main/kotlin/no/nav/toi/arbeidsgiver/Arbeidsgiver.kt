@@ -31,7 +31,7 @@ data class Næringskode(
 data class LeggTilArbeidsgiver(
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
-    val næringskoder: List<Næringskode>?
+    val næringskoder: List<Næringskode> = emptyList()
 )
 
 data class Arbeidsgiver(
@@ -39,7 +39,7 @@ data class Arbeidsgiver(
     val treffId: TreffId,
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
-    val næringskoder: List<Næringskode>?,
+    val næringskoder: List<Næringskode> = emptyList(),
     val hendelser: List<ArbeidsgiverHendelse> = emptyList()
 )
 
