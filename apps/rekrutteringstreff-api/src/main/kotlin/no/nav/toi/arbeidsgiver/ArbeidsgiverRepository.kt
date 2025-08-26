@@ -62,7 +62,7 @@ class ArbeidsgiverRepository(
 
     private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): Long {
         connection.prepareStatement(
-            "INSERT INTO arbeidsgiver (id, treff_db_id, orgnr, orgnavn) VALUES (?, ?, ?, ?)",
+            "INSERT INTO arbeidsgiver (id, treff_db_id, orgnr, orgnavn, naringskoder) VALUES (?, ?, ?, ?, ?)",
             Statement.RETURN_GENERATED_KEYS
         ).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
