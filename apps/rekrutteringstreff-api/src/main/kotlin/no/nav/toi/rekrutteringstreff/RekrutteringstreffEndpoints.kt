@@ -52,7 +52,7 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
     val internalDto = OpprettRekrutteringstreffInternalDto(
-        tittel = "Nytt rekrutteringstreff",
+        tittel = "",
         opprettetAvPersonNavident = ctx.extractNavIdent(),
         opprettetAvNavkontorEnhetId = inputDto.opprettetAvNavkontorEnhetId,
         opprettetAvTidspunkt = ZonedDateTime.now(),
