@@ -39,7 +39,6 @@ data class Arbeidsgiver(
     val treffId: TreffId,
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
-    val næringskoder: List<Næringskode> = emptyList(),
     val hendelser: List<ArbeidsgiverHendelse> = emptyList()
 )
 
