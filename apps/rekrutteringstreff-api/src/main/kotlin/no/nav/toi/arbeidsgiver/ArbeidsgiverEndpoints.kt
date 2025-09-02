@@ -18,9 +18,12 @@ private const val hendelserArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pa
 
 private data class LeggTilArbeidsgiverDto(
     val organisasjonsnummer: String,
-    val navn: String
+    val navn: String,
+    val næringskoder: List<Næringskode> = emptyList()
 ) {
-    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn))
+    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
+        Næringskode(it.kode, it.beskrivelse)
+    })
 }
 
 data class ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
@@ -30,7 +33,7 @@ data class ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
     val opprettetAvAktørType: String,
     val aktøridentifikasjon: String?,
     val orgnr: String,
-    val orgnavn: String
+    val orgnavn: String,
 )
 
 data class ArbeidsgiverHendelseOutboundDto(
@@ -40,7 +43,6 @@ data class ArbeidsgiverHendelseOutboundDto(
     val opprettetAvAktørType: String,
     val aktøridentifikasjon: String?,
 )
-
 
 data class ArbeidsgiverOutboundDto(
     val arbeidsgiverTreffId: String,
@@ -62,7 +64,7 @@ data class ArbeidsgiverOutboundDto(
     requestBody = OpenApiRequestBody(
         content = [OpenApiContent(
             from = LeggTilArbeidsgiverDto::class,
-            example = """{"organisasjonsnummer": "123456789", "navn": "Example Company"}"""
+            example = """{"organisasjonsnummer": "123456789", "navn": "Example Company", næringskoder: [{"kode": "47.111", "beskrivelse": "Detaljhandel med bredt varesortiment uten salg av drivstoff"}]}"""
         )]
     ),
     responses = [OpenApiResponse(
@@ -168,7 +170,7 @@ private fun List<Arbeidsgiver>.toOutboundDto(): List<ArbeidsgiverOutboundDto> =
                     "opprettetAvAktørType": "ARRANGØR",
                     "aktøridentifikasjon": "testperson",
                     "orgnr": "123456789",
-                    "orgnavn": "Example Company"
+                    "orgnavn": "Example Company",
                 }
             ]"""
         )]
@@ -188,7 +190,7 @@ private fun hentArbeidsgiverHendelserHandler(repo: ArbeidsgiverRepository): (Con
             opprettetAvAktørType = h.opprettetAvAktørType.toString(),
             aktøridentifikasjon = h.aktøridentifikasjon,
             orgnr = h.orgnr.asString,
-            orgnavn = h.orgnavn.asString
+            orgnavn = h.orgnavn.asString,
         )
     })
 }
