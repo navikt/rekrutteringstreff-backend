@@ -65,7 +65,10 @@ data class ArbeidsgiverOutboundDto(
             example = """{"organisasjonsnummer": "123456789", "navn": "Example Company"}"""
         )]
     ),
-    responses = [OpenApiResponse(status = "201")],
+    responses = [OpenApiResponse(
+        status = "201",
+        description = "Arbeidsgiver opprettet"
+    )],
     path = arbeidsgiverPath,
     methods = [HttpMethod.POST]
 )
@@ -98,15 +101,16 @@ private fun leggTilArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) 
                     "navn": "Example Company",
                     "hendelser": [
                         {
-                            "abeidsgiverTreffId": "any-uuid",
+                            "id": "any-uuid",
                             "tidspunkt": "2025-04-14T10:38:41Z",
                             "hendelsestype": "OPPRETT",
                             "opprettetAvAktørType": "ARRANGØR",
-                            "aktøridentifikasjon": "testperson",
+                            "aktøridentifikasjon": "testperson"
                         }
                     ]
                 },
                 {
+                    "arbeidsgiverTreffId": "any-uuid",
                     "organisasjonsnummer": "987654321",
                     "navn": "Another Company",
                     "hendelser": []

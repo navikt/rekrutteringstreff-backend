@@ -91,6 +91,48 @@ class App(
             configureOpenApi(config)
         }
 
+
+        javalin.exception(com.fasterxml.jackson.core.JsonParseException::class.java) { _, ctx ->
+            ctx.status(400).json(
+                mapOf(
+                    "feil" to "Ugyldig JSON i request-body.",
+                    "hint" to "Sett Content-Type: application/json, bruk gyldig JSON med \"-siterte feltnavn og ISO-8601 dato/tid med tidsone (f.eks. 2025-09-10T08:00:00+02:00)."
+                )
+            )
+        }
+        javalin.exception(com.fasterxml.jackson.databind.JsonMappingException::class.java) { _, ctx ->
+            ctx.status(400).json(
+                mapOf(
+                    "feil" to "Klarte ikke å lese request-body til forventet format.",
+                    "hint" to "Body må være JSON som matcher skjemaet for OppdaterRekrutteringstreffDto. Dato/tid må inkludere tidsone (f.eks. +02:00)."
+                )
+            )
+        }
+        // I enkelte Javalin-versjoner pakkes Jackson-feil i JsonMapperException
+        try {
+            val k = Class.forName("io.javalin.json.JsonMapperException") as Class<out Exception>
+            @Suppress("UNCHECKED_CAST")
+            javalin.exception(k) { _, ctx ->
+                ctx.status(400).json(
+                    mapOf(
+                        "feil" to "Ugyldig request-body (JSON).",
+                        "hint" to "Sett Content-Type: application/json og bruk ISO-8601 dato/tid med tidsone."
+                    )
+                )
+            }
+        } catch (_: ClassNotFoundException) {
+            // Ignorer – typen finnes ikke i denne Javalin-versjonen
+        }
+
+        javalin.exception(Exception::class.java) { e, ctx ->
+            log.error("Uventet feil", e)
+            ctx.status(500).json(
+                mapOf(
+                    "feil" to "En uventet feil oppstod på serveren."
+                )
+            )
+        }
+
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             authConfigs,
