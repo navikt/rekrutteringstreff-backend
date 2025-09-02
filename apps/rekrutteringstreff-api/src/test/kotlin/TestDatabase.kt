@@ -263,10 +263,21 @@ class TestDatabase {
     )
 
 
-    fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
+    fun leggTilArbeidsgivere(
+        arbeidsgivere: List<Arbeidsgiver>,
+        næringskoderPerOrgnr: Map<Orgnr, List<Næringskode>> = emptyMap()
+    ) {
         val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
-        arbeidsgivere.forEach {
-            repo.leggTil(LeggTilArbeidsgiver(it.orgnr, it.orgnavn, it.næringskoder), it.treffId, "testperson")
+        arbeidsgivere.forEach { ag ->
+            val næringskoder = næringskoderPerOrgnr[ag.orgnr].orEmpty()
+            repo.leggTil(
+                LeggTilArbeidsgiver(
+                    ag.orgnr,
+                    ag.orgnavn,
+                    næringskoder
+                ),
+                ag.treffId,
+                "testperson")
         }
     }
 
