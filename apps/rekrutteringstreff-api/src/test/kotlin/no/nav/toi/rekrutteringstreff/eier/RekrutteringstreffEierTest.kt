@@ -262,7 +262,8 @@ class RekrutteringstreffEierTest {
         val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
-            .body(mapper.writeValueAsString("""["A123456"]"""))
+            .header("Content-Type", "application/json")
+            .body(mapper.writeValueAsString(listOf("A123456")))
             .leggPåToken(authServer, authPort)
             .responseString()
         assertStatuscodeEquals(401, response, result)
