@@ -57,6 +57,7 @@ class RekrutteringstreffEierTest {
     fun setUp() {
         authServer.start(port = authPort)
         app.start()
+        waitForServerToBeReady()
     }
 
     @AfterAll
@@ -241,6 +242,29 @@ class RekrutteringstreffEierTest {
             opprettetAvTidspunkt = nowOslo().minusDays(10),
         )
         repo.opprett(originalDto)
+    }
+
+    private fun waitForServerToBeReady() {
+        val maxAttempts = 30
+        val delayMs = 200L
+        var attempts = 0
+
+        while (attempts < maxAttempts) {
+            try {
+                val (_, response, _) = Fuel.get("http://localhost:$appPort/isready")
+                    .timeout(5000)
+                    .timeoutRead(5000)
+                    .responseString()
+                if (response.statusCode == 200) {
+                    return
+                }
+            } catch (e: Exception) {
+                // Server not ready yet, continue waiting
+            }
+            attempts++
+            Thread.sleep(delayMs)
+        }
+        throw RuntimeException("Server did not become ready within ${maxAttempts * delayMs}ms")
     }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
