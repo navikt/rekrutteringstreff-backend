@@ -118,9 +118,11 @@ private fun verifyJwt(verifiers: List<JWTVerifier>, token: String): DecodedJWT {
             // prøv neste verifier
         } catch (e: SigningKeyNotFoundException) {
             // prøv neste verifier
+        } catch (e: IllegalArgumentException) {
+            // Fanges når token er helt ugyldig (f.eks. ikke JWT-format). Prøv neste, til slutt 401.
         }
     }
-    log.error("Token verification failed")
+    log.warn("Token verification failed for provided token (possibly malformed)")
     throw UnauthorizedResponse("Token verification failed")
 }
 
