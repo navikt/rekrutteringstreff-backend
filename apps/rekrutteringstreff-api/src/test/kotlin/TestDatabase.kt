@@ -84,6 +84,8 @@ class TestDatabase {
         it.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
         it.prepareStatement("DELETE FROM rekrutteringstreff_hendelse").executeUpdate()
         it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
+        it.prepareStatement("DELETE FROM ki_spørring_logg").executeUpdate()
+
     }
 
     fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) = dataSource.connection.use {

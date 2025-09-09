@@ -211,11 +211,11 @@ class JobbsøkerInnloggetBorgerTest {
         treffId: TreffId,
         token: SignedJWT
     ) {
-        val personTreffIder = jobbsøkere.toList().map { it.personTreffId }
+        val personTreffIder = jobbsøkere.toList().map { it.personTreffId }.distinct()
         assertThat(personTreffIder).hasSize(1)
 
         val requestBody = """
-            { "personTreffIder": ["${personTreffIder.first()}", "${personTreffIder.last()}"] }
+            { "personTreffIder": ${personTreffIder.map { "\"$it\"" }} }
         """.trimIndent()
 
 

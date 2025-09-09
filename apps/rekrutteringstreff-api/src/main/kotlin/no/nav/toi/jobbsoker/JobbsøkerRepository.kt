@@ -205,9 +205,7 @@ class JobbsøkerRepository(
     fun inviter(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             try {
-                val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbIds = c.hentJobbsøkerDbIder(treffDbId, personTreffIder)
-                c.batchInsertHendelser(JobbsøkerHendelsestype.INVITER, jobbsøkerDbIds, opprettetAv)
+                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.INVITER, personTreffIder, opprettetAv)
             } catch (e: Exception) {
                 throw e
             }
