@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
+import java.net.HttpURLConnection.HTTP_NO_CONTENT
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -229,6 +230,75 @@ class ArbeidsgiverTest {
                 assertThat(hendelse.orgnr).isEqualTo("777777777")
                 assertThat(hendelse.orgnavn).isEqualTo("HendelsesFirma")
             }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("tokenVarianter")
+    fun autentiseringSlettArbeidsgiver(autentiseringstest: UautentifiserendeTestCase) {
+        val leggPåToken = autentiseringstest.leggPåToken
+        val (_, response, result) = Fuel.delete("http://localhost:${appPort}/api/rekrutteringstreff/${UUID.randomUUID()}/arbeidsgiver/${UUID.randomUUID()}")
+            .leggPåToken(authServer, authPort)
+            .responseString()
+        assertStatuscodeEquals(HTTP_UNAUTHORIZED, response, result)
+    }
+
+    @Test
+    fun slettArbeidsgiver() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val requestBody = """
+            {
+              "organisasjonsnummer": "888888888",
+              "navn": "Slettefirma"
+            }
+        """.trimIndent()
+
+        val (_, postResponse, postResult) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(HTTP_CREATED, postResponse, postResult)
+
+        val id = db.hentAlleArbeidsgivere().first().arbeidsgiverTreffId.somUuid
+
+        val (_, delResponse, delResult) = Fuel.delete("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/$id")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(HTTP_NO_CONTENT, delResponse, delResult)
+
+        // Rad i arbeidsgiver-tabellen skal fortsatt finnes (soft delete)
+        assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
+
+        // Skal ikke returneres av GET arbeidsgivere etter soft delete
+        val (_, getResp, getRes) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<ArbeidsgiverOutboundDto>> {
+                override fun deserialize(content: String): List<ArbeidsgiverOutboundDto> {
+                    val mapper = JacksonConfig.mapper
+                    val type = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverOutboundDto::class.java)
+                    return mapper.readValue(content, type)
+                }
+            })
+        assertStatuscodeEquals(HTTP_OK, getResp, getRes)
+        when (getRes) {
+            is Failure -> throw getRes.error
+            is Success -> assertThat(getRes.value).isEmpty()
+        }
+
+        // Hendelser skal inneholde SLETT
+        val (_, hendResp, hendRes) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto>> {
+                override fun deserialize(content: String): List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto> {
+                    val type = JacksonConfig.mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto::class.java)
+                    return JacksonConfig.mapper.readValue(content, type)
+                }
+            })
+        assertStatuscodeEquals(HTTP_OK, hendResp, hendRes)
+        when (hendRes) {
+            is Failure -> throw hendRes.error
+            is Success -> assertThat(hendRes.value.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETT.name }).isTrue()
         }
     }
 }

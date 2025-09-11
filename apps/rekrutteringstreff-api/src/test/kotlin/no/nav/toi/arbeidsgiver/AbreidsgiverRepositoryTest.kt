@@ -94,4 +94,50 @@ class ArbeidsgiverRepositoryTest {
         assertThat(h.orgnr.asString).isEqualTo("444444444")
         assertThat(h.orgnavn.asString).isEqualTo("Company D")
     }
+
+    @Test
+    fun slettArbeidsgiver_returnerer_true_og_sletter_rad() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val input = LeggTilArbeidsgiver(Orgnr("987654321"), Orgnavn("Slettbar Bedrift"))
+        repository.leggTil(input, treffId, "testperson")
+        val id = repository.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId.somUuid
+
+        val resultat = repository.slett(id, "testperson")
+        assertThat(resultat).isTrue()
+        assertThat(repository.hentArbeidsgivere(treffId)).isEmpty()
+        val hendelser = repository.hentArbeidsgiverHendelser(treffId)
+        assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETT }).isTrue()
+    }
+
+    @Test
+    fun slettArbeidsgiver_returnerer_false_når_den_ikke_finnes() {
+        val tilfeldigId = UUID.randomUUID()
+        assertThat(repository.slett(tilfeldigId, "testperson")).isFalse()
+    }
+
+    @Test
+    fun hentArbeidsgivere_filterer_bort_slettet_arbeidsgiver() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Synlig Bedrift"))
+        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Skal SLETTES"))
+        repository.leggTil(ag1, treffId, "testperson")
+        repository.leggTil(ag2, treffId, "testperson")
+
+        val alleFør = repository.hentArbeidsgivere(treffId)
+        assertThat(alleFør).hasSize(2)
+
+        // Act: Soft-delete den ene arbeidsgiveren via SLETT-hendelse
+        val slettesId = alleFør.first { it.orgnr.asString == "222222222" }.arbeidsgiverTreffId.somUuid
+        val result = repository.slett(slettesId, "testperson")
+        assertThat(result).isTrue()
+
+        // Assert: hentArbeidsgivere returnerer kun ikke-slettet arbeidsgiver
+        val etter = repository.hentArbeidsgivere(treffId)
+        assertThat(etter).hasSize(1)
+        assertThat(etter.first().orgnr.asString).isEqualTo("111111111")
+
+        // Og hendelser inneholder SLETT for den slettede
+        val hendelser = repository.hentArbeidsgiverHendelser(treffId)
+        assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETT }).isTrue()
+    }
 }
