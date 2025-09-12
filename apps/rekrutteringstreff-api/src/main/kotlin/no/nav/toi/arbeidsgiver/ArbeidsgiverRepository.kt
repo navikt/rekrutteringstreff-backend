@@ -74,6 +74,7 @@ class ArbeidsgiverRepository(
                 ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
             val arbeidsgiverDbId = leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
             leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
+            leggTilNaringskoder(connection, arbeidsgiverDbId, arbeidsgiver.næringskoder)
         }
     }
 
@@ -91,6 +92,21 @@ class ArbeidsgiverRepository(
                 if (it.next()) return it.getLong(1)
                 else throw SQLException("Klarte ikke å hente db_id for arbeidsgiver")
             }
+        }
+    }
+
+    private fun leggTilNaringskoder(connection: Connection, arbeidsgiverDbId: Long, koder: List<Næringskode>) {
+        if (koder.isEmpty()) return
+        connection.prepareStatement(
+            "INSERT INTO naringskode (arbeidsgiver_db_id, kode, beskrivelse) VALUES (?, ?, ?)"
+        ).use { stmt ->
+            for (nk in koder) {
+                stmt.setLong(1, arbeidsgiverDbId)
+                stmt.setString(2, nk.kode)
+                stmt.setString(3, nk.beskrivelse)
+                stmt.addBatch()
+            }
+            stmt.executeBatch()
         }
     }
 
@@ -214,7 +230,6 @@ class ArbeidsgiverRepository(
             }
         }
     }
-
     private fun parseHendelser(json: String): List<ArbeidsgiverHendelse> {
         data class HendelseJson(
             val id: String,
