@@ -136,7 +136,6 @@ class ArbeidsgiverTest {
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val næringskoder = listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
         val requestBody = JacksonConfig.mapper.writeValueAsString(
             mapOf(
                 "organisasjonsnummer" to orgnr.asString,
