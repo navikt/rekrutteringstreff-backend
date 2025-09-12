@@ -136,6 +136,7 @@ class ArbeidsgiverTest {
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
+        val næringskoder = listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
         val requestBody = JacksonConfig.mapper.writeValueAsString(
             mapOf(
                 "organisasjonsnummer" to orgnr.asString,
@@ -159,6 +160,11 @@ class ArbeidsgiverTest {
         assertThat(ag.orgnr).isEqualTo(orgnr)
         assertThat(ag.orgnavn).isEqualTo(orgnavn)
         assertThat(ag.arbeidsgiverTreffId).isInstanceOf(ArbeidsgiverTreffId::class.java)
+
+        val nk = db.hentNæringskodeForArbeidsgiverPåTreff(treffId, orgnr)
+
+        assertThat(nk).hasSize(1)
+        assertThat(nk).isEqualTo(næringskoder)
 
         val hendelser = db.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
