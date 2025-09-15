@@ -287,20 +287,12 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.PUBLISER, publisertAv)
     }
 
-    fun avsluttInvitasjon(treff: TreffId, avsluttetAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVSLUTT_INVITASJON, avsluttetAv)
+    fun fullfor(treff: TreffId, fullfortAv: String) {
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.FULLFØR, fullfortAv)
     }
 
-    fun avsluttArrangement(treff: TreffId, avsluttetAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVSLUTT_ARRANGEMENT, avsluttetAv)
-    }
-
-    fun avsluttOppfolging(treff: TreffId, avsluttetAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVSLUTT_OPPFØLGING, avsluttetAv)
-    }
-
-    fun avslutt(treff: TreffId, avsluttetAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVSLUTT, avsluttetAv)
+    fun gjenapn(treff: TreffId, gjenapnetAv: String) {
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.GJENÅPN, gjenapnetAv)
     }
 
     private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {

@@ -94,7 +94,7 @@ class RekrutteringstreffRepositoryTest {
     }
 
     @Test
-    fun `avslutt-metoder registrerer hendelser`() {
+    fun `gjenåpn og fullfør registrerer hendelser`() {
         val navIdent = "A123456"
         val id = repository.opprett(
             OpprettRekrutteringstreffInternalDto(
@@ -105,18 +105,14 @@ class RekrutteringstreffRepositoryTest {
             )
         )
 
-        repository.avsluttInvitasjon(id, navIdent)
-        repository.avsluttArrangement(id, navIdent)
-        repository.avsluttOppfolging(id, navIdent)
-        repository.avslutt(id, navIdent)
+        repository.gjenapn(id, navIdent)
+        repository.fullfor(id, navIdent)
 
         val hendelser = repository.hentHendelser(id)
-        assertThat(hendelser).hasSize(5)
+        assertThat(hendelser).hasSize(3)
         assertThat(hendelser.map { it.hendelsestype }).containsExactly(
-            RekrutteringstreffHendelsestype.AVSLUTT,
-            RekrutteringstreffHendelsestype.AVSLUTT_OPPFØLGING,
-            RekrutteringstreffHendelsestype.AVSLUTT_ARRANGEMENT,
-            RekrutteringstreffHendelsestype.AVSLUTT_INVITASJON,
+            RekrutteringstreffHendelsestype.FULLFØR,
+            RekrutteringstreffHendelsestype.GJENÅPN,
             RekrutteringstreffHendelsestype.OPPRETT
         )
     }

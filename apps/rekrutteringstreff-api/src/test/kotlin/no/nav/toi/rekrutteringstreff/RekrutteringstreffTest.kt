@@ -483,10 +483,8 @@ class RekrutteringstreffTest {
 
     private fun hendelseEndepunktVarianter() = listOf(
         Arguments.of("publiser", RekrutteringstreffHendelsestype.PUBLISER),
-        Arguments.of("avslutt-invitasjon", RekrutteringstreffHendelsestype.AVSLUTT_INVITASJON),
-        Arguments.of("avslutt-arrangement", RekrutteringstreffHendelsestype.AVSLUTT_ARRANGEMENT),
-        Arguments.of("avslutt-oppfolging", RekrutteringstreffHendelsestype.AVSLUTT_OPPFØLGING),
-        Arguments.of("avslutt", RekrutteringstreffHendelsestype.AVSLUTT)
+        Arguments.of("gjenapn", RekrutteringstreffHendelsestype.GJENÅPN),
+        Arguments.of("fullfor", RekrutteringstreffHendelsestype.FULLFØR)
     )
 
     @ParameterizedTest
