@@ -3,6 +3,7 @@ package no.nav.toi.arbeidsgiver
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.bodyAsClass
+import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
@@ -15,6 +16,8 @@ private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val pathParamTreffId = "id"
 private const val arbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver"
 private const val hendelserArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/hendelser"
+private const val pathParamArbeidsgiverId = "arbeidsgiverId"
+private const val arbeidsgiverItemPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/{$pathParamArbeidsgiverId}"
 
 private data class LeggTilArbeidsgiverDto(
     val organisasjonsnummer: String,
@@ -195,8 +198,28 @@ private fun hentArbeidsgiverHendelserHandler(repo: ArbeidsgiverRepository): (Con
     })
 }
 
+@OpenApi(
+    summary = "Slett en arbeidsgiver",
+    operationId = "slettArbeidsgiver",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [
+        OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
+        OpenApiParam(name = pathParamArbeidsgiverId, type = UUID::class, required = true)
+    ],
+    responses = [OpenApiResponse(status = "204")],
+    path = arbeidsgiverItemPath,
+    methods = [HttpMethod.DELETE]
+)
+private fun slettArbeidsgiverHandler(repo: ArbeidsgiverRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val id = UUID.fromString(ctx.pathParam(pathParamArbeidsgiverId))
+    val navIdent = ctx.extractNavIdent()
+    if (repo.slett(id, navIdent)) ctx.status(204) else throw NotFoundResponse()
+}
+
 fun Javalin.handleArbeidsgiver(repo: ArbeidsgiverRepository) {
     post(arbeidsgiverPath, leggTilArbeidsgiverHandler(repo))
     get(arbeidsgiverPath, hentArbeidsgivereHandler(repo))
     get(hendelserArbeidsgiverPath, hentArbeidsgiverHendelserHandler(repo))
+    delete(arbeidsgiverItemPath, slettArbeidsgiverHandler(repo))
 }

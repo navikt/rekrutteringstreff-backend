@@ -38,6 +38,24 @@ class ArbeidsgiverRepository(
     private val objectMapper: ObjectMapper
 ) {
 
+    fun slett(arbeidsgiverId: UUID, opprettetAv: String): Boolean =
+        dataSource.connection.use { c ->
+            val arbeidsgiverDbId: Long? = c.prepareStatement("SELECT db_id FROM arbeidsgiver WHERE id = ?").use { ps ->
+                ps.setObject(1, arbeidsgiverId)
+                ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
+            }
+            if (arbeidsgiverDbId == null) return@use false
+
+            leggTilHendelse(
+                connection = c,
+                arbeidsgiverDbId = arbeidsgiverDbId,
+                hendelsestype = ArbeidsgiverHendelsestype.SLETT,
+                opprettetAvAktørType = AktørType.ARRANGØR,
+                aktøridentifikasjon = opprettetAv
+            )
+            true
+        }
+
     private fun hentTreffDbId(connection: Connection, treff: TreffId): Long? {
         connection.prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
             stmt.setObject(1, treff.somUuid)
@@ -142,7 +160,15 @@ class ArbeidsgiverRepository(
                 FROM arbeidsgiver ag
                 JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
                 LEFT JOIN arbeidsgiver_hendelse ah ON ag.db_id = ah.arbeidsgiver_db_id
+                LEFT JOIN LATERAL (
+                    SELECT hendelsestype
+                      FROM arbeidsgiver_hendelse h
+                     WHERE h.arbeidsgiver_db_id = ag.db_id
+                     ORDER BY h.tidspunkt DESC
+                     LIMIT 1
+                ) last ON true
                 WHERE rt.id = ?
+                  AND COALESCE(last.hendelsestype, 'OPPRETT') <> 'SLETT'
                 GROUP BY ag.id, ag.db_id, ag.orgnr, ag.orgnavn, rt.id
                 ORDER BY ag.db_id;
             """.trimIndent()
