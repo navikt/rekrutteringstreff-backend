@@ -1,6 +1,9 @@
 package no.nav.toi.arbeidsgiver
 
+import no.nav.toi.AktørType
+import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId
+import java.time.ZonedDateTime
 import java.util.UUID
 
 data class Orgnr(private val orgnr: String) {
@@ -20,9 +23,15 @@ data class Orgnavn(private val orgnavn: String) {
     override fun toString(): String = asString
 }
 
+data class Næringskode(
+    val kode: String?,
+    val beskrivelse: String?,
+)
+
 data class LeggTilArbeidsgiver(
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
+    val næringskoder: List<Næringskode> = emptyList()
 )
 
 data class Arbeidsgiver(

@@ -41,7 +41,8 @@ class ArbeidsgiverRepositoryTest {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val input = LeggTilArbeidsgiver(
             Orgnr("123456789"),
-            Orgnavn("Example Company")
+            Orgnavn("Example Company"),
+            listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
         )
         repository.leggTil(input, treffId, "testperson")
         val arbeidsgivere = repository.hentArbeidsgivere(treffId)
@@ -81,7 +82,8 @@ class ArbeidsgiverRepositoryTest {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreffHendelser")
         val input = LeggTilArbeidsgiver(
             Orgnr("444444444"),
-            Orgnavn("Company D")
+            Orgnavn("Company D"),
+            listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
         )
         repository.leggTil(input, treffId, "testperson")
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)

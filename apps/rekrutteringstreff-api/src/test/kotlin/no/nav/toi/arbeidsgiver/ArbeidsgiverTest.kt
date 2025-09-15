@@ -91,17 +91,60 @@ class ArbeidsgiverTest {
     }
 
     @Test
-    fun leggTilArbeidsgiver() {
+    fun leggTilArbeidsgiverMedTomListeForNæringskoder() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val requestBody = """
-            {
-              "organisasjonsnummer": "$orgnr",
-              "navn": "$orgnavn"
-            }
-        """.trimIndent()
+        val requestBody = JacksonConfig.mapper.writeValueAsString(
+            mapOf(
+                "organisasjonsnummer" to orgnr.asString,
+                "navn" to orgnavn.asString,
+                "næringskoder" to emptyList<Næringskode>()
+            )
+        )
+        assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+
+        val (_, response, result) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        val næringskoder = db.hentNæringskodeForArbeidsgiverPåTreff(treffId, orgnr)
+
+        assertStatuscodeEquals(HTTP_CREATED, response, result)
+
+        val actualArbeidsgivere = db.hentAlleArbeidsgivere()
+        assertThat(actualArbeidsgivere.size).isEqualTo(1)
+        val ag = actualArbeidsgivere.first()
+        assertThat(ag.treffId).isEqualTo(treffId)
+        assertThat(ag.orgnr).isEqualTo(orgnr)
+        assertThat(ag.orgnavn).isEqualTo(orgnavn)
+        assertThat(ag.arbeidsgiverTreffId).isInstanceOf(ArbeidsgiverTreffId::class.java)
+        assertThat(næringskoder).isEmpty()
+
+        val hendelser = db.hentArbeidsgiverHendelser(treffId)
+        assertThat(hendelser).hasSize(1)
+        val h = hendelser.first()
+        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT)
+        assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+        assertThat(h.aktøridentifikasjon).isEqualTo("A123456")
+    }
+
+    @Test
+    fun leggTilArbeidsgiverMedListeForNæringskoder() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val orgnr = Orgnr("555555555")
+        val orgnavn = Orgnavn("Oooorgnavn")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val næringskoder = listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
+        val requestBody = JacksonConfig.mapper.writeValueAsString(
+            mapOf(
+                "organisasjonsnummer" to orgnr.asString,
+                "navn" to orgnavn.asString,
+                "næringskoder" to listOf(mapOf("kode" to "47.111", "beskrivelse" to "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
+            )
+        )
         assertThat(db.hentAlleArbeidsgivere()).isEmpty()
 
         val (_, response, result) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver")
@@ -118,6 +161,11 @@ class ArbeidsgiverTest {
         assertThat(ag.orgnr).isEqualTo(orgnr)
         assertThat(ag.orgnavn).isEqualTo(orgnavn)
         assertThat(ag.arbeidsgiverTreffId).isInstanceOf(ArbeidsgiverTreffId::class.java)
+
+        val nk = db.hentNæringskodeForArbeidsgiverPåTreff(treffId, orgnr)
+
+        assertThat(nk).hasSize(1)
+        assertThat(nk).isEqualTo(næringskoder)
 
         val hendelser = db.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
