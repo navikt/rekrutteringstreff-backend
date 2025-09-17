@@ -299,6 +299,10 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVLYS, avlystAv)
     }
 
+    fun avpubliser(treff: TreffId, avpublisertAv: String) {
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVPUBLISER, avpublisertAv)
+    }
+
     private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
         dataSource.connection.use { c ->
             val dbId = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id=?")

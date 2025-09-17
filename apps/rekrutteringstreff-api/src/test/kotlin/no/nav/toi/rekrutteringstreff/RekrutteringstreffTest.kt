@@ -485,6 +485,7 @@ class RekrutteringstreffTest {
         Arguments.of("publiser", RekrutteringstreffHendelsestype.PUBLISER),
         Arguments.of("gjenapn", RekrutteringstreffHendelsestype.GJENÅPN),
         Arguments.of("avlys", RekrutteringstreffHendelsestype.AVLYS),
+        Arguments.of("avpubliser", RekrutteringstreffHendelsestype.AVPUBLISER),
         Arguments.of("fullfor", RekrutteringstreffHendelsestype.FULLFØR)
     )
 

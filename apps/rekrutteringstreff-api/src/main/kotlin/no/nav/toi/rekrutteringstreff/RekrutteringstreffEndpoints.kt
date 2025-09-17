@@ -20,6 +20,7 @@ private const val publiserPath = "$endepunktRekrutteringstreff/{$pathParamTreffI
 private const val gjenapnPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/gjenapn"
 private const val fullforPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/fullfor"
 private const val avlysPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avlys"
+private const val avpubliserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avpubliser"
 private const val fellesPath =
     "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
 
@@ -322,6 +323,23 @@ private fun avlysRekrutteringstreffHandler(repo: RekrutteringstreffRepository): 
 }
 
 @OpenApi(
+    summary = "Avpubliserer et rekrutteringstreff ved å legge til en avpubliseringshendelse.",
+    operationId = "avpubliserRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    path = avpubliserPath,
+    methods = [HttpMethod.POST],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+    responses = [OpenApiResponse(status = "200", description = "Avpubliseringshendelse er lagt til.")]
+)
+private fun avpubliserRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val navIdent = ctx.extractNavIdent()
+    repo.avpubliser(treffId, navIdent)
+    ctx.status(200)
+}
+
+@OpenApi(
     summary = "Fullfører et rekrutteringstreff ved å legge til en fullføringshendelse.",
     operationId = "fullforRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
@@ -349,6 +367,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     post(publiserPath, publiserRekrutteringstreffHandler(repo))
     post(gjenapnPath, gjenapnRekrutteringstreffHandler(repo))
     post(avlysPath, avlysRekrutteringstreffHandler(repo))
+    post(avpubliserPath, avpubliserRekrutteringstreffHandler(repo))
     post(fullforPath, fullforRekrutteringstreffHandler(repo))
     handleEiere(repo.eierRepository)
     handleInnlegg(repo.innleggRepository)

@@ -10,7 +10,7 @@ enum class ArbeidsgiverHendelsestype {
 }
 
 enum class RekrutteringstreffHendelsestype {
-    OPPRETT, OPPDATER, SLETT, PUBLISER, GJENÅPN, FULLFØR, AVLYS
+    OPPRETT, OPPDATER, SLETT, PUBLISER, GJENÅPN, FULLFØR, AVLYS, AVPUBLISER
 }
 
 enum class AktørType { ARRANGØR, JOBBSØKER, ARBEIDSGIVER }
