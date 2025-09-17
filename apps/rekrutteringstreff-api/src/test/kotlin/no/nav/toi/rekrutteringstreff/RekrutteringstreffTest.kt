@@ -484,6 +484,7 @@ class RekrutteringstreffTest {
     private fun hendelseEndepunktVarianter() = listOf(
         Arguments.of("publiser", RekrutteringstreffHendelsestype.PUBLISER),
         Arguments.of("gjenapn", RekrutteringstreffHendelsestype.GJENÅPN),
+        Arguments.of("avlys", RekrutteringstreffHendelsestype.AVLYS),
         Arguments.of("fullfor", RekrutteringstreffHendelsestype.FULLFØR)
     )
 

@@ -94,7 +94,7 @@ class RekrutteringstreffRepositoryTest {
     }
 
     @Test
-    fun `gjenåpn og fullfør registrerer hendelser`() {
+    fun `gjenåpn og fullfør hendelser`() {
         val navIdent = "A123456"
         val id = repository.opprett(
             OpprettRekrutteringstreffInternalDto(
@@ -113,6 +113,28 @@ class RekrutteringstreffRepositoryTest {
         assertThat(hendelser.map { it.hendelsestype }).containsExactly(
             RekrutteringstreffHendelsestype.FULLFØR,
             RekrutteringstreffHendelsestype.GJENÅPN,
+            RekrutteringstreffHendelsestype.OPPRETT
+        )
+    }
+
+    @Test
+    fun `avlys et treff hendelse`() {
+        val navIdent = "A654321"
+        val id = repository.opprett(
+            OpprettRekrutteringstreffInternalDto(
+                tittel = "Test-treff",
+                opprettetAvPersonNavident = navIdent,
+                opprettetAvNavkontorEnhetId = "0318",
+                opprettetAvTidspunkt = nowOslo()
+            )
+        )
+
+        repository.avlys(id, navIdent)
+
+        val hendelser = repository.hentHendelser(id)
+        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser.map { it.hendelsestype }).containsExactly(
+            RekrutteringstreffHendelsestype.AVLYS,
             RekrutteringstreffHendelsestype.OPPRETT
         )
     }

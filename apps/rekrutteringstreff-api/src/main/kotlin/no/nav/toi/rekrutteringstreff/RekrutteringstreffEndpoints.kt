@@ -19,6 +19,7 @@ private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreff
 private const val publiserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/publiser"
 private const val gjenapnPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/gjenapn"
 private const val fullforPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/fullfor"
+private const val avlysPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avlys"
 private const val fellesPath =
     "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
 
@@ -304,6 +305,23 @@ private fun gjenapnRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
 }
 
 @OpenApi(
+    summary = "Avlyser et rekrutteringstreff ved å legge til en avlysingshendelse.",
+    operationId = "avlysRekrutteringstreff",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    path = avlysPath,
+    methods = [HttpMethod.POST],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+    responses = [OpenApiResponse(status = "200", description = "Avlysningshendelse er lagt til.")]
+)
+private fun avlysRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+    val navIdent = ctx.extractNavIdent()
+    repo.avlys(treffId, navIdent)
+    ctx.status(200)
+}
+
+@OpenApi(
     summary = "Fullfører et rekrutteringstreff ved å legge til en fullføringshendelse.",
     operationId = "fullforRekrutteringstreff",
     security = [OpenApiSecurity(name = "BearerAuth")],
@@ -330,6 +348,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     get(fellesPath, hentAlleHendelserHandler(repo))
     post(publiserPath, publiserRekrutteringstreffHandler(repo))
     post(gjenapnPath, gjenapnRekrutteringstreffHandler(repo))
+    post(avlysPath, avlysRekrutteringstreffHandler(repo))
     post(fullforPath, fullforRekrutteringstreffHandler(repo))
     handleEiere(repo.eierRepository)
     handleInnlegg(repo.innleggRepository)
