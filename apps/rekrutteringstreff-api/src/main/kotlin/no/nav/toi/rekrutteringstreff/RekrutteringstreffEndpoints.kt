@@ -52,7 +52,7 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
     val internalDto = OpprettRekrutteringstreffInternalDto(
-        tittel = "",
+        tittel = inputDto.tittel,
         opprettetAvPersonNavident = ctx.extractNavIdent(),
         opprettetAvNavkontorEnhetId = inputDto.opprettetAvNavkontorEnhetId,
         opprettetAvTidspunkt = ZonedDateTime.now(),
@@ -392,6 +392,7 @@ data class RekrutteringstreffDTO(
 
 data class OpprettRekrutteringstreffDto(
     val opprettetAvNavkontorEnhetId: String,
+    val tittel: String = "Nytt rekrutteringstreff"
 )
 
 data class OpprettRekrutteringstreffInternalDto( // TODO Are: Finne et bedre navn? Ligger den i feil klasse?

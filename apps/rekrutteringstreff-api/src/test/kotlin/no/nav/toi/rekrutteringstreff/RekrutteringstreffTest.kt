@@ -106,7 +106,7 @@ class RekrutteringstreffTest {
                 assertThat(postId).isNotEmpty()
 
                 val rekrutteringstreff = db.hentAlleRekrutteringstreff().first()
-                assertThat(rekrutteringstreff.tittel).isEmpty()
+                assertThat(rekrutteringstreff.tittel).isEqualTo("Nytt rekrutteringstreff")
                 assertThat(rekrutteringstreff.beskrivelse).isNull()
                 assertThat(rekrutteringstreff.fraTid).isNull()
                 assertThat(rekrutteringstreff.tilTid).isNull()
