@@ -80,6 +80,9 @@ class OpenAiClient(
                 .body(body)
                 .responseString()
 
+            secure(log).info("kimelding input: $userMessageFiltered  response: $responseResult")
+
+
             val raw = when (responseResult) {
                 is Result.Failure -> throw responseResult.error
                 is Result.Success -> responseResult.get()
