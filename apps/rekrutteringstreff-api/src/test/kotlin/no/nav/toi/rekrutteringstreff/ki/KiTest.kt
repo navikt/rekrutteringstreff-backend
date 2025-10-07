@@ -39,7 +39,9 @@ class KiTest {
     private val authPort = 18013
     private val db = TestDatabase()
     private val appPort = ubruktPortnr()
-    private val base = "/api/rekrutteringstreff/ki"
+    private val oldBase = "/api/rekrutteringstreff/ki"
+    private val newBaseTemplate = "/api/rekrutteringstreff/%s/ki"
+    private val base = oldBase
 
     private val app = App(
         port = appPort,
@@ -393,7 +395,56 @@ class KiTest {
         assertThat(res.statusCode).isEqualTo(403)
     }
 
-    private fun stubOpenAi(bryter: Boolean = false, begrunnelse: String = "OK") {
+    @Test
+        fun validerer_tekst_med_nytt_endepunkt_og_returnerer_logg_id() {
+            stubOpenAi()
+            val navIdent = "A123456"
+            val token = authServer.lagToken(authPort, navIdent = navIdent)
+            val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+            val requestBody = """
+                {
+                  "feltType": "tittel",
+                  "tekst": "Dette er en uskyldig tittel"
+                }
+            """.trimIndent()
+            val baseNew = newBaseTemplate.format(treffId)
+            val (_, response, result) = Fuel.post("http://localhost:$appPort$baseNew/valider")
+                .body(requestBody)
+                .header("Authorization", "Bearer ${token.serialize()}")
+                .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
+                    override fun deserialize(content: String): ValiderMedLoggResponseDto =
+                        mapper.readValue(content, ValiderMedLoggResponseDto::class.java)
+                })
+            assertThat(response.statusCode).isEqualTo(200)
+            result as Result.Success
+            assertThat(result.value.loggId).isNotBlank()
+        }
+
+        @Test
+        fun lister_logglinjer_med_nytt_endepunkt() {
+            stubOpenAi()
+            val navIdent = "A123456"
+            val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+            val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+            val loggId = opprettLogg(treffId, token)
+            val baseNew = newBaseTemplate.format(treffId)
+            val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$baseNew/logg")
+                .header("Authorization", "Bearer ${token.serialize()}")
+                .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
+                    override fun deserialize(content: String): List<KiLoggOutboundDto> {
+                        val type = mapper.typeFactory.constructCollectionType(
+                            List::class.java,
+                            KiLoggOutboundDto::class.java
+                        )
+                        return mapper.readValue(content, type)
+                    }
+                })
+            assertThat(listRes.statusCode).isEqualTo(200)
+            listResult as Result.Success
+            assertThat(listResult.value.any { it.id == loggId }).isTrue()
+        }
+
+        private fun stubOpenAi(bryter: Boolean = false, begrunnelse: String = "OK") {
         val responseBody = """
             {
               "choices": [
@@ -488,4 +539,5 @@ class KiTest {
                 }
             }
         }
+
 }

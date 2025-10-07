@@ -14,18 +14,33 @@ import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
 import java.time.ZonedDateTime
 import java.util.*
 
-private const val base = "/api/rekrutteringstreff/ki"
+private const val pathParamTreffId = "id"
+private const val oldBase = "/api/rekrutteringstreff/ki"
+private const val newBase = "/api/rekrutteringstreff/{$pathParamTreffId}/ki"
 
 fun Javalin.handleKi(repo: KiLoggRepository) {
-    post("$base/valider", validerOgLoggHandler(repo))
-    put("$base/logg/{id}/lagret", oppdaterLagretHandler(repo))
-    put("$base/logg/{id}/manuell", oppdaterManuellHandler(repo))
-    get("$base/logg", listHandler(repo))
-    get("$base/logg/{id}", getHandler(repo))
+    // New endpoints with treffId in path
+    post("$newBase/valider", validerOgLoggHandlerNy(repo))
+    put("$newBase/logg/{loggId}/lagret", oppdaterLagretHandler(repo))
+    put("$newBase/logg/{loggId}/manuell", oppdaterManuellHandler(repo))
+    get("$newBase/logg", listHandler(repo))
+    get("$newBase/logg/{loggId}", getHandler(repo))
+
+    // Backward compatible old endpoints (deprecated)
+    @Deprecated("Bruk /api/rekrutteringstreff/{id}/ki")
+    fun registerDeprecated() {
+        post("$oldBase/valider", validerOgLoggHandlerGammel(repo))
+        put("$oldBase/logg/{id}/lagret", oppdaterLagretHandler(repo))
+        put("$oldBase/logg/{id}/manuell", oppdaterManuellHandler(repo))
+        get("$oldBase/logg", listHandler(repo))
+        get("$oldBase/logg/{id}", getHandler(repo))
+    }
+    registerDeprecated()
 }
 
+@Deprecated("Bruk nytt endepunkt med treffId i path")
 @OpenApi(
-    summary = "Valider tekst via KI og logg spørringen.",
+    summary = "Valider tekst via KI og logg spørringen (gammelt endepunkt).",
     security = [OpenApiSecurity(name = "BearerAuth")],
     requestBody = OpenApiRequestBody(
         required = true,
@@ -50,13 +65,57 @@ fun Javalin.handleKi(repo: KiLoggRepository) {
             }"""
         )]
     )],
-    path = "$base/valider",
+    path = "$oldBase/valider",
     methods = [HttpMethod.POST]
 )
-private fun validerOgLoggHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
+private fun validerOgLoggHandlerGammel(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val req = ctx.bodyAsClass<ValiderMedLoggRequestDto>()
     val treffId = UUID.fromString(req.treffId)
+    val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =
+        OpenAiClient(repo = repo).validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
+    ctx.status(200).json(
+        ValiderMedLoggResponseDto(
+            loggId = loggId?.toString() ?: "",
+            bryterRetningslinjer = result.bryterRetningslinjer,
+            begrunnelse = result.begrunnelse
+        )
+    )
+}
+
+@OpenApi(
+    summary = "Valider tekst via KI og logg spørringen (nytt endepunkt).",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, example = "550e8400-e29b-41d4-a716-446655440000")],
+    requestBody = OpenApiRequestBody(
+        required = true,
+        content = [OpenApiContent(
+            from = ValiderMedLoggRequestUtenTreffIdDto::class,
+            example = """{
+              "feltType": "tittel",
+              "tekst": "Vi søker etter en blid og motivert medarbeider."
+            }"""
+        )]
+    ),
+    responses = [OpenApiResponse(
+        status = "200",
+        description = "Resultat fra validering og referanse til logglinje.",
+        content = [OpenApiContent(
+            from = ValiderMedLoggResponseDto::class,
+            example = """{
+              "loggId": "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d",
+              "bryterRetningslinjer": false,
+              "begrunnelse": "Ingen sensitive opplysninger eller diskriminerende formuleringer."
+            }"""
+        )]
+    )],
+    path = "$newBase/valider",
+    methods = [HttpMethod.POST]
+)
+private fun validerOgLoggHandlerNy(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
+    ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+    val req = ctx.bodyAsClass<ValiderMedLoggRequestUtenTreffIdDto>()
+    val treffId = UUID.fromString(ctx.pathParam(pathParamTreffId))
     val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =
         OpenAiClient(repo = repo).validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
     ctx.status(200).json(
@@ -87,12 +146,12 @@ private fun validerOgLoggHandler(repo: KiLoggRepository): (Context) -> Unit = { 
         description = "Oppdatert.",
         content = [OpenApiContent(from = Map::class, example = "{}")]
     )],
-    path = "$base/logg/{id}/lagret",
+    path = "$newBase/logg/{loggId}/lagret",
     methods = [HttpMethod.PUT]
 )
 private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
-    val id = UUID.fromString(ctx.pathParam("id"))
+    val id = UUID.fromString(runCatching { ctx.pathParam("loggId") }.getOrElse { ctx.pathParam("id") })
     val req = ctx.bodyAsClass<OppdaterLagretRequestDto>()
     if (repo.setLagret(id, req.lagret) == 0) throw NotFoundResponse("Logg ikke funnet")
     ctx.status(200).json(emptyMap<String, String>())
@@ -117,12 +176,12 @@ private fun oppdaterLagretHandler(repo: KiLoggRepository): (Context) -> Unit = {
         description = "Oppdatert.",
         content = [OpenApiContent(from = Map::class, example = "{}")]
     )],
-    path = "$base/logg/{id}/manuell",
+    path = "$newBase/logg/{loggId}/manuell",
     methods = [HttpMethod.PUT]
 )
 private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
-    val id = UUID.fromString(ctx.pathParam("id"))
+    val id = UUID.fromString(runCatching { ctx.pathParam("loggId") }.getOrElse { ctx.pathParam("id") })
     val req = ctx.bodyAsClass<OppdaterManuellRequestDto>()
 
     val ident: String?
@@ -204,7 +263,7 @@ private fun oppdaterManuellHandler(repo: KiLoggRepository): (Context) -> Unit = 
             ]"""
         )]
     )],
-    path = "$base/logg",
+    path = "$newBase/logg",
     methods = [HttpMethod.GET]
 )
 private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
@@ -284,12 +343,12 @@ private fun listHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
             }"""
         )]
     )],
-    path = "$base/logg/{id}",
+    path = "$newBase/logg/{id}",
     methods = [HttpMethod.GET]
 )
 private fun getHandler(repo: KiLoggRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
-    val id = UUID.fromString(ctx.pathParam("id"))
+    val id = UUID.fromString(runCatching { ctx.pathParam("loggId") }.getOrElse { ctx.pathParam("id") })
     val row = repo.findById(id) ?: throw NotFoundResponse("Logg ikke funnet")
 
     val mapper = JacksonConfig.mapper
@@ -341,6 +400,11 @@ data class ValiderMedLoggResponseDto(
 
 data class ValiderMedLoggRequestDto(
     val treffId: String,
+    val feltType: String,
+    val tekst: String
+)
+
+data class ValiderMedLoggRequestUtenTreffIdDto(
     val feltType: String,
     val tekst: String
 )
