@@ -28,5 +28,7 @@ replay_pid*
 
 build/
 
+apps/rekrutteringstreff-api/robTestresultater.txt
+
 .gradle/
 .idea/
