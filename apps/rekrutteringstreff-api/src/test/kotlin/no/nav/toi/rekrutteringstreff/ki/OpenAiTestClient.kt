@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.ki
+package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.ki
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -6,6 +6,7 @@ import no.nav.toi.JacksonConfig
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
+import no.nav.toi.rekrutteringstreff.ki.SystemPrompt
 import java.lang.Thread.sleep
 import java.net.URI
 import java.net.http.HttpClient

@@ -2,7 +2,6 @@ package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.ki
 
 
 import no.nav.toi.log
-import no.nav.toi.rekrutteringstreff.ki.OpenAiTestClient
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Disabled
@@ -17,7 +16,6 @@ import java.net.URI
 private const val MAX_LENGDE_PROMPT_NAVN = 40
 private const val TESTRESULTATER_FIL = "robTestresultater.txt"
 // Testen skriver resultatene på et mer lesbart format enn loggene til filen definert over
-// Husk å fjerne denne filen før commit/push til github for ryddighetsskyld, da det er ment for intern bruk
 
 @Disabled("Testen skal kun kjøres manuelt ved behov")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
