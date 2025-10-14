@@ -169,7 +169,7 @@ class OpenAiClient(
         if (contentFilterResult.violence?.filtered == true) {
             tekstResultat += "voldelig innhold, "
         }
-        return tekstResultat.trim().trimEnd(',')
+        return tekstResultat.removeSuffix(", ")
     }
 
     companion object {
