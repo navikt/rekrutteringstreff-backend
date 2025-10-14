@@ -109,6 +109,7 @@ class OpenAiClient(
                             )
                         }. Den kan derfor ikke vurderes av KI."
                     )
+                    filtered = userMessageFiltered
                 } else {
                     secure(log).error("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
                 }
