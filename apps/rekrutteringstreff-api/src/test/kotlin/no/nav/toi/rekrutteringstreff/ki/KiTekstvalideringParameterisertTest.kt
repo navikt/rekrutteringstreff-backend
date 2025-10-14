@@ -261,14 +261,14 @@ class KiTekstvalideringParameterisertTest {
             Pair(true, "Treff for sosialhjelpsmottakere"),
             Pair(true, "Treff for unge menn"),
             Pair(true, "Treff for kvinner i sin beste alder"),
-//        Pair(true, "Treff for menn mellom 18-30"), // Fikk 400 bad request fra OpenAi pga. innholdet
+            Pair(true, "Treff for menn mellom 18-30"), // Fikk 400 bad request fra OpenAi pga. innholdet
             Pair(false, "Treff for håndtverkere"),
             Pair(true, "Treff for sykemeldte håndtverkere"),
             Pair(false, "Kirkekontoret inviterer til treff for jobber i kirken"),
             Pair(false, "Moskeen på Furuset inviterer til treff for jobber i moskeen"),
             Pair(true, "Moskeen på Furuset inviterer til jobbtreff for muslimer"),
             Pair(true, "Har du mottatt AAP lenge? Da ønsker du kanskje en jobb? Kom på rekrutteringstreff"),
-//        Pair(true, "Treff for kvp") // Fikk 400 bad request fra OpenAi pga. innholdet
+            Pair(true, "Treff for kvp") // Fikk 400 bad request fra OpenAi pga. innholdet
         )
 
         @JvmStatic

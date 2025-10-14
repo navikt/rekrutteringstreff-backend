@@ -83,13 +83,51 @@ class OpenAiTestClient(
         }
 
         if (response.statusCode() == 200) {
-            val result = mapper.readValue<OpenAiResponseTestClient>(response.body()).choices?.firstOrNull()?.message?.content
-                ?: error("Ingen respons fra OpenAI")
+            val result =
+                mapper.readValue<OpenAiResponseTestClient>(response.body()).choices?.firstOrNull()?.message?.content
+                    ?: error("Ingen respons fra OpenAI")
             return mapper.readValue(result.trim())
+        } else if (response.statusCode() == 400) {
+            log.warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
+            val error = mapper.readValue<OpenAiBadRequestDto>(response.body())
+            val contentFilterResult = error.error?.innererror?.content_filter_result
+            if (contentFilterResult != null) {
+                val respons = ValiderRekrutteringstreffResponsDto(
+                    bryterRetningslinjer = true,
+                    begrunnelse = "Teksten bryter med retningslinjene til KI-leverandøren og trigger: ${
+                        sorterContentFilterResult(
+                            contentFilterResult
+                        )
+                    }. Den kan derfor ikke vurderes av KI."
+                )
+                log.info(respons.begrunnelse)
+                return respons
+            } else
+                throw RuntimeException("Feil ved kall mot OpenAI: ${response.statusCode()} - ${response.body()}")
         } else {
             log.error("Feil ved kall mot OpenAI: ${response.statusCode()}")
         }
         throw RuntimeException("Feil ved kall mot OpenAI: ${response.statusCode()} - ${response.body()}")
+    }
+
+    private fun sorterContentFilterResult(contentFilterResult: ContentFilterResultDto): String {
+        var tekstResultat = ""
+        if (contentFilterResult.hate?.filtered == true) {
+            tekstResultat += "hatefull tekst, "
+        }
+        if (contentFilterResult.jailbreak?.filtered == true) {
+            tekstResultat += "tekst som prøver å forbigå retningslinjene, "
+        }
+        if (contentFilterResult.self_harm?.filtered == true) {
+            tekstResultat += "tekst om selvskading, "
+        }
+        if (contentFilterResult.sexual?.filtered == true) {
+            tekstResultat += "seksuelt innhold, "
+        }
+        if (contentFilterResult.violence?.filtered == true) {
+            tekstResultat += "voldelig innhold, "
+        }
+        return tekstResultat.trim().trimEnd(',')
     }
 
     companion object {
@@ -100,6 +138,43 @@ class OpenAiTestClient(
         private const val topP = TOP_P
         private val responseFormat = ResponseFormatTestClient()
     }
+
+    // Dto-er basert på response body-en fra OpenAi ved 400 Bad Request
+    data class OpenAiBadRequestDto(
+        val error: ErrorDto?
+    )
+
+    data class ErrorDto(
+        val message: String?,
+        val type: String?,
+        val param: String?,
+        val code: String?,
+        val status: Int?,
+        val innererror: InnerErrorDto?
+    )
+
+    data class InnerErrorDto(
+        val code: String?,
+        val content_filter_result: ContentFilterResultDto?
+    )
+
+    data class ContentFilterResultDto(
+        val hate: SeverityFilterResultDto?,
+        val jailbreak: JailbreakFilterResultDto?,
+        val self_harm: SeverityFilterResultDto?,
+        val sexual: SeverityFilterResultDto?,
+        val violence: SeverityFilterResultDto?
+    )
+
+    data class SeverityFilterResultDto(
+        val filtered: Boolean?,
+        val severity: String?
+    )
+
+    data class JailbreakFilterResultDto(
+        val filtered: Boolean?,
+        val detected: Boolean?
+    )
 }
 
 
