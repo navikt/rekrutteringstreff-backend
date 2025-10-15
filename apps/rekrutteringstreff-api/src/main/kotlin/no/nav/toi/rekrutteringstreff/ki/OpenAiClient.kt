@@ -87,6 +87,7 @@ class OpenAiClient(
                 is Result.Failure -> throw responseResult.error
                 is Result.Success -> responseResult.get()
             }
+            
 
             val content = mapper
                 .readValue<OpenAiResponse>(raw)
