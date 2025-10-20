@@ -150,23 +150,23 @@ class OpenAiClient(
     }
 
     private fun sorterContentFilterResult(contentFilterResult: ContentFilterResultDto): String {
-        var tekstResultat = ""
+        val tekstResultat = mutableListOf<String>()
         if (contentFilterResult.hate?.filtered == true) {
-            tekstResultat += "hatefull tekst, "
+            tekstResultat.add("hatefull tekst")
         }
         if (contentFilterResult.jailbreak?.filtered == true) {
-            tekstResultat += "tekst som prøver å forbigå retningslinjene, "
+            tekstResultat.add("tekst som prøver å forbigå retningslinjene")
         }
         if (contentFilterResult.self_harm?.filtered == true) {
-            tekstResultat += "tekst om selvskading, "
+            tekstResultat.add("tekst om selvskading")
         }
         if (contentFilterResult.sexual?.filtered == true) {
-            tekstResultat += "seksuelt innhold, "
+            tekstResultat.add("seksuelt innhold")
         }
         if (contentFilterResult.violence?.filtered == true) {
-            tekstResultat += "voldelig innhold, "
+            tekstResultat.add("voldelig innhold")
         }
-        return tekstResultat.removeSuffix(", ")
+        return tekstResultat.joinToString(", ")
     }
 
     companion object {
