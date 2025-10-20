@@ -13,7 +13,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/kandidatsøk-fnr
+      deploy_dev_branch: refs/heads/bytt-fuel
     secrets: inherit
     permissions:
       contents: read

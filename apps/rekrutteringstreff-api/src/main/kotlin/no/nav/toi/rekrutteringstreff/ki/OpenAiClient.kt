@@ -1,15 +1,17 @@
-// OpenAiClient.kt
 package no.nav.toi.rekrutteringstreff.ki
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.github.kittinunf.fuel.httpPost
-import com.github.kittinunf.result.Result
 import no.nav.toi.JacksonConfig
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.system.measureTimeMillis
@@ -41,6 +43,7 @@ data class EkstraMetaDbJson(
 )
 
 class OpenAiClient(
+    private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val repo: KiLoggRepository,
     private val apiUrl: String =
         System.getenv("OPENAI_API_URL")
@@ -75,27 +78,51 @@ class OpenAiClient(
                 )
             )
 
-            val (_, _, responseResult) = apiUrl.httpPost()
-                .header("api-key" to apiKey, "Content-Type" to "application/json")
-                .body(body)
-                .responseString()
+            val request = HttpRequest.newBuilder()
+                .uri(URI(apiUrl))
+                .headers("api-key", apiKey, "Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(30))
+                .build()
 
-            secure(log).info("kimelding input: $userMessageFiltered  response: $responseResult")
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
+            secure(log).info("kimelding input: $userMessageFiltered  response: $response")
 
-            val raw = when (responseResult) {
-                is Result.Failure -> throw responseResult.error
-                is Result.Success -> responseResult.get()
+            if (response.statusCode() == 429) {
+                secure(log).warn("For mange requester mot OpenAI.")
+                throw RuntimeException("For mange requester mot OpenAI: ${response.statusCode()} - ${response.body()}")
+            } else if (response.statusCode() == 400) {
+                secure(log).warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
+                val error = mapper.readValue<OpenAiBadRequestDto>(response.body())
+                val contentFilterResult = error.error?.innererror?.content_filter_result
+
+                if (contentFilterResult != null) {
+                    result = ValiderRekrutteringstreffResponsDto(
+                        bryterRetningslinjer = true,
+                        begrunnelse = "Teksten bryter med retningslinjene til KI-leverandøren og trigger: ${
+                            sorterContentFilterResult(
+                                contentFilterResult
+                            )
+                        }. Den kan derfor ikke vurderes av KI."
+                    )
+                    filtered = userMessageFiltered
+                } else {
+                    secure(log).error("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
+                }
+
+            } else if (response.statusCode() == 200) {
+                val responseResult = mapper.readValue<OpenAiResponse>(response.body()).choices?.firstOrNull()?.message?.content
+                    ?: error("Ingen respons fra OpenAI")
+                result = mapper.readValue(responseResult.trim())
+                filtered = userMessageFiltered
+
+            } else {
+                secure(log).error("Feil ved kall mot OpenAI: ${response.statusCode()}")
+                throw RuntimeException("Feil ved kall mot OpenAI: ${response.statusCode()} - ${response.body()}")
             }
             
 
-            val content = mapper
-                .readValue<OpenAiResponse>(raw)
-                .choices?.firstOrNull()?.message?.content
-                ?: error("Ingen respons fra OpenAI")
-
-            result = mapper.readValue(content.trim())
-            filtered = userMessageFiltered
         }
 
         val ekstra = EkstraMetaDbJson(
@@ -123,6 +150,26 @@ class OpenAiClient(
         return result to id
     }
 
+    private fun sorterContentFilterResult(contentFilterResult: ContentFilterResultDto): String {
+        val tekstResultat = mutableListOf<String>()
+        if (contentFilterResult.hate?.filtered == true) {
+            tekstResultat.add("hatefull tekst")
+        }
+        if (contentFilterResult.jailbreak?.filtered == true) {
+            tekstResultat.add("tekst som prøver å forbigå retningslinjene")
+        }
+        if (contentFilterResult.self_harm?.filtered == true) {
+            tekstResultat.add("tekst om selvskading")
+        }
+        if (contentFilterResult.sexual?.filtered == true) {
+            tekstResultat.add("seksuelt innhold")
+        }
+        if (contentFilterResult.violence?.filtered == true) {
+            tekstResultat.add("voldelig innhold")
+        }
+        return tekstResultat.joinToString(", ")
+    }
+
     companion object {
         private const val kiNavn = "azure-openai"
         private const val kiVersjon = "toi-gpt-4o"
@@ -131,4 +178,41 @@ class OpenAiClient(
         private const val topP = 1.0
         private val responseFormat = ResponseFormat()
     }
+
+    // Dto-er basert på response body-en fra OpenAi ved 400 Bad Request
+    private data class OpenAiBadRequestDto(
+        val error: ErrorDto?
+    )
+
+    private data class ErrorDto(
+        val message: String?,
+        val type: String?,
+        val param: String?,
+        val code: String?,
+        val status: Int?,
+        val innererror: InnerErrorDto?
+    )
+
+    private data class InnerErrorDto(
+        val code: String?,
+        val content_filter_result: ContentFilterResultDto?
+    )
+
+    private data class ContentFilterResultDto(
+        val hate: SeverityFilterResultDto?,
+        val jailbreak: JailbreakFilterResultDto?,
+        val self_harm: SeverityFilterResultDto?,
+        val sexual: SeverityFilterResultDto?,
+        val violence: SeverityFilterResultDto?
+    )
+
+    private data class SeverityFilterResultDto(
+        val filtered: Boolean?,
+        val severity: String?
+    )
+
+    private data class JailbreakFilterResultDto(
+        val filtered: Boolean?,
+        val detected: Boolean?
+    )
 }
