@@ -7,7 +7,6 @@ import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
-import java.lang.Thread.sleep
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -91,9 +90,7 @@ class OpenAiClient(
             secure(log).info("kimelding input: $userMessageFiltered  response: $response")
 
             if (response.statusCode() == 429) {
-                secure(log).warn("For mange requester mot OpenAI. Venter fem sekunder og prøver igjen.")
-                sleep(5000)
-                return validateRekrutteringstreffOgLogg(treffId, feltType, tekst)
+                secure(log).warn("For mange requester mot OpenAI.")
 
             } else if (response.statusCode() == 400) {
                 secure(log).warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
