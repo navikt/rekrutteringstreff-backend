@@ -91,7 +91,7 @@ class OpenAiClient(
 
             if (response.statusCode() == 429) {
                 secure(log).warn("For mange requester mot OpenAI.")
-
+                throw RuntimeException("For mange requester mot OpenAI: ${response.statusCode()} - ${response.body()}")
             } else if (response.statusCode() == 400) {
                 secure(log).warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
                 val error = mapper.readValue<OpenAiBadRequestDto>(response.body())
