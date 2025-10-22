@@ -23,7 +23,7 @@ erDiagram
     jobbsoker_hendelse ||--o{ aktivitetskort_polling : "sender"
     
     rekrutteringstreff {
-        bigserial db_id PK "Intern primærnøkkel"
+        bigserial rekrutteringstreff_id PK "Intern primærnøkkel"
         uuid id UK "Unik UUID for treffet"
         text tittel "Tittel på rekrutteringstreffet"
         text status "Status: OPPRETTET, PUBLISERT, AVLYST osv."
@@ -41,16 +41,16 @@ erDiagram
     }
     
     arbeidsgiver {
-        bigserial db_id PK "Intern primærnøkkel"
-        bigint treff_db_id FK "Referanse til rekrutteringstreff"
+        bigserial arbeidsgiver_id PK "Intern primærnøkkel"
+        bigint rekrutteringstreff_id FK "Referanse til rekrutteringstreff"
         text orgnr "Organisasjonsnummer"
         text orgnavn "Organisasjonsnavn"
         uuid id "Unik UUID for arbeidsgiver i treffet"
     }
     
     jobbsoker {
-        bigserial db_id PK "Intern primærnøkkel"
-        bigint treff_db_id FK "Referanse til rekrutteringstreff"
+        bigserial jobbsoker_id PK "Intern primærnøkkel"
+        bigint rekrutteringstreff_id FK "Referanse til rekrutteringstreff"
         text fodselsnummer "Fødselsnummer for jobbsøker"
         text fornavn "Fornavn på jobbsøker"
         text etternavn "Etternavn på jobbsøker"
@@ -62,9 +62,9 @@ erDiagram
     }
     
     innlegg {
-        bigserial db_id PK "Intern primærnøkkel"
+        bigserial innlegg_id PK "Intern primærnøkkel"
         uuid id UK "Unik UUID (auto-generert)"
-        bigint treff_db_id FK "Referanse til rekrutteringstreff"
+        bigint rekrutteringstreff_id FK "Referanse til rekrutteringstreff"
         text tittel "Tittel på innlegget"
         text opprettet_av_person_navident "NAV-ident til oppretteren"
         text opprettet_av_person_navn "Navn på oppretteren"
@@ -76,9 +76,9 @@ erDiagram
     }
     
     jobbsoker_hendelse {
-        bigserial db_id PK "Intern primærnøkkel"
+        bigserial jobbsoker_hendelse_id PK "Intern primærnøkkel"
         uuid id "Unik UUID for hendelsen"
-        bigint jobbsoker_db_id FK "Referanse til jobbsøker"
+        bigint jobbsoker_id FK "Referanse til jobbsøker"
         timestamptz tidspunkt "Når hendelsen skjedde"
         text hendelsestype "Type hendelse (f.eks. PÅMELDT, AVMELDT)"
         text opprettet_av_aktortype "Type aktør (NAV_ANSATT, ARBEIDSGIVER, osv.)"
@@ -86,9 +86,9 @@ erDiagram
     }
     
     arbeidsgiver_hendelse {
-        bigserial db_id PK "Intern primærnøkkel"
+        bigserial arbeidsgiver_hendelse_id PK "Intern primærnøkkel"
         uuid id "Unik UUID for hendelsen"
-        bigint arbeidsgiver_db_id FK "Referanse til arbeidsgiver"
+        bigint arbeidsgiver_id FK "Referanse til arbeidsgiver"
         timestamptz tidspunkt "Når hendelsen skjedde"
         text hendelsestype "Type hendelse (f.eks. INVITERT, TAKKET_JA)"
         text opprettet_av_aktortype "Type aktør (NAV_ANSATT, ARBEIDSGIVER, osv.)"
@@ -96,9 +96,9 @@ erDiagram
     }
     
     rekrutteringstreff_hendelse {
-        bigserial db_id PK "Intern primærnøkkel"
+        bigserial rekrutteringstreff_hendelse_id PK "Intern primærnøkkel"
         uuid id "Unik UUID for hendelsen"
-        bigint rekrutteringstreff_db_id FK "Referanse til rekrutteringstreff"
+        bigint rekrutteringstreff_id FK "Referanse til rekrutteringstreff"
         timestamptz tidspunkt "Når hendelsen skjedde"
         text hendelsestype "Type hendelse (f.eks. OPPRETTET, PUBLISERT, AVLYST)"
         text opprettet_av_aktortype "Type aktør (NAV_ANSATT, SYSTEM, osv.)"
@@ -106,13 +106,13 @@ erDiagram
     }
     
     aktivitetskort_polling {
-        bigserial db_id PK "Intern primærnøkkel"
-        bigint jobbsoker_hendelse_db_id FK "Referanse til jobbsøker_hendelse"
+        bigserial aktivitetskort_polling_id PK "Intern primærnøkkel"
+        bigint jobbsoker_hendelse_id FK "Referanse til jobbsøker_hendelse"
         timestamptz sendt_tidspunkt "Når aktivitetskortet ble sendt"
     }
     
     ki_spørring_logg {
-        bigserial db_id PK "Intern primærnøkkel"
+        bigserial ki_spørring_logg_id PK "Intern primærnøkkel"
         uuid id "Unik UUID (auto-generert)"
         timestamptz opprettet_tidspunkt "Når spørringen ble logget"
         uuid treff_id FK "Referanse til rekrutteringstreff (ON DELETE SET NULL)"
@@ -133,8 +133,8 @@ erDiagram
     }
     
     naringskode {
-        bigserial db_id PK "Intern primærnøkkel"
-        bigint arbeidsgiver_db_id FK "Referanse til arbeidsgiver"
+        bigserial naringskode_id PK "Intern primærnøkkel"
+        bigint arbeidsgiver_id FK "Referanse til arbeidsgiver"
         text kode "Næringskode (f.eks. 47.711)"
         text beskrivelse "Beskrivelse av næringskoden"
     }
@@ -165,11 +165,11 @@ erDiagram
 
 Viktige indexes for performance:
 - `rekrutteringstreff_id_uq` - Unik index på rekrutteringstreff.id
-- `idx_innlegg_treff_db_id` - Index på innlegg.treff_db_id
-- `idx_arbeidsgiver_hendelse_arbeidsgiver_db_id` - Index på arbeidsgiver_hendelse
-- `idx_rekrutteringstreff_hendelse_rekrutteringstreff_db_id` - Index på rekrutteringstreff_hendelse
+- `idx_innlegg_rekrutteringstreff_id` - Index på innlegg.rekrutteringstreff_id
+- `idx_arbeidsgiver_hendelse_arbeidsgiver_id` - Index på arbeidsgiver_hendelse.arbeidsgiver_id
+- `idx_rekrutteringstreff_hendelse_rekrutteringstreff_id` - Index på rekrutteringstreff_hendelse.rekrutteringstreff_id
 - `ki_spørring_logg_treff_uuid_idx` - Index på ki_spørring_logg.treff_id
-- `naringskode_arbeidsgiver_db_id_idx` - Index på naringskode.arbeidsgiver_db_id
+- `naringskode_arbeidsgiver_id_idx` - Index på naringskode.arbeidsgiver_id
 
 ## Constraints
 
