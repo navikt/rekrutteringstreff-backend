@@ -279,22 +279,34 @@ class KiTekstvalideringParameterisertTest {
     }
 
     var antallFeilendeTestPrompts = 0
-    var testResultater = ""
+    var antallTestPromptsSomBryterOpenAiRetningslinjer = 0
+    var bryterOpenAiRetningslinjer = ""
+    var falskePositive = ""
+    var falskeNegative = ""
 
     @ParameterizedTest(name = "TestPrompt nummer {index}, med input:  ''{2}'' skal gi vurdering {0}")
     @MethodSource("testPrompts")
     fun testValideringAvPrompts(forventetvurdering: Boolean, prompt: String, forkortetPromt: String ) {
         val openAiRespons = openAiClient.validerTekst(prompt)
+        if (openAiRespons.begrunnelse.contains("Den kan derfor ikke vurderes av KI.", ignoreCase = true)) {
+            antallTestPromptsSomBryterOpenAiRetningslinjer += 1
+            bryterOpenAiRetningslinjer += "- Følgende prompt bryter med OpenAi sine retningslinjer: '${prompt}' \n" +
+                    "Begrunnelsen: '${openAiRespons.begrunnelse}' \n\n"
+            return
+        }
         try {
             Assertions.assertEquals(forventetvurdering, openAiRespons.bryterRetningslinjer)
+
         } catch (e: AssertionError) {
             antallFeilendeTestPrompts += 1
-            testResultater += "- Følgende prompt får feil vurdering: '${prompt}' \n Forventet vurdering: '${forventetvurdering}' \n " +
+            val testResultat = "- Følgende prompt får feil vurdering: '${prompt}' \n Forventet vurdering: '${forventetvurdering}' \n " +
                     "Gitt vurdering: '${openAiRespons.bryterRetningslinjer}' \n " +
                     "Begrunnelsen: '${openAiRespons.begrunnelse}' \n\n"
-            log.info("- Følgende prompt får feil vurdering: '${prompt}' \n Forventet vurdering: '${forventetvurdering}' \n " +
-                    "Gitt vurdering: '${openAiRespons.bryterRetningslinjer}' \n " +
-                    "Begrunnelsen: '${openAiRespons.begrunnelse}' \n")
+            if (forventetvurdering) {
+                falskeNegative += testResultat
+            } else {
+                falskePositive += testResultat
+            }
             throw e
         }
         sleep(2000) // venter 2 sek for å unngå for mange requests til OpenAi på en gang
@@ -303,25 +315,26 @@ class KiTekstvalideringParameterisertTest {
     @AfterAll
     fun skrivTestResultaterTilFil() {
         File(TESTRESULTATER_FIL).bufferedWriter().use { writer ->
-            writer.write("Testresultater for KI-ROBs tekstvalidering")
-            writer.newLine()
-            writer.newLine()
-            writer.write("Detter er de test-promptene som fikk motsatt vurdering enn forventet.")
-            writer.newLine()
-            writer.newLine()
-            writer.write("Vurdering 'false' betyr at teksten ikke bryter med retningslinjene og dermed godtas, 'true' betyr at teksten bryter med retningslinjene og ikke godtas.")
-            writer.newLine()
-            writer.newLine()
-            writer.write(testResultater)
-            writer.newLine()
+            writer.write("Testresultater for KI-ROBs tekstvalidering \n\n")
+            writer.write("Dette er de test-promptene som feilet og fikk motsatt vurdering enn forventet. Antall feilende test-prompts er $antallFeilendeTestPrompts. \n\n")
+            writer.write("Vurdering 'false' betyr at teksten ikke bryter med retningslinjene og dermed godtas, 'true' betyr at teksten bryter med retningslinjene og ikke godtas.\n\n")
+            writer.write("De falske positive er:\n\n")
+            writer.write(falskePositive)
+            writer.write("De falske negative er:\n\n")
+            writer.write(falskeNegative)
+            if (bryterOpenAiRetningslinjer.isNotBlank()) {
+                writer.write("Følgende prompts ble ikke vurdert av KI fordi de bryter med OpenAi sine retningslinjer:\n\n")
+                writer.write(bryterOpenAiRetningslinjer)
+            }
             writer.write(robsNøyaktighet())
         }
     }
 
     fun robsNøyaktighet(): String {
-        val nøyaktighet = String.format("%.2f", (testPrompts().size - antallFeilendeTestPrompts).toDouble() / testPrompts().size.toDouble() * 100.0)
-        log.info("Robs nøyaktighet er: $nøyaktighet %")
-        return "Robs nøyaktighet er: $nøyaktighet %"
+        val antallVurderteTestPrompts = testPrompts().size - antallTestPromptsSomBryterOpenAiRetningslinjer
+        val nøyaktighet = String.format("%.2f", (antallVurderteTestPrompts - antallFeilendeTestPrompts).toDouble() / antallVurderteTestPrompts.toDouble() * 100.0)
+        log.info("ROBs nøyaktighet er: $nøyaktighet %")
+        return "ROBs nøyaktighet på de vurderte test-promptsene er: $nøyaktighet %"
     }
 
     fun hentPåkrevdeMiljøvariabler(envVarNavn: String): String =
