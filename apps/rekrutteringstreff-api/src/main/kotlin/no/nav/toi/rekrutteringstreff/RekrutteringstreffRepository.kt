@@ -111,9 +111,88 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
     fun slett(treff: TreffId) {
         dataSource.connection.use { c ->
-            c.prepareStatement("DELETE FROM $tabellnavn WHERE $id = ?").use {
-                it.setObject(1, treff.somUuid)
-                it.executeUpdate()
+            c.autoCommit = false
+            try {
+                // Finn db_id for treff og verifiser at det finnes
+                val dbIdRs = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id = ?").apply {
+                    setObject(1, treff.somUuid)
+                }.executeQuery()
+                if (!dbIdRs.next()) throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+                val treffDbId = dbIdRs.getLong("db_id")
+
+                // Ikke lov å slette etter publisering
+                c.prepareStatement(
+                    """
+                    SELECT 1
+                    FROM rekrutteringstreff_hendelse h
+                    WHERE h.rekrutteringstreff_db_id = ? AND h.hendelsestype = 'PUBLISER'
+                    LIMIT 1
+                    """.trimIndent()
+                ).use { s ->
+                    s.setLong(1, treffDbId)
+                    val rs = s.executeQuery()
+                    if (rs.next()) throw UlovligSlettingException("Kan ikke slette etter publisering.")
+                }
+
+                // Slett i riktig rekkefølge - FK constraints vil feile dersom det finnes blokkerende data
+                // arbeidsgiver_hendelse
+                c.prepareStatement(
+                    """
+                    DELETE FROM arbeidsgiver_hendelse ah
+                    USING arbeidsgiver ag
+                    WHERE ah.arbeidsgiver_db_id = ag.db_id AND ag.treff_db_id = ?
+                    """.trimIndent()
+                ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
+
+                // rekrutteringstreff_hendelse
+                c.prepareStatement(
+                    """
+                    DELETE FROM rekrutteringstreff_hendelse WHERE rekrutteringstreff_db_id = ?
+                    """.trimIndent()
+                ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
+
+                // naringskode
+                c.prepareStatement(
+                    """
+                    DELETE FROM naringskode nk
+                    USING arbeidsgiver ag
+                    WHERE nk.arbeidsgiver_db_id = ag.db_id AND ag.treff_db_id = ?
+                    """.trimIndent()
+                ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
+
+                // innlegg
+                c.prepareStatement(
+                    """
+                    DELETE FROM innlegg WHERE treff_db_id = ?
+                    """.trimIndent()
+                ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
+
+                // arbeidsgiver
+                c.prepareStatement(
+                    """
+                    DELETE FROM arbeidsgiver WHERE treff_db_id = ?
+                    """.trimIndent()
+                ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
+
+                // ki_spørring_logg
+                c.prepareStatement(
+                    """
+                    DELETE FROM ki_spørring_logg WHERE treff_id = ?
+                    """.trimIndent()
+                ).use { s -> s.setObject(1, treff.somUuid); s.executeUpdate() }
+
+                // rekrutteringstreff - vil feile med FK constraint dersom jobbsoker finnes
+                c.prepareStatement("DELETE FROM $tabellnavn WHERE $id = ?").use {
+                    it.setObject(1, treff.somUuid)
+                    it.executeUpdate()
+                }
+
+                c.commit()
+            } catch (e: Exception) {
+                c.rollback()
+                throw e
+            } finally {
+                c.autoCommit = true
             }
         }
     }

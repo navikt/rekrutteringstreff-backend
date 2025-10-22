@@ -9,6 +9,7 @@ import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.helse.rapids_rivers.RapidApplication
+import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
@@ -116,12 +117,26 @@ class App(
                 ctx.status(400).json(
                     mapOf(
                         "feil" to "Ugyldig request-body (JSON).",
-                        "hint" to "Sett Content-Type: application/json og bruk ISO-8601 dato/tid med tidsone."
+                        "hint" to "Sett Content-Type: application/json og bruk ISO-8601 dato/tid med tidsone på alle datoer."
                     )
                 )
             }
         } catch (_: ClassNotFoundException) {
             // Ignorer – typen finnes ikke i denne Javalin-versjonen
+        }
+
+        javalin.exception(java.sql.SQLException::class.java) { e, ctx ->
+            if (e.sqlState == "23503") {
+                ctx.status(409).json(mapOf(
+                    "feil" to "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes. Slett barn først."
+                ))
+            } else {
+                secure(log).error("SQL-feil", e)
+                ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod."))
+            }
+        }
+        javalin.exception(no.nav.toi.rekrutteringstreff.UlovligSlettingException::class.java) { e, ctx ->
+            ctx.status(409).json(mapOf("feil" to (e.message ?: "Ulovlig sletting")))
         }
 
         javalin.exception(Exception::class.java) { e, ctx ->

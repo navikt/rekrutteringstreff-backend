@@ -78,14 +78,16 @@ class TestDatabase {
     }
 
     fun slettAlt() = dataSource.connection.use {
-        it.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
-        it.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
+        it.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
         it.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
-        it.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
+        it.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
         it.prepareStatement("DELETE FROM rekrutteringstreff_hendelse").executeUpdate()
-        it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
+        it.prepareStatement("DELETE FROM naringskode").executeUpdate()
+        it.prepareStatement("DELETE FROM innlegg").executeUpdate()
+        it.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
+        it.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
         it.prepareStatement("DELETE FROM ki_spørring_logg").executeUpdate()
-
+        it.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
     }
 
     fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) = dataSource.connection.use {

@@ -222,7 +222,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun slettRekrutteringstreffUtenCascade() {
+    fun slettRekrutteringstreffMedUpublisertedata() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent)
@@ -241,7 +241,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun `cascade delete av jobbsøkere og arbeidsgivere ved sletting av rekrutteringstreff`() {
+    fun `slett rekrutteringstreff feiler (409) hvis data er publisert og har data`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
 
@@ -277,21 +277,38 @@ class RekrutteringstreffTest {
         assertThat(db.hentAlleJobbsøkere()).isNotEmpty
         assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
 
-        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
+        val (_, response, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
+        assertThat(response.statusCode).isEqualTo(409)
+        // Verifiser at data står igjen når sletting avvises
+        assertThat(db.hentAlleRekrutteringstreff()).isNotEmpty
+        assertThat(db.hentAlleJobbsøkere()).isNotEmpty
+        assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
+    }
 
-                assertThat(db.hentAlleRekrutteringstreff()).isEmpty()
+    @Test
+    fun `slett rekrutteringstreff feiler (409) etter publisering selv uten andre data`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        db.opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = db.hentAlleRekrutteringstreff().first()
 
-                assertThat(db.hentAlleJobbsøkere()).isEmpty()
-                assertThat(db.hentAlleArbeidsgivere()).isEmpty()
-            }
-        }
+        // Publiser treffet
+        val (_, pubRes, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertThat(pubRes.statusCode).isEqualTo(200)
+
+        // Forsøk å slette
+        val (_, delRes, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertThat(delRes.statusCode).isEqualTo(409)
+
+        // Treffet skal fortsatt eksistere
+        assertThat(db.hentAlleRekrutteringstreff()).isNotEmpty
     }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()

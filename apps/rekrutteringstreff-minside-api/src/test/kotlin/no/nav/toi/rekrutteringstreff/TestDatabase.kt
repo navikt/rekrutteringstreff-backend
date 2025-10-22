@@ -34,11 +34,15 @@ class TestDatabase {
 
     fun slettAlt() = dataSource.connection.use {c ->
         listOf(
+            "DELETE FROM aktivitetskort_polling",
+            "DELETE FROM jobbsoker_hendelse",
+            "DELETE FROM arbeidsgiver_hendelse",
+            "DELETE FROM rekrutteringstreff_hendelse",
+            "DELETE FROM naringskode",
             "DELETE FROM innlegg",
             "DELETE FROM arbeidsgiver",
-            "DELETE FROM jobbsoker_hendelse",
             "DELETE FROM jobbsoker",
-            "DELETE FROM rekrutteringstreff_hendelse",
+            "DELETE FROM ki_spørring_logg",
             "DELETE FROM rekrutteringstreff"
         ).forEach { c.prepareStatement(it).executeUpdate() }
     }
