@@ -66,7 +66,7 @@ class JobbsøkerRepository(
     ): List<Long> {
         val sql = """
             insert into jobbsoker
-              (id, treff_db_id,fodselsnummer,kandidatnummer,fornavn,etternavn,
+              (id, rekrutteringstreff_id,fodselsnummer,kandidatnummer,fornavn,etternavn,
                navkontor,veileder_navn,veileder_navident)
             values (?,?,?,?,?,?,?,?,?)
         """.trimIndent()
@@ -102,7 +102,7 @@ class JobbsøkerRepository(
     ) {
         val sql = """
             insert into jobbsoker_hendelse
-              (id,jobbsoker_db_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon)
+              (id,jobbsoker_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon)
             values (?,?,?,?,?,?)
         """.trimIndent()
         prepareStatement(sql).use { stmt ->
@@ -131,8 +131,8 @@ class JobbsøkerRepository(
     ) {
         val sql = """
             insert into jobbsoker_hendelse
-              (id,jobbsoker_db_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon)
-            values (?,(select db_id from jobbsoker where id = ?),?,?,?,?)
+              (id,jobbsoker_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon)
+            values (?,(select jobbsoker_id from jobbsoker where id = ?),?,?,?,?)
         """.trimIndent()
         prepareStatement(sql).use { stmt ->
             var n = 0
@@ -152,7 +152,7 @@ class JobbsøkerRepository(
     }
 
     private fun Connection.treffDbId(treff: TreffId): Long =
-        prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?")
+        prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?")
             .apply { setObject(1, treff.somUuid) }
             .executeQuery().let {
                 if (it.next()) it.getLong(1)

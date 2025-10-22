@@ -61,7 +61,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 INSERT INTO $tabellnavn($id,$tittel,$status,$opprettetAvPersonNavident,
                                          $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere)
                 VALUES (?,?,?,?,?,?,?)
-                RETURNING db_id
+                RETURNING rekrutteringstreff_id
                 """
             ).apply {
                 var i = 0
@@ -81,7 +81,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
     fun oppdater(treff: TreffId, dto: OppdaterRekrutteringstreffDto, oppdatertAv: String) {
         dataSource.connection.use { c ->
-            val dbId = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id=?")
+            val dbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
                 .apply { setObject(1, treff.somUuid) }
                 .executeQuery()
                 .run { next(); getLong(1) }
@@ -113,19 +113,19 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         dataSource.connection.use { c ->
             c.autoCommit = false
             try {
-                // Finn db_id for treff og verifiser at det finnes
-                val dbIdRs = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id = ?").apply {
+                // Finn rekrutteringstreff_id for treff og verifiser at det finnes
+                val dbIdRs = c.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id = ?").apply {
                     setObject(1, treff.somUuid)
                 }.executeQuery()
                 if (!dbIdRs.next()) throw NotFoundResponse("Rekrutteringstreff ikke funnet")
-                val treffDbId = dbIdRs.getLong("db_id")
+                val treffDbId = dbIdRs.getLong("rekrutteringstreff_id")
 
                 // Ikke lov å slette etter publisering
                 c.prepareStatement(
                     """
                     SELECT 1
                     FROM rekrutteringstreff_hendelse h
-                    WHERE h.rekrutteringstreff_db_id = ? AND h.hendelsestype = 'PUBLISER'
+                    WHERE h.rekrutteringstreff_id = ? AND h.hendelsestype = 'PUBLISER'
                     LIMIT 1
                     """.trimIndent()
                 ).use { s ->
@@ -140,14 +140,14 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                     """
                     DELETE FROM arbeidsgiver_hendelse ah
                     USING arbeidsgiver ag
-                    WHERE ah.arbeidsgiver_db_id = ag.db_id AND ag.treff_db_id = ?
+                    WHERE ah.arbeidsgiver_id = ag.arbeidsgiver_id AND ag.rekrutteringstreff_id = ?
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
                 // rekrutteringstreff_hendelse
                 c.prepareStatement(
                     """
-                    DELETE FROM rekrutteringstreff_hendelse WHERE rekrutteringstreff_db_id = ?
+                    DELETE FROM rekrutteringstreff_hendelse WHERE rekrutteringstreff_id = ?
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
@@ -156,21 +156,21 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                     """
                     DELETE FROM naringskode nk
                     USING arbeidsgiver ag
-                    WHERE nk.arbeidsgiver_db_id = ag.db_id AND ag.treff_db_id = ?
+                    WHERE nk.arbeidsgiver_id = ag.arbeidsgiver_id AND ag.rekrutteringstreff_id = ?
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
                 // innlegg
                 c.prepareStatement(
                     """
-                    DELETE FROM innlegg WHERE treff_db_id = ?
+                    DELETE FROM innlegg WHERE rekrutteringstreff_id = ?
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
                 // arbeidsgiver
                 c.prepareStatement(
                     """
-                    DELETE FROM arbeidsgiver WHERE treff_db_id = ?
+                    DELETE FROM arbeidsgiver WHERE rekrutteringstreff_id = ?
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
@@ -235,9 +235,9 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                        ) AS hendelser
                 FROM   rekrutteringstreff r
                 LEFT JOIN rekrutteringstreff_hendelse h
-                   ON r.db_id = h.rekrutteringstreff_db_id
+                   ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
                 WHERE  r.id = ?
-                GROUP BY r.db_id
+                GROUP BY r.rekrutteringstreff_id
                 """
             ).use { s ->
                 s.setObject(1, treff.somUuid)
@@ -281,7 +281,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                         h.opprettet_av_aktortype AS aktørtype,
                         h.aktøridentifikasjon AS ident
                 FROM    rekrutteringstreff_hendelse h
-                JOIN    rekrutteringstreff r ON h.rekrutteringstreff_db_id = r.db_id
+                JOIN    rekrutteringstreff r ON h.rekrutteringstreff_id = r.rekrutteringstreff_id
                 WHERE   r.id = ?
                 ORDER BY h.tidspunkt DESC
                 """
@@ -314,7 +314,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                        h.opprettet_av_aktortype,
                        h.aktøridentifikasjon
                 FROM   rekrutteringstreff_hendelse h
-                JOIN   rekrutteringstreff r ON r.db_id = h.rekrutteringstreff_db_id
+                JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
                 WHERE  r.id = ?
 
                 UNION ALL
@@ -326,8 +326,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                        jh.opprettet_av_aktortype,
                        jh.aktøridentifikasjon
                 FROM   jobbsoker_hendelse jh
-                JOIN   jobbsoker js        ON js.db_id = jh.jobbsoker_db_id
-                JOIN   rekrutteringstreff r ON r.db_id = js.treff_db_id
+                JOIN   jobbsoker js        ON js.jobbsoker_id = jh.jobbsoker_id
+                JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = js.rekrutteringstreff_id
                 WHERE  r.id = ?
 
                 UNION ALL
@@ -339,8 +339,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                        ah.opprettet_av_aktortype,
                        ah.aktøridentifikasjon
                 FROM   arbeidsgiver_hendelse ah
-                JOIN   arbeidsgiver ag      ON ag.db_id = ah.arbeidsgiver_db_id
-                JOIN   rekrutteringstreff r ON r.db_id = ag.treff_db_id
+                JOIN   arbeidsgiver ag      ON ag.arbeidsgiver_id = ah.arbeidsgiver_id
+                JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = ag.rekrutteringstreff_id
                 WHERE  r.id = ?
             ) AS union_hendelser
             ORDER BY tidspunkt DESC
@@ -384,7 +384,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
 
     private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
         dataSource.connection.use { c ->
-            val dbId = c.prepareStatement("SELECT db_id FROM $tabellnavn WHERE $id=?")
+            val dbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
                 .apply { setObject(1, treff.somUuid) }
                 .executeQuery()
                 .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
@@ -403,7 +403,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         c.prepareStatement(
             """
             INSERT INTO rekrutteringstreff_hendelse
-                   (id, rekrutteringstreff_db_id, tidspunkt,
+                   (id, rekrutteringstreff_id, tidspunkt,
                     hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
             VALUES (?, ?, now(), ?, ?, ?)
             """
