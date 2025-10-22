@@ -285,7 +285,7 @@ class KiTekstvalideringParameterisertTest {
 
     @ParameterizedTest(name = "TestPrompt nummer {index}, med input:  ''{2}'' skal gi vurdering {0}")
     @MethodSource("testPrompts")
-    fun testValideringAvPrompts(forventetvurdering: Boolean, prompt: String, forkortetPrompt: String ) {
+    fun testValideringAvPrompts(forventetVurdering: Boolean, prompt: String, forkortetPrompt: String ) {
         val openAiRespons = openAiClient.validerTekst(prompt)
         if (openAiRespons.begrunnelse.contains("Den kan derfor ikke vurderes av KI.", ignoreCase = true)) {
             antallTestPromptsSomBryterOpenAiRetningslinjer += 1
@@ -294,14 +294,14 @@ class KiTekstvalideringParameterisertTest {
             return
         }
         try {
-            Assertions.assertEquals(forventetvurdering, openAiRespons.bryterRetningslinjer)
+            Assertions.assertEquals(forventetVurdering, openAiRespons.bryterRetningslinjer)
 
         } catch (e: AssertionError) {
             antallFeilendeTestPrompts += 1
-            val testResultat = "- Følgende prompt får feil vurdering: '${prompt}' \n Forventet vurdering: '${forventetvurdering}' \n " +
+            val testResultat = "- Følgende prompt får feil vurdering: '${prompt}' \n Forventet vurdering: '${forventetVurdering}' \n " +
                     "Gitt vurdering: '${openAiRespons.bryterRetningslinjer}' \n " +
                     "Begrunnelsen: '${openAiRespons.begrunnelse}' \n\n"
-            if (forventetvurdering) {
+            if (forventetVurdering) {
                 falskeNegative += testResultat
             } else {
                 falskePositive += testResultat
