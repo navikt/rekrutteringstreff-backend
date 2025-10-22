@@ -286,7 +286,7 @@ class KiTekstvalideringParameterisertTest {
 
     @ParameterizedTest(name = "TestPrompt nummer {index}, med input:  ''{2}'' skal gi vurdering {0}")
     @MethodSource("testPrompts")
-    fun testValideringAvPrompts(forventetvurdering: Boolean, prompt: String, forkortetPromt: String ) {
+    fun testValideringAvPrompts(forventetvurdering: Boolean, prompt: String, forkortetPrompt: String ) {
         val openAiRespons = openAiClient.validerTekst(prompt)
         if (openAiRespons.begrunnelse.contains("Den kan derfor ikke vurderes av KI.", ignoreCase = true)) {
             antallTestPromptsSomBryterOpenAiRetningslinjer += 1
