@@ -1,4 +1,5 @@
 # Database Schema - Rekrutteringstreff
+Vis denne filen i Github for å se en grafisk remstilling av databaseskjemaet ved hjelp av Mermaid.
 
 Dette er en grafisk oversikt over databaseskjemaet for rekrutteringstreff-systemet.
 
@@ -22,120 +23,120 @@ erDiagram
     jobbsoker_hendelse ||--o{ aktivitetskort_polling : "sender"
     
     rekrutteringstreff {
-        bigserial db_id PK
-        uuid id UK "Unik UUID"
-        text tittel
-        text status
-        text opprettet_av_person_navident
-        text opprettet_av_kontor_enhetid
-        timestamptz opprettet_av_tidspunkt
-        timestamptz fratid
-        timestamptz tiltid
-        text gateadresse
-        text postnummer
-        text poststed
-        timestamptz svarfrist
-        text[] eiere "Array av eiere"
-        text beskrivelse
+        bigserial db_id PK "Intern primærnøkkel"
+        uuid id UK "Unik UUID for treffet"
+        text tittel "Tittel på rekrutteringstreffet"
+        text status "Status: OPPRETTET, PUBLISERT, AVLYST osv."
+        text opprettet_av_person_navident "NAV-ident for oppretteren"
+        text opprettet_av_kontor_enhetid "NAV-kontor enhetid"
+        timestamptz opprettet_av_tidspunkt "Når treffet ble opprettet"
+        timestamptz fratid "Start tidspunkt for treffet"
+        timestamptz tiltid "Slutt tidspunkt for treffet"
+        text gateadresse "Gateadresse for treffstedet"
+        text postnummer "Postnummer for treffstedet"
+        text poststed "Poststed for treffstedet"
+        timestamptz svarfrist "Frist for påmelding/svar"
+        text[] eiere "Array av NAV-identer som eier treffet"
+        text beskrivelse "Beskrivelse av treffet"
     }
     
     arbeidsgiver {
-        bigserial db_id PK
-        bigint treff_db_id FK
+        bigserial db_id PK "Intern primærnøkkel"
+        bigint treff_db_id FK "Referanse til rekrutteringstreff"
         text orgnr "Organisasjonsnummer"
-        text orgnavn
-        uuid id
+        text orgnavn "Organisasjonsnavn"
+        uuid id "Unik UUID for arbeidsgiver i treffet"
     }
     
     jobbsoker {
-        bigserial db_id PK
-        bigint treff_db_id FK
-        text fodselsnummer
-        text fornavn
-        text etternavn
-        text kandidatnummer
-        text navkontor
-        text veileder_navn
-        text veileder_navident
-        uuid id
+        bigserial db_id PK "Intern primærnøkkel"
+        bigint treff_db_id FK "Referanse til rekrutteringstreff"
+        text fodselsnummer "Fødselsnummer for jobbsøker"
+        text fornavn "Fornavn på jobbsøker"
+        text etternavn "Etternavn på jobbsøker"
+        text kandidatnummer "Kandidatnummer i NAV"
+        text navkontor "NAV-kontor som følger opp jobbsøker"
+        text veileder_navn "Veilederens navn"
+        text veileder_navident "Veilederens NAV-ident"
+        uuid id "Unik UUID for jobbsøker i treffet"
     }
     
     innlegg {
-        bigserial db_id PK
-        uuid id UK "Default: gen_random_uuid()"
-        bigint treff_db_id FK
-        text tittel
-        text opprettet_av_person_navident
-        text opprettet_av_person_navn
-        text opprettet_av_person_beskrivelse
-        timestamptz sendes_til_jobbsoker_tidspunkt
-        text html_content
-        timestamptz opprettet_tidspunkt "Default: now()"
-        timestamptz sist_oppdatert_tidspunkt "Default: now()"
+        bigserial db_id PK "Intern primærnøkkel"
+        uuid id UK "Unik UUID (auto-generert)"
+        bigint treff_db_id FK "Referanse til rekrutteringstreff"
+        text tittel "Tittel på innlegget"
+        text opprettet_av_person_navident "NAV-ident til oppretteren"
+        text opprettet_av_person_navn "Navn på oppretteren"
+        text opprettet_av_person_beskrivelse "Beskrivelse av oppretterens rolle"
+        timestamptz sendes_til_jobbsoker_tidspunkt "Når innlegget sendes til jobbsøker"
+        text html_content "Innhold i HTML-format"
+        timestamptz opprettet_tidspunkt "Når innlegget ble opprettet"
+        timestamptz sist_oppdatert_tidspunkt "Sist oppdatert tidspunkt"
     }
     
     jobbsoker_hendelse {
-        bigserial db_id PK
-        uuid id
-        bigint jobbsoker_db_id FK
-        timestamptz tidspunkt
-        text hendelsestype
-        text opprettet_av_aktortype
-        text aktøridentifikasjon
+        bigserial db_id PK "Intern primærnøkkel"
+        uuid id "Unik UUID for hendelsen"
+        bigint jobbsoker_db_id FK "Referanse til jobbsøker"
+        timestamptz tidspunkt "Når hendelsen skjedde"
+        text hendelsestype "Type hendelse (f.eks. PÅMELDT, AVMELDT)"
+        text opprettet_av_aktortype "Type aktør (NAV_ANSATT, ARBEIDSGIVER, osv.)"
+        text aktøridentifikasjon "Identifikasjon av aktøren"
     }
     
     arbeidsgiver_hendelse {
-        bigserial db_id PK
-        uuid id
-        bigint arbeidsgiver_db_id FK
-        timestamptz tidspunkt
-        text hendelsestype
-        text opprettet_av_aktortype
-        text aktøridentifikasjon
+        bigserial db_id PK "Intern primærnøkkel"
+        uuid id "Unik UUID for hendelsen"
+        bigint arbeidsgiver_db_id FK "Referanse til arbeidsgiver"
+        timestamptz tidspunkt "Når hendelsen skjedde"
+        text hendelsestype "Type hendelse (f.eks. INVITERT, TAKKET_JA)"
+        text opprettet_av_aktortype "Type aktør (NAV_ANSATT, ARBEIDSGIVER, osv.)"
+        text aktøridentifikasjon "Identifikasjon av aktøren"
     }
     
     rekrutteringstreff_hendelse {
-        bigserial db_id PK
-        uuid id
-        bigint rekrutteringstreff_db_id FK
-        timestamptz tidspunkt
-        text hendelsestype
-        text opprettet_av_aktortype
-        text aktøridentifikasjon
+        bigserial db_id PK "Intern primærnøkkel"
+        uuid id "Unik UUID for hendelsen"
+        bigint rekrutteringstreff_db_id FK "Referanse til rekrutteringstreff"
+        timestamptz tidspunkt "Når hendelsen skjedde"
+        text hendelsestype "Type hendelse (f.eks. OPPRETTET, PUBLISERT, AVLYST)"
+        text opprettet_av_aktortype "Type aktør (NAV_ANSATT, SYSTEM, osv.)"
+        text aktøridentifikasjon "Identifikasjon av aktøren"
     }
     
     aktivitetskort_polling {
-        bigserial db_id PK
-        bigint jobbsoker_hendelse_db_id FK
-        timestamptz sendt_tidspunkt
+        bigserial db_id PK "Intern primærnøkkel"
+        bigint jobbsoker_hendelse_db_id FK "Referanse til jobbsøker_hendelse"
+        timestamptz sendt_tidspunkt "Når aktivitetskortet ble sendt"
     }
     
     ki_spørring_logg {
-        bigserial db_id PK
-        uuid id "Default: gen_random_uuid()"
-        timestamptz opprettet_tidspunkt "Default: now()"
-        uuid treff_id FK "ON DELETE SET NULL"
-        text felt_type
-        text spørring_fra_frontend
-        text spørring_filtrert
-        text systemprompt
-        jsonb ekstra_parametre
-        boolean bryter_retningslinjer
-        text begrunnelse
-        text ki_navn
-        text ki_versjon
+        bigserial db_id PK "Intern primærnøkkel"
+        uuid id "Unik UUID (auto-generert)"
+        timestamptz opprettet_tidspunkt "Når spørringen ble logget"
+        uuid treff_id FK "Referanse til rekrutteringstreff (ON DELETE SET NULL)"
+        text felt_type "Hvilken felt-type spørringen gjelder (f.eks. TITTEL, BESKRIVELSE)"
+        text spørring_fra_frontend "Originalspørring fra bruker"
+        text spørring_filtrert "Filtrert/sanert versjon av spørringen"
+        text systemprompt "Systemprompt brukt i KI-kallet"
+        jsonb ekstra_parametre "Ekstra parametere sendt til KI"
+        boolean bryter_retningslinjer "Om KI-svaret bryter retningslinjer"
+        text begrunnelse "Begrunnelse for modereringsbeslutningen"
+        text ki_navn "Navn på KI-modellen (f.eks. GPT-4)"
+        text ki_versjon "Versjon av KI-modellen"
         integer svartid_ms "Svartid i millisekunder"
-        boolean lagret "Default: false"
-        boolean manuell_kontroll_bryter_retningslinjer
-        text manuell_kontroll_utført_av
-        timestamptz manuell_kontroll_tidspunkt
+        boolean lagret "Om svaret ble lagret/brukt"
+        boolean manuell_kontroll_bryter_retningslinjer "Manuell overprøving av moderering"
+        text manuell_kontroll_utført_av "NAV-ident for manuell kontrollør"
+        timestamptz manuell_kontroll_tidspunkt "Når manuell kontroll ble utført"
     }
     
     naringskode {
-        bigserial db_id PK
-        bigint arbeidsgiver_db_id FK
-        text kode
-        text beskrivelse
+        bigserial db_id PK "Intern primærnøkkel"
+        bigint arbeidsgiver_db_id FK "Referanse til arbeidsgiver"
+        text kode "Næringskode (f.eks. 47.711)"
+        text beskrivelse "Beskrivelse av næringskoden"
     }
 ```
 
