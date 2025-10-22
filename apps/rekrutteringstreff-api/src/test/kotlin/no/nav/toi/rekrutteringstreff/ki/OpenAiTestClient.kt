@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.ki
+package no.nav.toi.rekrutteringstreff.ki
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -6,7 +6,6 @@ import no.nav.toi.JacksonConfig
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
-import no.nav.toi.rekrutteringstreff.ki.SystemPrompt
 import java.lang.Thread.sleep
 import java.net.URI
 import java.net.http.HttpClient
@@ -16,8 +15,6 @@ import java.time.Duration
 
 //Egen klient som brukes til test av robs vurderinger uten database og logging
 
-private const val KI_Navn = "azure-openai"
-private const val KI_Versjon = "toi-gpt-4o"
 private const val TEMPERATURE = 0.0
 private const val MAX_TOKENS = 400
 private const val TOP_P = 1.0
@@ -131,8 +128,6 @@ class OpenAiTestClient(
     }
 
     companion object {
-        private const val kiNavn = KI_Navn
-        private const val kiVersjon = KI_Versjon
         private const val temperature = TEMPERATURE
         private const val maxTokens = MAX_TOKENS
         private const val topP = TOP_P

@@ -1,5 +1,4 @@
-package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.ki
-
+package no.nav.toi.rekrutteringstreff.ki
 
 import no.nav.toi.log
 import org.junit.jupiter.api.AfterAll
