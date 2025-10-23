@@ -51,7 +51,7 @@ class JobbsøkerRepository(
             try {
                 val treffId = c.treffDbId(treff)
                 val jsIds = c.batchInsertJobbsøkere(treffId, jobsøkere)
-                c.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETT, jsIds, opprettetAv)
+                c.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETTET, jsIds, opprettetAv)
                 c.commit()
             } catch (e: Exception) {
                 c.rollback(); throw e
@@ -205,7 +205,7 @@ class JobbsøkerRepository(
     fun inviter(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             try {
-                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.INVITER, personTreffIder, opprettetAv)
+                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.INVITERT, personTreffIder, opprettetAv)
             } catch (e: Exception) {
                 throw e
             }
@@ -215,7 +215,7 @@ class JobbsøkerRepository(
     fun registrerOppmøte(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             try {
-                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.MØT_OPP, personTreffIder, opprettetAv)
+                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.MØTT_OPP, personTreffIder, opprettetAv)
             } catch (e: Exception) {
                 throw e
             }
@@ -225,7 +225,7 @@ class JobbsøkerRepository(
     fun registrerIkkeOppmøte(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             try {
-                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.IKKE_MØT_OPP, personTreffIder, opprettetAv)
+                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.IKKE_MØTT_OPP, personTreffIder, opprettetAv)
             } catch (e: Exception) {
                 throw e
             }
@@ -241,7 +241,7 @@ class JobbsøkerRepository(
                         .firstOrNull()
                         ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
                 c.batchInsertHendelser(
-                    JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON,
+                    JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
                     listOf(jobbsøkerDbId),
                     opprettetAv,
                     AktørType.JOBBSØKER
@@ -260,7 +260,7 @@ class JobbsøkerRepository(
                     c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId, listOf(fødselsnummer)).firstOrNull()
                         ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
                 c.batchInsertHendelser(
-                    JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON,
+                    JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
                     listOf(jobbsøkerDbId),
                     opprettetAv,
                     AktørType.JOBBSØKER

@@ -58,7 +58,7 @@ class RekrutteringstreffRepositoryTest {
 
         val opprett = repository.hentHendelser(id)
         assertThat(opprett).hasSize(1)
-        assertThat(opprett.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT)
+        assertThat(opprett.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET)
 
         repository.oppdater(
             id,
@@ -93,9 +93,9 @@ class RekrutteringstreffRepositoryTest {
         val hendelser = repository.hentHendelser(id)
         assertThat(hendelser).hasSize(3)
 
-        assertThat(hendelser[0].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPDATER)
-        assertThat(hendelser[1].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPDATER)
-        assertThat(hendelser[2].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT)
+        assertThat(hendelser[0].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPDATERT)
+        assertThat(hendelser[1].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPDATERT)
+        assertThat(hendelser[2].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET)
         assertThat(hendelser.first().tidspunkt)
             .isAfterOrEqualTo(hendelser.last().tidspunkt)
             .isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))
@@ -122,11 +122,11 @@ class RekrutteringstreffRepositoryTest {
         val hendelser = repository.hentHendelser(id)
         assertThat(hendelser).hasSize(5)
         assertThat(hendelser.map { it.hendelsestype }).containsExactly(
-            RekrutteringstreffHendelsestype.AVPUBLISER,
-            RekrutteringstreffHendelsestype.AVLYS,
-            RekrutteringstreffHendelsestype.FULLFØR,
-            RekrutteringstreffHendelsestype.GJENÅPN,
-            RekrutteringstreffHendelsestype.OPPRETT
+            RekrutteringstreffHendelsestype.AVPUBLISERT,
+            RekrutteringstreffHendelsestype.AVLYST,
+            RekrutteringstreffHendelsestype.FULLFØRT,
+            RekrutteringstreffHendelsestype.GJENÅPNET,
+            RekrutteringstreffHendelsestype.OPPRETTET
         )
     }
 
@@ -227,7 +227,7 @@ class RekrutteringstreffRepositoryTest {
             navIdent = navIdent
         )
 
-        // Legg til en jobbsøker (dette lager automatisk en OPPRETT-hendelse - blokkerende)
+        // Legg til en jobbsøker (dette lager automatisk en OPPRETTET-hendelse - blokkerende)
         val jobbsøker = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
@@ -361,8 +361,8 @@ class RekrutteringstreffRepositoryTest {
         )
         db.leggTilArbeidsgivere(listOf(arbeidsgiver))
 
-        // Legg til rekrutteringstreff_hendelse (OPPDATER)
-        db.leggTilRekrutteringstreffHendelse(treffId, RekrutteringstreffHendelsestype.OPPDATER, navIdent)
+        // Legg til rekrutteringstreff_hendelse (OPPDATERT)
+        db.leggTilRekrutteringstreffHendelse(treffId, RekrutteringstreffHendelsestype.OPPDATERT, navIdent)
 
         // Legg til næringskode via SQL
         db.dataSource.connection.use { c ->
@@ -471,6 +471,6 @@ class RekrutteringstreffRepositoryTest {
         assertThat(db.hentAlleArbeidsgivere()).hasSize(1)
         assertThat(db.hentArbeidsgiverHendelser(treffId)).isNotEmpty
         assertThat(innleggRepo.hentById(innlegg.id)).isNotNull
-        assertThat(db.hentHendelser(treffId)).hasSizeGreaterThan(1) // OPPRETT + PUBLISER
+        assertThat(db.hentHendelser(treffId)).hasSizeGreaterThan(1) // OPPRETTET + PUBLISERT
     }
 }

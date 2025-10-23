@@ -22,7 +22,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortOppmøteSchedulerTest {
@@ -70,7 +69,7 @@ class AktivitetskortOppmøteSchedulerTest {
         Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
         Assertions.assertThat(melding["møttOpp"].asBoolean()).isTrue
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.MØT_OPP)
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.MØTT_OPP)
         Assertions.assertThat(usendteEtterpå).isEmpty()
     }
 
@@ -93,7 +92,7 @@ class AktivitetskortOppmøteSchedulerTest {
         Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
         Assertions.assertThat(melding["møttOpp"].asBoolean()).isFalse
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_MØT_OPP)
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_MØTT_OPP)
         Assertions.assertThat(usendteEtterpå).isEmpty()
     }
 

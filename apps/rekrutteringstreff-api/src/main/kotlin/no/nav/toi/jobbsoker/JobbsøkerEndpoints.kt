@@ -158,7 +158,7 @@ private fun leggTilJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> 
                         {
                             "id": "any-uuid",
                             "tidspunkt": "2025-04-14T10:38:41Z",
-                            "hendelsestype": "OPPRETT",
+                            "hendelsestype": "OPPRETTET",
                             "opprettetAvAktørType": "ARRANGØR",
                             "aktørIdentifikasjon": "testperson"
                         }
@@ -205,7 +205,7 @@ private fun hentJobbsøkereHandler(repo: JobbsøkerRepository): (Context) -> Uni
                 {
                     "id": "any-uuid",
                     "tidspunkt": "2025-04-14T10:38:41Z",
-                    "hendelsestype": "OPPRETT",
+                    "hendelsestype": "OPPRETTET",
                     "opprettetAvAktørType": "ARRANGØR",
                     "aktørIdentifikasjon": "testperson",
                     "fødselsnummer": "12345678901",

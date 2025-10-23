@@ -137,7 +137,7 @@ class JobbsøkerTest {
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(1)
         val h = hendelser.first()
-        assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT)
+        assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktørIdentifikasjon).isEqualTo("A123456")
     }
@@ -209,7 +209,7 @@ class JobbsøkerTest {
                     assertThat(hendelse.tidspunkt).isNotNull()
                     assertThat(hendelse.tidspunkt.toInstant())
                         .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-                    assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT.name)
+                    assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
                     assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                     assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 }
@@ -254,7 +254,7 @@ class JobbsøkerTest {
                 assertThatCode { UUID.fromString(jobbsoeker.personTreffId) }.doesNotThrowAnyException()
                 assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
                 val hendelse = jobbsoeker.hendelser.first()
-                assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT.name)
+                assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
                 assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                 assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
                 assertThatCode { UUID.fromString(hendelse.id) }
@@ -313,7 +313,7 @@ class JobbsøkerTest {
                 assertThat(hendelser[0].tidspunkt.toInstant()).isAfterOrEqualTo(hendelser[1].tidspunkt.toInstant())
                 hendelser.forEach { h ->
                     assertThatCode { UUID.fromString(h.id) }.doesNotThrowAnyException()
-                    assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETT.name)
+                    assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
                     assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                     assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
                     assertThat(h.fødselsnummer).isIn("11111111111", "22222222222")
@@ -362,7 +362,7 @@ class JobbsøkerTest {
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(4)
 
-        val inviterHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.INVITER }
+        val inviterHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
         assertThat(inviterHendelser).hasSize(2)
         inviterHendelser.forEach {
             assertThat(it.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
@@ -411,7 +411,7 @@ class JobbsøkerTest {
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(4)
 
-        val oppmøteHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.MØT_OPP }
+        val oppmøteHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.MØTT_OPP }
         assertThat(oppmøteHendelser).hasSize(2)
         oppmøteHendelser.forEach {
             assertThat(it.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
@@ -460,7 +460,7 @@ class JobbsøkerTest {
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(4)
 
-        val ikkeOppmøteHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.IKKE_MØT_OPP }
+        val ikkeOppmøteHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.IKKE_MØTT_OPP }
         assertThat(ikkeOppmøteHendelser).hasSize(2)
         ikkeOppmøteHendelser.forEach {
             assertThat(it.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)

@@ -12,7 +12,6 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
-import kotlin.io.use
 
 data class RekrutteringstreffHendelse(
     val id: UUID,
@@ -74,7 +73,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 setArray(++i, c.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
             }.executeQuery().run { next(); getLong(1) }
 
-            leggTilHendelse(c, dbId, RekrutteringstreffHendelsestype.OPPRETT, AktørType.ARRANGØR, dto.opprettetAvPersonNavident)
+            leggTilHendelse(c, dbId, RekrutteringstreffHendelsestype.OPPRETTET, AktørType.ARRANGØR, dto.opprettetAvPersonNavident)
         }
         return nyTreffId
     }
@@ -105,7 +104,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                 setObject(++i, treff.somUuid)
             }.executeUpdate()
 
-            leggTilHendelse(c, dbId, RekrutteringstreffHendelsestype.OPPDATER, AktørType.ARRANGØR, oppdatertAv)
+            leggTilHendelse(c, dbId, RekrutteringstreffHendelsestype.OPPDATERT, AktørType.ARRANGØR, oppdatertAv)
         }
     }
 
@@ -125,7 +124,7 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                     """
                     SELECT 1
                     FROM rekrutteringstreff_hendelse h
-                    WHERE h.rekrutteringstreff_id = ? AND h.hendelsestype = 'PUBLISER'
+                    WHERE h.rekrutteringstreff_id = ? AND h.hendelsestype = 'PUBLISERT'
                     LIMIT 1
                     """.trimIndent()
                 ).use { s ->
@@ -363,23 +362,23 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
 
     fun publiser(treff: TreffId, publisertAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.PUBLISER, publisertAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.PUBLISERT, publisertAv)
     }
 
     fun fullfor(treff: TreffId, fullfortAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.FULLFØR, fullfortAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.FULLFØRT, fullfortAv)
     }
 
     fun gjenapn(treff: TreffId, gjenapnetAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.GJENÅPN, gjenapnetAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.GJENÅPNET, gjenapnetAv)
     }
 
     fun avlys(treff: TreffId, avlystAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVLYS, avlystAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVLYST, avlystAv)
     }
 
     fun avpubliser(treff: TreffId, avpublisertAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVPUBLISER, avpublisertAv)
+        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVPUBLISERT, avpublisertAv)
     }
 
     private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {

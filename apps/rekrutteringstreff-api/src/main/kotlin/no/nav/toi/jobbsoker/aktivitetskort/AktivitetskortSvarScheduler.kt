@@ -49,8 +49,8 @@ class AktivitetskortSvarScheduler(
         }
 
         try {
-            val usendteSvarJa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON)
-            val usendteSvarNei = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON)
+            val usendteSvarJa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
+            val usendteSvarNei = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
 
 
             if (usendteSvarNei.isEmpty() && usendteSvarJa.isEmpty()) {

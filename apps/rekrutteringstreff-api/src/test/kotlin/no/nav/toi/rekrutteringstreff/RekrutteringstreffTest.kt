@@ -338,7 +338,7 @@ class RekrutteringstreffTest {
         assertThat(res.statusCode).isEqualTo(200)
         result as com.github.kittinunf.result.Result.Success
         val list = result.value
-        assertThat(list.map { it.hendelsestype }).containsExactly("OPPDATER", "OPPRETT")
+        assertThat(list.map { it.hendelsestype }).containsExactly("OPPDATERT", "OPPRETTET")
     }
 
     @Test
@@ -361,7 +361,7 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = result.value
                 assertThat(dto.hendelser).hasSize(1)
-                assertThat(dto.hendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT.name)
+                assertThat(dto.hendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET.name)
             }
         }
     }
@@ -398,7 +398,7 @@ class RekrutteringstreffTest {
             )
         )
 
-        db.leggTilRekrutteringstreffHendelse(treff, RekrutteringstreffHendelsestype.OPPDATER, "A123456")
+        db.leggTilRekrutteringstreffHendelse(treff, RekrutteringstreffHendelsestype.OPPDATERT, "A123456")
 
         val (_, res, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/allehendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -424,7 +424,7 @@ class RekrutteringstreffTest {
             HendelseRessurs.JOBBSØKER,
             HendelseRessurs.ARBEIDSGIVER
         )
-        assertThat(list.map { it.hendelsestype }).containsExactlyInAnyOrder("OPPRETT", "OPPRETT", "OPPRETT", "OPPDATER")
+        assertThat(list.map { it.hendelsestype }).containsExactlyInAnyOrder("OPPRETTET", "OPPRETTET", "OPPRETTET", "OPPDATERT")
     }
 
     @ParameterizedTest
@@ -499,11 +499,11 @@ class RekrutteringstreffTest {
     }
 
     private fun hendelseEndepunktVarianter() = listOf(
-        Arguments.of("publiser", RekrutteringstreffHendelsestype.PUBLISER),
-        Arguments.of("gjenapn", RekrutteringstreffHendelsestype.GJENÅPN),
-        Arguments.of("avlys", RekrutteringstreffHendelsestype.AVLYS),
-        Arguments.of("avpubliser", RekrutteringstreffHendelsestype.AVPUBLISER),
-        Arguments.of("fullfor", RekrutteringstreffHendelsestype.FULLFØR)
+        Arguments.of("publiser", RekrutteringstreffHendelsestype.PUBLISERT),
+        Arguments.of("gjenapn", RekrutteringstreffHendelsestype.GJENÅPNET),
+        Arguments.of("avlys", RekrutteringstreffHendelsestype.AVLYST),
+        Arguments.of("avpubliser", RekrutteringstreffHendelsestype.AVPUBLISERT),
+        Arguments.of("fullfor", RekrutteringstreffHendelsestype.FULLFØRT)
     )
 
     @ParameterizedTest
@@ -526,6 +526,6 @@ class RekrutteringstreffTest {
         assertThat(hendelser).hasSize(2)
         assertThat(hendelser.first().hendelsestype).isEqualTo(forventetHendelsestype)
         assertThat(hendelser.first().aktørIdentifikasjon).isEqualTo(navIdent)
-        assertThat(hendelser.last().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT)
+        assertThat(hendelser.last().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET)
     }
 }

@@ -55,7 +55,7 @@ class ArbeidsgiverRepositoryTest {
         val h = ag.hendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT)
+        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETTET)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktøridentifikasjon).isEqualTo("testperson")
     }
@@ -89,7 +89,7 @@ class ArbeidsgiverRepositoryTest {
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
         val h = hendelser.first()
-        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT)
+        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETTET)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktøridentifikasjon).isEqualTo("testperson")
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
@@ -108,7 +108,7 @@ class ArbeidsgiverRepositoryTest {
         assertThat(resultat).isTrue()
         assertThat(repository.hentArbeidsgivere(treffId)).isEmpty()
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
-        assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETT }).isTrue()
+        assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET }).isTrue()
     }
 
     @Test
@@ -128,7 +128,7 @@ class ArbeidsgiverRepositoryTest {
         val alleFør = repository.hentArbeidsgivere(treffId)
         assertThat(alleFør).hasSize(2)
 
-        // Act: Soft-delete den ene arbeidsgiveren via SLETT-hendelse
+        // Act: Soft-delete den ene arbeidsgiveren via SLETTET-hendelse
         val slettesId = alleFør.first { it.orgnr.asString == "222222222" }.arbeidsgiverTreffId.somUuid
         val result = repository.slett(slettesId, "testperson")
         assertThat(result).isTrue()
@@ -138,8 +138,8 @@ class ArbeidsgiverRepositoryTest {
         assertThat(etter).hasSize(1)
         assertThat(etter.first().orgnr.asString).isEqualTo("111111111")
 
-        // Og hendelser inneholder SLETT for den slettede
+        // Og hendelser inneholder SLETTET for den slettede
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
-        assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETT }).isTrue()
+        assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET }).isTrue()
     }
 }

@@ -15,7 +15,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
             left join aktivitetskort_polling p on jh.db_id = p.jobbsoker_hendelse_db_id
             left join jobbsoker j on jh.jobbsoker_db_id = j.db_id
             left join rekrutteringstreff rt on j.treff_db_id = rt.db_id
-            where p.db_id is null and jh.hendelsestype = '${JobbsøkerHendelsestype.INVITER.name}'
+            where p.db_id is null and jh.hendelsestype = '${JobbsøkerHendelsestype.INVITERT.name}'
             order by jh.tidspunkt
             """
         )

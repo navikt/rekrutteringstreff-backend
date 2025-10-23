@@ -49,7 +49,7 @@ class ArbeidsgiverRepository(
             leggTilHendelse(
                 connection = c,
                 arbeidsgiverDbId = arbeidsgiverDbId,
-                hendelsestype = ArbeidsgiverHendelsestype.SLETT,
+                hendelsestype = ArbeidsgiverHendelsestype.SLETTET,
                 opprettetAvAktørType = AktørType.ARRANGØR,
                 aktøridentifikasjon = opprettetAv
             )
@@ -73,7 +73,7 @@ class ArbeidsgiverRepository(
             val treffDbId: Long = hentTreffDbId(connection, treff)
                 ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
             val arbeidsgiverDbId = leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
-            leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
+            leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, opprettetAv)
             leggTilNaringskoder(connection, arbeidsgiverDbId, arbeidsgiver.næringskoder)
         }
     }
@@ -168,7 +168,7 @@ class ArbeidsgiverRepository(
                      LIMIT 1
                 ) last ON true
                 WHERE rt.id = ?
-                  AND COALESCE(last.hendelsestype, 'OPPRETT') <> 'SLETT'
+                  AND COALESCE(last.hendelsestype, 'OPPRETTET') <> 'SLETTET'
                 GROUP BY ag.id, ag.arbeidsgiver_id, ag.orgnr, ag.orgnavn, rt.id
                 ORDER BY ag.arbeidsgiver_id;
             """.trimIndent()

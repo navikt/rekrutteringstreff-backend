@@ -50,8 +50,8 @@ class AktivitetskortOppmøteScheduler(
 
         try {
 
-            val usendteOppmøte = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.MØT_OPP)
-            val usendteIkkeOppmøte = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_MØT_OPP)
+            val usendteOppmøte = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.MØTT_OPP)
+            val usendteIkkeOppmøte = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_MØTT_OPP)
 
 
             if (usendteOppmøte.isEmpty() && usendteIkkeOppmøte.isEmpty()) {
