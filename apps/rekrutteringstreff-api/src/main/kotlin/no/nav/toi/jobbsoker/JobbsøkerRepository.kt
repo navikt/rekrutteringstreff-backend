@@ -165,7 +165,7 @@ class JobbsøkerRepository(
                 """
                     SELECT
                         js.id,
-                        js.db_id,
+                        js.jobbsoker_id,
                         js.fodselsnummer,
                         js.kandidatnummer,
                         js.fornavn,
@@ -187,12 +187,12 @@ class JobbsøkerRepository(
                             '[]'
                         ) AS hendelser
                     FROM jobbsoker js
-                    JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
-                    LEFT JOIN jobbsoker_hendelse jh ON js.db_id = jh.jobbsoker_db_id
+                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                    LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
                     WHERE rt.id = ?
-                    GROUP BY js.id, js.db_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
+                    GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
                              js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
-                    ORDER BY js.db_id;
+                    ORDER BY js.jobbsoker_id;
                 """
             ).use { ps ->
                 ps.setObject(1, treff.somUuid)
@@ -276,7 +276,7 @@ class JobbsøkerRepository(
         treffDbId: Long,
         fødselsnumre: List<Fødselsnummer>
     ): List<Long> {
-        val sql = "SELECT db_id FROM jobbsoker WHERE treff_db_id = ? AND fodselsnummer = ANY(?)"
+        val sql = "SELECT jobbsoker_id FROM jobbsoker WHERE rekrutteringstreff_id = ? AND fodselsnummer = ANY(?)"
         return prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
             stmt.setArray(2, createArrayOf("varchar", fødselsnumre.map { it.asString }.toTypedArray()))
@@ -293,7 +293,7 @@ class JobbsøkerRepository(
 
         val sql = "SELECT j.id " +
                 "FROM jobbsoker j  " +
-                    "JOIN rekrutteringstreff rt ON j.treff_db_id = rt.db_id " +
+                    "JOIN rekrutteringstreff rt ON j.rekrutteringstreff_id = rt.rekrutteringstreff_id " +
                 "WHERE rt.id = ? AND j.fodselsnummer = ANY(?)"
         return prepareStatement(sql).use { stmt ->
             stmt.setObject(1, treffId.somUuid)
@@ -305,7 +305,7 @@ class JobbsøkerRepository(
     }
 
     private fun Connection.hentJobbsøkerDbIder(treffDbId: Long, personTreffIder: List<PersonTreffId>): List<Long> {
-        val sql = "SELECT db_id FROM jobbsoker WHERE treff_db_id = ? AND id = ANY(?)"
+        val sql = "SELECT jobbsoker_id FROM jobbsoker WHERE rekrutteringstreff_id = ? AND id = ANY(?)"
         return prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
             stmt.setArray(2, createArrayOf("uuid", personTreffIder.map { it.somString }.toTypedArray()))
@@ -353,8 +353,8 @@ class JobbsøkerRepository(
                     js.etternavn,
                     js.id as person_treff_id
                 FROM jobbsoker_hendelse jh
-                JOIN jobbsoker js ON jh.jobbsoker_db_id = js.db_id
-                JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
+                JOIN jobbsoker js ON jh.jobbsoker_id = js.jobbsoker_id
+                JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 WHERE rt.id = ?
                 ORDER BY jh.tidspunkt DESC;
             """.trimIndent()
@@ -394,7 +394,7 @@ class JobbsøkerRepository(
                 """
                 SELECT
                     js.id,
-                    js.db_id,
+                    js.jobbsoker_id,
                     js.fodselsnummer,
                     js.kandidatnummer,
                     js.fornavn,
@@ -416,10 +416,10 @@ class JobbsøkerRepository(
                         '[]'
                     ) AS hendelser
                 FROM jobbsoker js
-                JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
-                LEFT JOIN jobbsoker_hendelse jh ON js.db_id = jh.jobbsoker_db_id
+                JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
                 WHERE rt.id = ? AND js.fodselsnummer = ?
-                GROUP BY js.id, js.db_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
+                GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
                          js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             """
             ).use { ps ->

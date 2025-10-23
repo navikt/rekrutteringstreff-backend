@@ -189,7 +189,7 @@ class RekrutteringstreffRepositoryTest {
         assertThat(db.hentArbeidsgiverHendelser(treffId)).isNotEmpty
         assertThat(innleggRepo.hentById(innlegg.id)).isNotNull
         assertThat(db.hentHendelser(treffId)).isNotEmpty
-        assertThat(db.hentAlleJobbsøkere()).hasSize(1)
+        assertThat(db.hentJobbsøkereForTreff(treffId)).hasSize(1)
     }
 
     @Test
@@ -312,11 +312,11 @@ class RekrutteringstreffRepositoryTest {
         db.dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-                INSERT INTO aktivitetskort_polling (jobbsoker_hendelse_db_id, sendt_tidspunkt)
-                SELECT jh.db_id, now()
+                INSERT INTO aktivitetskort_polling (jobbsoker_hendelse_id, sendt_tidspunkt)
+                SELECT jh.jobbsoker_hendelse_id, now()
                 FROM jobbsoker_hendelse jh
-                JOIN jobbsoker js ON jh.jobbsoker_db_id = js.db_id
-                JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
+                JOIN jobbsoker js ON jh.jobbsoker_id = js.jobbsoker_id
+                JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 WHERE rt.id = ?
                 LIMIT 1
                 """.trimIndent()
@@ -368,10 +368,10 @@ class RekrutteringstreffRepositoryTest {
         db.dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-                INSERT INTO naringskode (arbeidsgiver_db_id, kode, beskrivelse)
-                SELECT ag.db_id, '62.010', 'Programmeringstjenester'
+                INSERT INTO naringskode (arbeidsgiver_id, kode, beskrivelse)
+                SELECT ag.arbeidsgiver_id, '62.010', 'Programmeringstjenester'
                 FROM arbeidsgiver ag
-                JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
+                JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 WHERE rt.id = ?
                 """.trimIndent()
             ).use { ps ->

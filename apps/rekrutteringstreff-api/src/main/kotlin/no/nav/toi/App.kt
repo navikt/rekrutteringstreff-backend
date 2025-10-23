@@ -132,7 +132,7 @@ class App(
                 ))
             } else {
                 secure(log).error("SQL-feil", e)
-                ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod."))
+                ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod på serveren."))
             }
         }
         javalin.exception(no.nav.toi.rekrutteringstreff.UlovligSlettingException::class.java) { e, ctx ->
@@ -143,7 +143,7 @@ class App(
             log.error("Uventet feil", e)
             ctx.status(500).json(
                 mapOf(
-                    "feil" to "En uventet feil oppstod på serveren."
+                    "feil" to "En databasefeil oppstod på serveren."
                 )
             )
         }

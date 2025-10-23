@@ -124,6 +124,6 @@ class AppExceptionHandlingTest {
 
         assertThat(response.statusCode).isEqualTo(500)
         val body = String(response.data)
-        assertThat(body).contains("uventet feil")
+        assertThat(body).contains("databasefeil")
     }
 }
