@@ -13,8 +13,6 @@ import java.net.HttpURLConnection.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
-import kotlin.text.contains
-import kotlin.text.get
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -95,7 +93,7 @@ class JobbsøkerInnloggetBorgerTest {
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(2)
 
-        val svarJaHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON }
+        val svarJaHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON }
         assertThat(svarJaHendelse).isNotNull
         svarJaHendelse!!
         assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
@@ -135,7 +133,7 @@ class JobbsøkerInnloggetBorgerTest {
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(2)
 
-        val svarNeiHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON }
+        val svarNeiHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON }
         assertThat(svarNeiHendelse).isNotNull
         svarNeiHendelse!!
         assertThat(svarNeiHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
@@ -394,7 +392,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(3)
-        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON, JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON)
+        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
 
         hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
             assertThat(it.statuser.erPåmeldt).isFalse()
@@ -437,7 +435,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(3)
-        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON, JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON)
+        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
 
         hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
             assertThat(it.statuser.erPåmeldt).isTrue()

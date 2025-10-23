@@ -12,7 +12,7 @@ class InnleggRepository(private val dataSource: DataSource) {
     private object T {
         const val TABLE              = "innlegg"
         const val COL_ID             = "id"
-        const val COL_TREFF_DB_ID    = "treff_db_id"
+        const val COL_TREFF_DB_ID    = "rekrutteringstreff_id"
         const val COL_TITTEL         = "tittel"
         const val COL_NAVIDENT       = "opprettet_av_person_navident"
         const val COL_NAVN           = "opprettet_av_person_navn"
@@ -30,7 +30,7 @@ class InnleggRepository(private val dataSource: DataSource) {
                 """
                 SELECT i.*, rt.id AS ${T.COL_TREFF_UUID}
                   FROM ${T.TABLE} i
-                  JOIN rekrutteringstreff rt ON i.${T.COL_TREFF_DB_ID} = rt.db_id
+                  JOIN rekrutteringstreff rt ON i.${T.COL_TREFF_DB_ID} = rt.rekrutteringstreff_id
                  WHERE rt.id = ?
                  ORDER BY i.${T.COL_OPPRETTET}
                 """
@@ -48,7 +48,7 @@ class InnleggRepository(private val dataSource: DataSource) {
                 """
                 SELECT i.*, rt.id AS ${T.COL_TREFF_UUID}
                   FROM ${T.TABLE} i
-                  JOIN rekrutteringstreff rt ON i.${T.COL_TREFF_DB_ID} = rt.db_id
+                  JOIN rekrutteringstreff rt ON i.${T.COL_TREFF_DB_ID} = rt.rekrutteringstreff_id
                  WHERE i.${T.COL_ID} = ?
                 """
             ).use { ps ->
@@ -63,12 +63,12 @@ class InnleggRepository(private val dataSource: DataSource) {
             c.prepareStatement(
                 """
                 INSERT INTO ${T.TABLE} (
-                    id, treff_db_id, tittel, opprettet_av_person_navident,
+                    id, ${T.COL_TREFF_DB_ID}, tittel, opprettet_av_person_navident,
                     opprettet_av_person_navn, opprettet_av_person_beskrivelse,
                     sendes_til_jobbsoker_tidspunkt, html_content
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING id,
-                          (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = ${T.TABLE}.treff_db_id) AS treffId,
+                          (SELECT r.id FROM rekrutteringstreff r WHERE r.rekrutteringstreff_id = ${T.TABLE}.${T.COL_TREFF_DB_ID}) AS treffId,
                           tittel, opprettet_av_person_navident, opprettet_av_person_navn,
                           opprettet_av_person_beskrivelse, ${T.COL_SENDES},
                           html_content, ${T.COL_OPPRETTET}, ${T.COL_SIST_OPPDATERT}
@@ -102,7 +102,7 @@ class InnleggRepository(private val dataSource: DataSource) {
                     ${T.COL_SIST_OPPDATERT} = NOW()
                 WHERE id = ? AND ${T.COL_TREFF_DB_ID} = ?
                 RETURNING id,
-                          (SELECT r.id FROM rekrutteringstreff r WHERE r.db_id = ${T.TABLE}.treff_db_id) AS treffId,
+                          (SELECT r.id FROM rekrutteringstreff r WHERE r.rekrutteringstreff_id = ${T.TABLE}.${T.COL_TREFF_DB_ID}) AS treffId,
                           tittel, opprettet_av_person_navident, opprettet_av_person_navn,
                           opprettet_av_person_beskrivelse, ${T.COL_SENDES},
                           html_content, ${T.COL_OPPRETTET}, ${T.COL_SIST_OPPDATERT}
@@ -130,7 +130,7 @@ class InnleggRepository(private val dataSource: DataSource) {
         }
 
     private fun java.sql.Connection.treffDbId(treff: TreffId): Long =
-        prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").use { ps ->
+        prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").use { ps ->
             ps.setObject(1, treff.somUuid)
             ps.executeQuery().let { rs -> if (rs.next()) rs.getLong(1) else error("Treff $treff finnes ikke") }
         }

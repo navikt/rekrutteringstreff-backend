@@ -34,11 +34,15 @@ class TestDatabase {
 
     fun slettAlt() = dataSource.connection.use {c ->
         listOf(
+            "DELETE FROM aktivitetskort_polling",
+            "DELETE FROM jobbsoker_hendelse",
+            "DELETE FROM arbeidsgiver_hendelse",
+            "DELETE FROM rekrutteringstreff_hendelse",
+            "DELETE FROM naringskode",
             "DELETE FROM innlegg",
             "DELETE FROM arbeidsgiver",
-            "DELETE FROM jobbsoker_hendelse",
             "DELETE FROM jobbsoker",
-            "DELETE FROM rekrutteringstreff_hendelse",
+            "DELETE FROM ki_spørring_logg",
             "DELETE FROM rekrutteringstreff"
         ).forEach { c.prepareStatement(it).executeUpdate() }
     }
@@ -66,8 +70,8 @@ class TestDatabase {
         val sql = """
             SELECT ag.orgnr, ag.orgnavn, rt.id as treff_id
               FROM arbeidsgiver ag
-              JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
-             ORDER BY ag.db_id
+              JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+             ORDER BY ag.arbeidsgiver_id
         """.trimIndent()
         val rs = it.prepareStatement(sql).executeQuery()
         generateSequence { if (rs.next()) konverterTilArbeidsgiver(rs) else null }.toList()
@@ -81,8 +85,8 @@ class TestDatabase {
                    jh.opprettet_av_aktortype,
                    jh.aktøridentifikasjon
               FROM jobbsoker_hendelse jh
-              JOIN jobbsoker js   ON jh.jobbsoker_db_id = js.db_id
-              JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
+              JOIN jobbsoker js   ON jh.jobbsoker_id = js.jobbsoker_id
+              JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
              WHERE rt.id = ?
              ORDER BY jh.tidspunkt
         """.trimIndent()
@@ -110,8 +114,8 @@ class TestDatabase {
                    ah.opprettet_av_aktortype,
                    ah.aktøridentifikasjon
               FROM arbeidsgiver_hendelse ah
-              JOIN arbeidsgiver ag ON ah.arbeidsgiver_db_id = ag.db_id
-              JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
+              JOIN arbeidsgiver ag ON ah.arbeidsgiver_id = ag.arbeidsgiver_id
+              JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
              WHERE rt.id = ?
              ORDER BY ah.tidspunkt
         """.trimIndent()
@@ -142,8 +146,8 @@ class TestDatabase {
                    js.veileder_navident,
                    rt.id as treff_id
               FROM jobbsoker js
-              JOIN rekrutteringstreff rt ON js.treff_db_id = rt.db_id
-             ORDER BY js.db_id
+              JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+             ORDER BY js.jobbsoker_id
         """.trimIndent()
         val rs = it.prepareStatement(sql).executeQuery()
         generateSequence { if (rs.next()) konverterTilJobbsøker(rs) else null }.toList()
@@ -217,7 +221,7 @@ class TestDatabase {
 
     fun leggTilRekrutteringstreffHendelse(treffId: TreffId, hendelsestype: RekrutteringstreffHendelsestype, aktørIdent: String) =
         dataSource.connection.use { c ->
-            val treffDbId = c.prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").apply {
+            val treffDbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").apply {
                 setObject(1, treffId.somUuid)
             }.executeQuery().let {
                 if (it.next()) it.getLong(1) else error("Treff $treffId finnes ikke i test-DB")
@@ -226,7 +230,7 @@ class TestDatabase {
             c.prepareStatement(
                 """
                 INSERT INTO rekrutteringstreff_hendelse
-                  (id, rekrutteringstreff_db_id, tidspunkt,
+                  (id, rekrutteringstreff_id, tidspunkt,
                    hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
                 VALUES (?, ?, now(), ?, ?, ?)
                 """.trimIndent()

@@ -126,7 +126,7 @@ class ArbeidsgiverTest {
         val hendelser = db.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
         val h = hendelser.first()
-        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT)
+        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETTET)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktøridentifikasjon).isEqualTo("A123456")
     }
@@ -170,7 +170,7 @@ class ArbeidsgiverTest {
         val hendelser = db.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
         val h = hendelser.first()
-        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT)
+        assertThat(h.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETTET)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktøridentifikasjon).isEqualTo("A123456")
     }
@@ -228,7 +228,7 @@ class ArbeidsgiverTest {
                 actualArbeidsgivere.forEach { arbeidsgiver ->
                     assertThat(arbeidsgiver.hendelser).hasSize(1)
                     val hendelse = arbeidsgiver.hendelser.first()
-                    assertThat(hendelse.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT.toString())
+                    assertThat(hendelse.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETTET.toString())
                     assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                     assertThat(hendelse.aktøridentifikasjon).isEqualTo("testperson")
                 }
@@ -272,7 +272,7 @@ class ArbeidsgiverTest {
                 val hendelser = result.value
                 assertThat(hendelser).hasSize(1)
                 val hendelse = hendelser.first()
-                assertThat(hendelse.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETT.name)
+                assertThat(hendelse.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETTET.name)
                 assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                 assertThat(hendelse.aktøridentifikasjon).isEqualTo("A123456")
                 assertThat(hendelse.orgnr).isEqualTo("777777777")
@@ -334,7 +334,7 @@ class ArbeidsgiverTest {
             is Success -> assertThat(getRes.value).isEmpty()
         }
 
-        // Hendelser skal inneholde SLETT
+        // Hendelser skal inneholde SLETTET
         val (_, hendResp, hendRes) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto>> {
@@ -346,7 +346,7 @@ class ArbeidsgiverTest {
         assertStatuscodeEquals(HTTP_OK, hendResp, hendRes)
         when (hendRes) {
             is Failure -> throw hendRes.error
-            is Success -> assertThat(hendRes.value.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETT.name }).isTrue()
+            is Success -> assertThat(hendRes.value.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET.name }).isTrue()
         }
     }
 }

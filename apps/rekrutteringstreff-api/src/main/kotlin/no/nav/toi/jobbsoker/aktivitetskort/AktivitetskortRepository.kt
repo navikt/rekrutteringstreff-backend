@@ -11,11 +11,11 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
     fun hentUsendteInvitasjoner(): List<UsendtInvitasjon> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
             """
-            select jh.db_id, j.fodselsnummer, rt.id from jobbsoker_hendelse jh
-            left join aktivitetskort_polling p on jh.db_id = p.jobbsoker_hendelse_db_id
-            left join jobbsoker j on jh.jobbsoker_db_id = j.db_id
-            left join rekrutteringstreff rt on j.treff_db_id = rt.db_id
-            where p.db_id is null and jh.hendelsestype = '${JobbsøkerHendelsestype.INVITER.name}'
+            select jh.jobbsoker_hendelse_id as db_id, j.fodselsnummer, rt.id from jobbsoker_hendelse jh
+            left join aktivitetskort_polling p on jh.jobbsoker_hendelse_id = p.jobbsoker_hendelse_id
+            left join jobbsoker j on jh.jobbsoker_id = j.jobbsoker_id
+            left join rekrutteringstreff rt on j.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            where p.aktivitetskort_polling_id is null and jh.hendelsestype = '${JobbsøkerHendelsestype.INVITERT.name}'
             order by jh.tidspunkt
             """
         )
@@ -30,11 +30,11 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
     fun hentUsendteHendelse(hendelsestype: JobbsøkerHendelsestype): List<UsendtHendelse> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
             """
-            select jh.db_id, j.fodselsnummer, rt.id from jobbsoker_hendelse jh
-            left join aktivitetskort_polling p on jh.db_id = p.jobbsoker_hendelse_db_id
-            left join jobbsoker j on jh.jobbsoker_db_id = j.db_id
-            left join rekrutteringstreff rt on j.treff_db_id = rt.db_id
-            where p.db_id is null and jh.hendelsestype = '${hendelsestype.name}' 
+            select jh.jobbsoker_hendelse_id as db_id, j.fodselsnummer, rt.id from jobbsoker_hendelse jh
+            left join aktivitetskort_polling p on jh.jobbsoker_hendelse_id = p.jobbsoker_hendelse_id
+            left join jobbsoker j on jh.jobbsoker_id = j.jobbsoker_id
+            left join rekrutteringstreff rt on j.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            where p.aktivitetskort_polling_id is null and jh.hendelsestype = '${hendelsestype.name}' 
             order by jh.tidspunkt
             """
         )
@@ -49,7 +49,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
     fun lagrePollingstatus(jobbsokerHendelseDbId: Long) {
         dataSource.connection.use { connection ->
             val statement = connection.prepareStatement(
-                "insert into aktivitetskort_polling(jobbsoker_hendelse_db_id, sendt_tidspunkt) values (?, ?)"
+                "insert into aktivitetskort_polling(jobbsoker_hendelse_id, sendt_tidspunkt) values (?, ?)"
             )
             statement.use {
                 it.setLong(1, jobbsokerHendelseDbId)

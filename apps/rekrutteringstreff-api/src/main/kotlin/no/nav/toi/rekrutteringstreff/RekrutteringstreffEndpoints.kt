@@ -123,7 +123,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
                  {
                    "id":"any-uuid",
                    "tidspunkt":"2025-06-01T08:00:00Z",
-                   "hendelsestype":"OPPRETT",
+                   "hendelsestype":"OPPRETTET",
                    "opprettetAvAktørType":"ARRANGØR",
                    "aktørIdentifikasjon":"A123456"
                  }

@@ -40,7 +40,7 @@ class ArbeidsgiverRepository(
 
     fun slett(arbeidsgiverId: UUID, opprettetAv: String): Boolean =
         dataSource.connection.use { c ->
-            val arbeidsgiverDbId: Long? = c.prepareStatement("SELECT db_id FROM arbeidsgiver WHERE id = ?").use { ps ->
+            val arbeidsgiverDbId: Long? = c.prepareStatement("SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?").use { ps ->
                 ps.setObject(1, arbeidsgiverId)
                 ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
             }
@@ -49,7 +49,7 @@ class ArbeidsgiverRepository(
             leggTilHendelse(
                 connection = c,
                 arbeidsgiverDbId = arbeidsgiverDbId,
-                hendelsestype = ArbeidsgiverHendelsestype.SLETT,
+                hendelsestype = ArbeidsgiverHendelsestype.SLETTET,
                 opprettetAvAktørType = AktørType.ARRANGØR,
                 aktøridentifikasjon = opprettetAv
             )
@@ -57,10 +57,10 @@ class ArbeidsgiverRepository(
         }
 
     private fun hentTreffDbId(connection: Connection, treff: TreffId): Long? {
-        connection.prepareStatement("SELECT db_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
+        connection.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
             stmt.setObject(1, treff.somUuid)
             stmt.executeQuery().use { rs ->
-                return if (rs.next()) rs.getLong("db_id") else null
+                return if (rs.next()) rs.getLong("rekrutteringstreff_id") else null
             }
         }
     }
@@ -73,14 +73,14 @@ class ArbeidsgiverRepository(
             val treffDbId: Long = hentTreffDbId(connection, treff)
                 ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
             val arbeidsgiverDbId = leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
-            leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.OPPRETT, AktørType.ARRANGØR, opprettetAv)
+            leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, opprettetAv)
             leggTilNaringskoder(connection, arbeidsgiverDbId, arbeidsgiver.næringskoder)
         }
     }
 
     private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): Long {
         connection.prepareStatement(
-            "INSERT INTO arbeidsgiver (id, treff_db_id, orgnr, orgnavn) VALUES (?, ?, ?, ?)",
+            "INSERT INTO arbeidsgiver (id, rekrutteringstreff_id, orgnr, orgnavn) VALUES (?, ?, ?, ?)",
             Statement.RETURN_GENERATED_KEYS
         ).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
@@ -90,7 +90,7 @@ class ArbeidsgiverRepository(
             stmt.executeUpdate()
             stmt.generatedKeys.use {
                 if (it.next()) return it.getLong(1)
-                else throw SQLException("Klarte ikke å hente db_id for arbeidsgiver")
+                else throw SQLException("Klarte ikke å hente arbeidsgiver_id for arbeidsgiver")
             }
         }
     }
@@ -98,7 +98,7 @@ class ArbeidsgiverRepository(
     private fun leggTilNaringskoder(connection: Connection, arbeidsgiverDbId: Long, koder: List<Næringskode>) {
         if (koder.isEmpty()) return
         connection.prepareStatement(
-            "INSERT INTO naringskode (arbeidsgiver_db_id, kode, beskrivelse) VALUES (?, ?, ?)"
+            "INSERT INTO naringskode (arbeidsgiver_id, kode, beskrivelse) VALUES (?, ?, ?)"
         ).use { stmt ->
             for (nk in koder) {
                 stmt.setLong(1, arbeidsgiverDbId)
@@ -120,7 +120,7 @@ class ArbeidsgiverRepository(
         connection.prepareStatement(
             """
             INSERT INTO arbeidsgiver_hendelse (
-                id, arbeidsgiver_db_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon
+                id, arbeidsgiver_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon
             ) VALUES (?, ?, ?, ?, ?, ?)
             """.trimIndent()
         ).use { stmt ->
@@ -158,19 +158,19 @@ class ArbeidsgiverRepository(
                         '[]'
                     ) as hendelser
                 FROM arbeidsgiver ag
-                JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
-                LEFT JOIN arbeidsgiver_hendelse ah ON ag.db_id = ah.arbeidsgiver_db_id
+                JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                LEFT JOIN arbeidsgiver_hendelse ah ON ag.arbeidsgiver_id = ah.arbeidsgiver_id
                 LEFT JOIN LATERAL (
                     SELECT hendelsestype
                       FROM arbeidsgiver_hendelse h
-                     WHERE h.arbeidsgiver_db_id = ag.db_id
+                     WHERE h.arbeidsgiver_id = ag.arbeidsgiver_id
                      ORDER BY h.tidspunkt DESC
                      LIMIT 1
                 ) last ON true
                 WHERE rt.id = ?
-                  AND COALESCE(last.hendelsestype, 'OPPRETT') <> 'SLETT'
-                GROUP BY ag.id, ag.db_id, ag.orgnr, ag.orgnavn, rt.id
-                ORDER BY ag.db_id;
+                  AND COALESCE(last.hendelsestype, 'OPPRETTET') <> 'SLETTET'
+                GROUP BY ag.id, ag.arbeidsgiver_id, ag.orgnr, ag.orgnavn, rt.id
+                ORDER BY ag.arbeidsgiver_id;
             """.trimIndent()
 
             connection.prepareStatement(sql).use { preparedStatement ->
@@ -202,8 +202,8 @@ class ArbeidsgiverRepository(
                     ag.orgnr,
                     ag.orgnavn
                 FROM arbeidsgiver_hendelse ah
-                JOIN arbeidsgiver ag ON ah.arbeidsgiver_db_id = ag.db_id
-                JOIN rekrutteringstreff rt ON ag.treff_db_id = rt.db_id
+                JOIN arbeidsgiver ag ON ah.arbeidsgiver_id = ag.arbeidsgiver_id
+                JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 WHERE rt.id = ?
                 ORDER BY ah.tidspunkt DESC;
             """.trimIndent()

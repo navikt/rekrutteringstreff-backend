@@ -12,7 +12,6 @@ import org.junit.jupiter.api.TestInstance
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import org.assertj.core.api.Assertions.within
-import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortFeilLytterTest {
@@ -70,7 +69,7 @@ class AktivitetskortFeilLytterTest {
         assertThat(jobbsøker).isNotNull
         assertThat(jobbsøker!!.hendelser).hasSize(2)
 
-        val opprettHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETT }
+        val opprettHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETTET }
         assertThat(opprettHendelse).isNotNull
         opprettHendelse!!.apply {
             assertThat(id).isNotNull()

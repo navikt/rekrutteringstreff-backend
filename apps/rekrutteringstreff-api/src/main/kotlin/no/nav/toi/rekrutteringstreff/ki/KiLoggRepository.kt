@@ -106,7 +106,7 @@ class KiLoggRepository(private val dataSource: DataSource) {
             from ki_spørring_logg k
             left join rekrutteringstreff r on r.id = k.treff_id
             $whereClause
-            order by k.opprettet_tidspunkt desc, k.db_id desc
+            order by k.opprettet_tidspunkt desc, k.ki_spørring_logg_id desc
             limit ? offset ?
             """.trimIndent()
 

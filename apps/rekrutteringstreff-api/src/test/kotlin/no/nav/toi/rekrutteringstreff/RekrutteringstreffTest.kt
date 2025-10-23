@@ -222,7 +222,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun slettRekrutteringstreffUtenCascade() {
+    fun slettRekrutteringstreffMedUpublisertedata() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent)
@@ -241,7 +241,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun `cascade delete av jobbsøkere og arbeidsgivere ved sletting av rekrutteringstreff`() {
+    fun `slett rekrutteringstreff feiler (409) hvis treffet er publisert og har jobbsøkerinformasjon`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
 
@@ -277,21 +277,38 @@ class RekrutteringstreffTest {
         assertThat(db.hentAlleJobbsøkere()).isNotEmpty
         assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
 
-        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
+        val (_, response, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
+        assertThat(response.statusCode).isEqualTo(409)
+        // Verifiser at data står igjen når sletting avvises
+        assertThat(db.hentAlleRekrutteringstreff()).isNotEmpty
+        assertThat(db.hentAlleJobbsøkere()).isNotEmpty
+        assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
+    }
 
-                assertThat(db.hentAlleRekrutteringstreff()).isEmpty()
+    @Test
+    fun `slett rekrutteringstreff feiler (409) etter publisering uansett hvilke data den har`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        db.opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = db.hentAlleRekrutteringstreff().first()
 
-                assertThat(db.hentAlleJobbsøkere()).isEmpty()
-                assertThat(db.hentAlleArbeidsgivere()).isEmpty()
-            }
-        }
+        // Publiser treffet
+        val (_, pubRes, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertThat(pubRes.statusCode).isEqualTo(200)
+
+        // Forsøk å slette
+        val (_, delRes, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertThat(delRes.statusCode).isEqualTo(409)
+
+        // Treffet skal fortsatt eksistere
+        assertThat(db.hentAlleRekrutteringstreff()).isNotEmpty
     }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
@@ -321,7 +338,7 @@ class RekrutteringstreffTest {
         assertThat(res.statusCode).isEqualTo(200)
         result as com.github.kittinunf.result.Result.Success
         val list = result.value
-        assertThat(list.map { it.hendelsestype }).containsExactly("OPPDATER", "OPPRETT")
+        assertThat(list.map { it.hendelsestype }).containsExactly("OPPDATERT", "OPPRETTET")
     }
 
     @Test
@@ -344,7 +361,7 @@ class RekrutteringstreffTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = result.value
                 assertThat(dto.hendelser).hasSize(1)
-                assertThat(dto.hendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT.name)
+                assertThat(dto.hendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET.name)
             }
         }
     }
@@ -381,7 +398,7 @@ class RekrutteringstreffTest {
             )
         )
 
-        db.leggTilRekrutteringstreffHendelse(treff, RekrutteringstreffHendelsestype.OPPDATER, "A123456")
+        db.leggTilRekrutteringstreffHendelse(treff, RekrutteringstreffHendelsestype.OPPDATERT, "A123456")
 
         val (_, res, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/allehendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -407,7 +424,7 @@ class RekrutteringstreffTest {
             HendelseRessurs.JOBBSØKER,
             HendelseRessurs.ARBEIDSGIVER
         )
-        assertThat(list.map { it.hendelsestype }).containsExactlyInAnyOrder("OPPRETT", "OPPRETT", "OPPRETT", "OPPDATER")
+        assertThat(list.map { it.hendelsestype }).containsExactlyInAnyOrder("OPPRETTET", "OPPRETTET", "OPPRETTET", "OPPDATERT")
     }
 
     @ParameterizedTest
@@ -482,11 +499,11 @@ class RekrutteringstreffTest {
     }
 
     private fun hendelseEndepunktVarianter() = listOf(
-        Arguments.of("publiser", RekrutteringstreffHendelsestype.PUBLISER),
-        Arguments.of("gjenapn", RekrutteringstreffHendelsestype.GJENÅPN),
-        Arguments.of("avlys", RekrutteringstreffHendelsestype.AVLYS),
-        Arguments.of("avpubliser", RekrutteringstreffHendelsestype.AVPUBLISER),
-        Arguments.of("fullfor", RekrutteringstreffHendelsestype.FULLFØR)
+        Arguments.of("publiser", RekrutteringstreffHendelsestype.PUBLISERT),
+        Arguments.of("gjenapn", RekrutteringstreffHendelsestype.GJENÅPNET),
+        Arguments.of("avlys", RekrutteringstreffHendelsestype.AVLYST),
+        Arguments.of("avpubliser", RekrutteringstreffHendelsestype.AVPUBLISERT),
+        Arguments.of("fullfor", RekrutteringstreffHendelsestype.FULLFØRT)
     )
 
     @ParameterizedTest
@@ -509,6 +526,6 @@ class RekrutteringstreffTest {
         assertThat(hendelser).hasSize(2)
         assertThat(hendelser.first().hendelsestype).isEqualTo(forventetHendelsestype)
         assertThat(hendelser.first().aktørIdentifikasjon).isEqualTo(navIdent)
-        assertThat(hendelser.last().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETT)
+        assertThat(hendelser.last().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET)
     }
 }

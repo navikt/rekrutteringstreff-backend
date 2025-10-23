@@ -6,7 +6,6 @@ import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiParam
-import io.javalin.openapi.OpenApiRequestBody
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.JobbsøkerHendelsestype
@@ -14,7 +13,6 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.util.UUID
-import kotlin.toString
 
 
 private const val pathParamTreffId = "id"
@@ -109,21 +107,21 @@ private fun svarNeiHandler(repo: JobbsøkerRepository): (Context) -> Unit = { ct
                 {
                   "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
                   "tidspunkt": "2023-05-15T10:30:00+02:00",
-                  "hendelsestype": "OPPRETT",
+                  "hendelsestype": "OPPRETTET",
                   "opprettetAvAktørType": "ARRANGØR",
                   "aktørIdentifikasjon": "Z999999"
                 },
                 {
                   "id": "d4e5f6a7-b8c9-0123-4567-890abcdef123",
                   "tidspunkt": "2023-05-16T10:00:00+02:00",
-                  "hendelsestype": "INVITER",
+                  "hendelsestype": "INVITERT",
                   "opprettetAvAktørType": "ARRANGØR",
                   "aktørIdentifikasjon": "Z999999"
                 },
                 {
                   "id": "b2c3d4e5-f6a7-8901-2345-67890abcdef1",
                   "tidspunkt": "2023-05-16T11:00:00+02:00",
-                  "hendelsestype": "SVAR_JA_TIL_INVITASJON",
+                  "hendelsestype": "SVART_JA_TIL_INVITASJON",
                   "opprettetAvAktørType": "JOBBSØKER",
                   "aktørIdentifikasjon": "12345678901"
                 }
@@ -154,7 +152,7 @@ private fun hentBorgerJobbsøkerHandler(repo: JobbsøkerRepository): (Context) -
 
 private fun Jobbsøker.toOutboundDtoMedStatuser(): JobbsøkerMedStatuserOutboundDto {
     val sisteSvar = hendelser.findLast {
-        it.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVAR_NEI_TIL_INVITASJON
+        it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
     }
 
     return JobbsøkerMedStatuserOutboundDto(
@@ -168,8 +166,8 @@ private fun Jobbsøker.toOutboundDtoMedStatuser(): JobbsøkerMedStatuserOutbound
         veilederNavn = veilederNavn?.asString,
         veilederNavIdent = veilederNavIdent?.asString,
         statuser = StatuserOutboundDto(
-            erPåmeldt = sisteSvar?.hendelsestype == JobbsøkerHendelsestype.SVAR_JA_TIL_INVITASJON,
-            erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITER },
+            erPåmeldt = sisteSvar?.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+            erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT },
             harSvart = sisteSvar != null
         ),
         hendelser = hendelser.map { it.toOutboundDto() }
