@@ -57,14 +57,6 @@ spec:
           - id: {{ adGruppeUtvikler }}
   kafka:
     pool: {{ kafka_pool }}
-  gcp:
-    sqlInstances:
-      - type: {{ postgres }}
-        databases:
-          - name: rekrutteringstreff-db
-        tier: {{ gcp_db_tier }}
-        diskAutoresize: {{ gcp_disk_autoresize }}
-        cascadingDelete: true
   envFrom:
     - secret: openai-toi-rekrutteringsbistand-stilling
   env:
