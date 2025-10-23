@@ -143,14 +143,12 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
-                // rekrutteringstreff_hendelse
                 c.prepareStatement(
                     """
                     DELETE FROM rekrutteringstreff_hendelse WHERE rekrutteringstreff_id = ?
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
-                // naringskode
                 c.prepareStatement(
                     """
                     DELETE FROM naringskode nk
@@ -159,21 +157,18 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
-                // innlegg
                 c.prepareStatement(
                     """
                     DELETE FROM innlegg WHERE rekrutteringstreff_id = ?
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
-                // arbeidsgiver
                 c.prepareStatement(
                     """
                     DELETE FROM arbeidsgiver WHERE rekrutteringstreff_id = ?
                     """.trimIndent()
                 ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
 
-                // ki_spørring_logg
                 c.prepareStatement(
                     """
                     DELETE FROM ki_spørring_logg WHERE treff_id = ?
