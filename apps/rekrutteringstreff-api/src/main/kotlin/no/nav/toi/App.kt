@@ -153,8 +153,7 @@ class App(
             authConfigs,
             RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler)
         )
-
-
+        
         javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
         javalin.handleJobbsøker(jobbsøkerRepository)
