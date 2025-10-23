@@ -241,7 +241,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun `slett rekrutteringstreff feiler (409) hvis data er publisert og har data`() {
+    fun `slett rekrutteringstreff feiler (409) hvis treffet er publisert og har jobbsøkerinformasjon`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
 
@@ -289,7 +289,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun `slett rekrutteringstreff feiler (409) etter publisering selv uten andre data`() {
+    fun `slett rekrutteringstreff feiler (409) etter publisering uansett hvilke data den har`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent)
