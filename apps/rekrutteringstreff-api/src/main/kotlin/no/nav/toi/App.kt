@@ -78,7 +78,7 @@ class App(
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         startJavalin(jobbsøkerRepository)
-        startSchedulere()
+        startSchedulere(jobbsøkerRepository)
         startRR(jobbsøkerRepository)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
@@ -154,7 +154,7 @@ class App(
             RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler)
         )
 
-        javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
+        javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource, jobbsøkerRepository))
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
         javalin.handleJobbsøker(jobbsøkerRepository)
         javalin.handleJobbsøkerInnloggetBorger(jobbsøkerRepository)
@@ -164,21 +164,21 @@ class App(
         javalin.start(port)
     }
 
-    private fun startSchedulere() {
+    private fun startSchedulere(jobbsøkerRepository: JobbsøkerRepository) {
         log.info("Starting scheduler")
         AktivitetskortInvitasjonScheduler(
             aktivitetskortRepository = AktivitetskortRepository(dataSource),
-            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource, jobbsøkerRepository),
             rapidsConnection = rapidsConnection
         ).start()
         AktivitetskortSvarScheduler(
             aktivitetskortRepository = AktivitetskortRepository(dataSource),
-            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource, jobbsøkerRepository),
             rapidsConnection = rapidsConnection
         ).start()
         AktivitetskortOppmøteScheduler(
             aktivitetskortRepository = AktivitetskortRepository(dataSource),
-            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource, jobbsøkerRepository),
             rapidsConnection = rapidsConnection
         ).start()
     }

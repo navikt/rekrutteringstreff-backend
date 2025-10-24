@@ -19,8 +19,9 @@ class TestDatabase {
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
-    ): TreffId =
-        RekrutteringstreffRepository(dataSource).opprett(
+    ): TreffId {
+        val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
+        return RekrutteringstreffRepository(dataSource, jobbsøkerRepository).opprett(
             OpprettRekrutteringstreffInternalDto(
                 tittel = tittel,
                 opprettetAvNavkontorEnhetId = "Original Kontor",
@@ -28,6 +29,7 @@ class TestDatabase {
                 opprettetAvTidspunkt = nowOslo().minusDays(10),
             )
         )
+    }
 
     fun opprettRekrutteringstreffMedAlleFelter(
         navIdent: String = "Z999999",

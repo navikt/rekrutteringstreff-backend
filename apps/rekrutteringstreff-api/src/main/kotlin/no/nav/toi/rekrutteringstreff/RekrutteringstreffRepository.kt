@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff
 import com.fasterxml.jackson.core.type.TypeReference
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
+import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import java.sql.Connection
@@ -50,7 +51,10 @@ enum class HendelseRessurs {
     REKRUTTERINGSTREFF, JOBBSØKER, ARBEIDSGIVER
 }
 
-class RekrutteringstreffRepository(private val dataSource: DataSource) {
+class RekrutteringstreffRepository(
+    private val dataSource: DataSource,
+    private val jobbsøkerRepository: JobbsøkerRepository
+) {
 
     fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
         val nyTreffId = TreffId(UUID.randomUUID())
@@ -361,7 +365,12 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     }
 
     fun fullfor(treff: TreffId, fullfortAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.FULLFØRT, fullfortAv)
+        leggTilHendelseForTreffMedJobbsøkerhendelser(
+            treff, 
+            fullfortAv, 
+            RekrutteringstreffHendelsestype.FULLFØRT,
+            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT
+        )
     }
 
     fun gjenapn(treff: TreffId, gjenapnetAv: String) {
@@ -369,11 +378,84 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
     }
 
     fun avlys(treff: TreffId, avlystAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVLYST, avlystAv)
+        leggTilHendelseForTreffMedJobbsøkerhendelser(
+            treff, 
+            avlystAv, 
+            RekrutteringstreffHendelsestype.AVLYST,
+            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST
+        )
     }
 
     fun avpubliser(treff: TreffId, avpublisertAv: String) {
         leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVPUBLISERT, avpublisertAv)
+    }
+
+    private fun leggTilHendelseForTreffMedJobbsøkerhendelser(
+        treff: TreffId,
+        ident: String,
+        rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
+        jobbsøkerHendelsestype: JobbsøkerHendelsestype
+    ) {
+        dataSource.connection.use { c ->
+            c.autoCommit = false
+            try {
+                // Hent rekrutteringstreff db-id
+                val dbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
+                    .apply { setObject(1, treff.somUuid) }
+                    .executeQuery()
+                    .let { rs -> 
+                        if (rs.next()) rs.getLong(1) 
+                        else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") 
+                    }
+
+                // Legg til hendelse for rekrutteringstreff
+                leggTilHendelse(c, dbId, rekrutteringstreffHendelsestype, AktørType.ARRANGØR, ident)
+
+                // Hent jobbsøkere med aktivt svar ja
+                val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(treff)
+
+                // Legg til hendelser for alle jobbsøkere med aktivt svar ja
+                if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
+                    c.leggTilHendelserForJobbsøkere(jobbsøkerHendelsestype, jobbsøkereMedAktivtSvarJa, ident)
+                }
+
+                c.commit()
+            } catch (e: Exception) {
+                c.rollback()
+                throw e
+            }
+        }
+    }
+
+    private fun Connection.leggTilHendelserForJobbsøkere(
+        hendelsestype: JobbsøkerHendelsestype,
+        personTreffIds: List<no.nav.toi.jobbsoker.PersonTreffId>,
+        opprettetAv: String,
+        size: Int = 500
+    ) {
+        val sql = """
+            INSERT INTO jobbsoker_hendelse
+              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?)
+        """.trimIndent()
+        
+        prepareStatement(sql).use { stmt ->
+            var n = 0
+            personTreffIds.forEach { id ->
+                stmt.setObject(1, UUID.randomUUID())
+                stmt.setObject(2, id.somUuid)
+                stmt.setTimestamp(3, Timestamp.from(Instant.now()))
+                stmt.setString(4, hendelsestype.name)
+                stmt.setString(5, AktørType.ARRANGØR.name)
+                stmt.setString(6, opprettetAv)
+                stmt.addBatch()
+                if (++n == size) {
+                    stmt.executeBatch()
+                    n = 0
+                }
+            }
+            if (n > 0) stmt.executeBatch()
+        }
     }
 
     private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {

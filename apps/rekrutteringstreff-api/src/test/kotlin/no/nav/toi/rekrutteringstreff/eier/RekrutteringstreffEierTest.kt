@@ -30,7 +30,8 @@ class RekrutteringstreffEierTest {
         private val authPort = 18012
         private val database = TestDatabase()
         private val appPort = ubruktPortnr()
-        private val repo = RekrutteringstreffRepository(database.dataSource)
+        private val jobbsøkerRepository = no.nav.toi.jobbsoker.JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
+        private val repo = RekrutteringstreffRepository(database.dataSource, jobbsøkerRepository)
 
         private val app = App(
             port = appPort,

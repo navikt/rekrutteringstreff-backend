@@ -460,6 +460,48 @@ class JobbsøkerRepository(
         }
     }
 
+    fun hentJobbsøkereMedAktivtSvarJa(treff: TreffId): List<PersonTreffId> =
+        dataSource.connection.use { c ->
+            c.hentJobbsøkereMedAktivtSvarJa(treff)
+        }
+
+    private fun Connection.hentJobbsøkereMedAktivtSvarJa(treff: TreffId): List<PersonTreffId> {
+        val sql = """
+            SELECT DISTINCT js.id AS person_treff_id
+            FROM jobbsoker js
+            JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ?
+            AND EXISTS (
+                SELECT 1
+                FROM jobbsoker_hendelse jh
+                WHERE jh.jobbsoker_id = js.jobbsoker_id
+                AND jh.hendelsestype = 'SVART_JA_TIL_INVITASJON'
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM jobbsoker_hendelse jh2
+                WHERE jh2.jobbsoker_id = js.jobbsoker_id
+                AND jh2.hendelsestype = 'SVART_NEI_TIL_INVITASJON'
+                AND jh2.tidspunkt > (
+                    SELECT MAX(jh3.tidspunkt)
+                    FROM jobbsoker_hendelse jh3
+                    WHERE jh3.jobbsoker_id = js.jobbsoker_id
+                    AND jh3.hendelsestype = 'SVART_JA_TIL_INVITASJON'
+                )
+            )
+        """.trimIndent()
+
+        return prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treff.somUuid)
+            stmt.executeQuery().use { rs ->
+                generateSequence {
+                    if (rs.next()) PersonTreffId(UUID.fromString(rs.getString("person_treff_id")))
+                    else null
+                }.toList()
+            }
+        }
+    }
+
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
         data class HendelseJson(
             val id: String,

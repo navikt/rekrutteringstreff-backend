@@ -29,7 +29,7 @@ class AktivitetskortInvitasjonSchedulerTest {
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository =
-            RekrutteringstreffRepository(db.dataSource)
+            RekrutteringstreffRepository(db.dataSource, jobbsøkerRepository)
 
     }
 
