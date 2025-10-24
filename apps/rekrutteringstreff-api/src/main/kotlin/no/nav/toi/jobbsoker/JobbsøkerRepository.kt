@@ -122,6 +122,38 @@ class JobbsøkerRepository(
         }
     }
 
+    fun leggTilHendelserForJobbsøkere(
+        c: Connection,
+        hendelsestype: JobbsøkerHendelsestype,
+        personTreffIds: List<PersonTreffId>,
+        opprettetAv: String,
+        arrangørtype: AktørType = AktørType.ARRANGØR,
+        size: Int = 500
+    ) {
+        val sql = """
+            INSERT INTO jobbsoker_hendelse
+              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?)
+        """.trimIndent()
+        c.prepareStatement(sql).use { stmt ->
+            var n = 0
+            personTreffIds.forEach { id ->
+                stmt.setObject(1, UUID.randomUUID())
+                stmt.setObject(2, id.somUuid)
+                stmt.setTimestamp(3, Timestamp.from(Instant.now()))
+                stmt.setString(4, hendelsestype.name)
+                stmt.setString(5, arrangørtype.name)
+                stmt.setString(6, opprettetAv)
+                stmt.addBatch()
+                if (++n == size) {
+                    stmt.executeBatch()
+                    n = 0
+                }
+            }
+            if (n > 0) stmt.executeBatch()
+        }
+    }
+
     private fun Connection.batchInsertHendelserFraPersonTreffIder(
         hendelsestype: JobbsøkerHendelsestype,
         personTreffIds: List<PersonTreffId>,

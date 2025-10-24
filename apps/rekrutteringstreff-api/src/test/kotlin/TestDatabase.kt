@@ -20,8 +20,7 @@ class TestDatabase {
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
     ): TreffId {
-        val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
-        return RekrutteringstreffRepository(dataSource, jobbsøkerRepository).opprett(
+        return RekrutteringstreffRepository(dataSource).opprett(
             OpprettRekrutteringstreffInternalDto(
                 tittel = tittel,
                 opprettetAvNavkontorEnhetId = "Original Kontor",

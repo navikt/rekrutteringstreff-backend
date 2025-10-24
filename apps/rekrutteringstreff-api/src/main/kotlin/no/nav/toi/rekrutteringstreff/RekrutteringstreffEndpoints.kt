@@ -314,11 +314,11 @@ private fun gjenapnRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
     responses = [OpenApiResponse(status = "200", description = "Avlysningshendelse er lagt til.")]
 )
-private fun avlysRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+private fun avlysRekrutteringstreffHandler(service: RekrutteringstreffService): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val navIdent = ctx.extractNavIdent()
-    repo.avlys(treffId, navIdent)
+    service.avlys(treffId, navIdent)
     ctx.status(200)
 }
 
@@ -348,15 +348,15 @@ private fun avpubliserRekrutteringstreffHandler(repo: RekrutteringstreffReposito
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
     responses = [OpenApiResponse(status = "200", description = "Fullføringshendelse er lagt til.")]
 )
-private fun fullforRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+private fun fullforRekrutteringstreffHandler(service: RekrutteringstreffService): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val navIdent = ctx.extractNavIdent()
-    repo.fullfor(treffId, navIdent)
+    service.fullfor(treffId, navIdent)
     ctx.status(200)
 }
 
-fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
+fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository, service: RekrutteringstreffService) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
@@ -366,9 +366,9 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository) {
     get(fellesPath, hentAlleHendelserHandler(repo))
     post(publiserPath, publiserRekrutteringstreffHandler(repo))
     post(gjenapnPath, gjenapnRekrutteringstreffHandler(repo))
-    post(avlysPath, avlysRekrutteringstreffHandler(repo))
+    post(avlysPath, avlysRekrutteringstreffHandler(service))
     post(avpubliserPath, avpubliserRekrutteringstreffHandler(repo))
-    post(fullforPath, fullforRekrutteringstreffHandler(repo))
+    post(fullforPath, fullforRekrutteringstreffHandler(service))
     handleEiere(repo.eierRepository)
     handleInnlegg(repo.innleggRepository)
 
