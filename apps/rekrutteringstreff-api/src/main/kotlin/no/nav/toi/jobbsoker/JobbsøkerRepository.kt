@@ -55,6 +55,8 @@ class JobbsøkerRepository(
                 c.commit()
             } catch (e: Exception) {
                 c.rollback(); throw e
+            } finally {
+                c.autoCommit = true
             }
         }
     }

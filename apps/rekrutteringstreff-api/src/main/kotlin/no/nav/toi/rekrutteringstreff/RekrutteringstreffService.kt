@@ -57,6 +57,8 @@ class RekrutteringstreffService(
             } catch (e: Exception) {
                 c.rollback()
                 throw e
+            } finally {
+                c.autoCommit = true
             }
         }
     }
