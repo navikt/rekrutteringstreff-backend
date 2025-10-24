@@ -23,6 +23,7 @@ import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
 import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.handleKi
@@ -78,7 +79,7 @@ class App(
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         startJavalin(jobbsøkerRepository)
-        startSchedulere()
+        startSchedulere(jobbsøkerRepository)
         startRR(jobbsøkerRepository)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
@@ -154,7 +155,9 @@ class App(
             RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler)
         )
 
-        javalin.handleRekrutteringstreff(RekrutteringstreffRepository(dataSource))
+        val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
+        val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository)
+        javalin.handleRekrutteringstreff(rekrutteringstreffRepository, rekrutteringstreffService)
         javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
         javalin.handleJobbsøker(jobbsøkerRepository)
         javalin.handleJobbsøkerInnloggetBorger(jobbsøkerRepository)
@@ -164,7 +167,7 @@ class App(
         javalin.start(port)
     }
 
-    private fun startSchedulere() {
+    private fun startSchedulere(jobbsøkerRepository: JobbsøkerRepository) {
         log.info("Starting scheduler")
         AktivitetskortInvitasjonScheduler(
             aktivitetskortRepository = AktivitetskortRepository(dataSource),

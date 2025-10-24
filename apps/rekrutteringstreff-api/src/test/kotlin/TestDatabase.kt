@@ -19,8 +19,8 @@ class TestDatabase {
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
-    ): TreffId =
-        RekrutteringstreffRepository(dataSource).opprett(
+    ): TreffId {
+        return RekrutteringstreffRepository(dataSource).opprett(
             OpprettRekrutteringstreffInternalDto(
                 tittel = tittel,
                 opprettetAvNavkontorEnhetId = "Original Kontor",
@@ -28,6 +28,7 @@ class TestDatabase {
                 opprettetAvTidspunkt = nowOslo().minusDays(10),
             )
         )
+    }
 
     fun opprettRekrutteringstreffMedAlleFelter(
         navIdent: String = "Z999999",

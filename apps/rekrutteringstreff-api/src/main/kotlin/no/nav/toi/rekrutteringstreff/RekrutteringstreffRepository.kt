@@ -50,7 +50,9 @@ enum class HendelseRessurs {
     REKRUTTERINGSTREFF, JOBBSØKER, ARBEIDSGIVER
 }
 
-class RekrutteringstreffRepository(private val dataSource: DataSource) {
+class RekrutteringstreffRepository(
+    private val dataSource: DataSource
+) {
 
     fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
         val nyTreffId = TreffId(UUID.randomUUID())
@@ -360,16 +362,8 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.PUBLISERT, publisertAv)
     }
 
-    fun fullfor(treff: TreffId, fullfortAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.FULLFØRT, fullfortAv)
-    }
-
     fun gjenapn(treff: TreffId, gjenapnetAv: String) {
         leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.GJENÅPNET, gjenapnetAv)
-    }
-
-    fun avlys(treff: TreffId, avlystAv: String) {
-        leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVLYST, avlystAv)
     }
 
     fun avpubliser(treff: TreffId, avpublisertAv: String) {
@@ -387,7 +381,17 @@ class RekrutteringstreffRepository(private val dataSource: DataSource) {
         }
     }
 
-    private fun leggTilHendelse(
+    fun hentRekrutteringstreffDbId(c: Connection, treff: TreffId): Long {
+        return c.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
+            .apply { setObject(1, treff.somUuid) }
+            .executeQuery()
+            .let { rs ->
+                if (rs.next()) rs.getLong(1)
+                else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke")
+            }
+    }
+
+    fun leggTilHendelse(
         c: Connection,
         treffDbId: Long,
         type: RekrutteringstreffHendelsestype,

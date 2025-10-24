@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
+import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
@@ -26,6 +27,7 @@ class RekrutteringstreffRepositoryTest {
     companion object {
         private val db = TestDatabase()
         private lateinit var repository: RekrutteringstreffRepository
+        private lateinit var jobbsøkerRepository: JobbsøkerRepository
         private val mapper = JacksonConfig.mapper
 
         @BeforeAll
@@ -36,6 +38,7 @@ class RekrutteringstreffRepositoryTest {
                 .load()
                 .migrate()
 
+            jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
             repository = RekrutteringstreffRepository(db.dataSource)
         }
     }
@@ -115,16 +118,12 @@ class RekrutteringstreffRepositoryTest {
 
         // Legg til ulike hendelsestyper
         repository.gjenapn(id, navIdent)
-        repository.fullfor(id, navIdent)
-        repository.avlys(id, navIdent)
         repository.avpubliser(id, navIdent)
 
         val hendelser = repository.hentHendelser(id)
-        assertThat(hendelser).hasSize(5)
+        assertThat(hendelser).hasSize(3)
         assertThat(hendelser.map { it.hendelsestype }).containsExactly(
             RekrutteringstreffHendelsestype.AVPUBLISERT,
-            RekrutteringstreffHendelsestype.AVLYST,
-            RekrutteringstreffHendelsestype.FULLFØRT,
             RekrutteringstreffHendelsestype.GJENÅPNET,
             RekrutteringstreffHendelsestype.OPPRETTET
         )
@@ -473,4 +472,5 @@ class RekrutteringstreffRepositoryTest {
         assertThat(innleggRepo.hentById(innlegg.id)).isNotNull
         assertThat(db.hentHendelser(treffId)).hasSizeGreaterThan(1) // OPPRETTET + PUBLISERT
     }
+
 }

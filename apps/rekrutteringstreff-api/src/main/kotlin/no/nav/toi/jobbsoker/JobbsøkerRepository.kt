@@ -34,6 +34,11 @@ data class JobbsøkerHendelseMedJobbsøkerData(
     val personTreffId: PersonTreffId
 )
 
+data class JobbsøkerMedHendelser(
+    val personTreffId: PersonTreffId,
+    val hendelser: List<JobbsøkerHendelse>
+)
+
 class JobbsøkerRepository(
     private val dataSource: DataSource,
     private val objectMapper: ObjectMapper
@@ -55,6 +60,8 @@ class JobbsøkerRepository(
                 c.commit()
             } catch (e: Exception) {
                 c.rollback(); throw e
+            } finally {
+                c.autoCommit = true
             }
         }
     }
@@ -117,6 +124,38 @@ class JobbsøkerRepository(
                 stmt.addBatch(); if (++n == size) {
                 stmt.executeBatch(); n = 0
             }
+            }
+            if (n > 0) stmt.executeBatch()
+        }
+    }
+
+    fun leggTilHendelserForJobbsøkere(
+        c: Connection,
+        hendelsestype: JobbsøkerHendelsestype,
+        personTreffIds: List<PersonTreffId>,
+        opprettetAv: String,
+        arrangørtype: AktørType = AktørType.ARRANGØR,
+        size: Int = 500
+    ) {
+        val sql = """
+            INSERT INTO jobbsoker_hendelse
+              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?)
+        """.trimIndent()
+        c.prepareStatement(sql).use { stmt ->
+            var n = 0
+            personTreffIds.forEach { id ->
+                stmt.setObject(1, UUID.randomUUID())
+                stmt.setObject(2, id.somUuid)
+                stmt.setTimestamp(3, Timestamp.from(Instant.now()))
+                stmt.setString(4, hendelsestype.name)
+                stmt.setString(5, arrangørtype.name)
+                stmt.setString(6, opprettetAv)
+                stmt.addBatch()
+                if (++n == size) {
+                    stmt.executeBatch()
+                    n = 0
+                }
             }
             if (n > 0) stmt.executeBatch()
         }
@@ -456,6 +495,60 @@ class JobbsøkerRepository(
                 log.info("Registrerte hendelse om at opprettelse av aktivitetskort feilet for rekrutteringstreffId: ${treff.somString}")
             } catch (e: Exception) {
                 throw e
+            }
+        }
+    }
+
+    fun hentJobbsøkereHendelser(treff: TreffId): List<JobbsøkerMedHendelser> =
+        dataSource.connection.use { c ->
+            c.hentJobbsøkereHendelser(treff)
+        }
+
+    private fun Connection.hentJobbsøkereHendelser(treff: TreffId): List<JobbsøkerMedHendelser> {
+        val sql = """
+            SELECT 
+                js.id AS person_treff_id,
+                js.jobbsoker_id,
+                jh.id AS hendelse_id,
+                jh.tidspunkt,
+                jh.hendelsestype,
+                jh.opprettet_av_aktortype,
+                jh.aktøridentifikasjon
+            FROM jobbsoker js
+            JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
+            WHERE rt.id = ?
+            ORDER BY js.jobbsoker_id, jh.tidspunkt
+        """.trimIndent()
+
+        return prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treff.somUuid)
+            stmt.executeQuery().use { rs ->
+                val jobbsøkerMap = mutableMapOf<PersonTreffId, MutableList<JobbsøkerHendelse>>()
+
+                while (rs.next()) {
+                    val personTreffId = PersonTreffId(UUID.fromString(rs.getString("person_treff_id")))
+                    val hendelser = jobbsøkerMap.getOrPut(personTreffId) { mutableListOf() }
+
+                    // Bare legg til hendelse hvis den finnes (LEFT JOIN kan gi null)
+                    val hendelseId = rs.getString("hendelse_id")
+                    if (hendelseId != null) {
+                        val timestamp = rs.getTimestamp("tidspunkt")
+                        hendelser.add(
+                            JobbsøkerHendelse(
+                                id = UUID.fromString(hendelseId),
+                                tidspunkt = ZonedDateTime.ofInstant(timestamp.toInstant(), java.time.ZoneId.systemDefault()),
+                                hendelsestype = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
+                                opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                                aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
+                            )
+                        )
+                    }
+                }
+
+                jobbsøkerMap.map { (personTreffId, hendelser) ->
+                    JobbsøkerMedHendelser(personTreffId, hendelser)
+                }
             }
         }
     }

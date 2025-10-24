@@ -528,4 +528,200 @@ class RekrutteringstreffTest {
         assertThat(hendelser.first().aktørIdentifikasjon).isEqualTo(navIdent)
         assertThat(hendelser.last().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET)
     }
+
+    @Test
+    fun `avlys oppretter hendelse for rekrutteringstreff og alle jobbsøkere med aktivt svar ja`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+
+        // Legg til tre jobbsøkere
+        val jobbsøker1 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("12345678901"),
+            kandidatnummer = Kandidatnummer("K1"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        val jobbsøker2 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("23456789012"),
+            kandidatnummer = Kandidatnummer("K2"),
+            fornavn = Fornavn("Kari"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        val jobbsøker3 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("34567890123"),
+            kandidatnummer = Kandidatnummer("K3"),
+            fornavn = Fornavn("Per"),
+            etternavn = Etternavn("Hansen"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2, jobbsøker3))
+
+        // Jobbsøker1 og jobbsøker2 svarer ja
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+
+        // Jobbsøker3 svarer ja og så nei (ombestemt seg)
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker3.fødselsnummer, treffId, jobbsøker3.fødselsnummer.asString)
+        jobbsøkerRepository.svarNeiTilInvitasjon(jobbsøker3.fødselsnummer, treffId, jobbsøker3.fødselsnummer.asString)
+
+        // Avlys treffet via endpoint
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        assertStatuscodeEquals(200, response, result)
+
+        // Verifiser at rekrutteringstreff har AVLYST hendelse
+        val treffHendelser = db.hentHendelser(treffId)
+        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.AVLYST)
+
+        // Verifiser at kun jobbsøker1 og jobbsøker2 har SVART_JA_TREFF_AVLYST hendelse
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter { 
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer 
+        }
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter { 
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer 
+        }
+        val jobbsøker3Hendelser = alleJobbsøkerHendelser.filter { 
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker3.fødselsnummer 
+        }
+
+        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
+        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
+        assertThat(jobbsøker3Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
+    }
+
+    @Test
+    fun `fullfor oppretter hendelse for rekrutteringstreff og alle jobbsøkere med aktivt svar ja`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+
+        // Legg til to jobbsøkere
+        val jobbsøker1 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("12345678901"),
+            kandidatnummer = Kandidatnummer("K1"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        val jobbsøker2 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("23456789012"),
+            kandidatnummer = Kandidatnummer("K2"),
+            fornavn = Fornavn("Kari"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
+
+        // Begge svarer ja
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+
+        // Fullfør treffet via endpoint
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        assertStatuscodeEquals(200, response, result)
+
+        // Verifiser at rekrutteringstreff har FULLFØRT hendelse
+        val treffHendelser = db.hentHendelser(treffId)
+        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.FULLFØRT)
+
+        // Verifiser at begge jobbsøkere har SVART_JA_TREFF_FULLFØRT hendelse
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter { 
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer 
+        }
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter { 
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer 
+        }
+
+        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
+        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
+    }
+
+    @Test
+    fun `avlys oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere har aktivt svar ja`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Legg til en jobbsøker som ikke svarer
+        val jobbsøker1 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("12345678901"),
+            kandidatnummer = Kandidatnummer("K1"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker1))
+
+        // Avlys treffet via endpoint
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        assertStatuscodeEquals(200, response, result)
+
+        // Verifiser at rekrutteringstreff har AVLYST hendelse
+        val treffHendelser = db.hentHendelser(treffId)
+        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.AVLYST)
+
+        // Verifiser at jobbsøkeren IKKE har SVART_JA_TREFF_AVLYST hendelse
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter { 
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer 
+        }
+        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
+    }
+
+    @Test
+    fun `fullfor oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere har aktivt svar ja`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Fullfør treffet uten jobbsøkere via endpoint
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        assertStatuscodeEquals(200, response, result)
+
+        // Verifiser at rekrutteringstreff har FULLFØRT hendelse
+        val treffHendelser = db.hentHendelser(treffId)
+        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.FULLFØRT)
+    }
 }
