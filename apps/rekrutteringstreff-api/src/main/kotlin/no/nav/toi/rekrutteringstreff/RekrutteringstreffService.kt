@@ -36,6 +36,14 @@ class RekrutteringstreffService(
         rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
         jobbsøkerHendelsestype: JobbsøkerHendelsestype
     ) {
+        // Hent alle jobbsøkere med hendelser - gjør filtrering i Kotlin
+        val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkereHendelser(treff)
+
+        // Business logic: Finn jobbsøkere som har aktivt svar JA
+        val jobbsøkereMedAktivtSvarJa = alleJobbsøkere
+            .filter { harAktivtSvarJa(it.hendelser) }
+            .map { it.personTreffId }
+
         dataSource.connection.use { c ->
             c.autoCommit = false
             try {
@@ -44,9 +52,6 @@ class RekrutteringstreffService(
 
                 // Legg til hendelse for rekrutteringstreff
                 rekrutteringstreffRepository.leggTilHendelse(c, dbId, rekrutteringstreffHendelsestype, AktørType.ARRANGØR, ident)
-
-                // Hent jobbsøkere med aktivt svar ja
-                val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(treff)
 
                 // Legg til hendelser for alle jobbsøkere med aktivt svar ja
                 if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
@@ -61,6 +66,20 @@ class RekrutteringstreffService(
                 c.autoCommit = true
             }
         }
+    }
+
+    private fun harAktivtSvarJa(hendelser: List<no.nav.toi.jobbsoker.JobbsøkerHendelse>): Boolean {
+        val jaSvar = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON }
+        val neiSvar = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON }
+
+        if (jaSvar.isEmpty()) return false
+
+        if (neiSvar.isEmpty()) return true
+
+        val sisteJa = jaSvar.maxByOrNull { it.tidspunkt }!!
+        val sisteNei = neiSvar.maxByOrNull { it.tidspunkt }!!
+
+        return sisteJa.tidspunkt.isAfter(sisteNei.tidspunkt)
     }
 
 }

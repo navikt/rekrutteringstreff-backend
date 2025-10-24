@@ -34,6 +34,11 @@ data class JobbsøkerHendelseMedJobbsøkerData(
     val personTreffId: PersonTreffId
 )
 
+data class JobbsøkerMedHendelser(
+    val personTreffId: PersonTreffId,
+    val hendelser: List<JobbsøkerHendelse>
+)
+
 class JobbsøkerRepository(
     private val dataSource: DataSource,
     private val objectMapper: ObjectMapper
@@ -494,44 +499,56 @@ class JobbsøkerRepository(
         }
     }
 
-    fun hentJobbsøkereMedAktivtSvarJa(treff: TreffId): List<PersonTreffId> =
+    fun hentJobbsøkereHendelser(treff: TreffId): List<JobbsøkerMedHendelser> =
         dataSource.connection.use { c ->
-            c.hentJobbsøkereMedAktivtSvarJa(treff)
+            c.hentJobbsøkereHendelser(treff)
         }
 
-    private fun Connection.hentJobbsøkereMedAktivtSvarJa(treff: TreffId): List<PersonTreffId> {
+    private fun Connection.hentJobbsøkereHendelser(treff: TreffId): List<JobbsøkerMedHendelser> {
         val sql = """
-            SELECT DISTINCT js.id AS person_treff_id
+            SELECT 
+                js.id AS person_treff_id,
+                js.jobbsoker_id,
+                jh.id AS hendelse_id,
+                jh.tidspunkt,
+                jh.hendelsestype,
+                jh.opprettet_av_aktortype,
+                jh.aktøridentifikasjon
             FROM jobbsoker js
             JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
             WHERE rt.id = ?
-            AND EXISTS (
-                SELECT 1
-                FROM jobbsoker_hendelse jh
-                WHERE jh.jobbsoker_id = js.jobbsoker_id
-                AND jh.hendelsestype = 'SVART_JA_TIL_INVITASJON'
-            )
-            AND NOT EXISTS (
-                SELECT 1
-                FROM jobbsoker_hendelse jh2
-                WHERE jh2.jobbsoker_id = js.jobbsoker_id
-                AND jh2.hendelsestype = 'SVART_NEI_TIL_INVITASJON'
-                AND jh2.tidspunkt > (
-                    SELECT MAX(jh3.tidspunkt)
-                    FROM jobbsoker_hendelse jh3
-                    WHERE jh3.jobbsoker_id = js.jobbsoker_id
-                    AND jh3.hendelsestype = 'SVART_JA_TIL_INVITASJON'
-                )
-            )
+            ORDER BY js.jobbsoker_id, jh.tidspunkt
         """.trimIndent()
 
         return prepareStatement(sql).use { stmt ->
             stmt.setObject(1, treff.somUuid)
             stmt.executeQuery().use { rs ->
-                generateSequence {
-                    if (rs.next()) PersonTreffId(UUID.fromString(rs.getString("person_treff_id")))
-                    else null
-                }.toList()
+                val jobbsøkerMap = mutableMapOf<PersonTreffId, MutableList<JobbsøkerHendelse>>()
+
+                while (rs.next()) {
+                    val personTreffId = PersonTreffId(UUID.fromString(rs.getString("person_treff_id")))
+                    val hendelser = jobbsøkerMap.getOrPut(personTreffId) { mutableListOf() }
+
+                    // Bare legg til hendelse hvis den finnes (LEFT JOIN kan gi null)
+                    val hendelseId = rs.getString("hendelse_id")
+                    if (hendelseId != null) {
+                        val timestamp = rs.getTimestamp("tidspunkt")
+                        hendelser.add(
+                            JobbsøkerHendelse(
+                                id = UUID.fromString(hendelseId),
+                                tidspunkt = ZonedDateTime.ofInstant(timestamp.toInstant(), java.time.ZoneId.systemDefault()),
+                                hendelsestype = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
+                                opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                                aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
+                            )
+                        )
+                    }
+                }
+
+                jobbsøkerMap.map { (personTreffId, hendelser) ->
+                    JobbsøkerMedHendelser(personTreffId, hendelser)
+                }
             }
         }
     }
