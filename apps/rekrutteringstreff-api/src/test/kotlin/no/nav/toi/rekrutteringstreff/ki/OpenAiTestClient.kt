@@ -13,8 +13,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-//Egen klient som brukes til test av robs vurderinger uten database og logging
-
 private const val TEMPERATURE = 0.0
 private const val MAX_TOKENS = 400
 private const val TOP_P = 1.0
@@ -39,6 +37,9 @@ private data class ChoiceTestClient(val message: OpenAiMessageTestClient?)
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class OpenAiResponseTestClient(val choices: List<ChoiceTestClient>?)
 
+/**
+ * Egen klient som brukes til test av KI-ROBSs vurderinger uten database og logging
+ */
 class OpenAiTestClient(
     private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val apiUrl: String =
@@ -85,7 +86,7 @@ class OpenAiTestClient(
                     ?: error("Ingen respons fra OpenAI")
             return mapper.readValue(result.trim())
         } else if (response.statusCode() == 400) {
-            log.warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
+            log.warn("Teksten bryter med retningslinjene til OpenAI: ${response.statusCode()} - ${response.body()}")
             val error = mapper.readValue<OpenAiBadRequestDto>(response.body())
             val contentFilterResult = error.error?.innererror?.content_filter_result
             if (contentFilterResult != null) {
@@ -171,9 +172,3 @@ class OpenAiTestClient(
         val detected: Boolean?
     )
 }
-
-
-
-
-
-
