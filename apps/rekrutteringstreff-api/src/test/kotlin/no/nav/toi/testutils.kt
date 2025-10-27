@@ -104,7 +104,6 @@ enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server
     }
 }
 
-
 object ubruktPortnrFra10000 {
     private val portnr = AtomicInteger(10000)
     fun ubruktPortnr(): Int = portnr.andIncrement
