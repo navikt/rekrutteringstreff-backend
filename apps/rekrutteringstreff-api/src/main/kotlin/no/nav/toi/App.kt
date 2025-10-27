@@ -76,6 +76,9 @@ class App(
     )
 
     private lateinit var javalin: Javalin
+    private lateinit var invitasjonScheduler: AktivitetskortInvitasjonScheduler
+    private lateinit var svarScheduler: AktivitetskortSvarScheduler
+    private lateinit var oppmøteScheduler: AktivitetskortOppmøteScheduler
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         startJavalin(jobbsøkerRepository)
@@ -169,21 +172,30 @@ class App(
 
     private fun startSchedulere(jobbsøkerRepository: JobbsøkerRepository) {
         log.info("Starting scheduler")
-        AktivitetskortInvitasjonScheduler(
-            aktivitetskortRepository = AktivitetskortRepository(dataSource),
-            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+
+        val aktivitetskortRepository = AktivitetskortRepository(dataSource)
+        val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
+
+        invitasjonScheduler = AktivitetskortInvitasjonScheduler(
+            aktivitetskortRepository = aktivitetskortRepository,
+            rekrutteringstreffRepository = rekrutteringstreffRepository,
             rapidsConnection = rapidsConnection
-        ).start()
-        AktivitetskortSvarScheduler(
-            aktivitetskortRepository = AktivitetskortRepository(dataSource),
-            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+        )
+        invitasjonScheduler.start()
+
+        svarScheduler = AktivitetskortSvarScheduler(
+            aktivitetskortRepository = aktivitetskortRepository,
+            rekrutteringstreffRepository = rekrutteringstreffRepository,
             rapidsConnection = rapidsConnection
-        ).start()
-        AktivitetskortOppmøteScheduler(
-            aktivitetskortRepository = AktivitetskortRepository(dataSource),
-            rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource),
+        )
+        svarScheduler.start()
+
+        oppmøteScheduler = AktivitetskortOppmøteScheduler(
+            aktivitetskortRepository = aktivitetskortRepository,
+            rekrutteringstreffRepository = rekrutteringstreffRepository,
             rapidsConnection = rapidsConnection
-        ).start()
+        )
+        oppmøteScheduler.start()
     }
 
     fun startRR(jobbsøkerRepository: JobbsøkerRepository) {
@@ -193,7 +205,13 @@ class App(
     }
 
     fun close() {
+        log.info("Shutting down application")
+        if (::invitasjonScheduler.isInitialized) invitasjonScheduler.stop()
+        if (::svarScheduler.isInitialized) svarScheduler.stop()
+        if (::oppmøteScheduler.isInitialized) oppmøteScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
+        (dataSource as? HikariDataSource)?.close()
+        log.info("Application shutdown complete")
     }
 }
 
@@ -281,10 +299,15 @@ private fun createDataSource(): DataSource =
         username = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_USERNAME")
         password = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_PASSWORD")
         driverClassName = "org.postgresql.Driver"
-        maximumPoolSize = 4
-        minimumIdle = 1
+        maximumPoolSize = 10
+        minimumIdle = 2
         isAutoCommit = true
         transactionIsolation = "TRANSACTION_REPEATABLE_READ"
         initializationFailTimeout = 5_000
+        connectionTimeout = 30_000
+        idleTimeout = 600_000
+        maxLifetime = 1_800_000
+        leakDetectionThreshold = 60_000
+        poolName = "RekrutteringstreffPool"
         validate()
     }.let(::HikariDataSource)
