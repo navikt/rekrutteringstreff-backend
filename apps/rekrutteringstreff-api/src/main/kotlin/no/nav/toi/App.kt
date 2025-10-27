@@ -298,16 +298,16 @@ private fun createDataSource(): DataSource =
         jdbcUrl = "$base&reWriteBatchedInserts=true"
         username = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_USERNAME")
         password = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_PASSWORD")
-        driverClassName = "org.postgresql.Driver"
-        maximumPoolSize = 10
-        minimumIdle = 2
-        isAutoCommit = true
-        transactionIsolation = "TRANSACTION_REPEATABLE_READ"
-        initializationFailTimeout = 5_000
-        connectionTimeout = 30_000
-        idleTimeout = 600_000
-        maxLifetime = 1_800_000
-        leakDetectionThreshold = 60_000
-        poolName = "RekrutteringstreffPool"
+        driverClassName = "org.postgresql.Driver"  // PostgreSQL driver
+        maximumPoolSize = 15  // Maks 15 samtidige tilkoblinger
+        minimumIdle = 3       // Behold minst 3 ledige tilkoblinger
+        isAutoCommit = true   // Auto-commit hver SQL-operasjon
+        transactionIsolation = "TRANSACTION_REPEATABLE_READ"  // PostgreSQL standard
+        initializationFailTimeout = 10_000  // Vent maks 10 sekunder ved oppstart feil
+        connectionTimeout = 30_000  // Vent maks 30 sekunder på ny tilkobling
+        idleTimeout = 600_000  // 10 minutter - lukk ledige tilkoblinger etter dette
+        maxLifetime = 1_800_000  // 30 minutter - lukk og erstatt tilkoblinger etter dette
+        leakDetectionThreshold = 60_000  // Logg advarsel hvis tilkobling holdes > 60 sekunder
+        poolName = "RekrutteringstreffPool"  // Navn for logging/debugging
         validate()
     }.let(::HikariDataSource)
