@@ -3,8 +3,6 @@ package no.nav.toi
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.aktivitetskort.AktivitetskortScheduler
-import no.nav.toi.log
-import no.nav.toi.noClassLogger
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerMøttOppLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerSvarLytter
@@ -19,6 +17,7 @@ import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import java.util.Properties
+
 
 class App(private val rapidsConnection: RapidsConnection, private val repository: Repository, private val producer: Producer<String, String>, private val consumer: Consumer<String, String>) {
     private lateinit var aktivitetskortScheduler: AktivitetskortScheduler
