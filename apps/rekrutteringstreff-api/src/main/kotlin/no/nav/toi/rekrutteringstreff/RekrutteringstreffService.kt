@@ -46,7 +46,7 @@ class RekrutteringstreffService(
                 rekrutteringstreffRepository.leggTilHendelse(c, dbId, rekrutteringstreffHendelsestype, AktørType.ARRANGØR, ident)
 
                 // Hent jobbsøkere med aktivt svar ja
-                val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(treff)
+                val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(c, treff)
 
                 // Legg til hendelser for alle jobbsøkere med aktivt svar ja
                 if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {

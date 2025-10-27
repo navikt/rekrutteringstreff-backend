@@ -15,11 +15,12 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
             left join aktivitetskort_polling p on jh.jobbsoker_hendelse_id = p.jobbsoker_hendelse_id
             left join jobbsoker j on jh.jobbsoker_id = j.jobbsoker_id
             left join rekrutteringstreff rt on j.rekrutteringstreff_id = rt.rekrutteringstreff_id
-            where p.aktivitetskort_polling_id is null and jh.hendelsestype = '${JobbsøkerHendelsestype.INVITERT.name}'
+            where p.aktivitetskort_polling_id is null and jh.hendelsestype = ?
             order by jh.tidspunkt
             """
         )
         statement.use {
+            it.setString(1, JobbsøkerHendelsestype.INVITERT.name)
             val resultSet = it.executeQuery()
             return@use generateSequence {
                 if (resultSet.next()) resultSet.tilUsendtInvitasjon() else null
@@ -34,11 +35,12 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
             left join aktivitetskort_polling p on jh.jobbsoker_hendelse_id = p.jobbsoker_hendelse_id
             left join jobbsoker j on jh.jobbsoker_id = j.jobbsoker_id
             left join rekrutteringstreff rt on j.rekrutteringstreff_id = rt.rekrutteringstreff_id
-            where p.aktivitetskort_polling_id is null and jh.hendelsestype = '${hendelsestype.name}' 
+            where p.aktivitetskort_polling_id is null and jh.hendelsestype = ?
             order by jh.tidspunkt
             """
         )
         statement.use {
+            it.setString(1, hendelsestype.name)
             val resultSet = it.executeQuery()
             return@use generateSequence {
                 if (resultSet.next()) resultSet.tilUsendtHendelse() else null
