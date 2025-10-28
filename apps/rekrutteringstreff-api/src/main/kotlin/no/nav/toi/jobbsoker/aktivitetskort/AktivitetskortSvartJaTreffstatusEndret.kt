@@ -8,7 +8,7 @@ class AktivitetskortSvartJaTreffstatusEndret(
     private val fnr: String,
     private val rekrutteringstreffId: TreffId,
     private val endretAv: String,
-    private val status: String,
+    private val treffstatus: String,
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
         val message = JsonMessage.newMessage(
@@ -18,7 +18,7 @@ class AktivitetskortSvartJaTreffstatusEndret(
                 "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
                 "endretAv" to endretAv,
                 "endretAvPersonbruker" to false,
-                "status" to status,
+                "treffstatus" to treffstatus,
             )
         )
 

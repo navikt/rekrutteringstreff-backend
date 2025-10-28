@@ -52,7 +52,7 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         // Avlys rekrutteringstreffet som lager jobbsøker-hendelse SVART_JA_TREFF_AVLYST
         rekrutteringstreffService.avlys(treffId, expectedFnr.asString)
 
-        AktivitetskortSvartJaTreffstatusScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
+        AktivitetskortTreffstatusEndretScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
             .behandleStatusendringer()
 
         // 1 melding fra invitasjon + 1 fra treffstatus-endring
@@ -63,7 +63,7 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         Assertions.assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
-        Assertions.assertThat(melding["status"].asText()).isEqualTo("avlyst")
+        Assertions.assertThat(melding["treffstatus"].asText()).isEqualTo("avlyst")
 
         val usendteEtterpaa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
         Assertions.assertThat(usendteEtterpaa).isEmpty()
@@ -80,7 +80,7 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         // Fullfør rekrutteringstreffet som lager jobbsøker-hendelse SVART_JA_TREFF_FULLFØRT
         rekrutteringstreffService.fullfor(treffId, expectedFnr.asString)
 
-        AktivitetskortSvartJaTreffstatusScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
+        AktivitetskortTreffstatusEndretScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
             .behandleStatusendringer()
 
         // 1 melding fra invitasjon + 1 fra treffstatus-endring
@@ -91,7 +91,7 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         Assertions.assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         Assertions.assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         Assertions.assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
-        Assertions.assertThat(melding["status"].asText()).isEqualTo("fullført")
+        Assertions.assertThat(melding["treffstatus"].asText()).isEqualTo("fullført")
 
         val usendteEtterpaa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
         Assertions.assertThat(usendteEtterpaa).isEmpty()
@@ -105,10 +105,10 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         rekrutteringstreffService.avlys(treffId, fnr.asString)
 
         // Førstegangskjøring
-        AktivitetskortSvartJaTreffstatusScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
+        AktivitetskortTreffstatusEndretScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
             .behandleStatusendringer()
         // Andre gang skal ikke sende på nytt
-        AktivitetskortSvartJaTreffstatusScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
+        AktivitetskortTreffstatusEndretScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
             .behandleStatusendringer()
 
         // 1 fra invitasjon + 1 fra første status-endring
@@ -118,7 +118,7 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
     @Test
     fun `skal ikke gjoere noe hvis det ikke er noen usendte treffstatus-endringer`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortSvartJaTreffstatusScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
+        val scheduler = AktivitetskortTreffstatusEndretScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
 
         scheduler.behandleStatusendringer()
 

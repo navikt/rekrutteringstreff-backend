@@ -12,7 +12,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-class AktivitetskortSvartJaTreffstatusScheduler(
+class AktivitetskortTreffstatusEndretScheduler(
     private val aktivitetskortRepository: AktivitetskortRepository,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val rapidsConnection: RapidsConnection
@@ -22,7 +22,7 @@ class AktivitetskortSvartJaTreffstatusScheduler(
     private val isRunning = AtomicBoolean(false)
 
     fun start() {
-        log.info("Starter AktivitetskortSvartJaTreffstatusScheduler")
+        log.info("Starter AktivitetskortTreffstatusEndretScheduler")
 
         val now = LocalDateTime.now()
         val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
@@ -31,7 +31,7 @@ class AktivitetskortSvartJaTreffstatusScheduler(
     }
 
     fun stop() {
-        log.info("Stopper AktivitetskortSvartJaTreffstatusScheduler")
+        log.info("Stopper AktivitetskortTreffstatusEndretScheduler")
         scheduler.shutdown()
         try {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -44,7 +44,7 @@ class AktivitetskortSvartJaTreffstatusScheduler(
 
     fun behandleStatusendringer() {
         if (isRunning.getAndSet(true)) {
-            log.info("Forrige kjøring av AktivitetskortSvartJaTreffstatusScheduler er ikke ferdig, skipper denne kjøringen.")
+            log.info("Forrige kjøring av AktivitetskortTreffstatusEndretScheduler er ikke ferdig, skipper denne kjøringen.")
             return
         }
 
@@ -62,7 +62,7 @@ class AktivitetskortSvartJaTreffstatusScheduler(
             usendteAvlyst.forEach { usendt ->
                 val treff = rekrutteringstreffRepository.hent(TreffId(usendt.rekrutteringstreffUuid))
                     ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendt.rekrutteringstreffUuid}")
-                treff.aktivitetskortSvartJaTreffstatusEndretFor(fnr = usendt.fnr, status = "avlyst")
+                treff.aktivitetskortSvartJaTreffstatusEndretFor(fnr = usendt.fnr, treffstatus = "avlyst")
                     .publiserTilRapids(rapidsConnection)
                 aktivitetskortRepository.lagrePollingstatus(usendt.jobbsokerHendelseDbId)
             }
@@ -71,14 +71,14 @@ class AktivitetskortSvartJaTreffstatusScheduler(
             usendteFullført.forEach { usendt ->
                 val treff = rekrutteringstreffRepository.hent(TreffId(usendt.rekrutteringstreffUuid))
                     ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${usendt.rekrutteringstreffUuid}")
-                treff.aktivitetskortSvartJaTreffstatusEndretFor(fnr = usendt.fnr, status = "fullført")
+                treff.aktivitetskortSvartJaTreffstatusEndretFor(fnr = usendt.fnr, treffstatus = "fullført")
                     .publiserTilRapids(rapidsConnection)
                 aktivitetskortRepository.lagrePollingstatus(usendt.jobbsokerHendelseDbId)
             }
             log.info("Ferdig med behandling av usendte 'fullført'-status for aktivitetskort")
 
         } catch (e: Exception) {
-            log.error("Feil under kjøring av AktivitetskortSvartJaTreffstatusScheduler", e)
+            log.error("Feil under kjøring av AktivitetskortTreffstatusEndretScheduler", e)
             throw e
         } finally {
             isRunning.set(false)

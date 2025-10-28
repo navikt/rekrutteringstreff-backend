@@ -64,11 +64,11 @@ class Rekrutteringstreff(
         møttOpp = møttOpp
     )
 
-    fun aktivitetskortSvartJaTreffstatusEndretFor(fnr: String, status: String) = AktivitetskortSvartJaTreffstatusEndret(
+    fun aktivitetskortSvartJaTreffstatusEndretFor(fnr: String, treffstatus: String) = AktivitetskortSvartJaTreffstatusEndret(
         fnr = fnr,
         rekrutteringstreffId = id,
         endretAv = fnr,
-        status = status
+        treffstatus = treffstatus
     )
 }
 
