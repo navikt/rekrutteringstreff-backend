@@ -6,6 +6,7 @@ import no.nav.toi.aktivitetskort.scheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerMøttOppLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerSvarLytter
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffSvartJaTreffstatusEndretLytter
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.CommonClientConfigs
@@ -23,6 +24,7 @@ class App(private val rapidsConnection: RapidsConnection, private val repository
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection, repository)
         RekrutteringstreffPersonbrukerMøttOppLytter(rapidsConnection, repository)
+        RekrutteringstreffSvartJaTreffstatusEndretLytter(rapidsConnection, repository)
     }
     fun start() {
         scheduler(0, 0, repository, producer, consumer, rapidsConnection)
