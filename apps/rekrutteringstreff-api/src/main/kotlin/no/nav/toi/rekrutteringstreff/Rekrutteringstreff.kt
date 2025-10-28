@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppmøte
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvartJaTreffstatusEndret
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortsvar
 import java.time.ZonedDateTime
@@ -61,6 +62,13 @@ class Rekrutteringstreff(
         rekrutteringstreffId = id,
         endretAv = fnr,
         møttOpp = møttOpp
+    )
+
+    fun aktivitetskortSvartJaTreffstatusEndretFor(fnr: String, treffstatus: String) = AktivitetskortSvartJaTreffstatusEndret(
+        fnr = fnr,
+        rekrutteringstreffId = id,
+        endretAv = fnr,
+        treffstatus = treffstatus
     )
 }
 
