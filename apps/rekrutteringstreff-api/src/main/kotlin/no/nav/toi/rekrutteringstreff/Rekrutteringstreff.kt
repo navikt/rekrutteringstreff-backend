@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppmøte
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvartJaTreffstatusEndret
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortsvar
@@ -55,13 +54,6 @@ class Rekrutteringstreff(
         rekrutteringstreffId = id,
         endretAv = fnr,
         svartJa = svar
-    )
-
-    fun aktivitetskortOppmøteFor(fnr: String, møttOpp: Boolean) = AktivitetskortOppmøte(
-        fnr = fnr,
-        rekrutteringstreffId = id,
-        endretAv = fnr,
-        møttOpp = møttOpp
     )
 
     fun aktivitetskortSvartJaTreffstatusEndretFor(fnr: String, treffstatus: String) = AktivitetskortSvartJaTreffstatusEndret(
