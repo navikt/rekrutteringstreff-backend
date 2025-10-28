@@ -3,7 +3,6 @@ package no.nav.toi.aktivitetskort
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
-import kotlinx.coroutines.runBlocking
 import no.nav.toi.Repository
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
@@ -18,29 +17,51 @@ import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-fun scheduler(
-    second: Int,
-    nano: Int,
-    repository: Repository,
-    producer: Producer<String, String>,
-    consumer: Consumer<String, String>,
-    rapidsConnection: RapidsConnection
-) = runBlocking {
-    val scheduledExecutor = Executors.newScheduledThreadPool(1)
-    val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
-    val myJob = AktivitetskortJobb(repository, producer)
-    consumer.subscribe(listOf("dab.aktivitetskort-feil-v1"))
-    val myErrorJob = AktivitetskortFeilJobb(repository, consumer) { key, message ->
-        rapidsConnection.publish(key, message)
+class AktivitetskortScheduler(
+    private val repository: Repository,
+    private val producer: Producer<String, String>,
+    private val consumer: Consumer<String, String>,
+    private val rapidsConnection: RapidsConnection
+) {
+    private val scheduledExecutor = Executors.newScheduledThreadPool(1)
+    private val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
+
+    fun start(second: Int = 0, nano: Int = 0) {
+        val myJob = AktivitetskortJobb(repository, producer)
+        consumer.subscribe(listOf("dab.aktivitetskort-feil-v1"))
+        val myErrorJob = AktivitetskortFeilJobb(repository, consumer) { key, message ->
+            rapidsConnection.publish(key, message)
+        }
+
+        val now = ZonedDateTime.now().toInstant().atOslo()
+        val nextRun = now.withSecond(second).withNano(nano)
+            .let { if (it <= now) it.plusMinutes(1) else it }
+        val delay = MILLIS.between(now, nextRun)
+
+        scheduledExecutor.scheduleAtFixedRate(myJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
+        scheduledFeilExecutor.scheduleAtFixedRate(myErrorJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
+
+        log.info("Aktivitetskort scheduler startet. Første kjøring om $delay ms")
     }
 
-    val now = ZonedDateTime.now().toInstant().atOslo()
-    val nextRun = now.withSecond(second).withNano(nano)
-        .let { if (it <= now) it.plusMinutes(1) else it }
-    val delay = MILLIS.between(now, nextRun)
-
-    scheduledExecutor.scheduleAtFixedRate(myJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
-    scheduledFeilExecutor.scheduleAtFixedRate(myErrorJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
+    fun stop() {
+        log.info("Stopper aktivitetskort schedulers...")
+        scheduledExecutor.shutdown()
+        scheduledFeilExecutor.shutdown()
+        try {
+            if (!scheduledExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduledExecutor.shutdownNow()
+            }
+            if (!scheduledFeilExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduledFeilExecutor.shutdownNow()
+            }
+        } catch (e: InterruptedException) {
+            scheduledExecutor.shutdownNow()
+            scheduledFeilExecutor.shutdownNow()
+            Thread.currentThread().interrupt()
+        }
+        log.info("Aktivitetskort schedulers stoppet")
+    }
 }
 
 class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>): Runnable {

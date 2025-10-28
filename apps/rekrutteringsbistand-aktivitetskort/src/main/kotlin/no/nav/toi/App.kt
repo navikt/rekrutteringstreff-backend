@@ -2,7 +2,7 @@ package no.nav.toi
 
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.helse.rapids_rivers.RapidApplication
-import no.nav.toi.aktivitetskort.scheduler
+import no.nav.toi.aktivitetskort.AktivitetskortScheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerMøttOppLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerSvarLytter
@@ -18,29 +18,45 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import java.util.Properties
 
+
 class App(private val rapidsConnection: RapidsConnection, private val repository: Repository, private val producer: Producer<String, String>, private val consumer: Consumer<String, String>) {
+    private lateinit var aktivitetskortScheduler: AktivitetskortScheduler
+
     init {
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection, repository)
         RekrutteringstreffPersonbrukerMøttOppLytter(rapidsConnection, repository)
     }
+
     fun start() {
-        scheduler(0, 0, repository, producer, consumer, rapidsConnection)
-        rapidsConnection.start()
+        aktivitetskortScheduler = AktivitetskortScheduler(repository, producer, consumer, rapidsConnection)
+        aktivitetskortScheduler.start(0, 0)
+        log.info("Starting RapidsConnection")
+        Thread(rapidsConnection::start).start()
     }
 
     fun stop() {
+        aktivitetskortScheduler.stop()
         rapidsConnection.stop()
     }
 }
 
 fun main() {
     val env = System.getenv()
+    val mainLogger = noClassLogger()
     val app = App(RapidApplication.create(env), Repository(DatabaseConfig(env), env.variable("MIN_SIDE_URL")),
         KafkaProducer(producerConfig(env)),
         KafkaConsumer(consumerConfig(env)),
     )
     app.start()
+
+    // Hold main-tråden i live siden vi ikke har en webserver som Javalin
+    Runtime.getRuntime().addShutdownHook(Thread {
+        mainLogger.info("Shutdown signal received, stopping application...")
+        app.stop()
+    })
+
+    Thread.currentThread().join()
 }
 
 fun producerConfig(env: Map<String, String>) = mapOf(

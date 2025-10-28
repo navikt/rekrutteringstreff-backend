@@ -25,12 +25,19 @@ class DatabaseConfig(
 
     fun lagDatasource() = HikariConfig().apply {
         jdbcUrl = "jdbc:postgresql://$host:$port/$database$sslsuffix"
-        minimumIdle = 1
-        maximumPoolSize = 7
-        driverClassName = "org.postgresql.Driver"
-        initializationFailTimeout = 5000
         username = user
         password = pw
+        driverClassName = "org.postgresql.Driver"  // PostgreSQL driver
+        maximumPoolSize = 10  // Maks 10 samtidige tilkoblinger
+        minimumIdle = 2  // Behold minst 2 ledige tilkoblinger
+        isAutoCommit = true  // Auto-commit hver SQL-operasjon
+        transactionIsolation = "TRANSACTION_REPEATABLE_READ"  // PostgreSQL standard
+        initializationFailTimeout = 10_000  // Vent maks 10 sekunder ved oppstart feil
+        connectionTimeout = 30_000  // Vent maks 30 sekunder på ny tilkobling
+        idleTimeout = 600_000  // 10 minutter - lukk ledige tilkoblinger etter dette
+        maxLifetime = 1_800_000  // 30 minutter - lukk og erstatt tilkoblinger etter dette
+        leakDetectionThreshold = 60_000  // Logg advarsel hvis tilkobling holdes > 60 sekunder
+        poolName = "RekrutteringAktivitetskortPool"  // Navn for logging/debugging
         metricRegistry = meterRegistry
         validate()
     }.let(::HikariDataSource)
