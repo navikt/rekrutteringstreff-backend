@@ -266,8 +266,6 @@ class JobbsøkerRepositoryTest {
         assertThat(hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETTET }).isNotNull
     }
 
-    // Oppmøte-relaterte repository-tester er fjernet fordi oppmøtelogikken er fjernet
-
     @Test
     fun `svarJaTilInvitasjon lager en svar-ja-hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Ja")

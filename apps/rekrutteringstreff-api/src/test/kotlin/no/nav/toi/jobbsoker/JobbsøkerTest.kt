@@ -375,8 +375,4 @@ class JobbsøkerTest {
         assertThat(inviterteFødselsnumre)
             .containsExactlyInAnyOrder(fnr1, fnr2)
     }
-
-    // Test for registrerOppmøteForJobbsøkere er fjernet da oppmøte-endepunkter er fjernet
-
-    // Test for registrerIkkeOppmøteForJobbsøkere er fjernet da oppmøte-endepunkter er fjernet
 }
