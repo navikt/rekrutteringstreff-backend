@@ -16,7 +16,6 @@ import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppmøteScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvarScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffstatusEndretScheduler
 import no.nav.toi.jobbsoker.handleJobbsøker
@@ -79,7 +78,6 @@ class App(
     private lateinit var javalin: Javalin
     private lateinit var invitasjonScheduler: AktivitetskortInvitasjonScheduler
     private lateinit var svarScheduler: AktivitetskortSvarScheduler
-    private lateinit var oppmøteScheduler: AktivitetskortOppmøteScheduler
     private lateinit var treffstatusScheduler: AktivitetskortTreffstatusEndretScheduler
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
@@ -192,13 +190,6 @@ class App(
         )
         svarScheduler.start()
 
-        oppmøteScheduler = AktivitetskortOppmøteScheduler(
-            aktivitetskortRepository = aktivitetskortRepository,
-            rekrutteringstreffRepository = rekrutteringstreffRepository,
-            rapidsConnection = rapidsConnection
-        )
-        oppmøteScheduler.start()
-
         treffstatusScheduler = AktivitetskortTreffstatusEndretScheduler(
             aktivitetskortRepository = aktivitetskortRepository,
             rekrutteringstreffRepository = rekrutteringstreffRepository,
@@ -217,7 +208,6 @@ class App(
         log.info("Shutting down application")
         if (::invitasjonScheduler.isInitialized) invitasjonScheduler.stop()
         if (::svarScheduler.isInitialized) svarScheduler.stop()
-        if (::oppmøteScheduler.isInitialized) oppmøteScheduler.stop()
         if (::treffstatusScheduler.isInitialized) treffstatusScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         (dataSource as? HikariDataSource)?.close()
