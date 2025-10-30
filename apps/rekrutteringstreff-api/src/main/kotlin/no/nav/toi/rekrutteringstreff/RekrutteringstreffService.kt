@@ -62,4 +62,45 @@ class RekrutteringstreffService(
             }
         }
     }
+
+    fun registrerEndring(treff: TreffId, endringer: String, endretAv: String) {
+        dataSource.connection.use { c ->
+            c.autoCommit = false
+            try {
+                // Hent rekrutteringstreff db-id
+                val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(c, treff)
+
+                // Legg til hendelse for rekrutteringstreff med endringer som JSON
+                rekrutteringstreffRepository.leggTilHendelse(
+                    c,
+                    dbId,
+                    RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
+                    AktørType.ARRANGØR,
+                    endretAv,
+                    endringer
+                )
+
+                // Hent jobbsøkere som skal varsles
+                val jobbsøkereSomSkalVarsles = jobbsøkerRepository.hentJobbsøkereSomSkalVarslesOmEndringer(c, treff)
+
+                // Legg til hendelser for alle relevante jobbsøkere med endringer som JSON
+                if (jobbsøkereSomSkalVarsles.isNotEmpty()) {
+                    jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                        c,
+                        JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
+                        jobbsøkereSomSkalVarsles,
+                        endretAv,
+                        hendelseData = endringer
+                    )
+                }
+
+                c.commit()
+            } catch (e: Exception) {
+                c.rollback()
+                throw e
+            } finally {
+                c.autoCommit = true
+            }
+        }
+    }
 }

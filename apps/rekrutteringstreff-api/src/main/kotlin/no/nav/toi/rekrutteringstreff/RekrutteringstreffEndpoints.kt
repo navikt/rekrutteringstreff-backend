@@ -6,6 +6,7 @@ import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.eier.handleEiere
@@ -21,6 +22,7 @@ private const val gjenapnPath = "$endepunktRekrutteringstreff/{$pathParamTreffId
 private const val fullforPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/fullfor"
 private const val avlysPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avlys"
 private const val avpubliserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avpubliser"
+private const val endringerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/endringer"
 private const val fellesPath =
     "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
 
@@ -356,6 +358,52 @@ private fun fullforRekrutteringstreffHandler(service: RekrutteringstreffService)
     ctx.status(200)
 }
 
+@OpenApi(
+    summary = "Registrer endringer til et publisert rekrutteringstreff",
+    operationId = "registrerEndring",
+    security = [OpenApiSecurity(name = "BearerAuth")],
+    path = endringerPath,
+    methods = [HttpMethod.POST],
+    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+    requestBody = OpenApiRequestBody(
+        content = [OpenApiContent(
+            from = RegistrerEndringDto::class,
+            example = """{
+                "endringer": {
+                    "tittel": "Gammel tittel",
+                    "beskrivelse": "Gammel beskrivelse",
+                    "fraTid": "2025-06-15T09:00:00+02:00",
+                    "tilTid": "2025-06-15T11:00:00+02:00",
+                    "svarfrist": "2025-06-14T11:00:00+02:00",
+                    "gateadresse": "Gammel gate",
+                    "postnummer": "0566",
+                    "poststed": "Oslo",
+                    "htmlContent": "<p>HTML innhold</p>"
+                }
+            }"""
+        )]
+    ),
+    responses = [OpenApiResponse(status = "201", description = "Endringer er registrert.")]
+)
+private fun registrerEndringHandler(
+    repo: RekrutteringstreffRepository,
+    service: RekrutteringstreffService
+): (Context) -> Unit {
+    return { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.extractNavIdent()
+
+        // TODO: Sjekk at treffet er publisert når statuser er bedre implementert i bakend
+
+        val dto = ctx.bodyAsClass<RegistrerEndringDto>()
+        val endringerJson = JacksonConfig.mapper.writeValueAsString(dto.endringer)
+
+        service.registrerEndring(treffId, endringerJson, navIdent)
+        ctx.status(201)
+    }
+}
+
 fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository, service: RekrutteringstreffService) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
     get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
@@ -369,6 +417,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository, service
     post(avlysPath, avlysRekrutteringstreffHandler(service))
     post(avpubliserPath, avpubliserRekrutteringstreffHandler(repo))
     post(fullforPath, fullforRekrutteringstreffHandler(service))
+    post(endringerPath, registrerEndringHandler(repo, service))
     handleEiere(repo.eierRepository)
     handleInnlegg(repo.innleggRepository)
 
@@ -411,6 +460,22 @@ data class OppdaterRekrutteringstreffDto(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?
+)
+
+data class RegistrerEndringDto(
+    val endringer: EndringerDto?
+)
+
+data class EndringerDto(
+    val tittel: String?,
+    val beskrivelse: String?,
+    val fraTid: String?,
+    val tilTid: String?,
+    val svarfrist: String?,
+    val gateadresse: String?,
+    val postnummer: String?,
+    val poststed: String?,
+    val htmlContent: String?
 )
 
 data class ValiderRekrutteringstreffResponsDto(

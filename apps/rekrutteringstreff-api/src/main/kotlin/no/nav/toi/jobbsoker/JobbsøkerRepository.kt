@@ -128,12 +128,13 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         personTreffIds: List<PersonTreffId>,
         opprettetAv: String,
         arrangørtype: AktørType = AktørType.ARRANGØR,
+        hendelseData: String? = null,
         size: Int = 500
     ) {
         val sql = """
             INSERT INTO jobbsoker_hendelse
-              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
-            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?)
+              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
+            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?, ?::jsonb)
         """.trimIndent()
         c.prepareStatement(sql).use { stmt ->
             var n = 0
@@ -144,6 +145,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 stmt.setString(4, hendelsestype.name)
                 stmt.setString(5, arrangørtype.name)
                 stmt.setString(6, opprettetAv)
+                stmt.setString(7, hendelseData)
                 stmt.addBatch()
                 if (++n == size) {
                     stmt.executeBatch()
@@ -507,6 +509,43 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.setObject(1, treff.somUuid)
             stmt.setString(2, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON.name)
             stmt.setString(3, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON.name)
+            stmt.executeQuery().use { rs ->
+                val result = mutableListOf<PersonTreffId>()
+                while (rs.next()) {
+                    result.add(PersonTreffId(UUID.fromString(rs.getString("id"))))
+                }
+                return result
+            }
+        }
+    }
+
+    /**
+     * Henter jobbsøkere som skal varsles om endringer i treffet.
+     * Dvs. de som har INVITERT eller SVART_JA_TIL_INVITASJON som siste hendelse,
+     * eventuelt sammen med AKTIVITETSKORT_OPPRETTELSE_FEIL, SVART_JA_TREFF_AVLYST, eller SVART_JA_TREFF_FULLFØRT.
+     */
+    fun hentJobbsøkereSomSkalVarslesOmEndringer(connection: Connection, treff: TreffId): List<PersonTreffId> {
+        val sql = """
+            WITH siste_hendelse AS (
+                SELECT 
+                    js.id,
+                    jh.hendelsestype,
+                    ROW_NUMBER() OVER (PARTITION BY js.jobbsoker_id ORDER BY jh.tidspunkt DESC) as rn
+                FROM jobbsoker js
+                JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
+                WHERE rt.id = ?
+                  AND jh.hendelsestype IN ('INVITERT', 'SVART_JA_TIL_INVITASJON', 'AKTIVITETSKORT_OPPRETTELSE_FEIL', 
+                                           'SVART_JA_TREFF_AVLYST', 'SVART_JA_TREFF_FULLFØRT')
+            )
+            SELECT DISTINCT id
+            FROM siste_hendelse
+            WHERE rn = 1
+              AND hendelsestype IN ('INVITERT', 'SVART_JA_TIL_INVITASJON')
+        """.trimIndent()
+
+        connection.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treff.somUuid)
             stmt.executeQuery().use { rs ->
                 val result = mutableListOf<PersonTreffId>()
                 while (rs.next()) {
