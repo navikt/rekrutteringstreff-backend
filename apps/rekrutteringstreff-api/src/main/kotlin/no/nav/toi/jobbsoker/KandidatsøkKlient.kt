@@ -28,18 +28,24 @@ class KandidatsøkKlient(
 
         val onBehalfOfToken = accessTokenClient.hentAccessToken(innkommendeToken = userToken, scope = kandidatsokScope)
 
-        val (_, response, result) = Fuel.post(url)
-            .header(Headers.CONTENT_TYPE, "application/json")
-            .jsonBody(requestBodyJson)
-            .authentication().bearer(onBehalfOfToken)
-            .responseObject<KandidatKandidatnrResponsDto>(objectMapper)
+        try {
+            val (_, response, result) = Fuel.post(url)
+                .header(Headers.CONTENT_TYPE, "application/json")
+                .jsonBody(requestBodyJson)
+                .authentication().bearer(onBehalfOfToken)
+                .responseObject<KandidatKandidatnrResponsDto>(objectMapper)
 
-        log.info("Hentet kandidatnummer fra kandidatsøkApi")
+            log.info("Hentet kandidatnummer fra kandidatsøkApi")
 
-        return when (response.statusCode) {
-            200 -> result.get().arenaKandidatnr.let(::Kandidatnummer)
-            404 -> null
-            else -> throw RuntimeException("Kall mot kandidatsok-api feilet med status ${response.statusCode}")
+            return when (response.statusCode) {
+                200 -> result.get().arenaKandidatnr.let(::Kandidatnummer)
+                404 -> null
+                else -> throw RuntimeException("Kall mot kandidatsok-api feilet med status ${response.statusCode}")
+            }
+
+        } catch (e: Exception) {
+            log.error("Det skjedde en feil ved henting av kandidatnummer fra kandidatsøk-api", e)
+            throw e
         }
     }
 }
