@@ -412,13 +412,13 @@ class RekrutteringstreffRepository(
         }
     }
 
-    fun endreStatus(treffId: TreffId, rekrutteringstreffStatus: RekrutteringstreffStatus, ) {
+    fun endreStatus(treffId: TreffId, rekrutteringstreffStatus: RekrutteringstreffStatus) {
         dataSource.connection.use { connection ->
             endreStatus(connection, treffId, rekrutteringstreffStatus)
         }
     }
 
-    fun endreStatus(connection: Connection, treffId: TreffId, rekrutteringstreffStatus: RekrutteringstreffStatus, ) {
+    fun endreStatus(connection: Connection, treffId: TreffId, rekrutteringstreffStatus: RekrutteringstreffStatus) {
             connection.prepareStatement(
                 """
                 UPDATE $tabellnavn
