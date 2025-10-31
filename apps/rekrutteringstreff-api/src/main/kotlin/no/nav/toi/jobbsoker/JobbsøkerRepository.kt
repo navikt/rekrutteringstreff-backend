@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.*
@@ -12,27 +14,6 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
-
-data class JobbsøkerHendelse(
-    val id: UUID,
-    val tidspunkt: ZonedDateTime,
-    val hendelsestype: JobbsøkerHendelsestype,
-    val opprettetAvAktørType: AktørType,
-    val aktørIdentifikasjon: String?
-)
-
-data class JobbsøkerHendelseMedJobbsøkerData(
-    val id: UUID,
-    val tidspunkt: ZonedDateTime,
-    val hendelsestype: JobbsøkerHendelsestype,
-    val opprettetAvAktørType: AktørType,
-    val aktørIdentifikasjon: String?,
-    val fødselsnummer: Fødselsnummer,
-    val kandidatnummer: Kandidatnummer?,
-    val fornavn: Fornavn,
-    val etternavn: Etternavn,
-    val personTreffId: PersonTreffId
-)
 
 class JobbsøkerRepository(private val dataSource: DataSource, private val mapper: ObjectMapper) {
 

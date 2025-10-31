@@ -7,6 +7,8 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.innlegg.OpprettInnleggRequestDto
 import org.assertj.core.api.Assertions.assertThat

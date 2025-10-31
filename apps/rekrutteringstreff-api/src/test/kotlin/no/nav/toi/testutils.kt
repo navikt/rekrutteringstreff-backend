@@ -10,6 +10,7 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.provider.Arguments
+import java.net.http.HttpClient
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -52,6 +53,10 @@ fun MockOAuth2Server.lagToken(
     expiry = expiry,
     audience = audience
 )
+
+val httpClient: HttpClient = HttpClient.newBuilder()
+    .followRedirects(HttpClient.Redirect.ALWAYS)
+    .build()
 
 private const val minSideAudience = "rekrutteringstreff-minside-audience"
 

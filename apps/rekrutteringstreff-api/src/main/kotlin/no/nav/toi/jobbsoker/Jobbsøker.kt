@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker
 
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.util.UUID
 

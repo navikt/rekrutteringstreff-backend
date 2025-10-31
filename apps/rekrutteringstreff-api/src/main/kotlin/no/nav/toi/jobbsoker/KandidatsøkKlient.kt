@@ -10,13 +10,13 @@ import com.github.kittinunf.fuel.jackson.responseObject
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Kandidatnummer
-import kotlin.text.get
 
 private data class KandidatKandidatnrRequestDto(val fodselsnummer: String)
 private data class KandidatKandidatnrResponsDto(val arenaKandidatnr: String)
 
 class KandidatsøkKlient(
     private val kandidatsokApiUrl: String,
+    private val kandidatsokScope: String,
     private val accessTokenClient: AccessTokenClient,
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
 ) {
@@ -25,7 +25,7 @@ class KandidatsøkKlient(
         val requestBody = KandidatKandidatnrRequestDto(fødselsnummer.asString)
         val requestBodyJson = objectMapper.writeValueAsString(requestBody)
 
-        val onBehalfOfToken = accessTokenClient.hentAccessToken(userToken)
+        val onBehalfOfToken = accessTokenClient.hentAccessToken(innkommendeToken = userToken, scope = kandidatsokScope)
 
         val (_, response, result) = Fuel.post(url)
             .header(Headers.CONTENT_TYPE, "application/json")

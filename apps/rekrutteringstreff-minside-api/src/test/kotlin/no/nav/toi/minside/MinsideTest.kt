@@ -54,8 +54,8 @@ class MinsideTest {
             azureClientSecret = "",
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
-            rapidsConnection = TestRapid()
-
+            rapidsConnection = TestRapid(),
+            httpClient = HttpClient.newBuilder().build()
         )
         private val httpClient: HttpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.ALWAYS)

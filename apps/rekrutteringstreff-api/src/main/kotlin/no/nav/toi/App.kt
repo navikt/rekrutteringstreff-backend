@@ -10,24 +10,29 @@ import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
-import no.nav.toi.arbeidsgiver.handleArbeidsgiver
 import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
+import no.nav.toi.jobbsoker.JobbsøkerController
+import no.nav.toi.jobbsoker.JobbsøkerInnloggetBorgerController
+import no.nav.toi.jobbsoker.JobbsøkerOutboundController
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvarScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffstatusEndretScheduler
-import no.nav.toi.jobbsoker.handleJobbsøker
-import no.nav.toi.jobbsoker.handleJobbsøkerInnloggetBorger
-import no.nav.toi.jobbsoker.handleJobbsøkerOutbound
 import no.nav.toi.kandidatsok.KandidatsøkKlient
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
-import no.nav.toi.rekrutteringstreff.handleRekrutteringstreff
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierController
+import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
+import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
+import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
-import no.nav.toi.rekrutteringstreff.ki.handleKi
 import org.flywaydb.core.Flyway
+import java.net.http.HttpClient
 import java.time.Instant
 import java.time.ZoneId.of
 import java.time.ZonedDateTime
@@ -56,6 +61,7 @@ class App(
         azureClientSecret: String,
         azureTokenEndpoint: String,
         rapidsConnection: RapidsConnection,
+        httpClient: HttpClient,
     ) : this(
         port = port,
         authConfigs = authConfigs,
@@ -64,15 +70,15 @@ class App(
         utvikler = utvikler,
         kandidatsokKlient = KandidatsøkKlient(
             kandidatsokApiUrl = kandidatsokApiUrl,
+            kandidatsokScope = kandidatsokScope,
             accessTokenClient = AccessTokenClient(
                 secret = azureClientSecret,
                 clientId = azureClientId,
-                scope = kandidatsokScope,
                 azureUrl = azureTokenEndpoint,
+                httpClient = httpClient
             )
         ),
-        rapidsConnection = rapidsConnection
-
+        rapidsConnection = rapidsConnection,
     )
 
     private lateinit var javalin: Javalin
@@ -159,13 +165,47 @@ class App(
         )
 
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
+        val eierRepository = EierRepository(dataSource)
+        val innleggRepository = InnleggRepository(dataSource)
+        val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
+        val kiLoggRepository = KiLoggRepository(dataSource)
+
         val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository)
-        javalin.handleRekrutteringstreff(rekrutteringstreffRepository, rekrutteringstreffService)
-        javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
-        javalin.handleJobbsøker(jobbsøkerRepository)
-        javalin.handleJobbsøkerInnloggetBorger(jobbsøkerRepository)
-        javalin.handleJobbsøkerOutbound(jobbsøkerRepository, kandidatsokKlient)
-        javalin.handleKi(KiLoggRepository(dataSource))
+
+        RekrutteringstreffController(
+            rekrutteringstreffRepository = rekrutteringstreffRepository,
+            rekrutteringstreffService = rekrutteringstreffService,
+            javalin = javalin
+        )
+        InnleggController(
+            innleggRepository = innleggRepository,
+            javalin = javalin
+        )
+        EierController(
+            eierRepository = eierRepository,
+            javalin = javalin
+        )
+        ArbeidsgiverController(
+            arbeidsgiverRepository = arbeidsgiverRepository,
+            javalin = javalin
+        )
+        JobbsøkerController(
+            jobbsøkerRepository = jobbsøkerRepository,
+            javalin = javalin
+        )
+        JobbsøkerInnloggetBorgerController(
+            jobbsøkerRepository = jobbsøkerRepository,
+            javalin = javalin
+        )
+        JobbsøkerOutboundController(
+            jobbsøkerRepository = jobbsøkerRepository,
+            kandidatsøkKlient = kandidatsokKlient,
+            javalin = javalin
+        )
+        KiController(
+            kiLoggRepository = kiLoggRepository,
+            javalin
+        )
 
         javalin.start(port)
     }
@@ -221,6 +261,10 @@ fun main() {
     val dataSource = createDataSource()
     val rapidsConnection = RapidApplication.create(System.getenv())
 
+    val httpClient: HttpClient = HttpClient.newBuilder()
+        .followRedirects(HttpClient.Redirect.ALWAYS)
+        .build()
+
     App(
         port = 8080,
         authConfigs = listOfNotNull(
@@ -249,7 +293,8 @@ fun main() {
         azureClientId = getenv("AZURE_APP_CLIENT_ID"),
         azureClientSecret = getenv("AZURE_APP_CLIENT_SECRET"),
         azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT"),
-        rapidsConnection = rapidsConnection
+        rapidsConnection = rapidsConnection,
+        httpClient = httpClient,
     ).start()
 }
 
