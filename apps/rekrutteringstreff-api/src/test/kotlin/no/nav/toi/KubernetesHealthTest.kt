@@ -19,7 +19,7 @@ import org.junit.jupiter.api.TestInstance
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KubernetesHealthTest {
     private val appPort = ubruktPortnr()
-    private val app = App(port = appPort, listOf(), TestDatabase().dataSource, arbeidsgiverrettet, utvikler, "", "", "", "", "", TestRapid())
+    private val app = App(port = appPort, listOf(), TestDatabase().dataSource, arbeidsgiverrettet, utvikler, "", "", "", "", "", TestRapid(), httpClient)
 
     @BeforeAll
     fun setUp() {

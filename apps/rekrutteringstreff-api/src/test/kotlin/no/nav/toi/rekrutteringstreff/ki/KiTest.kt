@@ -6,11 +6,13 @@ import com.github.kittinunf.result.Result
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.sql.Types
 import java.time.ZonedDateTime
 import java.util.*
 import java.util.stream.Stream
@@ -60,7 +63,8 @@ class KiTest {
         azureClientId = "",
         azureClientSecret = "",
         azureTokenEndpoint = "",
-        TestRapid()
+        TestRapid(),
+        httpClient = httpClient
     )
 
     @BeforeAll
@@ -473,7 +477,7 @@ class KiTest {
         )
     }
 
-    private fun opprettLogg(treffId: UUID, token: com.nimbusds.jwt.SignedJWT): String {
+    private fun opprettLogg(treffId: UUID, token: SignedJWT): String {
         val requestBody = """
             {
               "treffId": "$treffId",
@@ -498,7 +502,7 @@ class KiTest {
     private fun oppdaterEkstra(id: UUID, nyJson: String?) {
         db.dataSource.connection.use { c ->
             c.prepareStatement("update ki_spørring_logg set ekstra_parametre = cast(? as jsonb) where id = ?").use { ps ->
-                if (nyJson == null) ps.setNull(1, java.sql.Types.OTHER) else ps.setString(1, nyJson)
+                if (nyJson == null) ps.setNull(1, Types.OTHER) else ps.setString(1, nyJson)
                 ps.setObject(2, id)
                 ps.executeUpdate()
             }

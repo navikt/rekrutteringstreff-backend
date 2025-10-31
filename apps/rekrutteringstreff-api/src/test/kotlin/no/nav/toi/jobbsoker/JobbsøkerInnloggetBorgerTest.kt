@@ -5,6 +5,7 @@ import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -41,7 +42,8 @@ class JobbsøkerInnloggetBorgerTest {
             azureClientId = "",
             azureClientSecret = "",
             azureTokenEndpoint = "",
-            TestRapid()
+            TestRapid(),
+            httpClient = httpClient
         )
 
         val mapper = JacksonConfig.mapper
@@ -443,7 +445,7 @@ class JobbsøkerInnloggetBorgerTest {
         }
     }
 
-    private fun hentJobbsøkerInnloggetBorger(treffId: TreffId, fødselsnummer: Fødselsnummer, token: com.nimbusds.jwt.SignedJWT) =
+    private fun hentJobbsøkerInnloggetBorger(treffId: TreffId, fødselsnummer: Fødselsnummer, token: SignedJWT) =
         Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/borger")
             .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
             .header("Content-Type", "application/json")

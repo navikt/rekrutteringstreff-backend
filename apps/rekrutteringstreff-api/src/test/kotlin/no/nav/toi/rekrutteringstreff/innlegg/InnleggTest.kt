@@ -12,6 +12,7 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.*
+import java.net.ServerSocket
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -41,20 +42,21 @@ class InnleggTest {
         port = appPort,
         authConfigs = listOf(
             AuthenticationConfiguration(
-                issuer   = "http://localhost:$authPort/default",
-                jwksUri  = "http://localhost:$authPort/default/jwks",
+                issuer = "http://localhost:$authPort/default",
+                jwksUri = "http://localhost:$authPort/default/jwks",
                 audience = "rekrutteringstreff-audience"
             )
         ),
-        dataSource         = db.dataSource,
+        dataSource = db.dataSource,
         arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-        utvikler           = AzureAdRoller.utvikler,
+        utvikler = AzureAdRoller.utvikler,
         kandidatsokApiUrl = "",
         kandidatsokScope = "",
         azureClientId = "",
         azureClientSecret = "",
         azureTokenEndpoint = "",
-        TestRapid()
+        TestRapid(),
+        httpClient = httpClient
     )
 
     @BeforeAll fun start() { auth.start(port = authPort); app.start() }
@@ -225,5 +227,5 @@ class InnleggTest {
 }
 
 object TestUtils {
-    fun getFreePort(): Int = java.net.ServerSocket(0).use { it.localPort }
+    fun getFreePort(): Int = ServerSocket(0).use { it.localPort }
 }

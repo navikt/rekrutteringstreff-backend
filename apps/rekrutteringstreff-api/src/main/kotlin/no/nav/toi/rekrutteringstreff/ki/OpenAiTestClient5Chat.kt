@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import no.nav.toi.JacksonConfig
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
-import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
+import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import java.lang.Thread.sleep
 import java.net.URI
 import java.net.http.HttpClient

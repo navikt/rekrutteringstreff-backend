@@ -8,9 +8,9 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
-import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -30,7 +30,8 @@ class RekrutteringstreffEierTest {
         private val authPort = 18012
         private val database = TestDatabase()
         private val appPort = ubruktPortnr()
-        private val repo = RekrutteringstreffRepository(database.dataSource)
+        private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
+        private val eierRepository = EierRepository(database.dataSource)
 
         private val app = App(
             port = appPort,
@@ -49,7 +50,8 @@ class RekrutteringstreffEierTest {
             azureClientId = "",
             azureClientSecret = "",
             azureTokenEndpoint = "",
-            TestRapid()
+            TestRapid(),
+            httpClient = httpClient
         )
     }
 
@@ -217,7 +219,7 @@ class RekrutteringstreffEierTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        repo.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
+        eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
@@ -241,7 +243,7 @@ class RekrutteringstreffEierTest {
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),
         )
-        repo.opprett(originalDto)
+        rekrutteringstreffRepository.opprett(originalDto)
     }
 
     private fun waitForServerToBeReady() {

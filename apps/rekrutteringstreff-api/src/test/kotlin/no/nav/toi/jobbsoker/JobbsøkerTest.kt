@@ -6,6 +6,8 @@ import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
+import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -44,7 +46,8 @@ class JobbsøkerTest {
             azureClientId = "",
             azureClientSecret = "",
             azureTokenEndpoint = "",
-            TestRapid()
+            TestRapid(),
+            httpClient = httpClient
         )
 
         val mapper = JacksonConfig.mapper
