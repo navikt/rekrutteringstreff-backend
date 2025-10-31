@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import javax.sql.DataSource
 
@@ -13,53 +14,59 @@ class RekrutteringstreffService(
 ) {
 
     fun avlys(treff: TreffId, avlystAv: String) {
-        leggTilHendelseForTreffMedJobbsøkerhendelser(
+        leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
             treff,
             avlystAv,
             RekrutteringstreffHendelsestype.AVLYST,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST
+            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
+            RekrutteringstreffStatus.AVLYST,
         )
     }
 
-    fun fullfor(treff: TreffId, fullfortAv: String) {
-        leggTilHendelseForTreffMedJobbsøkerhendelser(
+    fun fullfør(treff: TreffId, fullfortAv: String) {
+        leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
             treff,
             fullfortAv,
             RekrutteringstreffHendelsestype.FULLFØRT,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT
+            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
+            RekrutteringstreffStatus.FULLFØRT
         )
     }
 
-    private fun leggTilHendelseForTreffMedJobbsøkerhendelser(
-        treff: TreffId,
+    private fun leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
+        treffId: TreffId,
         ident: String,
         rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
-        jobbsøkerHendelsestype: JobbsøkerHendelsestype
+        jobbsøkerHendelsestype: JobbsøkerHendelsestype,
+        status: RekrutteringstreffStatus,
     ) {
-        dataSource.connection.use { c ->
-            c.autoCommit = false
-            try {
-                // Hent rekrutteringstreff db-id
-                val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(c, treff)
+       dataSource.executeInTransaction { connection ->
+           // Hent rekrutteringstreff db-id
+           val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
 
-                // Legg til hendelse for rekrutteringstreff
-                rekrutteringstreffRepository.leggTilHendelse(c, dbId, rekrutteringstreffHendelsestype, AktørType.ARRANGØR, ident)
+           // Legg til hendelse for rekrutteringstreff
+           rekrutteringstreffRepository.leggTilHendelse(
+               connection,
+               dbId,
+               rekrutteringstreffHendelsestype,
+               AktørType.ARRANGØR,
+               ident
+           )
 
-                // Hent jobbsøkere med aktivt svar ja
-                val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(c, treff)
+           // Hent jobbsøkere med aktivt svar ja
+           val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(connection, treffId)
 
-                // Legg til hendelser for alle jobbsøkere med aktivt svar ja
-                if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
-                    jobbsøkerRepository.leggTilHendelserForJobbsøkere(c, jobbsøkerHendelsestype, jobbsøkereMedAktivtSvarJa, ident)
-                }
+           // Legg til hendelser for alle jobbsøkere med aktivt svar ja
+           if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
+               jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                   connection,
+                   jobbsøkerHendelsestype,
+                   jobbsøkereMedAktivtSvarJa,
+                   ident
+               )
+           }
 
-                c.commit()
-            } catch (e: Exception) {
-                c.rollback()
-                throw e
-            } finally {
-                c.autoCommit = true
-            }
+           rekrutteringstreffRepository.endreStatus(treffId, status)
         }
     }
 }

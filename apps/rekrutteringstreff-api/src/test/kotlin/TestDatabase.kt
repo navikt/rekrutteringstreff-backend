@@ -40,7 +40,7 @@ class TestDatabase {
         gateadresse: String = "Testgata 123",
         postnummer: String = "0484",
         poststed: String = "OSLO",
-        status: String = "ÅPEN",
+        status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
         opprettetAvNavkontorEnhetId: String = "0315"
     ): TreffId {
         val treffId = opprettRekrutteringstreffIDatabase(
@@ -70,7 +70,7 @@ class TestDatabase {
                 setString(5, gateadresse)
                 setString(6, postnummer)
                 setString(7, poststed)
-                setString(8, status)
+                setString(8, status.name)
                 setString(9, opprettetAvNavkontorEnhetId)
                 setObject(10, treffId.somUuid)
             }.executeUpdate()
@@ -260,7 +260,7 @@ class TestDatabase {
         gateadresse = rs.getString("gateadresse"),
         postnummer = rs.getString("postnummer"),
         poststed = rs.getString("poststed"),
-        status = rs.getString("status"),
+        status = RekrutteringstreffStatus.valueOf(rs.getString("status")),
         opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
         opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo()

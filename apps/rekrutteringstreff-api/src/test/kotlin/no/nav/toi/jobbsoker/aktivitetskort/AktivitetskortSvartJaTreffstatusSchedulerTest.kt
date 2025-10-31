@@ -78,7 +78,7 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
 
         // Fullfør rekrutteringstreffet som lager jobbsøker-hendelse SVART_JA_TREFF_FULLFØRT
-        rekrutteringstreffService.fullfor(treffId, expectedFnr.asString)
+        rekrutteringstreffService.fullfør(treffId, expectedFnr.asString)
 
         AktivitetskortTreffstatusEndretScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
             .behandleStatusendringer()
