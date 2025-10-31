@@ -10,6 +10,7 @@ import com.github.kittinunf.fuel.jackson.responseObject
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Kandidatnummer
+import no.nav.toi.log
 
 private data class KandidatKandidatnrRequestDto(val fodselsnummer: String)
 private data class KandidatKandidatnrResponsDto(val arenaKandidatnr: String)
@@ -32,6 +33,8 @@ class KandidatsøkKlient(
             .jsonBody(requestBodyJson)
             .authentication().bearer(onBehalfOfToken)
             .responseObject<KandidatKandidatnrResponsDto>(objectMapper)
+
+        log.info("Hentet kandidatnummer fra kandidatsøkApi")
 
         return when (response.statusCode) {
             200 -> result.get().arenaKandidatnr.let(::Kandidatnummer)
