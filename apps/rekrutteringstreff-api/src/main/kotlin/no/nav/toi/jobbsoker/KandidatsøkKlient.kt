@@ -22,27 +22,29 @@ class KandidatsøkKlient(
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
 ) {
     fun hentKandidatnummer(fødselsnummer: Fødselsnummer, userToken: String): Kandidatnummer? {
+        log.info("Henter kandidatnummer fra kandidatsøkApi")
         val url = "$kandidatsokApiUrl/api/arena-kandidatnr"
         val requestBody = KandidatKandidatnrRequestDto(fødselsnummer.asString)
         val requestBodyJson = objectMapper.writeValueAsString(requestBody)
 
-        val onBehalfOfToken = accessTokenClient.hentAccessToken(innkommendeToken = userToken, scope = kandidatsokScope)
-
         try {
+            val onBehalfOfToken = accessTokenClient.hentAccessToken(innkommendeToken = userToken, scope = kandidatsokScope)
+
             val (_, response, result) = Fuel.post(url)
                 .header(Headers.CONTENT_TYPE, "application/json")
                 .jsonBody(requestBodyJson)
                 .authentication().bearer(onBehalfOfToken)
                 .responseObject<KandidatKandidatnrResponsDto>(objectMapper)
 
-            log.info("Hentet kandidatnummer fra kandidatsøkApi")
 
             return when (response.statusCode) {
                 200 -> result.get().arenaKandidatnr.let(::Kandidatnummer)
                 404 -> null
-                else -> throw RuntimeException("Kall mot kandidatsok-api feilet med status ${response.statusCode}")
+                else -> {
+                    log.error("Det skjedde en feil ved henting av kandidatnummer fra kandidatsøk-api. status: ${response.statusCode}")
+                    throw RuntimeException("Kall mot kandidatsok-api feilet med status ${response.statusCode}")
+                }
             }
-
         } catch (e: Exception) {
             log.error("Det skjedde en feil ved henting av kandidatnummer fra kandidatsøk-api", e)
             throw e
