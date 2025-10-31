@@ -66,7 +66,7 @@ class RekrutteringstreffService(
                )
            }
 
-           rekrutteringstreffRepository.endreStatus(treffId, status)
+           rekrutteringstreffRepository.endreStatus(connection, treffId, status)
         }
     }
 }

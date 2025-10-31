@@ -350,34 +350,32 @@ class RekrutteringstreffRepository(
 
     fun publiser(treff: TreffId, publisertAv: String) {
         dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.PUBLISERT, publisertAv)
-            endreStatus(treff, RekrutteringstreffStatus.PUBLISERT)
+            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.PUBLISERT, publisertAv)
+            endreStatus(connection, treff, RekrutteringstreffStatus.PUBLISERT)
         }
     }
 
     fun gjenåpne(treff: TreffId, gjenapnetAv: String) {
         dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.GJENÅPNET, gjenapnetAv)
-            endreStatus(treff, RekrutteringstreffStatus.PUBLISERT) // TODO: sjekk om status skal være UTKAST eller PUBLISERT
+            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.GJENÅPNET, gjenapnetAv)
+            endreStatus(connection, treff, RekrutteringstreffStatus.PUBLISERT) // TODO: sjekk om status skal være UTKAST eller PUBLISERT
         }
     }
 
     fun avpubliser(treff: TreffId, avpublisertAv: String) {
         dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(treff, RekrutteringstreffHendelsestype.AVPUBLISERT, avpublisertAv)
-            endreStatus(treff, RekrutteringstreffStatus.UTKAST)
+            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.AVPUBLISERT, avpublisertAv)
+            endreStatus(connection, treff, RekrutteringstreffStatus.UTKAST)
         }
     }
 
-    private fun leggTilHendelseForTreff(treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
-        dataSource.connection.use { c ->
-            val dbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
-                .apply { setObject(1, treff.somUuid) }
-                .executeQuery()
-                .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
+    private fun leggTilHendelseForTreff(connection: Connection, treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
+        val dbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
+            .apply { setObject(1, treff.somUuid) }
+            .executeQuery()
+            .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
 
-            leggTilHendelse(c, dbId, hendelsestype, AktørType.ARRANGØR, ident)
-        }
+        leggTilHendelse(connection, dbId, hendelsestype, AktørType.ARRANGØR, ident)
     }
 
     fun hentRekrutteringstreffDbId(c: Connection, treff: TreffId): Long {
@@ -414,9 +412,14 @@ class RekrutteringstreffRepository(
         }
     }
 
-    fun endreStatus(treffId: TreffId, rekrutteringstreffStatus: RekrutteringstreffStatus) {
-        dataSource.connection.use { c ->
-            c.prepareStatement(
+    fun endreStatus(treffId: TreffId, rekrutteringstreffStatus: RekrutteringstreffStatus, ) {
+        dataSource.connection.use { connection ->
+            endreStatus(connection, treffId, rekrutteringstreffStatus)
+        }
+    }
+
+    fun endreStatus(connection: Connection, treffId: TreffId, rekrutteringstreffStatus: RekrutteringstreffStatus, ) {
+            connection.prepareStatement(
                 """
                 UPDATE $tabellnavn
                 SET $status=?
@@ -427,7 +430,6 @@ class RekrutteringstreffRepository(
                 setString(++i, rekrutteringstreffStatus.name)
                 setObject(++i, treffId.somUuid)
             }.executeUpdate()
-        }
     }
 
 
