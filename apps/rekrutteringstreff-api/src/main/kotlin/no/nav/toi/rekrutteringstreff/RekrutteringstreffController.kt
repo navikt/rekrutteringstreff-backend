@@ -16,7 +16,6 @@ import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
 import java.util.*
 
-
 class RekrutteringstreffController(
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val rekrutteringstreffService: RekrutteringstreffService,
