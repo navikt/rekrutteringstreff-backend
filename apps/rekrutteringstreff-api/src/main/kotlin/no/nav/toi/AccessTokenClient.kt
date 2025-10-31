@@ -23,7 +23,7 @@ class AccessTokenClient(
     private val httpClient: HttpClient
 ) {
     private val objectMapper: ObjectMapper = JacksonConfig.mapper
-    private val cache = CacheHjelper().lagCache { fetchAccessToken(it.token, it.scope).tilEntry() }
+    private val cache = CacheHjelper().lagCache { fetchAccessToken(token = it.token, scope = it.scope).tilEntry() }
 
     fun hentAccessToken(innkommendeToken: String, scope: String) = cache.invoke(AccessTokenCacheKey(scope = scope, token = innkommendeToken)).access_token
 
@@ -83,14 +83,14 @@ private data class AccessTokenResponse(
     fun tilEntry() = AccessTokenCacheEntry(access_token, Instant.now().plusSeconds(expires_in - 10))
 }
 
-private class AccessTokenCacheEntry(
+private data class AccessTokenCacheEntry(
     val access_token: String,
     private val expiry: Instant
 ) {
     fun erGåttUt() = Instant.now().isAfter(expiry)
 }
 
-private class AccessTokenCacheKey(
+private data class AccessTokenCacheKey(
     val scope: String,
     val token: String
 )

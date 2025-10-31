@@ -76,7 +76,6 @@ class RekrutteringstreffController(
     )
     private fun opprettRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        // sjekk kontor
         val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
         val internalDto = OpprettRekrutteringstreffInternalDto(
             tittel = inputDto.tittel,
