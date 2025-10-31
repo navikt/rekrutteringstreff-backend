@@ -80,7 +80,7 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
                     "gateadresse": "Malmøgata 1",
                     "postnummer": "0566",
                     "poststed": "Oslo",
-                    "status": "Utkast",
+                    "status": "UTKAST",
                     "opprettetAvPersonNavident": "A123456",
                     "opprettetAvNavkontorEnhetId": "0318",
                     "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
@@ -115,7 +115,7 @@ private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository
                "gateadresse": null,
                "postnummer": null,
                "poststed": null,
-               "status":"Utkast",
+               "status":"UTKAST",
                "opprettetAvPersonNavident":"A123456",
                "opprettetAvNavkontorEnhetId":"0318",
                "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
@@ -180,7 +180,7 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
                 "gateadresse": "Malmøgata 1",
                 "postnummer": "0566",
                 "poststed": "Oslo",
-                "status": "Utkast", 
+                "status": "UTKAST", 
                 "opprettetAvPersonNavident": "A123456", 
                 "opprettetAvNavkontorEnhetId": "0318",
                 "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
@@ -297,11 +297,11 @@ private fun publiserRekrutteringstreffHandler(repo: RekrutteringstreffRepository
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
     responses = [OpenApiResponse(status = "200", description = "Gjenåpningshendelse er lagt til.")]
 )
-private fun gjenapnRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+private fun gjenåpneRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val navIdent = ctx.extractNavIdent()
-    repo.gjenapn(treffId, navIdent)
+    repo.gjenåpne(treffId, navIdent)
     ctx.status(200)
 }
 
@@ -352,7 +352,7 @@ private fun fullforRekrutteringstreffHandler(service: RekrutteringstreffService)
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val navIdent = ctx.extractNavIdent()
-    service.fullfor(treffId, navIdent)
+    service.fullfør(treffId, navIdent)
     ctx.status(200)
 }
 
@@ -365,7 +365,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository, service
     get(hendelserPath, hentHendelserHandler(repo))
     get(fellesPath, hentAlleHendelserHandler(repo))
     post(publiserPath, publiserRekrutteringstreffHandler(repo))
-    post(gjenapnPath, gjenapnRekrutteringstreffHandler(repo))
+    post(gjenapnPath, gjenåpneRekrutteringstreffHandler(repo))
     post(avlysPath, avlysRekrutteringstreffHandler(service))
     post(avpubliserPath, avpubliserRekrutteringstreffHandler(repo))
     post(fullforPath, fullforRekrutteringstreffHandler(service))
@@ -384,7 +384,7 @@ data class RekrutteringstreffDTO(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
-    val status: String,
+    val status: RekrutteringstreffStatus,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
