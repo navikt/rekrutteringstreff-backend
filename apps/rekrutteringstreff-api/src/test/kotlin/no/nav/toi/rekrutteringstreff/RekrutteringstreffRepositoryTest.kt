@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId

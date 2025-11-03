@@ -15,7 +15,7 @@ private const val pathParamTreffId = "id"
 
 private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
-const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
+private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
 private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
 private const val inviterPath = "$jobbsøkerPath/inviter"
 

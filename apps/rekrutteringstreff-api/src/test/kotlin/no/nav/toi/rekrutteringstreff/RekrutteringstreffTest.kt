@@ -140,17 +140,17 @@ class RekrutteringstreffTest {
 
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffDTO>> {
-                override fun deserialize(content: String): List<RekrutteringstreffDTO> {
+            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffDto>> {
+                override fun deserialize(content: String): List<RekrutteringstreffDto> {
                     val type =
-                        mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDTO::class.java)
+                        mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDto::class.java)
                     return mapper.readValue(content, type)
                 }
             })
 
         when (result) {
             is Failure<*> -> throw result.error
-            is Success<List<RekrutteringstreffDTO>> -> {
+            is Success<List<RekrutteringstreffDto>> -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val liste = result.get()
                 assertThat(liste).hasSize(2)
@@ -207,7 +207,7 @@ class RekrutteringstreffTest {
             is Failure -> throw updateResult.error
             is Success -> {
                 assertThat(updateResponse.statusCode).isEqualTo(200)
-                val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDTO::class.java)
+                val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDto::class.java)
                 assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
                 assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
                 assertThat(updatedDto.fraTid).isEqualTo(updateDto.fraTid)

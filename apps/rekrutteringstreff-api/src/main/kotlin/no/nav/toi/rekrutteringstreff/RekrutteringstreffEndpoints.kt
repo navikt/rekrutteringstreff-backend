@@ -68,7 +68,7 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
-            from = Array<RekrutteringstreffDTO>::class,
+            from = Array<RekrutteringstreffDto>::class,
             example = """[
                 {
                     "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
@@ -91,9 +91,9 @@ private fun opprettRekrutteringstreffHandler(repo: RekrutteringstreffRepository)
     path = endepunktRekrutteringstreff,
     methods = [HttpMethod.GET]
 )
-private fun hentAlleRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+private fun hentAlleRekrutteringstreffHandler(service: RekrutteringstreffService): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-    ctx.status(200).json(repo.hentAlle().map { it.tilRekrutteringstreffDTO() })
+    ctx.status(200).json(service.hentAlleRekrutteringstreff())
 }
 
 @OpenApi(
@@ -169,7 +169,7 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
     responses = [OpenApiResponse(
         status = "200",
         content = [OpenApiContent(
-            from = RekrutteringstreffDTO::class,
+            from = RekrutteringstreffDto::class,
             example = """{
                 "id": "d6a587cd-8797-4b9a-a68b-575373f16d65", 
                 "tittel": "Oppdatert tittel", 
@@ -190,13 +190,13 @@ private fun hentRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (
     path = "$endepunktRekrutteringstreff/{id}",
     methods = [HttpMethod.PUT]
 )
-private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository): (Context) -> Unit = { ctx ->
+private fun oppdaterRekrutteringstreffHandler(repo: RekrutteringstreffRepository, service: RekrutteringstreffService): (Context) -> Unit = { ctx ->
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val id = TreffId(ctx.pathParam("id"))
     val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
     repo.oppdater(id, dto, ctx.extractNavIdent())
-    val updated = repo.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet etter oppdatering")
-    ctx.status(200).json(updated.tilRekrutteringstreffDTO())
+    val updated = service.hentRekrutteringstreff(id)
+    ctx.status(200).json(updated)
 }
 
 @OpenApi(
@@ -352,15 +352,15 @@ private fun fullforRekrutteringstreffHandler(service: RekrutteringstreffService)
     ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
     val treffId = TreffId(ctx.pathParam(pathParamTreffId))
     val navIdent = ctx.extractNavIdent()
-    service.fullfor(treffId, navIdent)
+    service.fullfør(treffId, navIdent)
     ctx.status(200)
 }
 
 fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository, service: RekrutteringstreffService) {
     post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler(repo))
-    get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(repo))
+    get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler(service))
     get("$endepunktRekrutteringstreff/{id}", hentRekrutteringstreffHandler(repo))
-    put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo))
+    put("$endepunktRekrutteringstreff/{id}", oppdaterRekrutteringstreffHandler(repo, service))
     delete("$endepunktRekrutteringstreff/{id}", slettRekrutteringstreffHandler(repo))
     get(hendelserPath, hentHendelserHandler(repo))
     get(fellesPath, hentAlleHendelserHandler(repo))
@@ -374,7 +374,7 @@ fun Javalin.handleRekrutteringstreff(repo: RekrutteringstreffRepository, service
 
 }
 
-data class RekrutteringstreffDTO(
+data class RekrutteringstreffDto(
     val id: UUID,
     val tittel: String,
     val beskrivelse: String?,
@@ -388,6 +388,8 @@ data class RekrutteringstreffDTO(
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
+    val antallArbeidsgivere: Int,
+    val antallJobbsøkere: Int,
 )
 
 data class OpprettRekrutteringstreffDto(

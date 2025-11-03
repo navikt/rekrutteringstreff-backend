@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker.aktivitetskort
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.TestRapid
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
@@ -23,6 +24,7 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         private lateinit var jobbsøkerRepository: JobbsøkerRepository
         private lateinit var aktivitetskortRepository: AktivitetskortRepository
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
+        private lateinit var arbeidsgiverRepository: ArbeidsgiverRepository
         private lateinit var rekrutteringstreffService: RekrutteringstreffService
         private val mapper = JacksonConfig.mapper
     }
@@ -33,7 +35,12 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
-        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository)
+        rekrutteringstreffService = RekrutteringstreffService(
+            db.dataSource,
+            rekrutteringstreffRepository,
+            jobbsøkerRepository,
+            arbeidsgiverRepository
+        )
     }
 
     @BeforeEach
@@ -78,7 +85,7 @@ class AktivitetskortSvartJaTreffstatusSchedulerTest {
         jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
 
         // Fullfør rekrutteringstreffet som lager jobbsøker-hendelse SVART_JA_TREFF_FULLFØRT
-        rekrutteringstreffService.fullfor(treffId, expectedFnr.asString)
+        rekrutteringstreffService.fullfør(treffId, expectedFnr.asString)
 
         AktivitetskortTreffstatusEndretScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
             .behandleStatusendringer()

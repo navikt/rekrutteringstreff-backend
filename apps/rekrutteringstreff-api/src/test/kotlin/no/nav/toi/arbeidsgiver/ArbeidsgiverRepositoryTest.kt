@@ -12,10 +12,12 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ArbeidsgiverRepositoryTest {
 
     companion object {
@@ -141,5 +143,18 @@ class ArbeidsgiverRepositoryTest {
         // Og hendelser inneholder SLETTET for den slettede
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET }).isTrue()
+    }
+
+    @Test
+    fun `Hent antall arbeidsgivere`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Bedrift En"))
+        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Bedrift To"))
+        repository.leggTil(ag1, treffId, "testperson")
+        repository.leggTil(ag2, treffId, "testperson")
+
+        val antallArbeidsgivere = repository.hentAntallArbeidsgivere(treffId)
+
+        assertThat(antallArbeidsgivere == 2)
     }
 }

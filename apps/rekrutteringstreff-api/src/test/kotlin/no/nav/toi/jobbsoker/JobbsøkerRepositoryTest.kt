@@ -3,6 +3,10 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepositoryTest
+import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -10,10 +14,12 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JobbsøkerRepositoryTest {
 
     companion object {
@@ -199,6 +205,34 @@ class JobbsøkerRepositoryTest {
 
         val ikkeEksisterendeJobbsøker = repository.hentJobbsøker(treffId, Fødselsnummer("99999999999"))
         assertThat(ikkeEksisterendeJobbsøker).isNull()
+    }
+
+    @Test
+    fun `Hent antall jobbsøkere`() {
+        val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val jobbsøkere = listOf(
+            LeggTilJobbsøker(
+                Fødselsnummer("12345678901"),
+                Kandidatnummer("K123456"),
+                Fornavn("Ola"),
+                Etternavn("Nordmann"),
+                Navkontor("Nav Oslo"),
+                VeilederNavn("Kari Nordmann"),
+                VeilederNavIdent("NAV123")
+            ),
+            LeggTilJobbsøker(
+                Fødselsnummer("12345678902"),
+                Kandidatnummer("K123457"),
+                Fornavn("Ole"),
+                Etternavn("Nordmann"),
+                Navkontor("Nav Oslo"),
+                VeilederNavn("Kari Nordmann"),
+                VeilederNavIdent("NAV123")
+            )
+        )
+        repository.leggTil(jobbsøkere, treffId, "testperson")
+        val antallJobbsøkere = repository.hentAntallJobbsøkere(treffId)
+        assertThat(antallJobbsøkere == 2)
     }
 
     @Test

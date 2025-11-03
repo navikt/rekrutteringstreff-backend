@@ -159,14 +159,19 @@ class App(
         )
 
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
-        val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository)
+        val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
+        val rekrutteringstreffService = RekrutteringstreffService(
+            dataSource,
+            rekrutteringstreffRepository,
+            jobbsøkerRepository,
+            arbeidsgiverRepository
+        )
         javalin.handleRekrutteringstreff(rekrutteringstreffRepository, rekrutteringstreffService)
-        javalin.handleArbeidsgiver(ArbeidsgiverRepository(dataSource, JacksonConfig.mapper))
+        javalin.handleArbeidsgiver(arbeidsgiverRepository)
         javalin.handleJobbsøker(jobbsøkerRepository)
         javalin.handleJobbsøkerInnloggetBorger(jobbsøkerRepository)
         javalin.handleJobbsøkerOutbound(jobbsøkerRepository, kandidatsokKlient)
         javalin.handleKi(KiLoggRepository(dataSource))
-
         javalin.start(port)
     }
 
