@@ -5,11 +5,12 @@ import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
-import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.flywaydb.core.Flyway
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
@@ -26,10 +27,10 @@ class TestDatabase {
     ): TreffId =
         RekrutteringstreffRepository(dataSource).opprett(
             OpprettRekrutteringstreffInternalDto(
-                tittel                = tittel,
+                tittel = tittel,
                 opprettetAvNavkontorEnhetId = "Original Kontor",
-                opprettetAvPersonNavident   = navIdent,
-                opprettetAvTidspunkt        = nowOslo().minusDays(10),
+                opprettetAvPersonNavident = navIdent,
+                opprettetAvTidspunkt = nowOslo().minusDays(10),
             )
         )
 

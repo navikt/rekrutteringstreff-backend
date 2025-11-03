@@ -3,8 +3,9 @@ package no.nav.toi.rekrutteringstreff
 import com.fasterxml.jackson.core.type.TypeReference
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
+import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -53,6 +54,24 @@ enum class HendelseRessurs {
 class RekrutteringstreffRepository(
     private val dataSource: DataSource,
 ) {
+    companion object {
+        private const val tabellnavn = "rekrutteringstreff"
+        private const val id = "id"
+        private const val tittel = "tittel"
+        private const val beskrivelse = "beskrivelse"
+        private const val status = "status"
+        private const val opprettetAvPersonNavident = "opprettet_av_person_navident"
+        private const val opprettetAvKontorEnhetid = "opprettet_av_kontor_enhetid"
+        private const val opprettetAvTidspunkt = "opprettet_av_tidspunkt"
+        private const val fratid = "fratid"
+        private const val tiltid = "tiltid"
+        private const val svarfrist = "svarfrist"
+        private const val eiere = "eiere"
+        private const val innlegg = "innlegg"
+        private const val gateadresse = "gateadresse"
+        private const val postnummer = "postnummer"
+        private const val poststed = "poststed"
+    }
 
     fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
         val nyTreffId = TreffId(UUID.randomUUID())
@@ -448,40 +467,4 @@ class RekrutteringstreffRepository(
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
         opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo()
     )
-
-    val eierRepository = EierRepository(
-        dataSource,
-        rekrutteringstreff = Tabellnavn(tabellnavn),
-        eiere = Kolonnenavn(eiere),
-        id = Kolonnenavn(id)
-    )
-
-    val innleggRepository = InnleggRepository(dataSource)
-
-    companion object {
-        private const val tabellnavn = "rekrutteringstreff"
-        private const val id = "id"
-        private const val tittel = "tittel"
-        private const val beskrivelse = "beskrivelse"
-        private const val status = "status"
-        private const val opprettetAvPersonNavident = "opprettet_av_person_navident"
-        private const val opprettetAvKontorEnhetid = "opprettet_av_kontor_enhetid"
-        private const val opprettetAvTidspunkt = "opprettet_av_tidspunkt"
-        private const val fratid = "fratid"
-        private const val tiltid = "tiltid"
-        private const val svarfrist = "svarfrist"
-        private const val eiere = "eiere"
-        private const val innlegg = "innlegg"
-        private const val gateadresse = "gateadresse"
-        private const val postnummer = "postnummer"
-        private const val poststed = "poststed"
-    }
-}
-
-class Tabellnavn(private val navn: String) {
-    override fun toString() = navn
-}
-
-class Kolonnenavn(private val navn: String) {
-    override fun toString() = navn
 }

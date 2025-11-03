@@ -11,5 +11,6 @@ object JacksonConfig {
         registerModule(JavaTimeModule())
         disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
         enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+        disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     }
 }
