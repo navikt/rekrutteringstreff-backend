@@ -177,11 +177,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     fun hentJobbsøkere(treff: TreffId): List<Jobbsøker> =
         dataSource.connection.use { c -> hentJobbsøkere(c, treff) }
 
-    /**
-     * Henter alle jobbsøkere for et treff med sine hendelser.
-     * Hendelser sorteres DESC (nyeste først).
-     * Brukes i transaksjoner - ta Connection som parameter.
-     */
     fun hentJobbsøkere(connection: Connection, treff: TreffId): List<Jobbsøker> {
         val sql = """
             SELECT
