@@ -78,7 +78,7 @@ class RekrutteringstreffServiceTest {
         jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Act
-        rekrutteringstreffService.fullfor(treffId, navIdent)
+        rekrutteringstreffService.fullfør(treffId, navIdent)
 
         // Assert - verifiser at BÅDE rekrutteringstreff-hendelse OG jobbsøker-hendelse er lagret
         val treffHendelser = hentRekrutteringstreffHendelser(treffId)

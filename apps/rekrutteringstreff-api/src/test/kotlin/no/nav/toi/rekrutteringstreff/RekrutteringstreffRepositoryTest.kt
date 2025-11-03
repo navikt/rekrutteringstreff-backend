@@ -118,7 +118,7 @@ class RekrutteringstreffRepositoryTest {
         )
 
         // Legg til ulike hendelsestyper
-        repository.gjenapn(id, navIdent)
+        repository.gjenåpne(id, navIdent)
         repository.avpubliser(id, navIdent)
 
         val hendelser = repository.hentHendelser(id)

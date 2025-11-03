@@ -5,9 +5,9 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.log
 import org.slf4j.Logger
-import java.sql.Connection
 import javax.sql.DataSource
 
 class RekrutteringstreffService(
@@ -75,7 +75,10 @@ class RekrutteringstreffService(
     }
 
     fun registrerEndring(treff: TreffId, endringer: String, endretAv: String) {
-        utførITransaksjon(treff) { connection, dbId ->
+        dataSource.executeInTransaction { connection ->
+            // Hent rekrutteringstreff db-id
+            val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treff)
+
             // Legg til hendelse for rekrutteringstreff med endringer som JSON
             rekrutteringstreffRepository.leggTilHendelse(
                 connection,
@@ -114,7 +117,7 @@ class RekrutteringstreffService(
      * - Jobbsøker skal varsles hvis siste hendelse er SVART_JA_TREFF_AVLYST eller SVART_JA_TREFF_FULLFØRT,
      *   OG nest-siste hendelse var INVITERT eller SVART_JA_TIL_INVITASJON
      */
-    private fun skalVarslesOmEndringer(hendelser: List<no.nav.toi.jobbsoker.JobbsøkerHendelse>): Boolean {
+    private fun skalVarslesOmEndringer(hendelser: List<JobbsøkerHendelse>): Boolean {
         if (hendelser.isEmpty()) return false
 
         val sisteHendelse = hendelser.first() // Hendelser er sortert DESC (nyeste først)
@@ -142,7 +145,10 @@ class RekrutteringstreffService(
         rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
         jobbsøkerHendelsestype: JobbsøkerHendelsestype
     ) {
-        utførITransaksjon(treff) { connection, dbId ->
+        dataSource.executeInTransaction { connection ->
+            // Hent rekrutteringstreff db-id
+            val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treff)
+
             // Legg til hendelse for rekrutteringstreff
             rekrutteringstreffRepository.leggTilHendelse(
                 connection,
