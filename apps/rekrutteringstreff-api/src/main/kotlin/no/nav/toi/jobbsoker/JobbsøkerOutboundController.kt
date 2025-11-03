@@ -8,7 +8,6 @@ import io.javalin.openapi.*
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.kandidatsok.KandidatsøkKlient
-import no.nav.toi.log
 import java.util.*
 
 data class KandidatnummerDto(val kandidatnummer: String)
@@ -46,7 +45,6 @@ class JobbsøkerOutboundController(
     )
     private fun hentKandidatnummerHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
-        log.info("Henter kandidatnummer for jobbsøker")
         val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
         val userToken = ctx.attribute<String>("raw_token")
             ?: throw InternalServerErrorResponse("Raw token ikke funnet i context")

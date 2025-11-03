@@ -3,7 +3,6 @@ package no.nav.toi
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
-import no.nav.toi.SecureLogLogger.Companion.secure
 import org.ehcache.CacheManager
 import org.ehcache.config.builders.CacheConfigurationBuilder
 import org.ehcache.config.builders.CacheManagerBuilder
@@ -51,14 +50,19 @@ class AccessTokenClient(
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         }
 
-        val response = withRetry(::fetch)
-        return if (response.statusCode() in 200..299) {
-            objectMapper.readValue(response.body(), AccessTokenResponse::class.java)
-        } else {
-            secure(log).error(
-                "Noe feil skjedde ved henting av access_token. Status: ${response.statusCode()}, msg: ${response.body()}"
-            )
-            throw RuntimeException("Noe feil skjedde ved henting av access_token. Status: ${response.statusCode()}")
+        try {
+            val response = withRetry(::fetch)
+            return if (response.statusCode() in 200..299) {
+                objectMapper.readValue(response.body(), AccessTokenResponse::class.java)
+            } else {
+                log.error(
+                    "Noe feil skjedde ved henting av access_token. Status: ${response.statusCode()}, body: ${response.body()}"
+                )
+                throw RuntimeException("Noe feil skjedde ved henting av access_token. Status: ${response.statusCode()}")
+            }
+        } catch (e: Exception) {
+            log.error("Det har skjedd en feil ved utveksling av access_token: ${e.message}", e)
+            throw RuntimeException("Noe feil skjedde ved henting av access_token: ", e)
         }
     }
 

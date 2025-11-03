@@ -11,18 +11,20 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import java.net.HttpURLConnection.*
 import java.util.UUID
 
-private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
-private const val INNLEGG_ID_PARAM            = "innleggId"
-
-private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
-
-private const val INNLEGG_BASE_PATH = "$endepunktRekrutteringstreff/{$REKRUTTERINGSTREFF_ID_PARAM}/innlegg"
-private const val INNLEGG_ITEM_PATH = "$INNLEGG_BASE_PATH/{$INNLEGG_ID_PARAM}"
 
 class InnleggController(
     private val innleggRepository: InnleggRepository,
     javalin: Javalin
 ) {
+    companion object {
+        private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
+        private const val INNLEGG_ID_PARAM            = "innleggId"
+
+        private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+
+        private const val INNLEGG_BASE_PATH = "$endepunktRekrutteringstreff/{$REKRUTTERINGSTREFF_ID_PARAM}/innlegg"
+        private const val INNLEGG_ITEM_PATH = "$INNLEGG_BASE_PATH/{$INNLEGG_ID_PARAM}"
+    }
 
     init {
         javalin.get(INNLEGG_BASE_PATH, hentAlleInnleggForTreff())

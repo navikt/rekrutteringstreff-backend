@@ -22,7 +22,7 @@ class KandidatsøkKlient(
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
 ) {
     fun hentKandidatnummer(fødselsnummer: Fødselsnummer, userToken: String): Kandidatnummer? {
-        log.info("Henter kandidatnummer fra kandidatsøkApi")
+        log.info("Henter kandidatnummer fra kandidatsøk-api")
         val url = "$kandidatsokApiUrl/api/arena-kandidatnr"
         val requestBody = KandidatKandidatnrRequestDto(fødselsnummer.asString)
         val requestBodyJson = objectMapper.writeValueAsString(requestBody)

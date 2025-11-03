@@ -102,7 +102,7 @@ class App(
             configureOpenApi(config)
         }
 
-
+        // TODO exceptions kan også skje steder hvor disse feilmeldingene ikke gir mening.
         javalin.exception(com.fasterxml.jackson.core.JsonParseException::class.java) { _, ctx ->
             ctx.status(400).json(
                 mapOf(

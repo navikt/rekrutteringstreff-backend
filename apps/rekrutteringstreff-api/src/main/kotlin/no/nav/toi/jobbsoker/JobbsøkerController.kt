@@ -13,21 +13,22 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.rekrutteringstreff.TreffId
-import java.time.ZonedDateTime
 import java.util.*
 
-private const val pathParamTreffId = "id"
-
-private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
-
-const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
-private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
-private const val inviterPath = "$jobbsøkerPath/inviter"
 
 class JobbsøkerController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     javalin: Javalin
 ) {
+    companion object {
+        private const val pathParamTreffId = "id"
+        private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+
+        private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
+        private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
+        private const val inviterPath = "$jobbsøkerPath/inviter"
+    }
+
     init {
         javalin.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         javalin.get(jobbsøkerPath, hentJobbsøkereHandler())
