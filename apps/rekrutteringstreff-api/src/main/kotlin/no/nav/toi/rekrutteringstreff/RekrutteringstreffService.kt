@@ -45,10 +45,8 @@ class RekrutteringstreffService(
         status: RekrutteringstreffStatus,
     ) {
        dataSource.executeInTransaction { connection ->
-           // Hent rekrutteringstreff db-id
            val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
 
-           // Legg til hendelse for rekrutteringstreff
            rekrutteringstreffRepository.leggTilHendelse(
                connection,
                dbId,
@@ -57,7 +55,6 @@ class RekrutteringstreffService(
                ident
            )
 
-           // Hent jobbsøkere med aktivt svar ja
            val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(connection, treffId)
 
            // Legg til hendelser for alle jobbsøkere med aktivt svar ja
@@ -76,10 +73,8 @@ class RekrutteringstreffService(
 
     fun registrerEndring(treff: TreffId, endringer: String, endretAv: String) {
         dataSource.executeInTransaction { connection ->
-            // Hent rekrutteringstreff db-id
             val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treff)
 
-            // Legg til hendelse for rekrutteringstreff med endringer som JSON
             rekrutteringstreffRepository.leggTilHendelse(
                 connection,
                 dbId,
@@ -89,7 +84,6 @@ class RekrutteringstreffService(
                 endringer
             )
 
-            // Hent alle jobbsøkere med hendelser og filtrer i service-laget
             val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treff)
             val jobbsøkereSomSkalVarsles = alleJobbsøkere
                 .filter { skalVarslesOmEndringer(it.hendelser) }
@@ -109,12 +103,6 @@ class RekrutteringstreffService(
         }
     }
 
-    /**
-     * Sjekker om en jobbsøker skal varsles om endringer basert på hendelseshistorikk.
-     *
-     * Logikk:
-     * - Jobbsøker skal varsles hvis siste hendelse er INVITERT eller SVART_JA_TIL_INVITASJON
-     */
     private fun skalVarslesOmEndringer(hendelser: List<JobbsøkerHendelse>): Boolean {
         if (hendelser.isEmpty()) return false
 
