@@ -11,3 +11,7 @@ data class EndringerDto(
     val poststed: String?,
     val htmlContent: String?
 )
+
+data class RegistrerEndringerDto(
+    val gamleVerdierForEndringer: EndringerDto?,
+)

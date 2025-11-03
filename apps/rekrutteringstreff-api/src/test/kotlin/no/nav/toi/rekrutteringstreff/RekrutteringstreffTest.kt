@@ -773,7 +773,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringerDto = """
             {
-                "endringer": {
+                "gamleVerdierForEndringer": {
                     "tittel": "Gammel tittel",
                     "beskrivelse": "Gammel beskrivelse",
                     "fraTid": "2025-10-30T10:00:00+01:00"
@@ -851,7 +851,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringerDto = """
             {
-                "endringer": {
+                "gamleVerdierForEndringer": {
                     "tittel": "Gammel tittel",
                     "gateadresse": "Gammel gate 1",
                     "postnummer": "0566",

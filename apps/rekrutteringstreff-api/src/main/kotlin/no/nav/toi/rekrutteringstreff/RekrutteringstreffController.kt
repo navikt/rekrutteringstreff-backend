@@ -9,11 +9,11 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.dto.RegistrerEndringerDto
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
 import java.util.*
@@ -395,17 +395,19 @@ class RekrutteringstreffController(
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
-                from = EndringerDto::class,
+                from = RegistrerEndringerDto::class,
                 example = """{
-                    "tittel": "Gammel tittel",
-                    "beskrivelse": "Gammel beskrivelse",
-                    "fraTid": "2025-06-15T09:00:00+02:00",
-                    "tilTid": "2025-06-15T11:00:00+02:00",
-                    "svarfrist": "2025-06-14T11:00:00+02:00",
-                    "gateadresse": "Gammel gate",
-                    "postnummer": "0566",
-                    "poststed": "Oslo",
-                    "htmlContent": "<p>HTML innhold</p>"
+                    "gamleVerdierForEndringer": {
+                        "tittel": "Gammel tittel",
+                        "beskrivelse": "Gammel beskrivelse",
+                        "fraTid": "2025-06-15T09:00:00+02:00",
+                        "tilTid": "2025-06-15T11:00:00+02:00",
+                        "svarfrist": "2025-06-14T11:00:00+02:00",
+                        "gateadresse": "Gammel gate",
+                        "postnummer": "0566",
+                        "poststed": "Oslo",
+                        "htmlContent": "<p>HTML innhold</p>"
+                    }
             }"""
             )]
         ),
@@ -422,8 +424,8 @@ class RekrutteringstreffController(
 
             // TODO: Sjekk at treffet er publisert når statuser er bedre implementert i bakend
 
-            val dto = ctx.bodyAsClass<EndringerDto>()
-            val endringerJson = JacksonConfig.mapper.writeValueAsString(dto)
+            val dto = ctx.bodyAsClass<RegistrerEndringerDto>()
+            val endringerJson = JacksonConfig.mapper.writeValueAsString(dto.gamleVerdierForEndringer)
 
             service.registrerEndring(treffId, endringerJson, navIdent)
             ctx.status(201)
