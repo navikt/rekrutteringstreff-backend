@@ -378,11 +378,8 @@ class JobbsøkerRepositoryTest {
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
         repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
-        // Venter litt og legger til en ny hendelse
-        Thread.sleep(10)
         repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
 
-        // Hent med Connection
         db.dataSource.connection.use { c ->
             val jobbsøkere = repository.hentJobbsøkere(c, treffId)
             assertThat(jobbsøkere).hasSize(1)
@@ -390,7 +387,6 @@ class JobbsøkerRepositoryTest {
             val hendelser = jobbsøkere[0].hendelser
             assertThat(hendelser).hasSizeGreaterThanOrEqualTo(3) // OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON
 
-            // Verifiser at hendelser er sortert DESC (nyeste først)
             assertThat(hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
             assertThat(hendelser[1].hendelsestype).isEqualTo(JobbsøkerHendelsestype.INVITERT)
             assertThat(hendelser[2].hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
@@ -415,15 +411,12 @@ class JobbsøkerRepositoryTest {
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
         repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
-        // Hent uten Connection (wrapper-metode)
         val jobbsøkereUtenConn = repository.hentJobbsøkere(treffId)
 
-        // Hent med Connection
         val jobbsøkereMedConn = db.dataSource.connection.use { c ->
             repository.hentJobbsøkere(c, treffId)
         }
 
-        // Begge skal gi samme resultat
         assertThat(jobbsøkereUtenConn).hasSize(1)
         assertThat(jobbsøkereMedConn).hasSize(1)
         assertThat(jobbsøkereUtenConn[0].personTreffId).isEqualTo(jobbsøkereMedConn[0].personTreffId)
@@ -455,7 +448,6 @@ class JobbsøkerRepositoryTest {
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
         repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
-        // Kun jobbsøker1 svarer ja
         repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
 
         db.dataSource.connection.use { c ->
@@ -468,10 +460,7 @@ class JobbsøkerRepositoryTest {
             assertThat(js1).isNotNull
             assertThat(js2).isNotNull
 
-            // Jobbsøker1 skal ha SVART_JA_TIL_INVITASJON som første (nyeste) hendelse
             assertThat(js1!!.hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
-
-            // Jobbsøker2 skal ha INVITERT som første (nyeste) hendelse
             assertThat(js2!!.hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.INVITERT)
         }
     }
