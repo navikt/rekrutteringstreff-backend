@@ -361,7 +361,77 @@ class JobbsøkerRepositoryTest {
     }
 
     @Test
-    fun `hentJobbsøkereSomSkalVarslesOmEndringer returnerer jobbsøkere med INVITERT som siste hendelse`() {
+    fun `hentJobbsøkere med Connection returnerer jobbsøkere med hendelser sortert DESC`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+
+        val jobbsøker1 = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Kandidatnummer("K1"),
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            null, null, null
+        )
+
+        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
+
+        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
+        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+
+        // Venter litt og legger til en ny hendelse
+        Thread.sleep(10)
+        repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+
+        // Hent med Connection
+        db.dataSource.connection.use { c ->
+            val jobbsøkere = repository.hentJobbsøkere(c, treffId)
+            assertThat(jobbsøkere).hasSize(1)
+
+            val hendelser = jobbsøkere[0].hendelser
+            assertThat(hendelser).hasSizeGreaterThanOrEqualTo(3) // OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON
+
+            // Verifiser at hendelser er sortert DESC (nyeste først)
+            assertThat(hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
+            assertThat(hendelser[1].hendelsestype).isEqualTo(JobbsøkerHendelsestype.INVITERT)
+            assertThat(hendelser[2].hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
+        }
+    }
+
+    @Test
+    fun `hentJobbsøkere uten Connection bruker intern Connection og gir samme resultat`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+
+        val jobbsøker1 = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Kandidatnummer("K1"),
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            null, null, null
+        )
+
+        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
+
+        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
+        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+
+        // Hent uten Connection (wrapper-metode)
+        val jobbsøkereUtenConn = repository.hentJobbsøkere(treffId)
+
+        // Hent med Connection
+        val jobbsøkereMedConn = db.dataSource.connection.use { c ->
+            repository.hentJobbsøkere(c, treffId)
+        }
+
+        // Begge skal gi samme resultat
+        assertThat(jobbsøkereUtenConn).hasSize(1)
+        assertThat(jobbsøkereMedConn).hasSize(1)
+        assertThat(jobbsøkereUtenConn[0].personTreffId).isEqualTo(jobbsøkereMedConn[0].personTreffId)
+        assertThat(jobbsøkereUtenConn[0].hendelser).hasSize(jobbsøkereMedConn[0].hendelser.size)
+    }
+
+    @Test
+    fun `hentJobbsøkere returnerer alle jobbsøkere med deres hendelser`() {
         val navIdent = "testperson"
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
 
@@ -385,185 +455,26 @@ class JobbsøkerRepositoryTest {
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
         repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
-        db.dataSource.connection.use { c ->
-            val varsleSomSkalVarsles = repository.hentJobbsøkereSomSkalVarslesOmEndringer(c, treffId)
-            assertThat(varsleSomSkalVarsles).hasSize(2)
-            assertThat(varsleSomSkalVarsles.map { it.somUuid }).containsExactlyInAnyOrder(
-                alleJobbsøkere[0].personTreffId.somUuid,
-                alleJobbsøkere[1].personTreffId.somUuid
-            )
-        }
-    }
-
-    @Test
-    fun `hentJobbsøkereSomSkalVarslesOmEndringer returnerer jobbsøkere med SVART_JA_TIL_INVITASJON som siste hendelse`() {
-        val navIdent = "testperson"
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
-
-        val jobbsøker1 = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
-            Fornavn("Ola"),
-            Etternavn("Nordmann"),
-            null, null, null
-        )
-        val jobbsøker2 = LeggTilJobbsøker(
-            Fødselsnummer("23456789012"),
-            Kandidatnummer("K2"),
-            Fornavn("Kari"),
-            Etternavn("Nordmann"),
-            null, null, null
-        )
-
-        repository.leggTil(listOf(jobbsøker1, jobbsøker2), treffId, navIdent)
-
-        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
-
-        // Begge svarer ja
-        repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
-        repository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
-
-        db.dataSource.connection.use { c ->
-            val varsleSomSkalVarsles = repository.hentJobbsøkereSomSkalVarslesOmEndringer(c, treffId)
-            assertThat(varsleSomSkalVarsles).hasSize(2)
-            assertThat(varsleSomSkalVarsles.map { it.somUuid }).containsExactlyInAnyOrder(
-                alleJobbsøkere[0].personTreffId.somUuid,
-                alleJobbsøkere[1].personTreffId.somUuid
-            )
-        }
-    }
-
-    @Test
-    fun `hentJobbsøkereSomSkalVarslesOmEndringer returnerer ikke jobbsøkere som har svart nei`() {
-        val navIdent = "testperson"
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
-
-        val jobbsøker1 = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
-            Fornavn("Ola"),
-            Etternavn("Nordmann"),
-            null, null, null
-        )
-        val jobbsøker2 = LeggTilJobbsøker(
-            Fødselsnummer("23456789012"),
-            Kandidatnummer("K2"),
-            Fornavn("Kari"),
-            Etternavn("Nordmann"),
-            null, null, null
-        )
-
-        repository.leggTil(listOf(jobbsøker1, jobbsøker2), treffId, navIdent)
-
-        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
-
-        // Jobbsøker1 svarer ja, jobbsøker2 svarer ja og så nei
-        repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
-        repository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
-        repository.svarNeiTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
-
-        db.dataSource.connection.use { c ->
-            val varsleSomSkalVarsles = repository.hentJobbsøkereSomSkalVarslesOmEndringer(c, treffId)
-            assertThat(varsleSomSkalVarsles).hasSize(1)
-            assertThat(varsleSomSkalVarsles[0].somUuid).isEqualTo(alleJobbsøkere[0].personTreffId.somUuid)
-        }
-    }
-
-    @Test
-    fun `hentJobbsøkereSomSkalVarslesOmEndringer inkluderer jobbsøkere med INVITERT etterfulgt av AKTIVITETSKORT_OPPRETTELSE_FEIL`() {
-        val navIdent = "testperson"
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
-
-        val jobbsøker1 = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
-            Fornavn("Ola"),
-            Etternavn("Nordmann"),
-            null, null, null
-        )
-
-        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
-
-        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
-
-        // Registrer aktivitetskort feil
-        repository.registrerAktivitetskortOpprettelseFeilet(jobbsøker1.fødselsnummer, treffId, navIdent)
-
-        db.dataSource.connection.use { c ->
-            val varsleSomSkalVarsles = repository.hentJobbsøkereSomSkalVarslesOmEndringer(c, treffId)
-            assertThat(varsleSomSkalVarsles).hasSize(1)
-            assertThat(varsleSomSkalVarsles[0].somUuid).isEqualTo(alleJobbsøkere[0].personTreffId.somUuid)
-        }
-    }
-
-    @Test
-    fun `hentJobbsøkereSomSkalVarslesOmEndringer inkluderer jobbsøkere med SVART_JA etterfulgt av SVART_JA_TREFF_AVLYST`() {
-        val navIdent = "testperson"
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
-
-        val jobbsøker1 = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
-            Fornavn("Ola"),
-            Etternavn("Nordmann"),
-            null, null, null
-        )
-
-        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
-
-        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+        // Kun jobbsøker1 svarer ja
         repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
 
-        // Legg til SVART_JA_TREFF_AVLYST manuelt
         db.dataSource.connection.use { c ->
-            repository.leggTilHendelserForJobbsøkere(
-                c,
-                JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
-                alleJobbsøkere.map { it.personTreffId },
-                navIdent
-            )
-        }
+            val jobbsøkere = repository.hentJobbsøkere(c, treffId)
+            assertThat(jobbsøkere).hasSize(2)
 
-        db.dataSource.connection.use { c ->
-            val varsleSomSkalVarsles = repository.hentJobbsøkereSomSkalVarslesOmEndringer(c, treffId)
-            assertThat(varsleSomSkalVarsles).hasSize(1)
-            assertThat(varsleSomSkalVarsles[0].somUuid).isEqualTo(alleJobbsøkere[0].personTreffId.somUuid)
-        }
-    }
+            val js1 = jobbsøkere.find { it.fødselsnummer == jobbsøker1.fødselsnummer }
+            val js2 = jobbsøkere.find { it.fødselsnummer == jobbsøker2.fødselsnummer }
 
-    @Test
-    fun `hentJobbsøkereSomSkalVarslesOmEndringer returnerer tom liste når ingen jobbsøkere finnes`() {
-        val navIdent = "testperson"
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+            assertThat(js1).isNotNull
+            assertThat(js2).isNotNull
 
-        db.dataSource.connection.use { c ->
-            val varsleSomSkalVarsles = repository.hentJobbsøkereSomSkalVarslesOmEndringer(c, treffId)
-            assertThat(varsleSomSkalVarsles).isEmpty()
-        }
-    }
+            // Jobbsøker1 skal ha SVART_JA_TIL_INVITASJON som første (nyeste) hendelse
+            assertThat(js1!!.hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
 
-    @Test
-    fun `hentJobbsøkereSomSkalVarslesOmEndringer returnerer tom liste når alle jobbsøkere kun har OPPRETTET hendelse`() {
-        val navIdent = "testperson"
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
-
-        val jobbsøker1 = LeggTilJobbsøker(
-            Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
-            Fornavn("Ola"),
-            Etternavn("Nordmann"),
-            null, null, null
-        )
-
-        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
-
-        db.dataSource.connection.use { c ->
-            val varsleSomSkalVarsles = repository.hentJobbsøkereSomSkalVarslesOmEndringer(c, treffId)
-            assertThat(varsleSomSkalVarsles).isEmpty()
+            // Jobbsøker2 skal ha INVITERT som første (nyeste) hendelse
+            assertThat(js2!!.hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.INVITERT)
         }
     }
 }
+
+

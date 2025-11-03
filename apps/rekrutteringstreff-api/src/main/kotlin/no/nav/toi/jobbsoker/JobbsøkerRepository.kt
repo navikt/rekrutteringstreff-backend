@@ -194,47 +194,54 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
 
     fun hentJobbsøkere(treff: TreffId): List<Jobbsøker> =
-        dataSource.connection.use { c ->
-            c.prepareStatement(
-                """
-                    SELECT
-                        js.id,
-                        js.jobbsoker_id,
-                        js.fodselsnummer,
-                        js.kandidatnummer,
-                        js.fornavn,
-                        js.etternavn,
-                        js.navkontor,
-                        js.veileder_navn,
-                        js.veileder_navident,
-                        rt.id as treff_id,
-                        COALESCE(
-                            json_agg(
-                                json_build_object(
-                                    'id', jh.id,
-                                    'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
-                                    'hendelsestype', jh.hendelsestype,
-                                    'opprettetAvAktortype', jh.opprettet_av_aktortype,
-                                    'aktøridentifikasjon', jh.aktøridentifikasjon
-                                ) ORDER BY jh.tidspunkt
-                            ) FILTER (WHERE jh.id IS NOT NULL),
-                            '[]'
-                        ) AS hendelser
-                    FROM jobbsoker js
-                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                    LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-                    WHERE rt.id = ?
-                    GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
-                             js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
-                    ORDER BY js.jobbsoker_id;
-                """
-            ).use { ps ->
-                ps.setObject(1, treff.somUuid)
-                ps.executeQuery().use { rs ->
-                    generateSequence { if (rs.next()) rs.toJobbsøker() else null }.toList()
-                }
+        dataSource.connection.use { c -> hentJobbsøkere(c, treff) }
+
+    /**
+     * Henter alle jobbsøkere for et treff med sine hendelser.
+     * Hendelser sorteres DESC (nyeste først).
+     * Brukes i transaksjoner - ta Connection som parameter.
+     */
+    fun hentJobbsøkere(connection: Connection, treff: TreffId): List<Jobbsøker> {
+        val sql = """
+            SELECT
+                js.id,
+                js.jobbsoker_id,
+                js.fodselsnummer,
+                js.kandidatnummer,
+                js.fornavn,
+                js.etternavn,
+                js.navkontor,
+                js.veileder_navn,
+                js.veileder_navident,
+                rt.id as treff_id,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', jh.id,
+                            'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+                            'hendelsestype', jh.hendelsestype,
+                            'opprettetAvAktortype', jh.opprettet_av_aktortype,
+                            'aktøridentifikasjon', jh.aktøridentifikasjon
+                        ) ORDER BY jh.tidspunkt DESC
+                    ) FILTER (WHERE jh.id IS NOT NULL),
+                    '[]'
+                ) AS hendelser
+            FROM jobbsoker js
+            JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
+            WHERE rt.id = ?
+            GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
+                     js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+            ORDER BY js.jobbsoker_id;
+        """.trimIndent()
+
+        return connection.prepareStatement(sql).use { ps ->
+            ps.setObject(1, treff.somUuid)
+            ps.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) rs.toJobbsøker() else null }.toList()
             }
         }
+    }
 
     fun inviter(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
@@ -509,43 +516,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.setObject(1, treff.somUuid)
             stmt.setString(2, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON.name)
             stmt.setString(3, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON.name)
-            stmt.executeQuery().use { rs ->
-                val result = mutableListOf<PersonTreffId>()
-                while (rs.next()) {
-                    result.add(PersonTreffId(UUID.fromString(rs.getString("id"))))
-                }
-                return result
-            }
-        }
-    }
-
-    /**
-     * Henter jobbsøkere som skal varsles om endringer i treffet.
-     * Dvs. de som har INVITERT eller SVART_JA_TIL_INVITASJON som siste hendelse,
-     * eventuelt sammen med AKTIVITETSKORT_OPPRETTELSE_FEIL, SVART_JA_TREFF_AVLYST, eller SVART_JA_TREFF_FULLFØRT.
-     */
-    fun hentJobbsøkereSomSkalVarslesOmEndringer(connection: Connection, treff: TreffId): List<PersonTreffId> {
-        val sql = """
-            WITH siste_hendelse AS (
-                SELECT 
-                    js.id,
-                    jh.hendelsestype,
-                    ROW_NUMBER() OVER (PARTITION BY js.jobbsoker_id ORDER BY jh.tidspunkt DESC) as rn
-                FROM jobbsoker js
-                JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-                WHERE rt.id = ?
-                  AND jh.hendelsestype IN ('INVITERT', 'SVART_JA_TIL_INVITASJON', 'AKTIVITETSKORT_OPPRETTELSE_FEIL', 
-                                           'SVART_JA_TREFF_AVLYST', 'SVART_JA_TREFF_FULLFØRT')
-            )
-            SELECT DISTINCT id
-            FROM siste_hendelse
-            WHERE rn = 1
-              AND hendelsestype IN ('INVITERT', 'SVART_JA_TIL_INVITASJON')
-        """.trimIndent()
-
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setObject(1, treff.somUuid)
             stmt.executeQuery().use { rs ->
                 val result = mutableListOf<PersonTreffId>()
                 while (rs.next()) {
