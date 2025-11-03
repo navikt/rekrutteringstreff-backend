@@ -15,6 +15,9 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -61,7 +64,8 @@ class RekrutteringstreffTest {
         azureClientId = "",
         azureClientSecret = "",
         azureTokenEndpoint = "",
-        TestRapid()
+        TestRapid(),
+        httpClient = httpClient
     )
 
     @BeforeAll
@@ -86,7 +90,7 @@ class RekrutteringstreffTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val gyldigKontorfelt = "Gyldig NAV Kontor"
-        val gyldigStatus = Status.Utkast
+        val gyldigStatus = RekrutteringstreffStatus.UTKAST
         val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
             .body(
                 """
@@ -114,7 +118,7 @@ class RekrutteringstreffTest {
                 assertThat(rekrutteringstreff.gateadresse).isNull()
                 assertThat(rekrutteringstreff.postnummer).isNull()
                 assertThat(rekrutteringstreff.poststed).isNull()
-                assertThat(rekrutteringstreff.status).isEqualTo(gyldigStatus.name)
+                assertThat(rekrutteringstreff.status.name).isEqualTo(gyldigStatus.name)
                 assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
                 assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
                 assertThat(rekrutteringstreff.id.somString).isEqualTo(postId)
@@ -140,17 +144,17 @@ class RekrutteringstreffTest {
 
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffDTO>> {
-                override fun deserialize(content: String): List<RekrutteringstreffDTO> {
+            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffDto>> {
+                override fun deserialize(content: String): List<RekrutteringstreffDto> {
                     val type =
-                        mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDTO::class.java)
+                        mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDto::class.java)
                     return mapper.readValue(content, type)
                 }
             })
 
         when (result) {
             is Failure<*> -> throw result.error
-            is Success<List<RekrutteringstreffDTO>> -> {
+            is Success<List<RekrutteringstreffDto>> -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val liste = result.get()
                 assertThat(liste).hasSize(2)
@@ -207,7 +211,7 @@ class RekrutteringstreffTest {
             is Failure -> throw updateResult.error
             is Success -> {
                 assertThat(updateResponse.statusCode).isEqualTo(200)
-                val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDTO::class.java)
+                val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDto::class.java)
                 assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
                 assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
                 assertThat(updatedDto.fraTid).isEqualTo(updateDto.fraTid)
@@ -336,7 +340,7 @@ class RekrutteringstreffTest {
             })
 
         assertThat(res.statusCode).isEqualTo(200)
-        result as com.github.kittinunf.result.Result.Success
+        result as Success
         val list = result.value
         assertThat(list.map { it.hendelsestype }).containsExactly("OPPDATERT", "OPPRETTET")
     }
@@ -356,8 +360,8 @@ class RekrutteringstreffTest {
             })
 
         when (result) {
-            is com.github.kittinunf.result.Result.Failure -> throw result.error
-            is com.github.kittinunf.result.Result.Success -> {
+            is Failure -> throw result.error
+            is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = result.value
                 assertThat(dto.hendelser).hasSize(1)
@@ -593,14 +597,14 @@ class RekrutteringstreffTest {
 
         // Verifiser at kun jobbsøker1 og jobbsøker2 har SVART_JA_TREFF_AVLYST hendelse
         val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
-        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter { 
-            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer 
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
         }
-        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter { 
-            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer 
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
         }
-        val jobbsøker3Hendelser = alleJobbsøkerHendelser.filter { 
-            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker3.fødselsnummer 
+        val jobbsøker3Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker3.fødselsnummer
         }
 
         assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
@@ -657,11 +661,11 @@ class RekrutteringstreffTest {
 
         // Verifiser at begge jobbsøkere har SVART_JA_TREFF_FULLFØRT hendelse
         val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
-        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter { 
-            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer 
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
         }
-        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter { 
-            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer 
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
         }
 
         assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
@@ -701,8 +705,8 @@ class RekrutteringstreffTest {
 
         // Verifiser at jobbsøkeren IKKE har SVART_JA_TREFF_AVLYST hendelse
         val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
-        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter { 
-            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer 
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
         }
         assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
     }

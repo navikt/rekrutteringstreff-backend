@@ -9,6 +9,8 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
 import no.nav.toi.*
+import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
+import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
@@ -45,7 +47,8 @@ class ArbeidsgiverTest {
             ),
             db.dataSource,
             arbeidsgiverrettet,
-            utvikler, "", "", "", "", "", TestRapid()
+            utvikler, "", "", "", "", "", TestRapid(),
+            httpClient = httpClient
         )
     }
 

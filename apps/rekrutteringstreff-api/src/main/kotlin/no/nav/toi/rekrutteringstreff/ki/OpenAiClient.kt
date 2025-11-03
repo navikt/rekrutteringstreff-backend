@@ -6,7 +6,7 @@ import no.nav.toi.JacksonConfig
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
-import no.nav.toi.rekrutteringstreff.ValiderRekrutteringstreffResponsDto
+import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest

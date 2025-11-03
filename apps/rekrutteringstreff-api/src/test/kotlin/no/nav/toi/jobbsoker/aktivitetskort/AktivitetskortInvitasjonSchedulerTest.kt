@@ -28,11 +28,8 @@ class AktivitetskortInvitasjonSchedulerTest {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
-        rekrutteringstreffRepository =
-            RekrutteringstreffRepository(db.dataSource)
-
+        rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
     }
-
 
     @BeforeEach
     fun beforeEach() {
@@ -45,7 +42,6 @@ class AktivitetskortInvitasjonSchedulerTest {
         val scheduler =
             AktivitetskortInvitasjonScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-
 
         val fødselsnummer = Fødselsnummer("12345678901")
         jobbsøkerRepository.leggTil(
@@ -101,10 +97,7 @@ class AktivitetskortInvitasjonSchedulerTest {
             scheduler.behandleInvitasjoner()
         }
         assertThat(exception.message).isEqualTo("FraTid kan ikke være null når vi inviterer")
-
-
     }
-
 
     @Test
     fun `skal ikke sende samme invitasjon to ganger`() {

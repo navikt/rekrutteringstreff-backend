@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.log
 import org.slf4j.Logger
@@ -17,21 +18,60 @@ class RekrutteringstreffService(
     private val logger: Logger = log
 
     fun avlys(treff: TreffId, avlystAv: String) {
-        leggTilHendelseForTreffMedJobbsøkerhendelser(
+        leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
             treff,
             avlystAv,
             RekrutteringstreffHendelsestype.AVLYST,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST
+            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
+            RekrutteringstreffStatus.AVLYST,
         )
     }
 
-    fun fullfor(treff: TreffId, fullfortAv: String) {
-        leggTilHendelseForTreffMedJobbsøkerhendelser(
+    fun fullfør(treff: TreffId, fullfortAv: String) {
+        leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
             treff,
             fullfortAv,
             RekrutteringstreffHendelsestype.FULLFØRT,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT
+            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
+            RekrutteringstreffStatus.FULLFØRT
         )
+    }
+
+    private fun leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
+        treffId: TreffId,
+        ident: String,
+        rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
+        jobbsøkerHendelsestype: JobbsøkerHendelsestype,
+        status: RekrutteringstreffStatus,
+    ) {
+       dataSource.executeInTransaction { connection ->
+           // Hent rekrutteringstreff db-id
+           val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
+
+           // Legg til hendelse for rekrutteringstreff
+           rekrutteringstreffRepository.leggTilHendelse(
+               connection,
+               dbId,
+               rekrutteringstreffHendelsestype,
+               AktørType.ARRANGØR,
+               ident
+           )
+
+           // Hent jobbsøkere med aktivt svar ja
+           val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(connection, treffId)
+
+           // Legg til hendelser for alle jobbsøkere med aktivt svar ja
+           if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
+               jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                   connection,
+                   jobbsøkerHendelsestype,
+                   jobbsøkereMedAktivtSvarJa,
+                   ident
+               )
+           }
+
+           rekrutteringstreffRepository.endreStatus(connection, treffId, status)
+        }
     }
 
     fun registrerEndring(treff: TreffId, endringer: String, endretAv: String) {
@@ -124,67 +164,6 @@ class RekrutteringstreffService(
                     ident
                 )
                 logger.info("Lagt til hendelse ${rekrutteringstreffHendelsestype.name} for ${jobbsøkereMedAktivtSvarJa.size} jobbsøkere")
-            }
-        }
-    }
-
-    /**
-     * Utfører en transaksjon mot databasen med automatisk commit/rollback.
-     * Henter rekrutteringstreff db-id som en del av transaksjonen.
-     *
-     * Denne metoden håndterer:
-     * - Opprettelse av database-connection
-     * - Henting av rekrutteringstreff db-id
-     * - Transaksjonsstyring (autoCommit false, commit ved suksess, rollback ved feil)
-     * - Logging av transaksjonsstatus
-     * - Automatisk cleanup (autoCommit true i finally)
-     *
-     * @param treff Rekrutteringstreff ID
-     * @param operasjon Lambda som får connection og db-id som parametre
-     */
-    private fun utførITransaksjon(treff: TreffId, operasjon: (connection: Connection, dbId: Long) -> Unit) {
-        dataSource.connection.use { c ->
-            c.autoCommit = false
-            try {
-                val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(c, treff)
-                operasjon(c, dbId)
-                c.commit()
-                logger.info("Transaksjon committed for rekrutteringstreff")
-            } catch (e: Exception) {
-                logger.warn("Transaksjon rullet tilbake for rekrutteringstreff: ${e.message}")
-                c.rollback()
-                throw e
-            } finally {
-                c.autoCommit = true
-            }
-        }
-    }
-
-    /**
-     * Utfører en transaksjon mot databasen med automatisk commit/rollback.
-     * Generell variant uten rekrutteringstreff-spesifikk logikk.
-     *
-     * Denne metoden håndterer:
-     * - Opprettelse av database-connection
-     * - Transaksjonsstyring (autoCommit false, commit ved suksess, rollback ved feil)
-     * - Logging av transaksjonsstatus
-     * - Automatisk cleanup (autoCommit true i finally)
-     *
-     * @param operasjon Lambda som får connection som parameter
-     */
-    private fun utførITransaksjon(operasjon: (connection: Connection) -> Unit) {
-        dataSource.connection.use { c ->
-            c.autoCommit = false
-            try {
-                operasjon(c)
-                c.commit()
-                logger.info("Transaksjon committed")
-            } catch (e: Exception) {
-                logger.warn("Transaksjon rullet tilbake: ${e.message}")
-                c.rollback()
-                throw e
-            } finally {
-                c.autoCommit = true
             }
         }
     }

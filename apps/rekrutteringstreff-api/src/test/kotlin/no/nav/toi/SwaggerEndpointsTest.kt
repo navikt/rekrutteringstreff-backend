@@ -12,12 +12,26 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import kotlin.collections.emptyList
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SwaggerEndpointsTest {
 
     private val appPort = ubruktPortnr()
-    private val app = App(port = appPort, listOf(), TestDatabase().dataSource, arbeidsgiverrettet, utvikler, "", "", "", "", "", TestRapid())
+    private val app = App(
+        port = appPort,
+        authConfigs = emptyList<AuthenticationConfiguration>(),
+        dataSource = TestDatabase().dataSource,
+        arbeidsgiverrettet = arbeidsgiverrettet,
+        utvikler = utvikler,
+        kandidatsokApiUrl = "",
+        kandidatsokScope = "",
+        azureClientId = "",
+        azureClientSecret = "",
+        azureTokenEndpoint = "",
+        rapidsConnection = TestRapid(),
+        httpClient = httpClient
+    )
 
     @BeforeAll
     fun setUp() {

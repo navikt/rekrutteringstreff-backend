@@ -5,6 +5,7 @@ import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.fuel.core.extensions.jsonBody
 import com.github.kittinunf.result.Result
+import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -19,7 +20,7 @@ import java.util.*
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AppExceptionHandlingTest {
     private val port = ubruktPortnr()
-    private val authServer = no.nav.security.mock.oauth2.MockOAuth2Server()
+    private val authServer = MockOAuth2Server()
     private val authPort = ubruktPortnr()
     private val app = App(
         port,
@@ -34,7 +35,8 @@ class AppExceptionHandlingTest {
         arbeidsgiverrettet,
         utvikler,
         "", "", "", "", "",
-        TestRapid()
+        TestRapid(),
+        httpClient = httpClient
     )
 
     private lateinit var treffId: UUID
