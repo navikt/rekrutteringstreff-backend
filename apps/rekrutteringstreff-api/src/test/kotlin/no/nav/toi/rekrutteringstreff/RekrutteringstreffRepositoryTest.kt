@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
@@ -119,7 +118,7 @@ class RekrutteringstreffRepositoryTest {
         )
 
         // Legg til ulike hendelsestyper
-        repository.gjenapn(id, navIdent)
+        repository.gjenåpne(id, navIdent)
         repository.avpubliser(id, navIdent)
 
         val hendelser = repository.hentHendelser(id)
@@ -308,7 +307,7 @@ class RekrutteringstreffRepositoryTest {
         // Hent jobbsøker_hendelse_db_id for å kunne lage aktivitetskort_polling
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).isNotEmpty
-        
+
         // Legg til aktivitetskort_polling manuelt (blokkerende)
         db.dataSource.connection.use { c ->
             c.prepareStatement(
@@ -475,4 +474,26 @@ class RekrutteringstreffRepositoryTest {
         assertThat(db.hentHendelser(treffId)).hasSizeGreaterThan(1) // OPPRETTET + PUBLISERT
     }
 
+    @Test
+    fun `Endre status gjør det den skal`() {
+        val id = repository.opprett(
+            OpprettRekrutteringstreffInternalDto(
+                tittel = "Initielt",
+                opprettetAvPersonNavident = "A1",
+                opprettetAvNavkontorEnhetId = "0318",
+                opprettetAvTidspunkt = nowOslo()
+            )
+        )
+
+        val initieltTreff = repository.hent(id)
+        assertThat(initieltTreff?.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
+
+        repository.endreStatus(
+            id,
+            RekrutteringstreffStatus.PUBLISERT,
+        )
+
+        val oppdatertTreff = repository.hent(id)
+        assertThat(oppdatertTreff?.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+    }
 }

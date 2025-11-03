@@ -17,7 +17,7 @@ class Rekrutteringstreff(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
-    val status: String,
+    val status: RekrutteringstreffStatus,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,

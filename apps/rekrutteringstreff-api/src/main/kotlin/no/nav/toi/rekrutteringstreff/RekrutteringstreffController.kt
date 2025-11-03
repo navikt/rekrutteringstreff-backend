@@ -43,7 +43,7 @@ class RekrutteringstreffController(
         javalin.get(hendelserPath, hentHendelserHandler())
         javalin.get(fellesPath, hentAlleHendelserHandler())
         javalin.post(publiserPath, publiserRekrutteringstreffHandler())
-        javalin.post(gjenapnPath, gjenapnRekrutteringstreffHandler())
+        javalin.post(gjenapnPath, gjenåpneRekrutteringstreffHandler())
         javalin.post(avlysPath, avlysRekrutteringstreffHandler())
         javalin.post(avpubliserPath, avpubliserRekrutteringstreffHandler())
         javalin.post(fullforPath, fullforRekrutteringstreffHandler())
@@ -105,7 +105,7 @@ class RekrutteringstreffController(
                         "gateadresse": "Malmøgata 1",
                         "postnummer": "0566",
                         "poststed": "Oslo",
-                        "status": "Utkast",
+                        "status": "UTKAST",
                         "opprettetAvPersonNavident": "A123456",
                         "opprettetAvNavkontorEnhetId": "0318",
                         "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
@@ -140,7 +140,7 @@ class RekrutteringstreffController(
                    "gateadresse": null,
                    "postnummer": null,
                    "poststed": null,
-                   "status":"Utkast",
+                   "status":"UTKAST",
                    "opprettetAvPersonNavident":"A123456",
                    "opprettetAvNavkontorEnhetId":"0318",
                    "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
@@ -205,7 +205,7 @@ class RekrutteringstreffController(
                     "gateadresse": "Malmøgata 1",
                     "postnummer": "0566",
                     "poststed": "Oslo",
-                    "status": "Utkast", 
+                    "status": "UTKAST", 
                     "opprettetAvPersonNavident": "A123456", 
                     "opprettetAvNavkontorEnhetId": "0318",
                     "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
@@ -322,11 +322,11 @@ class RekrutteringstreffController(
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
         responses = [OpenApiResponse(status = "200", description = "Gjenåpningshendelse er lagt til.")]
     )
-    private fun gjenapnRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
+    private fun gjenåpneRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
-        rekrutteringstreffRepository.gjenapn(treffId, navIdent)
+        rekrutteringstreffRepository.gjenåpne(treffId, navIdent)
         ctx.status(200)
     }
 
@@ -377,7 +377,7 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
-        rekrutteringstreffService.fullfor(treffId, navIdent)
+        rekrutteringstreffService.fullfør(treffId, navIdent)
         ctx.status(200)
     }
 }

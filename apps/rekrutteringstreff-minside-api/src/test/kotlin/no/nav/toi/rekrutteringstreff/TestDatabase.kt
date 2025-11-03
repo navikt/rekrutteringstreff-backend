@@ -8,6 +8,7 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.flywaydb.core.Flyway
@@ -164,7 +165,7 @@ class TestDatabase {
         gateadresse               = rs.getString("gateadresse"),
         postnummer                = rs.getString("postnummer"),
         poststed                  = rs.getString("poststed"),
-        status                   = rs.getString("status"),
+        status                   = RekrutteringstreffStatus.valueOf(rs.getString("status")),
         opprettetAvPersonNavident= rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
         opprettetAvTidspunkt     = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),

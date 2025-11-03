@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.dto
 
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -13,7 +14,7 @@ data class RekrutteringstreffDto(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
-    val status: String,
+    val status: RekrutteringstreffStatus,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
