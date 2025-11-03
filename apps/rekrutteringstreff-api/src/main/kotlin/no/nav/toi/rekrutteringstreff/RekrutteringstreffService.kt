@@ -114,63 +114,15 @@ class RekrutteringstreffService(
      *
      * Logikk:
      * - Jobbsøker skal varsles hvis siste hendelse er INVITERT eller SVART_JA_TIL_INVITASJON
-     * - Jobbsøker skal varsles hvis siste hendelse er SVART_JA_TREFF_AVLYST eller SVART_JA_TREFF_FULLFØRT,
-     *   OG nest-siste hendelse var INVITERT eller SVART_JA_TIL_INVITASJON
      */
     private fun skalVarslesOmEndringer(hendelser: List<JobbsøkerHendelse>): Boolean {
         if (hendelser.isEmpty()) return false
 
         val sisteHendelse = hendelser.first() // Hendelser er sortert DESC (nyeste først)
 
-        return when (sisteHendelse.hendelsestype) {
+        return sisteHendelse.hendelsestype in setOf(
             JobbsøkerHendelsestype.INVITERT,
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON -> true
-
-            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
-            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT -> {
-                // Kun hvis nest-siste var INVITERT eller SVART_JA
-                hendelser.getOrNull(1)?.hendelsestype in listOf(
-                    JobbsøkerHendelsestype.INVITERT,
-                    JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
-                )
-            }
-
-            else -> false
-        }
-    }
-
-    private fun leggTilHendelseForTreffMedJobbsøkerhendelser(
-        treff: TreffId,
-        ident: String,
-        rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
-        jobbsøkerHendelsestype: JobbsøkerHendelsestype
-    ) {
-        dataSource.executeInTransaction { connection ->
-            // Hent rekrutteringstreff db-id
-            val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treff)
-
-            // Legg til hendelse for rekrutteringstreff
-            rekrutteringstreffRepository.leggTilHendelse(
-                connection,
-                dbId,
-                rekrutteringstreffHendelsestype,
-                AktørType.ARRANGØR,
-                ident
-            )
-
-            // Hent jobbsøkere med aktivt svar ja
-            val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(connection, treff)
-
-            // Legg til hendelser for alle jobbsøkere med aktivt svar ja
-            if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
-                jobbsøkerRepository.leggTilHendelserForJobbsøkere(
-                    connection,
-                    jobbsøkerHendelsestype,
-                    jobbsøkereMedAktivtSvarJa,
-                    ident
-                )
-                logger.info("Lagt til hendelse ${rekrutteringstreffHendelsestype.name} for ${jobbsøkereMedAktivtSvarJa.size} jobbsøkere")
-            }
-        }
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
+        )
     }
 }

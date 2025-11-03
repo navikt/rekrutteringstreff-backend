@@ -202,7 +202,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `skal varsle jobbsøker med SVART_JA_TREFF_AVLYST som siste hendelse om endring`() {
+    fun `skal ikke varsle jobbsøker med SVART_JA_TREFF_AVLYST som siste hendelse om endring`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fnr = Fødselsnummer("12345678901")
@@ -223,7 +223,7 @@ class RekrutteringstreffServiceTest {
 
         // Assert - jobbsøker skal varsles fordi nest-siste var SVART_JA
         val jobbsøkerHendelser = hentJobbsøkerHendelser(treffId, fnr)
-        assertThat(jobbsøkerHendelser).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøkerHendelser).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
     @Test
