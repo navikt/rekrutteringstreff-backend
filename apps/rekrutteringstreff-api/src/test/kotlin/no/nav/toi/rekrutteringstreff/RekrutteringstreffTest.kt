@@ -1034,12 +1034,10 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
-        // Ingen publisering nødvendig, men vi kan gjøre det for testens skyld
         Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
             .header("Authorization", "Bearer ${token.serialize()}")
             .response()
 
-        // Registrer endringer
         val endringerDto = """
             {
                 "endringer": {
@@ -1056,11 +1054,9 @@ class RekrutteringstreffTest {
 
         assertStatuscodeEquals(201, response, result)
 
-        // Verifiser at kun rekrutteringstreff har TREFF_ENDRET_ETTER_PUBLISERING hendelse
         val treffHendelser = db.hentHendelser(treffId)
         assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
 
-        // Verifiser at ingen jobbsøker-hendelser ble opprettet
         val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(alleJobbsøkerHendelser).isEmpty()
     }
