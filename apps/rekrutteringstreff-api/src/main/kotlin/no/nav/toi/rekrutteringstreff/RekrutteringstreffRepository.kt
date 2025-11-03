@@ -407,19 +407,21 @@ class RekrutteringstreffRepository(
             }
     }
 
+
     fun leggTilHendelse(
         c: Connection,
         treffDbId: Long,
         type: RekrutteringstreffHendelsestype,
         aktørType: AktørType,
-        ident: String
+        ident: String,
+        hendelseData: String? = null
     ) {
         c.prepareStatement(
             """
             INSERT INTO rekrutteringstreff_hendelse
                    (id, rekrutteringstreff_id, tidspunkt,
-                    hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
-            VALUES (?, ?, now(), ?, ?, ?)
+                    hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
+            VALUES (?, ?, now(), ?, ?, ?, ?::jsonb)
             """
         ).use { s ->
             s.setObject(1, UUID.randomUUID())
@@ -427,6 +429,7 @@ class RekrutteringstreffRepository(
             s.setString(3, type.name)
             s.setString(4, aktørType.name)
             s.setString(5, ident)
+            s.setString(6, hendelseData)
             s.executeUpdate()
         }
     }
