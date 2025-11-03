@@ -1,14 +1,15 @@
 package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.JacksonConfig
-import no.nav.toi.Status
+
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.nowOslo
-import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
@@ -105,14 +106,13 @@ class RekrutteringstreffServiceTest {
         val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
-        assertThat(rekrutteringstreff.status == Status.Utkast.name).isTrue
+        assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
 
         rekrutteringstreffService.avlys(treffId1, "NAV1234")
 
         val rekrutteringstreffEtterAvlys = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
-        //Ser ut som status ikke blir oppdatert ved avlys, så dette burde fikses
 
-        assertThat(rekrutteringstreffEtterAvlys.status == Status.Avlyst.name).isTrue
+        assertThat(rekrutteringstreffEtterAvlys.status == RekrutteringstreffStatus.AVLYST).isTrue
     }
 
     @Test
@@ -126,14 +126,12 @@ class RekrutteringstreffServiceTest {
         val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
-        assertThat(rekrutteringstreff.status == Status.Utkast.name).isTrue
+        assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
 
         rekrutteringstreffService.fullfør(treffId1, "NAV1234")
 
         val rekrutteringstreffEtterFullfør = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
-        //Ser ut som status ikke blir oppdatert ved fullfør, så dette burde fikses
 
-        // Burde det legges til en fullfør-status?
-        assertThat(rekrutteringstreffEtterFullfør.status == Status.Fullfør.name).isTrue
+        assertThat(rekrutteringstreffEtterFullfør.status == RekrutteringstreffStatus.FULLFØRT).isTrue
     }
 }

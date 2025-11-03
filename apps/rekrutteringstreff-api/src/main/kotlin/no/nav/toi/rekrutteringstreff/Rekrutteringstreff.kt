@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvartJaTreffstatusEndret
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortsvar
+import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -16,7 +17,7 @@ class Rekrutteringstreff(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
-    val status: String,
+    val status: RekrutteringstreffStatus,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,

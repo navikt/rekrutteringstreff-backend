@@ -1,16 +1,18 @@
 package no.nav.toi.rekrutteringstreff.eier
 
-import no.nav.toi.rekrutteringstreff.Kolonnenavn
-import no.nav.toi.rekrutteringstreff.Tabellnavn
 import no.nav.toi.rekrutteringstreff.TreffId
 import javax.sql.DataSource
 
 class EierRepository(
     private val dataSource: DataSource,
-    private val rekrutteringstreff: Tabellnavn,
-    private val eiere: Kolonnenavn,
-    private val id: Kolonnenavn
 ) {
+    companion object {
+        private const val rekrutteringstreff = "rekrutteringstreff"
+        private const val eiere = "eiere"
+        private const val id = "id"
+    }
+
+
     fun hent(treff: TreffId): List<Eier>? {
         dataSource.connection.use { connection ->
             connection.prepareStatement("SELECT $eiere FROM $rekrutteringstreff WHERE $id = ?")

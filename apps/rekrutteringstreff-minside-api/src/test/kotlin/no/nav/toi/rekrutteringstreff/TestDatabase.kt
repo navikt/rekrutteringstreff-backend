@@ -5,10 +5,12 @@ import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
-import no.nav.toi.rekrutteringstreff.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.flywaydb.core.Flyway
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
@@ -25,10 +27,10 @@ class TestDatabase {
     ): TreffId =
         RekrutteringstreffRepository(dataSource).opprett(
             OpprettRekrutteringstreffInternalDto(
-                tittel                = tittel,
+                tittel = tittel,
                 opprettetAvNavkontorEnhetId = "Original Kontor",
-                opprettetAvPersonNavident   = navIdent,
-                opprettetAvTidspunkt        = nowOslo().minusDays(10),
+                opprettetAvPersonNavident = navIdent,
+                opprettetAvTidspunkt = nowOslo().minusDays(10),
             )
         )
 
@@ -163,7 +165,7 @@ class TestDatabase {
         gateadresse               = rs.getString("gateadresse"),
         postnummer                = rs.getString("postnummer"),
         poststed                  = rs.getString("poststed"),
-        status                   = rs.getString("status"),
+        status                   = RekrutteringstreffStatus.valueOf(rs.getString("status")),
         opprettetAvPersonNavident= rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
         opprettetAvTidspunkt     = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
