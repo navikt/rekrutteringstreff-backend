@@ -304,6 +304,75 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         }
     }
 
+    fun oppdaterRekrutteringstreffAktivitetskort(
+        fnr: String,
+        rekrutteringstreffId: UUID,
+        tittel: String,
+        startDato: LocalDate,
+        sluttDato: LocalDate,
+        tid: String,
+        gateAdresse: String,
+        postnummer: String,
+        poststed: String
+    ) {
+        val aktivitetskortId = hentAktivitetskortId(fnr, rekrutteringstreffId)
+            ?: throw IllegalStateException("Fant ikke aktivitetskort for rekrutteringstreff $rekrutteringstreffId og fnr")
+
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                INSERT INTO aktivitetskort
+                (message_id, aktivitetskort_id, fnr, tittel, aktivitets_status, beskrivelse, start_dato, 
+                slutt_dato, detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav, endret_av, 
+                endret_av_type, endret_tidspunkt)
+                SELECT
+                    ?,
+                    aktivitetskort_id,
+                    fnr,
+                    ?,
+                    aktivitets_status,
+                    beskrivelse,
+                    ?,
+                    ?,
+                    ?::json,
+                    handlinger,
+                    etiketter,
+                    oppgave,
+                    action_type,
+                    avtalt_med_nav,
+                    ?,
+                    ?,
+                    ?
+                FROM aktivitetskort
+                WHERE aktivitetskort_id = ?
+                ORDER BY endret_tidspunkt DESC
+                LIMIT 1
+                """.trimIndent()
+            ).apply {
+                setObject(1, UUID.randomUUID())
+                setString(2, tittel)
+                setObject(3, startDato)
+                setObject(4, sluttDato)
+                setString(
+                    5, listOf(
+                        AktivitetskortDetalj("Tid", tid),
+                        AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
+                    ).joinToJson(AktivitetskortDetalj::tilAkaasJson)
+                )
+                setString(6, EndretAvType.SYSTEM.name)
+                setString(7, EndretAvType.SYSTEM.name)
+                setTimestamp(8, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
+                setObject(9, aktivitetskortId)
+            }.executeUpdate()
+        }.let { rowsUpdated ->
+            if(rowsUpdated != 1){
+                secure(log).error("$rowsUpdated rader oppdatert i aktivitetskort for rekrutteringstreff $rekrutteringstreffId, forventet 1 rad oppdatert")
+            } else {
+                secure(log).info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
+            }
+        }
+    }
+
     init {
         Flyway.configure()
             .loggers("slf4j")
