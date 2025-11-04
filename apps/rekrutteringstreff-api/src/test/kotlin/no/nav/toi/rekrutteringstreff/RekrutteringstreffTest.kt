@@ -774,9 +774,15 @@ class RekrutteringstreffTest {
         val endringerDto = """
             {
                 "gamleVerdierForEndringer": {
-                    "tittel": "Gammel tittel",
-                    "beskrivelse": "Gammel beskrivelse",
-                    "fraTid": "2025-10-30T10:00:00+01:00"
+                    "tittel": {"value": "Gammel tittel", "endret": true},
+                    "beskrivelse": {"value": "Gammel beskrivelse", "endret": true},
+                    "fraTid": {"value": "2025-10-30T10:00:00+01:00", "endret": true},
+                    "tilTid": {"value": null, "endret": false},
+                    "svarfrist": {"value": null, "endret": false},
+                    "gateadresse": {"value": null, "endret": false},
+                    "postnummer": {"value": null, "endret": false},
+                    "poststed": {"value": null, "endret": false},
+                    "htmlContent": {"value": null, "endret": false}
                 }
             }
         """.trimIndent()
@@ -852,10 +858,15 @@ class RekrutteringstreffTest {
         val endringerDto = """
             {
                 "gamleVerdierForEndringer": {
-                    "tittel": "Gammel tittel",
-                    "gateadresse": "Gammel gate 1",
-                    "postnummer": "0566",
-                    "poststed": "Oslo"
+                    "tittel": {"value": "Gammel tittel", "endret": true},
+                    "beskrivelse": {"value": null, "endret": false},
+                    "fraTid": {"value": null, "endret": false},
+                    "tilTid": {"value": null, "endret": false},
+                    "svarfrist": {"value": null, "endret": false},
+                    "gateadresse": {"value": "Gammel gate 1", "endret": true},
+                    "postnummer": {"value": "0566", "endret": true},
+                    "poststed": {"value": "Oslo", "endret": true},
+                    "htmlContent": {"value": null, "endret": false}
                 }
             }
         """.trimIndent()
@@ -942,8 +953,6 @@ class RekrutteringstreffTest {
         jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
         jobbsøkerRepository.svarNeiTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
 
-        // Jobbsøker3 forblir på INVITERT status
-
         // Publiser treffet
         Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -952,8 +961,16 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringerDto = """
             {
-                "endringer": {
-                    "tilTid": "2025-10-30T14:00:00+01:00"
+                "gamleVerdierForEndringer": {
+                    "tittel": {"value": null, "endret": false},
+                    "beskrivelse": {"value": null, "endret": false},
+                    "fraTid": {"value": null, "endret": false},
+                    "tilTid": {"value": "2025-10-30T14:00:00+01:00", "endret": true},
+                    "svarfrist": {"value": null, "endret": false},
+                    "gateadresse": {"value": null, "endret": false},
+                    "postnummer": {"value": null, "endret": false},
+                    "poststed": {"value": null, "endret": false},
+                    "htmlContent": {"value": null, "endret": false}
                 }
             }
         """.trimIndent()
@@ -1008,8 +1025,16 @@ class RekrutteringstreffTest {
         // Registrer endringer (fungerer nå uavhengig av status)
         val endringerDto = """
             {
-                "endringer": {
-                    "beskrivelse": "Gammel beskrivelse"
+                "gamleVerdierForEndringer": {
+                    "tittel": {"value": null, "endret": false},
+                    "beskrivelse": {"value": "Gammel beskrivelse", "endret": true},
+                    "fraTid": {"value": null, "endret": false},
+                    "tilTid": {"value": null, "endret": false},
+                    "svarfrist": {"value": null, "endret": false},
+                    "gateadresse": {"value": null, "endret": false},
+                    "postnummer": {"value": null, "endret": false},
+                    "poststed": {"value": null, "endret": false},
+                    "htmlContent": {"value": null, "endret": false}
                 }
             }
         """.trimIndent()

@@ -398,15 +398,15 @@ class RekrutteringstreffController(
                 from = RegistrerEndringerDto::class,
                 example = """{
                     "gamleVerdierForEndringer": {
-                        "tittel": "Gammel tittel",
-                        "beskrivelse": "Gammel beskrivelse",
-                        "fraTid": "2025-06-15T09:00:00+02:00",
-                        "tilTid": "2025-06-15T11:00:00+02:00",
-                        "svarfrist": "2025-06-14T11:00:00+02:00",
-                        "gateadresse": "Gammel gate",
-                        "postnummer": "0566",
-                        "poststed": "Oslo",
-                        "htmlContent": "<p>HTML innhold</p>"
+                        "tittel": {"value": "Gammel tittel", "endret": true},
+                        "beskrivelse": {"value": "Gammel beskrivelse", "endret": true},
+                        "fraTid": {"value": "2025-06-15T09:00:00+02:00", "endret": true},
+                        "tilTid": {"value": "2025-06-15T11:00:00+02:00", "endret": true},
+                        "svarfrist": {"value": "2025-06-14T11:00:00+02:00", "endret": true},
+                        "gateadresse": {"value": "Gammel gate", "endret": true},
+                        "postnummer": {"value": "0566", "endret": true},
+                        "poststed": {"value": "Oslo", "endret": true},
+                        "htmlContent": {"value": "<p>HTML innhold</p>", "endret": true}
                     }
             }"""
             )]
