@@ -12,7 +12,6 @@ data class Endringsfelt<T>(
 @JsonPropertyOrder("tittel", "beskrivelse", "fraTid", "tilTid", "svarfrist", "gateadresse", "postnummer", "poststed", "innlegg")
 data class EndringerDto(
     val tittel: Endringsfelt<String>? = null,
-    val beskrivelse: Endringsfelt<String>? = null,
     val fraTid: Endringsfelt<String>? = null,
     val tilTid: Endringsfelt<String>? = null,
     val svarfrist: Endringsfelt<String>? = null,

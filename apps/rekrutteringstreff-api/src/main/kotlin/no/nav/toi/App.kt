@@ -20,6 +20,7 @@ import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvarScheduler
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffEndretScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffstatusEndretScheduler
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
@@ -85,6 +86,7 @@ class App(
     private lateinit var invitasjonScheduler: AktivitetskortInvitasjonScheduler
     private lateinit var svarScheduler: AktivitetskortSvarScheduler
     private lateinit var treffstatusScheduler: AktivitetskortTreffstatusEndretScheduler
+    private lateinit var treffEndretScheduler: AktivitetskortTreffEndretScheduler
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         startJavalin(jobbsøkerRepository)
@@ -236,6 +238,14 @@ class App(
             rapidsConnection = rapidsConnection
         )
         treffstatusScheduler.start()
+
+        treffEndretScheduler = AktivitetskortTreffEndretScheduler(
+            aktivitetskortRepository = aktivitetskortRepository,
+            rekrutteringstreffRepository = rekrutteringstreffRepository,
+            rapidsConnection = rapidsConnection,
+            objectMapper = JacksonConfig.mapper
+        )
+        treffEndretScheduler.start()
     }
 
     fun startRR(jobbsøkerRepository: JobbsøkerRepository) {
@@ -249,6 +259,7 @@ class App(
         if (::invitasjonScheduler.isInitialized) invitasjonScheduler.stop()
         if (::svarScheduler.isInitialized) svarScheduler.stop()
         if (::treffstatusScheduler.isInitialized) treffstatusScheduler.stop()
+        if (::treffEndretScheduler.isInitialized) treffEndretScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")

@@ -100,6 +100,75 @@ class TestDatabase {
         }.executeUpdate()
     }
 
+    fun oppdaterRekrutteringstreff(
+        id: TreffId,
+        tittel: String? = null,
+        beskrivelse: String? = null,
+        fraTid: ZonedDateTime? = null,
+        tilTid: ZonedDateTime? = null,
+        gateadresse: String? = null,
+        postnummer: String? = null,
+        poststed: String? = null
+    ) = dataSource.connection.use { conn ->
+        val updates = mutableListOf<String>()
+        val params = mutableListOf<Any?>()
+
+        tittel?.let { updates.add("tittel = ?"); params.add(it) }
+        beskrivelse?.let { updates.add("beskrivelse = ?"); params.add(it) }
+        fraTid?.let { updates.add("fratid = ?"); params.add(Timestamp.from(it.toInstant())) }
+        tilTid?.let { updates.add("tiltid = ?"); params.add(Timestamp.from(it.toInstant())) }
+        gateadresse?.let { updates.add("gateadresse = ?"); params.add(it) }
+        postnummer?.let { updates.add("postnummer = ?"); params.add(it) }
+        poststed?.let { updates.add("poststed = ?"); params.add(it) }
+
+        if (updates.isEmpty()) return@use
+
+        val sql = "UPDATE rekrutteringstreff SET ${updates.joinToString(", ")} WHERE id = ?"
+        conn.prepareStatement(sql).apply {
+            params.forEachIndexed { index, value -> setObject(index + 1, value) }
+            setObject(params.size + 1, id.somUuid)
+        }.executeUpdate()
+    }
+
+    fun registrerTreffEndretNotifikasjon(
+        treffId: TreffId,
+        fnr: Fødselsnummer,
+        endringer: no.nav.toi.rekrutteringstreff.dto.EndringerDto
+    ) = dataSource.connection.use { conn ->
+        // Hent jobbsøker_id
+        val jobbsøkerId = conn.prepareStatement(
+            """
+            SELECT js.jobbsoker_id 
+            FROM jobbsoker js
+            JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ? AND js.fodselsnummer = ?
+            """
+        ).apply {
+            setObject(1, treffId.somUuid)
+            setString(2, fnr.asString)
+        }.executeQuery().let {
+            if (it.next()) it.getLong(1) else error("Fant ikke jobbsøker for treff $treffId og fnr")
+        }
+
+        // Legg til hendelse med hendelse_data
+        val hendelseDataJson = JacksonConfig.mapper.writeValueAsString(endringer)
+        conn.prepareStatement(
+            """
+            INSERT INTO jobbsoker_hendelse 
+              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
+            VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)
+            """
+        ).apply {
+            setObject(1, UUID.randomUUID())
+            setLong(2, jobbsøkerId)
+            setTimestamp(3, Timestamp.from(nowOslo().toInstant()))
+            setString(4, JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON.name)
+            setString(5, AktørType.ARRANGØR.name)
+            setString(6, "Z123456")
+            setString(7, hendelseDataJson)
+        }.executeUpdate()
+    }
+
     fun hentAlleRekrutteringstreff(): List<Rekrutteringstreff> = dataSource.connection.use {
         val rs = it.prepareStatement("SELECT * FROM rekrutteringstreff ORDER BY id ASC").executeQuery()
         generateSequence { if (rs.next()) konverterTilRekrutteringstreff(rs) else null }.toList()
