@@ -4,6 +4,7 @@ import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
@@ -101,7 +102,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": "Ny tittel"}"""
+        val endringer = """{"tittel": {"value": "Ny tittel", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -144,17 +145,70 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": "Ny tittel", "beskrivelse": "Ny beskrivelse"}"""
+        val endringer = """{"tittel": {"value": "Ny tittel", "endret": true}, "beskrivelse": {"value": "Ny beskrivelse", "endret": true}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
 
-        // Assert - verifiser at hendelse_data er lagret
+        // Assert - verifiser at hendelse_data er lagret og kan deserialiseres
         val hendelseData = hentRekrutteringstreffHendelseData(treffId, RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
-        assertThat(hendelseData).isEqualTo(endringer)
+        assertThat(hendelseData).isNotNull()
+
+        // Deserialiser og verifiser feltene
+        val deserializedTreff = mapper.readValue(hendelseData, EndringerDto::class.java)
+        assertThat(deserializedTreff.tittel.value).isEqualTo("Ny tittel")
+        assertThat(deserializedTreff.tittel.endret).isTrue()
+        assertThat(deserializedTreff.beskrivelse.value).isEqualTo("Ny beskrivelse")
+        assertThat(deserializedTreff.beskrivelse.endret).isTrue()
 
         val jobbsøkerHendelseData = hentJobbsøkerHendelseData(treffId, fnr, JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-        assertThat(jobbsøkerHendelseData).isEqualTo(endringer)
+        assertThat(jobbsøkerHendelseData).isNotNull()
+
+        val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, EndringerDto::class.java)
+        assertThat(deserializedJobbsøker.tittel.value).isEqualTo("Ny tittel")
+        assertThat(deserializedJobbsøker.tittel.endret).isTrue()
+    }
+
+    @Test
+    fun `skal kunne deserialisere gammel JSON uten alle felt`() {
+        // Test at EndringerDto er robust og kan håndtere gamle JSON-strukturer fra databasen
+        // Dette sikrer at gamle hendelser fortsatt kan leses selv om EndringerDto får nye felt
+
+        // Gammel JSON med kun noen felt (som om vi hadde færre felt før)
+        val gammelJson = """{"tittel": {"value": "Gammel tittel", "endret": true}}"""
+        
+        // Act - deserialiserer gammel JSON
+        val deserialized = mapper.readValue(gammelJson, EndringerDto::class.java)
+
+        // Assert - verifiser at eksisterende felt fungerer
+        assertThat(deserialized.tittel.value).isEqualTo("Gammel tittel")
+        assertThat(deserialized.tittel.endret).isTrue()
+
+        // Verifiser at manglende felt får default-verdier
+        assertThat(deserialized.beskrivelse.value).isNull()
+        assertThat(deserialized.beskrivelse.endret).isFalse()
+        assertThat(deserialized.fraTid.endret).isFalse()
+        assertThat(deserialized.htmlContent.endret).isFalse()
+    }
+
+    @Test
+    fun `skal ignorere ukjente felt i JSON fra databasen`() {
+        // Test at EndringerDto kan ignorere felt som ikke lenger eksisterer i DTOen
+        // Dette sikrer bakoverkompatibilitet hvis vi fjerner felt i framtiden
+
+        // JSON med et ekstra felt som ikke finnes i EndringerDto
+        val jsonMedEkstraFelt = """{
+            "tittel": {"value": "Test", "endret": true},
+            "beskrivelse": {"value": "Test beskrivelse", "endret": true},
+            "ukjentFelt": {"value": "Dette skal ignoreres", "endret": true}
+        }"""
+
+        // Act - deserialiserer JSON med ukjent felt (skal ikke kaste exception)
+        val deserialized = mapper.readValue(jsonMedEkstraFelt, EndringerDto::class.java)
+
+        // Assert - verifiser at kjente felt fungerer
+        assertThat(deserialized.tittel.value).isEqualTo("Test")
+        assertThat(deserialized.beskrivelse.value).isEqualTo("Test beskrivelse")
     }
 
     @Test
@@ -191,7 +245,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": "Endret tittel"}"""
+        val endringer = """{"tittel": {"value": "Endret tittel", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -216,7 +270,7 @@ class RekrutteringstreffServiceTest {
         rekrutteringstreffService.avlys(treffId, navIdent)
 
         // Nå har jobbsøker SVART_JA_TREFF_AVLYST som siste hendelse
-        val endringer = """{"tittel": "Gjenåpnet og endret"}"""
+        val endringer = """{"tittel": {"value": "Gjenåpnet og endret", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -251,7 +305,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": "Endret tittel"}"""
+        val endringer = """{"tittel": {"value": "Endret tittel", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -291,7 +345,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": "Endret for alle"}"""
+        val endringer = """{"tittel": {"value": "Endret for alle", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
