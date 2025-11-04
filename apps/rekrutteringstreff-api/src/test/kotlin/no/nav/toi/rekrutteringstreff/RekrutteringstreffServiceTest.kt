@@ -176,7 +176,7 @@ class RekrutteringstreffServiceTest {
 
         // Gammel JSON med kun noen felt (som om vi hadde færre felt før)
         val gammelJson = """{"tittel": {"value": "Gammel tittel", "endret": true}}"""
-        
+
         // Act - deserialiserer gammel JSON
         val deserialized = mapper.readValue(gammelJson, EndringerDto::class.java)
 
