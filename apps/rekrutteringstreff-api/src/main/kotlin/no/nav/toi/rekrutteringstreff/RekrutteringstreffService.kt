@@ -72,6 +72,7 @@ class RekrutteringstreffService(
     }
 
     fun registrerEndring(treff: TreffId, endringer: String, endretAv: String) {
+
         dataSource.executeInTransaction { connection ->
             val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treff)
 
@@ -83,8 +84,8 @@ class RekrutteringstreffService(
                 endretAv,
                 endringer
             )
-
             val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treff)
+
             val jobbsøkereSomSkalVarsles = alleJobbsøkere
                 .filter { skalVarslesOmEndringer(it.hendelser) }
                 .map { it.personTreffId }
@@ -98,7 +99,7 @@ class RekrutteringstreffService(
                     endretAv,
                     hendelseData = endringer
                 )
-                logger.info("Registrert endring for rekrutteringstreff med ${jobbsøkereSomSkalVarsles.size} jobbsøkere som skal varsles")
+                logger.info("Registrert endring for rekrutteringstreff  ${treff.somString} med ${jobbsøkereSomSkalVarsles.size} jobbsøkere som skal varsles")
             }
         }
     }
@@ -106,9 +107,22 @@ class RekrutteringstreffService(
     private fun skalVarslesOmEndringer(hendelser: List<JobbsøkerHendelse>): Boolean {
         if (hendelser.isEmpty()) return false
 
-        val sisteHendelse = hendelser.first() // Hendelser er sortert DESC (nyeste først)
+        // Filtrer kun invitasjons- og svar-hendelser
+        val relevanteHendelser = hendelser.filter {
+            it.hendelsestype in setOf(
+                JobbsøkerHendelsestype.INVITERT,
+                JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+                JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
+            )
+        }
 
-        return sisteHendelse.hendelsestype in setOf(
+        if (relevanteHendelser.isEmpty()) return false
+
+        // Hendelser er allerede sortert DESC (nyeste først), ta første av de relevante
+        val sisteRelevanteHendelse = relevanteHendelser.first()
+
+        // Varsle kun hvis siste relevante hendelse er INVITERT eller SVART_JA_TIL_INVITASJON
+        return sisteRelevanteHendelse.hendelsestype in setOf(
             JobbsøkerHendelsestype.INVITERT,
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
         )

@@ -102,7 +102,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"value": "Ny tittel", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
+        val endringer = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -145,7 +145,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"value": "Ny tittel", "endret": true}, "beskrivelse": {"value": "Ny beskrivelse", "endret": true}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
+        val endringer = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}, "beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse"}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -154,61 +154,62 @@ class RekrutteringstreffServiceTest {
         val hendelseData = hentRekrutteringstreffHendelseData(treffId, RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
         assertThat(hendelseData).isNotNull()
 
-        // Deserialiser og verifiser feltene
-        val deserializedTreff = mapper.readValue(hendelseData, EndringerDto::class.java)
-        assertThat(deserializedTreff.tittel.value).isEqualTo("Ny tittel")
-        assertThat(deserializedTreff.tittel.endret).isTrue()
-        assertThat(deserializedTreff.beskrivelse.value).isEqualTo("Ny beskrivelse")
-        assertThat(deserializedTreff.beskrivelse.endret).isTrue()
+        // Deserialiser EndringerDto
+        val deserializedDto = mapper.readValue(hendelseData, EndringerDto::class.java)
+        assertThat(deserializedDto.tittel).isNotNull()
+        assertThat(deserializedDto.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserializedDto.tittel!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserializedDto.beskrivelse).isNotNull()
+        assertThat(deserializedDto.beskrivelse!!.gammelVerdi).isEqualTo("Gammel beskrivelse")
+        assertThat(deserializedDto.beskrivelse!!.nyVerdi).isEqualTo("Ny beskrivelse")
+        assertThat(deserializedDto.fraTid).isNull() // Ikke endret
 
         val jobbsøkerHendelseData = hentJobbsøkerHendelseData(treffId, fnr, JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
         assertThat(jobbsøkerHendelseData).isNotNull()
 
         val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, EndringerDto::class.java)
-        assertThat(deserializedJobbsøker.tittel.value).isEqualTo("Ny tittel")
-        assertThat(deserializedJobbsøker.tittel.endret).isTrue()
+        assertThat(deserializedJobbsøker.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserializedJobbsøker.tittel!!.nyVerdi).isEqualTo("Ny tittel")
     }
 
     @Test
-    fun `skal kunne deserialisere gammel JSON uten alle felt`() {
-        // Test at EndringerDto er robust og kan håndtere gamle JSON-strukturer fra databasen
-        // Dette sikrer at gamle hendelser fortsatt kan leses selv om EndringerDto får nye felt
+    fun `skal kunne deserialisere JSON med kun noen felt`() {
+        // Test at vi kan håndtere JSON fra databasen hvor kun noen felt er satt
+        // Dette sikrer bakoverkompatibilitet
 
-        // Gammel JSON med kun noen felt (som om vi hadde færre felt før)
-        val gammelJson = """{"tittel": {"value": "Gammel tittel", "endret": true}}"""
+        val jsonMedNoenFelt = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
 
-        // Act - deserialiserer gammel JSON
-        val deserialized = mapper.readValue(gammelJson, EndringerDto::class.java)
+        // Act
+        val deserialized = mapper.readValue(jsonMedNoenFelt, EndringerDto::class.java)
 
         // Assert - verifiser at eksisterende felt fungerer
-        assertThat(deserialized.tittel.value).isEqualTo("Gammel tittel")
-        assertThat(deserialized.tittel.endret).isTrue()
+        assertThat(deserialized.tittel).isNotNull()
+        assertThat(deserialized.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserialized.tittel!!.nyVerdi).isEqualTo("Ny tittel")
 
-        // Verifiser at manglende felt får default-verdier
-        assertThat(deserialized.beskrivelse.value).isNull()
-        assertThat(deserialized.beskrivelse.endret).isFalse()
-        assertThat(deserialized.fraTid.endret).isFalse()
-        assertThat(deserialized.htmlContent.endret).isFalse()
+        // Verifiser at manglende felt er null
+        assertThat(deserialized.fraTid).isNull()
+        assertThat(deserialized.innlegg).isNull()
     }
 
     @Test
     fun `skal ignorere ukjente felt i JSON fra databasen`() {
-        // Test at EndringerDto kan ignorere felt som ikke lenger eksisterer i DTOen
+        // Test at vi kan ignorere felt som ikke lenger eksisterer i DTOen
         // Dette sikrer bakoverkompatibilitet hvis vi fjerner felt i framtiden
 
-        // JSON med et ekstra felt som ikke finnes i EndringerDto
         val jsonMedEkstraFelt = """{
-            "tittel": {"value": "Test", "endret": true},
-            "beskrivelse": {"value": "Test beskrivelse", "endret": true},
-            "ukjentFelt": {"value": "Dette skal ignoreres", "endret": true}
+            "tittel": {"gammelVerdi": "Test", "nyVerdi": "Ny Test"},
+            "beskrivelse": {"gammelVerdi": "Test beskrivelse", "nyVerdi": "Ny beskrivelse"},
+            "ukjentFelt": {"gammelVerdi": "Dette skal ignoreres", "nyVerdi": "Også ignoreres"}
         }"""
 
         // Act - deserialiserer JSON med ukjent felt (skal ikke kaste exception)
         val deserialized = mapper.readValue(jsonMedEkstraFelt, EndringerDto::class.java)
 
         // Assert - verifiser at kjente felt fungerer
-        assertThat(deserialized.tittel.value).isEqualTo("Test")
-        assertThat(deserialized.beskrivelse.value).isEqualTo("Test beskrivelse")
+        assertThat(deserialized.tittel).isNotNull()
+        assertThat(deserialized.tittel!!.gammelVerdi).isEqualTo("Test")
+        assertThat(deserialized.beskrivelse!!.gammelVerdi).isEqualTo("Test beskrivelse")
     }
 
     @Test
@@ -242,10 +243,9 @@ class RekrutteringstreffServiceTest {
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
         // MERK: Jobbsøker har kun INVITERT, ikke svart ja
 
-        // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"value": "Endret tittel", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
+        val endringer = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Endret tittel"}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -256,7 +256,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `skal ikke varsle jobbsøker med SVART_JA_TREFF_AVLYST som siste hendelse om endring`() {
+    fun `skal varsle jobbsøker med SVART_JA_TREFF_AVLYST som siste hendelse om endring`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fnr = Fødselsnummer("12345678901")
@@ -270,14 +270,15 @@ class RekrutteringstreffServiceTest {
         rekrutteringstreffService.avlys(treffId, navIdent)
 
         // Nå har jobbsøker SVART_JA_TREFF_AVLYST som siste hendelse
-        val endringer = """{"tittel": {"value": "Gjenåpnet og endret", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
+        val endringer = """{"tittel": {"gammelVerdi": "Gammel", "nyVerdi": "Gjenåpnet og endret"}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
 
-        // Assert - jobbsøker skal varsles fordi nest-siste var SVART_JA
+        // Assert - jobbsøker skal varsles fordi siste INVITASJONS-hendelse er SVART_JA_TIL_INVITASJON
+        // SVART_JA_TREFF_AVLYST ignoreres da den ikke er en invitasjons/svar-hendelse
         val jobbsøkerHendelser = hentJobbsøkerHendelser(treffId, fnr)
-        assertThat(jobbsøkerHendelser).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøkerHendelser).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
     @Test
@@ -305,7 +306,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"value": "Endret tittel", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
+        val endringer = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Endret tittel"}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -345,7 +346,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"value": "Endret for alle", "endret": true}, "beskrivelse": {"value": null, "endret": false}, "fraTid": {"value": null, "endret": false}, "tilTid": {"value": null, "endret": false}, "svarfrist": {"value": null, "endret": false}, "gateadresse": {"value": null, "endret": false}, "postnummer": {"value": null, "endret": false}, "poststed": {"value": null, "endret": false}, "htmlContent": {"value": null, "endret": false}}"""
+        val endringer = """{"tittel": {"gammelVerdi": "Gammel", "nyVerdi": "Endret for alle"}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -361,7 +362,43 @@ class RekrutteringstreffServiceTest {
         assertThat(hendelser3).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
-    // Helper methods
+    @Test
+    fun `skal kunne sende flere endringsnotifikasjoner til samme person`() {
+        // Arrange
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val navIdent = "Z123456"
+        val fnr = Fødselsnummer("11111111111")
+
+        // Legg til og inviter jobbsøker
+        leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
+        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+
+        // Publiser treffet først
+        publiserTreff(treffId, navIdent)
+
+        // Act - Registrer første endring
+        val endring1 = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Endret tittel 1"}}"""
+        rekrutteringstreffService.registrerEndring(treffId, endring1, navIdent)
+
+        // Verifiser første notifikasjon
+        val hendelserEtterForsteEndring = hentJobbsøkerHendelser(treffId, fnr)
+        val forsteNotifikasjoner = hendelserEtterForsteEndring.filter {
+            it == JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON
+        }
+        assertThat(forsteNotifikasjoner).hasSize(1)
+
+        // Act - Registrer andre endring
+        val endring2 = """{"beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Endret beskrivelse 2"}}"""
+        rekrutteringstreffService.registrerEndring(treffId, endring2, navIdent)
+
+        // Assert - Jobbsøker skal ha fått to notifikasjoner
+        val hendelserEtterAndreEndring = hentJobbsøkerHendelser(treffId, fnr)
+        val andreNotifikasjoner = hendelserEtterAndreEndring.filter {
+            it == JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON
+        }
+        assertThat(andreNotifikasjoner).hasSize(2)
+    }
+
 
     private fun leggTilOgInviterJobbsøker(treffId: TreffId, fnr: Fødselsnummer, navIdent: String) {
         jobbsøkerRepository.leggTil(

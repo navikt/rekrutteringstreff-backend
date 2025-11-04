@@ -9,11 +9,11 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
+import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.dto.RegistrerEndringerDto
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
 import java.util.*
@@ -395,19 +395,17 @@ class RekrutteringstreffController(
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
-                from = RegistrerEndringerDto::class,
+                from = EndringerDto::class,
                 example = """{
-                    "gamleVerdierForEndringer": {
-                        "tittel": {"value": "Gammel tittel", "endret": true},
-                        "beskrivelse": {"value": "Gammel beskrivelse", "endret": true},
-                        "fraTid": {"value": "2025-06-15T09:00:00+02:00", "endret": true},
-                        "tilTid": {"value": "2025-06-15T11:00:00+02:00", "endret": true},
-                        "svarfrist": {"value": "2025-06-14T11:00:00+02:00", "endret": true},
-                        "gateadresse": {"value": "Gammel gate", "endret": true},
-                        "postnummer": {"value": "0566", "endret": true},
-                        "poststed": {"value": "Oslo", "endret": true},
-                        "htmlContent": {"value": "<p>HTML innhold</p>", "endret": true}
-                    }
+                    "tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"},
+                    "beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse"},
+                    "fraTid": {"gammelVerdi": "2025-06-15T09:00:00+02:00", "nyVerdi": "2025-06-15T10:00:00+02:00"},
+                    "tilTid": {"gammelVerdi": "2025-06-15T11:00:00+02:00", "nyVerdi": "2025-06-15T12:00:00+02:00"},
+                    "svarfrist": null,
+                    "gateadresse": {"gammelVerdi": null, "nyVerdi": "Ny gate 123"},
+                    "postnummer": {"gammelVerdi": "0566", "nyVerdi": "0567"},
+                    "poststed": {"gammelVerdi": "Oslo", "nyVerdi": "Oslo"},
+                    "innlegg": null
             }"""
             )]
         ),
@@ -424,8 +422,8 @@ class RekrutteringstreffController(
 
             // TODO: Sjekk at treffet er publisert når statuser er bedre implementert i bakend
 
-            val dto = ctx.bodyAsClass<RegistrerEndringerDto>()
-            val endringerJson = JacksonConfig.mapper.writeValueAsString(dto.gamleVerdierForEndringer)
+            val dto = ctx.bodyAsClass<EndringerDto>()
+            val endringerJson = JacksonConfig.mapper.writeValueAsString(dto)
 
             service.registrerEndring(treffId, endringerJson, navIdent)
             ctx.status(201)

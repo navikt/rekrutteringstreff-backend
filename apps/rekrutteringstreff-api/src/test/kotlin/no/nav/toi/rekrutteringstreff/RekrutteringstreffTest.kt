@@ -782,7 +782,7 @@ class RekrutteringstreffTest {
                     "gateadresse": {"value": null, "endret": false},
                     "postnummer": {"value": null, "endret": false},
                     "poststed": {"value": null, "endret": false},
-                    "htmlContent": {"value": null, "endret": false}
+                    "innlegg": {"value": null, "endret": false}
                 }
             }
         """.trimIndent()
@@ -866,7 +866,7 @@ class RekrutteringstreffTest {
                     "gateadresse": {"value": "Gammel gate 1", "endret": true},
                     "postnummer": {"value": "0566", "endret": true},
                     "poststed": {"value": "Oslo", "endret": true},
-                    "htmlContent": {"value": null, "endret": false}
+                    "innlegg": {"value": null, "endret": false}
                 }
             }
         """.trimIndent()
@@ -970,7 +970,7 @@ class RekrutteringstreffTest {
                     "gateadresse": {"value": null, "endret": false},
                     "postnummer": {"value": null, "endret": false},
                     "poststed": {"value": null, "endret": false},
-                    "htmlContent": {"value": null, "endret": false}
+                    "innlegg": {"value": null, "endret": false}
                 }
             }
         """.trimIndent()
@@ -1034,7 +1034,7 @@ class RekrutteringstreffTest {
                     "gateadresse": {"value": null, "endret": false},
                     "postnummer": {"value": null, "endret": false},
                     "poststed": {"value": null, "endret": false},
-                    "htmlContent": {"value": null, "endret": false}
+                    "innlegg": {"value": null, "endret": false}
                 }
             }
         """.trimIndent()
