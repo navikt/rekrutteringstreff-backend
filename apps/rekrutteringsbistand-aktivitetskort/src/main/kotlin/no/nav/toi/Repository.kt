@@ -1,25 +1,14 @@
 package no.nav.toi
 
-import no.nav.toi.aktivitetskort.ActionType
-import no.nav.toi.aktivitetskort.AktivitetsStatus
-import no.nav.toi.aktivitetskort.AktivitetskortDetalj
-import no.nav.toi.aktivitetskort.Aktivitetskort
-import no.nav.toi.aktivitetskort.AktivitetskortEtikett
-import no.nav.toi.aktivitetskort.AktivitetskortHandling
-import no.nav.toi.aktivitetskort.AktivitetskortOppgave
-import no.nav.toi.aktivitetskort.EndretAvType
-import no.nav.toi.aktivitetskort.ErrorType
-import no.nav.toi.aktivitetskort.LenkeType
-import no.nav.toi.aktivitetskort.atOslo
-import no.nav.toi.aktivitetskort.joinToJson
 import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.aktivitetskort.*
 import org.flywaydb.core.Flyway
 import java.sql.Timestamp
 import java.sql.Types.VARCHAR
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 
 class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String) {
     private val dataSource = databaseConfig.lagDatasource()
@@ -54,7 +43,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                     setObject(3, rekrutteringstreffId)
                 }.executeUpdate()
 
-                if(endredeLinjer==0) {
+                if (endredeLinjer == 0) {
                     log.error("Prøvde å opprette aktivitetskort for person på treff som allerede har aktivitetskort: $rekrutteringstreffId")
                     return null
                 } else {
@@ -178,50 +167,54 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         }
     }
 
-    fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortFeil> = dataSource.connection.use { connection ->
-        connection.prepareStatement(
-            """
+    fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortFeil> =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
             SELECT af.*, a.*, rt.rekrutteringstreff_id
             FROM aktivitetskort_hendelse_feil af
             JOIN aktivitetskort a ON af.message_id = a.message_id
             JOIN rekrutteringstreff rt ON a.aktivitetskort_id = rt.aktivitetskort_id
             WHERE af.sendt_tidspunkt IS NULL
             """.trimIndent()
-        ).executeQuery().use { resultSet ->
-            generateSequence {
-                if (resultSet.next()) {
-                    Aktivitetskort.AktivitetskortFeil(
-                        Aktivitetskort(
-                            repository = this,
-                            messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
-                            aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString(),
-                            fnr = resultSet.getString("fnr"),
-                            tittel = resultSet.getString("tittel"),
-                            beskrivelse = resultSet.getString("beskrivelse"),
-                            startDato = resultSet.getTimestamp("start_dato").toLocalDateTime().toLocalDate(),
-                            sluttDato = resultSet.getTimestamp("slutt_dato").toLocalDateTime().toLocalDate(),
-                            actionType = resultSet.getString("action_type").let(::enumValueOf),
-                            endretAv = resultSet.getString("endret_av"),
-                            endretAvType = resultSet.getString("endret_av_type").let(::enumValueOf),
-                            endretTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toInstant().atOslo(),
-                            aktivitetsStatus = resultSet.getString("aktivitets_status").let(::enumValueOf),
-                            detaljer = AktivitetskortDetalj.fraAkaasJson(resultSet.getString("detaljer")),
-                            handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
-                            etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
-                            oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
-                            avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
-                            sendtTidspunkt = null,
-                        ),
-                        rekrutteringstreffId = resultSet.getObject("rekrutteringstreff_id", UUID::class.java).toString(),
-                        errorMessage = resultSet.getString("error_message"),
-                        errorType = resultSet.getString("error_type").let(::enumValueOf),
-                    )
-                } else {
-                    null
-                }
-            }.toList()
+            ).executeQuery().use { resultSet ->
+                generateSequence {
+                    if (resultSet.next()) {
+                        Aktivitetskort.AktivitetskortFeil(
+                            Aktivitetskort(
+                                repository = this,
+                                messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
+                                aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java)
+                                    .toString(),
+                                fnr = resultSet.getString("fnr"),
+                                tittel = resultSet.getString("tittel"),
+                                beskrivelse = resultSet.getString("beskrivelse"),
+                                startDato = resultSet.getTimestamp("start_dato").toLocalDateTime().toLocalDate(),
+                                sluttDato = resultSet.getTimestamp("slutt_dato").toLocalDateTime().toLocalDate(),
+                                actionType = resultSet.getString("action_type").let(::enumValueOf),
+                                endretAv = resultSet.getString("endret_av"),
+                                endretAvType = resultSet.getString("endret_av_type").let(::enumValueOf),
+                                endretTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toInstant().atOslo(),
+                                aktivitetsStatus = resultSet.getString("aktivitets_status").let(::enumValueOf),
+                                detaljer = AktivitetskortDetalj.fraAkaasJson(resultSet.getString("detaljer")),
+                                handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
+                                etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
+                                oppgave = resultSet.getString("oppgave")
+                                    ?.let { AktivitetskortOppgave.fraAkaasJson(it) },
+                                avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
+                                sendtTidspunkt = null,
+                            ),
+                            rekrutteringstreffId = resultSet.getObject("rekrutteringstreff_id", UUID::class.java)
+                                .toString(),
+                            errorMessage = resultSet.getString("error_message"),
+                            errorType = resultSet.getString("error_type").let(::enumValueOf),
+                        )
+                    } else {
+                        null
+                    }
+                }.toList()
+            }
         }
-    }
 
     fun lagreFeilkøHendelse(messageId: UUID, failingMessage: String, errorMessage: String, errorType: ErrorType) =
         dataSource.connection.use { connection ->
@@ -241,7 +234,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         }
 
     fun hentAktivitetskortId(fnr: String, rekrutteringstreffId: UUID) = dataSource.connection.use { connection ->
-        connection.prepareStatement("""
+        connection.prepareStatement(
+            """
                 SELECT aktivitetskort_id FROM rekrutteringstreff
                 WHERE fnr = ? AND rekrutteringstreff_id = ?
             """.trimIndent()
@@ -249,14 +243,19 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
             setString(1, fnr)
             setObject(2, rekrutteringstreffId)
         }.executeQuery().use { resultSet ->
-            if(!resultSet.next()) {
+            if (!resultSet.next()) {
                 return@use null
             }
             resultSet.getString("aktivitetskort_id")?.let { UUID.fromString(it) }
         }
     }
 
-    fun oppdaterAktivitetsstatus(aktivitetskortId: UUID, aktivitetsStatus: AktivitetsStatus, endretAv: String, endretAvType: EndretAvType) {
+    fun oppdaterAktivitetsstatus(
+        aktivitetskortId: UUID,
+        aktivitetsStatus: AktivitetsStatus,
+        endretAv: String,
+        endretAvType: EndretAvType
+    ) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
@@ -296,10 +295,79 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                 setObject(6, aktivitetskortId)
             }.executeUpdate()
         }.let { rowsUpdated ->
-            if(rowsUpdated != 1){
+            if (rowsUpdated != 1) {
                 secure(log).error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
             } else {
                 secure(log).info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
+            }
+        }
+    }
+
+    fun oppdaterRekrutteringstreffAktivitetskort(
+        fnr: String,
+        rekrutteringstreffId: UUID,
+        tittel: String,
+        startDato: LocalDate,
+        sluttDato: LocalDate,
+        tid: String,
+        gateAdresse: String,
+        postnummer: String,
+        poststed: String
+    ) {
+        val aktivitetskortId = hentAktivitetskortId(fnr, rekrutteringstreffId)
+            ?: throw IllegalStateException("Fant ikke aktivitetskort for rekrutteringstreff $rekrutteringstreffId og fnr")
+
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                INSERT INTO aktivitetskort
+                (message_id, aktivitetskort_id, fnr, tittel, aktivitets_status, beskrivelse, start_dato, 
+                slutt_dato, detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav, endret_av, 
+                endret_av_type, endret_tidspunkt)
+                SELECT
+                    ?,
+                    aktivitetskort_id,
+                    fnr,
+                    ?,
+                    aktivitets_status,
+                    beskrivelse,
+                    ?,
+                    ?,
+                    ?::json,
+                    handlinger,
+                    etiketter,
+                    oppgave,
+                    action_type,
+                    avtalt_med_nav,
+                    ?,
+                    ?,
+                    ?
+                FROM aktivitetskort
+                WHERE aktivitetskort_id = ?
+                ORDER BY endret_tidspunkt DESC
+                LIMIT 1
+                """.trimIndent()
+            ).apply {
+                setObject(1, UUID.randomUUID())
+                setString(2, tittel)
+                setObject(3, startDato)
+                setObject(4, sluttDato)
+                setString(
+                    5, listOf(
+                        AktivitetskortDetalj("Tid", tid),
+                        AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
+                    ).joinToJson(AktivitetskortDetalj::tilAkaasJson)
+                )
+                setString(6, EndretAvType.SYSTEM.name)
+                setString(7, EndretAvType.SYSTEM.name)
+                setTimestamp(8, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
+                setObject(9, aktivitetskortId)
+            }.executeUpdate()
+        }.let { rowsUpdated ->
+            if (rowsUpdated != 1) {
+                secure(log).error("$rowsUpdated rader oppdatert i aktivitetskort for rekrutteringstreff $rekrutteringstreffId, forventet 1 rad oppdatert")
+            } else {
+                secure(log).info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
             }
         }
     }

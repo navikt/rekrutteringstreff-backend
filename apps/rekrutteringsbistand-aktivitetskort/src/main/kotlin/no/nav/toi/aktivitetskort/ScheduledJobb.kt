@@ -36,7 +36,7 @@ fun scheduler(
 
     val now = ZonedDateTime.now().toInstant().atOslo()
     val nextRun = now.withSecond(second).withNano(nano)
-        .let { if (it <= now) it.plusMinutes(1) else it }
+        .let { if (it <= now) it.plusSeconds(10) else it }
     val delay = MILLIS.between(now, nextRun)
 
     scheduledExecutor.scheduleAtFixedRate(myJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)

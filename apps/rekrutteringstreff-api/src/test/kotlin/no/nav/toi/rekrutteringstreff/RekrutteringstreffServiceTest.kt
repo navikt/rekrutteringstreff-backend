@@ -159,9 +159,6 @@ class RekrutteringstreffServiceTest {
         assertThat(deserializedDto.tittel).isNotNull()
         assertThat(deserializedDto.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
         assertThat(deserializedDto.tittel!!.nyVerdi).isEqualTo("Ny tittel")
-        assertThat(deserializedDto.beskrivelse).isNotNull()
-        assertThat(deserializedDto.beskrivelse!!.gammelVerdi).isEqualTo("Gammel beskrivelse")
-        assertThat(deserializedDto.beskrivelse!!.nyVerdi).isEqualTo("Ny beskrivelse")
         assertThat(deserializedDto.fraTid).isNull() // Ikke endret
 
         val jobbsøkerHendelseData = hentJobbsøkerHendelseData(treffId, fnr, JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
@@ -199,7 +196,6 @@ class RekrutteringstreffServiceTest {
 
         val jsonMedEkstraFelt = """{
             "tittel": {"gammelVerdi": "Test", "nyVerdi": "Ny Test"},
-            "beskrivelse": {"gammelVerdi": "Test beskrivelse", "nyVerdi": "Ny beskrivelse"},
             "ukjentFelt": {"gammelVerdi": "Dette skal ignoreres", "nyVerdi": "Også ignoreres"}
         }"""
 
@@ -209,7 +205,6 @@ class RekrutteringstreffServiceTest {
         // Assert - verifiser at kjente felt fungerer
         assertThat(deserialized.tittel).isNotNull()
         assertThat(deserialized.tittel!!.gammelVerdi).isEqualTo("Test")
-        assertThat(deserialized.beskrivelse!!.gammelVerdi).isEqualTo("Test beskrivelse")
     }
 
     @Test

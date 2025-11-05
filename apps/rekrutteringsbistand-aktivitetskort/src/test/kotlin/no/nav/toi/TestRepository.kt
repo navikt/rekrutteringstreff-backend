@@ -26,6 +26,7 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
                     SELECT * FROM aktivitetskort 
                     LEFT JOIN rekrutteringstreff ON aktivitetskort.aktivitetskort_id = rekrutteringstreff.aktivitetskort_id
                     LEFT JOIN aktivitetskort_hendelse_feil ON aktivitetskort.message_id = aktivitetskort_hendelse_feil.message_id
+                    ORDER BY aktivitetskort.endret_tidspunkt ASC
                 """.trimIndent()
         ).executeQuery().use { resultSet ->
             generateSequence {
