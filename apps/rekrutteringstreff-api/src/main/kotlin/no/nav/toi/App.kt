@@ -18,10 +18,7 @@ import no.nav.toi.jobbsoker.JobbsøkerInnloggetBorgerController
 import no.nav.toi.jobbsoker.JobbsøkerOutboundController
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortInvitasjonScheduler
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvarScheduler
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffEndretScheduler
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffstatusEndretScheduler
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -83,10 +80,7 @@ class App(
     )
 
     private lateinit var javalin: Javalin
-    private lateinit var invitasjonScheduler: AktivitetskortInvitasjonScheduler
-    private lateinit var svarScheduler: AktivitetskortSvarScheduler
-    private lateinit var treffstatusScheduler: AktivitetskortTreffstatusEndretScheduler
-    private lateinit var treffEndretScheduler: AktivitetskortTreffEndretScheduler
+    private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         startJavalin(jobbsøkerRepository)
@@ -218,34 +212,13 @@ class App(
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
 
-        invitasjonScheduler = AktivitetskortInvitasjonScheduler(
-            aktivitetskortRepository = aktivitetskortRepository,
-            rekrutteringstreffRepository = rekrutteringstreffRepository,
-            rapidsConnection = rapidsConnection
-        )
-        invitasjonScheduler.start()
-
-        svarScheduler = AktivitetskortSvarScheduler(
-            aktivitetskortRepository = aktivitetskortRepository,
-            rekrutteringstreffRepository = rekrutteringstreffRepository,
-            rapidsConnection = rapidsConnection
-        )
-        svarScheduler.start()
-
-        treffstatusScheduler = AktivitetskortTreffstatusEndretScheduler(
-            aktivitetskortRepository = aktivitetskortRepository,
-            rekrutteringstreffRepository = rekrutteringstreffRepository,
-            rapidsConnection = rapidsConnection
-        )
-        treffstatusScheduler.start()
-
-        treffEndretScheduler = AktivitetskortTreffEndretScheduler(
+        aktivitetskortJobbsøkerScheduler = AktivitetskortJobbsøkerScheduler(
             aktivitetskortRepository = aktivitetskortRepository,
             rekrutteringstreffRepository = rekrutteringstreffRepository,
             rapidsConnection = rapidsConnection,
             objectMapper = JacksonConfig.mapper
         )
-        treffEndretScheduler.start()
+        aktivitetskortJobbsøkerScheduler.start()
     }
 
     fun startRR(jobbsøkerRepository: JobbsøkerRepository) {
@@ -256,10 +229,7 @@ class App(
 
     fun close() {
         log.info("Shutting down application")
-        if (::invitasjonScheduler.isInitialized) invitasjonScheduler.stop()
-        if (::svarScheduler.isInitialized) svarScheduler.stop()
-        if (::treffstatusScheduler.isInitialized) treffstatusScheduler.stop()
-        if (::treffEndretScheduler.isInitialized) treffEndretScheduler.stop()
+        if (::aktivitetskortJobbsøkerScheduler.isInitialized) aktivitetskortJobbsøkerScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")
