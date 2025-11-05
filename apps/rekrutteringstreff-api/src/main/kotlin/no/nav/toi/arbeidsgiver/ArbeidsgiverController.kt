@@ -121,6 +121,7 @@ class ArbeidsgiverController(
                 arbeidsgiverTreffId = arbeidsgiver.arbeidsgiverTreffId.somString,
                 organisasjonsnummer = arbeidsgiver.orgnr.asString,
                 navn = arbeidsgiver.orgnavn.asString,
+                status = arbeidsgiver.status.name,
                 hendelser = arbeidsgiver.hendelser.map { h ->
                     ArbeidsgiverHendelseOutboundDto(
                         id = h.id.toString(),
