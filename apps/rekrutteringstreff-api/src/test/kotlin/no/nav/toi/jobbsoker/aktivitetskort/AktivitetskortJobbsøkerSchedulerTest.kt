@@ -543,11 +543,11 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(hendelserForSvartJa.last()["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
         assertThat(hendelserForSvartJa.last()["treffstatus"].asText()).isEqualTo("fullført")
 
-        // Person som ikke svarte skal få avbrutt-status
+        // Person som ikke svarte skal få ikkeSvartTreffstatusEndret med fullført treffstatus
         assertThat(hendelserForIkkeSvart).hasSize(2)
         assertThat(hendelserForIkkeSvart[0]["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
-        assertThat(hendelserForIkkeSvart[1]["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
-        assertThat(hendelserForIkkeSvart[1]["treffstatus"].asText()).isEqualTo("avbrutt")
+        assertThat(hendelserForIkkeSvart[1]["@event_name"].asText()).isEqualTo("ikkeSvartTreffstatusEndret")
+        assertThat(hendelserForIkkeSvart[1]["treffstatus"].asText()).isEqualTo("fullført")
 
         // Verifiser at hendelsene er markert som behandlet
         val usendteFullført = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
@@ -590,9 +590,9 @@ class AktivitetskortJobbsøkerSchedulerTest {
         // Person som svarte ja skal få avlyst-status
         assertThat(hendelserForSvartJa.last()["treffstatus"].asText()).isEqualTo("avlyst")
 
-        // Person som ikke svarte skal også få avbrutt-status
-        assertThat(hendelserForIkkeSvart.last()["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
-        assertThat(hendelserForIkkeSvart.last()["treffstatus"].asText()).isEqualTo("avbrutt")
+        // Person som ikke svarte skal få ikkeSvartTreffstatusEndret med avlyst treffstatus
+        assertThat(hendelserForIkkeSvart.last()["@event_name"].asText()).isEqualTo("ikkeSvartTreffstatusEndret")
+        assertThat(hendelserForIkkeSvart.last()["treffstatus"].asText()).isEqualTo("avlyst")
     }
 
     @Test
@@ -655,12 +655,12 @@ class AktivitetskortJobbsøkerSchedulerTest {
             .map { rapid.inspektør.message(it) }
             .filter { it["fnr"].asText() == fnrIkkeSvart2.asString }
 
-        // Begge personer som ikke svarte skal få avbrutt-status
+        // Begge personer som ikke svarte skal få ikkeSvartTreffstatusEndret med fullført treffstatus
         assertThat(hendelserForIkkeSvart1).hasSize(2)
-        assertThat(hendelserForIkkeSvart1.last()["treffstatus"].asText()).isEqualTo("avbrutt")
+        assertThat(hendelserForIkkeSvart1.last()["treffstatus"].asText()).isEqualTo("fullført")
 
         assertThat(hendelserForIkkeSvart2).hasSize(2)
-        assertThat(hendelserForIkkeSvart2.last()["treffstatus"].asText()).isEqualTo("avbrutt")
+        assertThat(hendelserForIkkeSvart2.last()["treffstatus"].asText()).isEqualTo("fullført")
     }
 
     // ==================== HJELPEMETODER ====================

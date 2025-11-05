@@ -14,7 +14,7 @@ import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.log
 
-class RekrutteringstreffSvartJaTreffstatusEndretLytter(
+class RekrutteringstreffIkkeSvartTreffstatusEndretLytter(
     rapidsConnection: RapidsConnection,
     private val repository: Repository
 ) : River.PacketListener {
@@ -22,7 +22,7 @@ class RekrutteringstreffSvartJaTreffstatusEndretLytter(
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "svartJaTreffstatusEndret")
+                it.requireValue("@event_name", "ikkeSvartTreffstatusEndret")
                 it.forbid("aktørId")
             }
             validate {
@@ -52,12 +52,13 @@ class RekrutteringstreffSvartJaTreffstatusEndretLytter(
         }
 
         val treffstatus = packet["treffstatus"].asText().lowercase()
+        // For ikke-svarte brukere skal status alltid være AVBRUTT uansett om treffet er fullført eller avlyst
         val aktivitetsStatus = when (treffstatus) {
-            "fullført", "fullfort" -> AktivitetsStatus.FULLFORT
+            "fullført", "fullfort" -> AktivitetsStatus.AVBRUTT
             "avlyst" -> AktivitetsStatus.AVBRUTT
             else -> {
-                log.error("Ukjent treffstatus '$treffstatus' for svart ja bruker, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
-                secure(log).error("Ukjent treffstatus '$treffstatus' for svart ja bruker, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
+                log.error("Ukjent treffstatus '$treffstatus' for ikke-svart bruker, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
+                secure(log).error("Ukjent treffstatus '$treffstatus' for ikke-svart bruker, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
                 return
             }
         }
@@ -75,8 +76,9 @@ class RekrutteringstreffSvartJaTreffstatusEndretLytter(
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
-        log.error("Feil ved behandling av svartJaTreffstatusEndret: $problems")
-        secure(log).error("Feil ved behandling av svartJaTreffstatusEndret: ${problems.toExtendedReport()}")
+        log.error("Feil ved behandling av ikkeSvartTreffstatusEndret: $problems")
+        secure(log).error("Feil ved behandling av ikkeSvartTreffstatusEndret: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }
+

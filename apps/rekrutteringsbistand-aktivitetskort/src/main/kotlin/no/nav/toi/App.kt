@@ -7,6 +7,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffPersonbrukerSvarLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffSvartJaTreffstatusEndretLytter
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffIkkeSvartTreffstatusEndretLytter
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.CommonClientConfigs
@@ -24,6 +25,7 @@ class App(private val rapidsConnection: RapidsConnection, private val repository
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffPersonbrukerSvarLytter(rapidsConnection, repository)
         RekrutteringstreffSvartJaTreffstatusEndretLytter(rapidsConnection, repository)
+        RekrutteringstreffIkkeSvartTreffstatusEndretLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
     }
     fun start() {

@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdatering
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortSvartJaTreffstatusEndret
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortIkkeSvartTreffstatusEndret
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortsvar
 import no.nav.toi.rekrutteringstreff.dto.EndringerDto
@@ -67,6 +68,12 @@ class Rekrutteringstreff(
         treffstatus = treffstatus
     )
 
+    fun aktivitetskortIkkeSvartTreffstatusEndretFor(fnr: String, treffstatus: String) = AktivitetskortIkkeSvartTreffstatusEndret(
+        fnr = fnr,
+        rekrutteringstreffId = id,
+        endretAv = opprettetAvPersonNavident,
+        treffstatus = treffstatus
+    )
 
     fun aktivitetskortOppdateringFor(fnr: String) = AktivitetskortOppdatering(
         fnr = fnr,
