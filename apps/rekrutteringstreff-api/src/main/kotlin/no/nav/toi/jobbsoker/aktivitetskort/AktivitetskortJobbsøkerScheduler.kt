@@ -30,7 +30,7 @@ class AktivitetskortJobbsøkerScheduler(
         val now = LocalDateTime.now()
         val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
 
-        scheduler.scheduleAtFixedRate(::behandleJobbsøkerHendelser, initialDelay, 20, TimeUnit.SECONDS)
+        scheduler.scheduleAtFixedRate(::behandleJobbsøkerHendelser, initialDelay, 10, TimeUnit.SECONDS)
     }
 
     fun stop() {
