@@ -272,7 +272,8 @@ class TestDatabase {
         arbeidsgiverTreffId = ArbeidsgiverTreffId(rs.getObject("id", UUID::class.java)),
         treffId = TreffId(rs.getString("treff_id")),
         orgnr = Orgnr(rs.getString("orgnr")),
-        orgnavn = Orgnavn(rs.getString("orgnavn"))
+        orgnavn = Orgnavn(rs.getString("orgnavn")),
+        status = ArbeidsgiverStatus.AKTIV,
     )
 
     private fun konverterTilNæringskoder(rs: ResultSet) = Næringskode(

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
+import no.nav.toi.executeInTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.SQLException
@@ -39,12 +40,12 @@ class ArbeidsgiverRepository(
 ) {
 
     fun slett(arbeidsgiverId: UUID, opprettetAv: String): Boolean =
-        dataSource.connection.use { c ->
+        dataSource.executeInTransaction { c ->
             val arbeidsgiverDbId: Long? = c.prepareStatement("SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?").use { ps ->
                 ps.setObject(1, arbeidsgiverId)
                 ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
             }
-            if (arbeidsgiverDbId == null) return@use false
+            if (arbeidsgiverDbId == null) return@executeInTransaction false
 
             leggTilHendelse(
                 connection = c,
@@ -53,6 +54,9 @@ class ArbeidsgiverRepository(
                 opprettetAvAktørType = AktørType.ARRANGØR,
                 aktøridentifikasjon = opprettetAv
             )
+
+            endreStatus(c, arbeidsgiverId, ArbeidsgiverStatus.SLETTET)
+
             true
         }
 
@@ -80,13 +84,14 @@ class ArbeidsgiverRepository(
 
     private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): Long {
         connection.prepareStatement(
-            "INSERT INTO arbeidsgiver (id, rekrutteringstreff_id, orgnr, orgnavn) VALUES (?, ?, ?, ?)",
+            "INSERT INTO arbeidsgiver (id, rekrutteringstreff_id, orgnr, orgnavn, status) VALUES (?, ?, ?, ?, ?)",
             Statement.RETURN_GENERATED_KEYS
         ).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
             stmt.setLong(2, treffDbId)
             stmt.setString(3, arbeidsgiver.orgnr.asString)
             stmt.setString(4, arbeidsgiver.orgnavn.asString)
+            stmt.setString(5, ArbeidsgiverStatus.AKTIV.name)
             stmt.executeUpdate()
             stmt.generatedKeys.use {
                 if (it.next()) return it.getLong(1)
@@ -144,6 +149,7 @@ class ArbeidsgiverRepository(
                     ag.id,
                     ag.orgnr,
                     ag.orgnavn,
+                    ag.status,
                     rt.id as treff_id,
                     COALESCE(
                         json_agg(
@@ -182,13 +188,60 @@ class ArbeidsgiverRepository(
         }
     }
 
+    fun hentArbeidsgiver(treff: TreffId, orgnr: Orgnr): ArbeidsgiverUtenHendelser? {
+        dataSource.connection.use { connection ->
+            if (!finnesIDb(connection, treff))
+                throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
+
+            val sql = """
+                SELECT
+                    ag.id,
+                    ag.orgnr,
+                    ag.orgnavn,
+                    ag.status,
+                    rt.id as treff_id
+                FROM arbeidsgiver ag
+                JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                WHERE rt.id = ? and ag.orgnr = ?
+                ORDER BY ag.arbeidsgiver_id;
+            """.trimIndent()
+
+            connection.prepareStatement(sql).use { preparedStatement ->
+                preparedStatement.setObject(1, treff.somUuid)
+                preparedStatement.setObject(2, orgnr.asString)
+                preparedStatement.executeQuery().use { resultSet ->
+                    return if (resultSet.next()) resultSet.toArbeidsgiverUtenHendelser() else null
+                }
+            }
+        }
+    }
+
     private fun java.sql.ResultSet.toArbeidsgiver() = Arbeidsgiver(
+       toArbeidsgiverUtenHendelser(),
+       parseHendelser(getString("hendelser"))
+    )
+
+    private fun java.sql.ResultSet.toArbeidsgiverUtenHendelser() = ArbeidsgiverUtenHendelser(
         arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(getString("id"))),
         treffId = TreffId(getString("treff_id")),
         orgnr = Orgnr(getString("orgnr")),
         orgnavn = Orgnavn(getString("orgnavn")),
-        hendelser = parseHendelser(getString("hendelser"))
+        status = ArbeidsgiverStatus.valueOf(getString("status"))
     )
+
+     fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {
+            connection.prepareStatement(
+                """
+                UPDATE arbeidsgiver
+                SET status=?
+                WHERE id=?
+                """
+            ).apply {
+                var i = 0
+                setString(++i, arbeidsgiverStatus.name)
+                setObject(++i, arbeidsgiverId)
+            }.executeUpdate()
+    }
 
     fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelseMedArbeidsgiverData> {
         dataSource.connection.use { connection ->

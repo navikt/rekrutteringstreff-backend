@@ -11,6 +11,7 @@ import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
+import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
@@ -273,7 +274,8 @@ class RekrutteringstreffTest {
                     arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
                     treffId = treff.id,
                     orgnr = Orgnr("999888777"),
-                    orgnavn = Orgnavn("Testbedrift AS")
+                    orgnavn = Orgnavn("Testbedrift AS"),
+                    status = ArbeidsgiverStatus.AKTIV,
                 )
             )
         )
@@ -397,7 +399,8 @@ class RekrutteringstreffTest {
                     arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
                     treff,
                     Orgnr("999888777"),
-                    Orgnavn("Test AS")
+                    Orgnavn("Test AS"),
+                    status = ArbeidsgiverStatus.AKTIV,
                 )
             )
         )

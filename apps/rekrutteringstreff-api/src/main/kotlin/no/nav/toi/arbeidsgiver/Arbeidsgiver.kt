@@ -1,9 +1,6 @@
 package no.nav.toi.arbeidsgiver
 
-import no.nav.toi.AktørType
-import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId
-import java.time.ZonedDateTime
 import java.util.UUID
 
 data class Orgnr(private val orgnr: String) {
@@ -34,14 +31,6 @@ data class LeggTilArbeidsgiver(
     val næringskoder: List<Næringskode> = emptyList()
 )
 
-data class Arbeidsgiver(
-    val arbeidsgiverTreffId: ArbeidsgiverTreffId,
-    val treffId: TreffId,
-    val orgnr: Orgnr,
-    val orgnavn: Orgnavn,
-    val hendelser: List<ArbeidsgiverHendelse> = emptyList()
-)
-
 data class ArbeidsgiverTreffId(private val id: UUID) {
     constructor(uuid: String) : this(UUID.fromString(uuid))
 
@@ -49,3 +38,33 @@ data class ArbeidsgiverTreffId(private val id: UUID) {
     val somString = id.toString()
     override fun toString() = somString
 }
+
+enum class ArbeidsgiverStatus {
+    AKTIV, SLETTET
+}
+
+data class Arbeidsgiver(
+    val arbeidsgiverTreffId: ArbeidsgiverTreffId,
+    val treffId: TreffId,
+    val orgnr: Orgnr,
+    val orgnavn: Orgnavn,
+    val hendelser: List<ArbeidsgiverHendelse> = emptyList(),
+    val status : ArbeidsgiverStatus,
+) {
+    constructor(arbeidsgiverUtenHendelser: ArbeidsgiverUtenHendelser, hendelser: List<ArbeidsgiverHendelse>) : this(
+        arbeidsgiverTreffId = arbeidsgiverUtenHendelser.arbeidsgiverTreffId,
+        treffId = arbeidsgiverUtenHendelser.treffId,
+        orgnr =  arbeidsgiverUtenHendelser.orgnr,
+        orgnavn = arbeidsgiverUtenHendelser.orgnavn,
+        status = arbeidsgiverUtenHendelser.status,
+        hendelser = hendelser
+    )
+}
+
+data class ArbeidsgiverUtenHendelser(
+    val arbeidsgiverTreffId: ArbeidsgiverTreffId,
+    val treffId: TreffId,
+    val orgnr: Orgnr,
+    val orgnavn: Orgnavn,
+    val status : ArbeidsgiverStatus,
+)
