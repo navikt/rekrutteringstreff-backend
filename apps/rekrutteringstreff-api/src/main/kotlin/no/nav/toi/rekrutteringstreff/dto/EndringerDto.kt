@@ -1,7 +1,6 @@
 package no.nav.toi.rekrutteringstreff.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonPropertyOrder
 
 data class Endringsfelt<T>(
     val gammelVerdi: T?,
@@ -9,7 +8,6 @@ data class Endringsfelt<T>(
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonPropertyOrder("tittel", "beskrivelse", "fraTid", "tilTid", "svarfrist", "gateadresse", "postnummer", "poststed", "innlegg")
 data class EndringerDto(
     val tittel: Endringsfelt<String>? = null,
     val fraTid: Endringsfelt<String>? = null,
