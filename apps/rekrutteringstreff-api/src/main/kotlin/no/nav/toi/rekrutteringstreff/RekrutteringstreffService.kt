@@ -4,6 +4,7 @@ import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.executeInTransaction
+import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.log
@@ -23,6 +24,7 @@ class RekrutteringstreffService(
             avlystAv,
             RekrutteringstreffHendelsestype.AVLYST,
             JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST,
             RekrutteringstreffStatus.AVLYST,
         )
     }
@@ -33,6 +35,7 @@ class RekrutteringstreffService(
             fullfortAv,
             RekrutteringstreffHendelsestype.FULLFØRT,
             JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT,
             RekrutteringstreffStatus.FULLFØRT
         )
     }
@@ -41,7 +44,8 @@ class RekrutteringstreffService(
         treffId: TreffId,
         ident: String,
         rekrutteringstreffHendelsestype: RekrutteringstreffHendelsestype,
-        jobbsøkerHendelsestype: JobbsøkerHendelsestype,
+        jobbsøkerHendelsestypeSvartJa: JobbsøkerHendelsestype,
+        jobbsøkerHendelsestypeIkkeSvart: JobbsøkerHendelsestype,
         status: RekrutteringstreffStatus,
     ) {
        dataSource.executeInTransaction { connection ->
@@ -55,19 +59,59 @@ class RekrutteringstreffService(
                ident
            )
 
-           val jobbsøkereMedAktivtSvarJa = jobbsøkerRepository.hentJobbsøkereMedAktivtSvarJa(connection, treffId)
+           // Hent alle jobbsøkere for treffet med deres hendelser
+           val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
+
+           // Filtrer i Kotlin: finn de som har aktivt svar ja
+           val jobbsøkereMedAktivtSvarJa = finnJobbsøkereMedAktivtSvarJa(alleJobbsøkere)
 
            // Legg til hendelser for alle jobbsøkere med aktivt svar ja
            if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
                jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                    connection,
-                   jobbsøkerHendelsestype,
-                   jobbsøkereMedAktivtSvarJa,
+                   jobbsøkerHendelsestypeSvartJa,
+                   jobbsøkereMedAktivtSvarJa.map { it.personTreffId },
+                   ident
+               )
+           }
+
+           // Filtrer i Kotlin: finn de som ikke har svart
+           val jobbsøkereSomIkkeSvart = finnJobbsøkereSomIkkeSvart(alleJobbsøkere)
+
+           // Legg til hendelser for alle jobbsøkere som ikke har svart
+           if (jobbsøkereSomIkkeSvart.isNotEmpty()) {
+               jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                   connection,
+                   jobbsøkerHendelsestypeIkkeSvart,
+                   jobbsøkereSomIkkeSvart.map { it.personTreffId },
                    ident
                )
            }
 
            rekrutteringstreffRepository.endreStatus(connection, treffId, status)
+        }
+    }
+
+    private fun finnJobbsøkereMedAktivtSvarJa(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
+        return jobbsøkere.filter { jobbsøker ->
+            val hendelsestyper = jobbsøker.hendelser.map { it.hendelsestype }
+            // Hendelser er sortert DESC (nyeste først), så indexOf finner den nyeste
+            val nyesteJaIndex = hendelsestyper.indexOf(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
+            val nyesteNeiIndex = hendelsestyper.indexOf(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
+
+            // Har svart ja, og ja er nyere enn eventuell nei (lavere index = nyere)
+            nyesteJaIndex != -1 && (nyesteNeiIndex == -1 || nyesteJaIndex < nyesteNeiIndex)
+        }
+    }
+
+    private fun finnJobbsøkereSomIkkeSvart(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
+        return jobbsøkere.filter { jobbsøker ->
+            val hendelsestyper = jobbsøker.hendelser.map { it.hendelsestype }.toSet()
+
+            // Har INVITERT, men ikke svart ja eller nei
+            hendelsestyper.contains(JobbsøkerHendelsestype.INVITERT) &&
+            !hendelsestyper.contains(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON) &&
+            !hendelsestyper.contains(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
         }
     }
 

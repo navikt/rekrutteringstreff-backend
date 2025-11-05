@@ -67,6 +67,7 @@ class Rekrutteringstreff(
         treffstatus = treffstatus
     )
 
+
     fun aktivitetskortOppdateringFor(fnr: String) = AktivitetskortOppdatering(
         fnr = fnr,
         rekrutteringstreffId = id,

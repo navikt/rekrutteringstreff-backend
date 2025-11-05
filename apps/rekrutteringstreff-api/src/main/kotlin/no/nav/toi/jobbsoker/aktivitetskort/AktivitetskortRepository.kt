@@ -70,6 +70,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
         }
     }
 
+
     private fun ResultSet.tilUsendtInvitasjon() = UsendtInvitasjon(
         jobbsokerHendelseDbId = getLong("db_id"),
         fnr = getString("fodselsnummer"),

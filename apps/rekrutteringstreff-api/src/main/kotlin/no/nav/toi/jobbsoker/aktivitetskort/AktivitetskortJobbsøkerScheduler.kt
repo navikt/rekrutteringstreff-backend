@@ -98,8 +98,14 @@ class AktivitetskortJobbsøkerScheduler(
         val fullført = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
             .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT, it.hendelseData) }
 
+        val ikkeSvartAvlyst = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST)
+            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST, it.hendelseData) }
+
+        val ikkeSvartFullført = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT)
+            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT, it.hendelseData) }
+
         // Slå sammen alle hendelser og sorter etter ID (som representerer tidspunkt)
-        return (invitasjoner + svarJa + svarNei + treffEndret + avlyst + fullført)
+        return (invitasjoner + svarJa + svarNei + treffEndret + avlyst + fullført + ikkeSvartAvlyst + ikkeSvartFullført)
             .sortedBy { it.jobbsokerHendelseDbId }
     }
 
@@ -111,6 +117,8 @@ class AktivitetskortJobbsøkerScheduler(
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON -> behandleTreffEndret(hendelse)
             JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST -> behandleTreffstatus(hendelse, "avlyst")
             JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT -> behandleTreffstatus(hendelse, "fullført")
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST -> behandleTreffstatus(hendelse, "avbrutt")
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT -> behandleTreffstatus(hendelse, "avbrutt")
             else -> {
                 log.warn("Ukjent hendelsestype ${hendelse.hendelsestype} for jobbsøker-hendelse ${hendelse.jobbsokerHendelseDbId}")
             }

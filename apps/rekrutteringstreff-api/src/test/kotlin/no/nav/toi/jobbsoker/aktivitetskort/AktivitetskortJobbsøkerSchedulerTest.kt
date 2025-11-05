@@ -500,6 +500,169 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(0)
     }
 
+    // ==================== IKKE-SVART TESTER ====================
+
+    @Test
+    fun `skal sende avbrutt-status for jobbsøker med kun INVITERT når treff fullføres`() {
+        val fnrSvartJa = Fødselsnummer("12345678901")
+        val fnrIkkeSvart = Fødselsnummer("12345678902")
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+
+        // Person 1: Svarer ja
+        opprettOgInviterJobbsøker(treffId, fnrSvartJa)
+        jobbsøkerRepository.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
+
+        // Person 2: Blir invitert men svarer ikke
+        opprettOgInviterJobbsøker(treffId, fnrIkkeSvart)
+
+        scheduler.behandleJobbsøkerHendelser()  // Send invitasjoner og svar
+
+        // Fullfør treffet
+        rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Verifiser at det sendes hendelser for begge personer
+        // Person 1: invitasjon + svar + fullført
+        // Person 2: invitasjon + avbrutt
+        assertThat(rapid.inspektør.size).isEqualTo(5)
+
+        // Finn hendelser for hver person
+        val hendelserForSvartJa = (0 until rapid.inspektør.size)
+            .map { rapid.inspektør.message(it) }
+            .filter { it["fnr"].asText() == fnrSvartJa.asString }
+
+        val hendelserForIkkeSvart = (0 until rapid.inspektør.size)
+            .map { rapid.inspektør.message(it) }
+            .filter { it["fnr"].asText() == fnrIkkeSvart.asString }
+
+        // Person som svarte ja skal få fullført-status
+        assertThat(hendelserForSvartJa).hasSize(3)
+        assertThat(hendelserForSvartJa.last()["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
+        assertThat(hendelserForSvartJa.last()["treffstatus"].asText()).isEqualTo("fullført")
+
+        // Person som ikke svarte skal få avbrutt-status
+        assertThat(hendelserForIkkeSvart).hasSize(2)
+        assertThat(hendelserForIkkeSvart[0]["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
+        assertThat(hendelserForIkkeSvart[1]["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
+        assertThat(hendelserForIkkeSvart[1]["treffstatus"].asText()).isEqualTo("avbrutt")
+
+        // Verifiser at hendelsene er markert som behandlet
+        val usendteFullført = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
+        assertThat(usendteFullført).isEmpty()
+    }
+
+    @Test
+    fun `skal sende avbrutt-status for jobbsøker med kun INVITERT når treff avlyses`() {
+        val fnrSvartJa = Fødselsnummer("12345678901")
+        val fnrIkkeSvart = Fødselsnummer("12345678902")
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+
+        // Person 1: Svarer ja
+        opprettOgInviterJobbsøker(treffId, fnrSvartJa)
+        jobbsøkerRepository.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
+
+        // Person 2: Blir invitert men svarer ikke
+        opprettOgInviterJobbsøker(treffId, fnrIkkeSvart)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Avlys treffet
+        rekrutteringstreffService.avlys(treffId, fnrSvartJa.asString)
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Verifiser at begge personer får avbrutt-status
+        assertThat(rapid.inspektør.size).isEqualTo(5)
+
+        val hendelserForSvartJa = (0 until rapid.inspektør.size)
+            .map { rapid.inspektør.message(it) }
+            .filter { it["fnr"].asText() == fnrSvartJa.asString }
+
+        val hendelserForIkkeSvart = (0 until rapid.inspektør.size)
+            .map { rapid.inspektør.message(it) }
+            .filter { it["fnr"].asText() == fnrIkkeSvart.asString }
+
+        // Person som svarte ja skal få avlyst-status
+        assertThat(hendelserForSvartJa.last()["treffstatus"].asText()).isEqualTo("avlyst")
+
+        // Person som ikke svarte skal også få avbrutt-status
+        assertThat(hendelserForIkkeSvart.last()["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
+        assertThat(hendelserForIkkeSvart.last()["treffstatus"].asText()).isEqualTo("avbrutt")
+    }
+
+    @Test
+    fun `skal ikke sende avbrutt-status for jobbsøker som har svart nei når treff fullføres`() {
+        val fnrSvartNei = Fødselsnummer("12345678901")
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+
+        // Person svarer nei
+        opprettOgInviterJobbsøker(treffId, fnrSvartNei)
+        jobbsøkerRepository.svarNeiTilInvitasjon(fnrSvartNei, treffId, fnrSvartNei.asString)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Fullfør treffet - skal ikke sende noen ekstra hendelse for person som svarte nei
+        rekrutteringstreffService.fullfør(treffId, fnrSvartNei.asString)
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Skal kun være invitasjon + svar nei (ikke noen treffstatus-endring)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+        assertThat(rapid.inspektør.message(0)["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
+        assertThat(rapid.inspektør.message(1)["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
+        assertThat(rapid.inspektør.message(1)["svartJa"].asBoolean()).isFalse
+    }
+
+    @Test
+    fun `skal håndtere flere jobbsøkere med kun INVITERT når treff fullføres`() {
+        val fnrSvartJa = Fødselsnummer("12345678901")
+        val fnrIkkeSvart1 = Fødselsnummer("12345678902")
+        val fnrIkkeSvart2 = Fødselsnummer("12345678903")
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+
+        // Person 1: Svarer ja
+        opprettOgInviterJobbsøker(treffId, fnrSvartJa)
+        jobbsøkerRepository.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
+
+        // Person 2 og 3: Blir invitert men svarer ikke
+        opprettOgInviterJobbsøker(treffId, fnrIkkeSvart1)
+        opprettOgInviterJobbsøker(treffId, fnrIkkeSvart2)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Fullfør treffet
+        rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Verifiser: 3 invitasjoner + 1 svar ja + 1 fullført + 2 avbrutt = 7
+        assertThat(rapid.inspektør.size).isEqualTo(7)
+
+        val hendelserForIkkeSvart1 = (0 until rapid.inspektør.size)
+            .map { rapid.inspektør.message(it) }
+            .filter { it["fnr"].asText() == fnrIkkeSvart1.asString }
+
+        val hendelserForIkkeSvart2 = (0 until rapid.inspektør.size)
+            .map { rapid.inspektør.message(it) }
+            .filter { it["fnr"].asText() == fnrIkkeSvart2.asString }
+
+        // Begge personer som ikke svarte skal få avbrutt-status
+        assertThat(hendelserForIkkeSvart1).hasSize(2)
+        assertThat(hendelserForIkkeSvart1.last()["treffstatus"].asText()).isEqualTo("avbrutt")
+
+        assertThat(hendelserForIkkeSvart2).hasSize(2)
+        assertThat(hendelserForIkkeSvart2.last()["treffstatus"].asText()).isEqualTo("avbrutt")
+    }
+
     // ==================== HJELPEMETODER ====================
 
     private fun opprettPersonOgInviter(fødselsnummer: Fødselsnummer, rapid: TestRapid, scheduler: AktivitetskortJobbsøkerScheduler): no.nav.toi.rekrutteringstreff.TreffId {

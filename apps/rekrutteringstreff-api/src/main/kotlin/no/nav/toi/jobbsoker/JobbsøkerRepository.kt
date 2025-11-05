@@ -472,33 +472,4 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    fun hentJobbsøkereMedAktivtSvarJa(connection: Connection, treff: TreffId): List<PersonTreffId> {
-        val sql = """
-            SELECT DISTINCT js.id
-            FROM jobbsoker js
-            JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-            JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-            WHERE rt.id = ?
-              AND jh.hendelsestype = ?
-              AND NOT EXISTS (
-                  SELECT 1 FROM jobbsoker_hendelse jh2
-                  WHERE jh2.jobbsoker_id = js.jobbsoker_id
-                    AND jh2.hendelsestype = ?
-                    AND jh2.tidspunkt > jh.tidspunkt
-              )
-        """.trimIndent()
-
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setObject(1, treff.somUuid)
-            stmt.setString(2, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON.name)
-            stmt.setString(3, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON.name)
-            stmt.executeQuery().use { rs ->
-                val result = mutableListOf<PersonTreffId>()
-                while (rs.next()) {
-                    result.add(PersonTreffId(UUID.fromString(rs.getString("id"))))
-                }
-                return result
-            }
-        }
-    }
 }
