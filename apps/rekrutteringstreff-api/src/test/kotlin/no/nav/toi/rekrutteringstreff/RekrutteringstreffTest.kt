@@ -400,7 +400,7 @@ class RekrutteringstreffTest {
                     treff,
                     Orgnr("999888777"),
                     Orgnavn("Test AS"),
-                    status = ArbeidsgiverStatus.AKTIV,
+                    ArbeidsgiverStatus.AKTIV,
                 )
             )
         )
