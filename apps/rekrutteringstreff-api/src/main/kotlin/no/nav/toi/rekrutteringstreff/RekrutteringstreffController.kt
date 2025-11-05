@@ -131,19 +131,22 @@ class RekrutteringstreffController(
             content = [OpenApiContent(
                 from = RekrutteringstreffDetaljOutboundDto::class,
                 example = """{
-                   "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
-                   "tittel":"Sommerjobbtreff",
-                   "beskrivelse":null,
-                   "fraTid":null,
-                   "tilTid":null,
-                   "svarfrist":null,
-                   "gateadresse": null,
-                   "postnummer": null,
-                   "poststed": null,
-                   "status":"UTKAST",
-                   "opprettetAvPersonNavident":"A123456",
-                   "opprettetAvNavkontorEnhetId":"0318",
-                   "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+                   "rekrutteringstreff":
+                    {
+                       "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
+                       "tittel":"Sommerjobbtreff",
+                       "beskrivelse":null,
+                       "fraTid":null,
+                       "tilTid":null,
+                       "svarfrist":null,
+                       "gateadresse": null,
+                       "postnummer": null,
+                       "poststed": null,
+                       "status":"UTKAST",
+                       "opprettetAvPersonNavident":"A123456",
+                       "opprettetAvNavkontorEnhetId":"0318",
+                       "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+                    },
                    "hendelser":[
                      {
                        "id":"any-uuid",
