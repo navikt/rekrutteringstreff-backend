@@ -64,9 +64,9 @@ class ArbeidsgiverRepositoryTest {
     fun hentArbeidsgivereTest() {
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
-        val ag1 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, Orgnr("111111111"), Orgnavn("Company A"))
-        val ag2 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("222222222"), Orgnavn("Company B"))
-        val ag3 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("333333333"), Orgnavn("Company C"))
+        val ag1 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, Orgnr("111111111"), Orgnavn("Company A"), ArbeidsgiverStatus.AKTIV)
+        val ag2 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("222222222"), Orgnavn("Company B"), ArbeidsgiverStatus.AKTIV)
+        val ag3 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("333333333"), Orgnavn("Company C"), ArbeidsgiverStatus.AKTIV)
         db.leggTilArbeidsgivere(listOf(ag1))
         db.leggTilArbeidsgivere(listOf(ag2, ag3))
         val hentet = repository.hentArbeidsgivere(treffId2)
@@ -102,13 +102,17 @@ class ArbeidsgiverRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val input = LeggTilArbeidsgiver(Orgnr("987654321"), Orgnavn("Slettbar Bedrift"))
         repository.leggTil(input, treffId, "testperson")
-        val id = repository.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId.somUuid
+        val id = repository.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId
 
-        val resultat = repository.slett(id, "testperson")
+        val resultat = repository.slett(id.somUuid, "testperson")
         assertThat(resultat).isTrue()
         assertThat(repository.hentArbeidsgivere(treffId)).isEmpty()
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET }).isTrue()
+
+        val arbeidsgiverSomErSlettet = repository.hentArbeidsgiver(treffId, input.orgnr)
+        assertThat(arbeidsgiverSomErSlettet).isNotNull()
+        assertThat(arbeidsgiverSomErSlettet?.status).isEqualTo(ArbeidsgiverStatus.SLETTET)
     }
 
     @Test

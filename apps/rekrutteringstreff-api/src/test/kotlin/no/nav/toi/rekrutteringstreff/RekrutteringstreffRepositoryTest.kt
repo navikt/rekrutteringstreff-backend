@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
+import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
@@ -147,7 +148,8 @@ class RekrutteringstreffRepositoryTest {
             arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
             treffId = treffId,
             orgnr = Orgnr("888888888"),
-            orgnavn = Orgnavn("Test AS")
+            orgnavn = Orgnavn("Test AS"),
+            status = ArbeidsgiverStatus.AKTIV,
         )
         db.leggTilArbeidsgivere(listOf(arbeidsgiver))
 
@@ -209,7 +211,8 @@ class RekrutteringstreffRepositoryTest {
             arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
             treffId = treffId,
             orgnr = Orgnr("777777777"),
-            orgnavn = Orgnavn("Test2 AS")
+            orgnavn = Orgnavn("Test2 AS"),
+            status = ArbeidsgiverStatus.AKTIV,
         )
         db.leggTilArbeidsgivere(listOf(arbeidsgiver))
 
@@ -272,7 +275,8 @@ class RekrutteringstreffRepositoryTest {
             arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
             treffId = treffId,
             orgnr = Orgnr("666666666"),
-            orgnavn = Orgnavn("Test3 AS")
+            orgnavn = Orgnavn("Test3 AS"),
+            status = ArbeidsgiverStatus.AKTIV,
         )
         db.leggTilArbeidsgivere(listOf(arbeidsgiver))
 
@@ -357,7 +361,8 @@ class RekrutteringstreffRepositoryTest {
             arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
             treffId = treffId,
             orgnr = Orgnr("999999999"),
-            orgnavn = Orgnavn("Test AS")
+            orgnavn = Orgnavn("Test AS"),
+            status = ArbeidsgiverStatus.AKTIV,
         )
         db.leggTilArbeidsgivere(listOf(arbeidsgiver))
 
@@ -440,7 +445,8 @@ class RekrutteringstreffRepositoryTest {
             arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
             treffId = treffId,
             orgnr = Orgnr("555555555"),
-            orgnavn = Orgnavn("Test4 AS")
+            orgnavn = Orgnavn("Test4 AS"),
+            status = ArbeidsgiverStatus.AKTIV,
         )
         db.leggTilArbeidsgivere(listOf(arbeidsgiver))
 

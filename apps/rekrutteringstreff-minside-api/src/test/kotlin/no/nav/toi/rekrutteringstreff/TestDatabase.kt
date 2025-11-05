@@ -175,7 +175,8 @@ class TestDatabase {
         arbeidsgiverTreffId      = ArbeidsgiverTreffId(UUID.fromString(rs.getString("id"))),
         treffId = TreffId(rs.getString("treff_id")),
         orgnr   = Orgnr(rs.getString("orgnr")),
-        orgnavn = Orgnavn(rs.getString("orgnavn"))
+        orgnavn = Orgnavn(rs.getString("orgnavn")),
+        status = ArbeidsgiverStatus.valueOf(rs.getString("status")),
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
