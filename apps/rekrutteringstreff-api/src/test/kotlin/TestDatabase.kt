@@ -18,11 +18,15 @@ import javax.sql.DataSource
 
 class TestDatabase {
 
+    private val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
+    private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
+    private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
+
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
     ): TreffId {
-        return RekrutteringstreffRepository(dataSource).opprett(
+        return rekrutteringstreffRepository.opprett(
             OpprettRekrutteringstreffInternalDto(
                 tittel = tittel,
                 opprettetAvNavkontorEnhetId = "Original Kontor",
@@ -50,33 +54,42 @@ class TestDatabase {
             tittel = tittel
         )
 
-        dataSource.connection.use {
-            val sql = """
-            UPDATE rekrutteringstreff
-            SET beskrivelse = ?,
-                fratid = ?,
-                tiltid = ?,
-                svarfrist = ?,
-                gateadresse = ?,
-                postnummer = ?,
-                poststed = ?,
-                status = ?,
-                opprettet_av_kontor_enhetid = ?
-            WHERE id = ?
-        """.trimIndent()
-            it.prepareStatement(sql).apply {
-                setString(1, beskrivelse)
-                setTimestamp(2, Timestamp.from(fraTid.toInstant()))
-                setTimestamp(3, Timestamp.from(tilTid.toInstant()))
-                setTimestamp(4, Timestamp.from(svarfrist.toInstant()))
-                setString(5, gateadresse)
-                setString(6, postnummer)
-                setString(7, poststed)
-                setString(8, status.name)
-                setString(9, opprettetAvNavkontorEnhetId)
-                setObject(10, treffId.somUuid)
-            }.executeUpdate()
+        // Bruk repository-metode for å oppdatere
+        rekrutteringstreffRepository.oppdater(
+            treffId,
+            no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
+                tittel = tittel,
+                beskrivelse = beskrivelse,
+                fraTid = fraTid,
+                tilTid = tilTid,
+                svarfrist = svarfrist,
+                gateadresse = gateadresse,
+                postnummer = postnummer,
+                poststed = poststed
+            ),
+            oppdatertAv = navIdent
+        )
+
+        // Status må oppdateres separat siden det ikke er del av OppdaterRekrutteringstreffDto
+        if (status != RekrutteringstreffStatus.UTKAST) {
+            dataSource.connection.use {
+                it.prepareStatement("UPDATE rekrutteringstreff SET status = ? WHERE id = ?").apply {
+                    setString(1, status.name)
+                    setObject(2, treffId.somUuid)
+                }.executeUpdate()
+            }
         }
+
+        // Oppdater opprettet_av_kontor_enhetid hvis nødvendig
+        if (opprettetAvNavkontorEnhetId != "Original Kontor") {
+            dataSource.connection.use {
+                it.prepareStatement("UPDATE rekrutteringstreff SET opprettet_av_kontor_enhetid = ? WHERE id = ?").apply {
+                    setString(1, opprettetAvNavkontorEnhetId)
+                    setObject(2, treffId.somUuid)
+                }.executeUpdate()
+            }
+        }
+
         return treffId
     }
 
@@ -109,25 +122,26 @@ class TestDatabase {
         gateadresse: String? = null,
         postnummer: String? = null,
         poststed: String? = null
-    ) = dataSource.connection.use { conn ->
-        val updates = mutableListOf<String>()
-        val params = mutableListOf<Any?>()
+    ) {
+        // Hent gjeldende verdier
+        val gjeldende = rekrutteringstreffRepository.hent(id)
+            ?: throw IllegalArgumentException("Treff $id finnes ikke")
 
-        tittel?.let { updates.add("tittel = ?"); params.add(it) }
-        beskrivelse?.let { updates.add("beskrivelse = ?"); params.add(it) }
-        fraTid?.let { updates.add("fratid = ?"); params.add(Timestamp.from(it.toInstant())) }
-        tilTid?.let { updates.add("tiltid = ?"); params.add(Timestamp.from(it.toInstant())) }
-        gateadresse?.let { updates.add("gateadresse = ?"); params.add(it) }
-        postnummer?.let { updates.add("postnummer = ?"); params.add(it) }
-        poststed?.let { updates.add("poststed = ?"); params.add(it) }
-
-        if (updates.isEmpty()) return@use
-
-        val sql = "UPDATE rekrutteringstreff SET ${updates.joinToString(", ")} WHERE id = ?"
-        conn.prepareStatement(sql).apply {
-            params.forEachIndexed { index, value -> setObject(index + 1, value) }
-            setObject(params.size + 1, id.somUuid)
-        }.executeUpdate()
+        // Bruk repository.oppdater med merge av nye og gamle verdier
+        rekrutteringstreffRepository.oppdater(
+            id,
+            no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
+                tittel = tittel ?: gjeldende.tittel,
+                beskrivelse = beskrivelse ?: gjeldende.beskrivelse,
+                fraTid = fraTid ?: gjeldende.fraTid,
+                tilTid = tilTid ?: gjeldende.tilTid,
+                svarfrist = gjeldende.svarfrist,
+                gateadresse = gateadresse ?: gjeldende.gateadresse,
+                postnummer = postnummer ?: gjeldende.postnummer,
+                poststed = poststed ?: gjeldende.poststed
+            ),
+            oppdatertAv = "test"
+        )
     }
 
     fun registrerTreffEndretNotifikasjon(
@@ -169,10 +183,7 @@ class TestDatabase {
         }.executeUpdate()
     }
 
-    fun hentAlleRekrutteringstreff(): List<Rekrutteringstreff> = dataSource.connection.use {
-        val rs = it.prepareStatement("SELECT * FROM rekrutteringstreff ORDER BY id ASC").executeQuery()
-        generateSequence { if (rs.next()) konverterTilRekrutteringstreff(rs) else null }.toList()
-    }
+    fun hentAlleRekrutteringstreff(): List<Rekrutteringstreff> = rekrutteringstreffRepository.hentAlle()
 
     fun hentEiere(id: TreffId): List<String> = dataSource.connection.use {
         val rs = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ?").apply {
@@ -366,10 +377,9 @@ class TestDatabase {
         arbeidsgivere: List<Arbeidsgiver>,
         næringskoderPerOrgnr: Map<Orgnr, List<Næringskode>> = emptyMap()
     ) {
-        val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         arbeidsgivere.forEach { ag ->
             val næringskoder = næringskoderPerOrgnr[ag.orgnr].orEmpty()
-            repo.leggTil(
+            arbeidsgiverRepository.leggTil(
                 LeggTilArbeidsgiver(
                     ag.orgnr,
                     ag.orgnavn,
@@ -381,6 +391,8 @@ class TestDatabase {
     }
 
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
+        // Kan ikke bruke jobbsøkerRepository.leggTil() her fordi testene trenger å spesifisere PersonTreffId
+        // Repository.leggTil() genererer nye UUID-er som gjør at inviter() feiler
         dataSource.executeInTransaction { c ->
             jobbsøkere.forEach { js ->
                 // Hent treff_db_id
@@ -501,32 +513,5 @@ class TestDatabase {
     )
 
     fun hentHendelser(treff: TreffId): List<RekrutteringstreffHendelse> =
-        dataSource.connection.use { c ->
-            c.prepareStatement(
-                """
-                SELECT  h.id                  AS hendelse_id,
-                        h.tidspunkt           AS tidspunkt,
-                        h.hendelsestype       AS hendelsestype,
-                        h.opprettet_av_aktortype AS aktørtype,
-                        h.aktøridentifikasjon AS ident
-                FROM    rekrutteringstreff_hendelse h
-                JOIN    rekrutteringstreff r ON h.rekrutteringstreff_id = r.rekrutteringstreff_id
-                WHERE   r.id = ?
-                ORDER BY h.tidspunkt DESC
-                """
-            ).use { s ->
-                s.setObject(1, treff.somUuid)
-                s.executeQuery().let { rs ->
-                    generateSequence {
-                        if (rs.next()) RekrutteringstreffHendelse(
-                            id = UUID.fromString(rs.getString("hendelse_id")),
-                            tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atOslo(),
-                            hendelsestype = RekrutteringstreffHendelsestype.valueOf(rs.getString("hendelsestype")),
-                            opprettetAvAktørType = AktørType.valueOf(rs.getString("aktørtype")),
-                            aktørIdentifikasjon = rs.getString("ident")
-                        ) else null
-                    }.toList()
-                }
-            }
-        }
+        rekrutteringstreffRepository.hentHendelser(treff)
 }
