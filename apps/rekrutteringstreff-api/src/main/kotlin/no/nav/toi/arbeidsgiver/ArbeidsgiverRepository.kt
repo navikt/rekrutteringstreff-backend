@@ -229,18 +229,18 @@ class ArbeidsgiverRepository(
         status = ArbeidsgiverStatus.valueOf(getString("status"))
     )
 
-     fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {
-            connection.prepareStatement(
-                """
-                UPDATE arbeidsgiver
-                SET status=?
-                WHERE id=?
-                """
-            ).apply {
-                var i = 0
-                setString(++i, arbeidsgiverStatus.name)
-                setObject(++i, arbeidsgiverId)
-            }.executeUpdate()
+    fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {
+        connection.prepareStatement(
+            """
+            UPDATE arbeidsgiver
+            SET status=?
+            WHERE id=?
+            """
+        ).apply {
+            var i = 0
+            setString(++i, arbeidsgiverStatus.name)
+            setObject(++i, arbeidsgiverId)
+        }.executeUpdate()
     }
 
     fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelseMedArbeidsgiverData> {
