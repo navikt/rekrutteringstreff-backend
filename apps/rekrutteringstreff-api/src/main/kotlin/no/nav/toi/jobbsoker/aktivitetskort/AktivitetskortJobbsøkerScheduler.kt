@@ -163,12 +163,10 @@ class AktivitetskortJobbsøkerScheduler(
             return
         }
 
-        // Verifiser at nyVerdi fra endringer matcher gjeldende verdier i databasen
+        // Verifiser at nyVerdi fra endringer matcher gjeldende verdier i databasen (kun til logging)
         val verificationResult = treff.verifiserEndringerMotDatabase(endringer)
         if (!verificationResult.erGyldig) {
-            log.warn("Endringer i hendelse ${hendelse.jobbsokerHendelseDbId} matcher ikke treff-data i databasen: ${verificationResult.feilmelding}. Markerer likevel som behandlet.")
-            aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
-            return
+            log.warn("Endringer i hendelse ${hendelse.jobbsokerHendelseDbId} matcher ikke treff-data i databasen: ${verificationResult.feilmelding}. Sender likevel oppdatering med faktiske verdier fra database.")
         }
 
         // Send oppdatering via rapids ved å bruke faktiske verdier fra rekrutteringstreff-tabellen

@@ -329,7 +329,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     }
 
     @Test
-    fun `skal markere som behandlet når nyVerdi ikke matcher database`() {
+    fun `skal sende oppdatering selv når nyVerdi ikke matcher database`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -348,9 +348,14 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(1)  // Kun invitasjon
+        // Skal sende oppdatering med faktiske verdier fra database, selv om verifiseringen feiler
+        assertThat(rapid.inspektør.size).isEqualTo(2)  // Invitasjon + oppdatering
+        val melding = rapid.inspektør.message(1)
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        // Verifiser at faktiske verdier fra database sendes, ikke de feilaktige fra endringer
+        assertThat(melding["tittel"].asText()).isEqualTo(treff.tittel)
 
-        // Hendelsen skal nå være markert som behandlet (endret fra tidligere oppførsel)
+        // Hendelsen skal være markert som behandlet
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON
         )
