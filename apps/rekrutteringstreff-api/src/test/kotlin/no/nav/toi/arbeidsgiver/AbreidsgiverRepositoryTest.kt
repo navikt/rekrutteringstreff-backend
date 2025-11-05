@@ -64,9 +64,9 @@ class ArbeidsgiverRepositoryTest {
     fun hentArbeidsgivereTest() {
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
-        val ag1 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, Orgnr("111111111"), Orgnavn("Company A"), status = ArbeidsgiverStatus.AKTIV)
-        val ag2 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("222222222"), Orgnavn("Company B"), status = ArbeidsgiverStatus.AKTIV)
-        val ag3 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("333333333"), Orgnavn("Company C"), status = ArbeidsgiverStatus.AKTIV)
+        val ag1 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, Orgnr("111111111"), Orgnavn("Company A"), ArbeidsgiverStatus.AKTIV)
+        val ag2 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("222222222"), Orgnavn("Company B"), ArbeidsgiverStatus.AKTIV)
+        val ag3 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("333333333"), Orgnavn("Company C"), ArbeidsgiverStatus.AKTIV)
         db.leggTilArbeidsgivere(listOf(ag1))
         db.leggTilArbeidsgivere(listOf(ag2, ag3))
         val hentet = repository.hentArbeidsgivere(treffId2)

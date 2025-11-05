@@ -48,8 +48,8 @@ data class Arbeidsgiver(
     val treffId: TreffId,
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
-    val hendelser: List<ArbeidsgiverHendelse> = emptyList(),
     val status: ArbeidsgiverStatus,
+    val hendelser: List<ArbeidsgiverHendelse> = emptyList(),
 ) {
     constructor(arbeidsgiverUtenHendelser: ArbeidsgiverUtenHendelser, hendelser: List<ArbeidsgiverHendelse>) : this(
         arbeidsgiverTreffId = arbeidsgiverUtenHendelser.arbeidsgiverTreffId,
