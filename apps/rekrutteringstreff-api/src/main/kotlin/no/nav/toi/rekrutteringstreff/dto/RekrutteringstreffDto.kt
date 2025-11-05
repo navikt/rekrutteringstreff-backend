@@ -18,6 +18,6 @@ data class RekrutteringstreffDto(
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
-    val antallArbeidsgivere: Int,
-    val antallJobbsøkere: Int
+    val antallArbeidsgivere: Int?,
+    val antallJobbsøkere: Int?
 )

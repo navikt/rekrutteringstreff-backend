@@ -56,6 +56,21 @@ class RekrutteringstreffService(
         return rekrutteringstreff?.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     }
 
+    fun hentRekrutteringstreffMedHendelser(treff: TreffId): RekrutteringstreffDetaljOutboundDto {
+        val rekrutteringstreff = hentRekrutteringstreff(treff)
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff)
+        return RekrutteringstreffDetaljOutboundDto(
+            rekrutteringstreff,
+            hendelser.map { RekrutteringstreffHendelseOutboundDto(
+                id = it.id,
+                tidspunkt = it.tidspunkt,
+                hendelsestype = it.hendelsestype,
+                opprettetAvAktørType = it.opprettetAvAktørType,
+                aktørIdentifikasjon = it.aktørIdentifikasjon
+            )}
+        )
+    }
+
     private fun leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
         treffId: TreffId,
         ident: String,

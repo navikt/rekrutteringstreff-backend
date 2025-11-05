@@ -96,6 +96,24 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
+    fun `Skal kunne hente et rekrutteringstreff med hendelser`() {
+        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 1",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0605",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
+
+        rekrutteringstreffService.fullfør(treffId1, "NAV1234")
+
+        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId1)
+
+        assertThat(!rekrutteringstreff.hendelser.isEmpty())
+        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == "FULLFØRT"}).isTrue
+    }
+
+    @Test
     fun `Skal kunne avlyse et rekrutteringstreff`() {
         val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
             tittel = "Treff 1",
