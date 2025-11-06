@@ -55,12 +55,9 @@ class RekrutteringstreffSvarOgStatusLytter(
         val svar = packet["svar"].takeIf { !it.isMissingNode }?.asBoolean()
         val treffstatus = packet["treffstatus"].takeIf { !it.isMissingNode }?.asText()
 
-        // Determine the activity status based on svar and treffstatus
         val aktivitetsStatus = when {
-            // If svar is present, it takes priority
             svar != null -> {
                 if (svar) {
-                    // User has answered yes
                     when (treffstatus?.lowercase()) {
                         "fullført", "fullfort" -> AktivitetsStatus.FULLFORT
                         "avlyst" -> AktivitetsStatus.AVBRUTT
@@ -72,11 +69,9 @@ class RekrutteringstreffSvarOgStatusLytter(
                         }
                     }
                 } else {
-                    // User has answered no
                     AktivitetsStatus.AVBRUTT
                 }
             }
-            // If only treffstatus is present (user hasn't answered)
             treffstatus != null -> {
                 when (treffstatus.lowercase()) {
                     "fullført", "fullfort", "avlyst" -> AktivitetsStatus.AVBRUTT
