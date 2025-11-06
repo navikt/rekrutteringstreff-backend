@@ -177,7 +177,8 @@ class RekrutteringstreffRepositoryTest {
             etternavn = Etternavn("Testesen"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder Veiledersen"),
-            veilederNavIdent = VeilederNavIdent("V123456")
+            veilederNavIdent = VeilederNavIdent("V123456"),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
 
@@ -240,7 +241,8 @@ class RekrutteringstreffRepositoryTest {
             etternavn = Etternavn("Testesen2"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder Veiledersen"),
-            veilederNavIdent = VeilederNavIdent("V123456")
+            veilederNavIdent = VeilederNavIdent("V123456"),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
 
@@ -304,14 +306,15 @@ class RekrutteringstreffRepositoryTest {
             etternavn = Etternavn("Testesen3"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder Veiledersen"),
-            veilederNavIdent = VeilederNavIdent("V123456")
+            veilederNavIdent = VeilederNavIdent("V123456"),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
 
         // Hent jobbsøker_hendelse_db_id for å kunne lage aktivitetskort_polling
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).isNotEmpty
-        
+
         // Legg til aktivitetskort_polling manuelt (blokkerende)
         db.dataSource.connection.use { c ->
             c.prepareStatement(

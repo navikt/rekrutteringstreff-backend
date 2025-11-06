@@ -114,6 +114,7 @@ class MinsideTest {
                     navkontor = Navkontor("NAV Kontor"),
                     veilederNavn = VeilederNavn("Veileder"),
                     veilederNavIdent = VeilederNavIdent("navIdent"),
+                    status = JobbsøkerStatus.LAGT_TIL,
                     hendelser = emptyList(),
                 )
                 ))

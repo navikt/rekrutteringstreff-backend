@@ -264,7 +264,8 @@ class RekrutteringstreffTest {
                     kandidatnummer = null,
                     navkontor = null,
                     veilederNavn = null,
-                    veilederNavIdent = null
+                    veilederNavIdent = null,
+                    status = JobbsøkerStatus.LAGT_TIL,
                 )
             )
         )
@@ -388,7 +389,8 @@ class RekrutteringstreffTest {
                     Etternavn("N"),
                     null,
                     null,
-                    null
+                    null,
+                    status = JobbsøkerStatus.LAGT_TIL,
                 )
             )
         )
@@ -553,7 +555,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -564,7 +567,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         val jobbsøker3 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -575,7 +579,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Hansen"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2, jobbsøker3))
 
@@ -632,7 +637,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -643,7 +649,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
 
@@ -691,7 +698,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker1))
 
@@ -750,7 +758,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -761,7 +770,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
 
@@ -832,7 +842,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -843,7 +854,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
 
@@ -916,7 +928,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         val jobbsøker2 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -927,7 +940,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         val jobbsøker3 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -938,7 +952,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Hansen"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2, jobbsøker3))
 
@@ -1020,7 +1035,8 @@ class RekrutteringstreffTest {
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
             veilederNavn = VeilederNavn("Veileder"),
-            veilederNavIdent = VeilederNavIdent(navIdent)
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker1))
         jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId), treffId, navIdent)

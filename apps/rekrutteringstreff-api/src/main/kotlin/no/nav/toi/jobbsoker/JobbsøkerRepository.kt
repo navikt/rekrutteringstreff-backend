@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.log
@@ -48,8 +49,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         val sql = """
             insert into jobbsoker
               (id, rekrutteringstreff_id,fodselsnummer,kandidatnummer,fornavn,etternavn,
-               navkontor,veileder_navn,veileder_navident)
-            values (?,?,?,?,?,?,?,?,?)
+               navkontor,veileder_navn,veileder_navident,status)
+            values (?,?,?,?,?,?,?,?,?,?)
         """.trimIndent()
         val ids = mutableListOf<Long>()
         prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
@@ -64,6 +65,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 stmt.setString(7, it.navkontor?.asString)
                 stmt.setString(8, it.veilederNavn?.asString)
                 stmt.setString(9, it.veilederNavIdent?.asString)
+                stmt.setString(10, JobbsøkerStatus.LAGT_TIL.name)
                 stmt.addBatch(); if (++n == size) {
                 ids += stmt.execBatchReturnIds(); n = 0
             }
@@ -189,6 +191,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 js.navkontor,
                 js.veileder_navn,
                 js.veileder_navident,
+                js.status,
                 rt.id as treff_id,
                 COALESCE(
                     json_agg(
@@ -231,7 +234,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
 
     fun svarJaTilInvitasjon(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String) {
-        dataSource.connection.use { c ->
+        dataSource.executeInTransaction { c ->
             try {
                 val treffDbId = c.treffDbId(treff)
                 val jobbsøkerDbId =
@@ -244,6 +247,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     opprettetAv,
                     AktørType.JOBBSØKER
                 )
+
+                endreStatus(c, jobbsøkerDbId, JobbsøkerStatus.SVART_JA)
             } catch (e: Exception) {
                 throw e
             }
@@ -251,7 +256,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     }
 
     fun svarNeiTilInvitasjon(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String) {
-        dataSource.connection.use { c ->
+        dataSource.executeInTransaction { c ->
             try {
                 val treffDbId = c.treffDbId(treff)
                 val jobbsøkerDbId =
@@ -263,6 +268,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     opprettetAv,
                     AktørType.JOBBSØKER
                 )
+
+                endreStatus(c, jobbsøkerDbId, JobbsøkerStatus.SVART_NEI)
             } catch (e: Exception) {
                 throw e
             }
@@ -347,6 +354,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         navkontor = getString("navkontor")?.let(::Navkontor),
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
+        status = JobbsøkerStatus.valueOf(getString("status")),
         hendelser = parseHendelser(getString("hendelser"))
     )
 
@@ -414,6 +422,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.navkontor,
                     js.veileder_navn,
                     js.veileder_navident,
+                    js.status,
                     rt.id as treff_id,
                     COALESCE(
                         json_agg(
@@ -470,6 +479,20 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 throw e
             }
         }
+    }
+
+    fun endreStatus(connection: Connection, jobbsøkerDbId: Long, jobbsøkerStatus: JobbsøkerStatus) {
+        connection.prepareStatement(
+            """
+            UPDATE jobbsoker
+            SET status=?
+            WHERE jobbsoker_id=?
+            """
+        ).apply {
+            var i = 0
+            setString(++i, jobbsøkerStatus.name)
+            setObject(++i, jobbsøkerDbId)
+        }.executeUpdate()
     }
 
 }
