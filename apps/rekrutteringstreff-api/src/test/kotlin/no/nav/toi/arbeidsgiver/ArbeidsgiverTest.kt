@@ -227,15 +227,6 @@ class ArbeidsgiverTest {
             is Success -> {
                 val actualArbeidsgivere: List<ArbeidsgiverOutboundDto> = result.value
                 assertThat(actualArbeidsgivere.size).isEqualTo(2)
-
-                actualArbeidsgivere.forEach { arbeidsgiver ->
-                    assertThat(arbeidsgiver.hendelser).hasSize(1)
-                    val hendelse = arbeidsgiver.hendelser.first()
-                    assertThat(hendelse.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETTET.toString())
-                    assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
-                    assertThat(hendelse.aktøridentifikasjon).isEqualTo("testperson")
-                }
-
                 val arbeidsgiverOrg2 = actualArbeidsgivere.find { it.organisasjonsnummer == orgnr2.asString }
                 assertThat(arbeidsgiverOrg2).isNotNull
                 val arbeidsgiverOrg3 = actualArbeidsgivere.find { it.organisasjonsnummer == orgnr3.asString }

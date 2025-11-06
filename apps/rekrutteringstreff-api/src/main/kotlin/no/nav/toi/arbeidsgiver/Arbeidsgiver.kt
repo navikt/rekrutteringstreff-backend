@@ -49,22 +49,4 @@ data class Arbeidsgiver(
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
     val status: ArbeidsgiverStatus,
-    val hendelser: List<ArbeidsgiverHendelse> = emptyList(),
-) {
-    constructor(arbeidsgiverUtenHendelser: ArbeidsgiverUtenHendelser, hendelser: List<ArbeidsgiverHendelse>) : this(
-        arbeidsgiverTreffId = arbeidsgiverUtenHendelser.arbeidsgiverTreffId,
-        treffId = arbeidsgiverUtenHendelser.treffId,
-        orgnr = arbeidsgiverUtenHendelser.orgnr,
-        orgnavn = arbeidsgiverUtenHendelser.orgnavn,
-        status = arbeidsgiverUtenHendelser.status,
-        hendelser = hendelser
-    )
-}
-
-data class ArbeidsgiverUtenHendelser(
-    val arbeidsgiverTreffId: ArbeidsgiverTreffId,
-    val treffId: TreffId,
-    val orgnr: Orgnr,
-    val orgnavn: Orgnavn,
-    val status: ArbeidsgiverStatus,
 )
