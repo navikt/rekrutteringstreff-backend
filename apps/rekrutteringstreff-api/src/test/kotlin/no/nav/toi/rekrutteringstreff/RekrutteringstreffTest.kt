@@ -728,4 +728,361 @@ class RekrutteringstreffTest {
         val treffHendelser = db.hentHendelser(treffId)
         assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.FULLFØRT)
     }
+
+
+    @Test
+    fun `registrer endring oppretter hendelser for publisert treff med inviterte jobbsøkere`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+
+        // Legg til jobbsøkere
+        val jobbsøker1 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("12345678901"),
+            kandidatnummer = Kandidatnummer("K1"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        val jobbsøker2 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("23456789012"),
+            kandidatnummer = Kandidatnummer("K2"),
+            fornavn = Fornavn("Kari"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
+
+        // Inviter jobbsøkerne
+        jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId), treffId, navIdent)
+
+        // Publiser treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Registrer endringer
+        val endringerDto = """
+            {
+                "gamleVerdierForEndringer": {
+                    "tittel": {"value": "Gammel tittel", "endret": true},
+                    "beskrivelse": {"value": "Gammel beskrivelse", "endret": true},
+                    "fraTid": {"value": "2025-10-30T10:00:00+01:00", "endret": true},
+                    "tilTid": {"value": null, "endret": false},
+                    "svarfrist": {"value": null, "endret": false},
+                    "gateadresse": {"value": null, "endret": false},
+                    "postnummer": {"value": null, "endret": false},
+                    "poststed": {"value": null, "endret": false},
+                    "innlegg": {"value": null, "endret": false}
+                }
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
+            .body(endringerDto)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .response()
+
+        assertStatuscodeEquals(201, response, result)
+
+        // Verifiser at rekrutteringstreff har TREFF_ENDRET_ETTER_PUBLISERING hendelse
+        val treffHendelser = db.hentHendelser(treffId)
+        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
+
+        // Verifiser at begge jobbsøkere har TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON hendelse
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
+        }
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
+        }
+
+        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+    }
+
+    @Test
+    fun `registrer endring oppretter hendelser for publisert treff med jobbsøkere som har svart ja`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+
+        // Legg til jobbsøkere
+        val jobbsøker1 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("12345678901"),
+            kandidatnummer = Kandidatnummer("K1"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        val jobbsøker2 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("23456789012"),
+            kandidatnummer = Kandidatnummer("K2"),
+            fornavn = Fornavn("Kari"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
+
+        // Inviter og svar ja
+        jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId), treffId, navIdent)
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+
+        // Publiser treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Registrer endringer
+        val endringerDto = """
+            {
+                "gamleVerdierForEndringer": {
+                    "tittel": {"value": "Gammel tittel", "endret": true},
+                    "beskrivelse": {"value": null, "endret": false},
+                    "fraTid": {"value": null, "endret": false},
+                    "tilTid": {"value": null, "endret": false},
+                    "svarfrist": {"value": null, "endret": false},
+                    "gateadresse": {"value": "Gammel gate 1", "endret": true},
+                    "postnummer": {"value": "0566", "endret": true},
+                    "poststed": {"value": "Oslo", "endret": true},
+                    "innlegg": {"value": null, "endret": false}
+                }
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
+            .body(endringerDto)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .response()
+
+        assertStatuscodeEquals(201, response, result)
+
+        // Verifiser at rekrutteringstreff har TREFF_ENDRET_ETTER_PUBLISERING hendelse
+        val treffHendelser = db.hentHendelser(treffId)
+        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
+
+        // Verifiser at begge jobbsøkere har TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON hendelse
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
+        }
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
+        }
+
+        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+    }
+
+    @Test
+    fun `registrer endring varsler ikke jobbsøkere som har svart nei`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+
+        // Legg til tre jobbsøkere
+        val jobbsøker1 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("12345678901"),
+            kandidatnummer = Kandidatnummer("K1"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        val jobbsøker2 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("23456789012"),
+            kandidatnummer = Kandidatnummer("K2"),
+            fornavn = Fornavn("Kari"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        val jobbsøker3 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("34567890123"),
+            kandidatnummer = Kandidatnummer("K3"),
+            fornavn = Fornavn("Per"),
+            etternavn = Etternavn("Hansen"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2, jobbsøker3))
+
+        // Inviter alle
+        jobbsøkerRepository.inviter(
+            listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId, jobbsøker3.personTreffId),
+            treffId,
+            navIdent
+        )
+
+        // Jobbsøker1 svarer ja
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+
+        // Jobbsøker2 svarer ja og så nei (ombestemt seg)
+        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+        jobbsøkerRepository.svarNeiTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+
+        // Publiser treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Registrer endringer
+        val endringerDto = """
+            {
+                "gamleVerdierForEndringer": {
+                    "tittel": {"value": null, "endret": false},
+                    "beskrivelse": {"value": null, "endret": false},
+                    "fraTid": {"value": null, "endret": false},
+                    "tilTid": {"value": "2025-10-30T14:00:00+01:00", "endret": true},
+                    "svarfrist": {"value": null, "endret": false},
+                    "gateadresse": {"value": null, "endret": false},
+                    "postnummer": {"value": null, "endret": false},
+                    "poststed": {"value": null, "endret": false},
+                    "innlegg": {"value": null, "endret": false}
+                }
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
+            .body(endringerDto)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .response()
+
+        assertStatuscodeEquals(201, response, result)
+
+        // Verifiser at kun jobbsøker1 og jobbsøker3 (invitert) får notifikasjon
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
+        }
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
+        }
+        val jobbsøker3Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker3.fødselsnummer
+        }
+
+        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøker3Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+    }
+
+    @Test
+    fun `registrer endring fungerer uavhengig av publiseringsstatus`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+
+        // Legg til jobbsøker
+        val jobbsøker1 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("12345678901"),
+            kandidatnummer = Kandidatnummer("K1"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent)
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker1))
+        jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId), treffId, navIdent)
+
+        // Registrer endringer (fungerer nå uavhengig av status)
+        val endringerDto = """
+            {
+                "gamleVerdierForEndringer": {
+                    "tittel": {"value": null, "endret": false},
+                    "beskrivelse": {"value": "Gammel beskrivelse", "endret": true},
+                    "fraTid": {"value": null, "endret": false},
+                    "tilTid": {"value": null, "endret": false},
+                    "svarfrist": {"value": null, "endret": false},
+                    "gateadresse": {"value": null, "endret": false},
+                    "postnummer": {"value": null, "endret": false},
+                    "poststed": {"value": null, "endret": false},
+                    "innlegg": {"value": null, "endret": false}
+                }
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
+            .body(endringerDto)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .response()
+
+        assertStatuscodeEquals(201, response, result)
+
+        // Verifiser at hendelse er opprettet
+        val treffHendelser = db.hentHendelser(treffId)
+        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
+    }
+
+
+    @Test
+    fun `registrer endring oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere skal varsles`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        val endringerDto = """
+            {
+                "endringer": {
+                    "tittel": "Gammel tittel"
+                }
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
+            .body(endringerDto)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .response()
+
+        assertStatuscodeEquals(201, response, result)
+
+        val treffHendelser = db.hentHendelser(treffId)
+        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
+
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(alleJobbsøkerHendelser).isEmpty()
+    }
 }

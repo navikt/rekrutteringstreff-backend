@@ -3,10 +3,6 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.arbeidsgiver.ArbeidsgiverRepositoryTest
-import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
-import no.nav.toi.arbeidsgiver.Orgnavn
-import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.*
@@ -393,4 +389,111 @@ class JobbsøkerRepositoryTest {
             assertThat(tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
         }
     }
+
+    @Test
+    fun `hentJobbsøkere med Connection returnerer jobbsøkere med hendelser sortert DESC`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+
+        val jobbsøker1 = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Kandidatnummer("K1"),
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            null, null, null
+        )
+
+        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
+
+        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
+        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+
+        repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+
+        db.dataSource.connection.use { c ->
+            val jobbsøkere = repository.hentJobbsøkere(c, treffId)
+            assertThat(jobbsøkere).hasSize(1)
+
+            val hendelser = jobbsøkere[0].hendelser
+            assertThat(hendelser).hasSizeGreaterThanOrEqualTo(3) // OPPRETTET, INVITERT, SVART_JA_TIL_INVITASJON
+
+            assertThat(hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
+            assertThat(hendelser[1].hendelsestype).isEqualTo(JobbsøkerHendelsestype.INVITERT)
+            assertThat(hendelser[2].hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
+        }
+    }
+
+    @Test
+    fun `hentJobbsøkere uten Connection bruker intern Connection og gir samme resultat`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+
+        val jobbsøker1 = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Kandidatnummer("K1"),
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            null, null, null
+        )
+
+        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
+
+        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
+        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+
+        val jobbsøkereUtenConn = repository.hentJobbsøkere(treffId)
+
+        val jobbsøkereMedConn = db.dataSource.connection.use { c ->
+            repository.hentJobbsøkere(c, treffId)
+        }
+
+        assertThat(jobbsøkereUtenConn).hasSize(1)
+        assertThat(jobbsøkereMedConn).hasSize(1)
+        assertThat(jobbsøkereUtenConn[0].personTreffId).isEqualTo(jobbsøkereMedConn[0].personTreffId)
+        assertThat(jobbsøkereUtenConn[0].hendelser).hasSize(jobbsøkereMedConn[0].hendelser.size)
+    }
+
+    @Test
+    fun `hentJobbsøkere returnerer alle jobbsøkere med deres hendelser`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+
+        val jobbsøker1 = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Kandidatnummer("K1"),
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            null, null, null
+        )
+        val jobbsøker2 = LeggTilJobbsøker(
+            Fødselsnummer("23456789012"),
+            Kandidatnummer("K2"),
+            Fornavn("Kari"),
+            Etternavn("Nordmann"),
+            null, null, null
+        )
+
+        repository.leggTil(listOf(jobbsøker1, jobbsøker2), treffId, navIdent)
+
+        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
+        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+
+        repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+
+        db.dataSource.connection.use { c ->
+            val jobbsøkere = repository.hentJobbsøkere(c, treffId)
+            assertThat(jobbsøkere).hasSize(2)
+
+            val js1 = jobbsøkere.find { it.fødselsnummer == jobbsøker1.fødselsnummer }
+            val js2 = jobbsøkere.find { it.fødselsnummer == jobbsøker2.fødselsnummer }
+
+            assertThat(js1).isNotNull
+            assertThat(js2).isNotNull
+
+            assertThat(js1!!.hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
+            assertThat(js2!!.hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.INVITERT)
+        }
+    }
 }
+
+

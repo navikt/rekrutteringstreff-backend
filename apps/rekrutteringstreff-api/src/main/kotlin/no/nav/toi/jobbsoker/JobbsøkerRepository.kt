@@ -109,12 +109,13 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         personTreffIds: List<PersonTreffId>,
         opprettetAv: String,
         arrangørtype: AktørType = AktørType.ARRANGØR,
+        hendelseData: String? = null,
         size: Int = 500
     ) {
         val sql = """
             INSERT INTO jobbsoker_hendelse
-              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
-            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?)
+              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
+            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?, ?::jsonb)
         """.trimIndent()
         c.prepareStatement(sql).use { stmt ->
             var n = 0
@@ -125,6 +126,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 stmt.setString(4, hendelsestype.name)
                 stmt.setString(5, arrangørtype.name)
                 stmt.setString(6, opprettetAv)
+                stmt.setString(7, hendelseData)
                 stmt.addBatch()
                 if (++n == size) {
                     stmt.executeBatch()
@@ -173,47 +175,49 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
 
     fun hentJobbsøkere(treff: TreffId): List<Jobbsøker> =
-        dataSource.connection.use { c ->
-            c.prepareStatement(
-                """
-                    SELECT
-                        js.id,
-                        js.jobbsoker_id,
-                        js.fodselsnummer,
-                        js.kandidatnummer,
-                        js.fornavn,
-                        js.etternavn,
-                        js.navkontor,
-                        js.veileder_navn,
-                        js.veileder_navident,
-                        rt.id as treff_id,
-                        COALESCE(
-                            json_agg(
-                                json_build_object(
-                                    'id', jh.id,
-                                    'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
-                                    'hendelsestype', jh.hendelsestype,
-                                    'opprettetAvAktortype', jh.opprettet_av_aktortype,
-                                    'aktøridentifikasjon', jh.aktøridentifikasjon
-                                ) ORDER BY jh.tidspunkt
-                            ) FILTER (WHERE jh.id IS NOT NULL),
-                            '[]'
-                        ) AS hendelser
-                    FROM jobbsoker js
-                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                    LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-                    WHERE rt.id = ?
-                    GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
-                             js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
-                    ORDER BY js.jobbsoker_id;
-                """
-            ).use { ps ->
-                ps.setObject(1, treff.somUuid)
-                ps.executeQuery().use { rs ->
-                    generateSequence { if (rs.next()) rs.toJobbsøker() else null }.toList()
-                }
+        dataSource.connection.use { c -> hentJobbsøkere(c, treff) }
+
+    fun hentJobbsøkere(connection: Connection, treff: TreffId): List<Jobbsøker> {
+        val sql = """
+            SELECT
+                js.id,
+                js.jobbsoker_id,
+                js.fodselsnummer,
+                js.kandidatnummer,
+                js.fornavn,
+                js.etternavn,
+                js.navkontor,
+                js.veileder_navn,
+                js.veileder_navident,
+                rt.id as treff_id,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', jh.id,
+                            'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+                            'hendelsestype', jh.hendelsestype,
+                            'opprettetAvAktortype', jh.opprettet_av_aktortype,
+                            'aktøridentifikasjon', jh.aktøridentifikasjon
+                        ) ORDER BY jh.tidspunkt DESC
+                    ) FILTER (WHERE jh.id IS NOT NULL),
+                    '[]'
+                ) AS hendelser
+            FROM jobbsoker js
+            JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
+            WHERE rt.id = ?
+            GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
+                     js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+            ORDER BY js.jobbsoker_id;
+        """.trimIndent()
+
+        return connection.prepareStatement(sql).use { ps ->
+            ps.setObject(1, treff.somUuid)
+            ps.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) rs.toJobbsøker() else null }.toList()
             }
         }
+    }
 
     fun hentAntallJobbsøkere(treff: TreffId): Int =
         dataSource.connection.use { c ->

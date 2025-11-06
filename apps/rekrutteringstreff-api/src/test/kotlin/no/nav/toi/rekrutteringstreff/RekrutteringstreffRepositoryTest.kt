@@ -307,7 +307,7 @@ class RekrutteringstreffRepositoryTest {
         // Hent jobbsøker_hendelse_db_id for å kunne lage aktivitetskort_polling
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).isNotEmpty
-
+        
         // Legg til aktivitetskort_polling manuelt (blokkerende)
         db.dataSource.connection.use { c ->
             c.prepareStatement(

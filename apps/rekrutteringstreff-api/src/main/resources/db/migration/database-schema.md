@@ -83,6 +83,7 @@ erDiagram
         text hendelsestype "Type hendelse (f.eks. PÅMELDT, AVMELDT)"
         text opprettet_av_aktortype "Type aktør (NAV_ANSATT, ARBEIDSGIVER, osv.)"
         text aktøridentifikasjon "Identifikasjon av aktøren"
+        jsonb hendelse_data "Ekstra data knyttet til hendelsen (JSON-format)"
     }
     
     arbeidsgiver_hendelse {
@@ -93,6 +94,7 @@ erDiagram
         text hendelsestype "Type hendelse (f.eks. INVITERT, TAKKET_JA)"
         text opprettet_av_aktortype "Type aktør (NAV_ANSATT, ARBEIDSGIVER, osv.)"
         text aktøridentifikasjon "Identifikasjon av aktøren"
+        jsonb hendelse_data "Ekstra data knyttet til hendelsen (JSON-format)"
     }
     
     rekrutteringstreff_hendelse {
@@ -103,6 +105,7 @@ erDiagram
         text hendelsestype "Type hendelse (f.eks. OPPRETTET, PUBLISERT, AVLYST)"
         text opprettet_av_aktortype "Type aktør (NAV_ANSATT, SYSTEM, osv.)"
         text aktøridentifikasjon "Identifikasjon av aktøren"
+        jsonb hendelse_data "Ekstra data knyttet til hendelsen (JSON-format)"
     }
     
     aktivitetskort_polling {
@@ -156,6 +159,16 @@ erDiagram
 - **jobbsoker_hendelse**: Logger hendelser for jobbsøkere
 - **aktivitetskort_polling**: Logger når aktivitetskort sendes til jobbsøkere
 
+#### hendelse_data kolonne
+
+Alle hendelse-tabeller har en `hendelse_data jsonb` kolonne som kan inneholde ekstra strukturert data knyttet til hendelsen:
+
+- **rekrutteringstreff_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING` hendelser
+- **jobbsoker_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` hendelser  
+- **arbeidsgiver_hendelse.hendelse_data**: Reservert for fremtidig bruk
+
+Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
+
 ### Støttetabeller
 
 - **naringskode**: Næringskoder for arbeidsgivere (kan ha flere per arbeidsgiver)
@@ -184,4 +197,3 @@ Dette diagrammet kan vises i:
 - IntelliJ IDEA (installer Mermaid plugin)
 - VS Code (installer Mermaid preview extension)
 - Online på [mermaid.live](https://mermaid.live)
-
