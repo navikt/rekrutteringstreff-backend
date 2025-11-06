@@ -4,5 +4,6 @@ data class ArbeidsgiverOutboundDto(
     val arbeidsgiverTreffId: String,
     val organisasjonsnummer: String,
     val navn: String,
+    val status: String,
     val hendelser: List<ArbeidsgiverHendelseOutboundDto>
 )

@@ -12,26 +12,26 @@ import no.nav.toi.Repository
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 
-class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, private val repository: Repository) :
-    River.PacketListener {
+
+class RekrutteringstreffOppdateringLytter(
+    rapidsConnection: RapidsConnection,
+    private val repository: Repository
+) : River.PacketListener {
 
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "rekrutteringstreffinvitasjon")
-                it.forbid("aktivitetskortuuid")
+                it.requireValue("@event_name", "rekrutteringstreffoppdatering")
                 it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
                 it.requireKey(
                     "fnr", "rekrutteringstreffId", "tittel", "fraTid", "tilTid",
-                    "opprettetAv", "opprettetTidspunkt", "gateadresse", "postnummer", "poststed"
+                    "gateadresse", "postnummer", "poststed"
                 )
             }
-
         }.register(this)
     }
-
 
     override fun onPacket(
         packet: JsonMessage,
@@ -40,27 +40,24 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         meterRegistry: MeterRegistry
     ) {
         val fnr = packet["fnr"].asText()
+        val rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID()
 
         val startDato = packet["fraTid"].asZonedDateTime()
         val sluttDato = packet["tilTid"].asZonedDateTime()
 
-        val aktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
+        repository.oppdaterRekrutteringstreffAktivitetskort(
             fnr = fnr,
-            rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
+            rekrutteringstreffId = rekrutteringstreffId,
             tittel = packet["tittel"].asText(),
-            beskrivelse = "Nav arrangerer rekrutteringstreff, og vil gjerne ha deg med hvis du vil. På treffet møter du arbeidsgivere som leter etter folk å ansette. Kanskje finner du jobbmuligheten du ikke visste fantes? Følg lenken under for å lese mer om treffet og svare på invitasjonen.",
             startDato = startDato.toLocalDate(),
             sluttDato = sluttDato.toLocalDate(),
             tid = formaterTidsperiode(startDato, sluttDato),
-            endretAv = packet["opprettetAv"].asText(),
             gateAdresse = packet["gateadresse"].asText(),
             postnummer = packet["postnummer"].asText(),
             poststed = packet["poststed"].asText()
         )
-        if (aktivitetskortId != null) {
-            packet["aktivitetskortuuid"] = aktivitetskortId
-            context.publish(fnr, packet.toJson())
-        }
+
+        log.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
     }
 
     override fun onError(
@@ -68,8 +65,9 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
-        log.error("Feil ved behandling av rekrutteringstreffinvitasjon: $problems")
-        secure(log).error("Feil ved behandling av rekrutteringstreffinvitasjon: ${problems.toExtendedReport()}")
+        log.error("Feil ved behandling av rekrutteringstreffoppdatering: $problems")
+        secure(log).error("Feil ved behandling av rekrutteringstreffoppdatering: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }
+

@@ -8,6 +8,7 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
+import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
@@ -121,7 +122,8 @@ class MinsideTest {
                         arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
                         treffId = treffId,
                         orgnr = Orgnr(arrangørOrgNr),
-                        orgnavn = Orgnavn(arrangørOrgnavn)
+                        orgnavn = Orgnavn(arrangørOrgnavn),
+                        status = ArbeidsgiverStatus.AKTIV,
                     )
                 ))
             }.hentAlleRekrutteringstreff().first { tittel == it.tittel }
