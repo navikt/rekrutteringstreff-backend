@@ -13,10 +13,10 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 class RekrutteringstreffKlient(private val url: String, private val tokenXKlient: TokenXKlient, private val rekrutteringstreffAudience: String) {
-    fun hent(id: String, innkommendeToken: String): Rekrutteringstreff? {
+    fun hent(id: String, innkommendeToken: String): RekrutteringstreffDetaljDto? {
         val (_, response, result) = "$url/api/rekrutteringstreff/$id".httpGet()
             .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
-            .responseObject<Rekrutteringstreff>(JacksonConfig.mapper)
+            .responseObject<RekrutteringstreffDetaljDto>(JacksonConfig.mapper)
 
         return when (result) {
             is Failure -> throw result.error
@@ -56,6 +56,10 @@ class RekrutteringstreffKlient(private val url: String, private val tokenXKlient
     }
 
 }
+
+data class RekrutteringstreffDetaljDto(
+    val rekrutteringstreff: Rekrutteringstreff
+)
 
 data class Rekrutteringstreff(
     private val id: UUID,
