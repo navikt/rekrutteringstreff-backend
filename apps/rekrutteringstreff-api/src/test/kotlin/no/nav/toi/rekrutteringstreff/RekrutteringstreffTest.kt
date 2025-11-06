@@ -183,7 +183,7 @@ class RekrutteringstreffTest {
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = mapper.readValue(result.get(), RekrutteringstreffDetaljOutboundDto::class.java)
-                assertThat(dto.tittel).isEqualTo(originalTittel)
+                assertThat(dto.rekrutteringstreff.tittel).isEqualTo(originalTittel)
             }
         }
     }

@@ -6,6 +6,7 @@ import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -31,19 +32,7 @@ data class RekrutteringstreffHendelseOutboundDto(
 )
 
 data class RekrutteringstreffDetaljOutboundDto(
-    val id: UUID,
-    val tittel: String,
-    val beskrivelse: String?,
-    val fraTid: ZonedDateTime?,
-    val tilTid: ZonedDateTime?,
-    val svarfrist: ZonedDateTime?,
-    val gateadresse: String?,
-    val postnummer: String?,
-    val poststed: String?,
-    val status: String,
-    val opprettetAvPersonNavident: String,
-    val opprettetAvNavkontorEnhetId: String,
-    val opprettetAvTidspunkt: ZonedDateTime,
+    val rekrutteringstreff: RekrutteringstreffDto,
     val hendelser: List<RekrutteringstreffHendelseOutboundDto>
 )
 
@@ -221,6 +210,7 @@ class RekrutteringstreffRepository(
             }
         }
 
+// Fjerne og heller håndtere i Service?
     fun hentMedHendelser(treff: TreffId): RekrutteringstreffDetaljOutboundDto? =
         dataSource.connection.use { c ->
             c.prepareStatement(
@@ -254,19 +244,23 @@ class RekrutteringstreffRepository(
                         object : TypeReference<List<RekrutteringstreffHendelseOutboundDto>>() {}
                     )
                     RekrutteringstreffDetaljOutboundDto(
-                        id = rs.getObject("id", UUID::class.java),
-                        tittel = rs.getString("tittel"),
-                        beskrivelse = rs.getString("beskrivelse"),
-                        fraTid = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
-                        tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
-                        svarfrist = rs.getTimestamp("svarfrist")?.toInstant()?.atOslo(),
-                        gateadresse = rs.getString("gateadresse"),
-                        postnummer = rs.getString("postnummer"),
-                        poststed = rs.getString("poststed"),
-                        status = rs.getString("status"),
-                        opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
-                        opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
-                        opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
+                        rekrutteringstreff = RekrutteringstreffDto(
+                            id = rs.getObject("id", UUID::class.java),
+                            tittel = rs.getString("tittel"),
+                            beskrivelse = rs.getString("beskrivelse"),
+                            fraTid = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
+                            tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
+                            svarfrist = rs.getTimestamp("svarfrist")?.toInstant()?.atOslo(),
+                            gateadresse = rs.getString("gateadresse"),
+                            postnummer = rs.getString("postnummer"),
+                            poststed = rs.getString("poststed"),
+                            status = RekrutteringstreffStatus.valueOf(rs.getString("status")),
+                            opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
+                            opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
+                            opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
+                            antallArbeidsgivere = null,
+                            antallJobbsøkere = null
+                        ),
                         hendelser = hendelser
                     )
                 }
@@ -453,7 +447,6 @@ class RekrutteringstreffRepository(
                 setObject(++i, treffId.somUuid)
             }.executeUpdate()
     }
-
 
     private fun ResultSet.tilRekrutteringstreff() = Rekrutteringstreff(
         id = TreffId(getObject(id, UUID::class.java)),

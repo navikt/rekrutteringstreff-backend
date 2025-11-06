@@ -1,6 +1,7 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import no.nav.toi.*
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
@@ -25,6 +26,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         private lateinit var aktivitetskortRepository: AktivitetskortRepository
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private lateinit var rekrutteringstreffService: RekrutteringstreffService
+        private lateinit var arbeidsgiverRepository: ArbeidsgiverRepository
         private val mapper = JacksonConfig.mapper
     }
 
@@ -34,7 +36,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
-        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository)
+        arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
+        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository)
     }
 
     @BeforeEach

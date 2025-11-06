@@ -196,6 +196,26 @@ class ArbeidsgiverRepository(
         }
     }
 
+    fun hentAntallArbeidsgivere(treff: TreffId): Int {
+        dataSource.connection.use { connection ->
+            if (!finnesIDb(connection, treff))
+                throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
+            val sql = """
+            SELECT
+                COUNT(1) AS antall_arbeidsgivere
+            FROM arbeidsgiver ag
+            JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ? 
+        """.trimIndent()
+            connection.prepareStatement(sql).use { preparedStatement ->
+                preparedStatement.setObject(1, treff.somUuid)
+                preparedStatement.executeQuery().use { resultSet ->
+                    return if (resultSet.next()) resultSet.getInt("antall_arbeidsgivere") else 0
+                }
+            }
+        }
+    }
+
     private fun java.sql.ResultSet.toArbeidsgiver() = Arbeidsgiver(
        arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(getString("id"))),
         treffId = TreffId(getString("treff_id")),
