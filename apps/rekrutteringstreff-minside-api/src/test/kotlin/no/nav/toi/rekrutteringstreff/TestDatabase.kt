@@ -188,9 +188,9 @@ class TestDatabase {
         etternavn      = Etternavn(rs.getString("etternavn")),
         navkontor      = rs.getString("navkontor")?.let(::Navkontor),
         veilederNavn   = rs.getString("veileder_navn")?.let(::VeilederNavn),
-        veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent)
+        veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent),
+        status = JobbsøkerStatus.LAGT_TIL,
     )
-
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)

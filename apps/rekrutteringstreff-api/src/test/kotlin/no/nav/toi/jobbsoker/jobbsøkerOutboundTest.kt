@@ -98,7 +98,8 @@ class JobbsøkerOutboundTest {
                     etternavn = Etternavn("Bruker"),
                     navkontor = null,
                     veilederNavn = null,
-                    veilederNavIdent = null
+                    veilederNavIdent = null,
+                    status = JobbsøkerStatus.LAGT_TIL,
                 )
             )
         )

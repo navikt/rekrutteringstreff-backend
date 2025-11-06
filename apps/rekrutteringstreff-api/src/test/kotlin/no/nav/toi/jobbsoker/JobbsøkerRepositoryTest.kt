@@ -116,7 +116,8 @@ class JobbsøkerRepositoryTest {
                 Etternavn("Etternavn1"),
                 Navkontor("Oslo"),
                 VeilederNavn("Veileder1"),
-                VeilederNavIdent("NAV1")
+                VeilederNavIdent("NAV1"),
+                JobbsøkerStatus.INVITERT,
             )
         )
         val js2 = listOf(
@@ -129,7 +130,8 @@ class JobbsøkerRepositoryTest {
                 Etternavn("Etternavn2"),
                 Navkontor("Oslo"),
                 VeilederNavn("Veileder1"),
-                VeilederNavIdent("NAV1")
+                VeilederNavIdent("NAV1"),
+                JobbsøkerStatus.INVITERT,
             ),
             Jobbsøker(
                 PersonTreffId(UUID.randomUUID()),
@@ -140,7 +142,8 @@ class JobbsøkerRepositoryTest {
                 Etternavn("Etternavn3"),
                 Navkontor("Bergen"),
                 VeilederNavn("Veileder2"),
-                VeilederNavIdent("NAV2")
+                VeilederNavIdent("NAV2"),
+                JobbsøkerStatus.INVITERT,
             )
         )
         db.leggTilJobbsøkere(js1)
