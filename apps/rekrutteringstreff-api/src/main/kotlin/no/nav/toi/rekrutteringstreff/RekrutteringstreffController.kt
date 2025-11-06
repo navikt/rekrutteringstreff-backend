@@ -2,7 +2,6 @@ package no.nav.toi.rekrutteringstreff
 
 import io.javalin.Javalin
 import io.javalin.http.Context
-import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
@@ -151,6 +150,8 @@ class RekrutteringstreffController(
                        "opprettetAvPersonNavident":"A123456",
                        "opprettetAvNavkontorEnhetId":"0318",
                        "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+                       "antallArbeidsgivere":"1",
+                       "antallJobbsøkere":"1"
                     },
                    "hendelser":[
                      {
@@ -170,8 +171,7 @@ class RekrutteringstreffController(
     private fun hentRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
         val id = TreffId(ctx.pathParam(pathParamTreffId))
-        rekrutteringstreffRepository.hentMedHendelser(id)?.let { ctx.status(200).json(it) }
-            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+        rekrutteringstreffService.hentRekrutteringstreffMedHendelser(id).let { ctx.status(200).json(it) }
     }
 
     @OpenApi(
