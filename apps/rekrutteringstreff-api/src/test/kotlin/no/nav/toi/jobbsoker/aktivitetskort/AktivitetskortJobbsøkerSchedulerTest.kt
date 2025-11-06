@@ -148,12 +148,12 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 svar
         val melding = rapid.inspektør.message(1)
-        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isTrue
-        assertThat(melding["svartJa"].asBoolean()).isTrue
+        assertThat(melding["svar"].asBoolean()).isTrue
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
         assertThat(usendteEtterpå).isEmpty()
@@ -172,12 +172,12 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 svar
         val melding = rapid.inspektør.message(1)
-        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isTrue
-        assertThat(melding["svartJa"].asBoolean()).isFalse
+        assertThat(melding["svar"].asBoolean()).isFalse
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
         assertThat(usendteEtterpå).isEmpty()
@@ -405,11 +405,12 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon + svar + status
         val melding = rapid.inspektør.message(2)
-        assertThat(melding["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
+        assertThat(melding["svar"].asBoolean()).isTrue
         assertThat(melding["treffstatus"].asText()).isEqualTo("avlyst")
 
         val usendteEtterpaa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
@@ -431,11 +432,12 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon + svar + status
         val melding = rapid.inspektør.message(2)
-        assertThat(melding["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
         assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
+        assertThat(melding["svar"].asBoolean()).isTrue
         assertThat(melding["treffstatus"].asText()).isEqualTo("fullført")
 
         val usendteEtterpaa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
@@ -485,9 +487,9 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         assertThat(rapid.inspektør.size).isEqualTo(4)
         assertThat(rapid.inspektør.message(0)["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
-        assertThat(rapid.inspektør.message(1)["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
+        assertThat(rapid.inspektør.message(1)["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(rapid.inspektør.message(2)["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
-        assertThat(rapid.inspektør.message(3)["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
+        assertThat(rapid.inspektør.message(3)["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
     }
 
     @Test
@@ -540,13 +542,15 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         // Person som svarte ja skal få fullført-status
         assertThat(hendelserForSvartJa).hasSize(3)
-        assertThat(hendelserForSvartJa.last()["@event_name"].asText()).isEqualTo("svartJaTreffstatusEndret")
+        assertThat(hendelserForSvartJa.last()["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(hendelserForSvartJa.last()["svar"].asBoolean()).isTrue
         assertThat(hendelserForSvartJa.last()["treffstatus"].asText()).isEqualTo("fullført")
 
-        // Person som ikke svarte skal få ikkeSvartTreffstatusEndret med fullført treffstatus
+        // Person som ikke svarte skal få rekrutteringstreffSvarOgStatus med fullført treffstatus
         assertThat(hendelserForIkkeSvart).hasSize(2)
         assertThat(hendelserForIkkeSvart[0]["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
-        assertThat(hendelserForIkkeSvart[1]["@event_name"].asText()).isEqualTo("ikkeSvartTreffstatusEndret")
+        assertThat(hendelserForIkkeSvart[1]["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(hendelserForIkkeSvart[1].has("svar")).isFalse
         assertThat(hendelserForIkkeSvart[1]["treffstatus"].asText()).isEqualTo("fullført")
 
         // Verifiser at hendelsene er markert som behandlet
@@ -590,8 +594,9 @@ class AktivitetskortJobbsøkerSchedulerTest {
         // Person som svarte ja skal få avlyst-status
         assertThat(hendelserForSvartJa.last()["treffstatus"].asText()).isEqualTo("avlyst")
 
-        // Person som ikke svarte skal få ikkeSvartTreffstatusEndret med avlyst treffstatus
-        assertThat(hendelserForIkkeSvart.last()["@event_name"].asText()).isEqualTo("ikkeSvartTreffstatusEndret")
+        // Person som ikke svarte skal få rekrutteringstreffSvarOgStatus med avlyst treffstatus
+        assertThat(hendelserForIkkeSvart.last()["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(hendelserForIkkeSvart.last().has("svar")).isFalse
         assertThat(hendelserForIkkeSvart.last()["treffstatus"].asText()).isEqualTo("avlyst")
     }
 
@@ -616,8 +621,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         // Skal kun være invitasjon + svar nei (ikke noen treffstatus-endring)
         assertThat(rapid.inspektør.size).isEqualTo(2)
         assertThat(rapid.inspektør.message(0)["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
-        assertThat(rapid.inspektør.message(1)["@event_name"].asText()).isEqualTo("rekrutteringstreffsvar")
-        assertThat(rapid.inspektør.message(1)["svartJa"].asBoolean()).isFalse
+        assertThat(rapid.inspektør.message(1)["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(rapid.inspektør.message(1)["svar"].asBoolean()).isFalse
     }
 
     @Test

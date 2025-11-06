@@ -139,7 +139,7 @@ class AktivitetskortJobbsøkerScheduler(
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
-        treff.aktivitetskortSvarFor(fnr = hendelse.fnr, svar = svar)
+        treff.aktivitetskortSvarOgStatusFor(fnr = hendelse.fnr, svar = svar, endretAvPersonbruker = true)
             .publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
@@ -189,7 +189,7 @@ class AktivitetskortJobbsøkerScheduler(
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
-        treff.aktivitetskortSvartJaTreffstatusEndretFor(fnr = hendelse.fnr, treffstatus = treffstatus)
+        treff.aktivitetskortSvarOgStatusFor(fnr = hendelse.fnr, svar = true, treffstatus = treffstatus, endretAvPersonbruker = false, endretAv = hendelse.fnr)
             .publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
@@ -199,7 +199,7 @@ class AktivitetskortJobbsøkerScheduler(
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
-        treff.aktivitetskortIkkeSvartTreffstatusEndretFor(fnr = hendelse.fnr, treffstatus = treffstatus)
+        treff.aktivitetskortSvarOgStatusFor(fnr = hendelse.fnr, treffstatus = treffstatus, endretAvPersonbruker = false)
             .publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
