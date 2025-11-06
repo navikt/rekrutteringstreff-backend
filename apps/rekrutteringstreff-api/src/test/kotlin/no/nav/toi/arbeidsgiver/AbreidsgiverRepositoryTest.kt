@@ -52,7 +52,7 @@ class ArbeidsgiverRepositoryTest {
         assertThat(ag.orgnr.asString).isEqualTo("123456789")
         assertThat(ag.orgnavn.asString).isEqualTo("Example Company")
 
-        val arbeidsgiverHendelser = repository.hentArbeidsgiverHendelser(treffId);
+        val arbeidsgiverHendelser = repository.hentArbeidsgiverHendelser(treffId)
         val h = arbeidsgiverHendelser.first()
         assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
         assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
