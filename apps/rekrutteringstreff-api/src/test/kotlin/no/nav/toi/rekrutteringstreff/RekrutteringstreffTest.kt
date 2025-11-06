@@ -390,7 +390,7 @@ class RekrutteringstreffTest {
                     null,
                     null,
                     null,
-                    status = JobbsøkerStatus.LAGT_TIL,
+                    JobbsøkerStatus.LAGT_TIL,
                 )
             )
         )
