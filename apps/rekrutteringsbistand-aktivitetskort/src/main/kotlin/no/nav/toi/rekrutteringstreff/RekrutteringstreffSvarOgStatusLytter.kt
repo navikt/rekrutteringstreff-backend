@@ -13,6 +13,13 @@ import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.log
+private const val TREFFSTATUS_FULLFØRT = "fullført"
+private const val TREFFSTATUS_AVLYST = "avlyst"
+private val TREFFSTATUS_UENDRET = null
+
+private const val SVART_JA = true
+private const val SVART_NEI = false
+private val IKKE_SVART = null
 
 class RekrutteringstreffSvarOgStatusLytter(
     rapidsConnection: RapidsConnection,
@@ -55,39 +62,7 @@ class RekrutteringstreffSvarOgStatusLytter(
         val svar = packet["svar"].takeIf { !it.isMissingNode }?.asBoolean()
         val treffstatus = packet["treffstatus"].takeIf { !it.isMissingNode }?.asText()
 
-        val aktivitetsStatus = when {
-            svar != null -> {
-                if (svar) {
-                    when (treffstatus?.lowercase()) {
-                        "fullført", "fullfort" -> AktivitetsStatus.FULLFORT
-                        "avlyst" -> AktivitetsStatus.AVBRUTT
-                        null -> AktivitetsStatus.GJENNOMFORES
-                        else -> {
-                            log.error("Ukjent treffstatus '$treffstatus' for bruker som har svart ja, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
-                            secure(log).error("Ukjent treffstatus '$treffstatus' for bruker som har svart ja, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
-                            return
-                        }
-                    }
-                } else {
-                    AktivitetsStatus.AVBRUTT
-                }
-            }
-            treffstatus != null -> {
-                when (treffstatus.lowercase()) {
-                    "fullført", "fullfort", "avlyst" -> AktivitetsStatus.AVBRUTT
-                    else -> {
-                        log.error("Ukjent treffstatus '$treffstatus' for bruker som ikke har svart, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
-                        secure(log).error("Ukjent treffstatus '$treffstatus' for bruker som ikke har svart, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
-                        return
-                    }
-                }
-            }
-            else -> {
-                log.error("Melding mangler både svar og treffstatus, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
-                secure(log).error("Melding mangler både svar og treffstatus, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
-                return
-            }
-        }
+        val aktivitetsStatus = beregnAktivitetsStatus(svar, treffstatus, rekrutteringstreffId, fnr) ?: return
 
         val endretAvPersonbruker = packet["endretAvPersonbruker"].asBoolean()
         secure(log).info("Oppdaterer aktivitetsstatus for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr til $aktivitetsStatus (svar=$svar, treffstatus=$treffstatus)")
@@ -98,6 +73,39 @@ class RekrutteringstreffSvarOgStatusLytter(
             endretAv = packet["endretAv"].asText(),
             endretAvType = if (endretAvPersonbruker) EndretAvType.PERSONBRUKERIDENT else EndretAvType.NAVIDENT
         )
+    }
+
+    private fun beregnAktivitetsStatus(
+        svar: Boolean?,
+        treffstatus: String?,
+        rekrutteringstreffId: String,
+        fnr: String
+    ): AktivitetsStatus? {
+        return when {
+            svar == SVART_JA && treffstatus == TREFFSTATUS_FULLFØRT -> AktivitetsStatus.FULLFORT
+            svar == SVART_JA && treffstatus == TREFFSTATUS_AVLYST -> AktivitetsStatus.AVBRUTT
+            svar == SVART_JA && treffstatus == TREFFSTATUS_UENDRET -> AktivitetsStatus.GJENNOMFORES
+            svar == SVART_JA -> {
+                log.error("Ukjent treffstatus '$treffstatus' for bruker som har svart ja, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
+                secure(log).error("Ukjent treffstatus '$treffstatus' for bruker som har svart ja, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
+                null
+            }
+
+            svar == SVART_NEI -> AktivitetsStatus.AVBRUTT
+
+            svar == IKKE_SVART && treffstatus == TREFFSTATUS_FULLFØRT -> AktivitetsStatus.AVBRUTT
+            svar == IKKE_SVART && treffstatus == TREFFSTATUS_AVLYST -> AktivitetsStatus.AVBRUTT
+            svar == IKKE_SVART && treffstatus != TREFFSTATUS_UENDRET -> {
+                log.error("Ukjent treffstatus '$treffstatus' for bruker som ikke har svart, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
+                secure(log).error("Ukjent treffstatus '$treffstatus' for bruker som ikke har svart, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
+                null
+            }
+            else -> {
+                log.error("Melding mangler både svar og treffstatus, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
+                secure(log).error("Melding mangler både svar og treffstatus, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
+                null
+            }
+        }
     }
 
     override fun onError(
