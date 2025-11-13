@@ -147,10 +147,10 @@ class TestDatabase {
                 gateadresse = gateadresse ?: gjeldende.gateadresse,
                 postnummer = postnummer ?: gjeldende.postnummer,
                 poststed = poststed ?: gjeldende.poststed,
-                kommune = null,
-                kommunenummer = null,
-                fylke = null,
-                fylkesnummer = null,
+                kommune = gjeldende.kommune,
+                kommunenummer = gjeldende.kommunenummer,
+                fylke = gjeldende.fylke,
+                fylkesnummer = gjeldende.fylkesnummer,
             ),
             oppdatertAv = "test"
         )

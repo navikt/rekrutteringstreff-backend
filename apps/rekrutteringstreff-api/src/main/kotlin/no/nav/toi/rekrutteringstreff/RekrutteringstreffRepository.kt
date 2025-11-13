@@ -102,7 +102,7 @@ class RekrutteringstreffRepository(
             connection.prepareStatement(
                 """
                 UPDATE $tabellnavn
-                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, poststed=?, kommune=?, kommunenummer=?, fylke=?, fylkesnummer=?
+                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, $poststed=?, $kommune=?, $kommunenummer=?, $fylke=?, $fylkesnummer=?
                 WHERE $id=?
                 """
             ).apply {
