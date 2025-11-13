@@ -111,7 +111,11 @@ private class AutorisasjonsTest {
                             svarfrist = nowOslo().minusDays(1),
                             gateadresse = "Oppdatert gateadresse",
                             postnummer = "1234",
-                            poststed = "Oppdatert poststed"
+                            poststed = "Oppdatert poststed",
+                            kommune = "Oppdatert kommune",
+                            kommunenummer = "0301",
+                            fylke = "Oppdatert fylke",
+                            fylkesnummer = "01",
                         )
                     )
                 )

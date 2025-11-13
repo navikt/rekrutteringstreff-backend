@@ -202,7 +202,12 @@ class RekrutteringstreffTest {
             svarfrist = nowOslo().minusDays(1),
             gateadresse = "Oppdatert Gateadresse",
             postnummer = "1234",
-            poststed = "Oslo"
+            poststed = "Oslo",
+            kommune = "Oppdatert Kommune",
+            kommunenummer = "0301",
+            fylke = "Oppdatert fylke",
+            fylkesnummer = "01",
+
         )
         val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${created.id}")
             .body(mapper.writeValueAsString(updateDto))
@@ -487,7 +492,11 @@ class RekrutteringstreffTest {
             svarfrist = nowOslo(),
             gateadresse = "Updated Gateadresse",
             postnummer = "5678",
-            poststed = "Bergen"
+            poststed = "Bergen",
+            kommune = "Updated Kommune",
+            kommunenummer = "1201",
+            fylke = "Updated fylke",
+            fylkesnummer = "12",
         )
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
             .body(mapper.writeValueAsString(updateDto))

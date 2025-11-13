@@ -10,5 +10,9 @@ data class OppdaterRekrutteringstreffDto(
     val svarfrist: ZonedDateTime?,
     val gateadresse: String?,
     val postnummer: String?,
-    val poststed: String?
+    val poststed: String?,
+    val kommune: String?,
+    val kommunenummer: String?,
+    val fylke: String?,
+    val fylkesnummer: String?,
 )
