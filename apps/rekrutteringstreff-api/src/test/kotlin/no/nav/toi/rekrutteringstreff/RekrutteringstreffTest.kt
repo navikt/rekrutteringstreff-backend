@@ -206,7 +206,7 @@ class RekrutteringstreffTest {
             kommune = "Oppdatert Kommune",
             kommunenummer = "0301",
             fylke = "Oppdatert fylke",
-            fylkesnummer = "01",
+            fylkesnummer = "03",
         )
         val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${created.id}")
             .body(mapper.writeValueAsString(updateDto))
