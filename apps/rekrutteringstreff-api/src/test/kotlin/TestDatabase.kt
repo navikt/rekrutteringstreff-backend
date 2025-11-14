@@ -46,6 +46,10 @@ class TestDatabase {
         gateadresse: String = "Testgata 123",
         postnummer: String = "0484",
         poststed: String = "OSLO",
+        kommune: String = "Oslo",
+        kommunenummer: String = "0301",
+        fylke: String = "Oslo",
+        fylkesnummer: String = "03",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
         opprettetAvNavkontorEnhetId: String = "0315"
     ): TreffId {
@@ -65,7 +69,11 @@ class TestDatabase {
                 svarfrist = svarfrist,
                 gateadresse = gateadresse,
                 postnummer = postnummer,
-                poststed = poststed
+                poststed = poststed,
+                kommune = kommune,
+                kommunenummer = kommunenummer,
+                fylke = fylke,
+                fylkesnummer = fylkesnummer
             ),
             oppdatertAv = navIdent
         )
@@ -138,7 +146,11 @@ class TestDatabase {
                 svarfrist = gjeldende.svarfrist,
                 gateadresse = gateadresse ?: gjeldende.gateadresse,
                 postnummer = postnummer ?: gjeldende.postnummer,
-                poststed = poststed ?: gjeldende.poststed
+                poststed = poststed ?: gjeldende.poststed,
+                kommune = gjeldende.kommune,
+                kommunenummer = gjeldende.kommunenummer,
+                fylke = gjeldende.fylke,
+                fylkesnummer = gjeldende.fylkesnummer,
             ),
             oppdatertAv = "test"
         )
@@ -342,6 +354,10 @@ class TestDatabase {
         gateadresse = rs.getString("gateadresse"),
         postnummer = rs.getString("postnummer"),
         poststed = rs.getString("poststed"),
+        kommune = rs.getString("kommune"),
+        kommunenummer = rs.getString("kommunenummer"),
+        fylke = rs.getString("fylke"),
+        fylkesnummer = rs.getString("fylkesnummer"),
         status = RekrutteringstreffStatus.valueOf(rs.getString("status")),
         opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),

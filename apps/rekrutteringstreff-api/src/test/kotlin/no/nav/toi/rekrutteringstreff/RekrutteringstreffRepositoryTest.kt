@@ -75,7 +75,11 @@ class RekrutteringstreffRepositoryTest {
                 svarfrist = null,
                 gateadresse = null,
                 postnummer = null,
-                poststed = null
+                poststed = null,
+                kommune = null,
+                kommunenummer = null,
+                fylke = null,
+                fylkesnummer = null,
             ),
             oppdatertAv = "A1"
         )
@@ -90,7 +94,11 @@ class RekrutteringstreffRepositoryTest {
                 svarfrist = nowOslo().minusDays(1),
                 gateadresse = "Karl Johans gate 1",
                 postnummer = "0154",
-                poststed ="Oslo"
+                poststed ="Oslo",
+                kommune = "Oslo",
+                kommunenummer = "0301",
+                fylke = "Oslo",
+                fylkesnummer = "03",
             ),
             oppdatertAv = "A1"
         )

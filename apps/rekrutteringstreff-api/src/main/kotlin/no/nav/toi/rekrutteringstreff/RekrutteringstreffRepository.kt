@@ -60,6 +60,10 @@ class RekrutteringstreffRepository(
         private const val gateadresse = "gateadresse"
         private const val postnummer = "postnummer"
         private const val poststed = "poststed"
+        private const val kommune = "kommune"
+        private const val kommunenummer = "kommunenummer"
+        private const val fylke = "fylke"
+        private const val fylkesnummer = "fylkesnummer"
     }
 
     fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
@@ -98,7 +102,7 @@ class RekrutteringstreffRepository(
             connection.prepareStatement(
                 """
                 UPDATE $tabellnavn
-                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, poststed=?
+                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, $poststed=?, $kommune=?, $kommunenummer=?, $fylke=?, $fylkesnummer=?
                 WHERE $id=?
                 """
             ).apply {
@@ -111,6 +115,10 @@ class RekrutteringstreffRepository(
                 setString(++i, dto.gateadresse)
                 setString(++i, dto.postnummer)
                 setString(++i, dto.poststed)
+                setString(++i, dto.kommune)
+                setString(++i, dto.kommunenummer)
+                setString(++i, dto.fylke)
+                setString(++i, dto.fylkesnummer)
                 setObject(++i, treff.somUuid)
             }.executeUpdate()
 
@@ -245,19 +253,23 @@ class RekrutteringstreffRepository(
                     )
                     RekrutteringstreffDetaljOutboundDto(
                         rekrutteringstreff = RekrutteringstreffDto(
-                            id = rs.getObject("id", UUID::class.java),
-                            tittel = rs.getString("tittel"),
-                            beskrivelse = rs.getString("beskrivelse"),
-                            fraTid = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
-                            tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
-                            svarfrist = rs.getTimestamp("svarfrist")?.toInstant()?.atOslo(),
-                            gateadresse = rs.getString("gateadresse"),
-                            postnummer = rs.getString("postnummer"),
-                            poststed = rs.getString("poststed"),
-                            status = RekrutteringstreffStatus.valueOf(rs.getString("status")),
-                            opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
-                            opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
-                            opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
+                            id = rs.getObject(id, UUID::class.java),
+                            tittel = rs.getString(tittel),
+                            beskrivelse = rs.getString(beskrivelse),
+                            fraTid = rs.getTimestamp(fratid)?.toInstant()?.atOslo(),
+                            tilTid = rs.getTimestamp(tiltid)?.toInstant()?.atOslo(),
+                            svarfrist = rs.getTimestamp(svarfrist)?.toInstant()?.atOslo(),
+                            gateadresse = rs.getString(gateadresse),
+                            postnummer = rs.getString(postnummer),
+                            poststed = rs.getString(poststed),
+                            kommune = rs.getString(kommune),
+                            kommunenummer = rs.getString(kommunenummer),
+                            fylke = rs.getString(fylke),
+                            fylkesnummer = rs.getString(fylkesnummer),
+                            status = RekrutteringstreffStatus.valueOf(rs.getString(status)),
+                            opprettetAvPersonNavident = rs.getString(opprettetAvPersonNavident),
+                            opprettetAvNavkontorEnhetId = rs.getString(opprettetAvKontorEnhetid),
+                            opprettetAvTidspunkt = rs.getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
                             antallArbeidsgivere = null,
                             antallJobbsøkere = null
                         ),
@@ -458,6 +470,10 @@ class RekrutteringstreffRepository(
         gateadresse = getString(gateadresse),
         postnummer = getString(postnummer),
         poststed = getString(poststed),
+        kommune = getString(kommune),
+        kommunenummer = getString(kommunenummer),
+        fylke = getString(fylke),
+        fylkesnummer = getString(fylkesnummer),
         status = RekrutteringstreffStatus.valueOf(getString(status)),
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
