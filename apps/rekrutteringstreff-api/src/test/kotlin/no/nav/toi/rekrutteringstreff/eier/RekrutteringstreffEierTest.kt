@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
@@ -11,6 +13,7 @@ import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -21,19 +24,34 @@ import java.util.*
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class RekrutteringstreffEierTest {
 
     val mapper = JacksonConfig.mapper
 
     companion object {
         private val authServer = MockOAuth2Server()
-        private val authPort = 18012
+        private val authPort = 18018
         private val database = TestDatabase()
         private val appPort = ubruktPortnr()
         private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
         private val eierRepository = EierRepository(database.dataSource)
 
-        private val app = App(
+        private val accessTokenClient = AccessTokenClient(
+            clientId = "clientId",
+            secret = "clientSecret",
+            azureUrl = "",
+            httpClient = httpClient
+        )
+
+        private lateinit var app: App
+    }
+
+    @BeforeAll
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
+        authServer.start(port = authPort)
+
+        app = App(
             port = appPort,
             authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -47,17 +65,18 @@ class RekrutteringstreffEierTest {
             utvikler,
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
-            azureClientId = "",
-            azureClientSecret = "",
-            azureTokenEndpoint = "",
-            TestRapid(),
-            httpClient = httpClient
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = emptyList<String>()
         )
-    }
 
-    @BeforeAll
-    fun setUp() {
-        authServer.start(port = authPort)
+
         app.start()
         waitForServerToBeReady()
     }

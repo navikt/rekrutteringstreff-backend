@@ -5,47 +5,66 @@ import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.fuel.core.extensions.jsonBody
 import com.github.kittinunf.result.Result
+import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class AppExceptionHandlingTest {
     private val port = ubruktPortnr()
     private val authServer = MockOAuth2Server()
     private val authPort = ubruktPortnr()
-    private val app = App(
-        port,
-        listOf(
-            AuthenticationConfiguration(
-                issuer = "http://localhost:$authPort/default",
-                jwksUri = "http://localhost:$authPort/default/jwks",
-                audience = "rekrutteringstreff-audience"
-            )
-        ),
-        TestDatabase().dataSource,
-        arbeidsgiverrettet,
-        utvikler,
-        "", "", "", "", "",
-        TestRapid(),
-        httpClient = httpClient
-    )
 
+    private lateinit var app: App
     private lateinit var treffId: UUID
 
     @BeforeAll
-    fun start() {
+    fun start(wmInfo: WireMockRuntimeInfo) {
+        val accessTokenClient = AccessTokenClient(
+            clientId = "clientId",
+            secret = "clientSecret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+        app = App(
+            port = port,
+            authConfigs = listOf(
+                AuthenticationConfiguration(
+                    issuer = "http://localhost:$authPort/default",
+                    jwksUri = "http://localhost:$authPort/default/jwks",
+                    audience = "rekrutteringstreff-audience"
+                )
+            ),
+            dataSource = TestDatabase().dataSource,
+            arbeidsgiverrettet = arbeidsgiverrettet,
+            utvikler = utvikler,
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
+
         authServer.start(port = authPort)
-        app.start()
         // Opprett et treff via API for å ha en gyldig id å PUT'e mot
+
+        setupStubs()
         val token = authServer.lagToken(authPort).serialize()
         val (_, response, _) = Fuel.post("http://localhost:$port/api/rekrutteringstreff")
             .header("Authorization", "Bearer $token")
@@ -57,6 +76,25 @@ class AppExceptionHandlingTest {
         val idRegex = Regex(""""id"\s*:\s*"([a-f0-9\-]+)"""")
         val match = idRegex.find(body) ?: error("Fikk ikke id fra opprett-respons: $body")
         treffId = UUID.fromString(match.groupValues[1])
+    }
+
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
     }
 
     @AfterAll

@@ -1,16 +1,22 @@
-package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff
+package no.nav.toi.rekrutteringstreff
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.Method
 import com.github.kittinunf.fuel.core.Request
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
-import no.nav.toi.rekrutteringstreff.*
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -21,6 +27,7 @@ import java.time.ZonedDateTime
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 private class AutorisasjonsTest {
 
     companion object {
@@ -31,34 +38,62 @@ private class AutorisasjonsTest {
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
     private val database = TestDatabase()
-    private val jobbsøkerRepository = no.nav.toi.jobbsoker.JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
     private val repo = RekrutteringstreffRepository(database.dataSource)
 
-    private val app = App(
-        port = appPort,
-        authConfigs = listOf(
-            AuthenticationConfiguration(
-                issuer = "http://localhost:$authPort/default",
-                jwksUri = "http://localhost:$authPort/default/jwks",
-                audience = "rekrutteringstreff-audience"
-            )
-        ),
-        database.dataSource,
-        arbeidsgiverrettet,
-        utvikler,
-        kandidatsokApiUrl = "",
-        kandidatsokScope = "",
-        azureClientId = "",
-        azureClientSecret = "",
-        azureTokenEndpoint = "",
-        TestRapid(),
-        httpClient = httpClient
-    )
+    private lateinit var app: App
 
     @BeforeAll
-    fun setUp() {
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
         authServer.start(port = authPort)
-        app.start()
+        val accessTokenClient = AccessTokenClient(
+            clientId = "client-id",
+            secret = "secret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+        app = App(
+            port = appPort,
+            authConfigs = listOf(
+                AuthenticationConfiguration(
+                    issuer = "http://localhost:$authPort/default",
+                    jwksUri = "http://localhost:$authPort/default/jwks",
+                    audience = "rekrutteringstreff-audience"
+                )
+            ),
+            database.dataSource,
+            arbeidsgiverrettet,
+            utvikler,
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
+    }
+
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
     }
 
     @AfterAll
@@ -71,6 +106,7 @@ private class AutorisasjonsTest {
     fun setup() {
         repo.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
+
     }
 
     @AfterEach

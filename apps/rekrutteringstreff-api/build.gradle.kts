@@ -42,4 +42,5 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
+    testImplementation("io.mockk:mockk:1.13.17")
 }

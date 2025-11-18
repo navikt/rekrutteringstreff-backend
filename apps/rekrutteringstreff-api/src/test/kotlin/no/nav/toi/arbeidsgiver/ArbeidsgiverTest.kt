@@ -4,6 +4,12 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
@@ -12,11 +18,13 @@ import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
@@ -28,6 +36,7 @@ import java.net.HttpURLConnection.HTTP_NO_CONTENT
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class ArbeidsgiverTest {
 
     companion object {
@@ -36,7 +45,19 @@ class ArbeidsgiverTest {
         private val db = TestDatabase()
         private val appPort = ubruktPortnr()
 
-        private val app = App(
+        private lateinit var app: App
+    }
+
+    @BeforeAll
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
+        authServer.start(port = authPort)
+        val accessTokenClient = AccessTokenClient(
+            clientId = "clientId",
+            secret = "clientSecret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+        app = App(
             port = appPort,
             authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -45,17 +66,40 @@ class ArbeidsgiverTest {
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            db.dataSource,
-            arbeidsgiverrettet,
-            utvikler, "", "", "", "", "", TestRapid(),
-            httpClient = httpClient
-        )
+            dataSource = db.dataSource,
+            arbeidsgiverrettet = arbeidsgiverrettet,
+            utvikler = utvikler,
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+            rapidsConnection =  TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
     }
 
-    @BeforeAll
-    fun setUp() {
-        authServer.start(port = authPort)
-        app.start()
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
     }
 
     @AfterAll

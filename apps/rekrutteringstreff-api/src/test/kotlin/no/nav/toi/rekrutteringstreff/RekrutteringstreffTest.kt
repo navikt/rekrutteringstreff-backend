@@ -4,81 +4,104 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
-import no.nav.toi.arbeidsgiver.Arbeidsgiver
-import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
-import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
-import no.nav.toi.arbeidsgiver.Orgnavn
-import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
-import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class RekrutteringstreffTest {
 
     val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
     private val mapper = JacksonConfig.mapper
 
-    companion object {
-        @JvmStatic
-        @RegisterExtension
-        val wireMockServer: WireMockExtension = WireMockExtension.newInstance()
-            .options(WireMockConfiguration.options().port(9955))
-            .build()
-    }
-
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
     private val db = TestDatabase()
     private val appPort = ubruktPortnr()
 
-    private val app = App(
-        port = appPort,
-        authConfigs = listOf(
-            AuthenticationConfiguration(
-                issuer = "http://localhost:$authPort/default",
-                jwksUri = "http://localhost:$authPort/default/jwks",
-                audience = "rekrutteringstreff-audience"
-            )
-        ),
-        db.dataSource,
-        arbeidsgiverrettet,
-        utvikler,
-        kandidatsokApiUrl = "",
-        kandidatsokScope = "",
-        azureClientId = "",
-        azureClientSecret = "",
-        azureTokenEndpoint = "",
-        TestRapid(),
-        httpClient = httpClient
-    )
+    private lateinit var app: App
 
     @BeforeAll
-    fun setUp() {
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
         authServer.start(port = authPort)
-        app.start()
+        val accessTokenClient = AccessTokenClient(
+            clientId = "client-id",
+            secret = "secret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+        app = App(
+            port = appPort,
+            authConfigs = listOf(
+                AuthenticationConfiguration(
+                    issuer = "http://localhost:$authPort/default",
+                    jwksUri = "http://localhost:$authPort/default/jwks",
+                    audience = "rekrutteringstreff-audience"
+                )
+            ),
+            db.dataSource,
+            arbeidsgiverrettet,
+            utvikler,
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
+
     }
 
     @AfterAll
     fun tearDown() {
         authServer.shutdown()
         app.close()
+    }
+
+    @BeforeEach
+    fun setUpStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
     }
 
     @AfterEach
