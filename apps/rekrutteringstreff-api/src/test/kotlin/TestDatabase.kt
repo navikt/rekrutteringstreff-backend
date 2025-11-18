@@ -103,6 +103,7 @@ class TestDatabase {
 
     fun slettAlt() = dataSource.executeInTransaction { conn ->
         conn.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
+        conn.prepareStatement("DELETE FROM varsling_polling").executeUpdate()
         conn.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM rekrutteringstreff_hendelse").executeUpdate()

@@ -20,6 +20,7 @@ import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
 import no.nav.toi.kandidatsok.KandidatsøkKlient
+import no.nav.toi.varsling.VarselScheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
@@ -81,6 +82,7 @@ class App(
 
     private lateinit var javalin: Javalin
     private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
+    private lateinit var varselScheduler: VarselScheduler
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         startJavalin(jobbsøkerRepository)
@@ -219,6 +221,12 @@ class App(
             objectMapper = JacksonConfig.mapper
         )
         aktivitetskortJobbsøkerScheduler.start()
+
+        varselScheduler = VarselScheduler(
+            dataSource = dataSource,
+            rapidsConnection = rapidsConnection
+        )
+        varselScheduler.start()
     }
 
     fun startRR(jobbsøkerRepository: JobbsøkerRepository) {
@@ -230,6 +238,7 @@ class App(
     fun close() {
         log.info("Shutting down application")
         if (::aktivitetskortJobbsøkerScheduler.isInitialized) aktivitetskortJobbsøkerScheduler.stop()
+        if (::varselScheduler.isInitialized) varselScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")
