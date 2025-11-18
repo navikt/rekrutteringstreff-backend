@@ -9,12 +9,7 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
-import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
-import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.dto.*
 import java.time.ZonedDateTime
 import java.util.*
 

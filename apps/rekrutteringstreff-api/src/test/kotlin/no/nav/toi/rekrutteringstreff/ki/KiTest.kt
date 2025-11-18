@@ -4,8 +4,11 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result
 import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
@@ -13,6 +16,7 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -27,6 +31,7 @@ import java.util.stream.Stream
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class KiTest {
 
     companion object {
@@ -46,31 +51,62 @@ class KiTest {
     private val newBaseTemplate = "/api/rekrutteringstreff/%s/ki"
     private val base = oldBase
 
-    private val app = App(
-        port = appPort,
-        authConfigs = listOf(
-            AuthenticationConfiguration(
-                issuer = "http://localhost:$authPort/default",
-                jwksUri = "http://localhost:$authPort/default/jwks",
-                audience = "rekrutteringstreff-audience"
-            )
-        ),
-        db.dataSource,
-        arbeidsgiverrettet,
-        utvikler,
-        kandidatsokApiUrl = "",
-        kandidatsokScope = "",
-        azureClientId = "",
-        azureClientSecret = "",
-        azureTokenEndpoint = "",
-        TestRapid(),
-        httpClient = httpClient
-    )
+    private lateinit var app: App
 
     @BeforeAll
-    fun setUp() {
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
         authServer.start(port = authPort)
-        app.start()
+
+        val accessTokenClient = AccessTokenClient(
+            clientId = "clientId",
+            secret = "clientSecret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+
+        app = App(
+            port = appPort,
+            authConfigs = listOf(
+                AuthenticationConfiguration(
+                    issuer = "http://localhost:$authPort/default",
+                    jwksUri = "http://localhost:$authPort/default/jwks",
+                    audience = "rekrutteringstreff-audience"
+                )
+            ),
+            db.dataSource,
+            arbeidsgiverrettet,
+            utvikler,
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
+    }
+
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
     }
 
     @AfterAll
@@ -214,8 +250,8 @@ class KiTest {
 
         wireMockServer.verify(
             1,
-            WireMock.postRequestedFor(
-                WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
+            postRequestedFor(
+                urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
             )
                 .withRequestBody(WireMock.containing(forventetFiltrertTekst))
                 .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
@@ -463,13 +499,13 @@ class KiTest {
         """.trimIndent()
 
         wireMockServer.stubFor(
-            WireMock.post(
-                WireMock.urlEqualTo(
+            post(
+                urlEqualTo(
                     "/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"
                 )
             )
                 .willReturn(
-                    WireMock.aResponse()
+                    aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody(responseBody)

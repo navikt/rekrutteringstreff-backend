@@ -13,6 +13,7 @@ import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.http.UnauthorizedResponse
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.eclipse.jetty.http.HttpHeader
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
@@ -44,7 +45,7 @@ interface AuthenticatedUser {
     fun extractPid(): String
 
     companion object {
-        fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon): AuthenticatedUser {
+        fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon, modiaKlient: ModiaKlient, pilotkontorer: List<String>): AuthenticatedUser {
             val navIdentClaim = jwt.getClaim(NAV_IDENT_CLAIM)
             return if(navIdentClaim.isMissing) {
                 AuthenticatedCitizenUser(jwt.getClaim(PID_CLAIM).asString())
@@ -55,6 +56,8 @@ interface AuthenticatedUser {
                         .asList(UUID::class.java)
                         .let(rolleUuidSpesifikasjon::rollerForUuider),
                     jwt = jwt.token,
+                    modiaKlient = modiaKlient,
+                    pilotkontorer = pilotkontorer
                 )
             }
         }
@@ -66,11 +69,20 @@ interface AuthenticatedUser {
 private class AuthenticatedNavUser(
     private val navIdent: String,
     private val roller: Set<Rolle>,
-    private val jwt: String
+    private val jwt: String,
+    private val modiaKlient: ModiaKlient,
+    private val pilotkontorer: List<String>
 ): AuthenticatedUser {
     override fun verifiserAutorisasjon(vararg gyldigeRoller: Rolle) {
         if(!erEnAvRollene(*gyldigeRoller)) {
             throw ForbiddenResponse()
+        }
+        val veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(jwt)
+
+        if(veiledersKontor.isNullOrEmpty() ) {
+            throw ForbiddenResponse("Finner ikke veileders innloggede kontor")
+        } else if(veiledersKontor !in pilotkontorer) {
+            throw ForbiddenResponse("Veileder er ikke tilknyttet et pilotkontor")
         }
     }
 
@@ -91,8 +103,12 @@ private class AuthenticatedCitizenUser(
 }
 
 
-fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>,
-                                                             rolleUuidSpesifikasjon: RolleUuidSpesifikasjon): Javalin {
+fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
+    authConfigs: List<AuthenticationConfiguration>,
+    rolleUuidSpesifikasjon: RolleUuidSpesifikasjon,
+    modiaKlient: ModiaKlient,
+    pilotkontorer: List<String>
+): Javalin {
     log.info("Starter autentiseringoppsett")
     val verifiers = authConfigs.flatMap { it.jwtVerifiers() }
     before { ctx ->
@@ -104,7 +120,7 @@ fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<
             ctx.attribute("raw_token", token)
 
             val decoded = verifyJwt(verifiers, token)
-            ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon))
+            ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon, modiaKlient, pilotkontorer))
         }
     }
     return this

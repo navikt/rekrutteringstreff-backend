@@ -2,12 +2,19 @@ package no.nav.toi.jobbsoker
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import java.net.HttpURLConnection.*
@@ -15,8 +22,8 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class JobbsøkerInnloggetBorgerTest {
 
     companion object {
@@ -25,7 +32,22 @@ class JobbsøkerInnloggetBorgerTest {
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
 
-        private val app = App(
+        private lateinit var app: App
+
+        val mapper = JacksonConfig.mapper
+    }
+
+    @BeforeAll
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
+
+        val accessTokenClient = AccessTokenClient(
+            clientId = "clientId",
+            secret = "clientSecret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+
+        app = App(
             port = appPort,
             authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -39,20 +61,36 @@ class JobbsøkerInnloggetBorgerTest {
             utvikler = AzureAdRoller.utvikler,
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
-            azureClientId = "",
-            azureClientSecret = "",
-            azureTokenEndpoint = "",
-            TestRapid(),
-            httpClient = httpClient
-        )
-
-        val mapper = JacksonConfig.mapper
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
+        authServer.start(port = authPort)
     }
 
-    @BeforeAll
-    fun setUp() {
-        authServer.start(port = authPort)
-        app.start()
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
     }
 
     @AfterAll
