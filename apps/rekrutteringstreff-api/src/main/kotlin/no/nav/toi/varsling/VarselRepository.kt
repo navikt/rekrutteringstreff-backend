@@ -18,7 +18,7 @@ class VarselRepository(private val dataSource: DataSource) {
             LEFT JOIN jobbsoker j ON jh.jobbsoker_id = j.jobbsoker_id
             LEFT JOIN rekrutteringstreff rt ON j.rekrutteringstreff_id = rt.rekrutteringstreff_id
             WHERE jh.hendelsestype IN (?, ?)
-            AND vp.sendt_tidspunkt IS NULL
+            AND vp.varsling_polling_id IS NULL
             ORDER BY jh.jobbsoker_hendelse_id
         """
 
