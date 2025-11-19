@@ -1,12 +1,33 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import no.nav.toi.JobbsøkerHendelsestype
+import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.ZonedDateTime
 import javax.sql.DataSource
 
 class AktivitetskortRepository(private val dataSource: DataSource) {
+
+    fun <T> runInTransaction(block: (Connection) -> T): T {
+        return dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                val result = block(connection)
+                connection.commit()
+                result
+            } catch (e: Exception) {
+                try {
+                    connection.rollback()
+                } catch (rollbackException: Exception) {
+                    e.addSuppressed(rollbackException)
+                }
+                throw e
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+    }
 
     fun hentUsendteInvitasjoner(): List<UsendtInvitasjon> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
@@ -60,14 +81,18 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
 
     fun lagrePollingstatus(jobbsokerHendelseDbId: Long) {
         dataSource.connection.use { connection ->
-            val statement = connection.prepareStatement(
-                "insert into aktivitetskort_polling(jobbsoker_hendelse_id, sendt_tidspunkt) values (?, ?)"
-            )
-            statement.use {
-                it.setLong(1, jobbsokerHendelseDbId)
-                it.setTimestamp(2, Timestamp.from(ZonedDateTime.now().toInstant()))
-                it.executeUpdate()
-            }
+            lagrePollingstatus(jobbsokerHendelseDbId, connection)
+        }
+    }
+
+    fun lagrePollingstatus(jobbsokerHendelseDbId: Long, connection: Connection) {
+        val statement = connection.prepareStatement(
+            "insert into aktivitetskort_polling(jobbsoker_hendelse_id, sendt_tidspunkt) values (?, ?)"
+        )
+        statement.use {
+            it.setLong(1, jobbsokerHendelseDbId)
+            it.setTimestamp(2, Timestamp.from(ZonedDateTime.now().toInstant()))
+            it.executeUpdate()
         }
     }
 
