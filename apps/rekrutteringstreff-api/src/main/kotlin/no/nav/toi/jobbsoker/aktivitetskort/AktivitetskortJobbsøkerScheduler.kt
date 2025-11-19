@@ -131,13 +131,13 @@ class AktivitetskortJobbsøkerScheduler(
         aktivitetskortRepository.runInTransaction { connection ->
             aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
 
-            sendKandidatInvitertHendelse(hendelse)
-
             val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
                 ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
             treff.aktivitetskortInvitasjonFor(hendelse.fnr)
                 .publiserTilRapids(rapidsConnection)
+
+            sendKandidatInvitertHendelse(hendelse)
         }
     }
 
@@ -171,25 +171,24 @@ class AktivitetskortJobbsøkerScheduler(
                 throw IllegalStateException("Manglende hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}")
             }
 
-            sendKandidatInvitertTreffEndretHendelse(hendelse)
-
             // Sjekk om noen relevante felt ble endret
-            if (!treff.harRelevanteEndringerForAktivitetskort(endringer)) {
-                log.info("Ingen relevante endringer for aktivitetskort i hendelse ${hendelse.jobbsokerHendelseDbId}, markerer som behandlet")
-                return@runInTransaction
+            if (treff.harRelevanteEndringerForAktivitetskort(endringer)) {
+                // Verifiser at nyVerdi fra endringer matcher gjeldende verdier i databasen (kun til logging)
+                val verificationResult = treff.verifiserEndringerMotDatabase(endringer)
+                if (!verificationResult.erGyldig) {
+                    log.warn("Endringer i hendelse ${hendelse.jobbsokerHendelseDbId} matcher ikke treff-data i databasen: ${verificationResult.feilmelding}. Sender likevel oppdatering med faktiske verdier fra database.")
+                }
+
+                // Send oppdatering via rapids ved å bruke faktiske verdier fra rekrutteringstreff-tabellen
+                treff.aktivitetskortOppdateringFor(hendelse.fnr)
+                    .publiserTilRapids(rapidsConnection)
+
+                log.info("Sendt aktivitetskort-oppdatering for treff ${hendelse.rekrutteringstreffUuid} til jobbsøker")
+            } else {
+                log.info("Ingen relevante endringer for aktivitetskort i hendelse ${hendelse.jobbsokerHendelseDbId}, sender kun minside-varsel")
             }
 
-            // Verifiser at nyVerdi fra endringer matcher gjeldende verdier i databasen (kun til logging)
-            val verificationResult = treff.verifiserEndringerMotDatabase(endringer)
-            if (!verificationResult.erGyldig) {
-                log.warn("Endringer i hendelse ${hendelse.jobbsokerHendelseDbId} matcher ikke treff-data i databasen: ${verificationResult.feilmelding}. Sender likevel oppdatering med faktiske verdier fra database.")
-            }
-
-            // Send oppdatering via rapids ved å bruke faktiske verdier fra rekrutteringstreff-tabellen
-            treff.aktivitetskortOppdateringFor(hendelse.fnr)
-                .publiserTilRapids(rapidsConnection)
-
-            log.info("Sendt aktivitetskort-oppdatering for treff ${hendelse.rekrutteringstreffUuid} til jobbsøker")
+            sendKandidatInvitertTreffEndretHendelse(hendelse)
         }
     }
 
