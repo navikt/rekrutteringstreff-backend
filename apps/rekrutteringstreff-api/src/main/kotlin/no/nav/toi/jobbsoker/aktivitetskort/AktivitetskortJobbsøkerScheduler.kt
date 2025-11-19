@@ -154,14 +154,12 @@ class AktivitetskortJobbsøkerScheduler(
             try {
                 objectMapper.readValue(hendelse.hendelseData, EndringerDto::class.java)
             } catch (e: Exception) {
-                log.warn("Kunne ikke parse hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}, skipper", e)
-                aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
-                return
+                log.error("Kunne ikke parse hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}, kaster exception for retry/alert", e)
+                throw IllegalStateException("Parse-feil i hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}", e)
             }
         } else {
-            log.warn("Ingen hendelse_data funnet for jobbsøker hendelse ${hendelse.jobbsokerHendelseDbId}, skipper")
-            aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
-            return
+            log.error("Ingen hendelse_data funnet for jobbsøker hendelse ${hendelse.jobbsokerHendelseDbId}, kaster exception")
+            throw IllegalStateException("Manglende hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}")
         }
 
         // Sjekk om noen relevante felt ble endret
