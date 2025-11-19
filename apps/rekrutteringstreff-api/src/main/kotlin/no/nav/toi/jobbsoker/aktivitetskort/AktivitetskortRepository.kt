@@ -11,7 +11,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
     fun hentUsendteInvitasjoner(): List<UsendtInvitasjon> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
             """
-            select jh.jobbsoker_hendelse_id as db_id, j.fodselsnummer, rt.id from jobbsoker_hendelse jh
+            select jh.jobbsoker_hendelse_id as db_id, j.fodselsnummer, rt.id, jh.aktøridentifikasjon from jobbsoker_hendelse jh
             left join aktivitetskort_polling p on jh.jobbsoker_hendelse_id = p.jobbsoker_hendelse_id
             left join jobbsoker j on jh.jobbsoker_id = j.jobbsoker_id
             left join rekrutteringstreff rt on j.rekrutteringstreff_id = rt.rekrutteringstreff_id
@@ -33,7 +33,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
     fun hentUsendteHendelse(hendelsestype: JobbsøkerHendelsestype): List<UsendtHendelse> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
             """
-            select jh.jobbsoker_hendelse_id as db_id, j.fodselsnummer, rt.id, jh.hendelse_data from jobbsoker_hendelse jh
+            select jh.jobbsoker_hendelse_id as db_id, j.fodselsnummer, rt.id, jh.hendelse_data, jh.aktøridentifikasjon from jobbsoker_hendelse jh
             left join aktivitetskort_polling p on jh.jobbsoker_hendelse_id = p.jobbsoker_hendelse_id
             left join jobbsoker j on jh.jobbsoker_id = j.jobbsoker_id
             left join rekrutteringstreff rt on j.rekrutteringstreff_id = rt.rekrutteringstreff_id
@@ -50,7 +50,8 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
                         jobbsokerHendelseDbId = resultSet.getLong("db_id"),
                         fnr = resultSet.getString("fodselsnummer"),
                         rekrutteringstreffUuid = resultSet.getString("id"),
-                        hendelseData = resultSet.getString("hendelse_data")
+                        hendelseData = resultSet.getString("hendelse_data"),
+                        aktøridentifikasjon = resultSet.getString("aktøridentifikasjon")
                     )
                 } else null
             }.toList()
@@ -74,19 +75,22 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
     private fun ResultSet.tilUsendtInvitasjon() = UsendtInvitasjon(
         jobbsokerHendelseDbId = getLong("db_id"),
         fnr = getString("fodselsnummer"),
-        rekrutteringstreffUuid = getString("id")
+        rekrutteringstreffUuid = getString("id"),
+        aktøridentifikasjon = getString("aktøridentifikasjon")
     )
 }
 
 data class UsendtInvitasjon(
     val jobbsokerHendelseDbId: Long,
     val fnr: String,
-    val rekrutteringstreffUuid: String
+    val rekrutteringstreffUuid: String,
+    val aktøridentifikasjon: String?
 )
 
 data class UsendtHendelse(
     val jobbsokerHendelseDbId: Long,
     val fnr: String,
     val rekrutteringstreffUuid: String,
-    val hendelseData: String? = null
+    val hendelseData: String? = null,
+    val aktøridentifikasjon: String?
 )
