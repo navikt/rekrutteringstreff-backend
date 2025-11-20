@@ -54,21 +54,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
-            listOf(
-                LeggTilJobbsøker(
-                    fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
-                    fornavn = Fornavn("Ola"),
-                    etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
-                    veilederNavn = VeilederNavn("Kari Veileder"),
-                    veilederNavIdent = VeilederNavIdent("Z123456"),
-                )
-            ), treffId, "Z123456"
-        )
-        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
         scheduler.behandleJobbsøkerHendelser()
         assertThat(rapid.inspektør.size).isEqualTo(2)
@@ -91,21 +77,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
-            listOf(
-                LeggTilJobbsøker(
-                    fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
-                    fornavn = Fornavn("Ola"),
-                    etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
-                    veilederNavn = VeilederNavn("Kari Veileder"),
-                    veilederNavIdent = VeilederNavIdent("Z123456"),
-                )
-            ), treffId, "Z123456"
-        )
-        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
         scheduler.behandleJobbsøkerHendelser()
 
@@ -120,21 +92,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
-            listOf(
-                LeggTilJobbsøker(
-                    fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
-                    fornavn = Fornavn("Ola"),
-                    etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
-                    veilederNavn = VeilederNavn("Kari Veileder"),
-                    veilederNavIdent = VeilederNavIdent("Z123456"),
-                )
-            ), treffId, "Z123456"
-        )
-        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
         scheduler.behandleJobbsøkerHendelser()
         scheduler.behandleJobbsøkerHendelser()

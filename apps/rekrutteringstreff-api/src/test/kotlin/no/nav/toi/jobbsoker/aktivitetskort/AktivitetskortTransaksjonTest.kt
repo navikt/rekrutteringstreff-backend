@@ -65,11 +65,7 @@ class AktivitetskortTransaksjonTest {
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
 
-        try {
-            scheduler.behandleJobbsøkerHendelser()
-        } catch (e: Exception) {
-            // Forventet feil
-        }
+        scheduler.behandleJobbsøkerHendelser()
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         assertThat(usendteEtterpå).isNotEmpty()
@@ -108,11 +104,7 @@ class AktivitetskortTransaksjonTest {
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 
-        try {
-            scheduler.behandleJobbsøkerHendelser()
-        } catch (e: Exception) {
-            // Forventet feil
-        }
+        scheduler.behandleJobbsøkerHendelser()
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
         assertThat(usendteEtterpå).isNotEmpty()
