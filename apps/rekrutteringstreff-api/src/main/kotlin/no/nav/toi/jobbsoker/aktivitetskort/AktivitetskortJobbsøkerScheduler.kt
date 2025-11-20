@@ -5,13 +5,13 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.log
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
-import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -131,19 +131,15 @@ class AktivitetskortJobbsøkerScheduler(
         aktivitetskortRepository.runInTransaction { connection ->
             aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
 
-            val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
-                ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
+            val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
-            treff.aktivitetskortInvitasjonFor(hendelse.fnr)
-                .publiserTilRapids(rapidsConnection)
-
+            sendAktivitetskortInvitasjon(treff, hendelse.fnr)
             sendKandidatInvitertHendelse(hendelse)
         }
     }
 
     private fun behandleSvar(hendelse: JobbsøkerHendelseForAktivitetskort, svar: Boolean) {
-        val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
-            ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
+        val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
         treff.aktivitetskortSvarOgStatusFor(fnr = hendelse.fnr, svar = svar, endretAvPersonbruker = true)
             .publiserTilRapids(rapidsConnection)
@@ -155,41 +151,61 @@ class AktivitetskortJobbsøkerScheduler(
         aktivitetskortRepository.runInTransaction { connection ->
             aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
 
-            val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
-                ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
+            val treff = hentTreff(hendelse.rekrutteringstreffUuid)
+            val endringer = parseEndringer(hendelse)
 
-            // Parse hendelse_data for å få endringene som ble gjort
-            val endringer = if (hendelse.hendelseData != null) {
-                try {
-                    objectMapper.readValue(hendelse.hendelseData, EndringerDto::class.java)
-                } catch (e: Exception) {
-                    log.error("Kunne ikke parse hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}, kaster exception for retry/alert", e)
-                    throw IllegalStateException("Parse-feil i hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}", e)
-                }
-            } else {
-                log.error("Ingen hendelse_data funnet for jobbsøker hendelse ${hendelse.jobbsokerHendelseDbId}, kaster exception")
-                throw IllegalStateException("Manglende hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}")
-            }
-
-            // Sjekk om noen relevante felt ble endret
-            if (treff.harRelevanteEndringerForAktivitetskort(endringer)) {
-                // Verifiser at nyVerdi fra endringer matcher gjeldende verdier i databasen (kun til logging)
-                val verificationResult = treff.verifiserEndringerMotDatabase(endringer)
-                if (!verificationResult.erGyldig) {
-                    log.warn("Endringer i hendelse ${hendelse.jobbsokerHendelseDbId} matcher ikke treff-data i databasen: ${verificationResult.feilmelding}. Sender likevel oppdatering med faktiske verdier fra database.")
-                }
-
-                // Send oppdatering via rapids ved å bruke faktiske verdier fra rekrutteringstreff-tabellen
-                treff.aktivitetskortOppdateringFor(hendelse.fnr)
-                    .publiserTilRapids(rapidsConnection)
-
-                log.info("Sendt aktivitetskort-oppdatering for treff ${hendelse.rekrutteringstreffUuid} til jobbsøker")
+            if (skalSendeAktivitetskortOppdatering(treff, endringer, hendelse.jobbsokerHendelseDbId)) {
+                sendAktivitetskortOppdatering(treff, hendelse.fnr, hendelse.rekrutteringstreffUuid)
             } else {
                 log.info("Ingen relevante endringer for aktivitetskort i hendelse ${hendelse.jobbsokerHendelseDbId}, sender kun minside-varsel")
             }
 
             sendKandidatInvitertTreffEndretHendelse(hendelse)
         }
+    }
+
+    private fun hentTreff(rekrutteringstreffUuid: String): Rekrutteringstreff =
+        rekrutteringstreffRepository.hent(TreffId(rekrutteringstreffUuid))
+            ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID $rekrutteringstreffUuid")
+
+    private fun sendAktivitetskortInvitasjon(treff: Rekrutteringstreff, fnr: String) {
+        treff.aktivitetskortInvitasjonFor(fnr)
+            .publiserTilRapids(rapidsConnection)
+    }
+
+    private fun parseEndringer(hendelse: JobbsøkerHendelseForAktivitetskort): EndringerDto {
+        if (hendelse.hendelseData == null) {
+            log.error("Ingen hendelse_data funnet for jobbsøker hendelse ${hendelse.jobbsokerHendelseDbId}, kaster exception")
+            throw IllegalStateException("Manglende hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}")
+        }
+
+        return try {
+            objectMapper.readValue(hendelse.hendelseData, EndringerDto::class.java)
+        } catch (e: Exception) {
+            log.error("Kunne ikke parse hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}, kaster exception for retry/alert", e)
+            throw IllegalStateException("Parse-feil i hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}", e)
+        }
+    }
+
+    private fun skalSendeAktivitetskortOppdatering(treff: Rekrutteringstreff, endringer: EndringerDto, hendelseDbId: Long): Boolean {
+        if (!treff.harRelevanteEndringerForAktivitetskort(endringer)) {
+            return false
+        }
+
+        // Verifiser at endringer matcher database (kun til logging)
+        val verificationResult = treff.verifiserEndringerMotDatabase(endringer)
+        if (!verificationResult.erGyldig) {
+            log.warn("Endringer i hendelse $hendelseDbId matcher ikke treff-data i databasen: ${verificationResult.feilmelding}. Sender likevel oppdatering med faktiske verdier fra database.")
+        }
+
+        return true
+    }
+
+    private fun sendAktivitetskortOppdatering(treff: Rekrutteringstreff, fnr: String, rekrutteringstreffUuid: String) {
+        treff.aktivitetskortOppdateringFor(fnr)
+            .publiserTilRapids(rapidsConnection)
+
+        log.info("Sendt aktivitetskort-oppdatering for treff $rekrutteringstreffUuid til jobbsøker")
     }
 
     private fun sendKandidatInvitertHendelse(hendelse: JobbsøkerHendelseForAktivitetskort) {
