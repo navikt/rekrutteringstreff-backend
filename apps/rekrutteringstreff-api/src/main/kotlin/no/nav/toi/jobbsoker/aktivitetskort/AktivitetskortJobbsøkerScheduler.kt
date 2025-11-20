@@ -193,12 +193,10 @@ class AktivitetskortJobbsøkerScheduler(
     }
 
     private fun sendKandidatInvitertHendelse(hendelse: JobbsøkerHendelseForAktivitetskort) {
-        val varselId = UUID.randomUUID().toString()
-
         val message = JsonMessage.newMessage(
             eventName = "kandidatInvitert",
             map = mapOf(
-                "varselId" to varselId,
+                "rekrutteringstreffId" to hendelse.rekrutteringstreffUuid,
                 "fnr" to hendelse.fnr,
                 "avsenderNavident" to (hendelse.aktøridentifikasjon ?: "UKJENT")
             )
@@ -206,16 +204,14 @@ class AktivitetskortJobbsøkerScheduler(
 
         rapidsConnection.publish(hendelse.fnr, message.toJson())
 
-        log.info("Sendt kandidatInvitert-hendelse for varselId=$varselId")
+        log.info("Sendt kandidatInvitert-hendelse for rekrutteringstreffId=${hendelse.rekrutteringstreffUuid}")
     }
 
     private fun sendKandidatInvitertTreffEndretHendelse(hendelse: JobbsøkerHendelseForAktivitetskort) {
-        val varselId = UUID.randomUUID().toString()
-
         val message = JsonMessage.newMessage(
             eventName = "kandidatInvitertTreffEndret",
             map = mapOf(
-                "varselId" to varselId,
+                "rekrutteringstreffId" to hendelse.rekrutteringstreffUuid,
                 "fnr" to hendelse.fnr,
                 "avsenderNavident" to (hendelse.aktøridentifikasjon ?: "UKJENT")
             )
@@ -223,7 +219,7 @@ class AktivitetskortJobbsøkerScheduler(
 
         rapidsConnection.publish(hendelse.fnr, message.toJson())
 
-        log.info("Sendt kandidatInvitertTreffEndret-hendelse for varselId=$varselId")
+        log.info("Sendt kandidatInvitertTreffEndret-hendelse for rekrutteringstreffId=${hendelse.rekrutteringstreffUuid}")
     }
 
     private fun behandleSvartJaTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: String) {

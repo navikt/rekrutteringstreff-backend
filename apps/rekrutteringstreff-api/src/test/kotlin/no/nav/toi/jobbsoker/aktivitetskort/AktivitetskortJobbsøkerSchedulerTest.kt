@@ -78,7 +78,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         val varselMelding = rapid.inspektør.message(1)
         assertThat(varselMelding["@event_name"].asText()).isEqualTo("kandidatInvitert")
-        assertThat(varselMelding["varselId"]).isNotNull
+        assertThat(varselMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
         assertThat(varselMelding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteInvitasjoner()
@@ -318,7 +318,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         val varselMelding = rapid.inspektør.message(3)
         assertThat(varselMelding["@event_name"].asText()).isEqualTo("kandidatInvitertTreffEndret")
-        assertThat(varselMelding["varselId"]).isNotNull
+        assertThat(varselMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
         assertThat(varselMelding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
     }
 
