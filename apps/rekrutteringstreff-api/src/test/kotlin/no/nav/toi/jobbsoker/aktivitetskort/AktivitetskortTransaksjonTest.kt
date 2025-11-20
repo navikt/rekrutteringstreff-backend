@@ -71,7 +71,7 @@ class AktivitetskortTransaksjonTest {
             // Forventet feil
         }
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteInvitasjoner()
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         assertThat(usendteEtterpå).isNotEmpty()
         assertThat(usendteEtterpå).hasSize(1)
     }
@@ -100,7 +100,7 @@ class AktivitetskortTransaksjonTest {
         jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
 
         // Mark invitation as handled so we don't fail on that
-        val invitasjoner = aktivitetskortRepository.hentUsendteInvitasjoner()
+        val invitasjoner = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         invitasjoner.forEach { aktivitetskortRepository.lagrePollingstatus(it.jobbsokerHendelseDbId) }
 
         val endringer = no.nav.toi.rekrutteringstreff.dto.EndringerDto(

@@ -81,7 +81,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(varselMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
         assertThat(varselMelding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteInvitasjoner()
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         assertThat(usendteEtterpå).isEmpty()
     }
 
@@ -107,10 +107,11 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
 
-        val exception = assertThrows<IllegalArgumentException> {
-            scheduler.behandleJobbsøkerHendelser()
-        }
-        assertThat(exception.message).isEqualTo("FraTid kan ikke være null når vi inviterer")
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(0)
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
+        assertThat(usendteEtterpå).hasSize(1)
     }
 
     @Test

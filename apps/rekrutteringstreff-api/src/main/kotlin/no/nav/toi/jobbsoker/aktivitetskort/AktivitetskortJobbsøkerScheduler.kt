@@ -64,51 +64,33 @@ class AktivitetskortJobbsøkerScheduler(
             log.info("Starter behandling av ${alleUsendteHendelser.size} usendte jobbsøker-hendelser for aktivitetskort")
 
             alleUsendteHendelser.forEach { hendelse ->
-                try {
-                    behandleHendelse(hendelse)
-                } catch (e: Exception) {
-                    log.error("Feil under behandling av jobbsøker-hendelse ${hendelse.jobbsokerHendelseDbId} av type ${hendelse.hendelsestype}", e)
-                    throw e
-                }
+                behandleHendelse(hendelse)
             }
 
             log.info("Ferdig med behandling av usendte jobbsøker-hendelser for aktivitetskort")
         } catch (e: Exception) {
             log.error("Feil under kjøring av AktivitetskortJobbsøkerScheduler", e)
-            throw e
         } finally {
             isRunning.set(false)
         }
     }
 
     private fun hentAlleUsendteHendelser(): List<JobbsøkerHendelseForAktivitetskort> {
-        val invitasjoner = aktivitetskortRepository.hentUsendteInvitasjoner()
-            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.INVITERT, null, it.aktøridentifikasjon) }
+        val hendelsestyper = listOf(
+            JobbsøkerHendelsestype.INVITERT,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
+            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
+            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST,
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT
+        )
 
-        val svarJa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
-            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, it.hendelseData, it.aktøridentifikasjon) }
-
-        val svarNei = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
-            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, it.hendelseData, it.aktøridentifikasjon) }
-
-        val treffEndret = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON, it.hendelseData, it.aktøridentifikasjon) }
-
-        val avlyst = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
-            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST, it.hendelseData, it.aktøridentifikasjon) }
-
-        val fullført = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
-            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT, it.hendelseData, it.aktøridentifikasjon) }
-
-        val ikkeSvartAvlyst = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST)
-            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST, it.hendelseData, it.aktøridentifikasjon) }
-
-        val ikkeSvartFullført = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT)
-            .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT, it.hendelseData, it.aktøridentifikasjon) }
-
-        // Slå sammen alle hendelser og sorter etter ID (som representerer tidspunkt)
-        return (invitasjoner + svarJa + svarNei + treffEndret + avlyst + fullført + ikkeSvartAvlyst + ikkeSvartFullført)
-            .sortedBy { it.jobbsokerHendelseDbId }
+        return hendelsestyper.flatMap { type ->
+            aktivitetskortRepository.hentUsendteHendelse(type)
+                .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, type, it.hendelseData, it.aktøridentifikasjon) }
+        }.sortedBy { it.jobbsokerHendelseDbId }
     }
 
     private fun behandleHendelse(hendelse: JobbsøkerHendelseForAktivitetskort) {
