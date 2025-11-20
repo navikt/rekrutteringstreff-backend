@@ -1,6 +1,7 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.executeInTransaction
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -8,26 +9,6 @@ import java.time.ZonedDateTime
 import javax.sql.DataSource
 
 class AktivitetskortRepository(private val dataSource: DataSource) {
-
-    fun <T> runInTransaction(block: (Connection) -> T): T {
-        return dataSource.connection.use { connection ->
-            connection.autoCommit = false
-            try {
-                val result = block(connection)
-                connection.commit()
-                result
-            } catch (e: Exception) {
-                try {
-                    connection.rollback()
-                } catch (rollbackException: Exception) {
-                    e.addSuppressed(rollbackException)
-                }
-                throw e
-            } finally {
-                connection.autoCommit = true
-            }
-        }
-    }
 
     fun hentUsendteHendelse(hendelsestype: JobbsøkerHendelsestype): List<UsendtHendelse> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(

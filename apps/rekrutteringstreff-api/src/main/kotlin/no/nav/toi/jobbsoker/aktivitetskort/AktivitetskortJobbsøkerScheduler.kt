@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.executeInTransaction
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -15,8 +16,10 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.sql.DataSource
 
 class AktivitetskortJobbsøkerScheduler(
+    private val dataSource: DataSource,
     private val aktivitetskortRepository: AktivitetskortRepository,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val rapidsConnection: RapidsConnection,
@@ -110,7 +113,7 @@ class AktivitetskortJobbsøkerScheduler(
     }
 
     private fun behandleInvitasjon(hendelse: JobbsøkerHendelseForAktivitetskort) {
-        aktivitetskortRepository.runInTransaction { connection ->
+        dataSource.executeInTransaction { connection ->
             aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
 
             val treff = hentTreff(hendelse.rekrutteringstreffUuid)
@@ -130,7 +133,7 @@ class AktivitetskortJobbsøkerScheduler(
     }
 
     private fun behandleTreffEndret(hendelse: JobbsøkerHendelseForAktivitetskort) {
-        aktivitetskortRepository.runInTransaction { connection ->
+        dataSource.executeInTransaction { connection ->
             aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
 
             val treff = hentTreff(hendelse.rekrutteringstreffUuid)

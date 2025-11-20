@@ -213,6 +213,7 @@ class App(
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
 
         aktivitetskortJobbsøkerScheduler = AktivitetskortJobbsøkerScheduler(
+            dataSource = dataSource,
             aktivitetskortRepository = aktivitetskortRepository,
             rekrutteringstreffRepository = rekrutteringstreffRepository,
             rapidsConnection = rapidsConnection,

@@ -45,7 +45,7 @@ class AktivitetskortTransaksjonTest {
     @Test
     fun `skal rulle tilbake databaseendringer dersom kafka feiler ved invitasjon`() {
         val failingRapid = FailingRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, failingRapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, failingRapid, mapper)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -79,7 +79,7 @@ class AktivitetskortTransaksjonTest {
     @Test
     fun `skal rulle tilbake databaseendringer dersom kafka feiler ved treff endret`() {
         val failingRapid = FailingRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, failingRapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, failingRapid, mapper)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
