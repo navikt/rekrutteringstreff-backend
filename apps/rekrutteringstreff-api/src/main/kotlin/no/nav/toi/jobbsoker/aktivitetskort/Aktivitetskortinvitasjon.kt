@@ -4,10 +4,12 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.ZonedDateTime
+import java.util.UUID
 
 class Aktivitetskortinvitasjon private constructor(
     private val fnr: String,
     private val rekrutteringstreffId: TreffId,
+    private val hendelseId: UUID,
     private val tittel: String,
     private val fraTid: ZonedDateTime,
     private val tilTid: ZonedDateTime,
@@ -22,6 +24,7 @@ class Aktivitetskortinvitasjon private constructor(
         fun opprett(
             fnr: String,
             rekrutteringstreffId: TreffId,
+            hendelseId: UUID,
             tittel: String,
             fraTid: ZonedDateTime?,
             tilTid: ZonedDateTime?,
@@ -34,6 +37,7 @@ class Aktivitetskortinvitasjon private constructor(
         ) = Aktivitetskortinvitasjon(
             fnr = fnr,
             rekrutteringstreffId = rekrutteringstreffId,
+            hendelseId = hendelseId,
             tittel = tittel,
             opprettetAv = opprettetAv,
             opprettetTidspunkt = opprettetTidspunkt,
@@ -52,6 +56,7 @@ class Aktivitetskortinvitasjon private constructor(
             map = mapOf<String, Any>(
                 "fnr" to fnr,
                 "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
+                "hendelseId" to hendelseId,
                 "tittel" to tittel,
                 "beskrivelse" to "TODO",
                 "fraTid" to fraTid,

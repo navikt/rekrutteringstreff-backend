@@ -6,6 +6,7 @@ import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.ZonedDateTime
+import java.util.UUID
 import javax.sql.DataSource
 
 class AktivitetskortRepository(private val dataSource: DataSource) {
@@ -13,7 +14,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
     fun hentUsendteHendelse(hendelsestype: JobbsøkerHendelsestype): List<UsendtHendelse> = dataSource.connection.use { connection ->
         val statement = connection.prepareStatement(
             """
-            select jh.jobbsoker_hendelse_id as db_id, j.fodselsnummer, rt.id, jh.hendelse_data, jh.aktøridentifikasjon from jobbsoker_hendelse jh
+            select jh.jobbsoker_hendelse_id as db_id, jh.id as hendelse_id, j.fodselsnummer, rt.id, jh.hendelse_data, jh.aktøridentifikasjon from jobbsoker_hendelse jh
             left join aktivitetskort_polling p on jh.jobbsoker_hendelse_id = p.jobbsoker_hendelse_id
             left join jobbsoker j on jh.jobbsoker_id = j.jobbsoker_id
             left join rekrutteringstreff rt on j.rekrutteringstreff_id = rt.rekrutteringstreff_id
@@ -28,6 +29,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
                 if (resultSet.next()) {
                     UsendtHendelse(
                         jobbsokerHendelseDbId = resultSet.getLong("db_id"),
+                        hendelseId = resultSet.getObject("hendelse_id", UUID::class.java),
                         fnr = resultSet.getString("fodselsnummer"),
                         rekrutteringstreffUuid = resultSet.getString("id"),
                         hendelseData = resultSet.getString("hendelse_data"),
@@ -58,6 +60,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
 
 data class UsendtHendelse(
     val jobbsokerHendelseDbId: Long,
+    val hendelseId: UUID,
     val fnr: String,
     val rekrutteringstreffUuid: String,
     val hendelseData: String? = null,

@@ -13,6 +13,7 @@ import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -92,7 +93,7 @@ class AktivitetskortJobbsøkerScheduler(
 
         return hendelsestyper.flatMap { type ->
             aktivitetskortRepository.hentUsendteHendelse(type)
-                .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.fnr, it.rekrutteringstreffUuid, type, it.hendelseData, it.aktøridentifikasjon) }
+                .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.hendelseId, it.fnr, it.rekrutteringstreffUuid, type, it.hendelseData, it.aktøridentifikasjon) }
         }.sortedBy { it.jobbsokerHendelseDbId }
     }
 
@@ -118,8 +119,7 @@ class AktivitetskortJobbsøkerScheduler(
 
             val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
-            sendAktivitetskortInvitasjon(treff, hendelse.fnr)
-            sendKandidatInvitertHendelse(hendelse)
+            sendAktivitetskortInvitasjon(treff, hendelse.fnr, hendelse.hendelseId, hendelse.aktøridentifikasjon)
         }
     }
 
@@ -137,15 +137,8 @@ class AktivitetskortJobbsøkerScheduler(
             aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
 
             val treff = hentTreff(hendelse.rekrutteringstreffUuid)
-            val endringer = parseEndringer(hendelse)
 
-            if (skalSendeAktivitetskortOppdatering(treff, endringer, hendelse.jobbsokerHendelseDbId)) {
-                sendAktivitetskortOppdatering(treff, hendelse.fnr, hendelse.rekrutteringstreffUuid)
-            } else {
-                log.info("Ingen relevante endringer for aktivitetskort i hendelse ${hendelse.jobbsokerHendelseDbId}, sender kun minside-varsel")
-            }
-
-            sendKandidatInvitertTreffEndretHendelse(hendelse)
+            sendAktivitetskortOppdatering(treff, hendelse.fnr, hendelse.rekrutteringstreffUuid, hendelse.hendelseId, hendelse.aktøridentifikasjon)
         }
     }
 
@@ -153,74 +146,16 @@ class AktivitetskortJobbsøkerScheduler(
         rekrutteringstreffRepository.hent(TreffId(rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID $rekrutteringstreffUuid")
 
-    private fun sendAktivitetskortInvitasjon(treff: Rekrutteringstreff, fnr: String) {
-        treff.aktivitetskortInvitasjonFor(fnr)
+    private fun sendAktivitetskortInvitasjon(treff: Rekrutteringstreff, fnr: String, hendelseId: UUID, avsenderNavident: String?) {
+        treff.aktivitetskortInvitasjonFor(fnr, hendelseId, avsenderNavident)
             .publiserTilRapids(rapidsConnection)
     }
 
-    private fun parseEndringer(hendelse: JobbsøkerHendelseForAktivitetskort): EndringerDto {
-        if (hendelse.hendelseData == null) {
-            log.error("Ingen hendelse_data funnet for jobbsøker hendelse ${hendelse.jobbsokerHendelseDbId}, kaster exception")
-            throw IllegalStateException("Manglende hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}")
-        }
-
-        return try {
-            objectMapper.readValue(hendelse.hendelseData, EndringerDto::class.java)
-        } catch (e: Exception) {
-            log.error("Kunne ikke parse hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}, kaster exception for retry/alert", e)
-            throw IllegalStateException("Parse-feil i hendelse_data for hendelse ${hendelse.jobbsokerHendelseDbId}", e)
-        }
-    }
-
-    private fun skalSendeAktivitetskortOppdatering(treff: Rekrutteringstreff, endringer: EndringerDto, hendelseDbId: Long): Boolean {
-        if (!treff.harRelevanteEndringerForAktivitetskort(endringer)) {
-            return false
-        }
-
-        // Verifiser at endringer matcher database (kun til logging)
-        val verificationResult = treff.verifiserEndringerMotDatabase(endringer)
-        if (!verificationResult.erGyldig) {
-            log.warn("Endringer i hendelse $hendelseDbId matcher ikke treff-data i databasen: ${verificationResult.feilmelding}. Sender likevel oppdatering med faktiske verdier fra database.")
-        }
-
-        return true
-    }
-
-    private fun sendAktivitetskortOppdatering(treff: Rekrutteringstreff, fnr: String, rekrutteringstreffUuid: String) {
-        treff.aktivitetskortOppdateringFor(fnr)
+    private fun sendAktivitetskortOppdatering(treff: Rekrutteringstreff, fnr: String, rekrutteringstreffUuid: String, hendelseId: UUID, avsenderNavident: String?) {
+        treff.aktivitetskortOppdateringFor(fnr, hendelseId, avsenderNavident)
             .publiserTilRapids(rapidsConnection)
 
         log.info("Sendt aktivitetskort-oppdatering for treff $rekrutteringstreffUuid til jobbsøker")
-    }
-
-    private fun sendKandidatInvitertHendelse(hendelse: JobbsøkerHendelseForAktivitetskort) {
-        val message = JsonMessage.newMessage(
-            eventName = "kandidatInvitert",
-            map = mapOf(
-                "rekrutteringstreffId" to hendelse.rekrutteringstreffUuid,
-                "fnr" to hendelse.fnr,
-                "avsenderNavident" to (hendelse.aktøridentifikasjon ?: "UKJENT")
-            )
-        )
-
-        rapidsConnection.publish(hendelse.fnr, message.toJson())
-
-        log.info("Sendt kandidatInvitert-hendelse for rekrutteringstreffId=${hendelse.rekrutteringstreffUuid}")
-    }
-
-    private fun sendKandidatInvitertTreffEndretHendelse(hendelse: JobbsøkerHendelseForAktivitetskort) {
-        val message = JsonMessage.newMessage(
-            eventName = "kandidatInvitertTreffEndret",
-            map = mapOf(
-                "rekrutteringstreffId" to hendelse.rekrutteringstreffUuid,
-                "fnr" to hendelse.fnr,
-                "avsenderNavident" to (hendelse.aktøridentifikasjon ?: "UKJENT")
-            )
-        )
-
-        rapidsConnection.publish(hendelse.fnr, message.toJson())
-
-        log.info("Sendt kandidatInvitertTreffEndret-hendelse for rekrutteringstreffId=${hendelse.rekrutteringstreffUuid}")
     }
 
     private fun behandleSvartJaTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: String) {
@@ -245,6 +180,7 @@ class AktivitetskortJobbsøkerScheduler(
 
     private data class JobbsøkerHendelseForAktivitetskort(
         val jobbsokerHendelseDbId: Long,
+        val hendelseId: UUID,
         val fnr: String,
         val rekrutteringstreffUuid: String,
         val hendelsestype: JobbsøkerHendelsestype,
