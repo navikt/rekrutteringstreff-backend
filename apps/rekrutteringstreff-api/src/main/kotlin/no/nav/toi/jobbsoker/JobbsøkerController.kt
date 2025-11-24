@@ -152,12 +152,24 @@ class JobbsøkerController(
         methods = [HttpMethod.DELETE]
     )
     private fun slettJobbsøkerHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val jobbsøkerId = UUID.fromString(ctx.pathParam(pathParamJobbsøkerId))
-        jobbsøkerRepository.endreStatus(jobbsøkerId,  JobbsøkerStatus.SLETTET)
-        ctx.status(200)
-    }
+      ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+      val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
+      val treffId = TreffId(UUID.fromString(ctx.pathParam(pathParamTreffId)))
 
+      val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
+      if (fødselsnummer == null) {
+          ctx.status(404)
+      } else {
+          val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
+          if (jobbsøker!!.status != JobbsøkerStatus.LAGT_TIL) {
+              // Vi støtter kun sletting av jobbsøkere som er i "LAGT_TIL" status
+              ctx.status(422)
+          } else {
+              jobbsøkerRepository.endreStatus(jobbsøkerId.somUuid, JobbsøkerStatus.SLETTET)
+              ctx.status(200)
+          }
+      }
+    }
 
     @OpenApi(
         summary = "Hent alle jobbsøkerhendelser med jobbsøkerdata for et rekrutteringstreff, sortert med nyeste først",
