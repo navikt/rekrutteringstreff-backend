@@ -13,6 +13,8 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.rekrutteringstreff.TreffId
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.util.*
 
 
@@ -29,6 +31,7 @@ class JobbsøkerController(
         private const val hendelserPath = "$jobbsøkerPath/hendelser"
         private const val slettPath = "$jobbsøkerPath/${pathParamJobbsøkerId}/slett"
         private const val inviterPath = "$jobbsøkerPath/inviter"
+        val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
     init {
@@ -152,23 +155,24 @@ class JobbsøkerController(
         methods = [HttpMethod.DELETE]
     )
     private fun slettJobbsøkerHandler(): (Context) -> Unit = { ctx ->
-      ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-      val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
-      val treffId = TreffId(UUID.fromString(ctx.pathParam(pathParamTreffId)))
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
+        val treffId = TreffId(UUID.fromString(ctx.pathParam(pathParamTreffId)))
+        log.info("Sletter jobbsøker $jobbsøkerId for treff $treffId")
 
-      val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
-      if (fødselsnummer == null) {
-          ctx.status(404)
-      } else {
-          val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
-          if (jobbsøker!!.status != JobbsøkerStatus.LAGT_TIL) {
-              // Vi støtter kun sletting av jobbsøkere som er i "LAGT_TIL" status
-              ctx.status(422)
-          } else {
-              jobbsøkerRepository.endreStatus(jobbsøkerId.somUuid, JobbsøkerStatus.SLETTET)
-              ctx.status(200)
-          }
-      }
+        val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
+        if (fødselsnummer == null) {
+            ctx.status(404)
+        } else {
+            val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
+            if (jobbsøker!!.status != JobbsøkerStatus.LAGT_TIL) {
+                // Vi støtter kun sletting av jobbsøkere som er i "LAGT_TIL" status
+                ctx.status(422)
+            } else {
+                jobbsøkerRepository.endreStatus(jobbsøkerId.somUuid, JobbsøkerStatus.SLETTET)
+                ctx.status(200)
+            }
+        }
     }
 
     @OpenApi(
