@@ -111,7 +111,7 @@ class PilotkontorTest {
 
     @Test
     fun `Person uten innlogget pilotkontor får ikke lov til å kalle rekrutteringstreff-endepunkter`() {
-        every { modiaKlient.hentVeiledersAktivEnhet(any())} returns "5678"
+        every { modiaKlient.hentVeiledersAktivEnhet(any()) } returns "5678"
 
         val request = HttpRequest.newBuilder()
             .uri(URI("http://localhost:$appPort/api/rekrutteringstreff"))

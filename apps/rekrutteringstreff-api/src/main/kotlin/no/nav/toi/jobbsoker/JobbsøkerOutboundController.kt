@@ -8,6 +8,7 @@ import io.javalin.openapi.*
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.kandidatsok.KandidatsøkKlient
+import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import java.util.*
 
@@ -21,7 +22,8 @@ class JobbsøkerOutboundController(
 ) {
     companion object {
         private const val pathParamPersonTreffId = "personTreffId"
-        private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
+        private const val pathParamTreffId = "treffId"
+        private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff/{$pathParamTreffId}"
         private const val eksternKandidatnummerPath = "$endepunktRekrutteringstreff/jobbsoker/{$pathParamPersonTreffId}/kandidatnummer"
     }
     init {
@@ -37,7 +39,13 @@ class JobbsøkerOutboundController(
             type = UUID::class,
             required = true,
             description = "Jobbsøkerens unike identifikator for treffet (UUID)"
-        )],
+        ), OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            required = true,
+            description = "Rekrutteringstreffets unike identifikator (UUID)"
+        )
+        ],
         responses = [
             OpenApiResponse("200", content = [OpenApiContent(from = KandidatnummerDto::class)]),
             OpenApiResponse("404", description = "Jobbsøker eller kandidatnummer ikke funnet")
@@ -47,11 +55,12 @@ class JobbsøkerOutboundController(
     )
     private fun hentKandidatnummerHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
+        log.info("Hent kandidatnummer")
+
         val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
         val userToken = ctx.attribute<String>("raw_token")
             ?: throw InternalServerErrorResponse("Raw token ikke funnet i context")
 
-        // TODO er persontreffId det samme som uuiden til rekrutteringstreffet?
         //val eiere = eierRepository.hent()
 
         jobbsøkerRepository.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->

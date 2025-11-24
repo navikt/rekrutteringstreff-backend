@@ -46,9 +46,14 @@ interface AuthenticatedUser {
     fun erUtvikler(): Boolean = false
 
     companion object {
-        fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon, modiaKlient: ModiaKlient, pilotkontorer: List<String>): AuthenticatedUser {
+        fun fromJwt(
+            jwt: DecodedJWT,
+            rolleUuidSpesifikasjon: RolleUuidSpesifikasjon,
+            modiaKlient: ModiaKlient,
+            pilotkontorer: List<String>
+        ): AuthenticatedUser {
             val navIdentClaim = jwt.getClaim(NAV_IDENT_CLAIM)
-            return if(navIdentClaim.isMissing) {
+            return if (navIdentClaim.isMissing) {
                 AuthenticatedCitizenUser(jwt.getClaim(PID_CLAIM).asString())
             } else {
                 AuthenticatedNavUser(
@@ -62,8 +67,10 @@ interface AuthenticatedUser {
                 )
             }
         }
+
         fun Context.extractNavIdent(): String =
-            attribute<AuthenticatedUser>("authenticatedUser")?.extractNavIdent() ?: throw UnauthorizedResponse("Not authenticated")
+            attribute<AuthenticatedUser>("authenticatedUser")?.extractNavIdent()
+                ?: throw UnauthorizedResponse("Not authenticated")
     }
 }
 
@@ -73,34 +80,35 @@ private class AuthenticatedNavUser(
     private val jwt: String,
     private val modiaKlient: ModiaKlient,
     private val pilotkontorer: List<String>
-): AuthenticatedUser {
+) : AuthenticatedUser {
     override fun verifiserAutorisasjon(vararg gyldigeRoller: Rolle) {
-        log.info("Roller for bruker er $roller")
-
-        if(!erEnAvRollene(*gyldigeRoller)) {
+        if (!erEnAvRollene(*gyldigeRoller)) {
             throw ForbiddenResponse()
-        }
-        val veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(jwt)
+        } else if (erUtvikler()) {
+            return
+        } else {
+            val veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(jwt)
 
-        if(veiledersKontor.isNullOrEmpty() ) {
-            throw ForbiddenResponse("Finner ikke veileders innloggede kontor")
-        } else if(veiledersKontor !in pilotkontorer) {
-            throw ForbiddenResponse("Veileder er ikke tilknyttet et pilotkontor")
+            if (veiledersKontor.isNullOrEmpty()) {
+                throw ForbiddenResponse("Finner ikke veileders innloggede kontor")
+            } else if (veiledersKontor !in pilotkontorer) {
+                throw ForbiddenResponse("Veileder er ikke tilknyttet et pilotkontor")
+            }
         }
     }
 
     fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
     override fun extractNavIdent() = navIdent
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
-    override fun erUtvikler() = roller.any {it == Rolle.UTVIKLER }
+    override fun erUtvikler() = roller.any { it == Rolle.UTVIKLER }
 }
 
 private class AuthenticatedCitizenUser(
     private val pid: String
-): AuthenticatedUser {
+) : AuthenticatedUser {
     override fun extractNavIdent() = throw ForbiddenResponse()
     override fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle) {
-        if(Rolle.BORGER !in arbeidsgiverRettet) throw ForbiddenResponse()
+        if (Rolle.BORGER !in arbeidsgiverRettet) throw ForbiddenResponse()
     }
 
     override fun extractPid(): String = pid
@@ -124,7 +132,10 @@ fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             ctx.attribute("raw_token", token)
 
             val decoded = verifyJwt(verifiers, token)
-            ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon, modiaKlient, pilotkontorer))
+            ctx.attribute(
+                "authenticatedUser",
+                AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon, modiaKlient, pilotkontorer)
+            )
         }
     }
     return this

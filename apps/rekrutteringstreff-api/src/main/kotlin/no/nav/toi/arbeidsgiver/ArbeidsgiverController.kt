@@ -69,9 +69,10 @@ class ArbeidsgiverController(
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
         //sjekk at personen er eier av treff
-        val eiere = eierRepository.hent(treff)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id ${treff.somString} har ingen eiere")
+        val eiere = eierRepository.hent(treff)?.tilNavIdenter()
+            ?: throw IllegalStateException("Rekrutteringstreff med id ${treff.somString} har ingen eiere")
 
-        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if (eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
             arbeidsgiverRepository.leggTil(dto.somLeggTilArbeidsgiver(), treff, ctx.extractNavIdent())
             ctx.status(201)
         } else {
@@ -163,9 +164,10 @@ class ArbeidsgiverController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
-        val eiere = eierRepository.hent(treff)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id ${treff.somString} har ingen eiere")
+        val eiere = eierRepository.hent(treff)?.tilNavIdenter()
+            ?: throw IllegalStateException("Rekrutteringstreff med id ${treff.somString} har ingen eiere")
 
-        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if (eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
             val hendelser = arbeidsgiverRepository.hentArbeidsgiverHendelser(treff)
             ctx.status(200).json(hendelser.map { h ->
                 ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
@@ -201,9 +203,10 @@ class ArbeidsgiverController(
         val navIdent = ctx.extractNavIdent()
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
 
-        val eiere = eierRepository.hent(treffId)?.tilNavIdenter() ?: throw IllegalArgumentException("Rekrutteringstreff med id ${treffId.somString} har ingen eiere")
+        val eiere = eierRepository.hent(treffId)?.tilNavIdenter()
+            ?: throw IllegalArgumentException("Rekrutteringstreff med id ${treffId.somString} har ingen eiere")
 
-        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if (eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
             if (arbeidsgiverRepository.slett(id, navIdent)) ctx.status(204) else throw NotFoundResponse()
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treffId.somString}")

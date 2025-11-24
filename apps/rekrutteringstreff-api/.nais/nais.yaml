@@ -57,7 +57,7 @@ spec:
           - NAVident
         groups:
           - id: {{ adGruppeUtvikler }}
-#         - id: {{ adGruppeArbeidsgiverrettet }}
+          - id: {{ adGruppeArbeidsgiverrettet }}
   kafka:
     pool: {{ kafka_pool }}
   gcp:

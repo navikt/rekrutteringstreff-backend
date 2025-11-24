@@ -270,7 +270,7 @@ class JobbsokerControllerAutorisasjonsTest {
     @ParameterizedTest
     @MethodSource("autorisasjonsCaserMedEier")
     fun testEndepunkterMedEier(endepunkt: Endepunkt, gruppetilhørighet: Gruppe, erEier: Boolean, expectedStatus: Int) {
-        if(erEier) {
+        if (erEier) {
             eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A000001"))
         }
 

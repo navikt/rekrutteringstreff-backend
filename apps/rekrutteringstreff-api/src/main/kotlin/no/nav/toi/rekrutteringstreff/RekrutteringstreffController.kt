@@ -268,7 +268,7 @@ class RekrutteringstreffController(
         //Verifiser at personen er eier av treffet eller har utvikler-tilgang
         val rekrutteringstreff = rekrutteringstreffRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke oppdatere")
         val navIdent = ctx.extractNavIdent()
-        if(rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if (rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
             rekrutteringstreffRepository.slett(id)
             ctx.status(200).result("Rekrutteringstreff slettet")
         } else {

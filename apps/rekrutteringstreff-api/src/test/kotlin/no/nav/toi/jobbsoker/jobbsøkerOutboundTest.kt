@@ -143,7 +143,7 @@ class JobbsøkerOutboundTest {
             .serialize()
 
         val (_, response, result) = Fuel
-            .get("http://localhost:$appPort$endepunktRekrutteringstreff/jobbsoker/$personTreffId/kandidatnummer")
+            .get("http://localhost:$appPort$endepunktRekrutteringstreff/$treffId/jobbsoker/$personTreffId/kandidatnummer")
             .header("Authorization", "Bearer $token")
             .responseObject<KandidatnummerDto>()
 

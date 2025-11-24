@@ -47,11 +47,11 @@ class ModiaKlient(
         try {
             val respons = withRetry(::fetch)
 
-            return if(respons.statusCode() in 200..299) {
+            return if (respons.statusCode() in 200..299) {
                 objectMapper.readValue(respons.body(), AktivEnhet::class.java).aktivEnhet
             } else {
                 log.error("Det skjedde en feil ved henting av aktiv enhet fra Modia. Status: ${respons.statusCode()}, body: ${respons.body()}")
-                return null
+                null
             }
 
         } catch (e: Exception) {
