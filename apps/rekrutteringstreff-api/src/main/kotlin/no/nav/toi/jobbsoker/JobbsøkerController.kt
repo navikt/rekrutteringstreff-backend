@@ -29,7 +29,7 @@ class JobbsøkerController(
 
         private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
         private const val hendelserPath = "$jobbsøkerPath/hendelser"
-        private const val slettPath = "$jobbsøkerPath/${pathParamJobbsøkerId}/slett"
+        private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
         private const val inviterPath = "$jobbsøkerPath/inviter"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
