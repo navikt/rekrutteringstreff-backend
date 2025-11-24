@@ -34,7 +34,7 @@ class JobbsøkerController(
     init {
         javalin.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         javalin.get(jobbsøkerPath, hentJobbsøkereHandler())
-        javalin.get(slettPath, slettJobbsøkerHandler())
+        javalin.delete(slettPath, slettJobbsøkerHandler())
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
     }
