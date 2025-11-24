@@ -31,6 +31,7 @@ class JobbsøkerInnloggetBorgerTest {
         private val authServer = MockOAuth2Server()
         private val authPort = 18012
         private val db = TestDatabase()
+        private var jobbsøkerRepository: JobbsøkerRepository = JobbsøkerRepository(db.dataSource, JacksonConfig.mapper)
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
 
         private lateinit var app: App
@@ -115,7 +116,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
             )
         )
 
@@ -145,6 +146,11 @@ class JobbsøkerInnloggetBorgerTest {
 
         val svarJaFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarJaHendelse.id)
         assertThat(svarJaFødselsnummer).isEqualTo(fnr)
+
+        jobbsøkerRepository.hentJobbsøker(treffId, fnr).also {
+            assertThat(it).isNotNull
+            assertThat(it!!.status).isEqualTo(JobbsøkerStatus.SVART_JA)
+        }
     }
 
     @Test
@@ -155,7 +161,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
             )
         )
 
@@ -185,6 +191,11 @@ class JobbsøkerInnloggetBorgerTest {
 
         val svarNeiFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarNeiHendelse.id)
         assertThat(svarNeiFødselsnummer).isEqualTo(fnr)
+
+        jobbsøkerRepository.hentJobbsøker(treffId, fnr).also {
+            assertThat(it).isNotNull
+            assertThat(it!!.status).isEqualTo(JobbsøkerStatus.SVART_NEI)
+        }
     }
 
     @Test
@@ -196,7 +207,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Kandidatnummer("K1"), Fornavn("Test"), Etternavn("Person"), Navkontor("NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"))
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Kandidatnummer("K1"), Fornavn("Test"), Etternavn("Person"), Navkontor("NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"), JobbsøkerStatus.INVITERT)
             )
         )
 
@@ -233,7 +244,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
         eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
@@ -278,7 +289,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
         eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
@@ -302,7 +313,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
         eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
@@ -319,7 +330,7 @@ class JobbsøkerInnloggetBorgerTest {
         val fødselsnummer = Fødselsnummer("44444444444")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
         assertThat(result.get().statuser.erPåmeldt).isFalse()
@@ -333,7 +344,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -358,7 +369,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -383,7 +394,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -413,7 +424,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
             )
         )
 
@@ -456,7 +467,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
             )
         )
 

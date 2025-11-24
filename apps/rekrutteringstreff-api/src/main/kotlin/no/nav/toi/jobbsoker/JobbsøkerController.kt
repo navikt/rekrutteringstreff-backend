@@ -251,6 +251,7 @@ class JobbsøkerController(
                 navkontor = it.navkontor?.asString,
                 veilederNavn = it.veilederNavn?.asString,
                 veilederNavIdent = it.veilederNavIdent?.asString,
+                status = it.status,
                 hendelser = it.hendelser.map { h ->
                     JobbsøkerHendelseOutboundDto(
                         id = h.id.toString(),

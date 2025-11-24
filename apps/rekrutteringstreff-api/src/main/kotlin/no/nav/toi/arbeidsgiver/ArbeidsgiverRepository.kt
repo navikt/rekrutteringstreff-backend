@@ -150,31 +150,11 @@ class ArbeidsgiverRepository(
                     ag.orgnr,
                     ag.orgnavn,
                     ag.status,
-                    rt.id as treff_id,
-                    COALESCE(
-                        json_agg(
-                            json_build_object(
-                                'id', ah.id,
-                                'tidspunkt', to_char(ah.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
-                                'hendelsestype', ah.hendelsestype,
-                                'opprettetAvAktortype', ah.opprettet_av_aktortype,
-                                'aktøridentifikasjon', ah.aktøridentifikasjon
-                            )
-                        ) FILTER (WHERE ah.id IS NOT NULL),
-                        '[]'
-                    ) as hendelser
+                    rt.id as treff_id
                 FROM arbeidsgiver ag
                 JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                LEFT JOIN arbeidsgiver_hendelse ah ON ag.arbeidsgiver_id = ah.arbeidsgiver_id
-                LEFT JOIN LATERAL (
-                    SELECT hendelsestype
-                      FROM arbeidsgiver_hendelse h
-                     WHERE h.arbeidsgiver_id = ag.arbeidsgiver_id
-                     ORDER BY h.tidspunkt DESC
-                     LIMIT 1
-                ) last ON true
                 WHERE rt.id = ?
-                  AND COALESCE(last.hendelsestype, 'OPPRETTET') <> 'SLETTET'
+                  AND ag.status <> 'SLETTET'
                 GROUP BY ag.id, ag.arbeidsgiver_id, ag.orgnr, ag.orgnavn, rt.id
                 ORDER BY ag.arbeidsgiver_id;
             """.trimIndent()
@@ -188,7 +168,7 @@ class ArbeidsgiverRepository(
         }
     }
 
-    fun hentArbeidsgiver(treff: TreffId, orgnr: Orgnr): ArbeidsgiverUtenHendelser? {
+    fun hentArbeidsgiver(treff: TreffId, orgnr: Orgnr): Arbeidsgiver? {
         dataSource.connection.use { connection ->
             if (!finnesIDb(connection, treff))
                 throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
@@ -210,19 +190,34 @@ class ArbeidsgiverRepository(
                 preparedStatement.setObject(1, treff.somUuid)
                 preparedStatement.setObject(2, orgnr.asString)
                 preparedStatement.executeQuery().use { resultSet ->
-                    return if (resultSet.next()) resultSet.toArbeidsgiverUtenHendelser() else null
+                    return if (resultSet.next()) resultSet.toArbeidsgiver() else null
+                }
+            }
+        }
+    }
+
+    fun hentAntallArbeidsgivere(treff: TreffId): Int {
+        dataSource.connection.use { connection ->
+            if (!finnesIDb(connection, treff))
+                throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
+            val sql = """
+            SELECT
+                COUNT(1) AS antall_arbeidsgivere
+            FROM arbeidsgiver ag
+            JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ? 
+        """.trimIndent()
+            connection.prepareStatement(sql).use { preparedStatement ->
+                preparedStatement.setObject(1, treff.somUuid)
+                preparedStatement.executeQuery().use { resultSet ->
+                    return if (resultSet.next()) resultSet.getInt("antall_arbeidsgivere") else 0
                 }
             }
         }
     }
 
     private fun java.sql.ResultSet.toArbeidsgiver() = Arbeidsgiver(
-       toArbeidsgiverUtenHendelser(),
-       parseHendelser(getString("hendelser"))
-    )
-
-    private fun java.sql.ResultSet.toArbeidsgiverUtenHendelser() = ArbeidsgiverUtenHendelser(
-        arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(getString("id"))),
+       arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(getString("id"))),
         treffId = TreffId(getString("treff_id")),
         orgnr = Orgnr(getString("orgnr")),
         orgnavn = Orgnavn(getString("orgnavn")),

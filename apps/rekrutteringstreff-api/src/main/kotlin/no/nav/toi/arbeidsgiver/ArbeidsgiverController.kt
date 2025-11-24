@@ -9,7 +9,6 @@ import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
-import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -100,15 +99,6 @@ class ArbeidsgiverController(
                     "arbeidsgiverTreffId": "any-uuid",
                     "organisasjonsnummer": "123456789",
                     "navn": "Example Company",
-                    "hendelser": [
-                        {
-                            "id": "any-uuid",
-                            "tidspunkt": "2025-04-14T10:38:41Z",
-                            "hendelsestype": "OPPRETTET",
-                            "opprettetAvAktørType": "ARRANGØR",
-                            "aktøridentifikasjon": "testperson"
-                        }
-                    ]
                 },
                 {
                     "arbeidsgiverTreffId": "any-uuid",
@@ -136,15 +126,6 @@ class ArbeidsgiverController(
                 organisasjonsnummer = arbeidsgiver.orgnr.asString,
                 navn = arbeidsgiver.orgnavn.asString,
                 status = arbeidsgiver.status.name,
-                hendelser = arbeidsgiver.hendelser.map { h ->
-                    ArbeidsgiverHendelseOutboundDto(
-                        id = h.id.toString(),
-                        tidspunkt = h.tidspunkt,
-                        hendelsestype = h.hendelsestype.toString(),
-                        opprettetAvAktørType = h.opprettetAvAktørType.toString(),
-                        aktøridentifikasjon = h.aktøridentifikasjon,
-                    )
-                }
             )
         }
 

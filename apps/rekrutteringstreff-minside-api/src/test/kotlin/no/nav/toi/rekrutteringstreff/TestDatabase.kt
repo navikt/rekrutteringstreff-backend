@@ -165,6 +165,10 @@ class TestDatabase {
         gateadresse               = rs.getString("gateadresse"),
         postnummer                = rs.getString("postnummer"),
         poststed                  = rs.getString("poststed"),
+        kommune = rs.getString("kommune"),
+        kommunenummer = rs.getString("kommunenummer"),
+        fylke = rs.getString("fylke"),
+        fylkesnummer = rs.getString("fylkesnummer"),
         status                   = RekrutteringstreffStatus.valueOf(rs.getString("status")),
         opprettetAvPersonNavident= rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
@@ -189,9 +193,9 @@ class TestDatabase {
         etternavn      = Etternavn(rs.getString("etternavn")),
         navkontor      = rs.getString("navkontor")?.let(::Navkontor),
         veilederNavn   = rs.getString("veileder_navn")?.let(::VeilederNavn),
-        veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent)
+        veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent),
+        status = JobbsøkerStatus.LAGT_TIL,
     )
-
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)

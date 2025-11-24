@@ -78,6 +78,10 @@ data class LeggTilJobbsøker(
     val veilederNavIdent: VeilederNavIdent?
 )
 
+enum class JobbsøkerStatus {
+    LAGT_TIL, INVITERT, SVART_JA, SVART_NEI, SLETTET
+}
+
 data class Jobbsøker(
     val personTreffId: PersonTreffId,
     val treffId: TreffId,
@@ -88,6 +92,7 @@ data class Jobbsøker(
     val navkontor: Navkontor?,
     val veilederNavn: VeilederNavn?,
     val veilederNavIdent: VeilederNavIdent?,
+    val status: JobbsøkerStatus,
     val hendelser: List<JobbsøkerHendelse> = emptyList()
 )
 

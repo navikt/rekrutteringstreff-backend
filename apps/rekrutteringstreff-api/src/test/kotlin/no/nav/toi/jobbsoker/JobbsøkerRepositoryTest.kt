@@ -10,10 +10,12 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JobbsøkerRepositoryTest {
 
     companion object {
@@ -114,7 +116,8 @@ class JobbsøkerRepositoryTest {
                 Etternavn("Etternavn1"),
                 Navkontor("Oslo"),
                 VeilederNavn("Veileder1"),
-                VeilederNavIdent("NAV1")
+                VeilederNavIdent("NAV1"),
+                JobbsøkerStatus.INVITERT,
             )
         )
         val js2 = listOf(
@@ -127,7 +130,8 @@ class JobbsøkerRepositoryTest {
                 Etternavn("Etternavn2"),
                 Navkontor("Oslo"),
                 VeilederNavn("Veileder1"),
-                VeilederNavIdent("NAV1")
+                VeilederNavIdent("NAV1"),
+                JobbsøkerStatus.INVITERT,
             ),
             Jobbsøker(
                 PersonTreffId(UUID.randomUUID()),
@@ -138,7 +142,8 @@ class JobbsøkerRepositoryTest {
                 Etternavn("Etternavn3"),
                 Navkontor("Bergen"),
                 VeilederNavn("Veileder2"),
-                VeilederNavIdent("NAV2")
+                VeilederNavIdent("NAV2"),
+                JobbsøkerStatus.INVITERT,
             )
         )
         db.leggTilJobbsøkere(js1)
@@ -199,6 +204,34 @@ class JobbsøkerRepositoryTest {
 
         val ikkeEksisterendeJobbsøker = repository.hentJobbsøker(treffId, Fødselsnummer("99999999999"))
         assertThat(ikkeEksisterendeJobbsøker).isNull()
+    }
+
+    @Test
+    fun `Hent antall jobbsøkere`() {
+        val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val jobbsøkere = listOf(
+            LeggTilJobbsøker(
+                Fødselsnummer("12345678901"),
+                Kandidatnummer("K123456"),
+                Fornavn("Ola"),
+                Etternavn("Nordmann"),
+                Navkontor("Nav Oslo"),
+                VeilederNavn("Kari Nordmann"),
+                VeilederNavIdent("NAV123")
+            ),
+            LeggTilJobbsøker(
+                Fødselsnummer("12345678902"),
+                Kandidatnummer("K123457"),
+                Fornavn("Ole"),
+                Etternavn("Nordmann"),
+                Navkontor("Nav Oslo"),
+                VeilederNavn("Kari Nordmann"),
+                VeilederNavIdent("NAV123")
+            )
+        )
+        repository.leggTil(jobbsøkere, treffId, "testperson")
+        val antallJobbsøkere = repository.hentAntallJobbsøkere(treffId)
+        assertThat(antallJobbsøkere == 2)
     }
 
     @Test

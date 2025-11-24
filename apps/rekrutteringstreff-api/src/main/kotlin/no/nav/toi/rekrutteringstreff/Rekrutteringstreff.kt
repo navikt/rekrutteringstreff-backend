@@ -19,13 +19,17 @@ class Rekrutteringstreff(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
+    val kommune: String?,
+    val kommunenummer: String?,
+    val fylke: String?,
+    val fylkesnummer: String?,
     val status: RekrutteringstreffStatus,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
     val eiere: List<String>,
 ) {
-    fun tilRekrutteringstreffDto() = RekrutteringstreffDto(
+    fun tilRekrutteringstreffDto(antallArbeidsgivere: Int, antallJobsøkere: Int) = RekrutteringstreffDto(
         tittel = tittel,
         beskrivelse = beskrivelse,
         fraTid = fraTid,
@@ -34,11 +38,17 @@ class Rekrutteringstreff(
         gateadresse = gateadresse,
         postnummer = postnummer,
         poststed = poststed,
+        kommune = kommune,
+        kommunenummer = kommunenummer,
+        fylke = fylke,
+        fylkesnummer = fylkesnummer,
         status = status,
         opprettetAvPersonNavident = opprettetAvPersonNavident,
         opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
         opprettetAvTidspunkt = opprettetAvTidspunkt,
-        id = id.somUuid
+        id = id.somUuid,
+        antallArbeidsgivere = antallArbeidsgivere,
+        antallJobbsøkere = antallJobsøkere
     )
     fun aktivitetskortInvitasjonFor(fnr: String) = Aktivitetskortinvitasjon.opprett(
         fnr = fnr,

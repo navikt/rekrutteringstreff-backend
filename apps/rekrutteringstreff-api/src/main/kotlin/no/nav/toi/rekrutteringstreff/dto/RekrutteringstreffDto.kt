@@ -14,8 +14,14 @@ data class RekrutteringstreffDto(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
+    val kommune: String?,
+    val kommunenummer: String?,
+    val fylke: String?,
+    val fylkesnummer: String?,
     val status: RekrutteringstreffStatus,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
+    val antallArbeidsgivere: Int?,
+    val antallJobbsøkere: Int?
 )

@@ -109,7 +109,9 @@ class RekrutteringstreffController(
                         "status": "UTKAST",
                         "opprettetAvPersonNavident": "A123456",
                         "opprettetAvNavkontorEnhetId": "0318",
-                        "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
+                        "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
+                        "antallArbeidsgivere":1,
+                        "antallJobbsøkere":1
                     }
                 ]"""
             )]
@@ -119,7 +121,7 @@ class RekrutteringstreffController(
     )
     private fun hentAlleRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        ctx.status(200).json(rekrutteringstreffRepository.hentAlle().map { it.tilRekrutteringstreffDto() })
+        ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
     }
 
     @OpenApi(
@@ -132,19 +134,24 @@ class RekrutteringstreffController(
             content = [OpenApiContent(
                 from = RekrutteringstreffDetaljOutboundDto::class,
                 example = """{
-                   "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
-                   "tittel":"Sommerjobbtreff",
-                   "beskrivelse":null,
-                   "fraTid":null,
-                   "tilTid":null,
-                   "svarfrist":null,
-                   "gateadresse": null,
-                   "postnummer": null,
-                   "poststed": null,
-                   "status":"UTKAST",
-                   "opprettetAvPersonNavident":"A123456",
-                   "opprettetAvNavkontorEnhetId":"0318",
-                   "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+                   "rekrutteringstreff":
+                    {
+                       "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
+                       "tittel":"Sommerjobbtreff",
+                       "beskrivelse":null,
+                       "fraTid":null,
+                       "tilTid":null,
+                       "svarfrist":null,
+                       "gateadresse": null,
+                       "postnummer": null,
+                       "poststed": null,
+                       "status":"UTKAST",
+                       "opprettetAvPersonNavident":"A123456",
+                       "opprettetAvNavkontorEnhetId":"0318",
+                       "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+                       "antallArbeidsgivere":1,
+                       "antallJobbsøkere":1
+                    },
                    "hendelser":[
                      {
                        "id":"any-uuid",
@@ -163,8 +170,7 @@ class RekrutteringstreffController(
     private fun hentRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
         val id = TreffId(ctx.pathParam(pathParamTreffId))
-        rekrutteringstreffRepository.hentMedHendelser(id)?.let { ctx.status(200).json(it) }
-            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+        rekrutteringstreffService.hentRekrutteringstreffMedHendelser(id).let { ctx.status(200).json(it) }
     }
 
     @OpenApi(
@@ -209,7 +215,9 @@ class RekrutteringstreffController(
                     "status": "UTKAST", 
                     "opprettetAvPersonNavident": "A123456", 
                     "opprettetAvNavkontorEnhetId": "0318",
-                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00"
+                    "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
+                    "antallArbeidsgivere":1,
+                    "antallJobbsøkere":1
                 }"""
             )]
         )],
@@ -227,8 +235,8 @@ class RekrutteringstreffController(
 
         if(rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
             rekrutteringstreffRepository.oppdater(id, dto, navIdent)
-            val updated = rekrutteringstreffRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet etter oppdatering")
-            ctx.status(200).json(updated.tilRekrutteringstreffDto())
+            val updated = rekrutteringstreffService.hentRekrutteringstreff(id)
+            ctx.status(200).json(updated)
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke oppdatere det")
         }
