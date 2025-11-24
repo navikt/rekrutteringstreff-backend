@@ -211,6 +211,7 @@ class JobbsøkerController(
     private fun hentJobbsøkerHendelserHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        log.info("Henter jobbsøkerhendelser for treff $treff")
         val hendelser = jobbsøkerRepository.hentJobbsøkerHendelser(treff)
         ctx.status(200).json(hendelser.map { h ->
             JobbsøkerHendelseMedJobbsøkerDataOutboundDto(

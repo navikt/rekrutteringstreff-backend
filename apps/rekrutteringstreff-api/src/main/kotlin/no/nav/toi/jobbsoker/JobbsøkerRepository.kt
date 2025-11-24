@@ -241,15 +241,18 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
 
     fun inviter(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
-        dataSource.connection.use { c ->
+        dataSource.executeInTransaction {  c ->
             try {
                 c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.INVITERT, personTreffIder, opprettetAv)
             } catch (e: Exception) {
                 throw e
             }
+            personTreffIder.forEach {
+                val jobbsøkerDbId = hentJobbsøkerDbId(it.somUuid)!!
+                endreStatus(c, jobbsøkerDbId, JobbsøkerStatus.INVITERT)
+            }
         }
     }
-
 
     fun svarJaTilInvitasjon(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String) {
         dataSource.executeInTransaction { c ->
