@@ -14,6 +14,7 @@ import no.nav.toi.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
@@ -36,6 +37,8 @@ class JobbsøkerInnloggetBorgerTest {
 
         val mapper = JacksonConfig.mapper
     }
+
+    private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
@@ -198,6 +201,8 @@ class JobbsøkerInnloggetBorgerTest {
         )
 
         val jobbsøkere = db.hentAlleJobbsøkere()
+        eierRepository.leggTil(treffId, listOf("testperson"))
+
         inviter(jobbsøkere, treffId, token)
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
@@ -229,6 +234,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
@@ -273,6 +279,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
@@ -296,6 +303,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null)))
+        eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)

@@ -185,10 +185,12 @@ class App(
         )
         ArbeidsgiverController(
             arbeidsgiverRepository = arbeidsgiverRepository,
+            eierRepository = eierRepository,
             javalin = javalin
         )
         JobbsøkerController(
             jobbsøkerRepository = jobbsøkerRepository,
+            eierRepository = eierRepository,
             javalin = javalin
         )
         JobbsøkerInnloggetBorgerController(
@@ -198,6 +200,7 @@ class App(
         JobbsøkerOutboundController(
             jobbsøkerRepository = jobbsøkerRepository,
             kandidatsøkKlient = kandidatsokKlient,
+            eierRepository = eierRepository,
             javalin = javalin
         )
         KiController(

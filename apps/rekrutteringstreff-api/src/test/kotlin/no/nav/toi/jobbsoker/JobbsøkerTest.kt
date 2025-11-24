@@ -16,6 +16,7 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
@@ -40,6 +41,8 @@ class JobbsøkerTest {
 
         val mapper = JacksonConfig.mapper
     }
+
+    private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo)  {
@@ -226,6 +229,7 @@ class JobbsøkerTest {
         db.leggTilJobbsøkere(jobbsøkere3)
         assertThat(db.hentAlleRekrutteringstreff().size).isEqualTo(3)
         assertThat(db.hentAlleJobbsøkere().size).isEqualTo(4)
+        eierRepository.leggTil(treffId2, listOf("A123456"))
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
@@ -271,6 +275,8 @@ class JobbsøkerTest {
       "veilederNavIdent" : "NAV007"
     }]
 """.trimIndent()
+        eierRepository.leggTil(treffId, listOf("testperson"))
+
         val (_, postResponse, postResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
             .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -336,6 +342,8 @@ class JobbsøkerTest {
                 Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.kandidatnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent)
             )
         )
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>> {
@@ -389,6 +397,8 @@ class JobbsøkerTest {
         val requestBody = """
         { "personTreffIder": ["${personTreffIder.first()}", "${personTreffIder.last()}"] }
     """.trimIndent()
+
+        eierRepository.leggTil(treffId, listOf("A123456"))
 
         val (_, r, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body(requestBody)

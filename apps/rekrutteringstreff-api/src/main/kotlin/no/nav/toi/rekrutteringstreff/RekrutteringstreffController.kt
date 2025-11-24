@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import io.javalin.Javalin
 import io.javalin.http.Context
+import io.javalin.http.ForbiddenResponse
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
@@ -219,9 +220,18 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = TreffId(ctx.pathParam("id"))
         val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
-        rekrutteringstreffRepository.oppdater(id, dto, ctx.extractNavIdent())
-        val updated = rekrutteringstreffRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet etter oppdatering")
-        ctx.status(200).json(updated.tilRekrutteringstreffDto())
+
+        //Verifiser at personen er eier av treffet eller har utvikler-tilgang
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke oppdatere")
+        val navIdent = ctx.extractNavIdent()
+
+        if(rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            rekrutteringstreffRepository.oppdater(id, dto, navIdent)
+            val updated = rekrutteringstreffRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet etter oppdatering")
+            ctx.status(200).json(updated.tilRekrutteringstreffDto())
+        } else {
+            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke oppdatere det")
+        }
     }
 
     @OpenApi(
@@ -247,8 +257,15 @@ class RekrutteringstreffController(
     private fun slettRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = TreffId(ctx.pathParam("id"))
-        rekrutteringstreffRepository.slett(id)
-        ctx.status(200).result("Rekrutteringstreff slettet")
+        //Verifiser at personen er eier av treffet eller har utvikler-tilgang
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke oppdatere")
+        val navIdent = ctx.extractNavIdent()
+        if(rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            rekrutteringstreffRepository.slett(id)
+            ctx.status(200).result("Rekrutteringstreff slettet")
+        } else {
+            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke slette det")
+        }
     }
 
     @OpenApi(

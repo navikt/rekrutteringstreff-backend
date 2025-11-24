@@ -468,6 +468,7 @@ class RekrutteringstreffRepository(
         status = RekrutteringstreffStatus.valueOf(getString(status)),
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
-        opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo()
+        opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
+        eiere = (getArray(eiere).array as Array<String>).toList()
     )
 }

@@ -345,7 +345,8 @@ class TestDatabase {
         status = RekrutteringstreffStatus.valueOf(rs.getString("status")),
         opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
-        opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo()
+        opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
+        eiere = (rs.getArray("eiere").array as Array<String>).toList()
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(

@@ -23,6 +23,7 @@ class Rekrutteringstreff(
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
+    val eiere: List<String>,
 ) {
     fun tilRekrutteringstreffDto() = RekrutteringstreffDto(
         tittel = tittel,

@@ -43,6 +43,7 @@ interface AuthenticatedUser {
     fun extractNavIdent(): String
     fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle)
     fun extractPid(): String
+    fun erUtvikler(): Boolean = false
 
     companion object {
         fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon, modiaKlient: ModiaKlient, pilotkontorer: List<String>): AuthenticatedUser {
@@ -74,6 +75,8 @@ private class AuthenticatedNavUser(
     private val pilotkontorer: List<String>
 ): AuthenticatedUser {
     override fun verifiserAutorisasjon(vararg gyldigeRoller: Rolle) {
+        log.info("Roller for bruker er $roller")
+
         if(!erEnAvRollene(*gyldigeRoller)) {
             throw ForbiddenResponse()
         }
@@ -89,6 +92,7 @@ private class AuthenticatedNavUser(
     fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
     override fun extractNavIdent() = navIdent
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
+    override fun erUtvikler() = roller.any {it == Rolle.UTVIKLER }
 }
 
 private class AuthenticatedCitizenUser(

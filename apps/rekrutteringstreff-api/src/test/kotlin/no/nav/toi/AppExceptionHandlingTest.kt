@@ -1,10 +1,7 @@
 package no.nav.toi
 
 import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.FuelError
-import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.fuel.core.extensions.jsonBody
-import com.github.kittinunf.result.Result
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
@@ -16,6 +13,9 @@ import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
+import java.net.URI
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -102,20 +102,19 @@ class AppExceptionHandlingTest {
 
     @Test
     fun `ugyldig JSON (JsonParseException) gir 400`() {
-        val (_, response: Response, result: Result<ByteArray, FuelError>) = Fuel.put("http://localhost:$port/api/rekrutteringstreff/$treffId")
+        val request = HttpRequest.newBuilder()
+            .uri(URI("http://localhost:$port/api/rekrutteringstreff/$treffId"))
             .header("Authorization", "Bearer ${authServer.lagToken(authPort).serialize()}")
-            .header("Content-Type", "text/plain")
-            .body("{tittel: uten quotes}") // Ikke gyldig JSON
-            .response()
+            .header("Content-Type", "application/json")
+            .PUT(HttpRequest.BodyPublishers.ofString("{tittel: uten quotes}"))
+            .build()
 
-        assertThat(response.statusCode).isEqualTo(400)
-        val body = String(response.data)
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertThat(response.statusCode()).isEqualTo(400)
+        val body = response.body()
         assertThat(body).contains("feil")
         assertThat(body).contains("hint")
-        when (result) {
-            is Result.Success -> {}
-            is Result.Failure -> {}
-        }
     }
 
     @Test
@@ -130,21 +129,23 @@ class AppExceptionHandlingTest {
             "postnummer":"0284",
             "poststed":"Oslo"
         }"""
-        val (_, response: Response, _) = Fuel.put("http://localhost:$port/api/rekrutteringstreff/$treffId")
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI("http://localhost:$port/api/rekrutteringstreff/$treffId"))
             .header("Authorization", "Bearer ${authServer.lagToken(authPort).serialize()}")
             .header("Content-Type", "application/json")
-            .body(json)
-            .response()
+            .PUT(HttpRequest.BodyPublishers.ofString(json))
+            .build()
 
-        assertThat(response.statusCode).isEqualTo(400)
-        val body = String(response.data)
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
+
+        assertThat(response.statusCode()).isEqualTo(400)
+        val body = String(response.body())
         assertThat(body).contains("feil")
     }
 
     @Test
-    fun `uventet feil gir 500 med standard feilmelding`() {
-        // For å trigge en uventet feil kan vi kalle en PUT med gyldig JSON men med en id som ikke finnes i DB,
-        // hvilket i repository vil forsøke å hente db_id og next() uten rad og dermed kaste en Exception.
+    fun `Oppdatering av treff som ikke finnes gir 404 (NotFoundException)`() {
         val ikkeEksisterendeId = UUID.randomUUID()
         val json = """{
             "tittel":"Test",
@@ -156,14 +157,16 @@ class AppExceptionHandlingTest {
             "postnummer":null,
             "poststed":null
         }"""
-        val (_, response: Response, _) = Fuel.put("http://localhost:$port/api/rekrutteringstreff/$ikkeEksisterendeId")
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI("http://localhost:$port/api/rekrutteringstreff/$ikkeEksisterendeId"))
             .header("Authorization", "Bearer ${authServer.lagToken(authPort).serialize()}")
             .header("Content-Type", "application/json")
-            .body(json)
-            .response()
+            .PUT(HttpRequest.BodyPublishers.ofString(json))
+            .build()
 
-        assertThat(response.statusCode).isEqualTo(500)
-        val body = String(response.data)
-        assertThat(body).contains("databasefeil")
+        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+
+        assertThat(response.statusCode()).isEqualTo(404)
     }
 }

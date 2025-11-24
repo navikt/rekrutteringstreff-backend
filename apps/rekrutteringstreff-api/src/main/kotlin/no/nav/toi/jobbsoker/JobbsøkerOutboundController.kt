@@ -8,6 +8,7 @@ import io.javalin.openapi.*
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.kandidatsok.KandidatsøkKlient
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import java.util.*
 
 data class KandidatnummerDto(val kandidatnummer: String)
@@ -15,6 +16,7 @@ data class KandidatnummerDto(val kandidatnummer: String)
 class JobbsøkerOutboundController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val kandidatsøkKlient: KandidatsøkKlient,
+    private val eierRepository: EierRepository,
     javalin: Javalin
 ) {
     companion object {
@@ -48,6 +50,9 @@ class JobbsøkerOutboundController(
         val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
         val userToken = ctx.attribute<String>("raw_token")
             ?: throw InternalServerErrorResponse("Raw token ikke funnet i context")
+
+        // TODO er persontreffId det samme som uuiden til rekrutteringstreffet?
+        //val eiere = eierRepository.hent()
 
         jobbsøkerRepository.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->
             kandidatsøkKlient.hentKandidatnummer(fødselsnummer, userToken)?.let { kandidatnummer ->

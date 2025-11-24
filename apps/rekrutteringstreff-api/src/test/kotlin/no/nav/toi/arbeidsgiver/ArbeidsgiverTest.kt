@@ -18,6 +18,7 @@ import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
@@ -47,6 +48,8 @@ class ArbeidsgiverTest {
 
         private lateinit var app: App
     }
+
+    private val eierRepository = EierRepository(dataSource = db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
@@ -143,6 +146,7 @@ class ArbeidsgiverTest {
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
         val requestBody = JacksonConfig.mapper.writeValueAsString(
             mapOf(
                 "organisasjonsnummer" to orgnr.asString,
@@ -184,6 +188,8 @@ class ArbeidsgiverTest {
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
         val næringskoder = listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
         val requestBody = JacksonConfig.mapper.writeValueAsString(
             mapOf(
@@ -342,6 +348,7 @@ class ArbeidsgiverTest {
     fun slettArbeidsgiver() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
         val requestBody = """
             {
               "organisasjonsnummer": "888888888",
