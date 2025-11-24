@@ -28,7 +28,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.http.HttpClient
 import java.util.*
-import kotlin.collections.emptyList
 
 private const val rekrutteringsTreffAudience = "rekrutteringstreff-audience"
 private const val minSideAudience = "rekrutteringstreff-minside-audience"

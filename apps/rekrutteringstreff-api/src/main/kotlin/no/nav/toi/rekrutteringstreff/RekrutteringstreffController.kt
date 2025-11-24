@@ -230,10 +230,11 @@ class RekrutteringstreffController(
         val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
 
         //Verifiser at personen er eier av treffet eller har utvikler-tilgang
-        val rekrutteringstreff = rekrutteringstreffRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke oppdatere")
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(id)
+            ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke oppdatere")
         val navIdent = ctx.extractNavIdent()
 
-        if(rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if (rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
             rekrutteringstreffRepository.oppdater(id, dto, navIdent)
             val updated = rekrutteringstreffService.hentRekrutteringstreff(id)
             ctx.status(200).json(updated)
@@ -266,7 +267,8 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = TreffId(ctx.pathParam("id"))
         //Verifiser at personen er eier av treffet eller har utvikler-tilgang
-        val rekrutteringstreff = rekrutteringstreffRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke oppdatere")
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(id)
+            ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke slette")
         val navIdent = ctx.extractNavIdent()
         if (rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
             rekrutteringstreffRepository.slett(id)
@@ -316,7 +318,7 @@ class RekrutteringstreffController(
     )
     private fun hentAlleHendelserHandler(): (Context) -> Unit = { ctx ->
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val list  = rekrutteringstreffRepository.hentAlleHendelser(treff)
+        val list = rekrutteringstreffRepository.hentAlleHendelser(treff)
         ctx.status(200).json(list)
     }
 
@@ -326,7 +328,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = publiserPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Publiseringshendelse er lagt til.")]
     )
     private fun publiserRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -344,7 +350,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = gjenapnPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Gjenåpningshendelse er lagt til.")]
     )
     private fun gjenåpneRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -361,7 +371,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = avlysPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Avlysningshendelse er lagt til.")]
     )
     private fun avlysRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -378,7 +392,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = avpubliserPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Avpubliseringshendelse er lagt til.")]
     )
     private fun avpubliserRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -395,7 +413,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = fullforPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Fullføringshendelse er lagt til.")]
     )
     private fun fullforRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -412,7 +434,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = endringerPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
                 from = EndringerDto::class,

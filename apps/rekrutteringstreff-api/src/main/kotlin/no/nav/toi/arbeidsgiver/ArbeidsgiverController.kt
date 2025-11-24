@@ -14,8 +14,6 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import java.lang.IllegalArgumentException
-import java.lang.IllegalStateException
 import java.util.*
 
 class ArbeidsgiverController(
@@ -204,7 +202,7 @@ class ArbeidsgiverController(
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
 
         val eiere = eierRepository.hent(treffId)?.tilNavIdenter()
-            ?: throw IllegalArgumentException("Rekrutteringstreff med id ${treffId.somString} har ingen eiere")
+            ?: throw IllegalStateException("Rekrutteringstreff med id ${treffId.somString} har ingen eiere")
 
         if (eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
             if (arbeidsgiverRepository.slett(id, navIdent)) ctx.status(204) else throw NotFoundResponse()

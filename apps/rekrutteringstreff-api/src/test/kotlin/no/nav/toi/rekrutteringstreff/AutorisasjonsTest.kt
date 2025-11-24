@@ -216,7 +216,7 @@ private class AutorisasjonsTest {
     @ParameterizedTest
     @MethodSource("autorisasjonsCaserMedEier")
     fun testEndepunktMedEier(endepunkt: Endepunkt, gruppetilhørighet: Gruppe, erEier: Boolean, expectedStatus: Int) {
-        if(erEier) {
+        if (erEier) {
             eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A000001"))
         }
 
