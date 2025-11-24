@@ -22,16 +22,19 @@ class JobbsøkerController(
 ) {
     companion object {
         private const val pathParamTreffId = "id"
+        private const val pathParamJobbsøkerId = "jobbsokerid"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
         private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
-        private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
+        private const val hendelserPath = "$jobbsøkerPath/hendelser"
+        private const val slettPath = "$jobbsøkerPath/${pathParamJobbsøkerId}/slett"
         private const val inviterPath = "$jobbsøkerPath/inviter"
     }
 
     init {
         javalin.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         javalin.get(jobbsøkerPath, hentJobbsøkereHandler())
+        javalin.get(slettPath, slettJobbsøkerHandler())
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
     }
@@ -135,6 +138,26 @@ class JobbsøkerController(
         val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treff)
         ctx.status(200).json(jobbsøkere.toOutboundDto())
     }
+
+      @OpenApi(
+        summary = "Slett en jobbsøker",
+        operationId = "slettJobbsøker",
+        security = [OpenApiSecurity("BearerAuth")],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
+            OpenApiParam(name = pathParamJobbsøkerId, type = UUID::class, required = true),
+         ],
+        responses = [OpenApiResponse("201")],
+        path = slettPath,
+        methods = [HttpMethod.DELETE]
+    )
+    private fun slettJobbsøkerHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val jobbsøkerId = UUID.fromString(ctx.pathParam(pathParamJobbsøkerId))
+        jobbsøkerRepository.endreStatus(jobbsøkerId,  JobbsøkerStatus.SLETTET)
+        ctx.status(200)
+    }
+
 
     @OpenApi(
         summary = "Hent alle jobbsøkerhendelser med jobbsøkerdata for et rekrutteringstreff, sortert med nyeste først",

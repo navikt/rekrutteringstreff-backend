@@ -208,7 +208,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             FROM jobbsoker js
             JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
             LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-            WHERE rt.id = ?
+            WHERE rt.id = ? and js.status != 'SLETTET'
             GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
                      js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             ORDER BY js.jobbsoker_id;
@@ -457,7 +457,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 FROM jobbsoker js
                 JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-                WHERE rt.id = ? AND js.fodselsnummer = ?
+                WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET'
                 GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
                          js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             """
@@ -469,6 +469,24 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 }
             }
         }
+
+    fun hentJobbsøkerDbId(jobbsøkerId: UUID): Long? {
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                SELECT
+                    js.jobbsoker_id
+                FROM jobbsoker js
+                WHERE js.id = ? 
+            """
+            ).use { ps ->
+                ps.setObject(1, jobbsøkerId)
+               return ps.executeQuery().use { rs ->
+                    if (rs.next()) (rs.getLong(1)) else null
+                }
+            }
+        }
+    }
 
     fun registrerAktivitetskortOpprettelseFeilet(fødselsnummer: Fødselsnummer, treff: TreffId, endretAv: String) {
         dataSource.connection.use { c ->
@@ -499,6 +517,15 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
+    fun endreStatus(jobbsøkerId: UUID, jobbsøkerStatus: JobbsøkerStatus) {
+        val jobbsøkerDbId: Long? = hentJobbsøkerDbId(jobbsøkerId)
+        if (jobbsøkerDbId == null) {
+            log.error("Kunne ikke finne jobbsøker med id: $jobbsøkerId for å endre status til $jobbsøkerStatus")
+            throw IllegalStateException("Fant ikke jobbsøker med id: $jobbsøkerId")
+        }
+        return endreStatus(dataSource.connection, jobbsøkerDbId, jobbsøkerStatus)
+    }
+
     fun endreStatus(connection: Connection, jobbsøkerDbId: Long, jobbsøkerStatus: JobbsøkerStatus) {
         connection.prepareStatement(
             """
@@ -512,5 +539,4 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             setObject(++i, jobbsøkerDbId)
         }.executeUpdate()
     }
-
 }
