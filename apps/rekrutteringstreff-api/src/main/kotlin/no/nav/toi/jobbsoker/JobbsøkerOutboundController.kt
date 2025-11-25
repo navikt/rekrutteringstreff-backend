@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker
 
 import io.javalin.Javalin
 import io.javalin.http.Context
+import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.openapi.*
@@ -9,7 +10,10 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.log
+import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import java.lang.IllegalStateException
 import java.util.*
 
 data class KandidatnummerDto(val kandidatnummer: String)
@@ -58,15 +62,21 @@ class JobbsøkerOutboundController(
         log.info("Hent kandidatnummer")
 
         val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
+        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val userToken = ctx.attribute<String>("raw_token")
             ?: throw InternalServerErrorResponse("Raw token ikke funnet i context")
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        //val eiere = eierRepository.hent()
+        val eiere = eierRepository.hent(treffId)?.tilNavIdenter() ?: throw IllegalStateException("Kan ikke hente kandidatnummer siden person ikke er eier av treffet")
 
-        jobbsøkerRepository.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->
-            kandidatsøkKlient.hentKandidatnummer(fødselsnummer, userToken)?.let { kandidatnummer ->
-                ctx.json(KandidatnummerDto(kandidatnummer.asString))
+        if (eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            jobbsøkerRepository.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->
+                kandidatsøkKlient.hentKandidatnummer(fødselsnummer, userToken)?.let { kandidatnummer ->
+                    ctx.json(KandidatnummerDto(kandidatnummer.asString))
+                } ?: ctx.status(HttpStatus.NOT_FOUND)
             } ?: ctx.status(HttpStatus.NOT_FOUND)
-        } ?: ctx.status(HttpStatus.NOT_FOUND)
+        } else {
+            throw ForbiddenResponse("Personen eier ikke treffet og kan ikke hente kandidatnummer")
+        }
     }
 }

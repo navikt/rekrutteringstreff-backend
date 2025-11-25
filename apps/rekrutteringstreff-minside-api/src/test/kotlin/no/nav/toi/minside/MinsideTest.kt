@@ -15,7 +15,7 @@ import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.minside.ubruktPortnrFra10000.ubruktPortnr
+import no.nav.toi.minside.ubruktPortnrFra9000.ubruktPortnr
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -283,8 +283,8 @@ class MinsideTest {
     }
 }
 
-object ubruktPortnrFra10000 {
-    private val portnr = AtomicInteger(10000)
+object ubruktPortnrFra9000 {
+    private val portnr = AtomicInteger(9000)
     fun ubruktPortnr(): Int = portnr.andIncrement
 }
 

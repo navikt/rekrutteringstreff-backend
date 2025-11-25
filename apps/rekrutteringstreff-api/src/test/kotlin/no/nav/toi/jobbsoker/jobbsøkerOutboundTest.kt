@@ -9,6 +9,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -28,6 +29,8 @@ class JobbsøkerOutboundTest {
     private val issuerId = "http://localhost:$authPort/default"
     private val audience = "rekrutteringstreff-audience"
     private val jwksUri = "http://localhost:$authPort/default/jwks"
+
+    private val eierRepository = EierRepository(db.dataSource)
 
     private lateinit var app: App
 
@@ -104,6 +107,8 @@ class JobbsøkerOutboundTest {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678910")
         val forventetKandidatnummer = "K123456"
+
+        eierRepository.leggTil(treffId, listOf("A000001"))
 
         db.leggTilJobbsøkere(
             listOf(
