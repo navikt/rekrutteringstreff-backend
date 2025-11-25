@@ -13,4 +13,4 @@ adGruppeArbeidsgiverrettet: "46c8e3b2-0469-4740-983f-d8cd2b6e4fee"
 adGruppeUtvikler: "41080368-439f-4128-858a-afbef876431e"
 modiacontextholder_url: "http://modiacontextholder.personoversikt"
 modiacontextholder_scope: "api://prod-gcp.personoversikt.modiacontextholder/.default"
-pilotkontorer: []
+pilotkontorer: ""

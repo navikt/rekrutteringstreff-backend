@@ -297,7 +297,7 @@ fun main() {
         rapidsConnection = rapidsConnection,
         accessTokenClient = accessTokenClient,
         modiaKlient = modiaKlient,
-        pilotkontorer = JacksonConfig.mapper.readValue(getenv("PILOTKONTORER"), object : TypeReference<List<String>>() {})
+        pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() }
     ).start()
 }
 
