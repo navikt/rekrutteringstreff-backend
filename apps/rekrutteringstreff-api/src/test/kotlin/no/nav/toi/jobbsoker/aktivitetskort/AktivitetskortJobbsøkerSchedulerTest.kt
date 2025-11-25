@@ -50,85 +50,44 @@ class AktivitetskortJobbsøkerSchedulerTest {
     @Test
     fun `skal sende invitasjoner på rapid og markere dem som pollet dersom vi har nok data`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
-            listOf(
-                LeggTilJobbsøker(
-                    fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
-                    fornavn = Fornavn("Ola"),
-                    etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
-                    veilederNavn = VeilederNavn("Kari Veileder"),
-                    veilederNavIdent = VeilederNavIdent("Z123456"),
-                )
-            ), treffId, "Z123456"
-        )
-        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
         scheduler.behandleJobbsøkerHendelser()
         assertThat(rapid.inspektør.size).isEqualTo(1)
-        val melding = rapid.inspektør.message(0)
-        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
-        assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
+        val kortMelding = rapid.inspektør.message(0)
+        assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
+        assertThat(kortMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteInvitasjoner()
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         assertThat(usendteEtterpå).isEmpty()
     }
 
     @Test
     fun `skal ikke sende invitasjoner på rapid dersom vi mangler prerequisites for invitasjon`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
-            listOf(
-                LeggTilJobbsøker(
-                    fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
-                    fornavn = Fornavn("Ola"),
-                    etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
-                    veilederNavn = VeilederNavn("Kari Veileder"),
-                    veilederNavIdent = VeilederNavIdent("Z123456"),
-                )
-            ), treffId, "Z123456"
-        )
-        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
-        val exception = assertThrows<IllegalArgumentException> {
-            scheduler.behandleJobbsøkerHendelser()
-        }
-        assertThat(exception.message).isEqualTo("FraTid kan ikke være null når vi inviterer")
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(0)
+        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
+        assertThat(usendteEtterpå).hasSize(1)
     }
 
     @Test
     fun `skal ikke sende samme invitasjon to ganger`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
-            listOf(
-                LeggTilJobbsøker(
-                    fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
-                    fornavn = Fornavn("Ola"),
-                    etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
-                    veilederNavn = VeilederNavn("Kari Veileder"),
-                    veilederNavIdent = VeilederNavIdent("Z123456"),
-                )
-            ), treffId, "Z123456"
-        )
-        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
         scheduler.behandleJobbsøkerHendelser()
         scheduler.behandleJobbsøkerHendelser()
@@ -142,14 +101,14 @@ class AktivitetskortJobbsøkerSchedulerTest {
     fun `skal sende ja-svar på rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
         jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 svar
+        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 svar
         val melding = rapid.inspektør.message(1)
         assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
@@ -166,14 +125,14 @@ class AktivitetskortJobbsøkerSchedulerTest {
     fun `skal sende nei-svar på rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
         jobbsøkerRepository.svarNeiTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 svar
+        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 svar
         val melding = rapid.inspektør.message(1)
         assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
@@ -190,7 +149,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     fun `skal ikke sende samme svar to ganger`() {
         val fødselsnummer = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
 
         jobbsøkerRepository.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
@@ -198,15 +157,15 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 svar (ikke duplikater)
+        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 svar (ikke duplikater)
     }
 
     // ==================== TREFF ENDRET TESTER ====================
 
     @Test
-    fun `skal sende oppdatering på rapid når relevante felt er endret`() {
+    fun `skal sende oppdatering av aktivitetskort OG minside-varsel når relevante felt er endret`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -226,12 +185,13 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 oppdatering
-        val melding = rapid.inspektør.message(1)
-        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
-        assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
-        assertThat(melding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
-        assertThat(melding["tittel"].asText()).isEqualTo(nyTittel)
+        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 oppdatering kort
+        
+        val kortMelding = rapid.inspektør.message(1)
+        assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        assertThat(kortMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
+        assertThat(kortMelding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
+        assertThat(kortMelding["tittel"].asText()).isEqualTo(nyTittel)
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON
@@ -240,9 +200,9 @@ class AktivitetskortJobbsøkerSchedulerTest {
     }
 
     @Test
-    fun `skal sende oppdatering når fraTid eller tilTid endres`() {
+    fun `skal sende oppdatering av aktivitetskort OG minside-varsel når fraTid eller tilTid endres`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -262,14 +222,14 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
-        val melding = rapid.inspektør.message(1)
-        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        val kortMelding = rapid.inspektør.message(1)
+        assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
     }
 
     @Test
-    fun `skal sende oppdatering når adressefelter endres`() {
+    fun `skal sende oppdatering av aktivitetskort OG minside-varsel når adressefelter endres`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -298,17 +258,17 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
-        val melding = rapid.inspektør.message(1)
-        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
-        assertThat(melding["gateadresse"].asText()).isEqualTo(nyGateadresse)
-        assertThat(melding["postnummer"].asText()).isEqualTo(nyPostnummer)
-        assertThat(melding["poststed"].asText()).isEqualTo(nyPoststed)
+        val kortMelding = rapid.inspektør.message(1)
+        assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        assertThat(kortMelding["gateadresse"].asText()).isEqualTo(nyGateadresse)
+        assertThat(kortMelding["postnummer"].asText()).isEqualTo(nyPostnummer)
+        assertThat(kortMelding["poststed"].asText()).isEqualTo(nyPoststed)
     }
 
     @Test
-    fun `skal ikke sende oppdatering når kun irrelevante felt er endret`() {
+    fun `skal sende oppdatering av aktivitetskort OG minside-varsel når kun irrelevante felt er endret`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -323,7 +283,10 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(1)  // Kun invitasjonen
+        assertThat(rapid.inspektør.size).isEqualTo(2)  // Invitasjon kort + oppdatering kort
+
+        val kortMelding = rapid.inspektør.message(1)
+        assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON
@@ -332,9 +295,9 @@ class AktivitetskortJobbsøkerSchedulerTest {
     }
 
     @Test
-    fun `skal sende oppdatering selv når nyVerdi ikke matcher database`() {
+    fun `skal sende oppdatering av aktivitetskort OG minside-varsel selv når nyVerdi ikke matcher database(det kommer logg i steden for exepeption)`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -352,11 +315,12 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         // Skal sende oppdatering med faktiske verdier fra database, selv om verifiseringen feiler
-        assertThat(rapid.inspektør.size).isEqualTo(2)  // Invitasjon + oppdatering
-        val melding = rapid.inspektør.message(1)
-        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        assertThat(rapid.inspektør.size).isEqualTo(2)  // Invitasjon kort + oppdatering kort
+        
+        val kortMelding = rapid.inspektør.message(1)
+        assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
         // Verifiser at faktiske verdier fra database sendes, ikke de feilaktige fra endringer
-        assertThat(melding["tittel"].asText()).isEqualTo(treff.tittel)
+        assertThat(kortMelding["tittel"].asText()).isEqualTo(treff.tittel)
 
         // Hendelsen skal være markert som behandlet
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(
@@ -368,7 +332,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     @Test
     fun `skal ikke sende samme oppdatering to ganger`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -397,7 +361,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     fun `skal sende avlyst-status paa rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
         jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
@@ -406,7 +370,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         rekrutteringstreffService.avlys(treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon + svar + status
+        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status
         val melding = rapid.inspektør.message(2)
         assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
@@ -424,7 +388,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     fun `skal sende fullfort-status paa rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
         jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
@@ -433,7 +397,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         rekrutteringstreffService.fullfør(treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon + svar + status
+        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status
         val melding = rapid.inspektør.message(2)
         assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
@@ -451,7 +415,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     fun `skal ikke sende samme treffstatus to ganger`() {
         val fnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(fnr, rapid, scheduler)
 
         jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, fnr.asString)
@@ -461,7 +425,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon + svar + status (ikke duplikat)
+        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status (ikke duplikat)
     }
 
     // ==================== REKKEFØLGE TESTER ====================
@@ -469,7 +433,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     @Test
     fun `skal behandle hendelser i riktig rekkefølge basert på tidspunkt`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fødselsnummer = Fødselsnummer("12345678901")
 
@@ -498,7 +462,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     @Test
     fun `skal ikke gjøre noe hvis det ikke er noen usendte hendelser`() {
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         scheduler.behandleJobbsøkerHendelser()
 
@@ -512,7 +476,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val fnrSvartJa = Fødselsnummer("12345678901")
         val fnrIkkeSvart = Fødselsnummer("12345678902")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
@@ -530,8 +494,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         // Verifiser at det sendes hendelser for begge personer
-        // Person 1: invitasjon + svar + fullført
-        // Person 2: invitasjon + avbrutt
+        // Person 1: invitasjon kort + svar + fullført
+        // Person 2: invitasjon kort + avbrutt
         assertThat(rapid.inspektør.size).isEqualTo(5)
 
         // Finn hendelser for hver person
@@ -566,7 +530,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val fnrSvartJa = Fødselsnummer("12345678901")
         val fnrIkkeSvart = Fødselsnummer("12345678902")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
@@ -607,7 +571,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     fun `skal ikke sende avbrutt-status for jobbsøker som har svart nei når treff fullføres`() {
         val fnrSvartNei = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
@@ -621,7 +585,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         rekrutteringstreffService.fullfør(treffId, fnrSvartNei.asString)
         scheduler.behandleJobbsøkerHendelser()
 
-        // Skal kun være invitasjon + svar nei (ikke noen treffstatus-endring)
+        // Skal kun være invitasjon kort + svar nei (ikke noen treffstatus-endring)
         assertThat(rapid.inspektør.size).isEqualTo(2)
         assertThat(rapid.inspektør.message(0)["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
         assertThat(rapid.inspektør.message(1)["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
@@ -634,7 +598,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val fnrIkkeSvart1 = Fødselsnummer("12345678902")
         val fnrIkkeSvart2 = Fødselsnummer("12345678903")
         val rapid = TestRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
@@ -652,7 +616,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
         scheduler.behandleJobbsøkerHendelser()
 
-        // Verifiser: 3 invitasjoner + 1 svar ja + 1 fullført + 2 avbrutt = 7
+        // Verifiser: 3 invitasjoner kort + 1 svar ja + 1 fullført + 2 avbrutt = 7
         assertThat(rapid.inspektør.size).isEqualTo(7)
 
         val hendelserForIkkeSvart1 = (0 until rapid.inspektør.size)
