@@ -21,4 +21,4 @@ kandidatsok_api_scope: "api://dev-gcp.toi.rekrutteringsbistand-kandidatsok-api/.
 kafka_consumer_group_id: rekrutteringstreff-rapid-1
 modiacontextholder_url: "http://modiacontextholder.personoversikt"
 modiacontextholder_scope: "api://dev-gcp.personoversikt.modiacontextholder/.default"
-pilotkontorer: ["0403", "0602", "0135", "0211", "1001", "0300"]
+pilotkontorer: "[\"0403\", \"0602\", \"0135\", \"0211\", \"1001\", \"0300\"]"

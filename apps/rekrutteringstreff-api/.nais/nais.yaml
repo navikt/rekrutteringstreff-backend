@@ -87,7 +87,7 @@ spec:
     - name: KAFKA_CONSUMER_GROUP_ID
       value: {{kafka_consumer_group_id}}
     - name: PILOTKONTORER
-      value: "{{pilotkontorer}}"
+      value: {{pilotkontorer}}
   observability:
     logging:
       destinations:
