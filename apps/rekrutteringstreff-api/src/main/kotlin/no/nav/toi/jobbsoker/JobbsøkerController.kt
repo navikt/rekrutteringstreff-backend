@@ -156,8 +156,8 @@ class JobbsøkerController(
     )
     private fun slettJobbsøkerHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
         val treffId = TreffId(UUID.fromString(ctx.pathParam(pathParamTreffId)))
+        val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
         log.info("Sletter jobbsøker $jobbsøkerId for treff $treffId")
 
         val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
