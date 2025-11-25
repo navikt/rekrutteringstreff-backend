@@ -162,6 +162,7 @@ class JobbsøkerController(
 
         val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
         if (fødselsnummer == null) {
+            log.info("Fant ikke jobbsøker med id $jobbsøkerId for treff $treffId")
             ctx.status(404)
         } else {
             val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
