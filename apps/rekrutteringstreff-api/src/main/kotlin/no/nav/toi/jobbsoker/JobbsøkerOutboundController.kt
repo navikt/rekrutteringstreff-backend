@@ -59,7 +59,6 @@ class JobbsøkerOutboundController(
     )
     private fun hentKandidatnummerHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
-        log.info("Hent kandidatnummer")
 
         val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))

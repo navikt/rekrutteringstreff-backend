@@ -236,11 +236,13 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    fun slettEier() {
+    fun `Slett eier er lov hvis det er flere eiere`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"))
+
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
@@ -252,6 +254,21 @@ class RekrutteringstreffEierTest {
                 assertThat(eiere).doesNotContain(navIdent)
             }
         }
+    }
+
+    @Test
+    fun `Slett eier hvis det bare er 1 eier skal gi bad request`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(400, response, result)
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).contains(navIdent)
     }
 
     @Test
