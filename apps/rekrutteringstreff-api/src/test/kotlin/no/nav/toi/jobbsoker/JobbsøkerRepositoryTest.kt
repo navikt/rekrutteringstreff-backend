@@ -497,6 +497,30 @@ class JobbsøkerRepositoryTest {
             assertThat(js2!!.hendelser[0].hendelsestype).isEqualTo(JobbsøkerHendelsestype.INVITERT)
         }
     }
+
+    @Test
+    fun `status slettet skal ikke synes i listen`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+
+        val jobbsøker = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Kandidatnummer("K1"),
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            null, null, null
+        )
+
+        repository.leggTil(listOf(jobbsøker), treffId, navIdent)
+
+        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(alleJobbsøkere).hasSize(1)
+
+        repository.endreStatus(alleJobbsøkere.get(0).personTreffId.somUuid, JobbsøkerStatus.SLETTET)
+
+        val alleJobbsøkereEtterSletting = repository.hentJobbsøkere(treffId)
+        assertThat(alleJobbsøkereEtterSletting).hasSize(0)
+    }
 }
 
 
