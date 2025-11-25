@@ -16,6 +16,8 @@ import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.util.*
 
 
@@ -26,16 +28,20 @@ class JobbsøkerController(
 ) {
     companion object {
         private const val pathParamTreffId = "id"
+        private const val pathParamJobbsøkerId = "jobbsokerid"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
         private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
-        private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/hendelser"
+        private const val hendelserPath = "$jobbsøkerPath/hendelser"
+        private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
         private const val inviterPath = "$jobbsøkerPath/inviter"
+        val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
     init {
         javalin.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         javalin.get(jobbsøkerPath, hentJobbsøkereHandler())
+        javalin.delete(slettPath, slettJobbsøkerHandler())
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
     }
@@ -148,6 +154,40 @@ class JobbsøkerController(
         }
     }
 
+      @OpenApi(
+        summary = "Slett en jobbsøker",
+        operationId = "slettJobbsøker",
+        security = [OpenApiSecurity("BearerAuth")],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
+            OpenApiParam(name = pathParamJobbsøkerId, type = UUID::class, required = true),
+         ],
+        responses = [OpenApiResponse("201")],
+        path = slettPath,
+        methods = [HttpMethod.DELETE]
+    )
+    private fun slettJobbsøkerHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treffId = TreffId(UUID.fromString(ctx.pathParam(pathParamTreffId)))
+        val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
+        log.info("Sletter jobbsøker $jobbsøkerId for treff $treffId")
+
+        val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
+        if (fødselsnummer == null) {
+            log.info("Fant ikke jobbsøker med id $jobbsøkerId for treff $treffId")
+            ctx.status(404)
+        } else {
+            val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
+            if (jobbsøker!!.status != JobbsøkerStatus.LAGT_TIL) {
+                // Vi støtter kun sletting av jobbsøkere som er i "LAGT_TIL" status
+                ctx.status(422)
+            } else {
+                jobbsøkerRepository.endreStatus(jobbsøkerId.somUuid, JobbsøkerStatus.SLETTET)
+                ctx.status(200)
+            }
+        }
+    }
+
     @OpenApi(
         summary = "Hent alle jobbsøkerhendelser med jobbsøkerdata for et rekrutteringstreff, sortert med nyeste først",
         operationId = "hentJobbsøkerHendelserMedData",
@@ -188,6 +228,7 @@ class JobbsøkerController(
         val eiere = eierRepository.hent(treff)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id $treff har ingen eiere")
 
         if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            log.info("Henter jobbsøkerhendelser for treff $treff")
             val hendelser = jobbsøkerRepository.hentJobbsøkerHendelser(treff)
             ctx.status(200).json(hendelser.map { h ->
                 JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
