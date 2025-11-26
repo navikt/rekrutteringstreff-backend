@@ -1,5 +1,6 @@
 package no.nav.toi
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -29,6 +30,7 @@ import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.flywaydb.core.Flyway
 import java.net.http.HttpClient
 import java.time.Instant
@@ -46,6 +48,8 @@ class App(
     private val utvikler: UUID,
     private val kandidatsokKlient: KandidatsøkKlient,
     private val rapidsConnection: RapidsConnection,
+    private val modiaKlient: ModiaKlient,
+    private val pilotkontorer: List<String>
 ) {
     constructor(
         port: Int,
@@ -55,11 +59,10 @@ class App(
         utvikler: UUID,
         kandidatsokApiUrl: String,
         kandidatsokScope: String,
-        azureClientId: String,
-        azureClientSecret: String,
-        azureTokenEndpoint: String,
         rapidsConnection: RapidsConnection,
-        httpClient: HttpClient,
+        accessTokenClient: AccessTokenClient,
+        modiaKlient: ModiaKlient,
+        pilotkontorer: List<String>,
     ) : this(
         port = port,
         authConfigs = authConfigs,
@@ -69,14 +72,11 @@ class App(
         kandidatsokKlient = KandidatsøkKlient(
             kandidatsokApiUrl = kandidatsokApiUrl,
             kandidatsokScope = kandidatsokScope,
-            accessTokenClient = AccessTokenClient(
-                secret = azureClientSecret,
-                clientId = azureClientId,
-                azureUrl = azureTokenEndpoint,
-                httpClient = httpClient
-            )
+            accessTokenClient = accessTokenClient
         ),
         rapidsConnection = rapidsConnection,
+        modiaKlient = modiaKlient,
+        pilotkontorer = pilotkontorer
     )
 
     private lateinit var javalin: Javalin
@@ -156,8 +156,10 @@ class App(
 
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
-            authConfigs,
-            RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler)
+            authConfigs = authConfigs,
+            rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler),
+            modiaKlient = modiaKlient,
+            pilotkontorer = pilotkontorer
         )
 
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
@@ -183,10 +185,12 @@ class App(
         )
         ArbeidsgiverController(
             arbeidsgiverRepository = arbeidsgiverRepository,
+            eierRepository = eierRepository,
             javalin = javalin
         )
         JobbsøkerController(
             jobbsøkerRepository = jobbsøkerRepository,
+            eierRepository = eierRepository,
             javalin = javalin
         )
         JobbsøkerInnloggetBorgerController(
@@ -196,6 +200,7 @@ class App(
         JobbsøkerOutboundController(
             jobbsøkerRepository = jobbsøkerRepository,
             kandidatsøkKlient = kandidatsokKlient,
+            eierRepository = eierRepository,
             javalin = javalin
         )
         KiController(
@@ -247,6 +252,24 @@ fun main() {
         .followRedirects(HttpClient.Redirect.ALWAYS)
         .build()
 
+    val azureClientId = getenv("AZURE_APP_CLIENT_ID")
+    val azureClientSecret = getenv("AZURE_APP_CLIENT_SECRET")
+    val azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")
+
+    val accessTokenClient = AccessTokenClient(
+        secret = azureClientSecret,
+        clientId = azureClientId,
+        azureUrl = azureTokenEndpoint,
+        httpClient = httpClient
+    )
+
+    val modiaKlient = ModiaKlient(
+        modiaContextHolderUrl = getenv("MODIACONTEXTHOLDER_URL"),
+        modiaContextHolderScope = getenv("MODIACONTEXTHOLDER_SCOPE"),
+        accessTokenClient = accessTokenClient,
+        httpClient = httpClient,
+    )
+
     App(
         port = 8080,
         authConfigs = listOfNotNull(
@@ -272,11 +295,10 @@ fun main() {
         utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER")),
         kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
         kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
-        azureClientId = getenv("AZURE_APP_CLIENT_ID"),
-        azureClientSecret = getenv("AZURE_APP_CLIENT_SECRET"),
-        azureTokenEndpoint = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT"),
         rapidsConnection = rapidsConnection,
-        httpClient = httpClient,
+        accessTokenClient = accessTokenClient,
+        modiaKlient = modiaKlient,
+        pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() }
     ).start()
 }
 

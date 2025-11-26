@@ -5,6 +5,7 @@ import com.github.kittinunf.result.Result
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -18,19 +19,29 @@ import kotlin.collections.emptyList
 class SwaggerEndpointsTest {
 
     private val appPort = ubruktPortnr()
+    private val accessTokenClient = AccessTokenClient(
+        clientId = "clientId",
+        secret = "clientSecret",
+        azureUrl = "",
+        httpClient = httpClient
+    )
     private val app = App(
         port = appPort,
-        authConfigs = emptyList<AuthenticationConfiguration>(),
+        authConfigs = emptyList(),
         dataSource = TestDatabase().dataSource,
         arbeidsgiverrettet = arbeidsgiverrettet,
         utvikler = utvikler,
         kandidatsokApiUrl = "",
         kandidatsokScope = "",
-        azureClientId = "",
-        azureClientSecret = "",
-        azureTokenEndpoint = "",
         rapidsConnection = TestRapid(),
-        httpClient = httpClient
+        accessTokenClient = accessTokenClient,
+        modiaKlient = ModiaKlient(
+            modiaContextHolderUrl = "",
+            modiaContextHolderScope = "",
+            accessTokenClient = accessTokenClient,
+            httpClient = httpClient
+        ),
+        pilotkontorer = emptyList()
     )
 
     @BeforeAll

@@ -271,7 +271,8 @@ class RekrutteringstreffRepository(
                             opprettetAvNavkontorEnhetId = rs.getString(opprettetAvKontorEnhetid),
                             opprettetAvTidspunkt = rs.getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
                             antallArbeidsgivere = null,
-                            antallJobbsøkere = null
+                            antallJobbsøkere = null,
+                            eiere = (rs.getArray(eiere).array as Array<String>).toList()
                         ),
                         hendelser = hendelser
                     )
@@ -477,6 +478,7 @@ class RekrutteringstreffRepository(
         status = RekrutteringstreffStatus.valueOf(getString(status)),
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
-        opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo()
+        opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
+        eiere = (getArray(eiere).array as Array<String>).toList()
     )
 }

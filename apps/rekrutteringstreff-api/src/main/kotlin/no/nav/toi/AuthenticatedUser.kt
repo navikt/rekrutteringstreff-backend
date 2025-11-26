@@ -13,6 +13,7 @@ import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.http.UnauthorizedResponse
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.eclipse.jetty.http.HttpHeader
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
@@ -42,11 +43,17 @@ interface AuthenticatedUser {
     fun extractNavIdent(): String
     fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle)
     fun extractPid(): String
+    fun erUtvikler(): Boolean = false
 
     companion object {
-        fun fromJwt(jwt: DecodedJWT, rolleUuidSpesifikasjon: RolleUuidSpesifikasjon): AuthenticatedUser {
+        fun fromJwt(
+            jwt: DecodedJWT,
+            rolleUuidSpesifikasjon: RolleUuidSpesifikasjon,
+            modiaKlient: ModiaKlient,
+            pilotkontorer: List<String>
+        ): AuthenticatedUser {
             val navIdentClaim = jwt.getClaim(NAV_IDENT_CLAIM)
-            return if(navIdentClaim.isMissing) {
+            return if (navIdentClaim.isMissing) {
                 AuthenticatedCitizenUser(jwt.getClaim(PID_CLAIM).asString())
             } else {
                 AuthenticatedNavUser(
@@ -55,44 +62,65 @@ interface AuthenticatedUser {
                         .asList(UUID::class.java)
                         .let(rolleUuidSpesifikasjon::rollerForUuider),
                     jwt = jwt.token,
+                    modiaKlient = modiaKlient,
+                    pilotkontorer = pilotkontorer
                 )
             }
         }
+
         fun Context.extractNavIdent(): String =
-            attribute<AuthenticatedUser>("authenticatedUser")?.extractNavIdent() ?: throw UnauthorizedResponse("Not authenticated")
+            attribute<AuthenticatedUser>("authenticatedUser")?.extractNavIdent()
+                ?: throw UnauthorizedResponse("Not authenticated")
     }
 }
 
 private class AuthenticatedNavUser(
     private val navIdent: String,
     private val roller: Set<Rolle>,
-    private val jwt: String
-): AuthenticatedUser {
+    private val jwt: String,
+    private val modiaKlient: ModiaKlient,
+    private val pilotkontorer: List<String>
+) : AuthenticatedUser {
     override fun verifiserAutorisasjon(vararg gyldigeRoller: Rolle) {
-        if(!erEnAvRollene(*gyldigeRoller)) {
+        if (!erEnAvRollene(*gyldigeRoller)) {
             throw ForbiddenResponse()
+        } else if (erUtvikler()) {
+            return
+        } else {
+            val veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(jwt)
+
+            if (veiledersKontor.isNullOrEmpty()) {
+                throw ForbiddenResponse("Finner ikke veileders innloggede kontor")
+            } else if (veiledersKontor !in pilotkontorer) {
+                throw ForbiddenResponse("Veileder er ikke tilknyttet et pilotkontor")
+            }
         }
     }
 
     fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
     override fun extractNavIdent() = navIdent
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
+    override fun erUtvikler() = roller.any { it == Rolle.UTVIKLER }
 }
 
 private class AuthenticatedCitizenUser(
     private val pid: String
-): AuthenticatedUser {
+) : AuthenticatedUser {
     override fun extractNavIdent() = throw ForbiddenResponse()
     override fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle) {
-        if(Rolle.BORGER !in arbeidsgiverRettet) throw ForbiddenResponse()
+        if (Rolle.BORGER !in arbeidsgiverRettet) throw ForbiddenResponse()
     }
 
     override fun extractPid(): String = pid
 }
 
 
-fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>,
-                                                             rolleUuidSpesifikasjon: RolleUuidSpesifikasjon): Javalin {
+fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
+    authConfigs: List<AuthenticationConfiguration>,
+    rolleUuidSpesifikasjon: RolleUuidSpesifikasjon,
+    modiaKlient: ModiaKlient,
+    pilotkontorer: List<String>
+): Javalin {
     log.info("Starter autentiseringoppsett")
     val verifiers = authConfigs.flatMap { it.jwtVerifiers() }
     before { ctx ->
@@ -104,7 +132,10 @@ fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<
             ctx.attribute("raw_token", token)
 
             val decoded = verifyJwt(verifiers, token)
-            ctx.attribute("authenticatedUser", AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon))
+            ctx.attribute(
+                "authenticatedUser",
+                AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon, modiaKlient, pilotkontorer)
+            )
         }
     }
     return this

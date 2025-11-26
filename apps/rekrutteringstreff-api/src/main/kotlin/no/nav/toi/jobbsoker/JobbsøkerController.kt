@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker
 
 import io.javalin.Javalin
 import io.javalin.http.Context
+import io.javalin.http.ForbiddenResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
@@ -13,6 +14,8 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -20,6 +23,7 @@ import java.util.*
 
 class JobbsøkerController(
     private val jobbsøkerRepository: JobbsøkerRepository,
+    private val eierRepository: EierRepository,
     javalin: Javalin
 ) {
     companion object {
@@ -76,7 +80,7 @@ class JobbsøkerController(
         responses = [OpenApiResponse("201")],
         path = jobbsøkerPath,
         methods = [HttpMethod.POST]
-    )
+    ) // TODO legg til jobbsøkerrettet
     private fun leggTilJobbsøkereHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
@@ -138,8 +142,16 @@ class JobbsøkerController(
     private fun hentJobbsøkereHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treff)
-        ctx.status(200).json(jobbsøkere.toOutboundDto())
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        val eiere = eierRepository.hent(treff)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id $treff har ingen eiere")
+
+        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treff)
+            ctx.status(200).json(jobbsøkere.toOutboundDto())
+        } else {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente jobbsøkere")
+        }
     }
 
       @OpenApi(
@@ -212,22 +224,29 @@ class JobbsøkerController(
     private fun hentJobbsøkerHendelserHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        log.info("Henter jobbsøkerhendelser for treff $treff")
-        val hendelser = jobbsøkerRepository.hentJobbsøkerHendelser(treff)
-        ctx.status(200).json(hendelser.map { h ->
-            JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
-                id = h.id.toString(),
-                tidspunkt = h.tidspunkt,
-                hendelsestype = h.hendelsestype.toString(),
-                opprettetAvAktørType = h.opprettetAvAktørType.toString(),
-                aktørIdentifikasjon = h.aktørIdentifikasjon,
-                fødselsnummer = h.fødselsnummer.asString,
-                kandidatnummer = h.kandidatnummer?.asString,
-                fornavn = h.fornavn.asString,
-                etternavn = h.etternavn.asString,
-                personTreffId = h.personTreffId.somString
-            )
-        })
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+        val eiere = eierRepository.hent(treff)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id $treff har ingen eiere")
+
+        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            log.info("Henter jobbsøkerhendelser for treff $treff")
+            val hendelser = jobbsøkerRepository.hentJobbsøkerHendelser(treff)
+            ctx.status(200).json(hendelser.map { h ->
+                JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
+                    id = h.id.toString(),
+                    tidspunkt = h.tidspunkt,
+                    hendelsestype = h.hendelsestype.toString(),
+                    opprettetAvAktørType = h.opprettetAvAktørType.toString(),
+                    aktørIdentifikasjon = h.aktørIdentifikasjon,
+                    fødselsnummer = h.fødselsnummer.asString,
+                    kandidatnummer = h.kandidatnummer?.asString,
+                    fornavn = h.fornavn.asString,
+                    etternavn = h.etternavn.asString,
+                    personTreffId = h.personTreffId.somString
+                )
+            })
+        } else {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente jobbsøkerhendelser")
+        }
     }
 
     @OpenApi(
@@ -252,8 +271,14 @@ class JobbsøkerController(
         val personTreffIder = dto.personTreffIder
         val navIdent = ctx.extractNavIdent()
 
-        jobbsøkerRepository.inviter(personTreffIder, treffId, navIdent)
-        ctx.status(200)
+        val eiere = eierRepository.hent(treffId)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id $treffId har ingen eiere")
+
+        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            jobbsøkerRepository.inviter(personTreffIder, treffId, navIdent)
+            ctx.status(200)
+        } else {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke invitere jobbsøkere")
+        }
     }
 
     private fun List<Jobbsøker>.toOutboundDto(): List<JobbsøkerOutboundDto> =

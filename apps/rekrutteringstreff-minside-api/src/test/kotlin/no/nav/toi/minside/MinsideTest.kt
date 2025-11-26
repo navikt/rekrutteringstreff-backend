@@ -5,6 +5,7 @@ import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import java.util.concurrent.atomic.AtomicInteger
 import no.nav.security.mock.oauth2.MockOAuth2Server
+import no.nav.toi.AccessTokenClient
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
@@ -14,7 +15,8 @@ import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.minside.ubruktPortnrFra10000.ubruktPortnr
+import no.nav.toi.minside.ubruktPortnrFra9000.ubruktPortnr
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -38,6 +40,17 @@ class MinsideTest {
         private val rekrutteringsTreffApiPort = ubruktPortnr()
         private val authPort = ubruktPortnr()
         private val db = TestDatabase()
+        private val httpClient: HttpClient = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.ALWAYS)
+            .version(HttpClient.Version.HTTP_1_1)
+            .build()
+        private val accessTokenClient = AccessTokenClient(
+            clientId = "clientId",
+            secret = "clientSecret",
+            azureUrl = "",
+            httpClient = httpClient
+        )
+
         private val rekrutteringsTreffApiApp = no.nav.toi.App(
             port = rekrutteringsTreffApiPort,
             authConfigs = listOf(
@@ -50,18 +63,19 @@ class MinsideTest {
             dataSource = db.dataSource,
             arbeidsgiverrettet = UUID.randomUUID(),
             utvikler = UUID.randomUUID(),
-            azureTokenEndpoint = "",
-            azureClientId = "",
-            azureClientSecret = "",
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
             rapidsConnection = TestRapid(),
-            httpClient = HttpClient.newBuilder().build()
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = "",
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = emptyList<String>()
         )
-        private val httpClient: HttpClient = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.ALWAYS)
-            .version(HttpClient.Version.HTTP_1_1)
-            .build()
+
         private val appPort = ubruktPortnr()
         private val app = App(
             port = appPort,
@@ -269,8 +283,8 @@ class MinsideTest {
     }
 }
 
-object ubruktPortnrFra10000 {
-    private val portnr = AtomicInteger(10000)
+object ubruktPortnrFra9000 {
+    private val portnr = AtomicInteger(9000)
     fun ubruktPortnr(): Int = portnr.andIncrement
 }
 
