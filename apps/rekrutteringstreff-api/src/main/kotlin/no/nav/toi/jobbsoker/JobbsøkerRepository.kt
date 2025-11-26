@@ -542,4 +542,35 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             setObject(++i, jobbsøkerDbId)
         }.executeUpdate()
     }
+
+    fun registrerMinsideVarselSvar(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String, hendelseData: String) {
+        dataSource.connection.use { c ->
+            try {
+                log.info("Skal oppdatere hendelse for minside varsel svar for TreffId: $treff")
+                secure(log).info("Henter jobbsøker persontreffid for treff: ${treff.somString} og fødselsnummer: ${fødselsnummer.asString}")
+                val personTreffId =
+                    c.hentPersonTreffIderFraFødselsnummer(treffId = treff, fødselsnumre = listOf(fødselsnummer))
+                        .firstOrNull()
+
+                if (personTreffId == null) {
+                    log.error("Fant ingen jobbsøker med treffId: ${treff.somString} for minside varsel svar (fødselsnummer i securelog)")
+                    secure(log).error("Fant ingen jobbsøker med treffId: ${treff.somString} og fødselsnummer: ${fødselsnummer.asString}")
+                    return
+                }
+
+                log.info("Skal registrere MOTTATT_SVAR_FRA_MINSIDE for jobbsøker med personTreffId: $personTreffId")
+                leggTilHendelserForJobbsøkere(
+                    c = c,
+                    hendelsestype = JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE,
+                    personTreffIds = listOf(personTreffId),
+                    opprettetAv = opprettetAv,
+                    arrangørtype = AktørType.ARRANGØR,
+                    hendelseData = hendelseData
+                )
+                log.info("Registrerte hendelse MOTTATT_SVAR_FRA_MINSIDE for rekrutteringstreffId: ${treff.somString}")
+            } catch (e: Exception) {
+                throw e
+            }
+        }
+    }
 }
