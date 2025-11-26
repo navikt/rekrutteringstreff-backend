@@ -48,7 +48,8 @@ class Rekrutteringstreff(
         opprettetAvTidspunkt = opprettetAvTidspunkt,
         id = id.somUuid,
         antallArbeidsgivere = antallArbeidsgivere,
-        antallJobbsøkere = antallJobsøkere
+        antallJobbsøkere = antallJobsøkere,
+        eiere = eiere
     )
     fun aktivitetskortInvitasjonFor(fnr: String) = Aktivitetskortinvitasjon.opprett(
         fnr = fnr,

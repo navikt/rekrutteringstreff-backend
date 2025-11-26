@@ -66,7 +66,7 @@ class ArbeidsgiverController(
         val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
-        //sjekk at personen er eier av treff
+
         val eiere = eierRepository.hent(treff)?.tilNavIdenter()
             ?: throw IllegalStateException("Rekrutteringstreff med id ${treff.somString} har ingen eiere")
 
@@ -110,7 +110,7 @@ class ArbeidsgiverController(
         )],
         path = arbeidsgiverPath,
         methods = [HttpMethod.GET]
-    ) // TODO tror alle skal få lov til å hente dette, også jobbsøkerrettet
+    )
     private fun hentArbeidsgivereHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))

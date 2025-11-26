@@ -271,7 +271,8 @@ class RekrutteringstreffRepository(
                             opprettetAvNavkontorEnhetId = rs.getString(opprettetAvKontorEnhetid),
                             opprettetAvTidspunkt = rs.getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
                             antallArbeidsgivere = null,
-                            antallJobbsøkere = null
+                            antallJobbsøkere = null,
+                            eiere = (rs.getArray(eiere).array as Array<String>).toList()
                         ),
                         hendelser = hendelser
                     )
