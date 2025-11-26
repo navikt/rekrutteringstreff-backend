@@ -1,6 +1,5 @@
 package no.nav.toi.jobbsoker
 
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
@@ -200,7 +199,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                             'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
                             'hendelsestype', jh.hendelsestype,
                             'opprettetAvAktortype', jh.opprettet_av_aktortype,
-                            'aktøridentifikasjon', jh.aktøridentifikasjon
+                            'aktøridentifikasjon', jh.aktøridentifikasjon,
+                            'hendelseData', jh.hendelse_data
                         ) ORDER BY jh.tidspunkt DESC
                     ) FILTER (WHERE jh.id IS NOT NULL),
                     '[]'
@@ -352,15 +352,15 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
 
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
-        val typeRef = object : TypeReference<List<Map<String, String>>>() {}
-        val hendelserRaw: List<Map<String, String>> = mapper.readValue(json, typeRef)
+        val hendelserRaw = mapper.readTree(json)
         return hendelserRaw.map { h ->
             JobbsøkerHendelse(
-                id = UUID.fromString(h["id"]),
-                tidspunkt = ZonedDateTime.parse(h["tidspunkt"]),
-                hendelsestype = JobbsøkerHendelsestype.valueOf(h["hendelsestype"]!!),
-                opprettetAvAktørType = AktørType.valueOf(h["opprettetAvAktortype"]!!),
-                aktørIdentifikasjon = h["aktøridentifikasjon"]
+                id = UUID.fromString(h["id"].asText()),
+                tidspunkt = ZonedDateTime.parse(h["tidspunkt"].asText()),
+                hendelsestype = JobbsøkerHendelsestype.valueOf(h["hendelsestype"].asText()),
+                opprettetAvAktørType = AktørType.valueOf(h["opprettetAvAktortype"].asText()),
+                aktørIdentifikasjon = h["aktøridentifikasjon"]?.takeIf { !it.isNull }?.asText(),
+                hendelseData = h["hendelseData"]?.takeIf { !it.isNull }
             )
         }
     }
@@ -452,7 +452,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                                 'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
                                 'hendelsestype', jh.hendelsestype,
                                 'opprettetAvAktortype', jh.opprettet_av_aktortype,
-                                'aktøridentifikasjon', jh.aktøridentifikasjon
+                                'aktøridentifikasjon', jh.aktøridentifikasjon,
+                                'hendelseData', jh.hendelse_data
                             )
                         ) FILTER (WHERE jh.id IS NOT NULL),
                         '[]'
