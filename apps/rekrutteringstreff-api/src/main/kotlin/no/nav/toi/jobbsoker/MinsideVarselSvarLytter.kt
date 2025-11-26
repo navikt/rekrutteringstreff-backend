@@ -72,7 +72,7 @@ class MinsideVarselSvarLytter(
             jobbsøkerRepository.registrerMinsideVarselSvar(
                 fødselsnummer = fødselsnummer,
                 treff = treffId,
-                opprettetAv = avsenderNavident ?: "system",
+                opprettetAv = "MIN_SIDE",
                 hendelseData = hendelseDataJson
             )
             log.info("Registrerte MOTTATT_SVAR_FRA_MINSIDE-hendelse for rekrutteringstreffId: $avsenderReferanseId")

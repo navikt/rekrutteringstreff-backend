@@ -565,7 +565,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     hendelsestype = JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE,
                     personTreffIds = listOf(personTreffId),
                     opprettetAv = opprettetAv,
-                    arrangørtype = AktørType.ARRANGØR,
+                    arrangørtype = AktørType.SYSTEM,
                     hendelseData = hendelseData
                 )
                 log.info("Registrerte hendelse MOTTATT_SVAR_FRA_MINSIDE for rekrutteringstreffId: ${treff.somString}")
