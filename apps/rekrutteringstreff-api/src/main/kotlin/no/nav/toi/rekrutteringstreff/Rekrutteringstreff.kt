@@ -51,13 +51,14 @@ class Rekrutteringstreff(
         antallJobbsøkere = antallJobsøkere,
         eiere = eiere
     )
-    fun aktivitetskortInvitasjonFor(fnr: String) = Aktivitetskortinvitasjon.opprett(
+    fun aktivitetskortInvitasjonFor(fnr: String, hendelseId: UUID, avsenderNavident: String?) = Aktivitetskortinvitasjon.opprett(
         fnr = fnr,
         rekrutteringstreffId = id,
+        hendelseId = hendelseId,
         tittel = tittel,
         fraTid = fraTid,
         tilTid = tilTid,
-        opprettetAv = opprettetAvPersonNavident,
+        opprettetAv = avsenderNavident ?: opprettetAvPersonNavident,
         opprettetTidspunkt = opprettetAvTidspunkt,
         gateadresse = gateadresse,
         postnummer = postnummer,
@@ -79,15 +80,17 @@ class Rekrutteringstreff(
         treffstatus = treffstatus
     )
 
-    fun aktivitetskortOppdateringFor(fnr: String) = AktivitetskortOppdatering(
+    fun aktivitetskortOppdateringFor(fnr: String, hendelseId: UUID, avsenderNavident: String?) = AktivitetskortOppdatering(
         fnr = fnr,
         rekrutteringstreffId = id,
+        hendelseId = hendelseId,
         tittel = tittel,
         fraTid = fraTid!!,
         tilTid = tilTid!!,
         gateadresse = gateadresse!!,
         postnummer = postnummer!!,
-        poststed = poststed!!
+        poststed = poststed!!,
+        endretAv = avsenderNavident
     )
 
     fun harRelevanteEndringerForAktivitetskort(endringer: EndringerDto): Boolean {
