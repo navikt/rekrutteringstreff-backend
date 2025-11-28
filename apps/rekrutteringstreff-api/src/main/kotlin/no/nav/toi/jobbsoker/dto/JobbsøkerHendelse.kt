@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.dto
 
+import com.fasterxml.jackson.databind.JsonNode
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import java.time.ZonedDateTime
@@ -10,7 +11,8 @@ data class JobbsøkerHendelse(
     val tidspunkt: ZonedDateTime,
     val hendelsestype: JobbsøkerHendelsestype,
     val opprettetAvAktørType: AktørType,
-    val aktørIdentifikasjon: String?
+    val aktørIdentifikasjon: String?,
+    val hendelseData: JsonNode? = null
 )
 
 fun JobbsøkerHendelse.toOutboundDto() = JobbsøkerHendelseOutboundDto(
@@ -18,5 +20,6 @@ fun JobbsøkerHendelse.toOutboundDto() = JobbsøkerHendelseOutboundDto(
     tidspunkt = tidspunkt,
     hendelsestype = hendelsestype.name,
     opprettetAvAktørType = opprettetAvAktørType.name,
-    aktørIdentifikasjon = aktørIdentifikasjon
+    aktørIdentifikasjon = aktørIdentifikasjon,
+    hendelseData = hendelseData
 )
