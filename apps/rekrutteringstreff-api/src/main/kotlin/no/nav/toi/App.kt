@@ -250,7 +250,9 @@ private val log = noClassLogger()
 
 fun main() {
     val dataSource = createDataSource()
-    val rapidsConnection = RapidApplication.create(System.getenv())
+    val env = System.getenv().toMutableMap()
+    env["HTTP_PORT"] = "8081"
+    val rapidsConnection = RapidApplication.create(env)
 
     val httpClient: HttpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
