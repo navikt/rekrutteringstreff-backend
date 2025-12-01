@@ -43,6 +43,7 @@ class MinsideVarselSvarLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
+        log.info("Mottok minsideVarselSvar");
         val avsenderReferanseId = packet["avsenderReferanseId"].asText()
         val fnr = packet["fnr"].asText()
         val avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asText()
