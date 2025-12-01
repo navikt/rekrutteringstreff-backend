@@ -14,8 +14,10 @@ spec:
   {{/each}}
   liveness:
     path: /isalive
+    port: 8080
   readiness:
     path: /isready
+    port: 8080
   prometheus:
     enabled: true
     path: /metrics
@@ -79,8 +81,6 @@ spec:
       value: toi.rapid-1
     - name: KAFKA_CONSUMER_GROUP_ID
       value: {{kafka_consumer_group_id}}
-    - name: HTTP_PORT
-      value: "8081"
   observability:
     logging:
       destinations:
