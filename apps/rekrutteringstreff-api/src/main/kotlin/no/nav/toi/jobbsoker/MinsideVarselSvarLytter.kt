@@ -26,6 +26,7 @@ class MinsideVarselSvarLytter(
 ) : River.PacketListener {
 
     init {
+        log.info("MinsideVarselSvarLytter initialisert")
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", "minsideVarselSvar")

@@ -227,7 +227,14 @@ class App(
         log.info("Starting RapidsConnection")
         AktivitetskortFeilLytter(rapidsConnection, jobbsøkerRepository)
         MinsideVarselSvarLytter(rapidsConnection, jobbsøkerRepository, JacksonConfig.mapper)
-        Thread(rapidsConnection::start).start()
+        Thread {
+            try {
+                rapidsConnection.start()
+            } catch (e: Exception) {
+                log.error("RapidsConnection feilet, avslutter applikasjonen", e)
+                System.exit(1)
+            }
+        }.start()
     }
 
     fun close() {
