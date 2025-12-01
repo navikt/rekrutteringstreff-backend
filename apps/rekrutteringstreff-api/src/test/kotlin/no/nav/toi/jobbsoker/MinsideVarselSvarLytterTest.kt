@@ -36,7 +36,7 @@ class MinsideVarselSvarLytterTest {
         db.slettAlt()
     }
 
-    /*@Test
+    @Test
     fun `skal lagre MOTTATT_SVAR_FRA_MINSIDE-hendelse med alle felter`() {
         val rapid = TestRapid()
         MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
@@ -68,7 +68,7 @@ class MinsideVarselSvarLytterTest {
                 "fnr": "${fødselsnummer.asString}",
                 "eksternStatus": "sendt",
                 "minsideStatus": "ferdigstilt",
-                "opprettet": "2024-01-15T10:30:00",
+                "opprettet": "2024-01-15T10:30:00+01:00",
                 "avsenderNavident": "$endretAvIdent",
                 "eksternFeilmelding": null,
                 "eksternKanal": "SMS",
@@ -160,7 +160,7 @@ class MinsideVarselSvarLytterTest {
         assertThat(hendelseDataMap.mal).isNull()
     }
 
-    /*@Test // Venter litt med dennne til vi får gjennom meldinger
+    @Test
     fun `skal ignorere melding med aktørId felt - feil type melding`() {
         val rapid = TestRapid()
         MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
@@ -201,7 +201,7 @@ class MinsideVarselSvarLytterTest {
         // Skal bare ha OPPRETTET-hendelse, ikke MOTTATT_SVAR_FRA_MINSIDE
         assertThat(jobbsøker!!.hendelser).hasSize(1)
         assertThat(jobbsøker.hendelser.first().hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
-    }*/
+    }
 
     @Test
     fun `skal ignorere melding med feil event_name`() {
@@ -376,5 +376,51 @@ class MinsideVarselSvarLytterTest {
         
         val minsideSvarHendelser = jobbsøker.hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
         assertThat(minsideSvarHendelser).hasSize(2)
-    }*/
+    }
+
+    @Test
+    fun `skal håndtere opprettet-dato med tidssone`() {
+        val rapid = TestRapid()
+        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val endretAvIdent = "Z123456"
+
+        jobbsøkerRepository.leggTil(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer = fødselsnummer,
+                    kandidatnummer = Kandidatnummer("ABC123"),
+                    fornavn = Fornavn("Ola"),
+                    etternavn = Etternavn("Nordmann"),
+                    navkontor = Navkontor("Oslo"),
+                    veilederNavn = VeilederNavn("Kari Veileder"),
+                    veilederNavIdent = VeilederNavIdent(endretAvIdent),
+                )
+            ), treffId, endretAvIdent
+        )
+
+        rapid.sendTestMessage(
+            """
+            {
+                "@event_name": "minsideVarselSvar",
+                "varselId": "varsel-123",
+                "avsenderReferanseId": "$treffId",
+                "fnr": "${fødselsnummer.asString}",
+                "opprettet": "2025-12-01T14:53:29.201417+01:00"
+            }
+            """.trimIndent()
+        )
+
+        val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker).isNotNull
+        val minsideSvarHendelse = jobbsøker!!.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
+        assertThat(minsideSvarHendelse).isNotNull
+
+        val hendelseDataMap = minsideSvarHendelse!!.hendelseData.toMinsideVarselSvarData()
+        assertThat(hendelseDataMap.opprettet).isNotNull
+        val expected = java.time.ZonedDateTime.parse("2025-12-01T14:53:29.201417+01:00")
+        assertThat(hendelseDataMap.opprettet!!.toInstant()).isEqualTo(expected.toInstant())
+    }
 }

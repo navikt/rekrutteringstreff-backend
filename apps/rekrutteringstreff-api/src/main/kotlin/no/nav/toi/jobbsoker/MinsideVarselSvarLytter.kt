@@ -29,7 +29,8 @@ class MinsideVarselSvarLytter(
         log.info("MinsideVarselSvarLytter initialisert")
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "minsideVarselSvarXXXSkip")
+                it.requireValue("@event_name", "minsideVarselSvar")
+                it.forbid("aktørId")
             }
             validate {
                 it.requireKey("varselId", "avsenderReferanseId", "fnr")
@@ -60,7 +61,7 @@ class MinsideVarselSvarLytter(
             fnr = fnr,
             eksternStatus = packet["eksternStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             minsideStatus = packet["minsideStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            opprettet = packet["opprettet"].takeIf { !it.isNull && !it.isMissingNode }?.asLocalDateTime()?.atZone(java.time.ZoneId.of("Europe/Oslo")),
+            opprettet = packet["opprettet"].takeIf { !it.isNull && !it.isMissingNode }?.asText()?.let { java.time.ZonedDateTime.parse(it) },
             avsenderNavident = avsenderNavident,
             eksternFeilmelding = packet["eksternFeilmelding"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             eksternKanal = packet["eksternKanal"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
@@ -99,10 +100,5 @@ class MinsideVarselSvarLytter(
     ) {
         log.error("Alvorlig feil ved behandling av minsideVarselSvar", error)
         secure(log).error("Alvorlig feil ved behandling av minsideVarselSvar: ${error.problems.toExtendedReport()}", error)
-    }
-
-    override fun onPreconditionError(error: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
-        log.error("Feil ved validering av preconditions behandling av minsideVarselSvar", error)
-        secure(log).error("Feil ved validering av preconditions ved behandling av minsideVarselSvar: ${error.toExtendedReport()}")
     }
 }
