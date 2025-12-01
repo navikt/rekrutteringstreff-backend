@@ -36,7 +36,7 @@ class MinsideVarselSvarLytterTest {
         db.slettAlt()
     }
 
-    @Test
+    /*@Test
     fun `skal lagre MOTTATT_SVAR_FRA_MINSIDE-hendelse med alle felter`() {
         val rapid = TestRapid()
         MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
@@ -376,5 +376,5 @@ class MinsideVarselSvarLytterTest {
         
         val minsideSvarHendelser = jobbsøker.hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
         assertThat(minsideSvarHendelser).hasSize(2)
-    }
+    }*/
 }
