@@ -98,4 +98,9 @@ class MinsideVarselSvarLytter(
         log.error("Alvorlig feil ved behandling av minsideVarselSvar", error)
         secure(log).error("Alvorlig feil ved behandling av minsideVarselSvar: ${error.problems.toExtendedReport()}", error)
     }
+
+    override fun onPreconditionError(error: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+        log.error("Feil ved validering av preconditions behandling av minsideVarselSvar", error)
+        secure(log).error("Feil ved validering av preconditions ved behandling av minsideVarselSvar: ${error.toExtendedReport()}")
+    }
 }
