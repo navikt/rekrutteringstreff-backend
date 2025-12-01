@@ -29,7 +29,6 @@ class MinsideVarselSvarLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", "minsideVarselSvar")
-                it.forbid("aktørId")
             }
             validate {
                 it.requireKey("varselId", "avsenderReferanseId", "fnr")
@@ -90,5 +89,13 @@ class MinsideVarselSvarLytter(
     ) {
         log.error("Feil ved behandling av minsideVarselSvar: $problems")
         secure(log).error("Feil ved behandling av minsideVarselSvar: ${problems.toExtendedReport()}")
+    }
+
+    override fun onSevere(
+        error: MessageProblems.MessageException,
+        context: MessageContext
+    ) {
+        log.error("Alvorlig feil ved behandling av minsideVarselSvar", error)
+        secure(log).error("Alvorlig feil ved behandling av minsideVarselSvar: ${error.problems.toExtendedReport()}", error)
     }
 }
