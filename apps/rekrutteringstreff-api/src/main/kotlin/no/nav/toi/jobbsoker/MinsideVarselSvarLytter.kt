@@ -29,7 +29,7 @@ class MinsideVarselSvarLytter(
         log.info("MinsideVarselSvarLytter initialisert")
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "minsideVarselSvar")
+                it.requireValue("@event_name", "minsideVarselSvarXXXSkip")
             }
             validate {
                 it.requireKey("varselId", "avsenderReferanseId", "fnr")
@@ -44,7 +44,7 @@ class MinsideVarselSvarLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        log.info("Mottok minsideVarselSvar");
+        log.info("Mottok minsideVarselSvar men skipper foreløpig");
         val avsenderReferanseId = packet["avsenderReferanseId"].asText()
         val fnr = packet["fnr"].asText()
         val avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asText()
