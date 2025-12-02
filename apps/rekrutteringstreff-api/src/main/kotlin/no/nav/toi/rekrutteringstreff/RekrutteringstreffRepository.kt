@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-import com.fasterxml.jackson.core.type.TypeReference
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -64,6 +63,8 @@ class RekrutteringstreffRepository(
         private const val kommunenummer = "kommunenummer"
         private const val fylke = "fylke"
         private const val fylkesnummer = "fylkesnummer"
+        private const val sistEndret = "sist_endret"
+        private const val sistEndretAv = "sist_endret_av"
     }
 
     fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
@@ -72,8 +73,8 @@ class RekrutteringstreffRepository(
             val dbId = connection.prepareStatement(
                 """
                 INSERT INTO $tabellnavn($id,$tittel,$status,$opprettetAvPersonNavident,
-                                         $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere)
-                VALUES (?,?,?,?,?,?,?)
+                                         $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere, $sistEndret, $sistEndretAv)
+                VALUES (?,?,?,?,?,?,?,?,?)
                 RETURNING rekrutteringstreff_id
                 """
             ).apply {
@@ -85,6 +86,8 @@ class RekrutteringstreffRepository(
                 setString(++i, dto.opprettetAvNavkontorEnhetId)
                 setTimestamp(++i, Timestamp.from(Instant.now()))
                 setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
+                setTimestamp(++i, Timestamp.from(Instant.now()))
+                setString(++i, dto.opprettetAvPersonNavident)
             }.executeQuery().run { next(); getLong(1) }
 
             leggTilHendelse(connection, dbId, RekrutteringstreffHendelsestype.OPPRETTET, AktørType.ARRANGØR, dto.opprettetAvPersonNavident)
@@ -102,7 +105,7 @@ class RekrutteringstreffRepository(
             connection.prepareStatement(
                 """
                 UPDATE $tabellnavn
-                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, $poststed=?, $kommune=?, $kommunenummer=?, $fylke=?, $fylkesnummer=?
+                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, $poststed=?, $kommune=?, $kommunenummer=?, $fylke=?, $fylkesnummer=?, $sistEndret=?, $sistEndretAv=?
                 WHERE $id=?
                 """
             ).apply {
@@ -119,6 +122,8 @@ class RekrutteringstreffRepository(
                 setString(++i, dto.kommunenummer)
                 setString(++i, dto.fylke)
                 setString(++i, dto.fylkesnummer)
+                setTimestamp(++i, Timestamp.from(Instant.now()))
+                setString(++i, oppdatertAv)
                 setObject(++i, treff.somUuid)
             }.executeUpdate()
 
@@ -219,66 +224,66 @@ class RekrutteringstreffRepository(
         }
 
 // Fjerne og heller håndtere i Service?
-    fun hentMedHendelser(treff: TreffId): RekrutteringstreffDetaljOutboundDto? =
-        dataSource.connection.use { c ->
-            c.prepareStatement(
-                """
-                SELECT r.*,
-                       COALESCE(
-                           json_agg(
-                               json_build_object(
-                                   'id', h.id,
-                                   'tidspunkt', to_char(h.tidspunkt,'YYYY-MM-DD"T"HH24:MI:SSOF'),
-                                   'hendelsestype', h.hendelsestype,
-                                   'opprettetAvAktørType', h.opprettet_av_aktortype,
-                                   'aktørIdentifikasjon', h.aktøridentifikasjon
-                               )
-                           ) FILTER (WHERE h.id IS NOT NULL),
-                           '[]'
-                       ) AS hendelser
-                FROM   rekrutteringstreff r
-                LEFT JOIN rekrutteringstreff_hendelse h
-                   ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
-                WHERE  r.id = ?
-                GROUP BY r.rekrutteringstreff_id
-                """
-            ).use { s ->
-                s.setObject(1, treff.somUuid)
-                s.executeQuery().let { rs ->
-                    if (!rs.next()) return null
-                    val hendelserJson = rs.getString("hendelser")
-                    val hendelser = JacksonConfig.mapper.readValue(
-                        hendelserJson,
-                        object : TypeReference<List<RekrutteringstreffHendelseOutboundDto>>() {}
-                    )
-                    RekrutteringstreffDetaljOutboundDto(
-                        rekrutteringstreff = RekrutteringstreffDto(
-                            id = rs.getObject(id, UUID::class.java),
-                            tittel = rs.getString(tittel),
-                            beskrivelse = rs.getString(beskrivelse),
-                            fraTid = rs.getTimestamp(fratid)?.toInstant()?.atOslo(),
-                            tilTid = rs.getTimestamp(tiltid)?.toInstant()?.atOslo(),
-                            svarfrist = rs.getTimestamp(svarfrist)?.toInstant()?.atOslo(),
-                            gateadresse = rs.getString(gateadresse),
-                            postnummer = rs.getString(postnummer),
-                            poststed = rs.getString(poststed),
-                            kommune = rs.getString(kommune),
-                            kommunenummer = rs.getString(kommunenummer),
-                            fylke = rs.getString(fylke),
-                            fylkesnummer = rs.getString(fylkesnummer),
-                            status = RekrutteringstreffStatus.valueOf(rs.getString(status)),
-                            opprettetAvPersonNavident = rs.getString(opprettetAvPersonNavident),
-                            opprettetAvNavkontorEnhetId = rs.getString(opprettetAvKontorEnhetid),
-                            opprettetAvTidspunkt = rs.getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
-                            antallArbeidsgivere = null,
-                            antallJobbsøkere = null,
-                            eiere = (rs.getArray(eiere).array as Array<String>).toList()
-                        ),
-                        hendelser = hendelser
-                    )
-                }
-            }
-        }
+//    fun hentMedHendelser(treff: TreffId): RekrutteringstreffDetaljOutboundDto? =
+//        dataSource.connection.use { c ->
+//            c.prepareStatement(
+//                """
+//                SELECT r.*,
+//                       COALESCE(
+//                           json_agg(
+//                               json_build_object(
+//                                   'id', h.id,
+//                                   'tidspunkt', to_char(h.tidspunkt,'YYYY-MM-DD"T"HH24:MI:SSOF'),
+//                                   'hendelsestype', h.hendelsestype,
+//                                   'opprettetAvAktørType', h.opprettet_av_aktortype,
+//                                   'aktørIdentifikasjon', h.aktøridentifikasjon
+//                               )
+//                           ) FILTER (WHERE h.id IS NOT NULL),
+//                           '[]'
+//                       ) AS hendelser
+//                FROM   rekrutteringstreff r
+//                LEFT JOIN rekrutteringstreff_hendelse h
+//                   ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
+//                WHERE  r.id = ?
+//                GROUP BY r.rekrutteringstreff_id
+//                """
+//            ).use { s ->
+//                s.setObject(1, treff.somUuid)
+//                s.executeQuery().let { rs ->
+//                    if (!rs.next()) return null
+//                    val hendelserJson = rs.getString("hendelser")
+//                    val hendelser = JacksonConfig.mapper.readValue(
+//                        hendelserJson,
+//                        object : TypeReference<List<RekrutteringstreffHendelseOutboundDto>>() {}
+//                    )
+//                    RekrutteringstreffDetaljOutboundDto(
+//                        rekrutteringstreff = RekrutteringstreffDto(
+//                            id = rs.getObject(id, UUID::class.java),
+//                            tittel = rs.getString(tittel),
+//                            beskrivelse = rs.getString(beskrivelse),
+//                            fraTid = rs.getTimestamp(fratid)?.toInstant()?.atOslo(),
+//                            tilTid = rs.getTimestamp(tiltid)?.toInstant()?.atOslo(),
+//                            svarfrist = rs.getTimestamp(svarfrist)?.toInstant()?.atOslo(),
+//                            gateadresse = rs.getString(gateadresse),
+//                            postnummer = rs.getString(postnummer),
+//                            poststed = rs.getString(poststed),
+//                            kommune = rs.getString(kommune),
+//                            kommunenummer = rs.getString(kommunenummer),
+//                            fylke = rs.getString(fylke),
+//                            fylkesnummer = rs.getString(fylkesnummer),
+//                            status = RekrutteringstreffStatus.valueOf(rs.getString(status)),
+//                            opprettetAvPersonNavident = rs.getString(opprettetAvPersonNavident),
+//                            opprettetAvNavkontorEnhetId = rs.getString(opprettetAvKontorEnhetid),
+//                            opprettetAvTidspunkt = rs.getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
+//                            antallArbeidsgivere = null,
+//                            antallJobbsøkere = null,
+//                            eiere = (rs.getArray(eiere).array as Array<String>).toList()
+//                        ),
+//                        hendelser = hendelser
+//                    )
+//                }
+//            }
+//        }
 
     /**
      * Liste over hendelser for gitt treffId – nyeste først
@@ -414,7 +419,6 @@ class RekrutteringstreffRepository(
             }
     }
 
-
     fun leggTilHendelse(
         c: Connection,
         treffDbId: Long,
@@ -479,6 +483,8 @@ class RekrutteringstreffRepository(
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
         opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
-        eiere = (getArray(eiere).array as Array<String>).toList()
+        eiere = (getArray(eiere).array as Array<String>).toList(),
+        sistEndret = getTimestamp(sistEndret).toInstant().atOslo(),
+        sistEndretAv = getString(sistEndretAv)
     )
 }

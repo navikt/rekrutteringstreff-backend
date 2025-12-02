@@ -168,7 +168,6 @@ class RekrutteringstreffServiceTest {
         assertThat(rekrutteringstreffEtterFullfør.status == RekrutteringstreffStatus.FULLFØRT).isTrue
     }
 
-
     @Test
     fun `skal committe transaksjon når avlys fullføres uten feil`() {
         // Arrange
@@ -284,7 +283,7 @@ class RekrutteringstreffServiceTest {
         val deserializedDto = mapper.readValue(hendelseData, EndringerDto::class.java)
         assertThat(deserializedDto.tittel).isNotNull()
         assertThat(deserializedDto.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedDto.tittel!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserializedDto.tittel.nyVerdi).isEqualTo("Ny tittel")
         assertThat(deserializedDto.fraTid).isNull() // Ikke endret
 
         val jobbsøkerHendelseData = hentJobbsøkerHendelseData(
@@ -296,7 +295,7 @@ class RekrutteringstreffServiceTest {
 
         val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, EndringerDto::class.java)
         assertThat(deserializedJobbsøker.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedJobbsøker.tittel!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserializedJobbsøker.tittel.nyVerdi).isEqualTo("Ny tittel")
     }
 
     @Test
@@ -312,7 +311,7 @@ class RekrutteringstreffServiceTest {
         // Assert - verifiser at eksisterende felt fungerer
         assertThat(deserialized.tittel).isNotNull()
         assertThat(deserialized.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserialized.tittel!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserialized.tittel.nyVerdi).isEqualTo("Ny tittel")
 
         // Verifiser at manglende felt er null
         assertThat(deserialized.fraTid).isNull()
