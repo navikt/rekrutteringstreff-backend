@@ -485,6 +485,6 @@ class RekrutteringstreffRepository(
         opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
         eiere = (getArray(eiere).array as Array<String>).toList(),
         sistEndret = getTimestamp(sistEndret).toInstant().atOslo(),
-        sistEndretAv = getString(sistEndretAv)
+        sistEndretAv = getString(sistEndretAv) ?: "Ukjent",
     )
 }
