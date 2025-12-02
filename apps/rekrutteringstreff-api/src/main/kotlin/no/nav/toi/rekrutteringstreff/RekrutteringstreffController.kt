@@ -2,18 +2,15 @@ package no.nav.toi.rekrutteringstreff
 
 import io.javalin.Javalin
 import io.javalin.http.Context
+import io.javalin.http.ForbiddenResponse
+import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
-import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
-import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.dto.*
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -231,9 +228,19 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = TreffId(ctx.pathParam("id"))
         val dto = ctx.bodyAsClass<OppdaterRekrutteringstreffDto>()
-        rekrutteringstreffRepository.oppdater(id, dto, ctx.extractNavIdent())
-        val updated = rekrutteringstreffService.hentRekrutteringstreff(id)
-        ctx.status(200).json(updated)
+
+        //Verifiser at personen er eier av treffet eller har utvikler-tilgang
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(id)
+            ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke oppdatere")
+        val navIdent = ctx.extractNavIdent()
+
+        if (rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            rekrutteringstreffRepository.oppdater(id, dto, navIdent)
+            val updated = rekrutteringstreffService.hentRekrutteringstreff(id)
+            ctx.status(200).json(updated)
+        } else {
+            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke oppdatere det")
+        }
     }
 
     @OpenApi(
@@ -259,8 +266,16 @@ class RekrutteringstreffController(
     private fun slettRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = TreffId(ctx.pathParam("id"))
-        rekrutteringstreffRepository.slett(id)
-        ctx.status(200).result("Rekrutteringstreff slettet")
+        //Verifiser at personen er eier av treffet eller har utvikler-tilgang
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(id)
+            ?: throw NotFoundResponse("Rekrutteringstreff finnes ikke, kan ikke slette")
+        val navIdent = ctx.extractNavIdent()
+        if (rekrutteringstreff.eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+            rekrutteringstreffRepository.slett(id)
+            ctx.status(200).result("Rekrutteringstreff slettet")
+        } else {
+            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke slette det")
+        }
     }
 
     @OpenApi(
@@ -303,7 +318,7 @@ class RekrutteringstreffController(
     )
     private fun hentAlleHendelserHandler(): (Context) -> Unit = { ctx ->
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val list  = rekrutteringstreffRepository.hentAlleHendelser(treff)
+        val list = rekrutteringstreffRepository.hentAlleHendelser(treff)
         ctx.status(200).json(list)
     }
 
@@ -313,7 +328,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = publiserPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Publiseringshendelse er lagt til.")]
     )
     private fun publiserRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -331,7 +350,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = gjenapnPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Gjenåpningshendelse er lagt til.")]
     )
     private fun gjenåpneRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -348,7 +371,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = avlysPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Avlysningshendelse er lagt til.")]
     )
     private fun avlysRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -365,7 +392,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = avpubliserPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Avpubliseringshendelse er lagt til.")]
     )
     private fun avpubliserRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -382,7 +413,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = fullforPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         responses = [OpenApiResponse(status = "200", description = "Fullføringshendelse er lagt til.")]
     )
     private fun fullforRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
@@ -399,7 +434,11 @@ class RekrutteringstreffController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         path = endringerPath,
         methods = [HttpMethod.POST],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, description = "ID for rekrutteringstreffet")],
+        pathParams = [OpenApiParam(
+            name = pathParamTreffId,
+            type = UUID::class,
+            description = "ID for rekrutteringstreffet"
+        )],
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
                 from = EndringerDto::class,

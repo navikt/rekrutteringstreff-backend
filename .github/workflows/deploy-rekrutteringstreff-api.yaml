@@ -13,7 +13,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/bruk-minside-svar-hendelser
+      deploy_dev_branch: refs/heads/sjekk_om_veileder_er_i_pilot
     secrets: inherit
     permissions:
       contents: read

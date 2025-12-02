@@ -4,24 +4,28 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
+import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import org.assertj.core.api.Assertions.*
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.*
 import java.net.ServerSocket
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 
 
 private object InnleggDeserializer : ResponseDeserializable<InnleggResponseDto> {
     override fun deserialize(content: String): InnleggResponseDto =
         JacksonConfig.mapper.readValue(content, InnleggResponseDto::class.java)
 }
-
 private object InnleggListeDeserializer : ResponseDeserializable<List<InnleggResponseDto>> {
     override fun deserialize(content: String): List<InnleggResponseDto> =
         JacksonConfig.mapper.readValue(
@@ -30,7 +34,7 @@ private object InnleggListeDeserializer : ResponseDeserializable<List<InnleggRes
         )
 }
 
-
+@WireMockTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InnleggTest {
 
@@ -38,30 +42,73 @@ class InnleggTest {
     private val authPort = 18013
     private val db = TestDatabase()
     private val appPort = TestUtils.getFreePort()
-    private val app = App(
-        port = appPort,
-        authConfigs = listOf(
-            AuthenticationConfiguration(
-                issuer = "http://localhost:$authPort/default",
-                jwksUri = "http://localhost:$authPort/default/jwks",
-                audience = "rekrutteringstreff-audience"
-            )
-        ),
-        dataSource = db.dataSource,
-        arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-        utvikler = AzureAdRoller.utvikler,
-        kandidatsokApiUrl = "",
-        kandidatsokScope = "",
-        azureClientId = "",
-        azureClientSecret = "",
-        azureTokenEndpoint = "",
-        TestRapid(),
-        httpClient = httpClient
-    )
+    private lateinit var app: App
 
-    @BeforeAll fun start() { auth.start(port = authPort); app.start() }
-    @AfterAll  fun stop()  { auth.shutdown(); app.close() }
-    @AfterEach fun clean() { db.slettAlt() }
+    @BeforeAll
+    fun start(wmInfo: WireMockRuntimeInfo) {
+        val accessTokenClient = AccessTokenClient(
+            clientId = "clientId",
+            secret = "clientSecret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+
+        app = App(
+            port = appPort,
+            authConfigs = listOf(
+                AuthenticationConfiguration(
+                    issuer = "http://localhost:$authPort/default",
+                    jwksUri = "http://localhost:$authPort/default/jwks",
+                    audience = "rekrutteringstreff-audience"
+                )
+            ),
+            dataSource = db.dataSource,
+            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
+            utvikler = AzureAdRoller.utvikler,
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
+        auth.start(port = authPort)
+    }
+
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
+    }
+
+    @AfterAll
+    fun stop() {
+        auth.shutdown()
+        app.close()
+    }
+
+    @AfterEach
+    fun clean() {
+        db.slettAlt()
+    }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
 

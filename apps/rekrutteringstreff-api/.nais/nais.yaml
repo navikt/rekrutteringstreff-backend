@@ -41,6 +41,8 @@ spec:
     outbound:
       rules:
         - application: rekrutteringsbistand-kandidatsok-api
+        - application: modiacontextholder
+          namespace: personoversikt
       external:
         - host: fakedings.intern.dev.nav.no
         - host: {{ openai_azure_host }}
@@ -57,6 +59,7 @@ spec:
           - NAVident
         groups:
           - id: {{ adGruppeUtvikler }}
+          - id: {{ adGruppeArbeidsgiverrettet }}
   kafka:
     pool: {{ kafka_pool }}
   gcp:
@@ -77,10 +80,16 @@ spec:
       value: {{kandidatsok_api_url}}
     - name: KANDIDATSOK_API_SCOPE
       value: {{kandidatsok_api_scope}}
+    - name: MODIACONTEXTHOLDER_URL
+      value: {{modiacontextholder_url}}
+    - name: MODIACONTEXTHOLDER_SCOPE
+      value: {{modiacontextholder_scope}}
     - name: KAFKA_RAPID_TOPIC
       value: toi.rapid-1
     - name: KAFKA_CONSUMER_GROUP_ID
       value: {{kafka_consumer_group_id}}
+    - name: PILOTKONTORER
+      value: {{pilotkontorer}}
   observability:
     logging:
       destinations:

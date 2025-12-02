@@ -4,6 +4,12 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
@@ -11,6 +17,7 @@ import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -21,19 +28,34 @@ import java.util.*
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class RekrutteringstreffEierTest {
 
     val mapper = JacksonConfig.mapper
 
     companion object {
         private val authServer = MockOAuth2Server()
-        private val authPort = 18012
+        private val authPort = 18018
         private val database = TestDatabase()
         private val appPort = ubruktPortnr()
         private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
         private val eierRepository = EierRepository(database.dataSource)
 
-        private val app = App(
+        private val accessTokenClient = AccessTokenClient(
+            clientId = "clientId",
+            secret = "clientSecret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+
+        private lateinit var app: App
+    }
+
+    @BeforeAll
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
+        authServer.start(port = authPort)
+
+        app = App(
             port = appPort,
             authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -47,19 +69,39 @@ class RekrutteringstreffEierTest {
             utvikler,
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
-            azureClientId = "",
-            azureClientSecret = "",
-            azureTokenEndpoint = "",
-            TestRapid(),
-            httpClient = httpClient
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
         )
-    }
 
-    @BeforeAll
-    fun setUp() {
-        authServer.start(port = authPort)
+
         app.start()
         waitForServerToBeReady()
+    }
+
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
     }
 
     @AfterAll
@@ -194,11 +236,13 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    fun slettEier() {
+    fun `Slett eier er lov hvis det er flere eiere`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"))
+
         val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
@@ -210,6 +254,21 @@ class RekrutteringstreffEierTest {
                 assertThat(eiere).doesNotContain(navIdent)
             }
         }
+    }
+
+    @Test
+    fun `Slett eier hvis det bare er 1 eier skal gi bad request`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
+        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(400, response, result)
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).contains(navIdent)
     }
 
     @Test

@@ -4,12 +4,20 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -19,8 +27,8 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class JobbsøkerTest {
 
     companion object {
@@ -29,7 +37,22 @@ class JobbsøkerTest {
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
 
-        private val app = App(
+        private lateinit var app: App
+
+        val mapper = JacksonConfig.mapper
+    }
+
+    private val eierRepository = EierRepository(db.dataSource)
+
+    @BeforeAll
+    fun setUp(wmInfo: WireMockRuntimeInfo)  {
+        val accessTokenClient = AccessTokenClient(
+            clientId = "client-id",
+            secret = "secret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+        app = App(
             port = appPort,
             authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -43,20 +66,36 @@ class JobbsøkerTest {
             utvikler = AzureAdRoller.utvikler,
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
-            azureClientId = "",
-            azureClientSecret = "",
-            azureTokenEndpoint = "",
-            TestRapid(),
-            httpClient = httpClient
-        )
-
-        val mapper = JacksonConfig.mapper
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
+        authServer.start(port = authPort)
     }
 
-    @BeforeAll
-    fun setUp() {
-        authServer.start(port = authPort)
-        app.start()
+    @BeforeEach
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
+                )
+        )
     }
 
     @AfterAll
@@ -190,6 +229,7 @@ class JobbsøkerTest {
         db.leggTilJobbsøkere(jobbsøkere3)
         assertThat(db.hentAlleRekrutteringstreff().size).isEqualTo(3)
         assertThat(db.hentAlleJobbsøkere().size).isEqualTo(4)
+        eierRepository.leggTil(treffId2, listOf("A123456"))
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
@@ -235,6 +275,8 @@ class JobbsøkerTest {
       "veilederNavIdent" : "NAV007"
     }]
 """.trimIndent()
+        eierRepository.leggTil(treffId, listOf("testperson"))
+
         val (_, postResponse, postResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
             .body(requestBody)
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -300,6 +342,8 @@ class JobbsøkerTest {
                 Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.kandidatnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent,JobbsøkerStatus.LAGT_TIL)
             )
         )
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseObject(object : ResponseDeserializable<List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>> {
@@ -353,6 +397,8 @@ class JobbsøkerTest {
         val requestBody = """
         { "personTreffIder": ["${personTreffIder.first()}", "${personTreffIder.last()}"] }
     """.trimIndent()
+
+        eierRepository.leggTil(treffId, listOf("A123456"))
 
         val (_, r, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body(requestBody)

@@ -9,16 +9,15 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.HttpURLConnection
 import java.util.*
 
-private const val WIREMOCK_PORT = 10010
-private const val WIREMOCK_BASE = "http://localhost:$WIREMOCK_PORT"
-
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@WireMockTest(httpPort = WIREMOCK_PORT)
+@WireMockTest
 class JobbsøkerOutboundTest {
 
     private val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -29,12 +28,21 @@ class JobbsøkerOutboundTest {
     private val appPort = ubruktPortnrFra10000.ubruktPortnr()
     private val issuerId = "http://localhost:$authPort/default"
     private val audience = "rekrutteringstreff-audience"
+    private val jwksUri = "http://localhost:$authPort/default/jwks"
+
+    private val eierRepository = EierRepository(db.dataSource)
 
     private lateinit var app: App
 
     @BeforeAll
     fun startApp(wmInfo: WireMockRuntimeInfo) {
         authServer.start(authPort)
+        val accessTokenClient = AccessTokenClient(
+            clientId = "client-id",
+            secret = "secret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
 
         app = App(
             port = appPort,
@@ -42,28 +50,41 @@ class JobbsøkerOutboundTest {
                 AuthenticationConfiguration(
                     audience = audience,
                     issuer = issuerId,
-                    jwksUri = authServer.jwksUrl(issuerId.substringAfterLast("/")).toString()
+                    jwksUri = jwksUri
                 )
             ),
             dataSource = db.dataSource,
             arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
             utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = WIREMOCK_BASE,
+            kandidatsokApiUrl = wmInfo.httpBaseUrl,
             kandidatsokScope = "scope",
-            azureClientId = "client-id",
-            azureClientSecret = "secret",
-            azureTokenEndpoint = "${wmInfo.httpBaseUrl}/token",
-            TestRapid(),
-            httpClient = httpClient
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
         ).also { it.start() }
     }
 
     @BeforeEach
     fun setupStubs() {
         stubFor(
-            post(urlPathEqualTo("/token"))
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
                 .willReturn(
-                    aResponse().withBody("""{"access_token": "obo-token", "expires_in": 3600}""")
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                                "aktivEnhet": "1234"
+                            }
+                            """.trimIndent()
+                        )
                 )
         )
     }
@@ -87,6 +108,8 @@ class JobbsøkerOutboundTest {
         val fnr = Fødselsnummer("12345678910")
         val forventetKandidatnummer = "K123456"
 
+        eierRepository.leggTil(treffId, listOf("A000001"))
+
         db.leggTilJobbsøkere(
             listOf(
                 Jobbsøker(
@@ -108,7 +131,7 @@ class JobbsøkerOutboundTest {
 
         stubFor(
             post("/api/arena-kandidatnr")
-                .withHeader("Authorization", equalTo("Bearer obo-token"))
+                .withHeader("Authorization", matching("Bearer .*"))
                 .withRequestBody(equalToJson("""{"fodselsnummer":"${fnr.asString}"}"""))
                 .willReturn(
                     okJson("""{"arenaKandidatnr":"$forventetKandidatnummer"}""")
@@ -125,7 +148,7 @@ class JobbsøkerOutboundTest {
             .serialize()
 
         val (_, response, result) = Fuel
-            .get("http://localhost:$appPort$endepunktRekrutteringstreff/jobbsoker/$personTreffId/kandidatnummer")
+            .get("http://localhost:$appPort$endepunktRekrutteringstreff/$treffId/jobbsoker/$personTreffId/kandidatnummer")
             .header("Authorization", "Bearer $token")
             .responseObject<KandidatnummerDto>()
 
@@ -134,6 +157,5 @@ class JobbsøkerOutboundTest {
             .isEqualTo(forventetKandidatnummer)
 
         verify(1, postRequestedFor(urlEqualTo("/api/arena-kandidatnr")))
-        verify(1, postRequestedFor(urlEqualTo("/token")))
     }
 }
