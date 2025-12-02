@@ -18,6 +18,7 @@ import no.nav.toi.jobbsoker.JobbsøkerController
 import no.nav.toi.jobbsoker.JobbsøkerInnloggetBorgerController
 import no.nav.toi.jobbsoker.JobbsøkerOutboundController
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
 import no.nav.toi.kandidatsok.KandidatsøkKlient
@@ -230,7 +231,15 @@ class App(
     fun startRR(jobbsøkerRepository: JobbsøkerRepository) {
         log.info("Starting RapidsConnection")
         AktivitetskortFeilLytter(rapidsConnection, jobbsøkerRepository)
-        Thread(rapidsConnection::start).start()
+        MinsideVarselSvarLytter(rapidsConnection, jobbsøkerRepository, JacksonConfig.mapper)
+        Thread {
+            try {
+                rapidsConnection.start()
+            } catch (e: Exception) {
+                log.error("RapidsConnection feilet, avslutter applikasjonen", e)
+                System.exit(1)
+            }
+        }.start()
     }
 
     fun close() {
@@ -246,7 +255,7 @@ private val log = noClassLogger()
 
 fun main() {
     val dataSource = createDataSource()
-    val rapidsConnection = RapidApplication.create(System.getenv())
+    val rapidsConnection = RapidApplication.create(System.getenv(), builder = { withHttpPort(9000) })
 
     val httpClient: HttpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)

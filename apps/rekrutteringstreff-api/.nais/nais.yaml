@@ -14,8 +14,10 @@ spec:
   {{/each}}
   liveness:
     path: /isalive
+    port: 8080
   readiness:
     path: /isready
+    port: 8080
   prometheus:
     enabled: true
     path: /metrics

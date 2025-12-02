@@ -424,4 +424,55 @@ class JobbsøkerTest {
         assertThat(inviterteFødselsnumre)
             .containsExactlyInAnyOrder(fnr1, fnr2)
     }
+
+    @Test
+    fun `hentJobbsøker skal inkludere hendelseData i responsen`() {
+        val repository = JobbsøkerRepository(db.dataSource, mapper)
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        // Legg til jobbsøker
+        val jobbsøker = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()),
+            treffId,
+            fødselsnummer,
+            Kandidatnummer("K123"),
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            null, null, null,
+            JobbsøkerStatus.LAGT_TIL
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker))
+
+        // Registrer hendelse med data via repository
+        val hendelseDataJson = """{"fnr": "12345678901", "svar": "JA"}"""
+        repository.registrerMinsideVarselSvar(fødselsnummer, treffId, "SYSTEM", hendelseDataJson)
+
+        // Hent jobbsøkere via API
+        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
+                override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
+                    return mapper.readValue(content, mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java))
+                }
+            })
+
+        assertThat(response.statusCode).isEqualTo(HTTP_OK)
+
+        when (result) {
+            is Failure -> throw result.error
+            is Success -> {
+                val jobbsøkere = result.value
+                assertThat(jobbsøkere).hasSize(1)
+                val js = jobbsøkere.first()
+
+                val hendelse = js.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE.name }
+                assertThat(hendelse).isNotNull
+                assertThat(hendelse!!.hendelseData).isNotNull
+                assertThat(hendelse.hendelseData!!.get("fnr").asText()).isEqualTo("12345678901")
+                assertThat(hendelse.hendelseData!!.get("svar").asText()).isEqualTo("JA")
+            }
+        }
+    }
 }

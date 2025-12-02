@@ -299,7 +299,8 @@ class JobbsøkerController(
                         tidspunkt = h.tidspunkt,
                         hendelsestype = h.hendelsestype.toString(),
                         opprettetAvAktørType = h.opprettetAvAktørType.toString(),
-                        aktørIdentifikasjon = h.aktørIdentifikasjon
+                        aktørIdentifikasjon = h.aktørIdentifikasjon,
+                        hendelseData = h.hendelseData
                     )
                 }
             )
