@@ -6,10 +6,11 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.executeInTransaction
 import no.nav.toi.log
+import no.nav.toi.rekrutteringstreff.MalParameter
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -138,8 +139,48 @@ class AktivitetskortJobbsøkerScheduler(
 
             val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
+            // Send aktivitetskort-oppdatering (alle endringer)
             sendAktivitetskortOppdatering(treff, hendelse.fnr, hendelse.rekrutteringstreffUuid, hendelse.hendelseId, hendelse.aktøridentifikasjon)
+
+            // Send MinSide varsling kun for endringer med skalVarsle=true
+            hendelse.hendelseData?.let { data ->
+                val endringer = objectMapper.readValue(data, Rekrutteringstreffendringer::class.java)
+                val malParametere = endringer.utledMalParametere()
+                if (malParametere.isNotEmpty()) {
+                    sendMinsideVarsling(
+                        rekrutteringstreffId = hendelse.rekrutteringstreffUuid,
+                        fnr = hendelse.fnr,
+                        hendelseId = hendelse.hendelseId,
+                        endretAv = hendelse.aktøridentifikasjon,
+                        malParametere = malParametere
+                    )
+                }
+            }
         }
+    }
+
+    private fun sendMinsideVarsling(
+        rekrutteringstreffId: String,
+        fnr: String,
+        hendelseId: UUID,
+        endretAv: String?,
+        malParametere: List<MalParameter>
+    ) {
+        val messageMap = buildMap<String, Any> {
+            put("rekrutteringstreffId", rekrutteringstreffId)
+            put("fnr", fnr)
+            put("hendelseId", hendelseId.toString())
+            put("malParametere", malParametere.map { it.name })
+            endretAv?.let { put("endretAv", it) }
+        }
+
+        val message = JsonMessage.newMessage(
+            eventName = "rekrutteringstreffoppdatering",
+            map = messageMap
+        )
+
+        rapidsConnection.publish(fnr, message.toJson())
+        log.info("Sendt MinSide-varsling for treff $rekrutteringstreffId med malParametere=${malParametere.map { it.name }}")
     }
 
     private fun hentTreff(rekrutteringstreffUuid: String): Rekrutteringstreff =

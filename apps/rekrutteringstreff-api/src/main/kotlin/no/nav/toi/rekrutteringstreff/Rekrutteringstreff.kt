@@ -3,7 +3,6 @@ package no.nav.toi.rekrutteringstreff
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdatering
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffSvarOgStatus
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -93,16 +92,7 @@ class Rekrutteringstreff(
         endretAv = avsenderNavident
     )
 
-    fun harRelevanteEndringerForAktivitetskort(endringer: EndringerDto): Boolean {
-        return endringer.tittel != null ||
-               endringer.fraTid != null ||
-               endringer.tilTid != null ||
-               endringer.postnummer != null ||
-               endringer.poststed != null ||
-               endringer.gateadresse != null
-    }
-
-    fun verifiserEndringerMotDatabase(endringer: EndringerDto): VerificationResult {
+    fun verifiserEndringerMotDatabase(endringer: Rekrutteringstreffendringer): VerificationResult {
         val feil = mutableListOf<String>()
 
         endringer.tittel?.let {

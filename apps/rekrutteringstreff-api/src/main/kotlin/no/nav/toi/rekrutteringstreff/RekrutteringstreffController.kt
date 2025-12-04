@@ -441,7 +441,7 @@ class RekrutteringstreffController(
         )],
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
-                from = EndringerDto::class,
+                from = Rekrutteringstreffendringer::class,
                 example = """{
                     "tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"},
                     "beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse"},
@@ -468,8 +468,8 @@ class RekrutteringstreffController(
 
             // TODO: Sjekk at treffet er publisert når statuser er bedre implementert i bakend
 
-            val dto = ctx.bodyAsClass<EndringerDto>()
-            val endringerJson = JacksonConfig.mapper.writeValueAsString(dto)
+            val endringer = ctx.bodyAsClass<Rekrutteringstreffendringer>()
+            val endringerJson = JacksonConfig.mapper.writeValueAsString(endringer)
 
             service.registrerEndring(treffId, endringerJson, navIdent)
             ctx.status(201)
