@@ -430,6 +430,7 @@ class JobbsøkerTest {
         val repository = JobbsøkerRepository(db.dataSource, mapper)
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
         val fødselsnummer = Fødselsnummer("12345678901")
 
         // Legg til jobbsøker
