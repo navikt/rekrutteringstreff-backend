@@ -63,6 +63,8 @@ class PilotkontorTest {
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
             rapidsConnection = TestRapid(),
+            isRunning = {true},
+            isReady = {true},
             accessTokenClient = AccessTokenClient(
                 clientId = "client-id",
                 secret = "secret",

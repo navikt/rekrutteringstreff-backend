@@ -1,6 +1,8 @@
 package no.nav.toi
 
-import com.fasterxml.jackson.core.type.TypeReference
+import com.github.navikt.tbd_libs.kafka.AivenConfig
+import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
+import com.github.navikt.tbd_libs.rapids_and_rivers.KafkaRapid
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -9,7 +11,7 @@ import io.javalin.config.JavalinConfig
 import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
-import no.nav.helse.rapids_rivers.RapidApplication
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
@@ -49,6 +51,8 @@ class App(
     private val utvikler: UUID,
     private val kandidatsokKlient: KandidatsøkKlient,
     private val rapidsConnection: RapidsConnection,
+    private val isRunning: () -> Boolean,
+    private val isReady: () -> Boolean,
     private val modiaKlient: ModiaKlient,
     private val pilotkontorer: List<String>
 ) {
@@ -61,6 +65,8 @@ class App(
         kandidatsokApiUrl: String,
         kandidatsokScope: String,
         rapidsConnection: RapidsConnection,
+        isRunning: () -> Boolean,
+        isReady: () -> Boolean,
         accessTokenClient: AccessTokenClient,
         modiaKlient: ModiaKlient,
         pilotkontorer: List<String>,
@@ -76,6 +82,8 @@ class App(
             accessTokenClient = accessTokenClient
         ),
         rapidsConnection = rapidsConnection,
+        isRunning = isRunning,
+        isReady = isReady,
         modiaKlient = modiaKlient,
         pilotkontorer = pilotkontorer
     )
@@ -155,7 +163,7 @@ class App(
             )
         }
 
-        javalin.handleHealth()
+        javalin.handleHealth(isRunning, isReady)
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             authConfigs = authConfigs,
             rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler),
@@ -255,7 +263,12 @@ private val log = noClassLogger()
 
 fun main() {
     val dataSource = createDataSource()
-    val rapidsConnection = RapidApplication.create(System.getenv(), builder = { withHttpPort(9000) })
+    val rapidsConnection = KafkaRapid(
+        factory = ConsumerProducerFactory(AivenConfig.default),
+        groupId = getenv("KAFKA_CONSUMER_GROUP_ID"),
+        rapidTopic = getenv("KAFKA_RAPID_TOPIC"),
+        meterRegistry = SimpleMeterRegistry()
+    )
 
     val httpClient: HttpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
@@ -305,6 +318,8 @@ fun main() {
         kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
         kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
         rapidsConnection = rapidsConnection,
+        isRunning = rapidsConnection::isRunning,
+        isReady = rapidsConnection::isReady,
         accessTokenClient = accessTokenClient,
         modiaKlient = modiaKlient,
         pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() }

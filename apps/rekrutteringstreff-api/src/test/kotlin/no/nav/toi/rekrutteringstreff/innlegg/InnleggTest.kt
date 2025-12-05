@@ -68,6 +68,8 @@ class InnleggTest {
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
             rapidsConnection = TestRapid(),
+            isRunning = {true},
+            isReady = {true},
             accessTokenClient = accessTokenClient,
             modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,

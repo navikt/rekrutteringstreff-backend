@@ -59,6 +59,8 @@ class JobbsøkerOutboundTest {
             kandidatsokApiUrl = wmInfo.httpBaseUrl,
             kandidatsokScope = "scope",
             rapidsConnection = TestRapid(),
+            isRunning = {true},
+            isReady = {true},
             accessTokenClient = accessTokenClient,
             modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,

@@ -35,6 +35,8 @@ class KubernetesHealthTest {
         kandidatsokApiUrl = "",
         kandidatsokScope = "",
         rapidsConnection = TestRapid(),
+        isRunning = {true},
+        isReady = {true},
         accessTokenClient = AccessTokenClient(
             clientId = "clientId",
             secret = "clientSecret",
