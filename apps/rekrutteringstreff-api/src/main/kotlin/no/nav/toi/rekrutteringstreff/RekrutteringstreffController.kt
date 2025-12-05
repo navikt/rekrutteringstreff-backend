@@ -441,17 +441,16 @@ class RekrutteringstreffController(
         )],
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
-                from = EndringerDto::class,
+                from = Rekrutteringstreffendringer::class,
                 example = """{
-                    "tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"},
-                    "beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse"},
-                    "fraTid": {"gammelVerdi": "2025-06-15T09:00:00+02:00", "nyVerdi": "2025-06-15T10:00:00+02:00"},
-                    "tilTid": {"gammelVerdi": "2025-06-15T11:00:00+02:00", "nyVerdi": "2025-06-15T12:00:00+02:00"},
-                    "svarfrist": null,
-                    "gateadresse": {"gammelVerdi": null, "nyVerdi": "Ny gate 123"},
-                    "postnummer": {"gammelVerdi": "0566", "nyVerdi": "0567"},
-                    "poststed": {"gammelVerdi": "Oslo", "nyVerdi": "Oslo"},
-                    "innlegg": null
+                    "tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
+                    "fraTid": {"gammelVerdi": "2025-06-15T09:00:00+02:00", "nyVerdi": "2025-06-15T10:00:00+02:00", "skalVarsle": true},
+                    "tilTid": {"gammelVerdi": "2025-06-15T11:00:00+02:00", "nyVerdi": "2025-06-15T12:00:00+02:00", "skalVarsle": false},
+                    "svarfrist": {"gammelVerdi": "2025-06-10T23:59:00+02:00", "nyVerdi": "2025-06-12T23:59:00+02:00", "skalVarsle": true},
+                    "gateadresse": {"gammelVerdi": null, "nyVerdi": "Ny gate 123", "skalVarsle": true},
+                    "postnummer": {"gammelVerdi": "0566", "nyVerdi": "0567", "skalVarsle": false},
+                    "poststed": {"gammelVerdi": "Oslo", "nyVerdi": "Oslo", "skalVarsle": false},
+                    "innlegg": {"gammelVerdi": "Gammelt innlegg", "nyVerdi": "Nytt innlegg", "skalVarsle": true}
             }"""
             )]
         ),
@@ -468,8 +467,8 @@ class RekrutteringstreffController(
 
             // TODO: Sjekk at treffet er publisert når statuser er bedre implementert i bakend
 
-            val dto = ctx.bodyAsClass<EndringerDto>()
-            val endringerJson = JacksonConfig.mapper.writeValueAsString(dto)
+            val endringer = ctx.bodyAsClass<Rekrutteringstreffendringer>()
+            val endringerJson = JacksonConfig.mapper.writeValueAsString(endringer)
 
             service.registrerEndring(treffId, endringerJson, navIdent)
             ctx.status(201)

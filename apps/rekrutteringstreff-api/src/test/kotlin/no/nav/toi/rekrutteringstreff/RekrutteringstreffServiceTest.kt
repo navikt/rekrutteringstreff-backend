@@ -14,7 +14,6 @@ import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.nowOslo
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -280,8 +279,8 @@ class RekrutteringstreffServiceTest {
         )
         assertThat(hendelseData).isNotNull()
 
-        // Deserialiser EndringerDto
-        val deserializedDto = mapper.readValue(hendelseData, EndringerDto::class.java)
+        // Deserialiser Rekrutteringstreffendringer
+        val deserializedDto = mapper.readValue(hendelseData, Rekrutteringstreffendringer::class.java)
         assertThat(deserializedDto.tittel).isNotNull()
         assertThat(deserializedDto.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
         assertThat(deserializedDto.tittel!!.nyVerdi).isEqualTo("Ny tittel")
@@ -294,7 +293,7 @@ class RekrutteringstreffServiceTest {
         )
         assertThat(jobbsøkerHendelseData).isNotNull()
 
-        val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, EndringerDto::class.java)
+        val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, Rekrutteringstreffendringer::class.java)
         assertThat(deserializedJobbsøker.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
         assertThat(deserializedJobbsøker.tittel!!.nyVerdi).isEqualTo("Ny tittel")
     }
@@ -307,7 +306,7 @@ class RekrutteringstreffServiceTest {
         val jsonMedNoenFelt = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
 
         // Act
-        val deserialized = mapper.readValue(jsonMedNoenFelt, EndringerDto::class.java)
+        val deserialized = mapper.readValue(jsonMedNoenFelt, Rekrutteringstreffendringer::class.java)
 
         // Assert - verifiser at eksisterende felt fungerer
         assertThat(deserialized.tittel).isNotNull()
@@ -330,7 +329,7 @@ class RekrutteringstreffServiceTest {
         }"""
 
         // Act - deserialiserer JSON med ukjent felt (skal ikke kaste exception)
-        val deserialized = mapper.readValue(jsonMedEkstraFelt, EndringerDto::class.java)
+        val deserialized = mapper.readValue(jsonMedEkstraFelt, Rekrutteringstreffendringer::class.java)
 
         // Assert - verifiser at kjente felt fungerer
         assertThat(deserialized.tittel).isNotNull()
