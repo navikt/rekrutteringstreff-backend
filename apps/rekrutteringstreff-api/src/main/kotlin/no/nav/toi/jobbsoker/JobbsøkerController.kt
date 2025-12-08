@@ -14,8 +14,7 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -23,7 +22,7 @@ import java.util.*
 
 class JobbsøkerController(
     private val jobbsøkerRepository: JobbsøkerRepository,
-    private val eierRepository: EierRepository,
+    private val eierService: EierService,
     javalin: Javalin
 ) {
     companion object {
@@ -144,9 +143,7 @@ class JobbsøkerController(
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        val eiere = eierRepository.hent(treff)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id $treff har ingen eiere")
-
-        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if(eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treff)
             ctx.status(200).json(jobbsøkere.toOutboundDto())
         } else {
@@ -170,20 +167,24 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(UUID.fromString(ctx.pathParam(pathParamTreffId)))
         val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
-        log.info("Sletter jobbsøker $jobbsøkerId for treff $treffId")
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
-        if (fødselsnummer == null) {
-            log.info("Fant ikke jobbsøker med id $jobbsøkerId for treff $treffId")
-            ctx.status(404)
-        } else {
-            val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
-            if (jobbsøker!!.status != JobbsøkerStatus.LAGT_TIL) {
-                // Vi støtter kun sletting av jobbsøkere som er i "LAGT_TIL" status
-                ctx.status(422)
+        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            log.info("Sletter jobbsøker $jobbsøkerId for treff $treffId")
+
+            val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
+            if (fødselsnummer == null) {
+                log.info("Fant ikke jobbsøker med id $jobbsøkerId for treff $treffId")
+                ctx.status(404)
             } else {
-                jobbsøkerRepository.endreStatus(jobbsøkerId.somUuid, JobbsøkerStatus.SLETTET)
-                ctx.status(200)
+                val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
+                if (jobbsøker!!.status != JobbsøkerStatus.LAGT_TIL) {
+                    // Vi støtter kun sletting av jobbsøkere som er i "LAGT_TIL" status
+                    ctx.status(422)
+                } else {
+                    jobbsøkerRepository.endreStatus(jobbsøkerId.somUuid, JobbsøkerStatus.SLETTET)
+                    ctx.status(200)
+                }
             }
         }
     }
@@ -225,9 +226,8 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
-        val eiere = eierRepository.hent(treff)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id $treff har ingen eiere")
 
-        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if(eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             log.info("Henter jobbsøkerhendelser for treff $treff")
             val hendelser = jobbsøkerRepository.hentJobbsøkerHendelser(treff)
             ctx.status(200).json(hendelser.map { h ->
@@ -271,9 +271,7 @@ class JobbsøkerController(
         val personTreffIder = dto.personTreffIder
         val navIdent = ctx.extractNavIdent()
 
-        val eiere = eierRepository.hent(treffId)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id $treffId har ingen eiere")
-
-        if(eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             jobbsøkerRepository.inviter(personTreffIder, treffId, navIdent)
             ctx.status(200)
         } else {

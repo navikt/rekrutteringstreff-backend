@@ -145,7 +145,7 @@ class AppExceptionHandlingTest {
     }
 
     @Test
-    fun `Oppdatering av treff som ikke finnes gir 404 (NotFoundException)`() {
+    fun `Oppdatering av treff som ikke finnes og dermed ingen eiere gir 500`() {
         val ikkeEksisterendeId = UUID.randomUUID()
         val json = """{
             "tittel":"Test",
@@ -165,8 +165,8 @@ class AppExceptionHandlingTest {
             .PUT(HttpRequest.BodyPublishers.ofString(json))
             .build()
 
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
-        assertThat(response.statusCode()).isEqualTo(404)
+        assertThat(response.statusCode()).isEqualTo(500)
     }
 }

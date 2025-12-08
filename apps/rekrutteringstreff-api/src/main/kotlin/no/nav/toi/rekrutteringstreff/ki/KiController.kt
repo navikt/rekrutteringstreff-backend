@@ -10,6 +10,7 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
+import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
 import java.time.ZonedDateTime
@@ -74,6 +75,7 @@ class KiController (
     )
     private fun validerOgLoggHandlerGammel(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        log.info("Gammet endepunkt for validering KI")
         val req = ctx.bodyAsClass<ValiderMedLoggRequestDto>()
         val treffId = UUID.fromString(req.treffId)
         val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =

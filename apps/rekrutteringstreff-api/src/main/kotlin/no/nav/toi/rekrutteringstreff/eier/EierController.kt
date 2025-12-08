@@ -1,27 +1,20 @@
 package no.nav.toi.rekrutteringstreff.eier
 
-import io.javalin.http.bodyAsClass
-
 
 import io.javalin.Javalin
-import io.javalin.http.BadRequestResponse
-import io.javalin.http.Context
-import io.javalin.http.ForbiddenResponse
-import io.javalin.http.NotFoundResponse
+import io.javalin.http.*
 import io.javalin.openapi.*
-import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilJson
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
-import java.lang.IllegalStateException
 import java.util.*
 
 
 class EierController(
     private val eierRepository: EierRepository,
+    private val eierService: EierService,
     javalin: Javalin
 ) {
     companion object {
@@ -49,13 +42,17 @@ class EierController(
     )
     private fun leggTil(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-
         val eiere: List<String> = ctx.bodyAsClass<List<String>>()
         val id = TreffId(ctx.pathParam("id"))
-        eierRepository.leggTil(id, eiere)
-        ctx.status(201)
-    }
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
 
+        if(eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
+            eierRepository.leggTil(id, eiere)
+            ctx.status(201)
+        } else {
+            throw ForbiddenResponse("Bruker har ikke tilgang til å legge til eier på rekrutteringstreff ${id.somString}")
+        }
+    }
 
     @OpenApi(
         summary = "Hent eierne til et rekrutteringstreff",
@@ -105,16 +102,15 @@ class EierController(
         val innloggetNavIdent = ctx.authenticatedUser().extractNavIdent()
 
         val eiere = eierRepository.hent(id)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id ${id.somString} har ingen eiere")
-
-        if(eiere.contains(innloggetNavIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if(eierService.erEierEllerUtvikler(id, innloggetNavIdent, ctx)) {
             if(eiere.size <= 1) {
-                throw BadRequestResponse("Kan ikke slette siste eier")
+                throw BadRequestResponse("Kan ikke slette siste eier for rekrutteringstreff ${id.somString}")
             }
 
             eierRepository.slett(id, navIdentSomSkalSlettes)
             ctx.status(200)
         } else {
-            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${id.somString}")
+            throw ForbiddenResponse("Bruker har ikke tilgang til å slette eier på rekrutteringstreff ${id.somString}")
         }
     }
 }

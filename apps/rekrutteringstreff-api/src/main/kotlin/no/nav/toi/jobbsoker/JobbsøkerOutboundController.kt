@@ -9,11 +9,8 @@ import io.javalin.openapi.*
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.kandidatsok.KandidatsøkKlient
-import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import java.lang.IllegalStateException
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.*
 
 data class KandidatnummerDto(val kandidatnummer: String)
@@ -21,7 +18,7 @@ data class KandidatnummerDto(val kandidatnummer: String)
 class JobbsøkerOutboundController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val kandidatsøkKlient: KandidatsøkKlient,
-    private val eierRepository: EierRepository,
+    private val eierService: EierService,
     javalin: Javalin
 ) {
     companion object {
@@ -66,9 +63,7 @@ class JobbsøkerOutboundController(
             ?: throw InternalServerErrorResponse("Raw token ikke funnet i context")
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        val eiere = eierRepository.hent(treffId)?.tilNavIdenter() ?: throw IllegalStateException("Kan ikke hente kandidatnummer siden person ikke er eier av treffet")
-
-        if (eiere.contains(navIdent) || ctx.authenticatedUser().erUtvikler()) {
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             jobbsøkerRepository.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->
                 kandidatsøkKlient.hentKandidatnummer(fødselsnummer, userToken)?.let { kandidatnummer ->
                     ctx.json(KandidatnummerDto(kandidatnummer.asString))

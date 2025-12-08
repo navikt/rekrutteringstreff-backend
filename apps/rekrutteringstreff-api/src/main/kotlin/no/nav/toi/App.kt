@@ -1,6 +1,5 @@
 package no.nav.toi
 
-import com.fasterxml.jackson.core.type.TypeReference
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -26,6 +25,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.eier.EierController
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiController
@@ -169,10 +169,12 @@ class App(
         val kiLoggRepository = KiLoggRepository(dataSource)
 
         val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository)
+        val eierService = EierService(eierRepository)
 
         RekrutteringstreffController(
             rekrutteringstreffRepository = rekrutteringstreffRepository,
             rekrutteringstreffService = rekrutteringstreffService,
+            eierService = eierService,
             javalin = javalin
         )
         InnleggController(
@@ -181,16 +183,17 @@ class App(
         )
         EierController(
             eierRepository = eierRepository,
+            eierService = eierService,
             javalin = javalin
         )
         ArbeidsgiverController(
             arbeidsgiverRepository = arbeidsgiverRepository,
-            eierRepository = eierRepository,
+            eierService = eierService,
             javalin = javalin
         )
         JobbsøkerController(
             jobbsøkerRepository = jobbsøkerRepository,
-            eierRepository = eierRepository,
+            eierService = eierService,
             javalin = javalin
         )
         JobbsøkerInnloggetBorgerController(
@@ -200,7 +203,7 @@ class App(
         JobbsøkerOutboundController(
             jobbsøkerRepository = jobbsøkerRepository,
             kandidatsøkKlient = kandidatsokKlient,
-            eierRepository = eierRepository,
+            eierService = eierService,
             javalin = javalin
         )
         KiController(
