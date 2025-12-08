@@ -14,8 +14,10 @@ spec:
   {{/each}}
   liveness:
     path: /isalive
+    initialDelay: 40
   readiness:
     path: /isready
+    initialDelay: 40
   prometheus:
     enabled: true
     path: /metrics
