@@ -75,7 +75,7 @@ class KiController (
     )
     private fun validerOgLoggHandlerGammel(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        log.info("Gammet endepunkt for validering KI")
+        log.info("Gammelt endepunkt for validering KI")
         val req = ctx.bodyAsClass<ValiderMedLoggRequestDto>()
         val treffId = UUID.fromString(req.treffId)
         val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =

@@ -46,7 +46,7 @@ class EierController(
         val id = TreffId(ctx.pathParam("id"))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        if(eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
             eierRepository.leggTil(id, eiere)
             ctx.status(201)
         } else {
@@ -101,9 +101,10 @@ class EierController(
         val navIdentSomSkalSlettes = ctx.pathParam("navIdent")
         val innloggetNavIdent = ctx.authenticatedUser().extractNavIdent()
 
-        val eiere = eierRepository.hent(id)?.tilNavIdenter() ?: throw IllegalStateException("Rekrutteringstreff med id ${id.somString} har ingen eiere")
-        if(eierService.erEierEllerUtvikler(id, innloggetNavIdent, ctx)) {
-            if(eiere.size <= 1) {
+        val eiere = eierRepository.hent(id)?.tilNavIdenter()
+            ?: throw IllegalStateException("Rekrutteringstreff med id ${id.somString} har ingen eiere")
+        if (eierService.erEierEllerUtvikler(id, innloggetNavIdent, ctx)) {
+            if (eiere.size <= 1) {
                 throw BadRequestResponse("Kan ikke slette siste eier for rekrutteringstreff ${id.somString}")
             }
 

@@ -290,7 +290,7 @@ class RekrutteringstreffController(
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        if(eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             val list = rekrutteringstreffRepository.hentHendelser(treff).map {
                 RekrutteringstreffHendelseOutboundDto(
                     id = it.id.toString(),
@@ -322,7 +322,7 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
-        if(eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             val list = rekrutteringstreffRepository.hentAlleHendelser(treff)
             ctx.status(200).json(list)
         } else {
@@ -348,7 +348,7 @@ class RekrutteringstreffController(
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
 
-        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             rekrutteringstreffRepository.publiser(treffId, navIdent)
             ctx.status(200)
         } else {
@@ -374,7 +374,7 @@ class RekrutteringstreffController(
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
 
-        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             rekrutteringstreffRepository.gjenåpne(treffId, navIdent)
             ctx.status(200)
         } else {
@@ -399,7 +399,7 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
-        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             rekrutteringstreffService.avlys(treffId, navIdent)
             ctx.status(200)
         } else {
@@ -425,7 +425,7 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
-        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             rekrutteringstreffRepository.avpubliser(treffId, navIdent)
             ctx.status(200)
         } else {
@@ -450,7 +450,7 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
-        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             rekrutteringstreffService.fullfør(treffId, navIdent)
             ctx.status(200)
         } else {
@@ -497,7 +497,7 @@ class RekrutteringstreffController(
             val navIdent = ctx.extractNavIdent()
 
             // TODO: Sjekk at treffet er publisert når statuser er bedre implementert i bakend
-            if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
                 val dto = ctx.bodyAsClass<EndringerDto>()
                 val endringerJson = JacksonConfig.mapper.writeValueAsString(dto)
 

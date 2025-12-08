@@ -4,7 +4,6 @@ import io.javalin.http.Context
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
-import java.lang.IllegalStateException
 
 class EierService(
     private val eierRepository: EierRepository,
