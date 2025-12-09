@@ -143,7 +143,7 @@ class JobbsøkerController(
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        if(eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treff)
             ctx.status(200).json(jobbsøkere.toOutboundDto())
         } else {
@@ -151,14 +151,14 @@ class JobbsøkerController(
         }
     }
 
-      @OpenApi(
+    @OpenApi(
         summary = "Slett en jobbsøker",
         operationId = "slettJobbsøker",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [
             OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
             OpenApiParam(name = pathParamJobbsøkerId, type = UUID::class, required = true),
-         ],
+        ],
         responses = [OpenApiResponse("201")],
         path = slettPath,
         methods = [HttpMethod.DELETE]
@@ -169,7 +169,7 @@ class JobbsøkerController(
         val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             log.info("Sletter jobbsøker $jobbsøkerId for treff $treffId")
 
             val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
@@ -227,7 +227,7 @@ class JobbsøkerController(
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
-        if(eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             log.info("Henter jobbsøkerhendelser for treff $treff")
             val hendelser = jobbsøkerRepository.hentJobbsøkerHendelser(treff)
             ctx.status(200).json(hendelser.map { h ->
@@ -271,7 +271,7 @@ class JobbsøkerController(
         val personTreffIder = dto.personTreffIder
         val navIdent = ctx.extractNavIdent()
 
-        if(eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             jobbsøkerRepository.inviter(personTreffIder, treffId, navIdent)
             ctx.status(200)
         } else {
