@@ -5,7 +5,6 @@ import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffSvarOgStatus
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
 import java.util.*
 
 class Rekrutteringstreff(
@@ -90,67 +89,6 @@ class Rekrutteringstreff(
         postnummer = postnummer!!,
         poststed = poststed!!,
         endretAv = avsenderNavident
-    )
-
-    fun verifiserEndringerMotDatabase(endringer: Rekrutteringstreffendringer): VerificationResult {
-        val feil = mutableListOf<String>()
-
-        endringer.tittel?.let {
-            if (it.nyVerdi != tittel) {
-                feil.add("tittel: forventet '${it.nyVerdi}', faktisk '$tittel'")
-            }
-        }
-
-        endringer.fraTid?.let {
-            val nyVerdiParsed = it.nyVerdi?.let { v -> ZonedDateTime.parse(v) }
-            if (nyVerdiParsed != null && fraTid != null) {
-                // Sammenlign med trunkering til millisekunder for å unngå database presisjonsproblemer
-                if (nyVerdiParsed.truncatedTo(ChronoUnit.MILLIS) !=
-                    fraTid.truncatedTo(ChronoUnit.MILLIS)) {
-                    feil.add("fraTid: forventet '${it.nyVerdi}', faktisk '$fraTid'")
-                }
-            }
-        }
-
-        endringer.tilTid?.let {
-            val nyVerdiParsed = it.nyVerdi?.let { v -> ZonedDateTime.parse(v) }
-            if (nyVerdiParsed != null && tilTid != null) {
-                // Sammenlign med trunkering til millisekunder for å unngå database presisjonsproblemer
-                if (nyVerdiParsed.truncatedTo(ChronoUnit.MILLIS) !=
-                    tilTid.truncatedTo(ChronoUnit.MILLIS)) {
-                    feil.add("tilTid: forventet '${it.nyVerdi}', faktisk '$tilTid'")
-                }
-            }
-        }
-
-        endringer.postnummer?.let {
-            if (it.nyVerdi != postnummer) {
-                feil.add("postnummer: forventet '${it.nyVerdi}', faktisk '$postnummer'")
-            }
-        }
-
-        endringer.poststed?.let {
-            if (it.nyVerdi != poststed) {
-                feil.add("poststed: forventet '${it.nyVerdi}', faktisk '$poststed'")
-            }
-        }
-
-        endringer.gateadresse?.let {
-            if (it.nyVerdi != gateadresse) {
-                feil.add("gateadresse: forventet '${it.nyVerdi}', faktisk '$gateadresse'")
-            }
-        }
-
-        return if (feil.isEmpty()) {
-            VerificationResult(erGyldig = true)
-        } else {
-            VerificationResult(erGyldig = false, feilmelding = feil.joinToString(", "))
-        }
-    }
-
-    data class VerificationResult(
-        val erGyldig: Boolean,
-        val feilmelding: String? = null
     )
 }
 

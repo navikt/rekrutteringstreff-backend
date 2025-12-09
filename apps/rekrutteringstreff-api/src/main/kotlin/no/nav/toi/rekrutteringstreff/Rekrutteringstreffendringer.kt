@@ -3,11 +3,11 @@ package no.nav.toi.rekrutteringstreff
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 enum class MalParameter {
-    TITTEL,
+    NAVN,
     TIDSPUNKT,
     SVARFRIST,
     STED,
-    INNHOLD
+    INTRODUKSJON
 }
 
 data class Endringsfelt<T>(
@@ -18,20 +18,17 @@ data class Endringsfelt<T>(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Rekrutteringstreffendringer(
-    val tittel: Endringsfelt<String>? = null,
-    val fraTid: Endringsfelt<String>? = null,
-    val tilTid: Endringsfelt<String>? = null,
+    val navn: Endringsfelt<String>? = null,
+    val sted: Endringsfelt<String>? = null,
+    val tidspunkt: Endringsfelt<String>? = null,
     val svarfrist: Endringsfelt<String>? = null,
-    val gateadresse: Endringsfelt<String>? = null,
-    val postnummer: Endringsfelt<String>? = null,
-    val poststed: Endringsfelt<String>? = null,
-    val innlegg: Endringsfelt<String>? = null
+    val introduksjon: Endringsfelt<String>? = null
 ) {
     fun utledMalParametere(): List<MalParameter> = buildList {
-        if (tittel?.skalVarsle == true) add(MalParameter.TITTEL)
-        if (fraTid?.skalVarsle == true || tilTid?.skalVarsle == true) add(MalParameter.TIDSPUNKT)
+        if (navn?.skalVarsle == true) add(MalParameter.NAVN)
+        if (tidspunkt?.skalVarsle == true) add(MalParameter.TIDSPUNKT)
         if (svarfrist?.skalVarsle == true) add(MalParameter.SVARFRIST)
-        if (gateadresse?.skalVarsle == true || postnummer?.skalVarsle == true || poststed?.skalVarsle == true) add(MalParameter.STED)
-        if (innlegg?.skalVarsle == true) add(MalParameter.INNHOLD)
+        if (sted?.skalVarsle == true) add(MalParameter.STED)
+        if (introduksjon?.skalVarsle == true) add(MalParameter.INTRODUKSJON)
     }
 }

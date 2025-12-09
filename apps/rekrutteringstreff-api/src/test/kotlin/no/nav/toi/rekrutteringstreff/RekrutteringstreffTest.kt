@@ -815,7 +815,7 @@ class RekrutteringstreffTest {
             .response()
 
         // Registrer endringer
-        val endringerDto = """
+        val endringer = """
             {
                 "gamleVerdierForEndringer": {
                     "tittel": {"value": "Gammel tittel", "endret": true},
@@ -832,7 +832,7 @@ class RekrutteringstreffTest {
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
@@ -901,7 +901,7 @@ class RekrutteringstreffTest {
             .response()
 
         // Registrer endringer
-        val endringerDto = """
+        val endringer = """
             {
                 "gamleVerdierForEndringer": {
                     "tittel": {"value": "Gammel tittel", "endret": true},
@@ -918,7 +918,7 @@ class RekrutteringstreffTest {
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
@@ -1008,7 +1008,7 @@ class RekrutteringstreffTest {
             .response()
 
         // Registrer endringer
-        val endringerDto = """
+        val endringer = """
             {
                 "gamleVerdierForEndringer": {
                     "tittel": {"value": null, "endret": false},
@@ -1025,7 +1025,7 @@ class RekrutteringstreffTest {
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
@@ -1073,7 +1073,7 @@ class RekrutteringstreffTest {
         jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId), treffId, navIdent)
 
         // Registrer endringer (fungerer nå uavhengig av status)
-        val endringerDto = """
+        val endringer = """
             {
                 "gamleVerdierForEndringer": {
                     "tittel": {"value": null, "endret": false},
@@ -1090,7 +1090,7 @@ class RekrutteringstreffTest {
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
@@ -1113,7 +1113,7 @@ class RekrutteringstreffTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .response()
 
-        val endringerDto = """
+        val endringer = """
             {
                 "endringer": {
                     "tittel": "Gammel tittel"
@@ -1122,7 +1122,7 @@ class RekrutteringstreffTest {
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
