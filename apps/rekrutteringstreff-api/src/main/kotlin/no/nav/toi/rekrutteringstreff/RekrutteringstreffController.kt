@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
 import io.javalin.Javalin
+import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.NotFoundResponse
@@ -465,7 +466,11 @@ class RekrutteringstreffController(
             val treffId = TreffId(ctx.pathParam(pathParamTreffId))
             val navIdent = ctx.extractNavIdent()
 
-            // TODO: Sjekk at treffet er publisert når statuser er bedre implementert i bakend
+            // Sjekk at treffet er publisert
+            val treff = repo.hent(treffId) ?: throw NotFoundResponse("Fant ikke rekrutteringstreff med id $treffId")
+            if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
+                throw BadRequestResponse("Kan kun registrere endringer for publiserte treff")
+            }
 
             val endringer = ctx.bodyAsClass<Rekrutteringstreffendringer>()
             val endringerJson = JacksonConfig.mapper.writeValueAsString(endringer)
