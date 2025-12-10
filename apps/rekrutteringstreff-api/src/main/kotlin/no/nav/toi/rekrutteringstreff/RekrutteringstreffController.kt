@@ -11,6 +11,8 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.*
 import no.nav.toi.rekrutteringstreff.eier.EierService
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -33,6 +35,8 @@ class RekrutteringstreffController(
 
         private const val fellesPath =
             "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
+
+        val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
     init {
@@ -266,7 +270,8 @@ class RekrutteringstreffController(
         val id = TreffId(ctx.pathParam("id"))
         val navIdent = ctx.extractNavIdent()
         if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
-            rekrutteringstreffRepository.slett(id)
+            log.info("Sletter rekrutteringstreff med id $id")
+            rekrutteringstreffService.slett(id, navIdent)
             ctx.status(200).result("Rekrutteringstreff slettet")
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke slette det")

@@ -45,6 +45,22 @@ class RekrutteringstreffService(
         )
     }
 
+    fun slett(treffId: TreffId, navIdent: String) {
+        val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treffId)
+        if (jobbsøkere.isNotEmpty()) {
+            throw IllegalStateException("Kan ikke slette rekrutteringstreff med registrerte jobbsøkere")
+        }
+        dataSource.executeInTransaction { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.SLETTET, navIdent)
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.SLETTET)
+
+            val arbeidsgivere = arbeidsgiverRepository.hentArbeidsgivere(treffId)
+            arbeidsgivere.forEach { arbeidsgiver ->
+                arbeidsgiverRepository.slett(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid, navIdent)
+            }
+        }
+    }
+
     fun hentAlleRekrutteringstreff(): List<RekrutteringstreffDto> {
         val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlle()
         val rekrutteringstreffDto: ArrayList<RekrutteringstreffDto> = ArrayList<RekrutteringstreffDto>()
