@@ -444,14 +444,11 @@ class RekrutteringstreffController(
             content = [OpenApiContent(
                 from = Rekrutteringstreffendringer::class,
                 example = """{
-                    "tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
-                    "fraTid": {"gammelVerdi": "2025-06-15T09:00:00+02:00", "nyVerdi": "2025-06-15T10:00:00+02:00", "skalVarsle": true},
-                    "tilTid": {"gammelVerdi": "2025-06-15T11:00:00+02:00", "nyVerdi": "2025-06-15T12:00:00+02:00", "skalVarsle": false},
+                    "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
+                    "tidspunkt": {"gammelVerdi": "2025-06-15T09:00:00+02:00 til 2025-06-15T11:00:00+02:00", "nyVerdi": "2025-06-15T10:00:00+02:00 til 2025-06-15T12:00:00+02:00", "skalVarsle": true},
                     "svarfrist": {"gammelVerdi": "2025-06-10T23:59:00+02:00", "nyVerdi": "2025-06-12T23:59:00+02:00", "skalVarsle": true},
-                    "gateadresse": {"gammelVerdi": null, "nyVerdi": "Ny gate 123", "skalVarsle": true},
-                    "postnummer": {"gammelVerdi": "0566", "nyVerdi": "0567", "skalVarsle": false},
-                    "poststed": {"gammelVerdi": "Oslo", "nyVerdi": "Oslo", "skalVarsle": false},
-                    "innlegg": {"gammelVerdi": "Gammelt innlegg", "nyVerdi": "Nytt innlegg", "skalVarsle": true}
+                    "sted": {"gammelVerdi": "Gammel gate 123, 0566 Oslo", "nyVerdi": "Ny gate 123, 0567 Oslo", "skalVarsle": true},
+                    "introduksjon": {"gammelVerdi": "Gammel introduksjon", "nyVerdi": "Ny introduksjon", "skalVarsle": true}
             }"""
             )]
         ),
@@ -466,10 +463,10 @@ class RekrutteringstreffController(
             val treffId = TreffId(ctx.pathParam(pathParamTreffId))
             val navIdent = ctx.extractNavIdent()
 
-            // Sjekk at treffet er publisert
+            // Sjekk at treffet er publisert og ikke fullført
             val treff = repo.hent(treffId) ?: throw NotFoundResponse("Fant ikke rekrutteringstreff med id $treffId")
             if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
-                throw BadRequestResponse("Kan kun registrere endringer for publiserte treff")
+                throw BadRequestResponse("Kan kun registrere endringer for treff som har publisert status")
             }
 
             val endringer = ctx.bodyAsClass<Rekrutteringstreffendringer>()
