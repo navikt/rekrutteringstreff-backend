@@ -146,6 +146,7 @@ class RekrutteringstreffTest {
                 assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
                 assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
                 assertThat(rekrutteringstreff.id.somString).isEqualTo(postId)
+                assertThat(rekrutteringstreff.sistEndretAv).isEqualTo(navIdent)
             }
         }
     }
@@ -248,7 +249,8 @@ class RekrutteringstreffTest {
                 assertThat(updatedDto.gateadresse).isEqualTo(updateDto.gateadresse)
                 assertThat(updatedDto.postnummer).isEqualTo(updateDto.postnummer)
                 assertThat(updatedDto.poststed).isEqualTo(updateDto.poststed)
-
+                assertThat(updatedDto.sistEndretAv).isEqualTo(navIdent)
+                assertThat(created.sistEndret).isBefore(updatedDto.sistEndret)
             }
         }
     }

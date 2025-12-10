@@ -26,6 +26,8 @@ class Rekrutteringstreff(
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
     val eiere: List<String>,
+    val sistEndret: ZonedDateTime,
+    val sistEndretAv: String,
 ) {
     fun tilRekrutteringstreffDto(antallArbeidsgivere: Int, antallJobsøkere: Int) = RekrutteringstreffDto(
         tittel = tittel,
@@ -47,7 +49,9 @@ class Rekrutteringstreff(
         id = id.somUuid,
         antallArbeidsgivere = antallArbeidsgivere,
         antallJobbsøkere = antallJobsøkere,
-        eiere = eiere
+        eiere = eiere,
+        sistEndret = sistEndret,
+        sistEndretAv = sistEndretAv
     )
     fun aktivitetskortInvitasjonFor(fnr: String, hendelseId: UUID, avsenderNavident: String?) = Aktivitetskortinvitasjon.opprett(
         fnr = fnr,

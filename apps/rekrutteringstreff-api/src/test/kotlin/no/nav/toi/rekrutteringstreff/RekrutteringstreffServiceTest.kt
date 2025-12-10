@@ -167,7 +167,6 @@ class RekrutteringstreffServiceTest {
         assertThat(rekrutteringstreffEtterFullfør.status == RekrutteringstreffStatus.FULLFØRT).isTrue
     }
 
-
     @Test
     fun `skal committe transaksjon når avlys fullføres uten feil`() {
         // Arrange
