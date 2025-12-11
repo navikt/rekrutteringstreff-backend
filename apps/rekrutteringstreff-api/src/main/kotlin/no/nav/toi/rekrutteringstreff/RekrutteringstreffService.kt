@@ -42,8 +42,8 @@ class RekrutteringstreffService(
     }
 
     fun publiser(treffId: TreffId, navIdent: String) {
-        val treff = rekrutteringstreffRepository.hent(treffId)
-            ?: throw IllegalStateException("Rekrutteringstreff med id $treffId ikke funnet")
+        rekrutteringstreffRepository.hent(treffId)
+            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
 
         rekrutteringstreffRepository.publiser(treffId, navIdent)
     }
@@ -110,7 +110,7 @@ class RekrutteringstreffService(
         val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
         val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(treffId)
         val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(treffId)
-        return rekrutteringstreff?.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+        return rekrutteringstreff?.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere) ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff ikke funnet")
     }
 
     fun hentRekrutteringstreffMedHendelser(treffId: TreffId): RekrutteringstreffDetaljOutboundDto {

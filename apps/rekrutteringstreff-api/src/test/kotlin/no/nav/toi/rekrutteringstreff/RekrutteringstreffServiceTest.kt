@@ -107,27 +107,26 @@ class RekrutteringstreffServiceTest {
 
     @Test
     fun `Skal kunne hente et rekrutteringstreff`() {
-        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
-            tittel = "Treff 1",
-            opprettetAvPersonNavident = "NAV1234",
-            opprettetAvNavkontorEnhetId = "0605",
-            opprettetAvTidspunkt = nowOslo(),
-        )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
+        val treffId1 = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
         assertThat(rekrutteringstreff.id == treffId1.somUuid).isTrue
     }
 
     @Test
+    fun `Skal kunne publisere et treff`() {
+        val treffId = opprettTreff()
+        rekrutteringstreffService.publiser(treffId, "NAV1234")
+
+        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId)
+        assertThat(!rekrutteringstreff.hendelser.isEmpty())
+        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
+        assertThat(rekrutteringstreff.rekrutteringstreff.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+    }
+
+    @Test
     fun `Skal kunne hente et rekrutteringstreff med hendelser`() {
-        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
-            tittel = "Treff 1",
-            opprettetAvPersonNavident = "NAV1234",
-            opprettetAvNavkontorEnhetId = "0605",
-            opprettetAvTidspunkt = nowOslo(),
-        )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
+        val treffId1 = opprettTreff()
 
         rekrutteringstreffService.publiser(treffId1, "NAV1234")
 
@@ -139,13 +138,7 @@ class RekrutteringstreffServiceTest {
 
     @Test
     fun `Skal kunne avlyse et rekrutteringstreff`() {
-        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
-            tittel = "Treff 1",
-            opprettetAvPersonNavident = "NAV1234",
-            opprettetAvNavkontorEnhetId = "0605",
-            opprettetAvTidspunkt = nowOslo(),
-        )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
+        val treffId1 = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
         assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
@@ -159,13 +152,7 @@ class RekrutteringstreffServiceTest {
 
     @Test
     fun `Skal kunne fullføre et rekrutteringstreff`() {
-        val opprettTreffDto = OpprettRekrutteringstreffInternalDto(
-            tittel = "Treff 1",
-            opprettetAvPersonNavident = "NAV1234",
-            opprettetAvNavkontorEnhetId = "0605",
-            opprettetAvTidspunkt = nowOslo(),
-        )
-        val treffId = rekrutteringstreffRepository.opprett(opprettTreffDto)
+        val treffId = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
         assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
 
@@ -177,6 +164,20 @@ class RekrutteringstreffServiceTest {
         val rekrutteringstreffEtterFullfør = rekrutteringstreffService.hentRekrutteringstreff(treffId)
 
         assertThat(rekrutteringstreffEtterFullfør.status == RekrutteringstreffStatus.FULLFØRT).isTrue
+    }
+
+    @Test
+    fun `Skal ikke kunne fullføre et treff hvor tilTid ikke er passert`() {
+        val treffId = opprettTreff()
+        val treff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
+        rekrutteringstreffService.oppdater(
+            treffId = treffId,
+            dto = OppdaterRekrutteringstreffDto.opprettFra(treff).copy(fraTid = nowOslo().plusDays(1)),
+            navIdent = "NAV1234"
+        )
+        assertThrows<UlovligOppdateringException> {
+            rekrutteringstreffService.fullfør(treffId, "NAV1234")
+        }
     }
 
     @Test
@@ -696,6 +697,16 @@ class RekrutteringstreffServiceTest {
                 }
             }
         }
+    }
+
+    private fun opprettTreff(): TreffId {
+        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 1",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0605",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+        return rekrutteringstreffRepository.opprett(rekrutteringstreff1)
     }
 
     private fun publiserTreff(treffId: TreffId, navIdent: String) {
