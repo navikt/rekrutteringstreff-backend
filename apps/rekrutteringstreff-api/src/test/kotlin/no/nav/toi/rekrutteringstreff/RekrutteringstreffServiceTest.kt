@@ -9,6 +9,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
@@ -20,6 +21,7 @@ import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.dto.EndringerDto
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -127,12 +129,12 @@ class RekrutteringstreffServiceTest {
         )
         val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
 
-        rekrutteringstreffService.fullfør(treffId1, "NAV1234")
+        rekrutteringstreffService.publiser(treffId1, "NAV1234")
 
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId1)
 
         assertThat(!rekrutteringstreff.hendelser.isEmpty())
-        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == "FULLFØRT" }).isTrue
+        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
     }
 
     @Test
@@ -157,20 +159,22 @@ class RekrutteringstreffServiceTest {
 
     @Test
     fun `Skal kunne fullføre et rekrutteringstreff`() {
-        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
+        val opprettTreffDto = OpprettRekrutteringstreffInternalDto(
             tittel = "Treff 1",
             opprettetAvPersonNavident = "NAV1234",
             opprettetAvNavkontorEnhetId = "0605",
             opprettetAvTidspunkt = nowOslo(),
         )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
-        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
-
+        val treffId = rekrutteringstreffRepository.opprett(opprettTreffDto)
+        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
         assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
 
-        rekrutteringstreffService.fullfør(treffId1, "NAV1234")
+        endreTilTidTilPassert(treffId, "NAV1234")
 
-        val rekrutteringstreffEtterFullfør = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
+        rekrutteringstreffService.publiser(treffId, "NAV1234")
+        rekrutteringstreffService.fullfør(treffId, "NAV1234")
+
+        val rekrutteringstreffEtterFullfør = rekrutteringstreffService.hentRekrutteringstreff(treffId)
 
         assertThat(rekrutteringstreffEtterFullfør.status == RekrutteringstreffStatus.FULLFØRT).isTrue
     }
@@ -207,6 +211,8 @@ class RekrutteringstreffServiceTest {
         jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Act
+        endreTilTidTilPassert(treffId, navIdent)
+        rekrutteringstreffService.publiser(treffId, navIdent)
         rekrutteringstreffService.fullfør(treffId, navIdent)
 
         // Assert - verifiser at BÅDE rekrutteringstreff-hendelse OG jobbsøker-hendelse er lagret
@@ -539,7 +545,7 @@ class RekrutteringstreffServiceTest {
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
 
-        assertThrows<IllegalStateException> {
+        assertThrows<UlovligOppdateringException> {
             rekrutteringstreffService.slett(treffId, navIdent)
         }
     }
@@ -698,5 +704,11 @@ class RekrutteringstreffServiceTest {
             RekrutteringstreffHendelsestype.PUBLISERT,
             navIdent
         )
+    }
+
+    private fun endreTilTidTilPassert(treffId: TreffId, navIdent: String) {
+        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
+        val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(rekrutteringstreff).copy(tilTid = nowOslo().minusDays(1))
+        rekrutteringstreffService.oppdater(treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
     }
 }
