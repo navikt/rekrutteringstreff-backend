@@ -270,7 +270,6 @@ class RekrutteringstreffController(
         val treffId = TreffId(ctx.pathParam("id"))
         val navIdent = ctx.extractNavIdent()
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            log.info("Sletter rekrutteringstreff med id $treffId")
             val treff = rekrutteringstreffRepository.hent(treffId)
             if (treff == null) {
                 ctx.status(404).result("Fant ikke rekrutteringstreff med id $treffId")
@@ -278,6 +277,7 @@ class RekrutteringstreffController(
                 if (!rekrutteringstreffService.kanSletteJobbtreff(treffId, treff.status)) {
                     ctx.status(409)
                 } else {
+                    log.info("Sletter rekrutteringstreff med id $treffId")
                     rekrutteringstreffService.slett(treffId, navIdent)
                     ctx.status(200).result("Rekrutteringstreff slettet")
                 }
