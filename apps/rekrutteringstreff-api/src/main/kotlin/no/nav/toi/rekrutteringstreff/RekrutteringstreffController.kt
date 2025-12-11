@@ -267,12 +267,21 @@ class RekrutteringstreffController(
     )
     private fun slettRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val id = TreffId(ctx.pathParam("id"))
+        val treffId = TreffId(ctx.pathParam("id"))
         val navIdent = ctx.extractNavIdent()
-        if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
-            log.info("Sletter rekrutteringstreff med id $id")
-            rekrutteringstreffService.slett(id, navIdent)
-            ctx.status(200).result("Rekrutteringstreff slettet")
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            log.info("Sletter rekrutteringstreff med id $treffId")
+            val treff = rekrutteringstreffRepository.hent(treffId)
+            if (treff == null) {
+                ctx.status(404).result("Fant ikke rekrutteringstreff med id $treffId")
+            } else {
+                if (!rekrutteringstreffService.kanSletteJobbtreff(treffId, treff.status)) {
+                    ctx.status(409)
+                } else {
+                    rekrutteringstreffService.slett(treffId, navIdent)
+                    ctx.status(200).result("Rekrutteringstreff slettet")
+                }
+            }
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke slette det")
         }

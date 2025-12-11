@@ -45,9 +45,18 @@ class RekrutteringstreffService(
         )
     }
 
-    fun slett(treffId: TreffId, navIdent: String) {
+    fun kanSletteJobbtreff(treffId: TreffId, status: RekrutteringstreffStatus): Boolean {
+        if (status != RekrutteringstreffStatus.UTKAST) {
+            // Kun treff i utkaststatus kan slettes
+            return false
+        }
         val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treffId)
-        if (jobbsøkere.isNotEmpty()) {
+        return jobbsøkere.isEmpty()
+    }
+
+    fun slett(treffId: TreffId, navIdent: String) {
+        val status = rekrutteringstreffRepository.hent(treffId)!!.status
+        if (kanSletteJobbtreff(treffId, status).not()) {
             throw IllegalStateException("Kan ikke slette rekrutteringstreff med registrerte jobbsøkere")
         }
         dataSource.executeInTransaction { connection ->

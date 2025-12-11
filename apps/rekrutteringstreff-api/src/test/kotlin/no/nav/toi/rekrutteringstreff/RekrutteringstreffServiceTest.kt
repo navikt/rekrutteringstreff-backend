@@ -539,7 +539,6 @@ class RekrutteringstreffServiceTest {
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
 
-        publiserTreff(treffId, navIdent)
         assertThrows<IllegalStateException> { // eller riktig exception-type
             rekrutteringstreffService.slett(treffId, navIdent)
         }
