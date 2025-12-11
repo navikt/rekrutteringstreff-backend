@@ -61,6 +61,7 @@ class MinsideTest {
                 )
             ),
             dataSource = db.dataSource,
+            jobbsøkerrettet = UUID.randomUUID(),
             arbeidsgiverrettet = UUID.randomUUID(),
             utvikler = UUID.randomUUID(),
             kandidatsokApiUrl = "",

@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -62,6 +63,7 @@ class JobbsøkerTest {
                 )
             ),
             dataSource = db.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
             utvikler = AzureAdRoller.utvikler,
             kandidatsokApiUrl = "",

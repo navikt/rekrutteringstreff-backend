@@ -60,6 +60,7 @@ spec:
         groups:
           - id: {{ adGruppeUtvikler }}
           - id: {{ adGruppeArbeidsgiverrettet }}
+          - id: {{ adGruppeJobbsokerrettet }}
   kafka:
     pool: {{ kafka_pool }}
   gcp:
@@ -76,6 +77,8 @@ spec:
       value: {{adGruppeArbeidsgiverrettet}}
     - name: REKRUTTERINGSBISTAND_UTVIKLER
       value: {{adGruppeUtvikler}}
+    - name: REKRUTTERINGSBISTAND_JOBBSOKERRETTET
+      value: {{adGruppeJobbsokerrettet}}
     - name: KANDIDATSOK_API_URL
       value: {{kandidatsok_api_url}}
     - name: KANDIDATSOK_API_SCOPE

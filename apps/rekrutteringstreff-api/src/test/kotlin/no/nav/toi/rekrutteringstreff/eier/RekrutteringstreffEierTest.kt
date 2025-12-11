@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -64,9 +65,10 @@ class RekrutteringstreffEierTest {
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            database.dataSource,
-            arbeidsgiverrettet,
-            utvikler,
+            dataSource = database.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
+            arbeidsgiverrettet = arbeidsgiverrettet,
+            utvikler = utvikler,
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
             rapidsConnection = TestRapid(),

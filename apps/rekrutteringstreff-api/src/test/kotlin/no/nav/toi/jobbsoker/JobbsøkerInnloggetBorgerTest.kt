@@ -11,6 +11,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -61,6 +62,7 @@ class JobbsøkerInnloggetBorgerTest {
                 )
             ),
             dataSource = db.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
             utvikler = AzureAdRoller.utvikler,
             kandidatsokApiUrl = "",

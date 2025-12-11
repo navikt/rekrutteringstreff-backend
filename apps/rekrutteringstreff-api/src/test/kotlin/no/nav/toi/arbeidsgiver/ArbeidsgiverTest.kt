@@ -15,6 +15,7 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
 import no.nav.toi.*
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -70,6 +71,7 @@ class ArbeidsgiverTest {
                 )
             ),
             dataSource = db.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = arbeidsgiverrettet,
             utvikler = utvikler,
             kandidatsokApiUrl = "",

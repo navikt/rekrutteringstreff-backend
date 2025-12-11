@@ -169,7 +169,7 @@ class RekrutteringstreffController(
         methods = [HttpMethod.GET]
     )
     private fun hentRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER, Rolle.JOBBSØKER_RETTET)
         val id = TreffId(ctx.pathParam(pathParamTreffId))
         rekrutteringstreffService.hentRekrutteringstreffMedHendelser(id).let { ctx.status(200).json(it) }
     }

@@ -6,6 +6,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
@@ -64,6 +65,7 @@ private class AutorisasjonsTest {
                 )
             ),
             dataSource = database.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = arbeidsgiverrettet,
             utvikler = utvikler,
             kandidatsokApiUrl = "",

@@ -11,6 +11,7 @@ import no.nav.toi.AccessTokenClient
 import no.nav.toi.App
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
@@ -93,6 +94,7 @@ class JobbsokerControllerAutorisasjonsTest {
                 )
             ),
             dataSource = database.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = arbeidsgiverrettet,
             utvikler = utvikler,
             kandidatsokApiUrl = "",
