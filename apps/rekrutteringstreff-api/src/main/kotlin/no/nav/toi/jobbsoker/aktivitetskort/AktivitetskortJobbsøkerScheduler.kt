@@ -145,14 +145,14 @@ class AktivitetskortJobbsøkerScheduler(
             // Send MinSide varsling kun for endringer med skalVarsle=true
             hendelse.hendelseData?.let { data ->
                 val endringer = objectMapper.readValue(data, Rekrutteringstreffendringer::class.java)
-                val malParametere = endringer.utledMalParametere()
-                if (malParametere.isNotEmpty()) {
+                val parametereSomSkalMappes = endringer.mapParametereSomSkalVarsles()
+                if (parametereSomSkalMappes.isNotEmpty()) {
                     sendMinsideVarsling(
                         rekrutteringstreffId = hendelse.rekrutteringstreffUuid,
                         fnr = hendelse.fnr,
                         hendelseId = hendelse.hendelseId,
                         endretAv = hendelse.aktøridentifikasjon,
-                        malParametere = malParametere
+                        malParametere = parametereSomSkalMappes
                     )
                 }
             }

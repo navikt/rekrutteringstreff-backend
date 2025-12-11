@@ -24,7 +24,7 @@ data class Rekrutteringstreffendringer(
     val svarfrist: Endringsfelt<String>? = null,
     val introduksjon: Endringsfelt<String>? = null
 ) {
-    fun utledMalParametere(): List<MalParameter> = buildList {
+    fun mapParametereSomSkalVarsles(): List<MalParameter> = buildList {
         if (navn?.skalVarsle == true) add(MalParameter.NAVN)
         if (tidspunkt?.skalVarsle == true) add(MalParameter.TIDSPUNKT)
         if (svarfrist?.skalVarsle == true) add(MalParameter.SVARFRIST)
