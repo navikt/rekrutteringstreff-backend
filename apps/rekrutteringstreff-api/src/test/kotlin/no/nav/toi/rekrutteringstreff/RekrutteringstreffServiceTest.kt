@@ -546,7 +546,6 @@ class RekrutteringstreffServiceTest {
 
     @Test
     fun `slett treff skal sette riktig status på treffet og arbeidsgivere`() {
-        // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(status = RekrutteringstreffStatus.UTKAST)
 
         val navIdent = "Z123456"
@@ -573,10 +572,7 @@ class RekrutteringstreffServiceTest {
 
         // Sjekk at treffet ikke returneres i hentAlleSomIkkeErSlettet
         assertThat(rekrutteringstreffRepository.hentAlleSomIkkeErSlettet().any { it.id == treffId }).isFalse()
-
     }
-
-
 
     private fun leggTilOgInviterJobbsøker(treffId: TreffId, fnr: Fødselsnummer, navIdent: String) {
         jobbsøkerRepository.leggTil(
