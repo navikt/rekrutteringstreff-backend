@@ -45,8 +45,33 @@ class RekrutteringstreffService(
         )
     }
 
+    fun kanSletteJobbtreff(treffId: TreffId, status: RekrutteringstreffStatus): Boolean {
+        if (status != RekrutteringstreffStatus.UTKAST) {
+            // Kun treff i utkaststatus kan slettes
+            return false
+        }
+        val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treffId)
+        return jobbsøkere.isEmpty()
+    }
+
+    fun slett(treffId: TreffId, navIdent: String) {
+        val status = rekrutteringstreffRepository.hent(treffId)?.status ?: throw IllegalStateException("Rekrutteringstreff med id $treffId ikke funnet")
+        if (kanSletteJobbtreff(treffId, status).not()) {
+            throw IllegalStateException("Kan ikke slette treff med id $treffId")
+        }
+        dataSource.executeInTransaction { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.SLETTET, navIdent)
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.SLETTET)
+
+            val arbeidsgivere = arbeidsgiverRepository.hentArbeidsgivere(treffId)
+            arbeidsgivere.forEach { arbeidsgiver ->
+                arbeidsgiverRepository.slett(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid, navIdent)
+            }
+        }
+    }
+
     fun hentAlleRekrutteringstreff(): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlle()
+        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleSomIkkeErSlettet()
         val rekrutteringstreffDto: ArrayList<RekrutteringstreffDto> = ArrayList<RekrutteringstreffDto>()
         alleRekrutteringstreff.forEach {
             val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(it.id)
