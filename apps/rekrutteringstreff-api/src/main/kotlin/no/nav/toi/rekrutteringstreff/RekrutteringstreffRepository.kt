@@ -144,7 +144,8 @@ class RekrutteringstreffRepository(
 
     fun hentAlleSomIkkeErSlettet(): List<Rekrutteringstreff> =
         dataSource.connection.use { c ->
-            c.prepareStatement("""SELECT * FROM $tabellnavn where status != '${RekrutteringstreffStatus.SLETTET}'""").use { s ->
+            c.prepareStatement("SELECT * FROM $tabellnavn where status != ?").use { s ->
+                s.setString(1, RekrutteringstreffStatus.SLETTET.name)
                 s.executeQuery().let { rs ->
                     generateSequence {
                         if (rs.next()) rs.tilRekrutteringstreff() else null

@@ -539,7 +539,7 @@ class RekrutteringstreffServiceTest {
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
 
-        assertThrows<IllegalStateException> { // eller riktig exception-type
+        assertThrows<IllegalStateException> {
             rekrutteringstreffService.slett(treffId, navIdent)
         }
     }
@@ -570,6 +570,10 @@ class RekrutteringstreffServiceTest {
 
         assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.SLETTET)
         assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.SLETTET }).isTrue()
+
+        // Sjekk at treffet ikke returneres i hentAlleSomIkkeErSlettet
+        assertThat(rekrutteringstreffRepository.hentAlleSomIkkeErSlettet().any { it.id == treffId }).isFalse()
+
     }
 
 

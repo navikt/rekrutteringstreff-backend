@@ -275,7 +275,7 @@ class RekrutteringstreffController(
                 ctx.status(404).result("Fant ikke rekrutteringstreff med id $treffId")
             } else {
                 if (!rekrutteringstreffService.kanSletteJobbtreff(treffId, treff.status)) {
-                    ctx.status(409)
+                    ctx.status(409).result("Rekrutteringstreff kan kun slettes hvis status er UTKAST og ingen jobbsøkere er tilknyttet.")
                 } else {
                     log.info("Sletter rekrutteringstreff med id $treffId")
                     rekrutteringstreffService.slett(treffId, navIdent)
