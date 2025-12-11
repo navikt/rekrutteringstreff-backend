@@ -6,6 +6,7 @@ import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
@@ -537,4 +538,14 @@ class TestDatabase {
 
     fun hentHendelser(treff: TreffId): List<RekrutteringstreffHendelse> =
         rekrutteringstreffRepository.hentHendelser(treff)
+
+    fun endreTilTidTilPassert(treffId: TreffId, navIdent: String) {
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
+        val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(rekrutteringstreff!!.tilRekrutteringstreffDto(1,1)).copy(tilTid = nowOslo().minusDays(1))
+        rekrutteringstreffRepository.oppdater(treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
+    }
+
+    fun publiser(treffId: TreffId, navIdent: String) {
+        rekrutteringstreffRepository.publiser(treffId, navIdent)
+    }
 }

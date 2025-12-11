@@ -12,6 +12,9 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
+import no.nav.toi.exception.UlovligOppdateringException
+import no.nav.toi.exception.UlovligSlettingException
 import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.JobbsøkerController
 import no.nav.toi.jobbsoker.JobbsøkerInnloggetBorgerController
@@ -85,7 +88,7 @@ class App(
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         startJavalin(jobbsøkerRepository)
-        startSchedulere(jobbsøkerRepository)
+        startSchedulere()
         startRR(jobbsøkerRepository)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
@@ -142,8 +145,16 @@ class App(
                 ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod på serveren."))
             }
         }
-        javalin.exception(no.nav.toi.rekrutteringstreff.UlovligSlettingException::class.java) { e, ctx ->
+        javalin.exception(UlovligSlettingException::class.java) { e, ctx ->
             ctx.status(409).json(mapOf("feil" to (e.message ?: "Ulovlig sletting")))
+        }
+
+        javalin.exception(UlovligOppdateringException::class.java) { e, ctx ->
+            ctx.status(409).json(mapOf("feil" to (e.message ?: "Konflikt ved oppdatering")))
+        }
+
+        javalin.exception(RekrutteringstreffIkkeFunnetException::class.java) { e, ctx ->
+            ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke rekrutteringstreffet")))
         }
 
         javalin.exception(Exception::class.java) { e, ctx ->
@@ -173,7 +184,6 @@ class App(
         val eierService = EierService(eierRepository)
 
         RekrutteringstreffController(
-            rekrutteringstreffRepository = rekrutteringstreffRepository,
             rekrutteringstreffService = rekrutteringstreffService,
             eierService = eierService,
             javalin = javalin
@@ -215,7 +225,7 @@ class App(
         javalin.start(port)
     }
 
-    private fun startSchedulere(jobbsøkerRepository: JobbsøkerRepository) {
+    private fun startSchedulere() {
         log.info("Starting scheduler")
 
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
