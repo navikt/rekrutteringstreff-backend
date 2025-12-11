@@ -1095,6 +1095,36 @@ class RekrutteringstreffTest {
         assertStatuscodeEquals(400, response, result)
     }
 
+    @Test
+    fun `registrer endring avvises for avlyste treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser og avlys treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Prøv å registrere endringer på avlyst treff (skal avvises)
+        val endringer = """
+            {
+                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
+            .body(endringer)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .response()
+
+        // Skal returnere 400 Bad Request fordi treffet er avlyst
+        assertStatuscodeEquals(400, response, result)
+    }
 
     @Test
     fun `registrer endring oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere skal varsles`() {
