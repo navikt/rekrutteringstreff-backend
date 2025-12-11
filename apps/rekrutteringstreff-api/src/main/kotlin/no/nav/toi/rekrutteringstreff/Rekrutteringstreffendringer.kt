@@ -2,7 +2,8 @@ package no.nav.toi.rekrutteringstreff
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-enum class EndringMalParameter {
+/** Typer av felt som kan endres på et rekrutteringstreff */
+enum class Endringsfelttype {
     NAVN,
     TIDSPUNKT,
     SVARFRIST,
@@ -24,11 +25,11 @@ data class Rekrutteringstreffendringer(
     val svarfrist: Endringsfelt<String>? = null,
     val introduksjon: Endringsfelt<String>? = null
 ) {
-    fun mapParametereSomSkalVarsles(): List<EndringMalParameter> = buildList {
-        if (navn?.skalVarsle == true) add(EndringMalParameter.NAVN)
-        if (tidspunkt?.skalVarsle == true) add(EndringMalParameter.TIDSPUNKT)
-        if (svarfrist?.skalVarsle == true) add(EndringMalParameter.SVARFRIST)
-        if (sted?.skalVarsle == true) add(EndringMalParameter.STED)
-        if (introduksjon?.skalVarsle == true) add(EndringMalParameter.INTRODUKSJON)
+    fun hentFelterSomSkalVarsles(): List<Endringsfelttype> = buildList {
+        if (navn?.skalVarsle == true) add(Endringsfelttype.NAVN)
+        if (tidspunkt?.skalVarsle == true) add(Endringsfelttype.TIDSPUNKT)
+        if (svarfrist?.skalVarsle == true) add(Endringsfelttype.SVARFRIST)
+        if (sted?.skalVarsle == true) add(Endringsfelttype.STED)
+        if (introduksjon?.skalVarsle == true) add(Endringsfelttype.INTRODUKSJON)
     }
 }

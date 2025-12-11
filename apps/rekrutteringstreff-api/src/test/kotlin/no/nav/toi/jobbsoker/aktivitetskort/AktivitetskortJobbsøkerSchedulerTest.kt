@@ -356,7 +356,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     // ==================== MINSIDE VARSLING TESTER ====================
 
     @Test
-    fun `skal sende minside-varsling med malParametere når skalVarsle er true for tittel`() {
+    fun `skal sende oppdatering med endredeFelter når skalVarsle er true for tittel`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -377,20 +377,23 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        // Skal nå være 3 meldinger: invitasjon + aktivitetskort-oppdatering + minside-varsling
-        assertThat(rapid.inspektør.size).isEqualTo(3)
+        // Skal nå være 2 meldinger: invitasjon + én samlet oppdatering (med endredeFelter)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
 
-        // Sjekk minside-varsling
-        val minsideMelding = rapid.inspektør.message(2)
-        assertThat(minsideMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
-        assertThat(minsideMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
-        assertThat(minsideMelding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
-        assertThat(minsideMelding.has("malParametere")).isTrue
-        assertThat(minsideMelding["malParametere"].map { it.asText() }).containsExactly("NAVN")
+        // Sjekk samlet oppdatering
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        assertThat(oppdateringMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
+        assertThat(oppdateringMelding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
+        assertThat(oppdateringMelding.has("endredeFelter")).isTrue
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("NAVN")
+        // Skal også ha aktivitetskort-data
+        assertThat(oppdateringMelding.has("tittel")).isTrue
+        assertThat(oppdateringMelding.has("fraTid")).isTrue
     }
 
     @Test
-    fun `skal sende minside-varsling med TIDSPUNKT når fraTid har skalVarsle true`() {
+    fun `skal sende oppdatering med TIDSPUNKT når fraTid har skalVarsle true`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -411,14 +414,14 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
 
-        val minsideMelding = rapid.inspektør.message(2)
-        assertThat(minsideMelding["malParametere"].map { it.asText() }).containsExactly("TIDSPUNKT")
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("TIDSPUNKT")
     }
 
     @Test
-    fun `skal sende minside-varsling med STED når gateadresse har skalVarsle true`() {
+    fun `skal sende oppdatering med STED når gateadresse har skalVarsle true`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -439,14 +442,14 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
 
-        val minsideMelding = rapid.inspektør.message(2)
-        assertThat(minsideMelding["malParametere"].map { it.asText() }).containsExactly("STED")
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("STED")
     }
 
     @Test
-    fun `skal sende minside-varsling med flere malParametere når flere felt har skalVarsle true`() {
+    fun `skal sende oppdatering med flere endredeFelter når flere felt har skalVarsle true`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -470,14 +473,14 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
 
-        val minsideMelding = rapid.inspektør.message(2)
-        assertThat(minsideMelding["malParametere"].map { it.asText() }).containsExactlyInAnyOrder("NAVN", "STED", "INTRODUKSJON")
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactlyInAnyOrder("NAVN", "STED", "INTRODUKSJON")
     }
 
     @Test
-    fun `skal ikke sende minside-varsling når ingen felt har skalVarsle true`() {
+    fun `skal ikke inkludere endredeFelter når ingen felt har skalVarsle true`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -499,17 +502,19 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        // Skal kun være 2 meldinger: invitasjon + aktivitetskort-oppdatering (ingen minside-varsling)
+        // Skal være 2 meldinger: invitasjon + oppdatering (uten endredeFelter)
         assertThat(rapid.inspektør.size).isEqualTo(2)
         
-        // Verifiser at aktivitetskort-oppdatering fortsatt sendes
-        val aktivitetskortMelding = rapid.inspektør.message(1)
-        assertThat(aktivitetskortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
-        assertThat(aktivitetskortMelding.has("malParametere")).isFalse
+        // Verifiser at oppdatering sendes uten endredeFelter
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        assertThat(oppdateringMelding.has("endredeFelter")).isFalse
+        // Skal fortsatt ha aktivitetskort-data
+        assertThat(oppdateringMelding.has("tittel")).isTrue
     }
 
     @Test
-    fun `skal sende minside-varsling med SVARFRIST når svarfrist har skalVarsle true`() {
+    fun `skal sende oppdatering med SVARFRIST når svarfrist har skalVarsle true`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -529,14 +534,14 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
 
-        val minsideMelding = rapid.inspektør.message(2)
-        assertThat(minsideMelding["malParametere"].map { it.asText() }).containsExactly("SVARFRIST")
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("SVARFRIST")
     }
 
     @Test
-    fun `skal kombinere fraTid og tilTid til TIDSPUNKT malParameter`() {
+    fun `skal kombinere fraTid og tilTid til TIDSPUNKT endredeFelter-verdi`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -558,15 +563,15 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
 
-        val minsideMelding = rapid.inspektør.message(2)
+        val oppdateringMelding = rapid.inspektør.message(1)
         // Skal kun ha én TIDSPUNKT, ikke to
-        assertThat(minsideMelding["malParametere"].map { it.asText() }).containsExactly("TIDSPUNKT")
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("TIDSPUNKT")
     }
 
     @Test
-    fun `skal kombinere gateadresse, postnummer og poststed til STED malParameter`() {
+    fun `skal kombinere gateadresse, postnummer og poststed til STED endredeFelter-verdi`() {
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
 
@@ -586,11 +591,11 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
 
-        val minsideMelding = rapid.inspektør.message(2)
+        val oppdateringMelding = rapid.inspektør.message(1)
         // Skal kun ha én STED, ikke tre
-        assertThat(minsideMelding["malParametere"].map { it.asText() }).containsExactly("STED")
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("STED")
     }
 
     // ==================== TREFFSTATUS ENDRET TESTER ====================

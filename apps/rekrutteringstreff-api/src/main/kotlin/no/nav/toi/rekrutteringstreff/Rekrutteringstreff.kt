@@ -82,7 +82,12 @@ class Rekrutteringstreff(
         treffstatus = treffstatus
     )
 
-    fun aktivitetskortOppdateringFor(fnr: String, hendelseId: UUID, avsenderNavident: String?) = AktivitetskortOppdatering(
+    fun aktivitetskortOppdateringFor(
+        fnr: String,
+        hendelseId: UUID,
+        avsenderNavident: String?,
+        endredeFelter: List<Endringsfelttype>? = null
+    ) = AktivitetskortOppdatering(
         fnr = fnr,
         rekrutteringstreffId = id,
         hendelseId = hendelseId,
@@ -92,7 +97,8 @@ class Rekrutteringstreff(
         gateadresse = gateadresse!!,
         postnummer = postnummer!!,
         poststed = poststed!!,
-        endretAv = avsenderNavident
+        endretAv = avsenderNavident,
+        endredeFelter = endredeFelter
     )
 }
 
