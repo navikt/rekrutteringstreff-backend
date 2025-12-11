@@ -156,7 +156,7 @@ class RekrutteringstreffServiceTest {
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
         assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
 
-        endreTilTidTilPassert(treffId, "NAV1234")
+        db.endreTilTidTilPassert(treffId, "NAV1234")
 
         rekrutteringstreffService.publiser(treffId, "NAV1234")
         rekrutteringstreffService.fullfør(treffId, "NAV1234")
@@ -212,7 +212,7 @@ class RekrutteringstreffServiceTest {
         jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Act
-        endreTilTidTilPassert(treffId, navIdent)
+        db.endreTilTidTilPassert(treffId, navIdent)
         rekrutteringstreffService.publiser(treffId, navIdent)
         rekrutteringstreffService.fullfør(treffId, navIdent)
 
@@ -715,11 +715,5 @@ class RekrutteringstreffServiceTest {
             RekrutteringstreffHendelsestype.PUBLISERT,
             navIdent
         )
-    }
-
-    private fun endreTilTidTilPassert(treffId: TreffId, navIdent: String) {
-        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
-        val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(rekrutteringstreff).copy(tilTid = nowOslo().minusDays(1))
-        rekrutteringstreffService.oppdater(treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
     }
 }

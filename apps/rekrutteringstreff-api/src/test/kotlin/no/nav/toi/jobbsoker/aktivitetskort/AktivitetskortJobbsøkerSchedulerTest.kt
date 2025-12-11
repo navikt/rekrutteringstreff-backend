@@ -397,7 +397,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
-        endreTilTidTilPassert(treffId, expectedFnr.asString)
+        db.endreTilTidTilPassert(treffId, expectedFnr.asString)
         rekrutteringstreffService.publiser(treffId, expectedFnr.asString)
         rekrutteringstreffService.fullfør(treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
@@ -452,7 +452,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val endringer = EndringerDto(tittel = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel))
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)  // Hendelse 3: TREFF_ENDRET
 
-        endreTilTidTilPassert(treffId, fødselsnummer.asString)
+        db.endreTilTidTilPassert(treffId, fødselsnummer.asString)
         rekrutteringstreffService.publiser(treffId, fødselsnummer.asString)
         rekrutteringstreffService.fullfør(treffId, fødselsnummer.asString)  // Hendelse 4: SVART_JA_TREFF_FULLFØRT
 
@@ -497,7 +497,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()  // Send invitasjoner og svar
 
         // Fullfør treffet
-        endreTilTidTilPassert(treffId, fnrSvartJa.asString)
+        db.endreTilTidTilPassert(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.publiser(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
         scheduler.behandleJobbsøkerHendelser()
@@ -591,7 +591,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         // Fullfør treffet - skal ikke sende noen ekstra hendelse for person som svarte nei
-        endreTilTidTilPassert(treffId, fnrSvartNei.asString)
+        db.endreTilTidTilPassert(treffId, fnrSvartNei.asString)
         rekrutteringstreffService.publiser(treffId, fnrSvartNei.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartNei.asString)
         scheduler.behandleJobbsøkerHendelser()
@@ -624,7 +624,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         // Fullfør treffet
-        endreTilTidTilPassert(treffId, fnrSvartJa.asString)
+        db.endreTilTidTilPassert(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.publiser(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
         scheduler.behandleJobbsøkerHendelser()
@@ -673,12 +673,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
-    }
-
-    private fun endreTilTidTilPassert(treffId: TreffId, navIdent: String) {
-        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
-        val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(rekrutteringstreff).copy(tilTid = nowOslo().minusDays(1))
-        rekrutteringstreffService.oppdater(treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
     }
 }
 

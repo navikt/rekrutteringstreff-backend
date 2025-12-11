@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
@@ -264,8 +263,8 @@ class RekrutteringstreffService(
         rekrutteringstreffRepository.avpubliser(treffId, navIdent)
     }
 
-    fun opprett(internalDto: OpprettRekrutteringstreffInternalDto) {
-        rekrutteringstreffRepository.opprett(internalDto)
+    fun opprett(internalDto: OpprettRekrutteringstreffInternalDto): TreffId {
+        return rekrutteringstreffRepository.opprett(internalDto)
     }
 
     fun oppdater(treffId: TreffId, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
