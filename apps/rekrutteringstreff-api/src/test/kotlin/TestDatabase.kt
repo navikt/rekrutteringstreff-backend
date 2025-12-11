@@ -197,6 +197,8 @@ class TestDatabase {
 
     fun hentAlleRekrutteringstreff(): List<Rekrutteringstreff> = rekrutteringstreffRepository.hentAlle()
 
+    fun hentAlleRekrutteringstreffSomIkkeErSlettet(): List<Rekrutteringstreff> = rekrutteringstreffRepository.hentAlleSomIkkeErSlettet()
+
     fun hentEiere(id: TreffId): List<String> = dataSource.connection.use {
         val rs = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ?").apply {
             setObject(1, id.somUuid)

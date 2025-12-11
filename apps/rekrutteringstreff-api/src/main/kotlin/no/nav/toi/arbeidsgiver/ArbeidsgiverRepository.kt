@@ -40,25 +40,29 @@ class ArbeidsgiverRepository(
 ) {
 
     fun slett(arbeidsgiverId: UUID, opprettetAv: String): Boolean =
-        dataSource.executeInTransaction { c ->
-            val arbeidsgiverDbId: Long? = c.prepareStatement("SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?").use { ps ->
-                ps.setObject(1, arbeidsgiverId)
-                ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
-            }
-            if (arbeidsgiverDbId == null) return@executeInTransaction false
-
-            leggTilHendelse(
-                connection = c,
-                arbeidsgiverDbId = arbeidsgiverDbId,
-                hendelsestype = ArbeidsgiverHendelsestype.SLETTET,
-                opprettetAvAktørType = AktørType.ARRANGØR,
-                aktøridentifikasjon = opprettetAv
-            )
-
-            endreStatus(c, arbeidsgiverId, ArbeidsgiverStatus.SLETTET)
-
-            true
+        dataSource.executeInTransaction { connection ->
+            slett(connection, arbeidsgiverId, opprettetAv)
         }
+
+    fun slett(connection: Connection, arbeidsgiverId: UUID, opprettetAv: String): Boolean {
+        val arbeidsgiverDbId: Long? = connection.prepareStatement("SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?").use { ps ->
+            ps.setObject(1, arbeidsgiverId)
+            ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
+        }
+        if (arbeidsgiverDbId == null) return false
+
+        leggTilHendelse(
+            connection = connection,
+            arbeidsgiverDbId = arbeidsgiverDbId,
+            hendelsestype = ArbeidsgiverHendelsestype.SLETTET,
+            opprettetAvAktørType = AktørType.ARRANGØR,
+            aktøridentifikasjon = opprettetAv
+        )
+
+        endreStatus(connection, arbeidsgiverId, ArbeidsgiverStatus.SLETTET)
+
+        return true
+    }
 
     private fun hentTreffDbId(connection: Connection, treff: TreffId): Long? {
         connection.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
@@ -224,7 +228,7 @@ class ArbeidsgiverRepository(
         status = ArbeidsgiverStatus.valueOf(getString("status"))
     )
 
-    fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {
+    private fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {
         connection.prepareStatement(
             """
             UPDATE arbeidsgiver

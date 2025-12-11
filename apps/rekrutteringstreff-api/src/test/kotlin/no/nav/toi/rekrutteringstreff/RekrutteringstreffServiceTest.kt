@@ -3,7 +3,12 @@ package no.nav.toi.rekrutteringstreff
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
+import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
@@ -23,6 +28,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffServiceTest {
@@ -523,6 +530,48 @@ class RekrutteringstreffServiceTest {
         assertThat(andreNotifikasjoner).hasSize(2)
     }
 
+    @Test
+    fun `skal ikke kunne slette treff som har jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val navIdent = "Z123456"
+        val fnr = Fødselsnummer("11111111111")
+
+        leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
+
+        assertThrows<IllegalStateException> {
+            rekrutteringstreffService.slett(treffId, navIdent)
+        }
+    }
+
+    @Test
+    fun `slett treff skal sette riktig status på treffet og arbeidsgivere`() {
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(status = RekrutteringstreffStatus.UTKAST)
+
+        val navIdent = "Z123456"
+
+        db.leggTilArbeidsgivere(
+            listOf(
+                Arbeidsgiver(
+                    arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
+                    treffId = treffId,
+                    orgnr = Orgnr("999888777"),
+                    orgnavn = Orgnavn("Testbedrift AS"),
+                    status = ArbeidsgiverStatus.AKTIV,
+                )
+            )
+        )
+
+        assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
+        assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.AKTIV }).isTrue()
+
+        rekrutteringstreffService.slett(treffId, navIdent)
+
+        assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.SLETTET)
+        assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.SLETTET }).isTrue()
+
+        // Sjekk at treffet ikke returneres i hentAlleSomIkkeErSlettet
+        assertThat(rekrutteringstreffRepository.hentAlleSomIkkeErSlettet().any { it.id == treffId }).isFalse()
+    }
 
     private fun leggTilOgInviterJobbsøker(treffId: TreffId, fnr: Fødselsnummer, navIdent: String) {
         jobbsøkerRepository.leggTil(
