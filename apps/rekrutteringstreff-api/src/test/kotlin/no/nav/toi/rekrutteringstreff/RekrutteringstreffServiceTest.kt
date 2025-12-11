@@ -547,7 +547,8 @@ class RekrutteringstreffServiceTest {
     @Test
     fun `slett treff skal sette riktig status på treffet og arbeidsgivere`() {
         // Arrange
-        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(status = RekrutteringstreffStatus.UTKAST)
+
         val navIdent = "Z123456"
 
         db.leggTilArbeidsgivere(
@@ -562,8 +563,7 @@ class RekrutteringstreffServiceTest {
             )
         )
 
-        publiserTreff(treffId, navIdent)
-        assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
         assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.AKTIV }).isTrue()
 
         rekrutteringstreffService.slett(treffId, navIdent)

@@ -57,7 +57,7 @@ class RekrutteringstreffService(
     fun slett(treffId: TreffId, navIdent: String) {
         val status = rekrutteringstreffRepository.hent(treffId)!!.status
         if (kanSletteJobbtreff(treffId, status).not()) {
-            throw IllegalStateException("Kan ikke slette rekrutteringstreff med registrerte jobbsøkere")
+            throw IllegalStateException("Kan ikke slette treff med id $treffId")
         }
         dataSource.executeInTransaction { connection ->
             rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.SLETTET, navIdent)
