@@ -2,7 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-enum class MalParameter {
+enum class EndringMalParameter {
     NAVN,
     TIDSPUNKT,
     SVARFRIST,
@@ -24,11 +24,11 @@ data class Rekrutteringstreffendringer(
     val svarfrist: Endringsfelt<String>? = null,
     val introduksjon: Endringsfelt<String>? = null
 ) {
-    fun mapParametereSomSkalVarsles(): List<MalParameter> = buildList {
-        if (navn?.skalVarsle == true) add(MalParameter.NAVN)
-        if (tidspunkt?.skalVarsle == true) add(MalParameter.TIDSPUNKT)
-        if (svarfrist?.skalVarsle == true) add(MalParameter.SVARFRIST)
-        if (sted?.skalVarsle == true) add(MalParameter.STED)
-        if (introduksjon?.skalVarsle == true) add(MalParameter.INTRODUKSJON)
+    fun mapParametereSomSkalVarsles(): List<EndringMalParameter> = buildList {
+        if (navn?.skalVarsle == true) add(EndringMalParameter.NAVN)
+        if (tidspunkt?.skalVarsle == true) add(EndringMalParameter.TIDSPUNKT)
+        if (svarfrist?.skalVarsle == true) add(EndringMalParameter.SVARFRIST)
+        if (sted?.skalVarsle == true) add(EndringMalParameter.STED)
+        if (introduksjon?.skalVarsle == true) add(EndringMalParameter.INTRODUKSJON)
     }
 }

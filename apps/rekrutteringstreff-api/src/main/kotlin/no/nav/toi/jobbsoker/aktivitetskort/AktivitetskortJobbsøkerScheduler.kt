@@ -6,7 +6,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.executeInTransaction
 import no.nav.toi.log
-import no.nav.toi.rekrutteringstreff.MalParameter
+import no.nav.toi.rekrutteringstreff.EndringMalParameter
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -152,7 +152,7 @@ class AktivitetskortJobbsøkerScheduler(
                         fnr = hendelse.fnr,
                         hendelseId = hendelse.hendelseId,
                         endretAv = hendelse.aktøridentifikasjon,
-                        malParametere = parametereSomSkalMappes
+                        endringMalParametere = parametereSomSkalMappes
                     )
                 }
             }
@@ -164,13 +164,13 @@ class AktivitetskortJobbsøkerScheduler(
         fnr: String,
         hendelseId: UUID,
         endretAv: String?,
-        malParametere: List<MalParameter>
+        endringMalParametere: List<EndringMalParameter>
     ) {
         val messageMap = buildMap<String, Any> {
             put("rekrutteringstreffId", rekrutteringstreffId)
             put("fnr", fnr)
             put("hendelseId", hendelseId.toString())
-            put("malParametere", malParametere.map { it.name })
+            put("malParametere", endringMalParametere.map { it.name })
             endretAv?.let { put("endretAv", it) }
         }
 
@@ -180,7 +180,7 @@ class AktivitetskortJobbsøkerScheduler(
         )
 
         rapidsConnection.publish(fnr, message.toJson())
-        log.info("Sendt MinSide-varsling for treff $rekrutteringstreffId med malParametere=${malParametere.map { it.name }}")
+        log.info("Sendt MinSide-varsling for treff $rekrutteringstreffId med malParametere=${endringMalParametere.map { it.name }}")
     }
 
     private fun hentTreff(rekrutteringstreffUuid: String): Rekrutteringstreff =
