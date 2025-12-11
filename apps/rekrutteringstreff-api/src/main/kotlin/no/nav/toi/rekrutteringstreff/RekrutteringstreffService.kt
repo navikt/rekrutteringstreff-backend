@@ -71,7 +71,7 @@ class RekrutteringstreffService(
     }
 
     fun hentAlleRekrutteringstreff(): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlle()
+        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleSomIkkeErSlettet()
         val rekrutteringstreffDto: ArrayList<RekrutteringstreffDto> = ArrayList<RekrutteringstreffDto>()
         alleRekrutteringstreff.forEach {
             val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(it.id)

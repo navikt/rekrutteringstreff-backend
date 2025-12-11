@@ -268,7 +268,7 @@ class RekrutteringstreffTest {
             is Failure -> throw result.error
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
-                val remaining = db.hentAlleRekrutteringstreff().filter { it.status != RekrutteringstreffStatus.SLETTET }
+                val remaining = db.hentAlleRekrutteringstreffSomIkkeErSlettet()
                 assertThat(remaining).isEmpty()
             }
         }
@@ -344,7 +344,7 @@ class RekrutteringstreffTest {
         assertThat(delRes.statusCode).isEqualTo(409)
 
         // Treffet skal fortsatt eksistere
-        assertThat(db.hentAlleRekrutteringstreff().filter { it.status != RekrutteringstreffStatus.SLETTET }).isNotEmpty
+        assertThat(db.hentAlleRekrutteringstreffSomIkkeErSlettet()).isNotEmpty
     }
 
     fun tokenVarianter() = UautentifiserendeTestCase.somStrømAvArgumenter()
