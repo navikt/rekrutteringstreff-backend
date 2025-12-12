@@ -66,7 +66,7 @@ class RekrutteringstreffOppdateringLytter(
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av rekrutteringstreffoppdatering: $problems")
-        secure(log).error("Feil ved behandling av rekrutteringstreffoppdatering: $extendedReport")
+        secure(log).error("Feil ved behandling av rekrutteringstreffoppdatering: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }
