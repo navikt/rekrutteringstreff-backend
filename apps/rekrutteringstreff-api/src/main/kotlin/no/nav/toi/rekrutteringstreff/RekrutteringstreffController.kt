@@ -1,8 +1,10 @@
 package no.nav.toi.rekrutteringstreff
 
 import io.javalin.Javalin
+import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
+import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
@@ -485,21 +487,21 @@ class RekrutteringstreffController(
         )],
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
-                from = EndringerDto::class,
+                from = Rekrutteringstreffendringer::class,
                 example = """{
-                    "tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"},
-                    "beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse"},
-                    "fraTid": {"gammelVerdi": "2025-06-15T09:00:00+02:00", "nyVerdi": "2025-06-15T10:00:00+02:00"},
-                    "tilTid": {"gammelVerdi": "2025-06-15T11:00:00+02:00", "nyVerdi": "2025-06-15T12:00:00+02:00"},
-                    "svarfrist": null,
-                    "gateadresse": {"gammelVerdi": null, "nyVerdi": "Ny gate 123"},
-                    "postnummer": {"gammelVerdi": "0566", "nyVerdi": "0567"},
-                    "poststed": {"gammelVerdi": "Oslo", "nyVerdi": "Oslo"},
-                    "innlegg": null
+                    "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
+                    "tidspunkt": {"gammelVerdi": "2025-06-15T09:00:00+02:00 til 2025-06-15T11:00:00+02:00", "nyVerdi": "2025-06-15T10:00:00+02:00 til 2025-06-15T12:00:00+02:00", "skalVarsle": true},
+                    "svarfrist": {"gammelVerdi": "2025-06-10T23:59:00+02:00", "nyVerdi": "2025-06-12T23:59:00+02:00", "skalVarsle": true},
+                    "sted": {"gammelVerdi": "Gammel gate 123, 0566 Oslo", "nyVerdi": "Ny gate 123, 0567 Oslo", "skalVarsle": true},
+                    "introduksjon": {"gammelVerdi": "Gammel introduksjon", "nyVerdi": "Ny introduksjon", "skalVarsle": true}
             }"""
             )]
         ),
-        responses = [OpenApiResponse(status = "201", description = "Endringer er registrert.")]
+        responses = [
+            OpenApiResponse(status = "201", description = "Endringer er registrert."),
+            OpenApiResponse(status = "400", description = "Kan kun registrere endringer for treff som har publisert status."),
+            OpenApiResponse(status = "403", description = "Bruker har ikke tilgang til å registrere endringer for treffet."),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff ikke funnet.")]
     )
     private fun registrerEndringHandler(
         repo: RekrutteringstreffRepository,
@@ -510,10 +512,14 @@ class RekrutteringstreffController(
             val treffId = TreffId(ctx.pathParam(pathParamTreffId))
             val navIdent = ctx.extractNavIdent()
 
-            // TODO: Sjekk at treffet er publisert når statuser er bedre implementert i bakend
             if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-                val dto = ctx.bodyAsClass<EndringerDto>()
-                val endringerJson = JacksonConfig.mapper.writeValueAsString(dto)
+                val treff = repo.hent(treffId) ?: throw NotFoundResponse("Fant ikke rekrutteringstreff med id $treffId")
+                if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
+                    throw BadRequestResponse("Kan kun registrere endringer for treff som har publisert status")
+                }
+
+                val endringer = ctx.bodyAsClass<Rekrutteringstreffendringer>()
+                val endringerJson = JacksonConfig.mapper.writeValueAsString(endringer)
 
                 service.registrerEndring(treffId, endringerJson, navIdent)
                 ctx.status(201)

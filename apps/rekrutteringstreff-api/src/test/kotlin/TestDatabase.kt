@@ -159,7 +159,7 @@ class TestDatabase {
     fun registrerTreffEndretNotifikasjon(
         treffId: TreffId,
         fnr: Fødselsnummer,
-        endringer: no.nav.toi.rekrutteringstreff.dto.EndringerDto
+        endringer: no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
     ) = dataSource.connection.use { conn ->
         // Hent jobbsøker_id
         val jobbsøkerId = conn.prepareStatement(

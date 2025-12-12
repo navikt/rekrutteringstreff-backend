@@ -817,24 +817,16 @@ class RekrutteringstreffTest {
             .response()
 
         // Registrer endringer
-        val endringerDto = """
+        val endringer = """
             {
-                "gamleVerdierForEndringer": {
-                    "tittel": {"value": "Gammel tittel", "endret": true},
-                    "beskrivelse": {"value": "Gammel beskrivelse", "endret": true},
-                    "fraTid": {"value": "2025-10-30T10:00:00+01:00", "endret": true},
-                    "tilTid": {"value": null, "endret": false},
-                    "svarfrist": {"value": null, "endret": false},
-                    "gateadresse": {"value": null, "endret": false},
-                    "postnummer": {"value": null, "endret": false},
-                    "poststed": {"value": null, "endret": false},
-                    "innlegg": {"value": null, "endret": false}
-                }
+                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
+                "tidspunkt": {"gammelVerdi": "2025-10-30T10:00:00+01:00", "nyVerdi": "2025-10-30T14:00:00+01:00", "skalVarsle": true},
+                "introduksjon": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse", "skalVarsle": false}
             }
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
@@ -903,24 +895,15 @@ class RekrutteringstreffTest {
             .response()
 
         // Registrer endringer
-        val endringerDto = """
+        val endringer = """
             {
-                "gamleVerdierForEndringer": {
-                    "tittel": {"value": "Gammel tittel", "endret": true},
-                    "beskrivelse": {"value": null, "endret": false},
-                    "fraTid": {"value": null, "endret": false},
-                    "tilTid": {"value": null, "endret": false},
-                    "svarfrist": {"value": null, "endret": false},
-                    "gateadresse": {"value": "Gammel gate 1", "endret": true},
-                    "postnummer": {"value": "0566", "endret": true},
-                    "poststed": {"value": "Oslo", "endret": true},
-                    "innlegg": {"value": null, "endret": false}
-                }
+                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
+                "sted": {"gammelVerdi": "Gammel gate 1, 0566 Oslo", "nyVerdi": "Ny gate 2, 0567 Oslo", "skalVarsle": true}
             }
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
@@ -1010,24 +993,14 @@ class RekrutteringstreffTest {
             .response()
 
         // Registrer endringer
-        val endringerDto = """
+        val endringer = """
             {
-                "gamleVerdierForEndringer": {
-                    "tittel": {"value": null, "endret": false},
-                    "beskrivelse": {"value": null, "endret": false},
-                    "fraTid": {"value": null, "endret": false},
-                    "tilTid": {"value": "2025-10-30T14:00:00+01:00", "endret": true},
-                    "svarfrist": {"value": null, "endret": false},
-                    "gateadresse": {"value": null, "endret": false},
-                    "postnummer": {"value": null, "endret": false},
-                    "poststed": {"value": null, "endret": false},
-                    "innlegg": {"value": null, "endret": false}
-                }
+                "tidspunkt": {"gammelVerdi": "2025-10-30T10:00:00+01:00 - 2025-10-30T12:00:00+01:00", "nyVerdi": "2025-10-30T10:00:00+01:00 - 2025-10-30T14:00:00+01:00", "skalVarsle": true}
             }
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
@@ -1052,7 +1025,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun `registrer endring fungerer uavhengig av publiseringsstatus`() {
+    fun `registrer endring avvises for upubliserte treff`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
@@ -1074,36 +1047,84 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(listOf(jobbsøker1))
         jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId), treffId, navIdent)
 
-        // Registrer endringer (fungerer nå uavhengig av status)
-        val endringerDto = """
+        // Prøv å registrere endringer på upublisert treff (skal avvises)
+        val endringer = """
             {
-                "gamleVerdierForEndringer": {
-                    "tittel": {"value": null, "endret": false},
-                    "beskrivelse": {"value": "Gammel beskrivelse", "endret": true},
-                    "fraTid": {"value": null, "endret": false},
-                    "tilTid": {"value": null, "endret": false},
-                    "svarfrist": {"value": null, "endret": false},
-                    "gateadresse": {"value": null, "endret": false},
-                    "postnummer": {"value": null, "endret": false},
-                    "poststed": {"value": null, "endret": false},
-                    "innlegg": {"value": null, "endret": false}
-                }
+                "introduksjon": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse", "skalVarsle": true}
             }
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
 
-        assertStatuscodeEquals(201, response, result)
-
-        // Verifiser at hendelse er opprettet
-        val treffHendelser = db.hentHendelser(treffId)
-        assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
+        // Skal returnere 400 Bad Request fordi treffet ikke er publisert
+        assertStatuscodeEquals(400, response, result)
     }
 
+    @Test
+    fun `registrer endring avvises for fullførte treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser og fullfør treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Prøv å registrere endringer på fullført treff (skal avvises)
+        val endringer = """
+            {
+                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
+            .body(endringer)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .response()
+
+        // Skal returnere 400 Bad Request fordi treffet er fullført
+        assertStatuscodeEquals(400, response, result)
+    }
+
+    @Test
+    fun `registrer endring avvises for avlyste treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser og avlys treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Prøv å registrere endringer på avlyst treff (skal avvises)
+        val endringer = """
+            {
+                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+            }
+        """.trimIndent()
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
+            .body(endringer)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .response()
+
+        // Skal returnere 400 Bad Request fordi treffet er avlyst
+        assertStatuscodeEquals(400, response, result)
+    }
 
     @Test
     fun `registrer endring oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere skal varsles`() {
@@ -1115,16 +1136,14 @@ class RekrutteringstreffTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .response()
 
-        val endringerDto = """
+        val endringer = """
             {
-                "endringer": {
-                    "tittel": "Gammel tittel"
-                }
+                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
             }
         """.trimIndent()
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringerDto)
+            .body(endringer)
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .response()
