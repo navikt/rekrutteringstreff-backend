@@ -65,8 +65,17 @@ class RekrutteringstreffOppdateringLytter(
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
+        // TODO: Fjern denne workarounden når gamle meldinger er ryddet opp fra Kafka
+        // Midlertidig: ignorer gamle meldinger som mangler påkrevde felter (sendt før ny meldingsformat)
+        val extendedReport = problems.toExtendedReport()
+        if (extendedReport.contains("Missing required key")) {
+            log.warn("Ignorerer gammel rekrutteringstreffoppdatering-melding med manglende felter: $problems")
+            secure(log).warn("Ignorerer gammel rekrutteringstreffoppdatering-melding: $extendedReport")
+            return
+        }
+        
         log.error("Feil ved behandling av rekrutteringstreffoppdatering: $problems")
-        secure(log).error("Feil ved behandling av rekrutteringstreffoppdatering: ${problems.toExtendedReport()}")
+        secure(log).error("Feil ved behandling av rekrutteringstreffoppdatering: $extendedReport")
         throw Exception(problems.toString())
     }
 }
