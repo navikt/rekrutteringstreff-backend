@@ -99,8 +99,8 @@ class AktivitetskortTransaksjonTest {
         val invitasjoner = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         invitasjoner.forEach { aktivitetskortRepository.lagrePollingstatus(it.jobbsokerHendelseDbId) }
 
-        val endringer = no.nav.toi.rekrutteringstreff.dto.EndringerDto(
-            tittel = no.nav.toi.rekrutteringstreff.dto.Endringsfelt(gammelVerdi = "Gammel", nyVerdi = "Ny")
+        val endringer = no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer(
+            navn = no.nav.toi.rekrutteringstreff.Endringsfelt(gammelVerdi = "Gammel", nyVerdi = "Ny")
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 
