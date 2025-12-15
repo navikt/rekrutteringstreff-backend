@@ -700,13 +700,13 @@ class RekrutteringstreffServiceTest {
     }
 
     private fun opprettTreff(): TreffId {
-        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
-            tittel = "Treff 1",
+        val rekrutteringstreff = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff",
             opprettetAvPersonNavident = "NAV1234",
             opprettetAvNavkontorEnhetId = "0605",
             opprettetAvTidspunkt = nowOslo(),
         )
-        return rekrutteringstreffRepository.opprett(rekrutteringstreff1)
+        return rekrutteringstreffRepository.opprett(rekrutteringstreff)
     }
 
     private fun publiserTreff(treffId: TreffId, navIdent: String) {
