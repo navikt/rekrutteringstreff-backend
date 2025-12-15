@@ -170,9 +170,10 @@ class RekrutteringstreffServiceTest {
     fun `Skal ikke kunne fullføre et treff hvor tilTid ikke er passert`() {
         val treffId = opprettTreff()
         val treff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
+        rekrutteringstreffService.publiser(treffId, "NAV1234")
         rekrutteringstreffService.oppdater(
             treffId = treffId,
-            dto = OppdaterRekrutteringstreffDto.opprettFra(treff).copy(fraTid = nowOslo().plusDays(1)),
+            dto = OppdaterRekrutteringstreffDto.opprettFra(treff).copy(tilTid = nowOslo().plusDays(1)),
             navIdent = "NAV1234"
         )
         assertThrows<UlovligOppdateringException> {

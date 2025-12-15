@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff.dto
 
-import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import java.time.ZonedDateTime
 
 data class OppdaterRekrutteringstreffDto(
