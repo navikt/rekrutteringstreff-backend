@@ -15,4 +15,23 @@ data class OppdaterRekrutteringstreffDto(
     val kommunenummer: String?,
     val fylke: String?,
     val fylkesnummer: String?,
-)
+) {
+    companion object {
+        fun opprettFra(rekrutteringstreff: RekrutteringstreffDto): OppdaterRekrutteringstreffDto {
+            return OppdaterRekrutteringstreffDto(
+                tittel = rekrutteringstreff.tittel,
+                beskrivelse = rekrutteringstreff.beskrivelse,
+                fraTid = rekrutteringstreff.fraTid,
+                tilTid = rekrutteringstreff.tilTid,
+                svarfrist = rekrutteringstreff.svarfrist,
+                gateadresse = rekrutteringstreff.gateadresse,
+                postnummer = rekrutteringstreff.postnummer,
+                poststed = rekrutteringstreff.poststed,
+                kommune = rekrutteringstreff.kommune,
+                kommunenummer = rekrutteringstreff.kommunenummer,
+                fylke = rekrutteringstreff.fylke,
+                fylkesnummer = rekrutteringstreff.fylkesnummer,
+            )
+        }
+    }
+}

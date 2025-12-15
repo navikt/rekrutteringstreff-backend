@@ -5,9 +5,12 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffServiceTest
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.Endringsfelt
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeAll
@@ -186,7 +189,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 oppdatering kort
-        
+
         val kortMelding = rapid.inspektør.message(1)
         assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
         assertThat(kortMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
@@ -314,7 +317,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         // Skal sende oppdatering med faktiske verdier fra database, selv om verifiseringen feiler
         assertThat(rapid.inspektør.size).isEqualTo(2)  // Invitasjon kort + oppdatering kort
-        
+
         val kortMelding = rapid.inspektør.message(1)
         assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
         // Verifiser at faktiske verdier fra database sendes, ikke de feilaktige fra endringer
@@ -504,7 +507,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         // Skal være 2 meldinger: invitasjon + oppdatering (uten endredeFelter)
         assertThat(rapid.inspektør.size).isEqualTo(2)
-        
+
         // Verifiser at oppdatering sendes uten endredeFelter
         val oppdateringMelding = rapid.inspektør.message(1)
         assertThat(oppdateringMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
@@ -637,6 +640,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
+        db.endreTilTidTilPassert(treffId, expectedFnr.asString)
+        rekrutteringstreffService.publiser(treffId, expectedFnr.asString)
         rekrutteringstreffService.fullfør(treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
@@ -690,6 +695,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val endringer = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel))
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)  // Hendelse 3: TREFF_ENDRET
 
+        db.endreTilTidTilPassert(treffId, fødselsnummer.asString)
+        rekrutteringstreffService.publiser(treffId, fødselsnummer.asString)
         rekrutteringstreffService.fullfør(treffId, fødselsnummer.asString)  // Hendelse 4: SVART_JA_TREFF_FULLFØRT
 
         // Kjør scheduler én gang - skal behandle alle i riktig rekkefølge
@@ -733,6 +740,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()  // Send invitasjoner og svar
 
         // Fullfør treffet
+        db.endreTilTidTilPassert(treffId, fnrSvartJa.asString)
+        rekrutteringstreffService.publiser(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
         scheduler.behandleJobbsøkerHendelser()
 
@@ -825,6 +834,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         // Fullfør treffet - skal ikke sende noen ekstra hendelse for person som svarte nei
+        db.endreTilTidTilPassert(treffId, fnrSvartNei.asString)
+        rekrutteringstreffService.publiser(treffId, fnrSvartNei.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartNei.asString)
         scheduler.behandleJobbsøkerHendelser()
 
@@ -856,6 +867,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         // Fullfør treffet
+        db.endreTilTidTilPassert(treffId, fnrSvartJa.asString)
+        rekrutteringstreffService.publiser(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
         scheduler.behandleJobbsøkerHendelser()
 

@@ -558,6 +558,12 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent)
 
+        if (path == "fullfor") {
+            // For å kunne fullføre må treffet være publisert først
+            db.endreTilTidTilPassert(treffId, navIdent)
+            db.publiser(treffId, navIdent)
+        }
+
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/$path")
             .header("Authorization", "Bearer ${token.serialize()}")
             .response()
@@ -565,7 +571,11 @@ class RekrutteringstreffTest {
         assertStatuscodeEquals(200, response, result)
 
         val hendelser = db.hentHendelser(treffId)
-        assertThat(hendelser).hasSize(2)
+        if (path == "fullfor") {
+            assertThat(hendelser).hasSize(4)
+        } else {
+            assertThat(hendelser).hasSize(2)
+        }
         assertThat(hendelser.first().hendelsestype).isEqualTo(forventetHendelsestype)
         assertThat(hendelser.first().aktørIdentifikasjon).isEqualTo(navIdent)
         assertThat(hendelser.last().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET)
@@ -659,6 +669,7 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+        val rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
 
         // Legg til to jobbsøkere
         val jobbsøker1 = Jobbsøker(
@@ -690,6 +701,10 @@ class RekrutteringstreffTest {
         // Begge svarer ja
         jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
         jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+
+        // Publiser treffet
+        rekrutteringstreffRepository.publiser(treffId, "navIdent")
+        db.endreTilTidTilPassert(treffId, "navIdent")
 
         // Fullfør treffet via endpoint
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
@@ -760,6 +775,10 @@ class RekrutteringstreffTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser treffet
+        db.endreTilTidTilPassert(treffId, navIdent)
+        db.publiser(treffId, navIdent)
 
         // Fullfør treffet uten jobbsøkere via endpoint
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
@@ -1069,6 +1088,7 @@ class RekrutteringstreffTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        db.endreTilTidTilPassert(treffId, navIdent)
 
         // Publiser og fullfør treffet
         Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")

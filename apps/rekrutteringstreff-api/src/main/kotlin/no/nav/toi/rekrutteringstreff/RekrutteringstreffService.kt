@@ -1,10 +1,11 @@
 package no.nav.toi.rekrutteringstreff
 
-import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
+import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerRepository
@@ -12,7 +13,12 @@ import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.util.ArrayList
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.log
+import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.slf4j.Logger
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import javax.sql.DataSource
 
 class RekrutteringstreffService(
@@ -23,9 +29,9 @@ class RekrutteringstreffService(
 ) {
     private val logger: Logger = log
 
-    fun avlys(treff: TreffId, avlystAv: String) {
+    fun avlys(treffId: TreffId, avlystAv: String) {
         leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
-            treff,
+            treffId,
             avlystAv,
             RekrutteringstreffHendelsestype.AVLYST,
             JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
@@ -34,9 +40,29 @@ class RekrutteringstreffService(
         )
     }
 
-    fun fullfør(treff: TreffId, fullfortAv: String) {
+    fun publiser(treffId: TreffId, navIdent: String) {
+        rekrutteringstreffRepository.hent(treffId)
+            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
+
+        rekrutteringstreffRepository.publiser(treffId, navIdent)
+    }
+
+    fun fullfør(treffId: TreffId, fullfortAv: String) {
+        val treff = rekrutteringstreffRepository.hent(treffId)
+            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
+
+        if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
+            logger.warn("Forsøk på å fullføre rekrutteringstreff som ikke er publisert. treffId: $treffId status: ${treff.status}")
+            throw UlovligOppdateringException("Kan kun fullføre rekrutteringstreff som er i PUBLISERT status")
+        }
+
+        if (treff.tilTid == null || treff.tilTid.isAfter(ZonedDateTime.now(ZoneId.of("Europe/Oslo")))) {
+            logger.warn("Forsøk på å fullføre rekrutteringstreff som fortsatt er i gang. treffId: $treffId")
+            throw UlovligOppdateringException("Rekrutteringstreff med id $treffId er fremdeles i gang og kan ikke fullføres")
+        }
+
         leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
-            treff,
+            treffId,
             fullfortAv,
             RekrutteringstreffHendelsestype.FULLFØRT,
             JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
@@ -55,9 +81,9 @@ class RekrutteringstreffService(
     }
 
     fun slett(treffId: TreffId, navIdent: String) {
-        val status = rekrutteringstreffRepository.hent(treffId)?.status ?: throw IllegalStateException("Rekrutteringstreff med id $treffId ikke funnet")
+        val status = rekrutteringstreffRepository.hent(treffId)?.status ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
         if (kanSletteJobbtreff(treffId, status).not()) {
-            throw IllegalStateException("Kan ikke slette treff med id $treffId")
+            throw UlovligOppdateringException("Kan ikke slette treff med id $treffId")
         }
         dataSource.executeInTransaction { connection ->
             rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.SLETTET, navIdent)
@@ -81,16 +107,16 @@ class RekrutteringstreffService(
         return rekrutteringstreffDto
     }
 
-    fun hentRekrutteringstreff(treff: TreffId): RekrutteringstreffDto {
-        val rekrutteringstreff = rekrutteringstreffRepository.hent(treff)
-        val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(treff)
-        val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(treff)
-        return rekrutteringstreff?.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    fun hentRekrutteringstreff(treffId: TreffId): RekrutteringstreffDto {
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
+        val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(treffId)
+        val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(treffId)
+        return rekrutteringstreff?.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere) ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff ikke funnet")
     }
 
-    fun hentRekrutteringstreffMedHendelser(treff: TreffId): RekrutteringstreffDetaljOutboundDto {
-        val rekrutteringstreff = hentRekrutteringstreff(treff)
-        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff)
+    fun hentRekrutteringstreffMedHendelser(treffId: TreffId): RekrutteringstreffDetaljOutboundDto {
+        val rekrutteringstreff = hentRekrutteringstreff(treffId)
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treffId)
         return RekrutteringstreffDetaljOutboundDto(
             rekrutteringstreff,
             hendelser.map { RekrutteringstreffHendelseOutboundDto(
@@ -178,10 +204,10 @@ class RekrutteringstreffService(
         }
     }
 
-    fun registrerEndring(treff: TreffId, endringer: String, endretAv: String) {
+    fun registrerEndring(treffId: TreffId, endringer: String, endretAv: String) {
 
         dataSource.executeInTransaction { connection ->
-            val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treff)
+            val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
 
             rekrutteringstreffRepository.leggTilHendelse(
                 connection,
@@ -191,7 +217,7 @@ class RekrutteringstreffService(
                 endretAv,
                 endringer
             )
-            val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treff)
+            val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
 
             val jobbsøkereSomSkalVarsles = alleJobbsøkere
                 .filter { skalVarslesOmEndringer(it.hendelser) }
@@ -206,7 +232,7 @@ class RekrutteringstreffService(
                     endretAv,
                     hendelseData = endringer
                 )
-                logger.info("Registrert endring for rekrutteringstreff  ${treff.somString} med ${jobbsøkereSomSkalVarsles.size} jobbsøkere som skal varsles")
+                logger.info("Registrert endring for rekrutteringstreff  ${treffId.somString} med ${jobbsøkereSomSkalVarsles.size} jobbsøkere som skal varsles")
             }
         }
     }
@@ -233,5 +259,29 @@ class RekrutteringstreffService(
             JobbsøkerHendelsestype.INVITERT,
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
         )
+    }
+
+    fun avpubliser(treffId: TreffId, navIdent: String) {
+        rekrutteringstreffRepository.avpubliser(treffId, navIdent)
+    }
+
+    fun opprett(internalDto: OpprettRekrutteringstreffInternalDto): TreffId {
+        return rekrutteringstreffRepository.opprett(internalDto)
+    }
+
+    fun oppdater(treffId: TreffId, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
+        rekrutteringstreffRepository.oppdater(treffId, dto, navIdent)
+    }
+
+    fun hentHendelser(treffId: TreffId): List<RekrutteringstreffHendelse> {
+        return rekrutteringstreffRepository.hentHendelser(treffId)
+    }
+
+    fun hentAlleHendelser(treffId: TreffId): List<FellesHendelseOutboundDto> {
+        return rekrutteringstreffRepository.hentAlleHendelser(treffId)
+    }
+
+    fun gjenåpne(treffId: TreffId, navIdent: String) {
+        rekrutteringstreffRepository.gjenåpne(treffId, navIdent)
     }
 }

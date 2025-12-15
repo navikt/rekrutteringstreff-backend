@@ -19,7 +19,6 @@ import java.time.ZonedDateTime
 import java.util.*
 
 class RekrutteringstreffController(
-    private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val rekrutteringstreffService: RekrutteringstreffService,
     private val eierService: EierService,
     javalin: Javalin
@@ -54,7 +53,7 @@ class RekrutteringstreffController(
         javalin.post(avlysPath, avlysRekrutteringstreffHandler())
         javalin.post(avpubliserPath, avpubliserRekrutteringstreffHandler())
         javalin.post(fullforPath, fullforRekrutteringstreffHandler())
-        javalin.post(endringerPath, registrerEndringHandler(rekrutteringstreffRepository, rekrutteringstreffService))
+        javalin.post(endringerPath, registrerEndringHandler(rekrutteringstreffService))
     }
 
     @OpenApi(
@@ -90,7 +89,7 @@ class RekrutteringstreffController(
             opprettetAvNavkontorEnhetId = inputDto.opprettetAvNavkontorEnhetId,
             opprettetAvTidspunkt = ZonedDateTime.now(),
         )
-        val id = rekrutteringstreffRepository.opprett(internalDto)
+        val id = rekrutteringstreffService.opprett(internalDto)
         ctx.status(201).json(mapOf("id" to id.toString()))
     }
 
@@ -239,7 +238,7 @@ class RekrutteringstreffController(
         val navIdent = ctx.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
-            rekrutteringstreffRepository.oppdater(id, dto, navIdent)
+            rekrutteringstreffService.oppdater(id, dto, navIdent)
             val updated = rekrutteringstreffService.hentRekrutteringstreff(id)
             ctx.status(200).json(updated)
         } else {
@@ -272,18 +271,9 @@ class RekrutteringstreffController(
         val treffId = TreffId(ctx.pathParam("id"))
         val navIdent = ctx.extractNavIdent()
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            val treff = rekrutteringstreffRepository.hent(treffId)
-            if (treff == null) {
-                ctx.status(404).result("Fant ikke rekrutteringstreff med id $treffId")
-            } else {
-                if (!rekrutteringstreffService.kanSletteJobbtreff(treffId, treff.status)) {
-                    ctx.status(409).result("Rekrutteringstreff kan kun slettes hvis status er UTKAST og ingen jobbsøkere er tilknyttet.")
-                } else {
-                    log.info("Sletter rekrutteringstreff med id $treffId")
-                    rekrutteringstreffService.slett(treffId, navIdent)
-                    ctx.status(200).result("Rekrutteringstreff slettet")
-                }
-            }
+            log.info("Sletter rekrutteringstreff med id $treffId")
+            rekrutteringstreffService.slett(treffId, navIdent)
+            ctx.status(200).result("Rekrutteringstreff slettet")
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke slette det")
         }
@@ -307,7 +297,7 @@ class RekrutteringstreffController(
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            val list = rekrutteringstreffRepository.hentHendelser(treff).map {
+            val list = rekrutteringstreffService.hentHendelser(treff).map {
                 RekrutteringstreffHendelseOutboundDto(
                     id = it.id.toString(),
                     tidspunkt = it.tidspunkt,
@@ -339,7 +329,7 @@ class RekrutteringstreffController(
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            val list = rekrutteringstreffRepository.hentAlleHendelser(treff)
+            val list = rekrutteringstreffService.hentAlleHendelser(treff)
             ctx.status(200).json(list)
         } else {
             throw ForbiddenResponse("Personen har ikke tilgang til å hente alle hendelser for rekrutteringstreff ${treff.somString}")
@@ -363,9 +353,8 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
-
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            rekrutteringstreffRepository.publiser(treffId, navIdent)
+            rekrutteringstreffService.publiser(treffId, navIdent)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Personen har ikke tilgang til å publisere treffet ${treffId.somString}")
@@ -391,7 +380,7 @@ class RekrutteringstreffController(
         val navIdent = ctx.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            rekrutteringstreffRepository.gjenåpne(treffId, navIdent)
+            rekrutteringstreffService.gjenåpne(treffId, navIdent)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Personen har ikke tilgang til å gjenåpne treffet ${treffId.somString}")
@@ -442,7 +431,7 @@ class RekrutteringstreffController(
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            rekrutteringstreffRepository.avpubliser(treffId, navIdent)
+            rekrutteringstreffService.avpubliser(treffId, navIdent)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Personen har ikke tilgang til å avpublisere treffet ${treffId.somString}")
@@ -504,7 +493,6 @@ class RekrutteringstreffController(
             OpenApiResponse(status = "404", description = "Rekrutteringstreff ikke funnet.")]
     )
     private fun registrerEndringHandler(
-        repo: RekrutteringstreffRepository,
         service: RekrutteringstreffService
     ): (Context) -> Unit {
         return { ctx ->
@@ -513,7 +501,7 @@ class RekrutteringstreffController(
             val navIdent = ctx.extractNavIdent()
 
             if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-                val treff = repo.hent(treffId) ?: throw NotFoundResponse("Fant ikke rekrutteringstreff med id $treffId")
+                val treff = service.hentRekrutteringstreff(treffId)
                 if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
                     throw BadRequestResponse("Kan kun registrere endringer for treff som har publisert status")
                 }
