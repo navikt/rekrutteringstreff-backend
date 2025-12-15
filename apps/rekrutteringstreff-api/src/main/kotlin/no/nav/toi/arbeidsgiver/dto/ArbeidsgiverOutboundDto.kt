@@ -5,4 +5,7 @@ data class ArbeidsgiverOutboundDto(
     val organisasjonsnummer: String,
     val navn: String,
     val status: String,
+    val gateadresse: String?,
+    val postnummer: String?,
+    val poststed: String?,
 )

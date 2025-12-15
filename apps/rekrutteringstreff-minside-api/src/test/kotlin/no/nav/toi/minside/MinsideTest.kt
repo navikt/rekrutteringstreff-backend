@@ -139,6 +139,9 @@ class MinsideTest {
                         orgnr = Orgnr(arrangørOrgNr),
                         orgnavn = Orgnavn(arrangørOrgnavn),
                         status = ArbeidsgiverStatus.AKTIV,
+                        gateadresse = "Fyrstikkalleen 1",
+                        postnummer = "0661",
+                        poststed = "Oslo",
                     )
                 ))
             }.hentAlleRekrutteringstreff().first { tittel == it.tittel }

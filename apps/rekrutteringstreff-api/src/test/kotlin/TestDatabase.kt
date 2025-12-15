@@ -21,7 +21,6 @@ import javax.sql.DataSource
 class TestDatabase {
 
     private val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
-    private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
     private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
 
     fun opprettRekrutteringstreffIDatabase(
@@ -210,7 +209,7 @@ class TestDatabase {
 
     fun hentAlleArbeidsgivere(): List<Arbeidsgiver> = dataSource.connection.use {
         val sql = """
-            SELECT ag.id, ag.orgnr, ag.orgnavn, rt.id as treff_id
+            SELECT ag.id, ag.orgnr, ag.orgnavn, ag.gateadresse, ag.postnummer, ag.poststed, rt.id as treff_id
               FROM arbeidsgiver ag
               JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
              ORDER BY ag.arbeidsgiver_id
@@ -377,6 +376,9 @@ class TestDatabase {
         orgnr = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn")),
         status = ArbeidsgiverStatus.AKTIV,
+        gateadresse = rs.getString("gateadresse"),
+        postnummer = rs.getString("postnummer"),
+        poststed = rs.getString("poststed"),
     )
 
     private fun konverterTilNæringskoder(rs: ResultSet) = Næringskode(
@@ -408,7 +410,10 @@ class TestDatabase {
                 LeggTilArbeidsgiver(
                     ag.orgnr,
                     ag.orgnavn,
-                    næringskoder
+                    næringskoder,
+                    ag.gateadresse,
+                    ag.postnummer,
+                    ag.poststed
                 ),
                 ag.treffId,
                 "testperson")
