@@ -501,7 +501,7 @@ class RekrutteringstreffController(
             val navIdent = ctx.extractNavIdent()
 
             if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-                val treff = repo.hent(treffId) ?: throw NotFoundResponse("Fant ikke rekrutteringstreff med id $treffId")
+                val treff = service.hentRekrutteringstreff(treffId)
                 if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
                     throw BadRequestResponse("Kan kun registrere endringer for treff som har publisert status")
                 }
