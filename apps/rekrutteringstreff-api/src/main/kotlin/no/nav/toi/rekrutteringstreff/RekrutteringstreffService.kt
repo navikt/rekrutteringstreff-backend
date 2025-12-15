@@ -52,10 +52,12 @@ class RekrutteringstreffService(
             ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
 
         if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
+            logger.warn("Forsøk på å fullføre rekrutteringstreff som ikke er publisert. treffId: $treffId status: ${treff.status}")
             throw UlovligOppdateringException("Kan kun fullføre rekrutteringstreff som er i PUBLISERT status")
         }
 
         if (treff.tilTid == null || treff.tilTid.isAfter(ZonedDateTime.now(ZoneId.of("Europe/Oslo")))) {
+            logger.warn("Forsøk på å fullføre rekrutteringstreff som fortsatt er i gang. treffId: $treffId")
             throw UlovligOppdateringException("Rekrutteringstreff med id $treffId er fremdeles i gang og kan ikke fullføres")
         }
 
