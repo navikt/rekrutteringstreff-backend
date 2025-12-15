@@ -8,8 +8,8 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffServiceTest
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
-import no.nav.toi.rekrutteringstreff.dto.Endringsfelt
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
+import no.nav.toi.rekrutteringstreff.Endringsfelt
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
@@ -181,8 +181,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         db.oppdaterRekrutteringstreff(treffId, tittel = nyTittel)
 
-        val endringer = EndringerDto(
-            tittel = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel)
+        val endringer = Rekrutteringstreffendringer(
+            navn = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel)
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 
@@ -217,8 +217,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val nyFraTid = ZonedDateTime.now().plusDays(5)
         db.oppdaterRekrutteringstreff(treffId, fraTid = nyFraTid)
 
-        val endringer = EndringerDto(
-            fraTid = Endringsfelt(gammelVerdi = treff.fraTid.toString(), nyVerdi = nyFraTid.toString())
+        val endringer = Rekrutteringstreffendringer(
+            tidspunkt = Endringsfelt(gammelVerdi = treff.fraTid.toString(), nyVerdi = nyFraTid.toString())
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 
@@ -251,10 +251,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
             poststed = nyPoststed
         )
 
-        val endringer = EndringerDto(
-            gateadresse = Endringsfelt(gammelVerdi = treff.gateadresse, nyVerdi = nyGateadresse),
-            postnummer = Endringsfelt(gammelVerdi = treff.postnummer, nyVerdi = nyPostnummer),
-            poststed = Endringsfelt(gammelVerdi = treff.poststed, nyVerdi = nyPoststed)
+        val endringer = Rekrutteringstreffendringer(
+            sted = Endringsfelt(gammelVerdi = "${treff.gateadresse}, ${treff.postnummer}, ${treff.poststed}", nyVerdi = "$nyGateadresse, $nyPostnummer, $nyPoststed")
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 
@@ -279,8 +277,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.behandleJobbsøkerHendelser()
 
-        val endringer = EndringerDto(
-            innlegg = Endringsfelt(gammelVerdi = "Gammelt innlegg", nyVerdi = "Nytt innlegg")
+        val endringer = Rekrutteringstreffendringer(
+            introduksjon = Endringsfelt(gammelVerdi = "Gammelt innlegg", nyVerdi = "Nytt innlegg")
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 
@@ -310,8 +308,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
 
-        val endringer = EndringerDto(
-            tittel = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = "Feil tittel")
+        val endringer = Rekrutteringstreffendringer(
+            navn = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = "Feil tittel")
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 
@@ -347,8 +345,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val nyTittel = "Ny tittel"
         db.oppdaterRekrutteringstreff(treffId, tittel = nyTittel)
 
-        val endringer = EndringerDto(
-            tittel = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel)
+        val endringer = Rekrutteringstreffendringer(
+            navn = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel)
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 
@@ -356,6 +354,251 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 oppdatering
+    }
+
+    // ==================== MINSIDE VARSLING TESTER ====================
+
+    @Test
+    fun `skal sende oppdatering med endredeFelter når skalVarsle er true for tittel`() {
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
+        scheduler.behandleJobbsøkerHendelser()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+        val nyTittel = "Ny tittel"
+        db.oppdaterRekrutteringstreff(treffId, tittel = nyTittel)
+
+        val endringer = Rekrutteringstreffendringer(
+            navn = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel, skalVarsle = true)
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Skal nå være 2 meldinger: invitasjon + én samlet oppdatering (med endredeFelter)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+
+        // Sjekk samlet oppdatering
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        assertThat(oppdateringMelding["rekrutteringstreffId"].asText()).isEqualTo(treffId.toString())
+        assertThat(oppdateringMelding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
+        assertThat(oppdateringMelding.has("endredeFelter")).isTrue
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("NAVN")
+        // Skal også ha aktivitetskort-data
+        assertThat(oppdateringMelding.has("tittel")).isTrue
+        assertThat(oppdateringMelding.has("fraTid")).isTrue
+    }
+
+    @Test
+    fun `skal sende oppdatering med TIDSPUNKT når fraTid har skalVarsle true`() {
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
+        scheduler.behandleJobbsøkerHendelser()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+        val nyFraTid = ZonedDateTime.now().plusDays(5)
+        db.oppdaterRekrutteringstreff(treffId, fraTid = nyFraTid)
+
+        val endringer = Rekrutteringstreffendringer(
+            tidspunkt = Endringsfelt(gammelVerdi = treff.fraTid.toString(), nyVerdi = nyFraTid.toString(), skalVarsle = true)
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("TIDSPUNKT")
+    }
+
+    @Test
+    fun `skal sende oppdatering med STED når gateadresse har skalVarsle true`() {
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
+        scheduler.behandleJobbsøkerHendelser()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+        val nyGateadresse = "Malmøgata 2"
+        db.oppdaterRekrutteringstreff(treffId, gateadresse = nyGateadresse)
+
+        val endringer = Rekrutteringstreffendringer(
+            sted = Endringsfelt(gammelVerdi = treff.gateadresse, nyVerdi = nyGateadresse, skalVarsle = true)
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("STED")
+    }
+
+    @Test
+    fun `skal sende oppdatering med flere endredeFelter når flere felt har skalVarsle true`() {
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
+        scheduler.behandleJobbsøkerHendelser()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+        val nyTittel = "Ny tittel"
+        val nyGateadresse = "Malmøgata 2"
+        db.oppdaterRekrutteringstreff(treffId, tittel = nyTittel, gateadresse = nyGateadresse)
+
+        val endringer = Rekrutteringstreffendringer(
+            navn = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel, skalVarsle = true),
+            sted = Endringsfelt(gammelVerdi = treff.gateadresse, nyVerdi = nyGateadresse, skalVarsle = true),
+            introduksjon = Endringsfelt(gammelVerdi = "Gammelt innlegg", nyVerdi = "Nytt innlegg", skalVarsle = true)
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactlyInAnyOrder("NAVN", "STED", "INTRODUKSJON")
+    }
+
+    @Test
+    fun `skal ikke inkludere endredeFelter når ingen felt har skalVarsle true`() {
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
+        scheduler.behandleJobbsøkerHendelser()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+        val nyTittel = "Ny tittel"
+        db.oppdaterRekrutteringstreff(treffId, tittel = nyTittel)
+
+        // skalVarsle = false (standard)
+        val endringer = Rekrutteringstreffendringer(
+            navn = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel, skalVarsle = false)
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        // Skal være 2 meldinger: invitasjon + oppdatering (uten endredeFelter)
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+
+        // Verifiser at oppdatering sendes uten endredeFelter
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffoppdatering")
+        assertThat(oppdateringMelding.has("endredeFelter")).isFalse
+        // Skal fortsatt ha aktivitetskort-data
+        assertThat(oppdateringMelding.has("tittel")).isTrue
+    }
+
+    @Test
+    fun `skal sende oppdatering med SVARFRIST når svarfrist har skalVarsle true`() {
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
+        scheduler.behandleJobbsøkerHendelser()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+        val nySvarfrist = ZonedDateTime.now().plusDays(7)
+
+        val endringer = Rekrutteringstreffendringer(
+            svarfrist = Endringsfelt(gammelVerdi = treff.svarfrist?.toString(), nyVerdi = nySvarfrist.toString(), skalVarsle = true)
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+
+        val oppdateringMelding = rapid.inspektør.message(1)
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("SVARFRIST")
+    }
+
+    @Test
+    fun `skal kombinere fraTid og tilTid til TIDSPUNKT endredeFelter-verdi`() {
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
+        scheduler.behandleJobbsøkerHendelser()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+        val nyFraTid = ZonedDateTime.now().plusDays(5)
+        val nyTilTid = ZonedDateTime.now().plusDays(5).plusHours(2)
+
+        // Tidspunkt er allerede et sammenslått felt, så denne testen består fortsatt
+        val endringer = Rekrutteringstreffendringer(
+            tidspunkt = Endringsfelt(gammelVerdi = "${treff.fraTid} - ${treff.tilTid}", nyVerdi = "$nyFraTid - $nyTilTid", skalVarsle = true)
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+
+        val oppdateringMelding = rapid.inspektør.message(1)
+        // Skal kun ha én TIDSPUNKT, ikke to
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("TIDSPUNKT")
+    }
+
+    @Test
+    fun `skal kombinere gateadresse, postnummer og poststed til STED endredeFelter-verdi`() {
+        val rapid = TestRapid()
+        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
+
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        opprettOgInviterJobbsøker(treffId, fødselsnummer)
+        scheduler.behandleJobbsøkerHendelser()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+
+        // Sted er allerede et sammenslått felt, så denne testen består fortsatt
+        val endringer = Rekrutteringstreffendringer(
+            sted = Endringsfelt(gammelVerdi = "${treff.gateadresse}, ${treff.postnummer}, ${treff.poststed}", nyVerdi = "Malmøgata 2, 0566, Oslo", skalVarsle = true)
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+
+        val oppdateringMelding = rapid.inspektør.message(1)
+        // Skal kun ha én STED, ikke tre
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("STED")
     }
 
     // ==================== TREFFSTATUS ENDRET TESTER ====================
@@ -449,7 +692,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyTittel = "Endret tittel"
         db.oppdaterRekrutteringstreff(treffId, tittel = nyTittel)
-        val endringer = EndringerDto(tittel = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel))
+        val endringer = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = treff.tittel, nyVerdi = nyTittel))
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)  // Hendelse 3: TREFF_ENDRET
 
         db.endreTilTidTilPassert(treffId, fødselsnummer.asString)

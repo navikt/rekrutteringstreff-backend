@@ -13,10 +13,9 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
-
     implementation("com.auth0:java-jwt:4.4.0")
     implementation("com.auth0:jwks-rsa:0.22.1")
-
+    
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
 }

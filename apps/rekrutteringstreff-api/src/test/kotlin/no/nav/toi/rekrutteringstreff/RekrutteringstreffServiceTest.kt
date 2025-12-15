@@ -20,7 +20,6 @@ import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.nowOslo
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.assertj.core.api.Assertions.assertThat
@@ -282,7 +281,7 @@ class RekrutteringstreffServiceTest {
         publiserTreff(treffId, navIdent)
 
         val endringer =
-            """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}, "beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse"}}"""
+            """{"navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}, "sted": {"gammelVerdi": "Gammel sted", "nyVerdi": "Ny sted"}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -294,12 +293,12 @@ class RekrutteringstreffServiceTest {
         )
         assertThat(hendelseData).isNotNull()
 
-        // Deserialiser EndringerDto
-        val deserializedDto = mapper.readValue(hendelseData, EndringerDto::class.java)
-        assertThat(deserializedDto.tittel).isNotNull()
-        assertThat(deserializedDto.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedDto.tittel!!.nyVerdi).isEqualTo("Ny tittel")
-        assertThat(deserializedDto.fraTid).isNull() // Ikke endret
+        // Deserialiser Rekrutteringstreffendringer
+        val deserializedDto = mapper.readValue(hendelseData, Rekrutteringstreffendringer::class.java)
+        assertThat(deserializedDto.navn).isNotNull()
+        assertThat(deserializedDto.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserializedDto.navn!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserializedDto.tidspunkt).isNull() // Ikke endret
 
         val jobbsøkerHendelseData = hentJobbsøkerHendelseData(
             treffId,
@@ -308,9 +307,9 @@ class RekrutteringstreffServiceTest {
         )
         assertThat(jobbsøkerHendelseData).isNotNull()
 
-        val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, EndringerDto::class.java)
-        assertThat(deserializedJobbsøker.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedJobbsøker.tittel!!.nyVerdi).isEqualTo("Ny tittel")
+        val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, Rekrutteringstreffendringer::class.java)
+        assertThat(deserializedJobbsøker.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserializedJobbsøker.navn!!.nyVerdi).isEqualTo("Ny tittel")
     }
 
     @Test
@@ -318,19 +317,19 @@ class RekrutteringstreffServiceTest {
         // Test at vi kan håndtere JSON fra databasen hvor kun noen felt er satt
         // Dette sikrer bakoverkompatibilitet
 
-        val jsonMedNoenFelt = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
+        val jsonMedNoenFelt = """{"navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
 
         // Act
-        val deserialized = mapper.readValue(jsonMedNoenFelt, EndringerDto::class.java)
+        val deserialized = mapper.readValue(jsonMedNoenFelt, Rekrutteringstreffendringer::class.java)
 
         // Assert - verifiser at eksisterende felt fungerer
-        assertThat(deserialized.tittel).isNotNull()
-        assertThat(deserialized.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserialized.tittel!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserialized.navn).isNotNull()
+        assertThat(deserialized.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserialized.navn!!.nyVerdi).isEqualTo("Ny tittel")
 
         // Verifiser at manglende felt er null
-        assertThat(deserialized.fraTid).isNull()
-        assertThat(deserialized.innlegg).isNull()
+        assertThat(deserialized.tidspunkt).isNull()
+        assertThat(deserialized.introduksjon).isNull()
     }
 
     @Test
@@ -339,16 +338,16 @@ class RekrutteringstreffServiceTest {
         // Dette sikrer bakoverkompatibilitet hvis vi fjerner felt i framtiden
 
         val jsonMedEkstraFelt = """{
-            "tittel": {"gammelVerdi": "Test", "nyVerdi": "Ny Test"},
+            "navn": {"gammelVerdi": "Test", "nyVerdi": "Ny Test"},
             "ukjentFelt": {"gammelVerdi": "Dette skal ignoreres", "nyVerdi": "Også ignoreres"}
         }"""
 
         // Act - deserialiserer JSON med ukjent felt (skal ikke kaste exception)
-        val deserialized = mapper.readValue(jsonMedEkstraFelt, EndringerDto::class.java)
+        val deserialized = mapper.readValue(jsonMedEkstraFelt, Rekrutteringstreffendringer::class.java)
 
         // Assert - verifiser at kjente felt fungerer
-        assertThat(deserialized.tittel).isNotNull()
-        assertThat(deserialized.tittel!!.gammelVerdi).isEqualTo("Test")
+        assertThat(deserialized.navn).isNotNull()
+        assertThat(deserialized.navn!!.gammelVerdi).isEqualTo("Test")
     }
 
     @Test

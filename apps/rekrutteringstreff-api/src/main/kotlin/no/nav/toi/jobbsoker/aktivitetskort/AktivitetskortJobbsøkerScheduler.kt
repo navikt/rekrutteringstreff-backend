@@ -1,15 +1,14 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.executeInTransaction
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -138,7 +137,21 @@ class AktivitetskortJobbsøkerScheduler(
 
             val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
-            sendAktivitetskortOppdatering(treff, hendelse.fnr, hendelse.rekrutteringstreffUuid, hendelse.hendelseId, hendelse.aktøridentifikasjon)
+            // Hent ut hvilke felt som er endret og skal varsles om
+            val endredeFelter = hendelse.hendelseData?.let { data ->
+                val endringer = objectMapper.readValue(data, Rekrutteringstreffendringer::class.java)
+                endringer.hentFelterSomSkalVarsles().takeIf { it.isNotEmpty() }
+            }
+
+            // Send én samlet melding som brukes av både aktivitetskort-appen og kandidatvarsel-api
+            treff.aktivitetskortOppdateringFor(
+                fnr = hendelse.fnr,
+                hendelseId = hendelse.hendelseId,
+                avsenderNavident = hendelse.aktøridentifikasjon,
+                endredeFelter = endredeFelter
+            ).publiserTilRapids(rapidsConnection)
+
+            log.info("Sendt rekrutteringstreffoppdatering for treff ${hendelse.rekrutteringstreffUuid}${endredeFelter?.let { " med endredeFelter=$it" } ?: ""}")
         }
     }
 
@@ -149,13 +162,6 @@ class AktivitetskortJobbsøkerScheduler(
     private fun sendAktivitetskortInvitasjon(treff: Rekrutteringstreff, fnr: String, hendelseId: UUID, avsenderNavident: String?) {
         treff.aktivitetskortInvitasjonFor(fnr, hendelseId, avsenderNavident)
             .publiserTilRapids(rapidsConnection)
-    }
-
-    private fun sendAktivitetskortOppdatering(treff: Rekrutteringstreff, fnr: String, rekrutteringstreffUuid: String, hendelseId: UUID, avsenderNavident: String?) {
-        treff.aktivitetskortOppdateringFor(fnr, hendelseId, avsenderNavident)
-            .publiserTilRapids(rapidsConnection)
-
-        log.info("Sendt aktivitetskort-oppdatering for treff $rekrutteringstreffUuid til jobbsøker")
     }
 
     private fun behandleSvartJaTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: String) {
