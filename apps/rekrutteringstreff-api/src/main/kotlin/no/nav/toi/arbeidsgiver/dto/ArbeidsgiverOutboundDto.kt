@@ -9,3 +9,4 @@ data class ArbeidsgiverOutboundDto(
     val postnummer: String?,
     val poststed: String?,
 )
+
