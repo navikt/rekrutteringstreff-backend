@@ -1088,6 +1088,7 @@ class RekrutteringstreffTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        db.endreTilTidTilPassert(treffId, navIdent)
 
         // Publiser og fullfør treffet
         Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
