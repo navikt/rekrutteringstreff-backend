@@ -112,7 +112,7 @@ class ArbeidsgiverRepositoryTest {
     @Test
     fun slettArbeidsgiver_returnerer_true_og_sletter_rad() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val input = LeggTilArbeidsgiver(Orgnr("987654321"), Orgnavn("Slettbar Bedrift"), emptyList(),"Fyrstikkalleen 1", "0661", "Oslo")
+        val input = LeggTilArbeidsgiver(Orgnr("987654321"), Orgnavn("Slettbar Bedrift"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
         repository.leggTil(input, treffId, "testperson")
         val id = repository.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId
 
@@ -136,8 +136,8 @@ class ArbeidsgiverRepositoryTest {
     @Test
     fun hentArbeidsgivere_filterer_bort_slettet_arbeidsgiver() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Synlig Bedrift"), emptyList(),"Fyrstikkalleen 1", "0661", "Oslo")
-        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Skal SLETTES"), emptyList(),"Fyrstikkalleen 1", "0661", "Oslo")
+        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Synlig Bedrift"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
+        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Skal SLETTES"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
         repository.leggTil(ag1, treffId, "testperson")
         repository.leggTil(ag2, treffId, "testperson")
 
@@ -162,8 +162,8 @@ class ArbeidsgiverRepositoryTest {
     @Test
     fun `Hent antall arbeidsgivere`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Bedrift En"), emptyList(),"Fyrstikkalleen 1", "0661", "Oslo")
-        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Bedrift To"), emptyList(),"Fyrstikkalleen 1", "0661", "Oslo")
+        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Bedrift En"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
+        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Bedrift To"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
         repository.leggTil(ag1, treffId, "testperson")
         repository.leggTil(ag2, treffId, "testperson")
 
