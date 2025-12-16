@@ -122,6 +122,9 @@ class ArbeidsgiverController(
                 organisasjonsnummer = arbeidsgiver.orgnr.asString,
                 navn = arbeidsgiver.orgnavn.asString,
                 status = arbeidsgiver.status.name,
+                gateadresse = arbeidsgiver.gateadresse,
+                postnummer = arbeidsgiver.postnummer,
+                poststed = arbeidsgiver.poststed,
             )
         }
 
@@ -206,10 +209,13 @@ class ArbeidsgiverController(
     private data class LeggTilArbeidsgiverDto(
         val organisasjonsnummer: String,
         val navn: String,
-        val næringskoder: List<Næringskode> = emptyList()
+        val næringskoder: List<Næringskode> = emptyList(),
+        val gateadresse: String?,
+        val postnummer: String?,
+        val poststed: String?,
     ) {
         fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
             Næringskode(it.kode, it.beskrivelse)
-        })
+        }, gateadresse, postnummer, poststed)
     }
 }

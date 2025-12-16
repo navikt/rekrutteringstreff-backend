@@ -245,14 +245,14 @@ class ArbeidsgiverTest {
         val orgnavn4 = Orgnavn("Orgnavn4")
 
         val arbeidsgivere1 = listOf(
-            Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, orgnr1, orgnavn1, ArbeidsgiverStatus.AKTIV)
+            Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, orgnr1, orgnavn1, ArbeidsgiverStatus.AKTIV, "Fyrstikkalleen 1", "0661", "Oslo")
         )
         val arbeidsgivere2 = listOf(
-            Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, orgnr2, orgnavn2, ArbeidsgiverStatus.AKTIV),
-            Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, orgnr3, orgnavn3, ArbeidsgiverStatus.AKTIV)
+            Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, orgnr2, orgnavn2, ArbeidsgiverStatus.AKTIV, "Fyrstikkalleen 1", "0661", "Oslo"),
+            Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, orgnr3, orgnavn3, ArbeidsgiverStatus.AKTIV, "Fyrstikkalleen 1", "0661", "Oslo")
         )
         val arbeidsgivere3 = listOf(
-            Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId3, orgnr4, orgnavn4, ArbeidsgiverStatus.AKTIV)
+            Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId3, orgnr4, orgnavn4, ArbeidsgiverStatus.AKTIV, "Fyrstikkalleen 1", "0661", "Oslo")
         )
         db.leggTilArbeidsgivere(arbeidsgivere1)
         db.leggTilArbeidsgivere(arbeidsgivere2)
