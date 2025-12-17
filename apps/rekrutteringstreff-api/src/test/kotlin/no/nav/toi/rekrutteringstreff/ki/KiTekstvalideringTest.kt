@@ -15,7 +15,7 @@ private const val MAX_LENGDE_PROMPT_NAVN = 40
 private const val TESTRESULTATER_FIL = "robTestresultater.txt"
 // Testen skriver resultatene på et mer lesbart format enn loggene til filen definert over
 
-//@Disabled("Testen skal kun kjøres manuelt ved behov")
+@Disabled("Testen skal kun kjøres manuelt ved behov")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiTekstvalideringParameterisertTest {
     private val openAiClient = OpenAiTestClient()
