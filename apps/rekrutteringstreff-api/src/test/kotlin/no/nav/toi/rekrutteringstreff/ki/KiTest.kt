@@ -168,7 +168,7 @@ class KiTest {
 
         wireMockServer.stubFor(
             WireMock.post(
-                WireMock.urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
+                WireMock.urlEqualTo("/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview")
             )
                 .withRequestBody(WireMock.containing(forventetFiltrertTekst))
                 .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
@@ -230,7 +230,7 @@ class KiTest {
 
         val sentToOpenAi: String = try {
             wireMockServer.serveEvents.serveEvents
-                .filter { it.request.url.contains("/openai/deployments/toi-gpt-4o/chat/completions") }
+                .filter { it.request.url.contains("openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview") }
                 .joinToString("\n----\n") { it.request.bodyAsString }
         } catch (_: Throwable) {
             "<could not capture WireMock serve events>"
@@ -251,7 +251,7 @@ class KiTest {
         wireMockServer.verify(
             1,
             postRequestedFor(
-                urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
+                urlEqualTo("/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview")
             )
                 .withRequestBody(WireMock.containing(forventetFiltrertTekst))
                 .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
@@ -501,7 +501,7 @@ class KiTest {
         wireMockServer.stubFor(
             post(
                 urlEqualTo(
-                    "/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview"
+                    "/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview"
                 )
             )
                 .willReturn(

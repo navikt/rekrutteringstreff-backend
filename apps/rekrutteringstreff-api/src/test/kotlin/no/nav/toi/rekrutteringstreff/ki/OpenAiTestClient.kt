@@ -44,7 +44,7 @@ class OpenAiTestClient(
     private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val apiUrl: String =
         System.getenv("OPENAI_API_URL")
-            ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview",
+            ?: "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
     private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key"
 ) {
     private val mapper = JacksonConfig.mapper
