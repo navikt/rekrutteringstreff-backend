@@ -168,24 +168,34 @@ private class AutorisasjonsTest {
     enum class Gruppe(val somStringListe: List<UUID>) {
         ModiaGenerell(listOf(modiaGenerell)),
         Arbeidsgiverrettet(listOf(arbeidsgiverrettet)),
-        Utvikler(listOf(utvikler))
+        Utvikler(listOf(utvikler)),
+        Jobbsøkerrettet(listOf(jobbsøkerrettet))
     }
 
     private fun autorisasjonsCases() = listOf(
         Arguments.of(Endepunkt.OpprettRekrutteringstreff, Gruppe.Utvikler, HTTP_CREATED),
         Arguments.of(Endepunkt.OpprettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_CREATED),
+        Arguments.of(Endepunkt.OpprettRekrutteringstreff, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.OpprettRekrutteringstreff, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+
         Arguments.of(Endepunkt.HentAlleRekrutteringstreff, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.HentAlleRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleRekrutteringstreff, Gruppe.Jobbsøkerrettet, HTTP_OK),
         Arguments.of(Endepunkt.HentAlleRekrutteringstreff, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+
         Arguments.of(Endepunkt.HentRekrutteringstreff, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.HentRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.HentRekrutteringstreff, Gruppe.Jobbsøkerrettet, HTTP_OK),
         Arguments.of(Endepunkt.HentRekrutteringstreff, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+
         Arguments.of(Endepunkt.OppdaterRekrutteringstreff, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.OppdaterRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.OppdaterRekrutteringstreff, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.OppdaterRekrutteringstreff, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
     ).stream()
 
@@ -193,9 +203,12 @@ private class AutorisasjonsTest {
         Arguments.of(Endepunkt.OppdaterRekrutteringstreff, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
         Arguments.of(Endepunkt.OppdaterRekrutteringstreff, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
         Arguments.of(Endepunkt.OppdaterRekrutteringstreff, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.OppdaterRekrutteringstreff, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
     ).stream()
 
     @ParameterizedTest

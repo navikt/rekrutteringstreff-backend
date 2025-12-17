@@ -24,12 +24,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun leggTil(jobsøkere: List<LeggTilJobbsøker>, treff: TreffId, opprettetAv: String) {
+    fun leggTil(jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             c.autoCommit = false
             try {
                 val treffId = c.treffDbId(treff)
-                val jsIds = c.batchInsertJobbsøkere(treffId, jobsøkere)
+                val jsIds = c.batchInsertJobbsøkere(treffId, jobbsøkere)
                 c.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETTET, jsIds, opprettetAv)
                 c.commit()
             } catch (e: Exception) {

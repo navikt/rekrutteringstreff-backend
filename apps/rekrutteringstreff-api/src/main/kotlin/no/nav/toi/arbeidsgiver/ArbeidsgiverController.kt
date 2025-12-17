@@ -10,6 +10,7 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
+import no.nav.toi.arbeidsgiver.dto.LeggTilArbeidsgiverDto
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
@@ -109,7 +110,7 @@ class ArbeidsgiverController(
         methods = [HttpMethod.GET]
     )
     private fun hentArbeidsgivereHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET, Rolle.BORGER)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val arbeidsgivere = arbeidsgiverRepository.hentArbeidsgivere(treff)
         ctx.status(200).json(arbeidsgivere.toOutboundDto())
@@ -201,15 +202,5 @@ class ArbeidsgiverController(
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treffId.somString}")
         }
-    }
-
-    private data class LeggTilArbeidsgiverDto(
-        val organisasjonsnummer: String,
-        val navn: String,
-        val næringskoder: List<Næringskode> = emptyList()
-    ) {
-        fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
-            Næringskode(it.kode, it.beskrivelse)
-        })
     }
 }

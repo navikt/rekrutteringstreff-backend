@@ -18,7 +18,8 @@ class App(
     private val rekrutteringstreffUrl: String,
     private val rekrutteringstreffAudience: String,
     private val tokenXKlient: TokenXKlient,
-    private val authConfigs: List<AuthenticationConfiguration>
+    private val authConfigs: List<AuthenticationConfiguration>,
+    private val httpClient: HttpClient
 ) {
     private lateinit var javalin: Javalin
 
@@ -30,7 +31,12 @@ class App(
         }
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
-        val rekrutteringstreffKlient = RekrutteringstreffKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
+        val rekrutteringstreffKlient = RekrutteringstreffKlient(
+            url = rekrutteringstreffUrl,
+            tokenXKlient = tokenXKlient,
+            rekrutteringstreffAudience = rekrutteringstreffAudience,
+            httpClient = httpClient
+        )
         val borgerKlient = BorgerKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
         javalin.rekrutteringstreffSvarEndepunkt(rekrutteringstreffKlient, borgerKlient)
         javalin.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
@@ -88,7 +94,8 @@ fun main() {
                 issuer = env("TOKEN_X_ISSUER"),
                 jwksUri = env("TOKEN_X_JWKS_URI")
             )
-        )
+        ),
+        httpClient = httpClient
     ).start()
 }
 

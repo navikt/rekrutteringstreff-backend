@@ -105,7 +105,8 @@ class MinsideTest {
                 issuer = "http://localhost:$authPort/default",
                 jwksUri = "http://localhost:$authPort/default/jwks",
                 audience = minSideAudience
-            ))
+            )),
+            httpClient = httpClient
         )
         private val jobbsøkerFnr = "12345678901"
         private val authServer = MockOAuth2Server()

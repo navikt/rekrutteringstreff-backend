@@ -34,6 +34,17 @@ class EierController(
         operationId = "leggTilEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class)],
+        requestBody = OpenApiRequestBody(
+            content = [OpenApiContent(
+                from = Array<String>::class,
+                example = """
+                [
+                    "A123456",
+                    "Z999999"
+                ]
+                """
+            )],
+        ),
         responses = [OpenApiResponse(
             status = "201"
         )],
@@ -75,7 +86,7 @@ class EierController(
         methods = [HttpMethod.GET]
     )
     private fun hentEiere(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
 
         val id = TreffId(ctx.pathParam("id"))
         val eiere = eierRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")

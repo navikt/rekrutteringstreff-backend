@@ -79,9 +79,9 @@ class JobbsøkerController(
         responses = [OpenApiResponse("201")],
         path = jobbsøkerPath,
         methods = [HttpMethod.POST]
-    ) // TODO legg til jobbsøkerrettet
+    )
     private fun leggTilJobbsøkereHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         jobbsøkerRepository.leggTil(dtoer.map { it.domene() }, treff, ctx.extractNavIdent())
@@ -186,6 +186,8 @@ class JobbsøkerController(
                     ctx.status(200)
                 }
             }
+        } else {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke slette jobbsøkere")
         }
     }
 

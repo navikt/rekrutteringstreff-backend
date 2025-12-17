@@ -4,7 +4,6 @@ import io.javalin.Javalin
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
-import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
@@ -126,7 +125,7 @@ class RekrutteringstreffController(
         methods = [HttpMethod.GET]
     )
     private fun hentAlleRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
     }
 
@@ -138,36 +137,25 @@ class RekrutteringstreffController(
         responses = [OpenApiResponse(
             status = "200",
             content = [OpenApiContent(
-                from = RekrutteringstreffDetaljOutboundDto::class,
+                from = RekrutteringstreffDto::class,
                 example = """{
-                   "rekrutteringstreff":
-                    {
-                       "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
-                       "tittel":"Sommerjobbtreff",
-                       "beskrivelse":null,
-                       "fraTid":null,
-                       "tilTid":null,
-                       "svarfrist":null,
-                       "gateadresse": null,
-                       "postnummer": null,
-                       "poststed": null,
-                       "status":"UTKAST",
-                       "opprettetAvPersonNavident":"A123456",
-                       "opprettetAvNavkontorEnhetId":"0318",
-                       "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
-                       "antallArbeidsgivere":1,
-                       "antallJobbsøkere":1
-                    },
-                   "hendelser":[
-                     {
-                       "id":"any-uuid",
-                       "tidspunkt":"2025-06-01T08:00:00Z",
-                       "hendelsestype":"OPPRETTET",
-                       "opprettetAvAktørType":"ARRANGØR",
-                       "aktørIdentifikasjon":"A123456"
-                     }
-                   ]
-                }"""
+                    "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
+                    "tittel":"Sommerjobbtreff",
+                    "beskrivelse":null,
+                    "fraTid":null,
+                    "tilTid":null,
+                    "svarfrist":null,
+                    "gateadresse": null,
+                    "postnummer": null,
+                    "poststed": null,
+                    "status":"UTKAST",
+                    "opprettetAvPersonNavident":"A123456",
+                    "opprettetAvNavkontorEnhetId":"0318",
+                    "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+                    "antallArbeidsgivere":1,
+                    "antallJobbsøkere":1
+                }
+                """
             )]
         )],
         path = "$endepunktRekrutteringstreff/{id}",
@@ -175,8 +163,8 @@ class RekrutteringstreffController(
     )
     private fun hentRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER, Rolle.JOBBSØKER_RETTET)
-        val id = TreffId(ctx.pathParam(pathParamTreffId))
-        rekrutteringstreffService.hentRekrutteringstreffMedHendelser(id).let { ctx.status(200).json(it) }
+        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+        rekrutteringstreffService.hentRekrutteringstreff(treffId).let { ctx.status(200).json(it) }
     }
 
     @OpenApi(
