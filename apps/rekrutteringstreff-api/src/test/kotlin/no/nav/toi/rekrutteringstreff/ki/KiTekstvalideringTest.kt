@@ -10,22 +10,15 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 import java.lang.Thread.sleep
-import java.net.URI
 
 private const val MAX_LENGDE_PROMPT_NAVN = 40
 private const val TESTRESULTATER_FIL = "robTestresultater.txt"
 // Testen skriver resultatene på et mer lesbart format enn loggene til filen definert over
 
-@Disabled("Testen skal kun kjøres manuelt ved behov")
+//@Disabled("Testen skal kun kjøres manuelt ved behov")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiTekstvalideringParameterisertTest {
-    private val openAiApiUrl = URI.create(hentPåkrevdeMiljøvariabler("OPENAI_API_URL")).toURL()
-    private val openAiApiKey = hentPåkrevdeMiljøvariabler("OPENAI_API_KEY")
-
-    private val openAiClient = OpenAiTestClient(
-        apiUrl = openAiApiUrl.toString(),
-        apiKey = openAiApiKey
-    )
+    private val openAiClient = OpenAiTestClient()
 
     companion object {
         private val testPromptsListe = listOf(
@@ -336,6 +329,4 @@ class KiTekstvalideringParameterisertTest {
         return "ROBs nøyaktighet på de vurderte test-promptsene er: $nøyaktighet %"
     }
 
-    fun hentPåkrevdeMiljøvariabler(envVarNavn: String): String =
-        System.getenv(envVarNavn) ?: throw IllegalArgumentException("Husk å sette den påkrevde miljøvariabelen '$envVarNavn'")
 }

@@ -1,7 +1,5 @@
 kafka_pool: nav-prod
-"ingress": [
-  "https://rekrutteringstreff-api.intern.nav.no/api"
-]
+"ingress": ["https://rekrutteringstreff-api.intern.nav.no/api"]
 cluster: prod-gcp
 min_replicas: 2
 max_replicas: 4
@@ -9,6 +7,8 @@ gcp_db_tier: db-custom-1-3840
 gcp_disk_autoresize: true
 postgres: POSTGRES_17
 openai_azure_host: "todo"
+openai_deployment: "toi-gpt-4.1"
+openai_api_version: "2025-01-01-preview"
 adGruppeArbeidsgiverrettet: "46c8e3b2-0469-4740-983f-d8cd2b6e4fee"
 adGruppeUtvikler: "41080368-439f-4128-858a-afbef876431e"
 modiacontextholder_url: "http://modiacontextholder.personoversikt"

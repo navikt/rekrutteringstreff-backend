@@ -1,12 +1,13 @@
 kafka_pool: nav-dev
-"ingress": [
+"ingress":
+  [
     "https://rekrutteringstreff-api.intern.dev.nav.no/swagger",
     "https://rekrutteringstreff-api.intern.dev.nav.no/webjars",
     "https://rekrutteringstreff-api.intern.dev.nav.no/openapi",
     "https://rekrutteringstreff-api.intern.dev.nav.no/api",
     "https://rekrutteringstreff-api.intern.dev.nav.no/isalive",
-    "https://rekrutteringstreff-api.intern.dev.nav.no/isready"
-]
+    "https://rekrutteringstreff-api.intern.dev.nav.no/isready",
+  ]
 cluster: dev-gcp
 min_replicas: 1
 max_replicas: 1
@@ -15,6 +16,8 @@ gcp_disk_autoresize: false
 postgres: POSTGRES_17
 adGruppeUtvikler: "a1749d9a-52e0-4116-bb9f-935c38f6c74a"
 openai_azure_host: "arbeidsmarked-dev.openai.azure.com"
+openai_deployment: "toi-gpt-4.1"
+openai_api_version: "2025-01-01-preview"
 adGruppeArbeidsgiverrettet: "52bc2af7-38d1-468b-b68d-0f3a4de45af2"
 kandidatsok_api_url: "http://rekrutteringsbistand-kandidatsok-api"
 kandidatsok_api_scope: "api://dev-gcp.toi.rekrutteringsbistand-kandidatsok-api/.default"

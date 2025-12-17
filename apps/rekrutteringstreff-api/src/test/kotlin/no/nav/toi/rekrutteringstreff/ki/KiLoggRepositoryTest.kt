@@ -40,7 +40,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = "OK",
-                kiNavn = "toi-gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 123
             )
@@ -62,7 +62,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = true,
                 begrunnelse = "Begrunnelse",
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 321
             )
@@ -78,7 +78,7 @@ class KiLoggRepositoryTest {
         assertThat(row.ekstraParametreJson).isNull()
         assertThat(row.bryterRetningslinjer).isTrue()
         assertThat(row.begrunnelse).isEqualTo("Begrunnelse")
-        assertThat(row.kiNavn).isEqualTo("gpt-4.1")
+        assertThat(row.kiNavn).isEqualTo("azure-openai")
         assertThat(row.kiVersjon).isEqualTo("2025-01-01")
         assertThat(row.svartidMs).isEqualTo(321)
         assertThat(row.lagret).isFalse()
@@ -100,7 +100,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = null,
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 10
             )
@@ -126,7 +126,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = "OK",
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 11
             )
@@ -155,7 +155,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = "OK",
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 11
             )
@@ -189,7 +189,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = null,
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 1
             )
@@ -204,7 +204,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = true,
                 begrunnelse = "B",
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 2
             )
@@ -219,7 +219,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = "C",
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 3
             )
@@ -252,7 +252,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = false,
                 begrunnelse = null,
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 1
             )
@@ -267,7 +267,7 @@ class KiLoggRepositoryTest {
                 ekstraParametreJson = null,
                 bryterRetningslinjer = true,
                 begrunnelse = "B",
-                kiNavn = "gpt-4.1",
+                kiNavn = "azure-openai",
                 kiVersjon = "2025-01-01",
                 svartidMs = 2
             )
