@@ -45,13 +45,20 @@ data class EkstraMetaDbJson(
 class OpenAiClient(
     private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val repo: KiLoggRepository,
-    private val apiUrl: String =
-        System.getenv("OPENAI_API_URL")
-            ?: "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
-    private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key"
+    private val apiUrl: String = System.getenv("OPENAI_API_URL") ?: "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
+    private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key",
+    private val kiVersjon: String = System.getenv("OPENAI_DEPLOYMENT") ?: "toi-gpt-4.1"
 ) {
     private val mapper = JacksonConfig.mapper
     private val zdtFormatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
+
+    companion object {
+        private const val kiNavn = "azure-openai"
+        private const val temperature = 0.0
+        private const val maxTokens = 400
+        private const val topP = 1.0
+        private val responseFormat = ResponseFormat()
+    }
 
     fun validateRekrutteringstreffOgLogg(
         treffId: UUID,
@@ -168,15 +175,6 @@ class OpenAiClient(
             tekstResultat.add("voldelig innhold")
         }
         return tekstResultat.joinToString(", ")
-    }
-
-    companion object {
-        private const val kiNavn = "azure-openai"
-        private const val kiVersjon = "toi-gpt-4.1"
-        private const val temperature = 0.0
-        private const val maxTokens = 400
-        private const val topP = 1.0
-        private val responseFormat = ResponseFormat()
     }
 
     // Dto-er basert på response body-en fra OpenAi ved 400 Bad Request
