@@ -70,7 +70,7 @@ spec:
         tier: {{ gcp_db_tier }}
         diskAutoresize: {{ gcp_disk_autoresize }}
   envFrom:
-    - secret: openai-toi-rekrutteringsbistand-stilling
+    - secret: openai-toi-rekrutteringstreff
   env:
     - name: REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET
       value: {{adGruppeArbeidsgiverrettet}}
