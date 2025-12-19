@@ -308,6 +308,9 @@ class RekrutteringstreffTest {
                     orgnr = Orgnr("999888777"),
                     orgnavn = Orgnavn("Testbedrift AS"),
                     status = ArbeidsgiverStatus.AKTIV,
+                    gateadresse = "Fyrstikkalleen 1",
+                    postnummer = "0661",
+                    poststed = "Oslo",
                 )
             )
         )
@@ -409,6 +412,9 @@ class RekrutteringstreffTest {
                     Orgnr("999888777"),
                     Orgnavn("Test AS"),
                     ArbeidsgiverStatus.AKTIV,
+                    "Fyrstikkalleen 1",
+                    "0661",
+                    "Oslo",
                 )
             )
         )

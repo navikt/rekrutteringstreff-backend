@@ -123,6 +123,9 @@ class ArbeidsgiverController(
                 organisasjonsnummer = arbeidsgiver.orgnr.asString,
                 navn = arbeidsgiver.orgnavn.asString,
                 status = arbeidsgiver.status.name,
+                gateadresse = arbeidsgiver.gateadresse,
+                postnummer = arbeidsgiver.postnummer,
+                poststed = arbeidsgiver.poststed,
             )
         }
 

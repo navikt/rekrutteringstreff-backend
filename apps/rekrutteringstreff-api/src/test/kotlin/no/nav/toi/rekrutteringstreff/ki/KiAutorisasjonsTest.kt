@@ -17,6 +17,7 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.ki.KiLoggInsert
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
+import no.nav.toi.rekrutteringstreff.ki.TEST_OPENAI_PATH
 import no.nav.toi.rekrutteringstreff.ki.ValiderMedLoggRequestUtenTreffIdDto
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
@@ -126,7 +127,7 @@ class KiAutorisasjonsTest {
 
         wireMockServer.stubFor(
             post(
-                urlEqualTo("/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview")
+                urlEqualTo(TEST_OPENAI_PATH)
             )
                 .withRequestBody(containing("Dette er en testmelding som skal valideres av KI."))
                 .willReturn(

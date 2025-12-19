@@ -184,6 +184,9 @@ class TestDatabase {
         orgnr   = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn")),
         status = ArbeidsgiverStatus.valueOf(rs.getString("status")),
+        gateadresse = rs.getString("gateadresse"),
+        postnummer  = rs.getString("postnummer"),
+        poststed    = rs.getString("poststed"),
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
@@ -202,7 +205,7 @@ class TestDatabase {
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         arbeidsgivere.forEach {
-            repo.leggTil(LeggTilArbeidsgiver(it.orgnr, it.orgnavn), it.treffId, "testperson")
+            repo.leggTil(LeggTilArbeidsgiver(it.orgnr, it.orgnavn, emptyList(), it.gateadresse, it.postnummer, it.poststed), it.treffId, "testperson")
         }
     }
 

@@ -565,6 +565,9 @@ class RekrutteringstreffServiceTest {
                     orgnr = Orgnr("999888777"),
                     orgnavn = Orgnavn("Testbedrift AS"),
                     status = ArbeidsgiverStatus.AKTIV,
+                    gateadresse = "Fyrstikkalleen 1",
+                    postnummer = "0661",
+                    poststed = "Oslo",
                 )
             )
         )

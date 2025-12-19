@@ -88,7 +88,7 @@ class ArbeidsgiverRepository(
 
     private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): Long {
         connection.prepareStatement(
-            "INSERT INTO arbeidsgiver (id, rekrutteringstreff_id, orgnr, orgnavn, status) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO arbeidsgiver (id, rekrutteringstreff_id, orgnr, orgnavn, status, gateadresse, postnummer, poststed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             Statement.RETURN_GENERATED_KEYS
         ).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
@@ -96,6 +96,9 @@ class ArbeidsgiverRepository(
             stmt.setString(3, arbeidsgiver.orgnr.asString)
             stmt.setString(4, arbeidsgiver.orgnavn.asString)
             stmt.setString(5, ArbeidsgiverStatus.AKTIV.name)
+            stmt.setString(6, arbeidsgiver.gateadresse)
+            stmt.setString(7, arbeidsgiver.postnummer)
+            stmt.setString(8, arbeidsgiver.poststed)
             stmt.executeUpdate()
             stmt.generatedKeys.use {
                 if (it.next()) return it.getLong(1)
@@ -154,6 +157,9 @@ class ArbeidsgiverRepository(
                     ag.orgnr,
                     ag.orgnavn,
                     ag.status,
+                    ag.gateadresse,
+                    ag.postnummer,
+                    ag.poststed,
                     rt.id as treff_id
                 FROM arbeidsgiver ag
                 JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
@@ -183,6 +189,9 @@ class ArbeidsgiverRepository(
                     ag.orgnr,
                     ag.orgnavn,
                     ag.status,
+                    ag.gateadresse,
+                    ag.postnummer,
+                    ag.poststed,
                     rt.id as treff_id
                 FROM arbeidsgiver ag
                 JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
@@ -225,7 +234,10 @@ class ArbeidsgiverRepository(
         treffId = TreffId(getString("treff_id")),
         orgnr = Orgnr(getString("orgnr")),
         orgnavn = Orgnavn(getString("orgnavn")),
-        status = ArbeidsgiverStatus.valueOf(getString("status"))
+        status = ArbeidsgiverStatus.valueOf(getString("status")),
+        gateadresse = getString("gateadresse"),
+        postnummer = getString("postnummer"),
+        poststed = getString("poststed"),
     )
 
     private fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {

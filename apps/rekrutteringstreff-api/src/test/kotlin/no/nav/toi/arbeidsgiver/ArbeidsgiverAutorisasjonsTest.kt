@@ -151,7 +151,10 @@ class ArbeidsgiverAutorisasjonsTest {
                         kode = "47.111",
                         beskrivelse = "Detaljhandel med bredt varesortiment uten salg av drivstoff"
                     )
-                )
+                ),
+                gateadresse = "Gate 1",
+                postnummer = "2345",
+                poststed = "OSLO"
             ), gyldigRekrutteringstreff, "A000001"
         )
         arbeidsgiverId = arbeidsgiverRepository.hentArbeidsgiver(gyldigRekrutteringstreff, Orgnr("123456789"))?.arbeidsgiverTreffId!!
@@ -178,7 +181,10 @@ class ArbeidsgiverAutorisasjonsTest {
                                 kode = "47.111",
                                 beskrivelse = "Detaljhandel med bredt varesortiment uten salg av drivstoff"
                             )
-                        )
+                        ),
+                        gateadresse = "Gate 1",
+                        postnummer = "2345",
+                        poststed = "OSLO"
                     )
                 ))
             )

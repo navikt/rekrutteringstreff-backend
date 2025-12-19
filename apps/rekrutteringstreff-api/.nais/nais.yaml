@@ -71,7 +71,7 @@ spec:
         tier: {{ gcp_db_tier }}
         diskAutoresize: {{ gcp_disk_autoresize }}
   envFrom:
-    - secret: openai-toi-rekrutteringsbistand-stilling
+    - secret: openai-toi-rekrutteringstreff
   env:
     - name: REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET
       value: {{adGruppeArbeidsgiverrettet}}
@@ -93,6 +93,10 @@ spec:
       value: {{kafka_consumer_group_id}}
     - name: PILOTKONTORER
       value: {{pilotkontorer}}
+    - name: OPENAI_API_URL
+      value: "https://{{openai_azure_host}}/openai/deployments/{{openai_deployment}}/chat/completions?api-version={{openai_api_version}}"
+    - name: OPENAI_DEPLOYMENT
+      value: {{openai_deployment}}
   observability:
     logging:
       destinations:

@@ -8,9 +8,14 @@ import no.nav.toi.arbeidsgiver.Orgnr
 data class LeggTilArbeidsgiverDto(
     val organisasjonsnummer: String,
     val navn: String,
-    val næringskoder: List<Næringskode> = emptyList()
+    val næringskoder: List<Næringskode> = emptyList(),
+    val gateadresse: String?,
+    val postnummer: String?,
+    val poststed: String?,
 ) {
-    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
-        Næringskode(it.kode, it.beskrivelse)
-    })
+    fun somLeggTilArbeidsgiver() = LeggTilArbeidsgiver(
+        Orgnr(organisasjonsnummer), Orgnavn(navn), næringskoder.map {
+            Næringskode(it.kode, it.beskrivelse)
+        }, gateadresse, postnummer, poststed
+    )
 }

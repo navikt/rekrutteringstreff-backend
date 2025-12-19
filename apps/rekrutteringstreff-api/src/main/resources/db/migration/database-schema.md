@@ -1,5 +1,5 @@
 # Database Schema - Rekrutteringstreff
-Vis denne filen i Github for å se en grafisk remstilling av databaseskjemaet ved hjelp av Mermaid.
+Vis denne filen i Github for å se en grafisk fremstilling av databaseskjemaet ved hjelp av Mermaid.
 
 Dette er en grafisk oversikt over databaseskjemaet for rekrutteringstreff-systemet.
 

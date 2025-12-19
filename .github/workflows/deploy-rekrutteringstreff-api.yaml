@@ -13,7 +13,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/adresse-felter-arbeidsgiver
+      deploy_dev_branch: refs/heads/bruk-adresse-felter-arbeidsgiver
     secrets: inherit
     permissions:
       contents: read

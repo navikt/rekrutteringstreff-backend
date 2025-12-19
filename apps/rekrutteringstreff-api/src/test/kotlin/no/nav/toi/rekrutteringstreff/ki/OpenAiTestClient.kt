@@ -17,6 +17,13 @@ private const val TEMPERATURE = 0.0
 private const val MAX_TOKENS = 400
 private const val TOP_P = 1.0
 
+// Test/lokal konfigurasjon - modell defineres én gang her
+const val TEST_DEPLOYMENT = "toi-gpt-4.1"
+const val TEST_API_VERSION = "2025-01-01-preview"
+private const val DEV_HOST = "arbeidsmarked-dev.openai.azure.com"
+private const val DEV_API_URL = "https://$DEV_HOST/openai/deployments/$TEST_DEPLOYMENT/chat/completions?api-version=$TEST_API_VERSION"
+const val TEST_OPENAI_PATH = "/openai/deployments/$TEST_DEPLOYMENT/chat/completions?api-version=$TEST_API_VERSION"
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class OpenAiMessageTestClient(val role: String, val content: String)
 
@@ -42,9 +49,7 @@ private data class OpenAiResponseTestClient(val choices: List<ChoiceTestClient>?
  */
 class OpenAiTestClient(
     private val httpClient: HttpClient = HttpClient.newBuilder().build(),
-    private val apiUrl: String =
-        System.getenv("OPENAI_API_URL")
-            ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview",
+    private val apiUrl: String = DEV_API_URL,
     private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key"
 ) {
     private val mapper = JacksonConfig.mapper
