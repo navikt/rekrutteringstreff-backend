@@ -3,6 +3,7 @@ package no.nav.toi
 import java.util.*
 
 enum class Rolle {
+    JOBBSØKER_RETTET,
     ARBEIDSGIVER_RETTET,
     UTVIKLER,
     BORGER
@@ -13,10 +14,12 @@ enum class Rolle {
     Det er ulik spesifikasjon for dev og prod.
  */
 data class RolleUuidSpesifikasjon(
+    private val jobbsøkerrettet: UUID,
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
 ) {
     private fun rolleForUuid(uuid: UUID): Rolle? = when (uuid) {
+        jobbsøkerrettet -> Rolle.JOBBSØKER_RETTET
         arbeidsgiverrettet -> Rolle.ARBEIDSGIVER_RETTET
         utvikler -> Rolle.UTVIKLER
         else -> { log.warn("Ukjent rolle-UUID: $uuid"); null }

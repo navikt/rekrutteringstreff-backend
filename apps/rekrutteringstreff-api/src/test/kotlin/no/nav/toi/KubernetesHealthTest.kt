@@ -7,6 +7,7 @@ import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.fuel.core.responseUnit
 import com.github.kittinunf.result.Result
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -30,6 +31,7 @@ class KubernetesHealthTest {
         port = appPort,
         authConfigs = emptyList<AuthenticationConfiguration>(),
         dataSource = TestDatabase().dataSource,
+        jobbsøkerrettet = jobbsøkerrettet,
         arbeidsgiverrettet = arbeidsgiverrettet,
         utvikler = utvikler,
         kandidatsokApiUrl = "",

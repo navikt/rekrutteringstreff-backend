@@ -47,7 +47,7 @@ private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathP
 )
 private fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
     val id = ctx.pathParam(pathParamTreffId)
-    val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.rekrutteringstreff?.tilDTOForBruker() ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker() ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     val arbeidsgivere = treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
     val innlegg = treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
     ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())

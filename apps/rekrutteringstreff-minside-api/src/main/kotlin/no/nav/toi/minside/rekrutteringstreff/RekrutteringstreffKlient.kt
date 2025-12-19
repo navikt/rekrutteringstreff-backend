@@ -1,65 +1,84 @@
 package no.nav.toi.minside.rekrutteringstreff
 
-import com.github.kittinunf.fuel.httpGet
-import com.github.kittinunf.fuel.jackson.responseObject
-import com.github.kittinunf.result.Result.Failure
-import com.github.kittinunf.result.Result.Success
-import io.javalin.http.Header
+import com.fasterxml.jackson.core.type.TypeReference
 import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.minside.TokenXKlient
 import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto
 import no.nav.toi.minside.innlegg.InnleggOutboundDto
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.time.ZonedDateTime
 import java.util.UUID
 
-class RekrutteringstreffKlient(private val url: String, private val tokenXKlient: TokenXKlient, private val rekrutteringstreffAudience: String) {
-    fun hent(id: String, innkommendeToken: String): RekrutteringstreffDetaljDto? {
-        val (_, response, result) = "$url/api/rekrutteringstreff/$id".httpGet()
-            .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
-            .responseObject<RekrutteringstreffDetaljDto>(JacksonConfig.mapper)
+class RekrutteringstreffKlient(
+    private val url: String,
+    private val tokenXKlient: TokenXKlient,
+    private val rekrutteringstreffAudience: String,
+    private val httpClient: HttpClient
+) {
+    fun hent(id: String, innkommendeToken: String): Rekrutteringstreff? {
+        val request = HttpRequest.newBuilder()
+            .uri(URI("$url/api/rekrutteringstreff/$id"))
+            .header(
+                "Authorization",
+                "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}"
+            )
+            .header("Content-Type", "application/json")
+            .GET()
+            .build()
 
-        return when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                if (response.statusCode == 404) return null
-                else result.value
-            }
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        return when (response.statusCode()) {
+            200 -> JacksonConfig.mapper.readValue(response.body(), Rekrutteringstreff::class.java)
+            404 -> null
+            else -> throw RuntimeException("Feil ved henting av rekrutteringstreff med id $id. Status: ${response.statusCode()}, body: ${response.body()}")
         }
     }
 
     fun hentArbeidsgivere(id: String, innkommendeToken: String): List<Arbeidsgiver>? {
-        val (_, response, result) = "$url/api/rekrutteringstreff/$id/arbeidsgiver".httpGet()
-            .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
-            .responseObject<List<Arbeidsgiver>>()
+        val request = HttpRequest.newBuilder()
+            .uri(URI("$url/api/rekrutteringstreff/$id/arbeidsgiver"))
+            .header(
+                "Authorization",
+                "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}"
+            )
+            .header("Content-Type", "application/json")
+            .GET()
+            .build()
 
-        return when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                if (response.statusCode == 404) return null
-                else result.value
-            }
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        return when (response.statusCode()) {
+            200 -> JacksonConfig.mapper.readValue(response.body(), object : TypeReference<List<Arbeidsgiver>>() {})
+            404 -> null
+            else -> throw RuntimeException("Feil ved henting av arbeidsgivere for rekrutteringstreff med id $id. Status: ${response.statusCode()}, body: ${response.body()}")
         }
     }
 
-     fun hentInnlegg(id: String, innkommendeToken: String): List<Innlegg>? {
-        val (_, response, result) = "$url/api/rekrutteringstreff/$id/innlegg".httpGet()
-            .header(Header.AUTHORIZATION, "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}")
-            .responseObject<List<Innlegg>>()
+    fun hentInnlegg(id: String, innkommendeToken: String): List<Innlegg>? {
+        val request = HttpRequest.newBuilder()
+            .uri(URI("$url/api/rekrutteringstreff/$id/innlegg"))
+            .header(
+                "Authorization",
+                "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}"
+            )
+            .header("Content-Type", "application/json")
+            .GET()
+            .build()
 
-        return when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                if (response.statusCode == 404) return null
-                else result.value
-            }
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        return when (response.statusCode()) {
+            200 -> JacksonConfig.mapper.readValue(response.body(), object : TypeReference<List<Innlegg>>() {})
+            404 -> null
+            else -> throw RuntimeException("Feil ved henting av innlegg for rekrutteringstreff med id $id. Status: ${response.statusCode()}, body: ${response.body()}")
         }
     }
 
 }
-
-data class RekrutteringstreffDetaljDto(
-    val rekrutteringstreff: Rekrutteringstreff
-)
 
 data class Rekrutteringstreff(
     private val id: UUID,
@@ -73,7 +92,18 @@ data class Rekrutteringstreff(
     private val poststed: String?,
     private val status: String?,
 ) {
-    fun tilDTOForBruker() = RekrutteringstreffOutboundDto(id, tittel, beskrivelse, fraTid, tilTid, svarfrist, gateadresse, postnummer, poststed, status)
+    fun tilDTOForBruker() = RekrutteringstreffOutboundDto(
+        id,
+        tittel,
+        beskrivelse,
+        fraTid,
+        tilTid,
+        svarfrist,
+        gateadresse,
+        postnummer,
+        poststed,
+        status
+    )
 }
 
 data class Arbeidsgiver(
@@ -85,7 +115,8 @@ data class Arbeidsgiver(
 
 data class Innlegg(
     val tittel: String,
-    val htmlContent: String) {
+    val htmlContent: String
+) {
     fun tilDTOForBruker() = InnleggOutboundDto(tittel, htmlContent)
 }
 

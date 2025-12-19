@@ -7,6 +7,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -46,6 +47,7 @@ class AppExceptionHandlingTest {
                 )
             ),
             dataSource = TestDatabase().dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = arbeidsgiverrettet,
             utvikler = utvikler,
             kandidatsokApiUrl = "",

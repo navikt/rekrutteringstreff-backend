@@ -48,6 +48,7 @@ class App(
     private val port: Int,
     private val authConfigs: List<AuthenticationConfiguration>,
     private val dataSource: DataSource,
+    private val jobbsøkerrettet: UUID,
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
     private val kandidatsokKlient: KandidatsøkKlient,
@@ -59,6 +60,7 @@ class App(
         port: Int,
         authConfigs: List<AuthenticationConfiguration>,
         dataSource: DataSource,
+        jobbsøkerrettet: UUID,
         arbeidsgiverrettet: UUID,
         utvikler: UUID,
         kandidatsokApiUrl: String,
@@ -71,6 +73,7 @@ class App(
         port = port,
         authConfigs = authConfigs,
         dataSource = dataSource,
+        jobbsøkerrettet = jobbsøkerrettet,
         arbeidsgiverrettet = arbeidsgiverrettet,
         utvikler = utvikler,
         kandidatsokKlient = KandidatsøkKlient(
@@ -169,7 +172,11 @@ class App(
         javalin.handleHealth()
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             authConfigs = authConfigs,
-            rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler),
+            rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
+                jobbsøkerrettet = jobbsøkerrettet,
+                arbeidsgiverrettet = arbeidsgiverrettet,
+                utvikler = utvikler
+            ),
             modiaKlient = modiaKlient,
             pilotkontorer = pilotkontorer
         )
@@ -313,6 +320,7 @@ fun main() {
                 ) else null
         ),
         dataSource = dataSource,
+        jobbsøkerrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_JOBBSOKERRETTET")),
         arbeidsgiverrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET")),
         utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER")),
         kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),

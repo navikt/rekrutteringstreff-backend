@@ -34,6 +34,7 @@ fun assertStatuscodeEquals(
 
 object AzureAdRoller {
     val modiaGenerell: UUID = UUID.randomUUID()
+    val jobbsøkerrettet: UUID = UUID.randomUUID()
     val arbeidsgiverrettet: UUID = UUID.randomUUID()
     val utvikler: UUID = UUID.randomUUID()
 }

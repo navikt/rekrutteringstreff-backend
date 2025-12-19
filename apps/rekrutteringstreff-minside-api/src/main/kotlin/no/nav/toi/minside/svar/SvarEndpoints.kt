@@ -49,12 +49,11 @@ class SvarEndpoints {
         val rekrutteringstreffId = ctx.pathParam(PATH_PARAM_TREFFID)
 
         // Sjekker om treffet finnes
-        treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.rekrutteringstreff?.tilDTOForBruker()
+        treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
             ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
         // hent påmeldingsstatus for treffet
         val jobbsøkerMedStatuser = borgerKlient.hentJobbsøkerMedStatuser(rekrutteringstreffId, ctx.authenticatedUser().jwt)
-        log.info("jobbsøkerMedStatuser: $jobbsøkerMedStatuser");
         val statuser = jobbsøkerMedStatuser.statuser
 
         val svar = RekrutteringstreffSvarOutboundDto(
@@ -102,7 +101,7 @@ class SvarEndpoints {
         log.info("Mottatt svar for rekrutteringstreff med id: ${rekrutteringstreffId} erPåmeldt: ${inputDto.erPåmeldt}")
 
         // Sjekker om treffet finnes
-        treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.rekrutteringstreff?.tilDTOForBruker()
+        treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
         borgerKlient.svarPåTreff(rekrutteringstreffId, ctx.authenticatedUser().jwt, inputDto.erPåmeldt)
