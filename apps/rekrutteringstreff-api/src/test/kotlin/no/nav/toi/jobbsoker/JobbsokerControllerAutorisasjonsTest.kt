@@ -215,23 +215,28 @@ class JobbsokerControllerAutorisasjonsTest {
     private fun autorisasjonsCaser() = listOf(
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Utvikler, HTTP_CREATED),
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Arbeidsgiverrettet, HTTP_CREATED),
+        Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_CREATED),
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.SlettJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.SlettJobbsøker, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.SlettJobbsøker, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.SlettJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.SlettJobbsøker, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.inviterJobbsøker, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.inviterJobbsøker, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.inviterJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.inviterJobbsøker, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
     ).stream()
 
@@ -244,10 +249,13 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+
 
         Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.SlettJobbsøker, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
@@ -260,7 +268,10 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Utvikler, erIkkeEier, HTTP_CREATED),
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Arbeidsgiverrettet, erEier, HTTP_CREATED),
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_CREATED),
+        Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Jobbsøkerrettet, erIkkeEier, HTTP_CREATED),
+        Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Jobbsøkerrettet, erEier, HTTP_CREATED),
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
+
         ).stream()
 
 
