@@ -14,7 +14,6 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.Kandidatnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
@@ -589,7 +588,6 @@ class RekrutteringstreffServiceTest {
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fnr,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),

@@ -20,7 +20,6 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.Kandidatnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -140,7 +139,6 @@ class JobbsokerControllerAutorisasjonsTest {
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer = Fødselsnummer("12345678902"),
-            kandidatnummer = Kandidatnummer("K654321"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("NAV Oslo"),
@@ -171,7 +169,6 @@ class JobbsokerControllerAutorisasjonsTest {
                 [
                     {
                         "fødselsnummer": "12345678901",
-                        "kandidatnummer": "K123456",
                         "fornavn": "Ola",
                         "etternavn": "Nordmann",
                         "navkontor": "NAV Oslo",

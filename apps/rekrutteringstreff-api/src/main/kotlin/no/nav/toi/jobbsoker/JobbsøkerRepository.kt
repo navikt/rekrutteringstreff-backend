@@ -47,9 +47,9 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     ): List<Long> {
         val sql = """
             insert into jobbsoker
-              (id, rekrutteringstreff_id,fodselsnummer,kandidatnummer,fornavn,etternavn,
+              (id, rekrutteringstreff_id,fodselsnummer,fornavn,etternavn,
                navkontor,veileder_navn,veileder_navident,status)
-            values (?,?,?,?,?,?,?,?,?,?)
+            values (?,?,?,?,?,?,?,?,?)
         """.trimIndent()
         val ids = mutableListOf<Long>()
         prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
@@ -58,13 +58,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 stmt.setObject(1, UUID.randomUUID())
                 stmt.setLong(2, treffDbId)
                 stmt.setString(3, it.fødselsnummer.asString)
-                stmt.setString(4, it.kandidatnummer?.asString)
-                stmt.setString(5, it.fornavn.asString)
-                stmt.setString(6, it.etternavn.asString)
-                stmt.setString(7, it.navkontor?.asString)
-                stmt.setString(8, it.veilederNavn?.asString)
-                stmt.setString(9, it.veilederNavIdent?.asString)
-                stmt.setString(10, JobbsøkerStatus.LAGT_TIL.name)
+                stmt.setString(4, it.fornavn.asString)
+                stmt.setString(5, it.etternavn.asString)
+                stmt.setString(6, it.navkontor?.asString)
+                stmt.setString(7, it.veilederNavn?.asString)
+                stmt.setString(8, it.veilederNavIdent?.asString)
+                stmt.setString(9, JobbsøkerStatus.LAGT_TIL.name)
                 stmt.addBatch(); if (++n == size) {
                 ids += stmt.execBatchReturnIds(); n = 0
             }
@@ -184,7 +183,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 js.id,
                 js.jobbsoker_id,
                 js.fodselsnummer,
-                js.kandidatnummer,
                 js.fornavn,
                 js.etternavn,
                 js.navkontor,
@@ -209,7 +207,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
             LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
             WHERE rt.id = ? and js.status != 'SLETTET'
-            GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
+            GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
                      js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             ORDER BY js.jobbsoker_id;
         """.trimIndent()
@@ -369,7 +367,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         personTreffId = PersonTreffId(UUID.fromString(getString("id"))),
         treffId = TreffId(getString("treff_id")),
         fødselsnummer = Fødselsnummer(getString("fodselsnummer")),
-        kandidatnummer = getString("kandidatnummer")?.let(::Kandidatnummer),
         fornavn = Fornavn(getString("fornavn")),
         etternavn = Etternavn(getString("etternavn")),
         navkontor = getString("navkontor")?.let(::Navkontor),
@@ -390,7 +387,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     jh.aktøridentifikasjon,
                     jh.hendelse_data,
                     js.fodselsnummer,
-                    js.kandidatnummer,
                     js.fornavn,
                     js.etternavn,
                     js.id as person_treff_id
@@ -415,7 +411,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                                 opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
                                 aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
                                 fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
-                                kandidatnummer = rs.getString("kandidatnummer")?.let { Kandidatnummer(it) },
                                 fornavn = Fornavn(rs.getString("fornavn")),
                                 etternavn = Etternavn(rs.getString("etternavn")),
                                 personTreffId = PersonTreffId(
@@ -441,7 +436,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.id,
                     js.jobbsoker_id,
                     js.fodselsnummer,
-                    js.kandidatnummer,
                     js.fornavn,
                     js.etternavn,
                     js.navkontor,
@@ -466,7 +460,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
                 WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET'
-                GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.kandidatnummer, js.fornavn, js.etternavn,
+                GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
                          js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             """
             ).use { ps ->

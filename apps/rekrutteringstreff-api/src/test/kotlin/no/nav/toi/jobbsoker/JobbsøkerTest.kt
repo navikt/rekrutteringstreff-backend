@@ -137,7 +137,6 @@ class JobbsøkerTest {
     fun leggTilJobbsøkerTest() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val fnr = Fødselsnummer("55555555555")
-        val kandidatnr = Kandidatnummer("Kaaaaaaandidatnummer")
         val fornavn = Fornavn("Foooornavn")
         val etternavn = Etternavn("Eeeetternavn")
         val navkontor = Navkontor("Oslo")
@@ -147,7 +146,6 @@ class JobbsøkerTest {
         val requestBody = """
         [{
           "fødselsnummer" : "${fnr.asString}",
-          "kandidatnummer" : "${kandidatnr.asString}",
           "fornavn" : "${fornavn.asString}",
           "etternavn" : "${etternavn.asString}",
           "navkontor" : "${navkontor.asString}",
@@ -169,7 +167,6 @@ class JobbsøkerTest {
             assertThatCode { UUID.fromString(actual.personTreffId.toString()) }.doesNotThrowAnyException()
             assertThat(actual.treffId).isEqualTo(treffId)
             assertThat(actual.fødselsnummer).isEqualTo(fnr)
-            assertThat(actual.kandidatnummer).isEqualTo(kandidatnr)
             assertThat(actual.fornavn).isEqualTo(fornavn)
             assertThat(actual.etternavn).isEqualTo(etternavn)
             assertThat(actual.navkontor).isEqualTo(navkontor)
@@ -194,9 +191,6 @@ class JobbsøkerTest {
         val fnr2 = Fødselsnummer("22222222222")
         val fnr3 = Fødselsnummer("33333333333")
         val fnr4 = Fødselsnummer("44444444444")
-        val kandidatnr1 = Kandidatnummer("Kandidatnr1")
-        val kandidatnr2 = Kandidatnummer("Kandidatnr2")
-        val kandidatnr3 = Kandidatnummer("Kandidatnr3")
         val fornavn1 = Fornavn("Fornavn1")
         val fornavn2 = Fornavn("Fornavn2")
         val fornavn3 = Fornavn("Fornavn3")
@@ -215,14 +209,14 @@ class JobbsøkerTest {
         val veilederNavIdent2 = VeilederNavIdent("NAV002")
         val veilederNavIdent3 = VeilederNavIdent("NAV003")
         val jobbsøkere1 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId1, fnr1, kandidatnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId1, fnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL)
         )
         val jobbsøkere2 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr2, kandidatnr2, fornavn2, etternavn2, navkontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL),
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr3, kandidatnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr2, fornavn2, etternavn2, navkontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL),
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2, JobbsøkerStatus.LAGT_TIL)
         )
         val jobbsøkere3 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId3, fnr4, kandidatnr1, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId3, fnr4, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3, JobbsøkerStatus.LAGT_TIL)
         )
         db.leggTilJobbsøkere(jobbsøkere1)
         db.leggTilJobbsøkere(jobbsøkere2)
@@ -267,7 +261,6 @@ class JobbsøkerTest {
         val requestBody = """
     [{
       "fødselsnummer" : "77777777777",
-      "kandidatnummer" : "K777777",
       "fornavn" : "Test",
       "etternavn" : "Bruker",
       "navkontor" : "Oslo",
@@ -316,7 +309,6 @@ class JobbsøkerTest {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val input1 = LeggTilJobbsøker(
             Fødselsnummer("11111111111"),
-            Kandidatnummer("K111"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             Navkontor("NAV Oslo"),
@@ -325,7 +317,6 @@ class JobbsøkerTest {
         )
         val input2 = LeggTilJobbsøker(
             Fødselsnummer("22222222222"),
-            Kandidatnummer("K222"),
             Fornavn("Kari"),
             Etternavn("Nordmann"),
             Navkontor("NAV Bergen"),
@@ -334,12 +325,12 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.kandidatnummer, input1.fornavn, input1.etternavn, input1.navkontor, input1.veilederNavn, input1.veilederNavIdent, JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.fornavn, input1.etternavn, input1.navkontor, input1.veilederNavn, input1.veilederNavIdent, JobbsøkerStatus.LAGT_TIL)
             )
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.kandidatnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent,JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent,JobbsøkerStatus.LAGT_TIL)
             )
         )
         eierRepository.leggTil(treffId, listOf("A123456"))
@@ -364,7 +355,6 @@ class JobbsøkerTest {
                     assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
                     assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
                     assertThat(h.fødselsnummer).isIn("11111111111", "22222222222")
-                    assertThat(h.kandidatnummer).isIn("K111", "K222")
                     assertThat(h.fornavn).isIn("Ola", "Kari")
                     assertThat(h.etternavn).isEqualTo("Nordmann")
                     assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
@@ -383,8 +373,8 @@ class JobbsøkerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr1, null, Fornavn("Fornavn1"), Etternavn("Etternavn1"), null, null, null, JobbsøkerStatus.LAGT_TIL),
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr2, null, Fornavn("Fornavn2"), Etternavn("Etternavn2"), null, null, null, JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr1, Fornavn("Fornavn1"), Etternavn("Etternavn1"), null, null, null, JobbsøkerStatus.LAGT_TIL),
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr2, Fornavn("Fornavn2"), Etternavn("Etternavn2"), null, null, null, JobbsøkerStatus.LAGT_TIL)
             )
         )
 
@@ -438,7 +428,6 @@ class JobbsøkerTest {
             PersonTreffId(UUID.randomUUID()),
             treffId,
             fødselsnummer,
-            Kandidatnummer("K123"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null,

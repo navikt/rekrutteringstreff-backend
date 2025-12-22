@@ -14,14 +14,6 @@ data class Fødselsnummer(private val fødselsnummer: String) {
     override fun toString(): String = asString
 }
 
-data class Kandidatnummer(private val kandidatnummer: String) {
-    init {
-        if (kandidatnummer.isEmpty()) throw IllegalArgumentException("Kandidatnummer må være ikke-tomt.")
-    }
-    val asString: String = kandidatnummer
-    override fun toString(): String = asString
-}
-
 data class Fornavn(private val fornavn: String) {
     init {
         if (fornavn.isEmpty()) throw IllegalArgumentException("Fornavn må være ikke-tomt.")
@@ -68,9 +60,17 @@ data class VeilederNavIdent(private val ident: String) {
     override fun toString(): String = asString
 }
 
+/**
+ * Kandidatnummer brukes kun for on-demand henting fra ekstern API (kandidatsøk-api).
+ * Det lagres ikke lenger i databasen, men brukes som type-sikker wrapper for API-respons.
+ */
+data class Kandidatnummer(private val kandidatnummer: String) {
+    val asString: String = kandidatnummer
+    override fun toString(): String = asString
+}
+
 data class LeggTilJobbsøker(
     val fødselsnummer: Fødselsnummer,
-    val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
     val navkontor: Navkontor?,
@@ -86,7 +86,6 @@ data class Jobbsøker(
     val personTreffId: PersonTreffId,
     val treffId: TreffId,
     val fødselsnummer: Fødselsnummer,
-    val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
     val navkontor: Navkontor?,

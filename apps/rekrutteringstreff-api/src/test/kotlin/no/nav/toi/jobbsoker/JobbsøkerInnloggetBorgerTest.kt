@@ -116,7 +116,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
             )
         )
 
@@ -161,7 +161,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
             )
         )
 
@@ -207,7 +207,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Kandidatnummer("K1"), Fornavn("Test"), Etternavn("Person"), Navkontor("NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"), JobbsøkerStatus.INVITERT)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), Navkontor("NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"), JobbsøkerStatus.INVITERT)
             )
         )
 
@@ -228,7 +228,6 @@ class JobbsøkerInnloggetBorgerTest {
         val jobbsøker = result.get()
         assertThatCode { UUID.fromString(jobbsøker.personTreffId) }.doesNotThrowAnyException()
         assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer.asString)
-        assertThat(jobbsøker.kandidatnummer).isEqualTo("K1")
         assertThat(jobbsøker.fornavn).isEqualTo("Test")
         assertThat(jobbsøker.etternavn).isEqualTo("Person")
         assertThat(jobbsøker.navkontor).isEqualTo("NAV En")
@@ -244,7 +243,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
         eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
@@ -289,7 +288,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
         eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
@@ -313,7 +312,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
         eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
@@ -330,7 +329,7 @@ class JobbsøkerInnloggetBorgerTest {
         val fødselsnummer = Fødselsnummer("44444444444")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
         assertThat(result.get().statuser.erPåmeldt).isFalse()
@@ -344,7 +343,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -369,7 +368,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -394,7 +393,7 @@ class JobbsøkerInnloggetBorgerTest {
         val token = authServer.lagToken(authPort, navIdent = "test")
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
-        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
+        db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
         Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
@@ -424,7 +423,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
             )
         )
 
@@ -467,7 +466,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, null, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
             )
         )
 

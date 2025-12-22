@@ -140,7 +140,6 @@ class TestDatabase {
     fun hentAlleJobbsøkere(): List<Jobbsøker> = dataSource.connection.use {
         val sql = """
             SELECT js.fodselsnummer,
-                   js.kandidatnummer,
                    js.fornavn,
                    js.etternavn,
                    js.navkontor,
@@ -193,7 +192,6 @@ class TestDatabase {
         personTreffId             = PersonTreffId(UUID.fromString(rs.getString("fodselsnummer"))),
         treffId        = TreffId(rs.getString("treff_id")),
         fødselsnummer  = Fødselsnummer(rs.getString("fodselsnummer")),
-        kandidatnummer = rs.getString("kandidatnummer")?.let(::Kandidatnummer),
         fornavn        = Fornavn(rs.getString("fornavn")),
         etternavn      = Etternavn(rs.getString("etternavn")),
         navkontor      = rs.getString("navkontor")?.let(::Navkontor),
@@ -218,7 +216,6 @@ class TestDatabase {
                     jsListe.map {
                         LeggTilJobbsøker(
                             it.fødselsnummer,
-                            it.kandidatnummer,
                             it.fornavn,
                             it.etternavn,
                             it.navkontor,
