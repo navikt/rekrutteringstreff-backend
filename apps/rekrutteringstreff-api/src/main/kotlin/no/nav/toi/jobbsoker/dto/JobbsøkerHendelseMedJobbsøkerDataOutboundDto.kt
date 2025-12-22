@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.dto
 
+import com.fasterxml.jackson.databind.JsonNode
 import java.time.ZonedDateTime
 
 data class JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
@@ -12,5 +13,6 @@ data class JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
     val kandidatnummer: String?,
     val fornavn: String,
     val etternavn: String,
-    val personTreffId: String
+    val personTreffId: String,
+    val hendelseData: JsonNode? = null
 )

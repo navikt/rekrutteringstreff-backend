@@ -160,6 +160,10 @@ private class AutorisasjonsTest {
         SlettRekrutteringstreff(
             { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" },
             {HttpRequest.newBuilder().DELETE()}
+        ),
+        HentAlleHendelser(
+            { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/allehendelser" },
+            {HttpRequest.newBuilder().GET()}
         )
     }
 
@@ -185,6 +189,9 @@ private class AutorisasjonsTest {
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Utvikler, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
     ).stream()
 
     private fun autorisasjonsCaserMedEier() = listOf(
@@ -194,6 +201,9 @@ private class AutorisasjonsTest {
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
     ).stream()
 
     @ParameterizedTest

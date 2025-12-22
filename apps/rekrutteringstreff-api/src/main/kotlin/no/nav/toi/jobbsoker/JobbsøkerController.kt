@@ -214,7 +214,26 @@ class JobbsøkerController(
                     "kandidatnummer": "K123456",
                     "fornavn": "Ola",
                     "etternavn": "Nordmann",
-                    "personTreffId": "any-uuid"
+                    "personTreffId": "any-uuid",
+                    "hendelseData": null
+                },
+                {
+                    "id": "any-uuid-2",
+                    "tidspunkt": "2025-04-14T11:00:00Z",
+                    "hendelsestype": "MOTTATT_SVAR_FRA_MINSIDE",
+                    "opprettetAvAktørType": "SYSTEM",
+                    "aktørIdentifikasjon": null,
+                    "fødselsnummer": "12345678901",
+                    "kandidatnummer": "K123456",
+                    "fornavn": "Ola",
+                    "etternavn": "Nordmann",
+                    "personTreffId": "any-uuid",
+                    "hendelseData": {
+                        "varselId": "A400",
+                        "eksternKanal": "SMS",
+                        "eksternStatus": "FERDIGSTILT",
+                        "minsideStatus": "OPPRETTET"
+                    }
                 }
             ]"""
             )]
@@ -241,7 +260,8 @@ class JobbsøkerController(
                     kandidatnummer = h.kandidatnummer?.asString,
                     fornavn = h.fornavn.asString,
                     etternavn = h.etternavn.asString,
-                    personTreffId = h.personTreffId.somString
+                    personTreffId = h.personTreffId.somString,
+                    hendelseData = h.hendelseData
                 )
             })
         } else {

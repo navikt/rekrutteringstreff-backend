@@ -469,6 +469,23 @@ class RekrutteringstreffTest {
             HendelseRessurs.ARBEIDSGIVER
         )
         assertThat(list.map { it.hendelsestype }).containsExactlyInAnyOrder("OPPRETTET", "OPPRETTET", "OPPRETTET", "OPPDATERT")
+
+        // Verifiser subjektId og subjektNavn for jobbsøker-hendelser
+        val jobbsøkerHendelse = list.find { it.ressurs == HendelseRessurs.JOBBSØKER }
+        assertThat(jobbsøkerHendelse?.subjektId).isEqualTo("11111111111")
+        assertThat(jobbsøkerHendelse?.subjektNavn).isEqualTo("Ola N")
+
+        // Verifiser subjektId og subjektNavn for arbeidsgiver-hendelser
+        val arbeidsgiverHendelse = list.find { it.ressurs == HendelseRessurs.ARBEIDSGIVER }
+        assertThat(arbeidsgiverHendelse?.subjektId).isEqualTo("999888777")
+        assertThat(arbeidsgiverHendelse?.subjektNavn).isEqualTo("Test AS")
+
+        // Verifiser at rekrutteringstreff-hendelser har null for subjektId og subjektNavn
+        val treffHendelser = list.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }
+        assertThat(treffHendelser).allSatisfy {
+            assertThat(it.subjektId).isNull()
+            assertThat(it.subjektNavn).isNull()
+        }
     }
 
     @ParameterizedTest
