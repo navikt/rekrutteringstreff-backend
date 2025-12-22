@@ -388,6 +388,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     jh.hendelsestype,
                     jh.opprettet_av_aktortype,
                     jh.aktøridentifikasjon,
+                    jh.hendelse_data,
                     js.fodselsnummer,
                     js.kandidatnummer,
                     js.fornavn,
@@ -419,7 +420,10 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                                 etternavn = Etternavn(rs.getString("etternavn")),
                                 personTreffId = PersonTreffId(
                                     UUID.fromString(rs.getString("person_treff_id"))
-                                )
+                                ),
+                                hendelseData = rs.getString("hendelse_data")?.let {
+                                    mapper.readTree(it)
+                                }
                             )
                         )
                     }

@@ -34,3 +34,6 @@ apps/rekrutteringstreff-api/robTestresultater.txt
 .idea/
 
 robTestresultater.txt
+
+# Generated bin directories
+bin/
