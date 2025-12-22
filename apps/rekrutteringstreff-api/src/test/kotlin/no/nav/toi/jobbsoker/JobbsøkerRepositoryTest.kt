@@ -41,7 +41,6 @@ class JobbsøkerRepositoryTest {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val input = listOf(LeggTilJobbsøker(
             Fødselsnummer("12345678901"),
-            Kandidatnummer("K123456"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             Navkontor("NAV Oslo"),
@@ -54,7 +53,6 @@ class JobbsøkerRepositoryTest {
         val js = jobbsøkere.first()
         assertThatCode { UUID.fromString(js.personTreffId.toString()) }.doesNotThrowAnyException()
         assertThat(js.fødselsnummer.asString).isEqualTo("12345678901")
-        assertThat(js.kandidatnummer?.asString).isEqualTo("K123456")
         assertThat(js.fornavn.asString).isEqualTo("Ola")
         assertThat(js.etternavn.asString).isEqualTo("Nordmann")
         assertThat(js.navkontor?.asString).isEqualTo("NAV Oslo")
@@ -74,7 +72,6 @@ class JobbsøkerRepositoryTest {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val input = listOf(LeggTilJobbsøker(
             Fødselsnummer("98765432109"),
-            null,
             Fornavn("Knut"),
             Etternavn("Hansen"),
             null,
@@ -87,7 +84,6 @@ class JobbsøkerRepositoryTest {
         val js = jobbsøkere.first()
         assertThatCode { UUID.fromString(js.personTreffId.toString()) }.doesNotThrowAnyException()
         assertThat(js.fødselsnummer.asString).isEqualTo("98765432109")
-        assertThat(js.kandidatnummer).isNull()
         assertThat(js.fornavn.asString).isEqualTo("Knut")
         assertThat(js.etternavn.asString).isEqualTo("Hansen")
         assertThat(js.navkontor).isNull()
@@ -111,7 +107,6 @@ class JobbsøkerRepositoryTest {
                 PersonTreffId(UUID.randomUUID()),
                 treffId1,
                 Fødselsnummer("11111111111"),
-                Kandidatnummer("K1"),
                 Fornavn("Fornavn1"),
                 Etternavn("Etternavn1"),
                 Navkontor("Oslo"),
@@ -125,7 +120,6 @@ class JobbsøkerRepositoryTest {
                 PersonTreffId(UUID.randomUUID()),
                 treffId2,
                 Fødselsnummer("22222222222"),
-                Kandidatnummer("K2"),
                 Fornavn("Fornavn2"),
                 Etternavn("Etternavn2"),
                 Navkontor("Oslo"),
@@ -137,7 +131,6 @@ class JobbsøkerRepositoryTest {
                 PersonTreffId(UUID.randomUUID()),
                 treffId2,
                 Fødselsnummer("33333333333"),
-                Kandidatnummer("K3"),
                 Fornavn("Fornavn3"),
                 Etternavn("Etternavn3"),
                 Navkontor("Bergen"),
@@ -170,7 +163,6 @@ class JobbsøkerRepositoryTest {
 
         val leggTilJobbsøker1 = LeggTilJobbsøker(
             fødselsnummer1,
-            Kandidatnummer("K1"),
             Fornavn("Fornavn1"),
             Etternavn("Etternavn1"),
             Navkontor("NAV Test"),
@@ -179,7 +171,6 @@ class JobbsøkerRepositoryTest {
         )
         val leggTilJobbsøker2 = LeggTilJobbsøker(
             fødselsnummer2,
-            Kandidatnummer("K2"),
             Fornavn("Fornavn2"),
             Etternavn("Etternavn2"),
             null, null, null
@@ -191,7 +182,6 @@ class JobbsøkerRepositoryTest {
         jobbsøker!!
         assertThatCode { UUID.fromString(jobbsøker.personTreffId.toString()) }.doesNotThrowAnyException()
         assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer1)
-        assertThat(jobbsøker.kandidatnummer?.asString).isEqualTo("K1")
         assertThat(jobbsøker.fornavn.asString).isEqualTo("Fornavn1")
         assertThat(jobbsøker.etternavn.asString).isEqualTo("Etternavn1")
         assertThat(jobbsøker.navkontor?.asString).isEqualTo("NAV Test")
@@ -212,7 +202,6 @@ class JobbsøkerRepositoryTest {
         val jobbsøkere = listOf(
             LeggTilJobbsøker(
                 Fødselsnummer("12345678901"),
-                Kandidatnummer("K123456"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
                 Navkontor("Nav Oslo"),
@@ -221,7 +210,6 @@ class JobbsøkerRepositoryTest {
             ),
             LeggTilJobbsøker(
                 Fødselsnummer("12345678902"),
-                Kandidatnummer("K123457"),
                 Fornavn("Ole"),
                 Etternavn("Nordmann"),
                 Navkontor("Nav Oslo"),
@@ -240,7 +228,6 @@ class JobbsøkerRepositoryTest {
 
         val input = listOf(LeggTilJobbsøker(
             Fødselsnummer("11223344556"),
-            Kandidatnummer("K7890"),
             Fornavn("Emil"),
             Etternavn("Hansen"),
             Navkontor("NAV Bergen"),
@@ -255,7 +242,6 @@ class JobbsøkerRepositoryTest {
 
         val hendelse = hendelser.first()
         assertThat(hendelse.fødselsnummer.asString).isEqualTo("11223344556")
-        assertThat(hendelse.kandidatnummer?.asString).isEqualTo("K7890")
         assertThat(hendelse.fornavn.asString).isEqualTo("Emil")
         assertThat(hendelse.etternavn.asString).isEqualTo("Hansen")
         assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
@@ -271,7 +257,6 @@ class JobbsøkerRepositoryTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer,
-            Kandidatnummer("K123"),
             Fornavn("Test"),
             Etternavn("Person"),
             null, null, null
@@ -305,7 +290,6 @@ class JobbsøkerRepositoryTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer,
-            Kandidatnummer("K123"),
             Fornavn("Test"),
             Etternavn("Person"),
             null, null, null
@@ -336,7 +320,6 @@ class JobbsøkerRepositoryTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer,
-            Kandidatnummer("K123"),
             Fornavn("Test"),
             Etternavn("Person"),
             null, null, null
@@ -369,7 +352,6 @@ class JobbsøkerRepositoryTest {
 
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer,
-            Kandidatnummer("K123"),
             Fornavn("Test"),
             Etternavn("Person"),
             null, null, null
@@ -400,7 +382,6 @@ class JobbsøkerRepositoryTest {
 
         val jobbsøker1 = LeggTilJobbsøker(
             Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null
@@ -433,7 +414,6 @@ class JobbsøkerRepositoryTest {
 
         val jobbsøker1 = LeggTilJobbsøker(
             Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null
@@ -463,14 +443,12 @@ class JobbsøkerRepositoryTest {
 
         val jobbsøker1 = LeggTilJobbsøker(
             Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null
         )
         val jobbsøker2 = LeggTilJobbsøker(
             Fødselsnummer("23456789012"),
-            Kandidatnummer("K2"),
             Fornavn("Kari"),
             Etternavn("Nordmann"),
             null, null, null
@@ -505,7 +483,6 @@ class JobbsøkerRepositoryTest {
 
         val jobbsøker = LeggTilJobbsøker(
             Fødselsnummer("12345678901"),
-            Kandidatnummer("K1"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
             null, null, null

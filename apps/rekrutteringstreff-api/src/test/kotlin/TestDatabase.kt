@@ -281,7 +281,6 @@ class TestDatabase {
         val sql = """
             SELECT js.id,
                    js.fodselsnummer,
-                   js.kandidatnummer,
                    js.fornavn,
                    js.etternavn,
                    js.navkontor,
@@ -300,7 +299,6 @@ class TestDatabase {
         val sql = """
             SELECT js.id,
                    js.fodselsnummer,
-                   js.kandidatnummer,
                    js.fornavn,
                    js.etternavn,
                    js.navkontor,
@@ -390,7 +388,6 @@ class TestDatabase {
         personTreffId = PersonTreffId(rs.getObject("id", UUID::class.java)),
         treffId = TreffId(rs.getString("treff_id")),
         fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
-        kandidatnummer = rs.getString("kandidatnummer")?.let(::Kandidatnummer),
         fornavn = Fornavn(rs.getString("fornavn")),
         etternavn = Etternavn(rs.getString("etternavn")),
         navkontor = rs.getString("navkontor")?.let(::Navkontor),
@@ -436,21 +433,20 @@ class TestDatabase {
                 val jobbsøkerDbId = c.prepareStatement(
                     """
                     INSERT INTO jobbsoker
-                      (id, rekrutteringstreff_id, fodselsnummer, kandidatnummer, fornavn, etternavn,
+                      (id, rekrutteringstreff_id, fodselsnummer, fornavn, etternavn,
                        navkontor, veileder_navn, veileder_navident)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     RETURNING jobbsoker_id
                     """.trimIndent()
                 ).apply {
                     setObject(1, js.personTreffId.somUuid) // Bruk den spesifiserte UUID
                     setLong(2, treffDbId)
                     setString(3, js.fødselsnummer.asString)
-                    setString(4, js.kandidatnummer?.asString)
-                    setString(5, js.fornavn.asString)
-                    setString(6, js.etternavn.asString)
-                    setString(7, js.navkontor?.asString)
-                    setString(8, js.veilederNavn?.asString)
-                    setString(9, js.veilederNavIdent?.asString)
+                    setString(4, js.fornavn.asString)
+                    setString(5, js.etternavn.asString)
+                    setString(6, js.navkontor?.asString)
+                    setString(7, js.veilederNavn?.asString)
+                    setString(8, js.veilederNavIdent?.asString)
                 }.executeQuery().let {
                     if (it.next()) it.getLong(1) else error("Kunne ikke legge til jobbsøker")
                 }

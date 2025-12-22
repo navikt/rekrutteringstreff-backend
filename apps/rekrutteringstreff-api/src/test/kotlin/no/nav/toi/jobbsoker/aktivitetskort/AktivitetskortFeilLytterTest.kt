@@ -44,7 +44,6 @@ class AktivitetskortFeilLytterTest {
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),

@@ -57,7 +57,6 @@ class JobbsøkerController(
                 example = """[
               {
                 "fødselsnummer": "12345678901",
-                "kandidatnummer": "K123456",
                 "fornavn": "Ola",
                 "etternavn": "Nordmann",
                 "navkontor": "NAV Oslo",
@@ -66,7 +65,6 @@ class JobbsøkerController(
               },
               {
                 "fødselsnummer": "10987654321",
-                "kandidatnummer": null,
                 "fornavn": "Kari",
                 "etternavn": "Nordmann",
                 "navkontor": null,
@@ -106,7 +104,6 @@ class JobbsøkerController(
                 {   
                     "personTreffId": "any-uuid",
                     "fødselsnummer": "12345678901",
-                    "kandidatnummer": "K123456",
                     "fornavn": "Ola",
                     "etternavn": "Nordmann",
                     "navkontor": "Oslo",
@@ -124,7 +121,6 @@ class JobbsøkerController(
                 },
                 {
                     "fødselsnummer": "10987654321",
-                    "kandidatnummer": "K543210",
                     "fornavn": "Kari",
                     "etternavn": "Nordmann",
                     "navkontor": null,
@@ -211,7 +207,6 @@ class JobbsøkerController(
                     "opprettetAvAktørType": "ARRANGØR",
                     "aktørIdentifikasjon": "testperson",
                     "fødselsnummer": "12345678901",
-                    "kandidatnummer": "K123456",
                     "fornavn": "Ola",
                     "etternavn": "Nordmann",
                     "personTreffId": "any-uuid",
@@ -224,7 +219,6 @@ class JobbsøkerController(
                     "opprettetAvAktørType": "SYSTEM",
                     "aktørIdentifikasjon": null,
                     "fødselsnummer": "12345678901",
-                    "kandidatnummer": "K123456",
                     "fornavn": "Ola",
                     "etternavn": "Nordmann",
                     "personTreffId": "any-uuid",
@@ -257,7 +251,6 @@ class JobbsøkerController(
                     opprettetAvAktørType = h.opprettetAvAktørType.toString(),
                     aktørIdentifikasjon = h.aktørIdentifikasjon,
                     fødselsnummer = h.fødselsnummer.asString,
-                    kandidatnummer = h.kandidatnummer?.asString,
                     fornavn = h.fornavn.asString,
                     etternavn = h.etternavn.asString,
                     personTreffId = h.personTreffId.somString,
@@ -304,7 +297,6 @@ class JobbsøkerController(
             JobbsøkerOutboundDto(
                 personTreffId = it.personTreffId.toString(),
                 fødselsnummer = it.fødselsnummer.asString,
-                kandidatnummer = it.kandidatnummer?.asString,
                 fornavn = it.fornavn.asString,
                 etternavn = it.etternavn.asString,
                 navkontor = it.navkontor?.asString,
