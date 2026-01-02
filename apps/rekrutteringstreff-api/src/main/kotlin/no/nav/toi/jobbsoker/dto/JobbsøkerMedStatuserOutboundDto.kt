@@ -4,7 +4,6 @@ data class JobbsøkerMedStatuserOutboundDto(
     val personTreffId: String,
     val treffId: String,
     val fødselsnummer: String,
-    val kandidatnummer: String?,
     val fornavn: String,
     val etternavn: String,
     val navkontor: String?,

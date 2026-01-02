@@ -6,7 +6,6 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
-import no.nav.toi.jobbsoker.Kandidatnummer
 import no.nav.toi.jobbsoker.PersonTreffId
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -18,7 +17,6 @@ data class JobbsøkerHendelseMedJobbsøkerData(
     val opprettetAvAktørType: AktørType,
     val aktørIdentifikasjon: String?,
     val fødselsnummer: Fødselsnummer,
-    val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
     val personTreffId: PersonTreffId,

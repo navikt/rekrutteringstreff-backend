@@ -10,7 +10,6 @@ data class JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
     val opprettetAvAktørType: String,
     val aktørIdentifikasjon: String?,
     val fødselsnummer: String,
-    val kandidatnummer: String?,
     val fornavn: String,
     val etternavn: String,
     val personTreffId: String,

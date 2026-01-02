@@ -93,7 +93,6 @@ class JobbsøkerInnloggetBorgerController(
             {
               "treffId": "c1b2c3d4-e5f6-7890-1234-567890abcdef",
               "fødselsnummer": "12345678901",
-              "kandidatnummer": "PA123456",
               "fornavn": "Ola",
               "etternavn": "Nordmann",
               "navkontor": "NAV Grünerløkka",
@@ -160,7 +159,6 @@ class JobbsøkerInnloggetBorgerController(
             personTreffId = personTreffId.toString(),
             treffId = treffId.somString,
             fødselsnummer = fødselsnummer.asString,
-            kandidatnummer = kandidatnummer?.asString,
             fornavn = fornavn.asString,
             etternavn = etternavn.asString,
             navkontor = navkontor?.asString,
