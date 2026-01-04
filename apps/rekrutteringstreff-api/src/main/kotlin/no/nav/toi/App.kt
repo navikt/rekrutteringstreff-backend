@@ -12,15 +12,17 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.exception.UlovligSlettingException
-import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.JobbsøkerController
 import no.nav.toi.jobbsoker.JobbsøkerInnloggetBorgerController
 import no.nav.toi.jobbsoker.JobbsøkerOutboundController
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
 import no.nav.toi.kandidatsok.KandidatsøkKlient
@@ -87,9 +89,10 @@ class App(
     private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         startJavalin(jobbsøkerRepository)
         startSchedulere()
-        startRR(jobbsøkerRepository)
+        startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
 
@@ -180,7 +183,9 @@ class App(
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val kiLoggRepository = KiLoggRepository(dataSource)
 
-        val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
+        val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
+        val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
         val eierService = EierService(eierRepository)
 
         RekrutteringstreffController(
@@ -198,17 +203,17 @@ class App(
             javalin = javalin
         )
         ArbeidsgiverController(
-            arbeidsgiverRepository = arbeidsgiverRepository,
+            arbeidsgiverService = arbeidsgiverService,
             eierService = eierService,
             javalin = javalin
         )
         JobbsøkerController(
-            jobbsøkerRepository = jobbsøkerRepository,
+            jobbsøkerService = jobbsøkerService,
             eierService = eierService,
             javalin = javalin
         )
         JobbsøkerInnloggetBorgerController(
-            jobbsøkerRepository = jobbsøkerRepository,
+            jobbsøkerService = jobbsøkerService,
             javalin = javalin
         )
         JobbsøkerOutboundController(
@@ -241,10 +246,10 @@ class App(
         aktivitetskortJobbsøkerScheduler.start()
     }
 
-    fun startRR(jobbsøkerRepository: JobbsøkerRepository) {
+    fun startRR(jobbsøkerService: JobbsøkerService) {
         log.info("Starting RapidsConnection")
-        AktivitetskortFeilLytter(rapidsConnection, jobbsøkerRepository)
-        MinsideVarselSvarLytter(rapidsConnection, jobbsøkerRepository, JacksonConfig.mapper)
+        AktivitetskortFeilLytter(rapidsConnection, jobbsøkerService)
+        MinsideVarselSvarLytter(rapidsConnection, jobbsøkerService, JacksonConfig.mapper)
         Thread {
             try {
                 rapidsConnection.start()

@@ -19,7 +19,7 @@ import java.util.UUID
 import kotlin.collections.findLast
 
 class JobbsøkerInnloggetBorgerController(
-    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val jobbsøkerService: JobbsøkerService,
     javalin: Javalin
 ) {
     companion object {
@@ -54,7 +54,7 @@ class JobbsøkerInnloggetBorgerController(
             if (pid.isEmpty()) {
                 throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
             }
-            jobbsøkerRepository.svarJaTilInvitasjon(Fødselsnummer(pid), treffId, pid)
+            jobbsøkerService.svarJaTilInvitasjon(Fødselsnummer(pid), treffId, pid)
             ctx.status(200)
         }
 
@@ -76,7 +76,7 @@ class JobbsøkerInnloggetBorgerController(
             if (pid.isEmpty()) {
                 throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
             }
-            jobbsøkerRepository.svarNeiTilInvitasjon(Fødselsnummer(pid), treffId, pid)
+            jobbsøkerService.svarNeiTilInvitasjon(Fødselsnummer(pid), treffId, pid)
             ctx.status(200)
         }
     }
@@ -141,7 +141,7 @@ class JobbsøkerInnloggetBorgerController(
             if (pid.isEmpty()) {
                 throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
             }
-            val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, Fødselsnummer(pid))
+            val jobbsøker = jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(pid))
             if (jobbsøker == null) {
                 ctx.status(404)
             } else {

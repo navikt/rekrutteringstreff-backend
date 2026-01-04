@@ -24,13 +24,25 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun leggTil(jobsøkere: List<LeggTilJobbsøker>, treff: TreffId, opprettetAv: String) {
+    /**
+     * Legger til jobbsøkere i databasen og returnerer deres db-id-er.
+     * NB: Kaller IKKE leggTilHendelse - det skal gjøres av servicelaget.
+     */
+    fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId): List<Long> {
+        val treffDbId = connection.treffDbId(treff)
+        return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere)
+    }
+
+    /**
+     * Bekvemmelighetsmetode for å legge til jobbsøkere med hendelse i én operasjon.
+     * Brukes primært fra tester. Servicelaget bør bruke de separate metodene for bedre kontroll.
+     */
+    fun leggTilMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId, opprettetAv: String) {
         dataSource.connection.use { c ->
             c.autoCommit = false
             try {
-                val treffId = c.treffDbId(treff)
-                val jsIds = c.batchInsertJobbsøkere(treffId, jobsøkere)
-                c.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETTET, jsIds, opprettetAv)
+                val jobbsøkerDbIds = leggTil(c, jobbsøkere, treff)
+                leggTilOpprettetHendelserForJobbsøkereDbId(c, jobbsøkerDbIds, opprettetAv)
                 c.commit()
             } catch (e: Exception) {
                 c.rollback(); throw e
@@ -38,6 +50,17 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 c.autoCommit = true
             }
         }
+    }
+
+    /**
+     * Legger til OPPRETTET-hendelser for jobbsøkere basert på deres db-id-er.
+     */
+    fun leggTilOpprettetHendelserForJobbsøkereDbId(
+        connection: Connection,
+        jobbsøkerDbIds: List<Long>,
+        opprettetAv: String
+    ) {
+        connection.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETTET, jobbsøkerDbIds, opprettetAv)
     }
 
     private fun Connection.batchInsertJobbsøkere(
@@ -73,7 +96,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         return ids
     }
 
-    @Deprecated("Bruk heller PersonTreffId enn db_id")
     private fun Connection.batchInsertHendelser(
         hendelsestype: JobbsøkerHendelsestype,
         jobbsøkerIds: List<Long>,
@@ -137,6 +159,36 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
+    fun leggTilHendelse(
+        c: Connection,
+        jobbsøkerDbId: Long,
+        hendelsestype: JobbsøkerHendelsestype,
+        aktørType: AktørType,
+        opprettetAv: String,
+        hendelseData: String? = null
+    ) {
+        val sql = """
+            INSERT INTO jobbsoker_hendelse
+              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
+            VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)
+        """.trimIndent()
+        c.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, UUID.randomUUID())
+            stmt.setLong(2, jobbsøkerDbId)
+            stmt.setTimestamp(3, Timestamp.from(Instant.now()))
+            stmt.setString(4, hendelsestype.name)
+            stmt.setString(5, aktørType.name)
+            stmt.setString(6, opprettetAv)
+            stmt.setString(7, hendelseData)
+            stmt.executeUpdate()
+        }
+    }
+
+    fun hentJobbsøkerDbIdFraFødselsnummer(connection: Connection, treffId: TreffId, fødselsnummer: Fødselsnummer): Long? {
+        val treffDbId = connection.treffDbId(treffId)
+        return connection.hentJobbsøkerDbIderFraFødselsnummer(treffDbId, listOf(fødselsnummer)).firstOrNull()
+    }
+
     private fun Connection.batchInsertHendelserFraPersonTreffIder(
         hendelsestype: JobbsøkerHendelsestype,
         personTreffIds: List<PersonTreffId>,
@@ -194,12 +246,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     json_agg(
                         json_build_object(
                             'id', jh.id,
-                            'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+                            'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SS.MSOF'),
                             'hendelsestype', jh.hendelsestype,
                             'opprettetAvAktortype', jh.opprettet_av_aktortype,
                             'aktøridentifikasjon', jh.aktøridentifikasjon,
                             'hendelseData', jh.hendelse_data
-                        ) ORDER BY jh.tidspunkt DESC
+                        ) ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
                     ) FILTER (WHERE jh.id IS NOT NULL),
                     '[]'
                 ) AS hendelser
@@ -238,64 +290,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun inviter(personTreffIder: List<PersonTreffId>, treff: TreffId, opprettetAv: String) {
-        dataSource.executeInTransaction {  c ->
-            try {
-                c.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.INVITERT, personTreffIder, opprettetAv)
-            } catch (e: Exception) {
-                throw e
-            }
-            personTreffIder.forEach {
-                val jobbsøkerDbId = hentJobbsøkerDbId(it.somUuid)!!
-                endreStatus(c, jobbsøkerDbId, JobbsøkerStatus.INVITERT)
-            }
-        }
-    }
-
-    fun svarJaTilInvitasjon(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String) {
-        dataSource.executeInTransaction { c ->
-            try {
-                val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbId =
-                    c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId = treffDbId, fødselsnumre = listOf(fødselsnummer))
-                        .firstOrNull()
-                        ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
-                c.batchInsertHendelser(
-                    JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-                    listOf(jobbsøkerDbId),
-                    opprettetAv,
-                    AktørType.JOBBSØKER
-                )
-
-                endreStatus(c, jobbsøkerDbId, JobbsøkerStatus.SVART_JA)
-            } catch (e: Exception) {
-                throw e
-            }
-        }
-    }
-
-    fun svarNeiTilInvitasjon(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String) {
-        dataSource.executeInTransaction { c ->
-            try {
-                val treffDbId = c.treffDbId(treff)
-                val jobbsøkerDbId =
-                    c.hentJobbsøkerDbIderFraFødselsnummer(treffDbId, listOf(fødselsnummer)).firstOrNull()
-                        ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
-                c.batchInsertHendelser(
-                    JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
-                    listOf(jobbsøkerDbId),
-                    opprettetAv,
-                    AktørType.JOBBSØKER
-                )
-
-                endreStatus(c, jobbsøkerDbId, JobbsøkerStatus.SVART_NEI)
-            } catch (e: Exception) {
-                throw e
-            }
-        }
-    }
-
-
     private fun Connection.hentJobbsøkerDbIderFraFødselsnummer(
         treffDbId: Long,
         fødselsnumre: List<Fødselsnummer>
@@ -309,6 +303,11 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
     }
+
+    fun hentPersonTreffIdFraFødselsnummer(treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
+        dataSource.connection.use { c ->
+            c.hentPersonTreffIderFraFødselsnummer(treffId, listOf(fødselsnummer)).firstOrNull()
+        }
 
     private fun Connection.hentPersonTreffIderFraFødselsnummer(
         treffId: TreffId,
@@ -490,35 +489,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    fun registrerAktivitetskortOpprettelseFeilet(fødselsnummer: Fødselsnummer, treff: TreffId, endretAv: String) {
-        dataSource.connection.use { c ->
-            try {
-                log.info("Skal oppdatere hendelse for aktiviteskortfeil for Treffid: ${treff}")
-                secure(log).error("Henter jobbsøker persontreffid for treff: ${treff.somString} og fødselsnummer: ${fødselsnummer.asString}")
-                val personTreffIds =
-                    c.hentPersonTreffIderFraFødselsnummer(treffId = treff, fødselsnumre = listOf(fødselsnummer))
-                        .firstOrNull()
-
-                if(personTreffIds == null) {
-                    log.error("Fant ingen jobbsøker med treffId: ${treff.somString} og fødselsnummer: (se securelog)")
-                    secure(log).error("Fant ingen jobbsøker med treffId: ${treff.somString} og fødselsnummer: ${fødselsnummer.asString}")
-                    return
-                }
-
-                log.info("Skal oppdatere feil fra aktivitetsplanen for  jobbsøkerdbId: $personTreffIds")
-                c.batchInsertHendelserFraPersonTreffIder(
-                    JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEIL,
-                    listOf(personTreffIds),
-                    endretAv,
-                    AktørType.ARRANGØR
-                )
-                log.info("Registrerte hendelse om at opprettelse av aktivitetskort feilet for rekrutteringstreffId: ${treff.somString}")
-            } catch (e: Exception) {
-                throw e
-            }
-        }
-    }
-
     fun endreStatus(jobbsøkerId: UUID, jobbsøkerStatus: JobbsøkerStatus) {
         val jobbsøkerDbId: Long? = hentJobbsøkerDbId(jobbsøkerId)
         if (jobbsøkerDbId == null) {
@@ -540,36 +510,5 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             setString(++i, jobbsøkerStatus.name)
             setObject(++i, jobbsøkerDbId)
         }.executeUpdate()
-    }
-
-    fun registrerMinsideVarselSvar(fødselsnummer: Fødselsnummer, treff: TreffId, opprettetAv: String, hendelseData: String) {
-        dataSource.connection.use { c ->
-            try {
-                log.info("Skal oppdatere hendelse for minside varsel svar for TreffId: $treff")
-                secure(log).info("Henter jobbsøker persontreffid for treff: ${treff.somString} og fødselsnummer: ${fødselsnummer.asString}")
-                val personTreffId =
-                    c.hentPersonTreffIderFraFødselsnummer(treffId = treff, fødselsnumre = listOf(fødselsnummer))
-                        .firstOrNull()
-
-                if (personTreffId == null) {
-                    log.error("Fant ingen jobbsøker med treffId: ${treff.somString} for minside varsel svar (fødselsnummer i securelog)")
-                    secure(log).error("Fant ingen jobbsøker med treffId: ${treff.somString} og fødselsnummer: ${fødselsnummer.asString}")
-                    return
-                }
-
-                log.info("Skal registrere MOTTATT_SVAR_FRA_MINSIDE for jobbsøker med personTreffId: $personTreffId")
-                leggTilHendelserForJobbsøkere(
-                    c = c,
-                    hendelsestype = JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE,
-                    personTreffIds = listOf(personTreffId),
-                    opprettetAv = opprettetAv,
-                    arrangørtype = AktørType.SYSTEM,
-                    hendelseData = hendelseData
-                )
-                log.info("Registrerte hendelse MOTTATT_SVAR_FRA_MINSIDE for rekrutteringstreffId: ${treff.somString}")
-            } catch (e: Exception) {
-                throw e
-            }
-        }
     }
 }

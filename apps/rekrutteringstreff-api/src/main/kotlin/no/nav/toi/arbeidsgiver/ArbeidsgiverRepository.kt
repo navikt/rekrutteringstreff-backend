@@ -39,30 +39,6 @@ class ArbeidsgiverRepository(
     private val objectMapper: ObjectMapper
 ) {
 
-    fun slett(arbeidsgiverId: UUID, opprettetAv: String): Boolean =
-        dataSource.executeInTransaction { connection ->
-            slett(connection, arbeidsgiverId, opprettetAv)
-        }
-
-    fun slett(connection: Connection, arbeidsgiverId: UUID, opprettetAv: String): Boolean {
-        val arbeidsgiverDbId: Long? = connection.prepareStatement("SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?").use { ps ->
-            ps.setObject(1, arbeidsgiverId)
-            ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
-        }
-        if (arbeidsgiverDbId == null) return false
-
-        leggTilHendelse(
-            connection = connection,
-            arbeidsgiverDbId = arbeidsgiverDbId,
-            hendelsestype = ArbeidsgiverHendelsestype.SLETTET,
-            opprettetAvAktørType = AktørType.ARRANGØR,
-            aktøridentifikasjon = opprettetAv
-        )
-
-        endreStatus(connection, arbeidsgiverId, ArbeidsgiverStatus.SLETTET)
-
-        return true
-    }
 
     private fun hentTreffDbId(connection: Connection, treff: TreffId): Long? {
         connection.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
@@ -76,14 +52,11 @@ class ArbeidsgiverRepository(
     private fun finnesIDb(connection: Connection, treff: TreffId): Boolean =
         hentTreffDbId(connection, treff) != null
 
-    fun leggTil(arbeidsgiver: LeggTilArbeidsgiver, treff: TreffId, opprettetAv: String) {
-        dataSource.connection.use { connection ->
-            val treffDbId: Long = hentTreffDbId(connection, treff)
-                ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
-            val arbeidsgiverDbId = leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
-            leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, opprettetAv)
-            leggTilNaringskoder(connection, arbeidsgiverDbId, arbeidsgiver.næringskoder)
-        }
+
+    fun opprettArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treff: TreffId): Long {
+        val treffDbId: Long = hentTreffDbId(connection, treff)
+            ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
+        return leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
     }
 
     private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): Long {
@@ -107,7 +80,7 @@ class ArbeidsgiverRepository(
         }
     }
 
-    private fun leggTilNaringskoder(connection: Connection, arbeidsgiverDbId: Long, koder: List<Næringskode>) {
+    fun leggTilNaringskoder(connection: Connection, arbeidsgiverDbId: Long, koder: List<Næringskode>) {
         if (koder.isEmpty()) return
         connection.prepareStatement(
             "INSERT INTO naringskode (arbeidsgiver_id, kode, beskrivelse) VALUES (?, ?, ?)"
@@ -122,7 +95,7 @@ class ArbeidsgiverRepository(
         }
     }
 
-    private fun leggTilHendelse(
+    fun leggTilHendelse(
         connection: Connection,
         arbeidsgiverDbId: Long,
         hendelsestype: ArbeidsgiverHendelsestype,
@@ -240,7 +213,14 @@ class ArbeidsgiverRepository(
         poststed = getString("poststed"),
     )
 
-    private fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {
+    fun hentArbeidsgiverDbId(connection: Connection, arbeidsgiverId: UUID): Long? {
+        return connection.prepareStatement("SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?").use { ps ->
+            ps.setObject(1, arbeidsgiverId)
+            ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
+        }
+    }
+
+    fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {
         connection.prepareStatement(
             """
             UPDATE arbeidsgiver

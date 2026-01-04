@@ -21,13 +21,17 @@ import javax.sql.DataSource
 class TestDatabase {
 
     private val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
+    private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
     private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
+    private val arbeidsgiverService by lazy { ArbeidsgiverService(dataSource, arbeidsgiverRepository) }
+    private val jobbsøkerService by lazy { JobbsøkerService(dataSource, jobbsøkerRepository) }
+    private val rekrutteringstreffService by lazy { RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService) }
 
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
     ): TreffId {
-        return rekrutteringstreffRepository.opprett(
+        return rekrutteringstreffService.opprett(
             OpprettRekrutteringstreffInternalDto(
                 tittel = tittel,
                 opprettetAvNavkontorEnhetId = "Original Kontor",
@@ -403,7 +407,7 @@ class TestDatabase {
     ) {
         arbeidsgivere.forEach { ag ->
             val næringskoder = næringskoderPerOrgnr[ag.orgnr].orEmpty()
-            arbeidsgiverRepository.leggTil(
+            arbeidsgiverService.leggTilArbeidsgiver(
                 LeggTilArbeidsgiver(
                     ag.orgnr,
                     ag.orgnavn,
@@ -546,10 +550,13 @@ class TestDatabase {
         val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(
             rekrutteringstreff.tilRekrutteringstreffDto(1,1)).copy(tilTid = nowOslo().minusDays(1)
         )
-        rekrutteringstreffRepository.oppdater(treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
+        rekrutteringstreffService.oppdater(treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
     }
 
     fun publiser(treffId: TreffId, navIdent: String) {
-        rekrutteringstreffRepository.publiser(treffId, navIdent)
+        dataSource.executeInTransaction { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.PUBLISERT, navIdent)
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)
+        }
     }
 }

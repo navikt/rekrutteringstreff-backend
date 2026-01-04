@@ -16,7 +16,7 @@ import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.*
 
 class ArbeidsgiverController(
-    private val arbeidsgiverRepository: ArbeidsgiverRepository,
+    private val arbeidsgiverService: ArbeidsgiverService,
     private val eierService: EierService,
     javalin: Javalin
 ) {
@@ -67,7 +67,7 @@ class ArbeidsgiverController(
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            arbeidsgiverRepository.leggTil(dto.somLeggTilArbeidsgiver(), treff, ctx.extractNavIdent())
+            arbeidsgiverService.leggTilArbeidsgiver(dto.somLeggTilArbeidsgiver(), treff, ctx.extractNavIdent())
             ctx.status(201)
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
@@ -111,7 +111,7 @@ class ArbeidsgiverController(
     private fun hentArbeidsgivereHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val arbeidsgivere = arbeidsgiverRepository.hentArbeidsgivere(treff)
+        val arbeidsgivere = arbeidsgiverService.hentArbeidsgivere(treff)
         ctx.status(200).json(arbeidsgivere.toOutboundDto())
     }
 
@@ -164,7 +164,7 @@ class ArbeidsgiverController(
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            val hendelser = arbeidsgiverRepository.hentArbeidsgiverHendelser(treff)
+            val hendelser = arbeidsgiverService.hentArbeidsgiverHendelser(treff)
             ctx.status(200).json(hendelser.map { h ->
                 ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
                     id = h.id.toString(),
@@ -200,7 +200,7 @@ class ArbeidsgiverController(
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
 
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            if (arbeidsgiverRepository.slett(id, navIdent)) ctx.status(204) else throw NotFoundResponse()
+            if (arbeidsgiverService.slettArbeidsgiver(id, treffId, navIdent)) ctx.status(204) else throw NotFoundResponse()
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treffId.somString}")
         }

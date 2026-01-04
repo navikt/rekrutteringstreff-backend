@@ -21,6 +21,7 @@ class JobbsøkerRepositoryTest {
     companion object {
         private val db = TestDatabase()
         private lateinit var repository: JobbsøkerRepository
+        private lateinit var service: JobbsøkerService
         private val mapper = JacksonConfig.mapper
 
         @BeforeAll
@@ -28,6 +29,7 @@ class JobbsøkerRepositoryTest {
         fun setup() {
             Flyway.configure().dataSource(db.dataSource).load().migrate()
             repository = JobbsøkerRepository(db.dataSource, mapper)
+            service = JobbsøkerService(db.dataSource, repository)
         }
     }
 
@@ -47,7 +49,7 @@ class JobbsøkerRepositoryTest {
             VeilederNavn("Kari Nordmann"),
             VeilederNavIdent("NAV123"))
         )
-        repository.leggTil(input, treffId, "testperson")
+        repository.leggTilMedHendelse(input, treffId, "testperson")
         val jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere).hasSize(1)
         val js = jobbsøkere.first()
@@ -78,7 +80,7 @@ class JobbsøkerRepositoryTest {
             null,
             null)
         )
-        repository.leggTil(input, treffId, "testperson")
+        repository.leggTilMedHendelse(input, treffId, "testperson")
         val jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere).hasSize(1)
         val js = jobbsøkere.first()
@@ -175,7 +177,7 @@ class JobbsøkerRepositoryTest {
             Etternavn("Etternavn2"),
             null, null, null
         )
-        repository.leggTil(listOf(leggTilJobbsøker1, leggTilJobbsøker2), treffId, "testperson")
+        repository.leggTilMedHendelse(listOf(leggTilJobbsøker1, leggTilJobbsøker2), treffId, "testperson")
 
         val jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer1)
         assertThat(jobbsøker).isNotNull
@@ -217,7 +219,7 @@ class JobbsøkerRepositoryTest {
                 VeilederNavIdent("NAV123")
             )
         )
-        repository.leggTil(jobbsøkere, treffId, "testperson")
+        repository.leggTilMedHendelse(jobbsøkere, treffId, "testperson")
         val antallJobbsøkere = repository.hentAntallJobbsøkere(treffId)
         assertThat(antallJobbsøkere == 2)
     }
@@ -234,7 +236,7 @@ class JobbsøkerRepositoryTest {
             VeilederNavn("Lars"),
             VeilederNavIdent("NAV456"))
         )
-        repository.leggTil(input, treffId, "testperson")
+        repository.leggTilMedHendelse(input, treffId, "testperson")
 
         val hendelser = repository.hentJobbsøkerHendelser(treffId)
 
@@ -261,14 +263,14 @@ class JobbsøkerRepositoryTest {
             Etternavn("Person"),
             null, null, null
         )
-        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
+        repository.leggTilMedHendelse(listOf(leggTilJobbsøker), treffId, "testperson")
 
         var jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere.first().hendelser).hasSize(1)
 
         val personTreffId = jobbsøkere.first().personTreffId
 
-        repository.inviter(listOf(personTreffId), treffId, "inviterende_person")
+        service.inviter(listOf(personTreffId), treffId, "inviterende_person")
 
         jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere).hasSize(1)
@@ -294,12 +296,12 @@ class JobbsøkerRepositoryTest {
             Etternavn("Person"),
             null, null, null
         )
-        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
+        repository.leggTilMedHendelse(listOf(leggTilJobbsøker), treffId, "testperson")
 
         var jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere.first().hendelser).hasSize(1)
 
-        repository.svarJaTilInvitasjon(fødselsnummer, treffId, "svar_ja_person")
+        service.svarJaTilInvitasjon(fødselsnummer, treffId, "svar_ja_person")
 
         jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat  (jobbsøkere).hasSize(1)
@@ -324,12 +326,12 @@ class JobbsøkerRepositoryTest {
             Etternavn("Person"),
             null, null, null
         )
-        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
+        repository.leggTilMedHendelse(listOf(leggTilJobbsøker), treffId, "testperson")
 
         var jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere.first().hendelser).hasSize(1)
 
-        repository.svarNeiTilInvitasjon(fødselsnummer, treffId, "svar_nei_person")
+        service.svarNeiTilInvitasjon(fødselsnummer, treffId, "svar_nei_person")
 
         jobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(jobbsøkere).hasSize(1)
@@ -356,12 +358,12 @@ class JobbsøkerRepositoryTest {
             Etternavn("Person"),
             null, null, null
         )
-        repository.leggTil(listOf(leggTilJobbsøker), treffId, "testperson")
+        repository.leggTilMedHendelse(listOf(leggTilJobbsøker), treffId, "testperson")
 
         var jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer)
         assertThat(jobbsøker!!.hendelser).hasSize(1)
 
-        repository.registrerAktivitetskortOpprettelseFeilet(fødselsnummer, treffId, endretAvIdent)
+        service.registrerAktivitetskortOpprettelseFeilet(fødselsnummer, treffId, endretAvIdent)
 
         jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer)
         assertThat(jobbsøker!!.hendelser).hasSize(2)
@@ -387,12 +389,12 @@ class JobbsøkerRepositoryTest {
             null, null, null
         )
 
-        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
+        repository.leggTilMedHendelse(listOf(jobbsøker1), treffId, navIdent)
 
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+        service.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
-        repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        service.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
 
         db.dataSource.connection.use { c ->
             val jobbsøkere = repository.hentJobbsøkere(c, treffId)
@@ -419,10 +421,10 @@ class JobbsøkerRepositoryTest {
             null, null, null
         )
 
-        repository.leggTil(listOf(jobbsøker1), treffId, navIdent)
+        repository.leggTilMedHendelse(listOf(jobbsøker1), treffId, navIdent)
 
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+        service.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
         val jobbsøkereUtenConn = repository.hentJobbsøkere(treffId)
 
@@ -454,12 +456,12 @@ class JobbsøkerRepositoryTest {
             null, null, null
         )
 
-        repository.leggTil(listOf(jobbsøker1, jobbsøker2), treffId, navIdent)
+        repository.leggTilMedHendelse(listOf(jobbsøker1, jobbsøker2), treffId, navIdent)
 
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        repository.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+        service.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
-        repository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        service.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
 
         db.dataSource.connection.use { c ->
             val jobbsøkere = repository.hentJobbsøkere(c, treffId)
@@ -488,7 +490,7 @@ class JobbsøkerRepositoryTest {
             null, null, null
         )
 
-        repository.leggTil(listOf(jobbsøker), treffId, navIdent)
+        repository.leggTilMedHendelse(listOf(jobbsøker), treffId, navIdent)
 
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(alleJobbsøkere).hasSize(1)

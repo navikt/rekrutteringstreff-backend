@@ -18,6 +18,7 @@ import java.time.temporal.ChronoUnit
 class MinsideVarselSvarLytterTest {
 
     private lateinit var jobbsøkerRepository: JobbsøkerRepository
+    private lateinit var jobbsøkerService: JobbsøkerService
     private val db = TestDatabase()
     private val objectMapper = JacksonConfig.mapper
     
@@ -29,6 +30,7 @@ class MinsideVarselSvarLytterTest {
     fun beforeAll() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, objectMapper)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
     }
 
     @BeforeEach
@@ -39,13 +41,13 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal lagre MOTTATT_SVAR_FRA_MINSIDE-hendelse med alle felter`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        jobbsøkerRepository.leggTilMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -108,13 +110,13 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal lagre hendelse med kun påkrevde felter - håndterer manglende valgfrie felter`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        jobbsøkerRepository.leggTilMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -161,13 +163,13 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal ignorere melding med aktørId felt - feil type melding`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        jobbsøkerRepository.leggTilMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -203,13 +205,13 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal ignorere melding med feil event_name`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        jobbsøkerRepository.leggTilMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -244,7 +246,7 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal ikke lagre hendelse når jobbsøker ikke finnes for treffet`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -269,13 +271,13 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal lagre hendelse med ekstern feilmelding`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        jobbsøkerRepository.leggTilMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -317,13 +319,13 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal håndtere flere meldinger for samme jobbsøker`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        jobbsøkerRepository.leggTilMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -375,13 +377,13 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal håndtere opprettet-dato med tidssone`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        jobbsøkerRepository.leggTilMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,

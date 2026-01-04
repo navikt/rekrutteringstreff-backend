@@ -15,9 +15,13 @@ import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -39,6 +43,10 @@ class RekrutteringstreffEierTest {
         private val database = TestDatabase()
         private val appPort = ubruktPortnr()
         private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
+        private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
+        private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
+        private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+        private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
         private val eierRepository = EierRepository(database.dataSource)
 
         private val accessTokenClient = AccessTokenClient(
@@ -302,7 +310,7 @@ class RekrutteringstreffEierTest {
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),
         )
-        rekrutteringstreffRepository.opprett(originalDto)
+        rekrutteringstreffService.opprett(originalDto)
     }
 
     private fun waitForServerToBeReady() {

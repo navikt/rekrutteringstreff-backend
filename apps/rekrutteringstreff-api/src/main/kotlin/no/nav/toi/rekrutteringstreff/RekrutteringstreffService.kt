@@ -1,14 +1,17 @@
 package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.AktørType
+import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.util.ArrayList
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
@@ -25,7 +28,8 @@ class RekrutteringstreffService(
     private val dataSource: DataSource,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val jobbsøkerRepository: JobbsøkerRepository,
-    private val arbeidsgiverRepository: ArbeidsgiverRepository
+    private val arbeidsgiverRepository: ArbeidsgiverRepository,
+    private val jobbsøkerService: JobbsøkerService
 ) {
     private val logger: Logger = log
 
@@ -44,7 +48,10 @@ class RekrutteringstreffService(
         rekrutteringstreffRepository.hent(treffId)
             ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
 
-        rekrutteringstreffRepository.publiser(treffId, navIdent)
+        dataSource.executeInTransaction { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.PUBLISERT, navIdent)
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)
+        }
     }
 
     fun fullfør(treffId: TreffId, fullfortAv: String) {
@@ -73,7 +80,6 @@ class RekrutteringstreffService(
 
     fun kanSletteJobbtreff(treffId: TreffId, status: RekrutteringstreffStatus): Boolean {
         if (status != RekrutteringstreffStatus.UTKAST) {
-            // Kun treff i utkaststatus kan slettes
             return false
         }
         val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treffId)
@@ -91,7 +97,11 @@ class RekrutteringstreffService(
 
             val arbeidsgivere = arbeidsgiverRepository.hentArbeidsgivere(treffId)
             arbeidsgivere.forEach { arbeidsgiver ->
-                arbeidsgiverRepository.slett(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid, navIdent)
+                val arbeidsgiverDbId = arbeidsgiverRepository.hentArbeidsgiverDbId(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid)
+                if (arbeidsgiverDbId != null) {
+                    arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
+                    arbeidsgiverRepository.endreStatus(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid, ArbeidsgiverStatus.SLETTET)
+                }
             }
         }
     }
@@ -148,13 +158,9 @@ class RekrutteringstreffService(
                ident
            )
 
-           // Hent alle jobbsøkere for treffet med deres hendelser
            val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
 
-           // Filtrer i Kotlin: finn de som har aktivt svar ja
-           val jobbsøkereMedAktivtSvarJa = finnJobbsøkereMedAktivtSvarJa(alleJobbsøkere)
-
-           // Legg til hendelser for alle jobbsøkere med aktivt svar ja
+           val jobbsøkereMedAktivtSvarJa = jobbsøkerService.finnJobbsøkereMedAktivtSvarJa(alleJobbsøkere)
            if (jobbsøkereMedAktivtSvarJa.isNotEmpty()) {
                jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                    connection,
@@ -164,10 +170,7 @@ class RekrutteringstreffService(
                )
            }
 
-           // Filtrer i Kotlin: finn de som ikke har svart
-           val jobbsøkereSomIkkeSvart = finnJobbsøkereSomIkkeSvart(alleJobbsøkere)
-
-           // Legg til hendelser for alle jobbsøkere som ikke har svart
+           val jobbsøkereSomIkkeSvart = jobbsøkerService.finnJobbsøkereSomIkkeSvart(alleJobbsøkere)
            if (jobbsøkereSomIkkeSvart.isNotEmpty()) {
                jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                    connection,
@@ -181,31 +184,7 @@ class RekrutteringstreffService(
         }
     }
 
-    private fun finnJobbsøkereMedAktivtSvarJa(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { jobbsøker ->
-            val hendelsestyper = jobbsøker.hendelser.map { it.hendelsestype }
-            // Hendelser er sortert DESC (nyeste først), så indexOf finner den nyeste
-            val nyesteJaIndex = hendelsestyper.indexOf(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
-            val nyesteNeiIndex = hendelsestyper.indexOf(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
-
-            // Har svart ja, og ja er nyere enn eventuell nei (lavere index = nyere)
-            nyesteJaIndex != -1 && (nyesteNeiIndex == -1 || nyesteJaIndex < nyesteNeiIndex)
-        }
-    }
-
-    private fun finnJobbsøkereSomIkkeSvart(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { jobbsøker ->
-            val hendelsestyper = jobbsøker.hendelser.map { it.hendelsestype }.toSet()
-
-            // Har INVITERT, men ikke svart ja eller nei
-            hendelsestyper.contains(JobbsøkerHendelsestype.INVITERT) &&
-            !hendelsestyper.contains(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON) &&
-            !hendelsestyper.contains(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
-        }
-    }
-
     fun registrerEndring(treffId: TreffId, endringer: String, endretAv: String) {
-
         dataSource.executeInTransaction { connection ->
             val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
 
@@ -217,13 +196,12 @@ class RekrutteringstreffService(
                 endretAv,
                 endringer
             )
-            val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
 
+            val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
             val jobbsøkereSomSkalVarsles = alleJobbsøkere
-                .filter { skalVarslesOmEndringer(it.hendelser) }
+                .filter { jobbsøkerService.skalVarslesOmEndringer(it.hendelser) }
                 .map { it.personTreffId }
 
-            // Legg til hendelser for alle relevante jobbsøkere med endringer som JSON
             if (jobbsøkereSomSkalVarsles.isNotEmpty()) {
                 jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                     connection,
@@ -237,40 +215,39 @@ class RekrutteringstreffService(
         }
     }
 
-    private fun skalVarslesOmEndringer(hendelser: List<JobbsøkerHendelse>): Boolean {
-        if (hendelser.isEmpty()) return false
-
-        // Filtrer kun invitasjons- og svar-hendelser
-        val relevanteHendelser = hendelser.filter {
-            it.hendelsestype in setOf(
-                JobbsøkerHendelsestype.INVITERT,
-                JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-                JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
-            )
-        }
-
-        if (relevanteHendelser.isEmpty()) return false
-
-        // Hendelser er allerede sortert DESC (nyeste først), ta første av de relevante
-        val sisteRelevanteHendelse = relevanteHendelser.first()
-
-        // Varsle kun hvis siste relevante hendelse er INVITERT eller SVART_JA_TIL_INVITASJON
-        return sisteRelevanteHendelse.hendelsestype in setOf(
-            JobbsøkerHendelsestype.INVITERT,
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
-        )
-    }
-
     fun avpubliser(treffId: TreffId, navIdent: String) {
-        rekrutteringstreffRepository.avpubliser(treffId, navIdent)
+        dataSource.executeInTransaction { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.AVPUBLISERT, navIdent)
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.UTKAST)
+        }
     }
 
     fun opprett(internalDto: OpprettRekrutteringstreffInternalDto): TreffId {
-        return rekrutteringstreffRepository.opprett(internalDto)
+        return dataSource.executeInTransaction { connection ->
+            val (treffId, dbId) = rekrutteringstreffRepository.opprett(connection, internalDto)
+            rekrutteringstreffRepository.leggTilHendelse(
+                connection,
+                dbId,
+                RekrutteringstreffHendelsestype.OPPRETTET,
+                AktørType.ARRANGØR,
+                internalDto.opprettetAvPersonNavident
+            )
+            treffId
+        }
     }
 
     fun oppdater(treffId: TreffId, dto: OppdaterRekrutteringstreffDto, navIdent: String) {
-        rekrutteringstreffRepository.oppdater(treffId, dto, navIdent)
+        dataSource.executeInTransaction { connection ->
+            val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
+            rekrutteringstreffRepository.oppdater(connection, treffId, dto, navIdent)
+            rekrutteringstreffRepository.leggTilHendelse(
+                connection,
+                dbId,
+                RekrutteringstreffHendelsestype.OPPDATERT,
+                AktørType.ARRANGØR,
+                navIdent
+            )
+        }
     }
 
     fun hentHendelser(treffId: TreffId): List<RekrutteringstreffHendelse> {
@@ -282,6 +259,9 @@ class RekrutteringstreffService(
     }
 
     fun gjenåpne(treffId: TreffId, navIdent: String) {
-        rekrutteringstreffRepository.gjenåpne(treffId, navIdent)
+        dataSource.executeInTransaction { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.GJENÅPNET, navIdent)
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)
+        }
     }
 }
