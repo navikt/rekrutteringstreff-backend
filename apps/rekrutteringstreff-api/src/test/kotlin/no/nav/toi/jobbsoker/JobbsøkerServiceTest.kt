@@ -474,4 +474,37 @@ class JobbsøkerServiceTest {
             assertThat(tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
         }
     }
+
+    @Test
+    fun `registrerMinsideVarselSvar skal opprette hendelse med hendelseData`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for MinsideVarsel")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val opprettetAv = "system"
+        val hendelseData = """{"action": "DONE", "varselId": "abc123"}"""
+
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        jobbsøkerService.leggTilJobbsøkere(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker!!.hendelser).hasSize(1)
+
+        jobbsøkerService.registrerMinsideVarselSvar(fødselsnummer, treffId, opprettetAv, hendelseData)
+
+        jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker!!.hendelser).hasSize(2)
+
+        val minsideHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
+        assertThat(minsideHendelse).isNotNull
+        minsideHendelse!!.apply {
+            assertThat(opprettetAvAktørType).isEqualTo(AktørType.SYSTEM)
+            assertThat(aktørIdentifikasjon).isEqualTo(opprettetAv)
+            assertThat(tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+            assertThat(hendelseData).isNotNull
+        }
+    }
 }
