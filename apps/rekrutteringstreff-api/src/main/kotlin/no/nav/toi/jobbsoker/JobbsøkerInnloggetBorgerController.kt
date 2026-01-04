@@ -8,7 +8,6 @@ import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiParam
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
-import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
@@ -16,7 +15,6 @@ import no.nav.toi.jobbsoker.dto.StatuserOutboundDto
 import no.nav.toi.jobbsoker.dto.toOutboundDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.util.UUID
-import kotlin.collections.findLast
 
 class JobbsøkerInnloggetBorgerController(
     private val jobbsøkerService: JobbsøkerService,
@@ -151,11 +149,6 @@ class JobbsøkerInnloggetBorgerController(
     }
 
     private fun Jobbsøker.toOutboundDtoMedStatuser(): JobbsøkerMedStatuserOutboundDto {
-        // Hendelsene er sortert nyeste først (DESC), så vi bruker firstOrNull for å finne siste svar
-        val sisteSvar = hendelser.firstOrNull {
-            it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
-        }
-
         return JobbsøkerMedStatuserOutboundDto(
             personTreffId = personTreffId.toString(),
             treffId = treffId.somString,
@@ -166,9 +159,9 @@ class JobbsøkerInnloggetBorgerController(
             veilederNavn = veilederNavn?.asString,
             veilederNavIdent = veilederNavIdent?.asString,
             statuser = StatuserOutboundDto(
-                erPåmeldt = sisteSvar?.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-                erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT },
-                harSvart = sisteSvar != null
+                erPåmeldt = harAktivtSvarJa(),
+                erInvitert = erInvitert(),
+                harSvart = harSvart()
             ),
             hendelser = hendelser.map { it.toOutboundDto() }
         )
