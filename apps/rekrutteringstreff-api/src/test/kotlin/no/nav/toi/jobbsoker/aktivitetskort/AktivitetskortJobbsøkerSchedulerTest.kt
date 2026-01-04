@@ -895,7 +895,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     }
 
     private fun opprettOgInviterJobbsøker(treffId: no.nav.toi.rekrutteringstreff.TreffId, fødselsnummer: Fødselsnummer) {
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,

@@ -588,7 +588,7 @@ class RekrutteringstreffServiceTest {
     }
 
     private fun leggTilOgInviterJobbsøker(treffId: TreffId, fnr: Fødselsnummer, navIdent: String) {
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fnr,

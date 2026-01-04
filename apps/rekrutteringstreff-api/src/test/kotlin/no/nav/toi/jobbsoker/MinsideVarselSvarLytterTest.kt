@@ -47,7 +47,7 @@ class MinsideVarselSvarLytterTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -116,7 +116,7 @@ class MinsideVarselSvarLytterTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -169,7 +169,7 @@ class MinsideVarselSvarLytterTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -211,7 +211,7 @@ class MinsideVarselSvarLytterTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -277,7 +277,7 @@ class MinsideVarselSvarLytterTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -325,7 +325,7 @@ class MinsideVarselSvarLytterTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -383,7 +383,7 @@ class MinsideVarselSvarLytterTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        db.leggTilJobbsøkereMedService(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
