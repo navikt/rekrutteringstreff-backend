@@ -67,10 +67,6 @@ class RekrutteringstreffRepository(
         private const val sistEndretAv = "sist_endret_av"
     }
 
-    /**
-     * Oppretter et nytt rekrutteringstreff i databasen.
-     * NB: Kaller IKKE leggTilHendelse - det skal gjøres av servicelaget.
-     */
     fun opprett(connection: Connection, dto: OpprettRekrutteringstreffInternalDto): Pair<TreffId, Long> {
         val nyTreffId = TreffId(UUID.randomUUID())
         val dbId = connection.prepareStatement(
@@ -96,11 +92,6 @@ class RekrutteringstreffRepository(
         return Pair(nyTreffId, dbId)
     }
 
-
-    /**
-     * Oppdaterer et rekrutteringstreff i databasen.
-     * NB: Kaller IKKE leggTilHendelse - det skal gjøres av servicelaget.
-     */
     fun oppdater(connection: Connection, treff: TreffId, dto: OppdaterRekrutteringstreffDto, oppdatertAv: String) {
         connection.prepareStatement(
             """

@@ -389,11 +389,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun endreStatus(personTreffId: PersonTreffId, jobbsøkerStatus: JobbsøkerStatus) {
-        dataSource.connection.use { connection ->
-            endreStatus(connection, personTreffId, jobbsøkerStatus)
-        }
-    }
 
     fun endreStatus(connection: Connection, personTreffId: PersonTreffId, jobbsøkerStatus: JobbsøkerStatus) {
         connection.prepareStatement(

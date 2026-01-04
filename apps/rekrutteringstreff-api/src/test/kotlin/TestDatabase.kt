@@ -47,7 +47,7 @@ class TestDatabase {
                 AktørType.ARRANGØR
             )
             personTreffIds.forEach { personTreffId ->
-                jobbsøkerRepository.endreStatus(personTreffId, JobbsøkerStatus.INVITERT)
+                jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.INVITERT)
             }
         }
     }
@@ -66,7 +66,7 @@ class TestDatabase {
                 svarAv,
                 AktørType.JOBBSØKER
             )
-            jobbsøkerRepository.endreStatus(personTreffId, JobbsøkerStatus.SVART_JA)
+            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
         }
     }
 

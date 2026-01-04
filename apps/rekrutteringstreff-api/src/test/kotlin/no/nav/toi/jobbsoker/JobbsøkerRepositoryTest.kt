@@ -369,9 +369,9 @@ class JobbsøkerRepositoryTest {
 
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
         assertThat(alleJobbsøkere).hasSize(1)
-
-        repository.endreStatus(alleJobbsøkere.get(0).personTreffId, JobbsøkerStatus.SLETTET)
-
+        db.dataSource.connection.use { c ->
+            repository.endreStatus(c, alleJobbsøkere.get(0).personTreffId, JobbsøkerStatus.SLETTET)
+        }
         val alleJobbsøkereEtterSletting = repository.hentJobbsøkere(treffId)
         assertThat(alleJobbsøkereEtterSletting).hasSize(0)
     }
