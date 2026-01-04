@@ -35,6 +35,41 @@ class TestDatabase {
         jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, opprettetAv)
     }
 
+    /**
+     * Inviterer jobbsøkere via service.
+     */
+    fun inviterJobbsøkere(personTreffIds: List<PersonTreffId>, treffId: TreffId, inviterende: String = "testperson") {
+        jobbsøkerService.inviter(personTreffIds, treffId, inviterende)
+    }
+
+    /**
+     * Registrerer svar ja via service.
+     */
+    fun svarJaTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, svarAv: String) {
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, svarAv)
+    }
+
+    /**
+     * Henter jobbsøkere via service.
+     */
+    fun hentJobbsøkere(treffId: TreffId): List<Jobbsøker> {
+        return jobbsøkerService.hentJobbsøkere(treffId)
+    }
+
+    /**
+     * Legger til arbeidsgiver via service (standard måte).
+     */
+    fun leggTilArbeidsgiverMedService(input: LeggTilArbeidsgiver, treffId: TreffId, opprettetAv: String = "testperson") {
+        arbeidsgiverService.leggTilArbeidsgiver(input, treffId, opprettetAv)
+    }
+
+    /**
+     * Markerer arbeidsgiver som slettet via service.
+     */
+    fun markerArbeidsgiverSlettet(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String = "testperson"): Boolean {
+        return arbeidsgiverService.markerArbeidsgiverSlettet(arbeidsgiverId, treffId, navIdent)
+    }
+
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",

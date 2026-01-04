@@ -351,5 +351,127 @@ class JobbsøkerServiceTest {
 
         assertThat(skalVarsles).isFalse()
     }
-}
 
+    @Test
+    fun `inviter skal opprette INVITERT-hendelse for jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Invitasjon")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        jobbsøkerService.leggTilJobbsøkere(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere.first().hendelser).hasSize(1)
+
+        val personTreffId = jobbsøkere.first().personTreffId
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, "inviterende_person")
+
+        jobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere).hasSize(1)
+        val hendelser = jobbsøkere.first().hendelser
+        assertThat(hendelser).hasSize(2)
+
+        val inviterHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
+        assertThat(inviterHendelse).isNotNull
+        inviterHendelse!!
+        assertThat(inviterHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+        assertThat(inviterHendelse.aktørIdentifikasjon).isEqualTo("inviterende_person")
+        assertThat(inviterHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+        assertThat(hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETTET }).isNotNull
+    }
+
+    @Test
+    fun `svarJaTilInvitasjon skal opprette SVART_JA-hendelse`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Ja")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        jobbsøkerService.leggTilJobbsøkere(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere.first().hendelser).hasSize(1)
+
+        jobbsøkerService.svarJaTilInvitasjon(fødselsnummer, treffId, "svar_ja_person")
+
+        jobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere).hasSize(1)
+        val hendelser = jobbsøkere.first().hendelser
+        assertThat(hendelser).hasSize(2)
+
+        val svarJaHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON }
+        assertThat(svarJaHendelse).isNotNull
+        svarJaHendelse!!
+        assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
+        assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("svar_ja_person")
+        assertThat(svarJaHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+    }
+
+    @Test
+    fun `svarNeiTilInvitasjon skal opprette SVART_NEI-hendelse`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Nei")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        jobbsøkerService.leggTilJobbsøkere(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere.first().hendelser).hasSize(1)
+
+        jobbsøkerService.svarNeiTilInvitasjon(fødselsnummer, treffId, "svar_nei_person")
+
+        jobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere).hasSize(1)
+        val hendelser = jobbsøkere.first().hendelser
+        assertThat(hendelser).hasSize(2)
+
+        val svarNeiHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON }
+        assertThat(svarNeiHendelse).isNotNull
+        svarNeiHendelse!!
+        assertThat(svarNeiHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
+        assertThat(svarNeiHendelse.aktørIdentifikasjon).isEqualTo("svar_nei_person")
+        assertThat(svarNeiHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+    }
+
+    @Test
+    fun `registrerAktivitetskortOpprettelseFeilet skal opprette feil-hendelse`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Feil")
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val endretAvIdent = "Z987654"
+
+        val leggTilJobbsøker = LeggTilJobbsøker(
+            fødselsnummer,
+            Fornavn("Test"),
+            Etternavn("Person"),
+            null, null, null
+        )
+        jobbsøkerService.leggTilJobbsøkere(listOf(leggTilJobbsøker), treffId, "testperson")
+
+        var jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker!!.hendelser).hasSize(1)
+
+        jobbsøkerService.registrerAktivitetskortOpprettelseFeilet(fødselsnummer, treffId, endretAvIdent)
+
+        jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker!!.hendelser).hasSize(2)
+
+        val feilHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEIL }
+        assertThat(feilHendelse).isNotNull
+        feilHendelse!!.apply {
+            assertThat(opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
+            assertThat(aktørIdentifikasjon).isEqualTo(endretAvIdent)
+            assertThat(tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+        }
+    }
+}

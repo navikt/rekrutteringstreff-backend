@@ -21,7 +21,6 @@ class JobbsøkerRepositoryTest {
     companion object {
         private val db = TestDatabase()
         private lateinit var repository: JobbsøkerRepository
-        private lateinit var service: JobbsøkerService
         private val mapper = JacksonConfig.mapper
 
         @BeforeAll
@@ -29,7 +28,6 @@ class JobbsøkerRepositoryTest {
         fun setup() {
             Flyway.configure().dataSource(db.dataSource).load().migrate()
             repository = JobbsøkerRepository(db.dataSource, mapper)
-            service = JobbsøkerService(db.dataSource, repository)
         }
     }
 
@@ -253,129 +251,6 @@ class JobbsøkerRepositoryTest {
         assertThatCode { UUID.fromString(hendelse.personTreffId.toString()) }.doesNotThrowAnyException()
     }
 
-    @Test
-    fun `inviter lager en inviter-hendelse for eksisterende jobbsøkere`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Invitasjon")
-        val fødselsnummer = Fødselsnummer("12345678901")
-        val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer,
-            Fornavn("Test"),
-            Etternavn("Person"),
-            null, null, null
-        )
-        db.leggTilJobbsøkereMedService(listOf(leggTilJobbsøker), treffId, "testperson")
-
-        var jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere.first().hendelser).hasSize(1)
-
-        val personTreffId = jobbsøkere.first().personTreffId
-
-        service.inviter(listOf(personTreffId), treffId, "inviterende_person")
-
-        jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere).hasSize(1)
-        val hendelser = jobbsøkere.first().hendelser
-        assertThat(hendelser).hasSize(2)
-
-        val inviterHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
-        assertThat(inviterHendelse).isNotNull
-        inviterHendelse!!
-        assertThat(inviterHendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
-        assertThat(inviterHendelse.aktørIdentifikasjon).isEqualTo("inviterende_person")
-        assertThat(inviterHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        assertThat(hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.OPPRETTET }).isNotNull
-    }
-
-    @Test
-    fun `svarJaTilInvitasjon lager en svar-ja-hendelse`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Ja")
-        val fødselsnummer = Fødselsnummer("12345678901")
-        val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer,
-            Fornavn("Test"),
-            Etternavn("Person"),
-            null, null, null
-        )
-        db.leggTilJobbsøkereMedService(listOf(leggTilJobbsøker), treffId, "testperson")
-
-        var jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere.first().hendelser).hasSize(1)
-
-        service.svarJaTilInvitasjon(fødselsnummer, treffId, "svar_ja_person")
-
-        jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat  (jobbsøkere).hasSize(1)
-        val hendelser = jobbsøkere.first().hendelser
-        assertThat(hendelser).hasSize(2)
-
-        val svarJaHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON }
-        assertThat(svarJaHendelse).isNotNull
-        svarJaHendelse!!
-        assertThat(svarJaHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
-        assertThat(svarJaHendelse.aktørIdentifikasjon).isEqualTo("svar_ja_person")
-        assertThat(svarJaHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-    }
-
-    @Test
-    fun `svarNeiTilInvitasjon lager en svar-nei-hendelse`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Svar Nei")
-        val fødselsnummer = Fødselsnummer("12345678901")
-        val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer,
-            Fornavn("Test"),
-            Etternavn("Person"),
-            null, null, null
-        )
-        db.leggTilJobbsøkereMedService(listOf(leggTilJobbsøker), treffId, "testperson")
-
-        var jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere.first().hendelser).hasSize(1)
-
-        service.svarNeiTilInvitasjon(fødselsnummer, treffId, "svar_nei_person")
-
-        jobbsøkere = repository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere).hasSize(1)
-        val hendelser = jobbsøkere.first().hendelser
-        assertThat(hendelser).hasSize(2)
-
-        val svarNeiHendelse = hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON }
-        assertThat(svarNeiHendelse).isNotNull
-        svarNeiHendelse!!
-        assertThat(svarNeiHendelse.opprettetAvAktørType).isEqualTo(AktørType.JOBBSØKER)
-        assertThat(svarNeiHendelse.aktørIdentifikasjon).isEqualTo("svar_nei_person")
-        assertThat(svarNeiHendelse.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-    }
-
-    @Test
-    fun `registrerAktivitetskortOpprettelseFeilet lager en feil-hendelse`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff for Feil")
-        val fødselsnummer = Fødselsnummer("12345678901")
-        val endretAvIdent = "Z987654"
-
-        val leggTilJobbsøker = LeggTilJobbsøker(
-            fødselsnummer,
-            Fornavn("Test"),
-            Etternavn("Person"),
-            null, null, null
-        )
-        db.leggTilJobbsøkereMedService(listOf(leggTilJobbsøker), treffId, "testperson")
-
-        var jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer)
-        assertThat(jobbsøker!!.hendelser).hasSize(1)
-
-        service.registrerAktivitetskortOpprettelseFeilet(fødselsnummer, treffId, endretAvIdent)
-
-        jobbsøker = repository.hentJobbsøker(treffId, fødselsnummer)
-        assertThat(jobbsøker!!.hendelser).hasSize(2)
-
-        val feilHendelse = jobbsøker.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.AKTIVITETSKORT_OPPRETTELSE_FEIL }
-        assertThat(feilHendelse).isNotNull
-        feilHendelse!!.apply {
-            assertThat(opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
-            assertThat(aktørIdentifikasjon).isEqualTo(endretAvIdent)
-            assertThat(tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-        }
-    }
 
     @Test
     fun `hentJobbsøkere med Connection returnerer jobbsøkere med hendelser sortert DESC`() {
@@ -392,9 +267,9 @@ class JobbsøkerRepositoryTest {
         db.leggTilJobbsøkereMedService(listOf(jobbsøker1), treffId, navIdent)
 
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        service.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+        db.inviterJobbsøkere(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
-        service.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        db.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
 
         db.dataSource.connection.use { c ->
             val jobbsøkere = repository.hentJobbsøkere(c, treffId)
@@ -424,7 +299,7 @@ class JobbsøkerRepositoryTest {
         db.leggTilJobbsøkereMedService(listOf(jobbsøker1), treffId, navIdent)
 
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        service.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+        db.inviterJobbsøkere(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
         val jobbsøkereUtenConn = repository.hentJobbsøkere(treffId)
 
@@ -459,9 +334,9 @@ class JobbsøkerRepositoryTest {
         db.leggTilJobbsøkereMedService(listOf(jobbsøker1, jobbsøker2), treffId, navIdent)
 
         val alleJobbsøkere = repository.hentJobbsøkere(treffId)
-        service.inviter(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
+        db.inviterJobbsøkere(alleJobbsøkere.map { it.personTreffId }, treffId, navIdent)
 
-        service.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        db.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
 
         db.dataSource.connection.use { c ->
             val jobbsøkere = repository.hentJobbsøkere(c, treffId)
