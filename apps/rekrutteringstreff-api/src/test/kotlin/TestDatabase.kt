@@ -29,8 +29,8 @@ class TestDatabase {
      */
     fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson") {
         dataSource.connection.use { connection ->
-            val jobbsøkerDbIds = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
-            jobbsøkerRepository.leggTilOpprettetHendelserForJobbsøkereDbId(connection, jobbsøkerDbIds, opprettetAv)
+            val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
+            jobbsøkerRepository.leggTilOpprettetHendelserForPersonTreffIder(connection, personTreffIder, opprettetAv)
         }
     }
 
@@ -82,11 +82,11 @@ class TestDatabase {
      */
     fun leggTilArbeidsgiverMedHendelse(input: LeggTilArbeidsgiver, treffId: TreffId, opprettetAv: String = "testperson") {
         dataSource.connection.use { connection ->
-            val arbeidsgiverDbId = arbeidsgiverRepository.opprettArbeidsgiver(connection, input, treffId)
-            arbeidsgiverRepository.leggTilNaringskoder(connection, arbeidsgiverDbId, input.næringskoder)
+            val arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(connection, input, treffId)
+            arbeidsgiverRepository.leggTilNaringskoder(connection, arbeidsgiverTreffId, input.næringskoder)
             arbeidsgiverRepository.leggTilHendelse(
                 connection,
-                arbeidsgiverDbId,
+                arbeidsgiverTreffId,
                 ArbeidsgiverHendelsestype.OPPRETTET,
                 AktørType.ARRANGØR,
                 opprettetAv

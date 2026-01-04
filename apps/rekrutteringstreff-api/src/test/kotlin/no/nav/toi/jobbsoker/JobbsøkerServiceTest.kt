@@ -167,7 +167,7 @@ class JobbsøkerServiceTest {
     }
 
     @Test
-    fun `fjernJobbsøker skal returnere OK og opprette SLETTET-hendelse når jobbsøker har status LAGT_TIL`() {
+    fun `markerSlettet skal returnere OK og opprette SLETTET-hendelse når jobbsøker har status LAGT_TIL`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr = Fødselsnummer("12345678901")
         val jobbsøkere = listOf(
@@ -176,9 +176,9 @@ class JobbsøkerServiceTest {
         jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
         val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
 
-        val resultat = jobbsøkerService.fjernJobbsøker(personTreffId, treffId, "testperson")
+        val resultat = jobbsøkerService.markerSlettet(personTreffId, treffId, "testperson")
 
-        assertThat(resultat).isEqualTo(FjernJobbsøkerResultat.OK)
+        assertThat(resultat).isEqualTo(MarkerSlettetResultat.OK)
 
         // Verifiser at jobbsøker ikke lenger returneres (har status SLETTET)
         val jobbsøkere2 = jobbsøkerService.hentJobbsøkere(treffId)
@@ -192,7 +192,7 @@ class JobbsøkerServiceTest {
     }
 
     @Test
-    fun `fjernJobbsøker skal returnere IKKE_TILLATT når jobbsøker har status INVITERT`() {
+    fun `markerSlettet skal returnere IKKE_TILLATT når jobbsøker har status INVITERT`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr = Fødselsnummer("12345678901")
         val jobbsøkere = listOf(
@@ -202,19 +202,19 @@ class JobbsøkerServiceTest {
         val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
         jobbsøkerService.inviter(listOf(personTreffId), treffId, "testperson")
 
-        val resultat = jobbsøkerService.fjernJobbsøker(personTreffId, treffId, "testperson")
+        val resultat = jobbsøkerService.markerSlettet(personTreffId, treffId, "testperson")
 
-        assertThat(resultat).isEqualTo(FjernJobbsøkerResultat.IKKE_TILLATT)
+        assertThat(resultat).isEqualTo(MarkerSlettetResultat.IKKE_TILLATT)
     }
 
     @Test
-    fun `fjernJobbsøker skal returnere IKKE_FUNNET når jobbsøker ikke finnes`() {
+    fun `markerSlettet skal returnere IKKE_FUNNET når jobbsøker ikke finnes`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val ikkeEksisterendeId = PersonTreffId(UUID.randomUUID())
 
-        val resultat = jobbsøkerService.fjernJobbsøker(ikkeEksisterendeId, treffId, "testperson")
+        val resultat = jobbsøkerService.markerSlettet(ikkeEksisterendeId, treffId, "testperson")
 
-        assertThat(resultat).isEqualTo(FjernJobbsøkerResultat.IKKE_FUNNET)
+        assertThat(resultat).isEqualTo(MarkerSlettetResultat.IKKE_FUNNET)
     }
 
     @Test

@@ -19,8 +19,8 @@ class JobbsøkerService(
 
     fun leggTilJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
-            val jobbsøkerDbIds = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
-            jobbsøkerRepository.leggTilOpprettetHendelserForJobbsøkereDbId(connection, jobbsøkerDbIds, navIdent)
+            val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
+            jobbsøkerRepository.leggTilOpprettetHendelserForPersonTreffIder(connection, personTreffIder, navIdent)
         }
     }
 
@@ -57,15 +57,15 @@ class JobbsøkerService(
         }
     }
 
-    fun fjernJobbsøker(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): FjernJobbsøkerResultat {
+    fun markerSlettet(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): MarkerSlettetResultat {
         val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(personTreffId)
-            ?: return FjernJobbsøkerResultat.IKKE_FUNNET
+            ?: return MarkerSlettetResultat.IKKE_FUNNET
 
         val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
-            ?: return FjernJobbsøkerResultat.IKKE_FUNNET
+            ?: return MarkerSlettetResultat.IKKE_FUNNET
 
         if (jobbsøker.status != JobbsøkerStatus.LAGT_TIL) {
-            return FjernJobbsøkerResultat.IKKE_TILLATT
+            return MarkerSlettetResultat.IKKE_TILLATT
         }
 
         dataSource.executeInTransaction { connection ->
@@ -80,7 +80,7 @@ class JobbsøkerService(
         }
 
         logger.info("Slettet jobbsøker $personTreffId for treff $treffId")
-        return FjernJobbsøkerResultat.OK
+        return MarkerSlettetResultat.OK
     }
 
     fun hentJobbsøkere(treffId: TreffId): List<Jobbsøker> {
@@ -200,7 +200,7 @@ class JobbsøkerService(
     }
 }
 
-enum class FjernJobbsøkerResultat {
+enum class MarkerSlettetResultat {
     OK,
     IKKE_FUNNET,
     IKKE_TILLATT

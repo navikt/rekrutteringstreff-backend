@@ -220,14 +220,14 @@ class TestDatabase {
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
         arbeidsgivere.forEach { ag ->
             dataSource.connection.use { connection ->
-                val arbeidsgiverDbId = arbeidsgiverRepository.opprettArbeidsgiver(
+                val arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(
                     connection,
                     LeggTilArbeidsgiver(ag.orgnr, ag.orgnavn, emptyList(), ag.gateadresse, ag.postnummer, ag.poststed),
                     ag.treffId
                 )
                 arbeidsgiverRepository.leggTilHendelse(
                     connection,
-                    arbeidsgiverDbId,
+                    arbeidsgiverTreffId,
                     ArbeidsgiverHendelsestype.OPPRETTET,
                     AktørType.ARRANGØR,
                     "testperson"
@@ -251,8 +251,8 @@ class TestDatabase {
                             veilederNavIdent = js.veilederNavIdent
                         )
                     }
-                    val jobbsøkerDbIds = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
-                    jobbsøkerRepository.leggTilOpprettetHendelserForJobbsøkereDbId(connection, jobbsøkerDbIds, "testperson")
+                    val personTreffIder = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
+                    jobbsøkerRepository.leggTilOpprettetHendelserForPersonTreffIder(connection, personTreffIder, "testperson")
                 }
             }
     }

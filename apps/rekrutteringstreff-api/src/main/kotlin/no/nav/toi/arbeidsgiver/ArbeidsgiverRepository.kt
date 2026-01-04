@@ -52,18 +52,18 @@ class ArbeidsgiverRepository(
         hentTreffDbId(connection, treff) != null
 
 
-    fun opprettArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treff: TreffId): Long {
+    fun opprettArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treff: TreffId): ArbeidsgiverTreffId {
         val treffDbId: Long = hentTreffDbId(connection, treff)
             ?: throw IllegalArgumentException("Kan ikke legge til arbeidsgiver fordi treff med id ${treff.somUuid} ikke finnes.")
         return leggTilArbeidsgiver(connection, arbeidsgiver, treffDbId)
     }
 
-    private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): Long {
+    private fun leggTilArbeidsgiver(connection: Connection, arbeidsgiver: LeggTilArbeidsgiver, treffDbId: Long): ArbeidsgiverTreffId {
+        val arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID())
         connection.prepareStatement(
-            "INSERT INTO arbeidsgiver (id, rekrutteringstreff_id, orgnr, orgnavn, status, gateadresse, postnummer, poststed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            Statement.RETURN_GENERATED_KEYS
+            "INSERT INTO arbeidsgiver (id, rekrutteringstreff_id, orgnr, orgnavn, status, gateadresse, postnummer, poststed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         ).use { stmt ->
-            stmt.setObject(1, UUID.randomUUID())
+            stmt.setObject(1, arbeidsgiverTreffId.somUuid)
             stmt.setLong(2, treffDbId)
             stmt.setString(3, arbeidsgiver.orgnr.asString)
             stmt.setString(4, arbeidsgiver.orgnavn.asString)
@@ -72,20 +72,17 @@ class ArbeidsgiverRepository(
             stmt.setString(7, arbeidsgiver.postnummer)
             stmt.setString(8, arbeidsgiver.poststed)
             stmt.executeUpdate()
-            stmt.generatedKeys.use {
-                if (it.next()) return it.getLong(1)
-                else throw SQLException("Klarte ikke å hente arbeidsgiver_id for arbeidsgiver")
-            }
         }
+        return arbeidsgiverTreffId
     }
 
-    fun leggTilNaringskoder(connection: Connection, arbeidsgiverDbId: Long, koder: List<Næringskode>) {
+    fun leggTilNaringskoder(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId, koder: List<Næringskode>) {
         if (koder.isEmpty()) return
         connection.prepareStatement(
-            "INSERT INTO naringskode (arbeidsgiver_id, kode, beskrivelse) VALUES (?, ?, ?)"
+            "INSERT INTO naringskode (arbeidsgiver_id, kode, beskrivelse) VALUES ((SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?), ?, ?)"
         ).use { stmt ->
             for (nk in koder) {
-                stmt.setLong(1, arbeidsgiverDbId)
+                stmt.setObject(1, arbeidsgiverTreffId.somUuid)
                 stmt.setString(2, nk.kode)
                 stmt.setString(3, nk.beskrivelse)
                 stmt.addBatch()
@@ -96,7 +93,7 @@ class ArbeidsgiverRepository(
 
     fun leggTilHendelse(
         connection: Connection,
-        arbeidsgiverDbId: Long,
+        arbeidsgiverTreffId: ArbeidsgiverTreffId,
         hendelsestype: ArbeidsgiverHendelsestype,
         opprettetAvAktørType: AktørType,
         aktøridentifikasjon: String
@@ -105,11 +102,11 @@ class ArbeidsgiverRepository(
             """
             INSERT INTO arbeidsgiver_hendelse (
                 id, arbeidsgiver_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (?, (SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?), ?, ?, ?, ?)
             """.trimIndent()
         ).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
-            stmt.setLong(2, arbeidsgiverDbId)
+            stmt.setObject(2, arbeidsgiverTreffId.somUuid)
             stmt.setTimestamp(3, Timestamp.from(Instant.now()))
             stmt.setString(4, hendelsestype.toString())
             stmt.setString(5, opprettetAvAktørType.toString())
@@ -212,22 +209,19 @@ class ArbeidsgiverRepository(
         poststed = getString("poststed"),
     )
 
-    fun hentArbeidsgiverDbId(connection: Connection, arbeidsgiverId: UUID): Long? {
-        return connection.prepareStatement("SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?").use { ps ->
-            ps.setObject(1, arbeidsgiverId)
-            ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
-        }
-    }
-
-    /**
-     * Markerer en arbeidsgiver som slettet (soft-delete).
-     * Legger til SLETTET-hendelse og oppdaterer status til SLETTET.
-     */
     fun markerSlettet(connection: Connection, arbeidsgiverId: UUID, opprettetAv: String): Boolean {
-        val arbeidsgiverDbId = hentArbeidsgiverDbId(connection, arbeidsgiverId) ?: return false
-        leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, opprettetAv)
+        val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
+        if (!finnesArbeidsgiver(connection, arbeidsgiverTreffId)) return false
+        leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, opprettetAv)
         endreStatus(connection, arbeidsgiverId, ArbeidsgiverStatus.SLETTET)
         return true
+    }
+
+    private fun finnesArbeidsgiver(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): Boolean {
+        return connection.prepareStatement("SELECT 1 FROM arbeidsgiver WHERE id = ?").use { ps ->
+            ps.setObject(1, arbeidsgiverTreffId.somUuid)
+            ps.executeQuery().use { rs -> rs.next() }
+        }
     }
 
     fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {

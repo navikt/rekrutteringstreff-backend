@@ -168,13 +168,13 @@ class JobbsøkerController(
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             log.info("Sletter jobbsøker $jobbsøkerId for treff $treffId")
 
-            when (jobbsøkerService.fjernJobbsøker(jobbsøkerId, treffId, navIdent)) {
-                FjernJobbsøkerResultat.OK -> ctx.status(200)
-                FjernJobbsøkerResultat.IKKE_FUNNET -> {
+            when (jobbsøkerService.markerSlettet(jobbsøkerId, treffId, navIdent)) {
+                MarkerSlettetResultat.OK -> ctx.status(200)
+                MarkerSlettetResultat.IKKE_FUNNET -> {
                     log.info("Fant ikke jobbsøker med id $jobbsøkerId for treff $treffId")
                     ctx.status(404)
                 }
-                FjernJobbsøkerResultat.IKKE_TILLATT -> ctx.status(422)
+                MarkerSlettetResultat.IKKE_TILLATT -> ctx.status(422)
             }
         }
     }
