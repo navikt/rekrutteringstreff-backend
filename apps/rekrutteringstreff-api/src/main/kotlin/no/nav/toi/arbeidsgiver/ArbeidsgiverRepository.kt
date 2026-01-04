@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
-import no.nav.toi.executeInTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.SQLException
@@ -218,6 +217,17 @@ class ArbeidsgiverRepository(
             ps.setObject(1, arbeidsgiverId)
             ps.executeQuery().use { rs -> if (rs.next()) rs.getLong(1) else null }
         }
+    }
+
+    /**
+     * Markerer en arbeidsgiver som slettet (soft-delete).
+     * Legger til SLETTET-hendelse og oppdaterer status til SLETTET.
+     */
+    fun markerSlettet(connection: Connection, arbeidsgiverId: UUID, opprettetAv: String): Boolean {
+        val arbeidsgiverDbId = hentArbeidsgiverDbId(connection, arbeidsgiverId) ?: return false
+        leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, opprettetAv)
+        endreStatus(connection, arbeidsgiverId, ArbeidsgiverStatus.SLETTET)
+        return true
     }
 
     fun endreStatus(connection: Connection, arbeidsgiverId: UUID, arbeidsgiverStatus: ArbeidsgiverStatus) {

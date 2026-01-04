@@ -96,11 +96,6 @@ class RekrutteringstreffRepository(
         return Pair(nyTreffId, dbId)
     }
 
-    fun oppdater(treff: TreffId, dto: OppdaterRekrutteringstreffDto, oppdatertAv: String) {
-        dataSource.connection.use { connection ->
-            oppdater(connection, treff, dto, oppdatertAv)
-        }
-    }
 
     /**
      * Oppdaterer et rekrutteringstreff i databasen.

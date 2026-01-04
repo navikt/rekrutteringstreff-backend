@@ -151,7 +151,8 @@ class JobbsøkerInnloggetBorgerController(
     }
 
     private fun Jobbsøker.toOutboundDtoMedStatuser(): JobbsøkerMedStatuserOutboundDto {
-        val sisteSvar = hendelser.findLast {
+        // Hendelsene er sortert nyeste først (DESC), så vi bruker firstOrNull for å finne siste svar
+        val sisteSvar = hendelser.firstOrNull {
             it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
         }
 

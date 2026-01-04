@@ -24,16 +24,15 @@ class ArbeidsgiverService(
         logger.info("La til arbeidsgiver ${arbeidsgiver.orgnr.asString} for treff $treffId")
     }
 
-    fun slettArbeidsgiver(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String): Boolean {
+    /**
+     * Markerer en arbeidsgiver som slettet (soft-delete).
+     */
+    fun markerArbeidsgiverSlettet(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String): Boolean {
         val resultat = dataSource.executeInTransaction { connection ->
-            val arbeidsgiverDbId = arbeidsgiverRepository.hentArbeidsgiverDbId(connection, arbeidsgiverId)
-                ?: return@executeInTransaction false
-            arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
-            arbeidsgiverRepository.endreStatus(connection, arbeidsgiverId, ArbeidsgiverStatus.SLETTET)
-            true
+            arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId, navIdent)
         }
         if (resultat) {
-            logger.info("Slettet arbeidsgiver $arbeidsgiverId for treff $treffId")
+            logger.info("Markert arbeidsgiver $arbeidsgiverId som slettet for treff $treffId")
         }
         return resultat
     }

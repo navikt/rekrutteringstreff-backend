@@ -50,7 +50,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         db.slettAlt()
     }
 
-    // ==================== INVITASJONSTESTER ====================
 
     @Test
     fun `skal sende invitasjoner på rapid og markere dem som pollet dersom vi har nok data`() {
@@ -100,7 +99,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(1)
     }
 
-    // ==================== SVARTESTER ====================
 
     @Test
     fun `skal sende ja-svar på rapid og markere dem som pollet`() {
@@ -165,7 +163,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 svar (ikke duplikater)
     }
 
-    // ==================== TREFF ENDRET TESTER ====================
 
     @Test
     fun `skal sende oppdatering av aktivitetskort OG minside-varsel når relevante felt er endret`() {
@@ -358,7 +355,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 oppdatering
     }
 
-    // ==================== MINSIDE VARSLING TESTER ====================
 
     @Test
     fun `skal sende oppdatering med endredeFelter når skalVarsle er true for tittel`() {
@@ -603,7 +599,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("STED")
     }
 
-    // ==================== TREFFSTATUS ENDRET TESTER ====================
 
     @Test
     fun `skal sende avlyst-status paa rapid og markere dem som pollet`() {
@@ -678,7 +673,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status (ikke duplikat)
     }
 
-    // ==================== REKKEFØLGE TESTER ====================
 
     @Test
     fun `skal behandle hendelser i riktig rekkefølge basert på tidspunkt`() {
@@ -721,7 +715,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(0)
     }
 
-    // ==================== IKKE-SVART TESTER ====================
 
     @Test
     fun `skal sende avbrutt-status for jobbsøker med kun INVITERT når treff fullføres`() {
@@ -893,7 +886,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(hendelserForIkkeSvart2.last()["treffstatus"].asText()).isEqualTo("fullført")
     }
 
-    // ==================== HJELPEMETODER ====================
 
     private fun opprettPersonOgInviter(fødselsnummer: Fødselsnummer, rapid: TestRapid, scheduler: AktivitetskortJobbsøkerScheduler): no.nav.toi.rekrutteringstreff.TreffId {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
@@ -903,7 +895,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     }
 
     private fun opprettOgInviterJobbsøker(treffId: no.nav.toi.rekrutteringstreff.TreffId, fødselsnummer: Fødselsnummer) {
-        jobbsøkerRepository.leggTilMedHendelse(
+        db.leggTilJobbsøkereMedService(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,

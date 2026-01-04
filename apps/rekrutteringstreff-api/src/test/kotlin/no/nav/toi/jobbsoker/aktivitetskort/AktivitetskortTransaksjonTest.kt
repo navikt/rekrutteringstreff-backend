@@ -51,7 +51,7 @@ class AktivitetskortTransaksjonTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTilMedHendelse(
+        db.leggTilJobbsøkereMedService(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -80,7 +80,7 @@ class AktivitetskortTransaksjonTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTilMedHendelse(
+        db.leggTilJobbsøkereMedService(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,

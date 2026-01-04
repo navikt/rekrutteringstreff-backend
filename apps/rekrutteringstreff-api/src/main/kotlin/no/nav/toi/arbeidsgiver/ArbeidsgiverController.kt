@@ -200,7 +200,7 @@ class ArbeidsgiverController(
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
 
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            if (arbeidsgiverService.slettArbeidsgiver(id, treffId, navIdent)) ctx.status(204) else throw NotFoundResponse()
+            if (arbeidsgiverService.markerArbeidsgiverSlettet(id, treffId, navIdent)) ctx.status(204) else throw NotFoundResponse()
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treffId.somString}")
         }

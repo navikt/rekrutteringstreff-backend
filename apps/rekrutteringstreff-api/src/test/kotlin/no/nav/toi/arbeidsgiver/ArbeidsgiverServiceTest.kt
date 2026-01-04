@@ -94,7 +94,7 @@ class ArbeidsgiverServiceTest {
         arbeidsgiverService.leggTilArbeidsgiver(arbeidsgiver, treffId, "testperson")
         val arbeidsgiverId = arbeidsgiverService.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId.somUuid
 
-        val resultat = arbeidsgiverService.slettArbeidsgiver(arbeidsgiverId, treffId, "testperson")
+        val resultat = arbeidsgiverService.markerArbeidsgiverSlettet(arbeidsgiverId, treffId, "testperson")
 
         assertThat(resultat).isTrue()
 
@@ -114,7 +114,7 @@ class ArbeidsgiverServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val ikkeEksisterendeId = UUID.randomUUID()
 
-        val resultat = arbeidsgiverService.slettArbeidsgiver(ikkeEksisterendeId, treffId, "testperson")
+        val resultat = arbeidsgiverService.markerArbeidsgiverSlettet(ikkeEksisterendeId, treffId, "testperson")
 
         assertThat(resultat).isFalse()
     }

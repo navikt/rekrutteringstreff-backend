@@ -1,20 +1,16 @@
 package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.AktørType
-import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
-import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.executeInTransaction
-import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.util.ArrayList
-import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
@@ -86,7 +82,11 @@ class RekrutteringstreffService(
         return jobbsøkere.isEmpty()
     }
 
-    fun slett(treffId: TreffId, navIdent: String) {
+    /**
+     * Markerer et rekrutteringstreff og tilhørende arbeidsgivere som slettet (soft-delete).
+     * Kan kun gjøres på treff i UTKAST-status uten jobbsøkere.
+     */
+    fun markerSlettet(treffId: TreffId, navIdent: String) {
         val status = rekrutteringstreffRepository.hent(treffId)?.status ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
         if (kanSletteJobbtreff(treffId, status).not()) {
             throw UlovligOppdateringException("Kan ikke slette treff med id $treffId")
@@ -97,11 +97,7 @@ class RekrutteringstreffService(
 
             val arbeidsgivere = arbeidsgiverRepository.hentArbeidsgivere(treffId)
             arbeidsgivere.forEach { arbeidsgiver ->
-                val arbeidsgiverDbId = arbeidsgiverRepository.hentArbeidsgiverDbId(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid)
-                if (arbeidsgiverDbId != null) {
-                    arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverDbId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
-                    arbeidsgiverRepository.endreStatus(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid, ArbeidsgiverStatus.SLETTET)
-                }
+                arbeidsgiverRepository.markerSlettet(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid, navIdent)
             }
         }
     }

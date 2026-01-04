@@ -550,7 +550,7 @@ class RekrutteringstreffServiceTest {
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
 
         assertThrows<UlovligOppdateringException> {
-            rekrutteringstreffService.slett(treffId, navIdent)
+            rekrutteringstreffService.markerSlettet(treffId, navIdent)
         }
     }
 
@@ -578,7 +578,7 @@ class RekrutteringstreffServiceTest {
         assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
         assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.AKTIV }).isTrue()
 
-        rekrutteringstreffService.slett(treffId, navIdent)
+        rekrutteringstreffService.markerSlettet(treffId, navIdent)
 
         assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.SLETTET)
         assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.SLETTET }).isTrue()
@@ -588,7 +588,7 @@ class RekrutteringstreffServiceTest {
     }
 
     private fun leggTilOgInviterJobbsøker(treffId: TreffId, fnr: Fødselsnummer, navIdent: String) {
-        jobbsøkerRepository.leggTilMedHendelse(
+        db.leggTilJobbsøkereMedService(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fnr,

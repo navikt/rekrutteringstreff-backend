@@ -7,10 +7,8 @@ import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.flywaydb.core.Flyway
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
@@ -24,15 +22,50 @@ class TestDatabase {
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
-    ): TreffId =
-        RekrutteringstreffRepository(dataSource).opprett(
-            OpprettRekrutteringstreffInternalDto(
-                tittel = tittel,
-                opprettetAvNavkontorEnhetId = "Original Kontor",
-                opprettetAvPersonNavident = navIdent,
-                opprettetAvTidspunkt = nowOslo().minusDays(10),
-            )
-        )
+    ): TreffId {
+        val nyTreffId = TreffId(UUID.randomUUID())
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                INSERT INTO rekrutteringstreff(id, tittel, status, opprettet_av_person_navident,
+                                     opprettet_av_kontor_enhetid, opprettet_av_tidspunkt, eiere, sist_endret, sist_endret_av)
+                VALUES (?,?,?,?,?,?,?,?,?)
+                """
+            ).apply {
+                var i = 0
+                setObject(++i, nyTreffId.somUuid)
+                setString(++i, tittel)
+                setString(++i, RekrutteringstreffStatus.UTKAST.name)
+                setString(++i, navIdent)
+                setString(++i, "Original Kontor")
+                setTimestamp(++i, java.sql.Timestamp.from(nowOslo().minusDays(10).toInstant()))
+                setArray(++i, connection.createArrayOf("text", arrayOf(navIdent)))
+                setTimestamp(++i, java.sql.Timestamp.from(java.time.Instant.now()))
+                setString(++i, navIdent)
+            }.executeUpdate()
+
+            // Legg til OPPRETTET-hendelse
+            val treffDbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?")
+                .apply { setObject(1, nyTreffId.somUuid) }
+                .executeQuery()
+                .let { rs -> if (rs.next()) rs.getLong(1) else error("Treff ikke funnet") }
+
+            connection.prepareStatement(
+                """
+                INSERT INTO rekrutteringstreff_hendelse
+                  (id, rekrutteringstreff_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+                VALUES (?, ?, now(), ?, ?, ?)
+                """
+            ).apply {
+                setObject(1, UUID.randomUUID())
+                setLong(2, treffDbId)
+                setString(3, RekrutteringstreffHendelsestype.OPPRETTET.name)
+                setString(4, AktørType.ARRANGØR.name)
+                setString(5, navIdent)
+            }.executeUpdate()
+        }
+        return nyTreffId
+    }
 
     fun slettAlt() = dataSource.connection.use {c ->
         listOf(
@@ -201,32 +234,98 @@ class TestDatabase {
     )
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
-        val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
-        arbeidsgivere.forEach {
-            repo.leggTil(LeggTilArbeidsgiver(it.orgnr, it.orgnavn, emptyList(), it.gateadresse, it.postnummer, it.poststed), it.treffId, "testperson")
+        dataSource.connection.use { connection ->
+            arbeidsgivere.forEach { ag ->
+                // Hent treff_db_id
+                val treffDbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?")
+                    .apply { setObject(1, ag.treffId.somUuid) }
+                    .executeQuery().let {
+                        if (it.next()) it.getLong(1) else error("Treff ${ag.treffId} finnes ikke")
+                    }
+
+                // Legg til arbeidsgiver
+                val arbeidsgiverDbId = connection.prepareStatement(
+                    "INSERT INTO arbeidsgiver (id, rekrutteringstreff_id, orgnr, orgnavn, status, gateadresse, postnummer, poststed) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING arbeidsgiver_id"
+                ).apply {
+                    setObject(1, ag.arbeidsgiverTreffId.somUuid)
+                    setLong(2, treffDbId)
+                    setString(3, ag.orgnr.asString)
+                    setString(4, ag.orgnavn.asString)
+                    setString(5, ArbeidsgiverStatus.AKTIV.name)
+                    setString(6, ag.gateadresse)
+                    setString(7, ag.postnummer)
+                    setString(8, ag.poststed)
+                }.executeQuery().let {
+                    if (it.next()) it.getLong(1) else error("Kunne ikke legge til arbeidsgiver")
+                }
+
+                // Legg til OPPRETTET-hendelse
+                connection.prepareStatement(
+                    """
+                    INSERT INTO arbeidsgiver_hendelse
+                      (id, arbeidsgiver_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+                    VALUES (?, ?, now(), ?, ?, ?)
+                    """
+                ).apply {
+                    setObject(1, UUID.randomUUID())
+                    setLong(2, arbeidsgiverDbId)
+                    setString(3, ArbeidsgiverHendelsestype.OPPRETTET.name)
+                    setString(4, AktørType.ARRANGØR.name)
+                    setString(5, "testperson")
+                }.executeUpdate()
+            }
         }
     }
 
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
-        val repo = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
-        jobbsøkere
-            .groupBy { it.treffId }
-            .forEach { (treffId, jsListe) ->
-                repo.leggTil(
-                    jsListe.map {
-                        LeggTilJobbsøker(
-                            it.fødselsnummer,
-                            it.fornavn,
-                            it.etternavn,
-                            it.navkontor,
-                            it.veilederNavn,
-                            it.veilederNavIdent
-                        )
-                    },
-                    treffId,
-                    "testperson"
-                )
+        dataSource.connection.use { connection ->
+            jobbsøkere.forEach { js ->
+                // Hent treff_db_id
+                val treffDbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?")
+                    .apply { setObject(1, js.treffId.somUuid) }
+                    .executeQuery().let {
+                        if (it.next()) it.getLong(1) else error("Treff ${js.treffId} finnes ikke")
+                    }
+
+                // Legg til jobbsøker
+                val jobbsøkerDbId = connection.prepareStatement(
+                    """
+                    INSERT INTO jobbsoker
+                      (id, rekrutteringstreff_id, fodselsnummer, fornavn, etternavn,
+                       navkontor, veileder_navn, veileder_navident, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    RETURNING jobbsoker_id
+                    """
+                ).apply {
+                    setObject(1, js.personTreffId.somUuid)
+                    setLong(2, treffDbId)
+                    setString(3, js.fødselsnummer.asString)
+                    setString(4, js.fornavn.asString)
+                    setString(5, js.etternavn.asString)
+                    setString(6, js.navkontor?.asString)
+                    setString(7, js.veilederNavn?.asString)
+                    setString(8, js.veilederNavIdent?.asString)
+                    setString(9, JobbsøkerStatus.LAGT_TIL.name)
+                }.executeQuery().let {
+                    if (it.next()) it.getLong(1) else error("Kunne ikke legge til jobbsøker")
+                }
+
+                // Legg til OPPRETTET-hendelse
+                connection.prepareStatement(
+                    """
+                    INSERT INTO jobbsoker_hendelse
+                      (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+                    VALUES (?, ?, now(), ?, ?, ?)
+                    """
+                ).apply {
+                    setObject(1, UUID.randomUUID())
+                    setLong(2, jobbsøkerDbId)
+                    setString(3, JobbsøkerHendelsestype.OPPRETTET.name)
+                    setString(4, AktørType.ARRANGØR.name)
+                    setString(5, "testperson")
+                }.executeUpdate()
             }
+        }
     }
 
     fun leggTilRekrutteringstreffHendelse(treffId: TreffId, hendelsestype: RekrutteringstreffHendelsestype, aktørIdent: String) =

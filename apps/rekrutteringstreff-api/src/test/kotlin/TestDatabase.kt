@@ -27,6 +27,14 @@ class TestDatabase {
     private val jobbsøkerService by lazy { JobbsøkerService(dataSource, jobbsøkerRepository) }
     private val rekrutteringstreffService by lazy { RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService) }
 
+    /**
+     * Legger til jobbsøkere via service (standard måte).
+     * Bruk denne for de fleste test-scenarier.
+     */
+    fun leggTilJobbsøkereMedService(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson") {
+        jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, opprettetAv)
+    }
+
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
@@ -63,8 +71,8 @@ class TestDatabase {
             tittel = tittel
         )
 
-        // Bruk repository-metode for å oppdatere
-        rekrutteringstreffRepository.oppdater(
+        // Bruk service-metode for å oppdatere med hendelse
+        rekrutteringstreffService.oppdater(
             treffId,
             no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
                 tittel = tittel,
@@ -80,7 +88,7 @@ class TestDatabase {
                 fylke = fylke,
                 fylkesnummer = fylkesnummer
             ),
-            oppdatertAv = navIdent
+            navIdent = navIdent
         )
 
         // Status må oppdateres separat siden det ikke er del av OppdaterRekrutteringstreffDto
@@ -140,8 +148,8 @@ class TestDatabase {
         val gjeldende = rekrutteringstreffRepository.hent(id)
             ?: throw IllegalArgumentException("Treff $id finnes ikke")
 
-        // Bruk repository.oppdater med merge av nye og gamle verdier
-        rekrutteringstreffRepository.oppdater(
+        // Bruk service.oppdater med merge av nye og gamle verdier
+        rekrutteringstreffService.oppdater(
             id,
             no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
                 tittel = tittel ?: gjeldende.tittel,
@@ -157,7 +165,7 @@ class TestDatabase {
                 fylke = gjeldende.fylke,
                 fylkesnummer = gjeldende.fylkesnummer,
             ),
-            oppdatertAv = "test"
+            navIdent = "test"
         )
     }
 
@@ -554,9 +562,6 @@ class TestDatabase {
     }
 
     fun publiser(treffId: TreffId, navIdent: String) {
-        dataSource.executeInTransaction { connection ->
-            rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.PUBLISERT, navIdent)
-            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)
-        }
+        rekrutteringstreffService.publiser(treffId, navIdent)
     }
 }

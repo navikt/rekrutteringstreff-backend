@@ -325,29 +325,16 @@ class JobbsøkerServiceTest {
         jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
         val personTreffIds = jobbsøkerService.hentJobbsøkere(treffId).map { it.personTreffId }
         jobbsøkerService.inviter(personTreffIds, treffId, "testperson")
+        Thread.sleep(10) // Sikre at tidspunktet for neste hendelse er forskjellig
         jobbsøkerService.svarNeiTilInvitasjon(fnr, treffId, fnr.asString)
 
         val jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fnr)
 
-        // Verifiser at status er SVART_NEI (dette viser at operasjonen fungerte)
         assertThat(jobbsøker!!.status).isEqualTo(JobbsøkerStatus.SVART_NEI)
+        assertThat(jobbsøker.hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON }).isTrue()
 
-        // Verifiser at SVART_NEI_TIL_INVITASJON-hendelse finnes
-        val harSvartNeiHendelse = jobbsøker.hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON }
-        assertThat(harSvartNeiHendelse).isTrue()
-
-        // Metoden skal returnere false fordi jobbsøkeren har svart nei
-        // Men siden hendelsene har samme tidspunkt, bruker vi status som alternativ validering
         val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker.hendelser)
-
-        // Forvent at resultatet reflekterer at jobbsøkeren har svart nei
-        // Hvis status er SVART_NEI, så skal vi ikke varsle
-        if (jobbsøker.status == JobbsøkerStatus.SVART_NEI) {
-            // Jobbsøkeren har svart nei, så vi forventer at skalVarsles er false
-            // Men p.g.a. tidspunkt-problemer i tester kan dette være ustabilt
-            // Så vi tester heller at status er riktig og at hendelse finnes
-            assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_NEI)
-        }
+        assertThat(skalVarsles).isFalse()
     }
 
     @Test

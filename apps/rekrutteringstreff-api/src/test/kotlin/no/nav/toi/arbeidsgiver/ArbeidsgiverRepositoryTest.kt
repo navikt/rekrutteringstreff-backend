@@ -118,7 +118,7 @@ class ArbeidsgiverRepositoryTest {
         service.leggTilArbeidsgiver(input, treffId, "testperson")
         val id = repository.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId
 
-        val resultat = service.slettArbeidsgiver(id.somUuid, treffId, "testperson")
+        val resultat = service.markerArbeidsgiverSlettet(id.somUuid, treffId, "testperson")
         assertThat(resultat).isTrue()
         assertThat(repository.hentArbeidsgivere(treffId)).isEmpty()
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
@@ -133,7 +133,7 @@ class ArbeidsgiverRepositoryTest {
     fun slettArbeidsgiver_returnerer_false_når_den_ikke_finnes() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val tilfeldigId = UUID.randomUUID()
-        assertThat(service.slettArbeidsgiver(tilfeldigId, treffId, "testperson")).isFalse()
+        assertThat(service.markerArbeidsgiverSlettet(tilfeldigId, treffId, "testperson")).isFalse()
     }
 
     @Test
@@ -149,7 +149,7 @@ class ArbeidsgiverRepositoryTest {
 
         // Act: Soft-delete den ene arbeidsgiveren via service
         val slettesId = alleFør.first { it.orgnr.asString == "222222222" }.arbeidsgiverTreffId.somUuid
-        val result = service.slettArbeidsgiver(slettesId, treffId, "testperson")
+        val result = service.markerArbeidsgiverSlettet(slettesId, treffId, "testperson")
         assertThat(result).isTrue()
 
         // Assert: hentArbeidsgivere returnerer kun ikke-slettet arbeidsgiver

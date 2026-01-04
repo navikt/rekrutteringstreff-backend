@@ -3,8 +3,6 @@ package no.nav.toi.jobbsoker
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.SecureLogLogger.Companion.secure
-import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.log
@@ -31,25 +29,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId): List<Long> {
         val treffDbId = connection.treffDbId(treff)
         return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere)
-    }
-
-    /**
-     * Bekvemmelighetsmetode for å legge til jobbsøkere med hendelse i én operasjon.
-     * Brukes primært fra tester. Servicelaget bør bruke de separate metodene for bedre kontroll.
-     */
-    fun leggTilMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId, opprettetAv: String) {
-        dataSource.connection.use { c ->
-            c.autoCommit = false
-            try {
-                val jobbsøkerDbIds = leggTil(c, jobbsøkere, treff)
-                leggTilOpprettetHendelserForJobbsøkereDbId(c, jobbsøkerDbIds, opprettetAv)
-                c.commit()
-            } catch (e: Exception) {
-                c.rollback(); throw e
-            } finally {
-                c.autoCommit = true
-            }
-        }
     }
 
     /**
@@ -446,12 +425,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                         json_agg(
                             json_build_object(
                                 'id', jh.id,
-                                'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SSOF'),
+                                'tidspunkt', to_char(jh.tidspunkt, 'YYYY-MM-DD"T"HH24:MI:SS.MSOF'),
                                 'hendelsestype', jh.hendelsestype,
                                 'opprettetAvAktortype', jh.opprettet_av_aktortype,
                                 'aktøridentifikasjon', jh.aktøridentifikasjon,
                                 'hendelseData', jh.hendelse_data
-                            )
+                            ) ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
                         ) FILTER (WHERE jh.id IS NOT NULL),
                         '[]'
                     ) AS hendelser

@@ -42,7 +42,7 @@ class AktivitetskortFeilLytterTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTilMedHendelse(
+        db.leggTilJobbsøkereMedService(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
