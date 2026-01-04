@@ -30,7 +30,7 @@ class TestDatabase {
     fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson") {
         dataSource.connection.use { connection ->
             val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
-            jobbsøkerRepository.leggTilOpprettetHendelserForPersonTreffIder(connection, personTreffIder, opprettetAv)
+            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv)
         }
     }
 
@@ -47,7 +47,7 @@ class TestDatabase {
                 AktørType.ARRANGØR
             )
             personTreffIds.forEach { personTreffId ->
-                jobbsøkerRepository.endreStatus(personTreffId.somUuid, JobbsøkerStatus.INVITERT)
+                jobbsøkerRepository.endreStatus(personTreffId, JobbsøkerStatus.INVITERT)
             }
         }
     }
@@ -57,7 +57,7 @@ class TestDatabase {
      */
     fun svarJaTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, svarAv: String) {
         dataSource.connection.use { connection ->
-            val personTreffId = jobbsøkerRepository.hentPersonTreffIdFraFødselsnummer(treffId, fnr)
+            val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
                 ?: throw IllegalArgumentException("Jobbsøker ikke funnet for fnr og treffId")
             jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                 connection,
@@ -66,7 +66,7 @@ class TestDatabase {
                 svarAv,
                 AktørType.JOBBSØKER
             )
-            jobbsøkerRepository.endreStatus(personTreffId.somUuid, JobbsøkerStatus.SVART_JA)
+            jobbsøkerRepository.endreStatus(personTreffId, JobbsøkerStatus.SVART_JA)
         }
     }
 

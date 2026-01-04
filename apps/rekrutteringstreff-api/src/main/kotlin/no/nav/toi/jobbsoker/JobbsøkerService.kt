@@ -20,7 +20,7 @@ class JobbsøkerService(
     fun leggTilJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
             val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
-            jobbsøkerRepository.leggTilOpprettetHendelserForPersonTreffIder(connection, personTreffIder, navIdent)
+            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
         }
     }
 
@@ -33,27 +33,26 @@ class JobbsøkerService(
                     listOf(personTreffId),
                     navIdent
                 )
-                val jobbsøkerDbId = jobbsøkerRepository.hentJobbsøkerDbId(personTreffId.somUuid)!!
-                jobbsøkerRepository.endreStatus(connection, jobbsøkerDbId, JobbsøkerStatus.INVITERT)
+                jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.INVITERT)
             }
         }
     }
 
     fun svarJaTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
-            val jobbsøkerDbId = jobbsøkerRepository.hentJobbsøkerDbIdFraFødselsnummer(connection, treffId, fnr)
+            val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
-            jobbsøkerRepository.leggTilHendelse(connection, jobbsøkerDbId, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
-            jobbsøkerRepository.endreStatus(connection, jobbsøkerDbId, JobbsøkerStatus.SVART_JA)
+            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
+            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
         }
     }
 
     fun svarNeiTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
-            val jobbsøkerDbId = jobbsøkerRepository.hentJobbsøkerDbIdFraFødselsnummer(connection, treffId, fnr)
+            val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
-            jobbsøkerRepository.leggTilHendelse(connection, jobbsøkerDbId, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
-            jobbsøkerRepository.endreStatus(connection, jobbsøkerDbId, JobbsøkerStatus.SVART_NEI)
+            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
+            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_NEI)
         }
     }
 
@@ -75,8 +74,7 @@ class JobbsøkerService(
                 listOf(personTreffId),
                 navIdent
             )
-            val jobbsøkerDbId = jobbsøkerRepository.hentJobbsøkerDbId(personTreffId.somUuid)!!
-            jobbsøkerRepository.endreStatus(connection, jobbsøkerDbId, JobbsøkerStatus.SLETTET)
+            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
         }
 
         logger.info("Slettet jobbsøker $personTreffId for treff $treffId")
@@ -99,7 +97,7 @@ class JobbsøkerService(
         logger.info("Skal oppdatere hendelse for aktivitetskortfeil for TreffId: $treffId")
         secure(logger).info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
 
-        val personTreffId = jobbsøkerRepository.hentPersonTreffIdFraFødselsnummer(treffId, fnr)
+        val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
         if (personTreffId == null) {
             logger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: (se securelog)")
             secure(logger).error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
@@ -122,7 +120,7 @@ class JobbsøkerService(
         logger.info("Skal oppdatere hendelse for minside varsel svar for TreffId: $treffId")
         secure(logger).info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
 
-        val personTreffId = jobbsøkerRepository.hentPersonTreffIdFraFødselsnummer(treffId, fnr)
+        val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
         if (personTreffId == null) {
             logger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} for minside varsel svar (fødselsnummer i securelog)")
             secure(logger).error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")

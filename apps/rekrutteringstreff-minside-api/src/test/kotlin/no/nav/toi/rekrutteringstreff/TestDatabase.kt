@@ -252,7 +252,7 @@ class TestDatabase {
                         )
                     }
                     val personTreffIder = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
-                    jobbsøkerRepository.leggTilOpprettetHendelserForPersonTreffIder(connection, personTreffIder, "testperson")
+                    jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, "testperson")
                 }
             }
     }

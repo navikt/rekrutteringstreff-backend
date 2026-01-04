@@ -27,12 +27,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere)
     }
 
-    fun leggTilOpprettetHendelserForPersonTreffIder(
+    fun leggTilOpprettetHendelser(
         connection: Connection,
         personTreffIder: List<PersonTreffId>,
         opprettetAv: String
     ) {
-        connection.batchInsertHendelserFraPersonTreffIder(JobbsøkerHendelsestype.OPPRETTET, personTreffIder, opprettetAv)
+        connection.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETTET, personTreffIder, opprettetAv)
     }
 
     private fun Connection.batchInsertJobbsøkere(
@@ -106,7 +106,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
     fun leggTilHendelse(
         c: Connection,
-        jobbsøkerDbId: Long,
+        personTreffId: PersonTreffId,
         hendelsestype: JobbsøkerHendelsestype,
         aktørType: AktørType,
         opprettetAv: String,
@@ -115,11 +115,11 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         val sql = """
             INSERT INTO jobbsoker_hendelse
               (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
-            VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)
+            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?, ?::jsonb)
         """.trimIndent()
         c.prepareStatement(sql).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
-            stmt.setLong(2, jobbsøkerDbId)
+            stmt.setObject(2, personTreffId.somUuid)
             stmt.setTimestamp(3, Timestamp.from(Instant.now()))
             stmt.setString(4, hendelsestype.name)
             stmt.setString(5, aktørType.name)
@@ -129,12 +129,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    fun hentJobbsøkerDbIdFraFødselsnummer(connection: Connection, treffId: TreffId, fødselsnummer: Fødselsnummer): Long? {
-        val treffDbId = connection.treffDbId(treffId)
-        return connection.hentJobbsøkerDbIderFraFødselsnummer(treffDbId, listOf(fødselsnummer)).firstOrNull()
-    }
-
-    private fun Connection.batchInsertHendelserFraPersonTreffIder(
+    private fun Connection.batchInsertHendelser(
         hendelsestype: JobbsøkerHendelsestype,
         personTreffIds: List<PersonTreffId>,
         opprettetAv: String,
@@ -235,24 +230,13 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    private fun Connection.hentJobbsøkerDbIderFraFødselsnummer(
-        treffDbId: Long,
-        fødselsnumre: List<Fødselsnummer>
-    ): List<Long> {
-        val sql = "SELECT jobbsoker_id FROM jobbsoker WHERE rekrutteringstreff_id = ? AND fodselsnummer = ANY(?)"
-        return prepareStatement(sql).use { stmt ->
-            stmt.setLong(1, treffDbId)
-            stmt.setArray(2, createArrayOf("varchar", fødselsnumre.map { it.asString }.toTypedArray()))
-            stmt.executeQuery().use { rs ->
-                generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
-            }
-        }
-    }
-
-    fun hentPersonTreffIdFraFødselsnummer(treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
+    fun hentPersonTreffId(treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
         dataSource.connection.use { c ->
-            c.hentPersonTreffIderFraFødselsnummer(treffId, listOf(fødselsnummer)).firstOrNull()
+            hentPersonTreffId(c, treffId, fødselsnummer)
         }
+
+    fun hentPersonTreffId(connection: Connection, treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
+        connection.hentPersonTreffIderFraFødselsnummer(treffId, listOf(fødselsnummer)).firstOrNull()
 
     private fun Connection.hentPersonTreffIderFraFødselsnummer(
         treffId: TreffId,
@@ -268,17 +252,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.setArray(2, createArrayOf("varchar", fødselsnumre.map { it.asString }.toTypedArray()))
             stmt.executeQuery().use { rs ->
                 generateSequence { if (rs.next()) PersonTreffId(UUID.fromString(rs.getString("id"))) else null }.toList()
-            }
-        }
-    }
-
-    private fun Connection.hentJobbsøkerDbIder(treffDbId: Long, personTreffIder: List<PersonTreffId>): List<Long> {
-        val sql = "SELECT jobbsoker_id FROM jobbsoker WHERE rekrutteringstreff_id = ? AND id = ANY(?)"
-        return prepareStatement(sql).use { stmt ->
-            stmt.setLong(1, treffDbId)
-            stmt.setArray(2, createArrayOf("uuid", personTreffIder.map { it.somString }.toTypedArray()))
-            stmt.executeQuery().use { rs ->
-                generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
             }
         }
     }
@@ -416,44 +389,23 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun hentJobbsøkerDbId(jobbsøkerId: UUID): Long? {
-        dataSource.connection.use { c ->
-            c.prepareStatement(
-                """
-                SELECT
-                    js.jobbsoker_id
-                FROM jobbsoker js
-                WHERE js.id = ? 
-            """
-            ).use { ps ->
-                ps.setObject(1, jobbsøkerId)
-               return ps.executeQuery().use { rs ->
-                    if (rs.next()) (rs.getLong(1)) else null
-                }
-            }
+    fun endreStatus(personTreffId: PersonTreffId, jobbsøkerStatus: JobbsøkerStatus) {
+        dataSource.connection.use { connection ->
+            endreStatus(connection, personTreffId, jobbsøkerStatus)
         }
     }
 
-    fun endreStatus(jobbsøkerId: UUID, jobbsøkerStatus: JobbsøkerStatus) {
-        val jobbsøkerDbId: Long? = hentJobbsøkerDbId(jobbsøkerId)
-        if (jobbsøkerDbId == null) {
-            log.error("Kunne ikke finne jobbsøker med id: $jobbsøkerId for å endre status til $jobbsøkerStatus")
-            throw IllegalStateException("Fant ikke jobbsøker med id: $jobbsøkerId")
-        }
-        return endreStatus(dataSource.connection, jobbsøkerDbId, jobbsøkerStatus)
-    }
-
-    fun endreStatus(connection: Connection, jobbsøkerDbId: Long, jobbsøkerStatus: JobbsøkerStatus) {
+    fun endreStatus(connection: Connection, personTreffId: PersonTreffId, jobbsøkerStatus: JobbsøkerStatus) {
         connection.prepareStatement(
             """
             UPDATE jobbsoker
             SET status=?
-            WHERE jobbsoker_id=?
+            WHERE id=?
             """
         ).apply {
             var i = 0
             setString(++i, jobbsøkerStatus.name)
-            setObject(++i, jobbsøkerDbId)
+            setObject(++i, personTreffId.somUuid)
         }.executeUpdate()
     }
 }
