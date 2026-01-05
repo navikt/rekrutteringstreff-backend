@@ -203,10 +203,9 @@ class ArbeidsgiverRepository(
         poststed = getString("poststed"),
     )
 
-    fun markerSlettet(connection: Connection, arbeidsgiverId: UUID, opprettetAv: String): Boolean {
+    fun markerSlettet(connection: Connection, arbeidsgiverId: UUID): Boolean {
         val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
         if (!finnesArbeidsgiver(connection, arbeidsgiverTreffId)) return false
-        leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, opprettetAv)
         endreStatus(connection, arbeidsgiverId, ArbeidsgiverStatus.SLETTET)
         return true
     }

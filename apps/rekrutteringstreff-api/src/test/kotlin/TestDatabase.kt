@@ -103,7 +103,9 @@ class TestDatabase {
             ?: return false
 
         dataSource.connection.use { connection ->
-            arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId, navIdent)
+            val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
+            arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId)
+            arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
         }
         return true
     }

@@ -26,7 +26,12 @@ class ArbeidsgiverService(
 
     fun markerArbeidsgiverSlettet(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String): Boolean {
         val resultat = dataSource.executeInTransaction { connection ->
-            arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId, navIdent)
+            val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
+            val markert = arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId)
+            if (markert) {
+                arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
+            }
+            markert
         }
         if (resultat) {
             logger.info("Markert arbeidsgiver $arbeidsgiverId som slettet for treff $treffId")

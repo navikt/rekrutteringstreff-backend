@@ -1,9 +1,11 @@
 package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.AktørType
+import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.executeInTransaction
@@ -97,7 +99,9 @@ class RekrutteringstreffService(
 
             val arbeidsgivere = arbeidsgiverRepository.hentArbeidsgivere(treffId)
             arbeidsgivere.forEach { arbeidsgiver ->
-                arbeidsgiverRepository.markerSlettet(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid, navIdent)
+                val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiver.arbeidsgiverTreffId.somUuid)
+                arbeidsgiverRepository.markerSlettet(connection, arbeidsgiver.arbeidsgiverTreffId.somUuid)
+                arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
             }
         }
     }
