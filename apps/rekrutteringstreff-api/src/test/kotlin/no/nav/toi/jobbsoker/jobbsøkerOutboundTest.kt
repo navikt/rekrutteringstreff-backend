@@ -118,7 +118,6 @@ class JobbsøkerOutboundTest {
                     personTreffId = PersonTreffId(UUID.randomUUID()),
                     treffId = treffId,
                     fødselsnummer = fnr,
-                    kandidatnummer = null,
                     fornavn = Fornavn("Test"),
                     etternavn = Etternavn("Bruker"),
                     navkontor = null,

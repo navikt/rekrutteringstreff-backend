@@ -24,6 +24,7 @@ class AktivitetskortTransaksjonTest {
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private lateinit var rekrutteringstreffService: RekrutteringstreffService
         private lateinit var arbeidsgiverRepository: ArbeidsgiverRepository
+        private lateinit var jobbsøkerService: JobbsøkerService
         private val mapper = JacksonConfig.mapper
     }
 
@@ -34,7 +35,8 @@ class AktivitetskortTransaksjonTest {
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
         arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
     }
 
     @BeforeEach
@@ -49,11 +51,10 @@ class AktivitetskortTransaksjonTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -63,7 +64,7 @@ class AktivitetskortTransaksjonTest {
             ), treffId, "Z123456"
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, "Z123456")
 
         scheduler.behandleJobbsøkerHendelser()
 
@@ -79,11 +80,10 @@ class AktivitetskortTransaksjonTest {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -93,7 +93,7 @@ class AktivitetskortTransaksjonTest {
             ), treffId, "Z123456"
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, "Z123456")
 
         // Mark invitation as handled so we don't fail on that
         val invitasjoner = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)

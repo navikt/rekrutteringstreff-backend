@@ -21,14 +21,16 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.Kandidatnummer
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.lagToken
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -68,6 +70,9 @@ class JobbsokerControllerAutorisasjonsTest {
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
     private val eierRepository = EierRepository(database.dataSource)
     private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
+    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+    private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
 
     private val erEier = true
     private val erIkkeEier = false
@@ -137,21 +142,19 @@ class JobbsokerControllerAutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        rekrutteringstreffRepository.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
-        gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
+        gyldigRekrutteringstreff = rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer = Fødselsnummer("12345678902"),
-            kandidatnummer = Kandidatnummer("K654321"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("NAV Oslo"),
             veilederNavn = VeilederNavn("Espen Askeladd"),
             veilederNavIdent = VeilederNavIdent("NAV456")
         )
-        jobbsøkerRepository.leggTil(
+        jobbsøkerService.leggTilJobbsøkere(
             jobbsøkere = listOf(leggTilJobbsøker),
-            treff = gyldigRekrutteringstreff,
-            opprettetAv = "NAV456"
+            treffId = gyldigRekrutteringstreff,
+            navIdent = "NAV456"
         )
         gyldigJobbsøkerId = jobbsøkerRepository.hentJobbsøkere(gyldigRekrutteringstreff).first().personTreffId
     }
@@ -172,7 +175,6 @@ class JobbsokerControllerAutorisasjonsTest {
                 [
                     {
                         "fødselsnummer": "12345678901",
-                        "kandidatnummer": "K123456",
                         "fornavn": "Ola",
                         "etternavn": "Nordmann",
                         "navkontor": "NAV Oslo",

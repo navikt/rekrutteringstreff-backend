@@ -1,11 +1,11 @@
 package no.nav.toi.jobbsoker.dto
 
+import com.fasterxml.jackson.databind.JsonNode
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
-import no.nav.toi.jobbsoker.Kandidatnummer
 import no.nav.toi.jobbsoker.PersonTreffId
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -17,8 +17,8 @@ data class JobbsøkerHendelseMedJobbsøkerData(
     val opprettetAvAktørType: AktørType,
     val aktørIdentifikasjon: String?,
     val fødselsnummer: Fødselsnummer,
-    val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
-    val personTreffId: PersonTreffId
+    val personTreffId: PersonTreffId,
+    val hendelseData: JsonNode? = null
 )

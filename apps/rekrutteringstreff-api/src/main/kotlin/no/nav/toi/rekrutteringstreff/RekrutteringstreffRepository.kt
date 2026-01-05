@@ -67,68 +67,56 @@ class RekrutteringstreffRepository(
         private const val sistEndretAv = "sist_endret_av"
     }
 
-    fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
+    fun opprett(connection: Connection, dto: OpprettRekrutteringstreffInternalDto): Pair<TreffId, Long> {
         val nyTreffId = TreffId(UUID.randomUUID())
-        dataSource.executeInTransaction { connection ->
-            val dbId = connection.prepareStatement(
-                """
-                INSERT INTO $tabellnavn($id,$tittel,$status,$opprettetAvPersonNavident,
-                                         $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere, $sistEndret, $sistEndretAv)
-                VALUES (?,?,?,?,?,?,?,?,?)
-                RETURNING rekrutteringstreff_id
-                """
-            ).apply {
-                var i = 0
-                setObject(++i, nyTreffId.somUuid)
-                setString(++i, dto.tittel)
-                setString(++i, RekrutteringstreffStatus.UTKAST.name)
-                setString(++i, dto.opprettetAvPersonNavident)
-                setString(++i, dto.opprettetAvNavkontorEnhetId)
-                setTimestamp(++i, Timestamp.from(Instant.now()))
-                setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
-                setTimestamp(++i, Timestamp.from(Instant.now()))
-                setString(++i, dto.opprettetAvPersonNavident)
-            }.executeQuery().run { next(); getLong(1) }
+        val dbId = connection.prepareStatement(
+            """
+            INSERT INTO $tabellnavn($id,$tittel,$status,$opprettetAvPersonNavident,
+                                     $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere, $sistEndret, $sistEndretAv)
+            VALUES (?,?,?,?,?,?,?,?,?)
+            RETURNING rekrutteringstreff_id
+            """
+        ).apply {
+            var i = 0
+            setObject(++i, nyTreffId.somUuid)
+            setString(++i, dto.tittel)
+            setString(++i, RekrutteringstreffStatus.UTKAST.name)
+            setString(++i, dto.opprettetAvPersonNavident)
+            setString(++i, dto.opprettetAvNavkontorEnhetId)
+            setTimestamp(++i, Timestamp.from(Instant.now()))
+            setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
+            setTimestamp(++i, Timestamp.from(Instant.now()))
+            setString(++i, dto.opprettetAvPersonNavident)
+        }.executeQuery().run { next(); getLong(1) }
 
-            leggTilHendelse(connection, dbId, RekrutteringstreffHendelsestype.OPPRETTET, AktørType.ARRANGØR, dto.opprettetAvPersonNavident)
-        }
-        return nyTreffId
+        return Pair(nyTreffId, dbId)
     }
 
-    fun oppdater(treff: TreffId, dto: OppdaterRekrutteringstreffDto, oppdatertAv: String) {
-        dataSource.connection.use { connection ->
-            val dbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
-                .apply { setObject(1, treff.somUuid) }
-                .executeQuery()
-                .run { next(); getLong(1) }
-
-            connection.prepareStatement(
-                """
+    fun oppdater(connection: Connection, treff: TreffId, dto: OppdaterRekrutteringstreffDto, oppdatertAv: String) {
+        connection.prepareStatement(
+            """
                 UPDATE $tabellnavn
                 SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, $poststed=?, $kommune=?, $kommunenummer=?, $fylke=?, $fylkesnummer=?, $sistEndret=?, $sistEndretAv=?
                 WHERE $id=?
                 """
-            ).apply {
-                var i = 0
-                setString(++i, dto.tittel)
-                setString(++i, dto.beskrivelse)
-                setTimestamp(++i, if(dto.fraTid != null)  Timestamp.from(dto.fraTid.toInstant()) else null)
-                setTimestamp(++i, if(dto.tilTid != null) Timestamp.from(dto.tilTid.toInstant()) else null)
-                setTimestamp(++i, if(dto.svarfrist != null) Timestamp.from(dto.svarfrist.toInstant()) else null)
-                setString(++i, dto.gateadresse)
-                setString(++i, dto.postnummer)
-                setString(++i, dto.poststed)
-                setString(++i, dto.kommune)
-                setString(++i, dto.kommunenummer)
-                setString(++i, dto.fylke)
-                setString(++i, dto.fylkesnummer)
-                setTimestamp(++i, Timestamp.from(Instant.now()))
-                setString(++i, oppdatertAv)
-                setObject(++i, treff.somUuid)
-            }.executeUpdate()
-
-            leggTilHendelse(connection, dbId, RekrutteringstreffHendelsestype.OPPDATERT, AktørType.ARRANGØR, oppdatertAv)
-        }
+        ).apply {
+            var i = 0
+            setString(++i, dto.tittel)
+            setString(++i, dto.beskrivelse)
+            setTimestamp(++i, if(dto.fraTid != null)  Timestamp.from(dto.fraTid.toInstant()) else null)
+            setTimestamp(++i, if(dto.tilTid != null) Timestamp.from(dto.tilTid.toInstant()) else null)
+            setTimestamp(++i, if(dto.svarfrist != null) Timestamp.from(dto.svarfrist.toInstant()) else null)
+            setString(++i, dto.gateadresse)
+            setString(++i, dto.postnummer)
+            setString(++i, dto.poststed)
+            setString(++i, dto.kommune)
+            setString(++i, dto.kommunenummer)
+            setString(++i, dto.fylke)
+            setString(++i, dto.fylkesnummer)
+            setTimestamp(++i, Timestamp.from(Instant.now()))
+            setString(++i, oppdatertAv)
+            setObject(++i, treff.somUuid)
+        }.executeUpdate()
     }
 
     fun hentAlle(): List<Rekrutteringstreff> =
@@ -199,14 +187,16 @@ class RekrutteringstreffRepository(
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-            SELECT id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, ressurs
+            SELECT id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, ressurs, subjekt_id, subjekt_navn
             FROM (
                 SELECT h.id,
                        '${HendelseRessurs.REKRUTTERINGSTREFF.name}' AS ressurs,
                        h.tidspunkt,
                        h.hendelsestype,
                        h.opprettet_av_aktortype,
-                       h.aktøridentifikasjon
+                       h.aktøridentifikasjon,
+                       NULL AS subjekt_id,
+                       NULL AS subjekt_navn
                 FROM   rekrutteringstreff_hendelse h
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
                 WHERE  r.id = ?
@@ -218,7 +208,9 @@ class RekrutteringstreffRepository(
                        jh.tidspunkt,
                        jh.hendelsestype,
                        jh.opprettet_av_aktortype,
-                       jh.aktøridentifikasjon
+                       jh.aktøridentifikasjon,
+                       js.fodselsnummer AS subjekt_id,
+                       js.fornavn || ' ' || js.etternavn AS subjekt_navn
                 FROM   jobbsoker_hendelse jh
                 JOIN   jobbsoker js        ON js.jobbsoker_id = jh.jobbsoker_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = js.rekrutteringstreff_id
@@ -231,7 +223,9 @@ class RekrutteringstreffRepository(
                        ah.tidspunkt,
                        ah.hendelsestype,
                        ah.opprettet_av_aktortype,
-                       ah.aktøridentifikasjon
+                       ah.aktøridentifikasjon,
+                       ag.orgnr AS subjekt_id,
+                       ag.orgnavn AS subjekt_navn
                 FROM   arbeidsgiver_hendelse ah
                 JOIN   arbeidsgiver ag      ON ag.arbeidsgiver_id = ah.arbeidsgiver_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = ag.rekrutteringstreff_id
@@ -249,33 +243,15 @@ class RekrutteringstreffRepository(
                             hendelsestype = rs.getString("hendelsestype"),
                             opprettetAvAktørType = rs.getString("opprettet_av_aktortype"),
                             aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
-                            ressurs = HendelseRessurs.valueOf(rs.getString("ressurs"))
+                            ressurs = HendelseRessurs.valueOf(rs.getString("ressurs")),
+                            subjektId = rs.getString("subjekt_id"),
+                            subjektNavn = rs.getString("subjekt_navn")
                         ) else null
                     }.toList()
                 }
             }
         }
 
-    fun publiser(treff: TreffId, publisertAv: String) {
-        dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.PUBLISERT, publisertAv)
-            endreStatus(connection, treff, RekrutteringstreffStatus.PUBLISERT)
-        }
-    }
-
-    fun gjenåpne(treff: TreffId, gjenapnetAv: String) {
-        dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.GJENÅPNET, gjenapnetAv)
-            endreStatus(connection, treff, RekrutteringstreffStatus.PUBLISERT) // TODO: sjekk om status skal være UTKAST eller PUBLISERT
-        }
-    }
-
-    fun avpubliser(treff: TreffId, avpublisertAv: String) {
-        dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.AVPUBLISERT, avpublisertAv)
-            endreStatus(connection, treff, RekrutteringstreffStatus.UTKAST)
-        }
-    }
 
     fun leggTilHendelseForTreff(connection: Connection, treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
         val dbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")

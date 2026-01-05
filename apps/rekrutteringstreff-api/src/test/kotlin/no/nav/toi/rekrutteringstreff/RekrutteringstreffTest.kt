@@ -292,7 +292,6 @@ class RekrutteringstreffTest {
                     fødselsnummer = Fødselsnummer("01010112345"),
                     fornavn = Fornavn("Kari"),
                     etternavn = Etternavn("Nordmann"),
-                    kandidatnummer = null,
                     navkontor = null,
                     veilederNavn = null,
                     veilederNavIdent = null,
@@ -391,15 +390,14 @@ class RekrutteringstreffTest {
             listOf(
                 Jobbsøker(
                     personTreffId = PersonTreffId(UUID.randomUUID()),
-                    treff,
-                    Fødselsnummer("11111111111"),
-                    null,
-                    Fornavn("Ola"),
-                    Etternavn("N"),
-                    null,
-                    null,
-                    null,
-                    JobbsøkerStatus.LAGT_TIL,
+                    treffId = treff,
+                    fødselsnummer = Fødselsnummer("11111111111"),
+                    fornavn = Fornavn("Ola"),
+                    etternavn = Etternavn("N"),
+                    navkontor = null,
+                    veilederNavn = null,
+                    veilederNavIdent = null,
+                    status = JobbsøkerStatus.LAGT_TIL,
                 )
             )
         )
@@ -446,6 +444,23 @@ class RekrutteringstreffTest {
             HendelseRessurs.ARBEIDSGIVER
         )
         assertThat(list.map { it.hendelsestype }).containsExactlyInAnyOrder("OPPRETTET", "OPPRETTET", "OPPRETTET", "OPPDATERT")
+
+        // Verifiser subjektId og subjektNavn for jobbsøker-hendelser
+        val jobbsøkerHendelse = list.find { it.ressurs == HendelseRessurs.JOBBSØKER }
+        assertThat(jobbsøkerHendelse?.subjektId).isEqualTo("11111111111")
+        assertThat(jobbsøkerHendelse?.subjektNavn).isEqualTo("Ola N")
+
+        // Verifiser subjektId og subjektNavn for arbeidsgiver-hendelser
+        val arbeidsgiverHendelse = list.find { it.ressurs == HendelseRessurs.ARBEIDSGIVER }
+        assertThat(arbeidsgiverHendelse?.subjektId).isEqualTo("999888777")
+        assertThat(arbeidsgiverHendelse?.subjektNavn).isEqualTo("Test AS")
+
+        // Verifiser at rekrutteringstreff-hendelser har null for subjektId og subjektNavn
+        val treffHendelser = list.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }
+        assertThat(treffHendelser).allSatisfy {
+            assertThat(it.subjektId).isNull()
+            assertThat(it.subjektNavn).isNull()
+        }
     }
 
     @ParameterizedTest
@@ -570,13 +585,13 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
 
         // Legg til tre jobbsøkere
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("12345678901"),
-            kandidatnummer = Kandidatnummer("K1"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -588,7 +603,6 @@ class RekrutteringstreffTest {
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("23456789012"),
-            kandidatnummer = Kandidatnummer("K2"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -600,7 +614,6 @@ class RekrutteringstreffTest {
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("34567890123"),
-            kandidatnummer = Kandidatnummer("K3"),
             fornavn = Fornavn("Per"),
             etternavn = Etternavn("Hansen"),
             navkontor = Navkontor("0318"),
@@ -611,12 +624,12 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2, jobbsøker3))
 
         // Jobbsøker1 og jobbsøker2 svarer ja
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
 
         // Jobbsøker3 svarer ja og så nei (ombestemt seg)
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker3.fødselsnummer, treffId, jobbsøker3.fødselsnummer.asString)
-        jobbsøkerRepository.svarNeiTilInvitasjon(jobbsøker3.fødselsnummer, treffId, jobbsøker3.fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker3.fødselsnummer, treffId, jobbsøker3.fødselsnummer.asString)
+        jobbsøkerService.svarNeiTilInvitasjon(jobbsøker3.fødselsnummer, treffId, jobbsøker3.fødselsnummer.asString)
 
         // Avlys treffet via endpoint
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
@@ -652,14 +665,13 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-        val rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
 
         // Legg til to jobbsøkere
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("12345678901"),
-            kandidatnummer = Kandidatnummer("K1"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -671,7 +683,6 @@ class RekrutteringstreffTest {
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("23456789012"),
-            kandidatnummer = Kandidatnummer("K2"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -682,11 +693,11 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
 
         // Begge svarer ja
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
 
         // Publiser treffet
-        rekrutteringstreffRepository.publiser(treffId, "navIdent")
+        db.publiser(treffId, "navIdent")
         db.endreTilTidTilPassert(treffId, "navIdent")
 
         // Fullfør treffet via endpoint
@@ -724,7 +735,6 @@ class RekrutteringstreffTest {
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("12345678901"),
-            kandidatnummer = Kandidatnummer("K1"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -782,13 +792,13 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
 
         // Legg til jobbsøkere
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("12345678901"),
-            kandidatnummer = Kandidatnummer("K1"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -800,7 +810,6 @@ class RekrutteringstreffTest {
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("23456789012"),
-            kandidatnummer = Kandidatnummer("K2"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -811,7 +820,7 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
 
         // Inviter jobbsøkerne
-        jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId), treffId, navIdent)
+        jobbsøkerService.inviter(listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId), treffId, navIdent)
 
         // Publiser treffet
         Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
@@ -858,13 +867,13 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
 
         // Legg til jobbsøkere
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("12345678901"),
-            kandidatnummer = Kandidatnummer("K1"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -876,7 +885,6 @@ class RekrutteringstreffTest {
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("23456789012"),
-            kandidatnummer = Kandidatnummer("K2"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -887,9 +895,9 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2))
 
         // Inviter og svar ja
-        jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId), treffId, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+        jobbsøkerService.inviter(listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId), treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
 
         // Publiser treffet
         Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
@@ -935,13 +943,13 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
 
         // Legg til tre jobbsøkere
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("12345678901"),
-            kandidatnummer = Kandidatnummer("K1"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -953,7 +961,6 @@ class RekrutteringstreffTest {
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("23456789012"),
-            kandidatnummer = Kandidatnummer("K2"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -965,7 +972,6 @@ class RekrutteringstreffTest {
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("34567890123"),
-            kandidatnummer = Kandidatnummer("K3"),
             fornavn = Fornavn("Per"),
             etternavn = Etternavn("Hansen"),
             navkontor = Navkontor("0318"),
@@ -976,18 +982,18 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2, jobbsøker3))
 
         // Inviter alle
-        jobbsøkerRepository.inviter(
+        jobbsøkerService.inviter(
             listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId, jobbsøker3.personTreffId),
             treffId,
             navIdent
         )
 
         // Jobbsøker1 svarer ja
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
 
         // Jobbsøker2 svarer ja og så nei (ombestemt seg)
-        jobbsøkerRepository.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
-        jobbsøkerRepository.svarNeiTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+        jobbsøkerService.svarNeiTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
 
         // Publiser treffet
         Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
@@ -1032,13 +1038,13 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
 
         // Legg til jobbsøker
         val jobbsøker1 = Jobbsøker(
             personTreffId = PersonTreffId(UUID.randomUUID()),
             treffId = treffId,
             fødselsnummer = Fødselsnummer("12345678901"),
-            kandidatnummer = Kandidatnummer("K1"),
             fornavn = Fornavn("Ola"),
             etternavn = Etternavn("Nordmann"),
             navkontor = Navkontor("0318"),
@@ -1047,7 +1053,7 @@ class RekrutteringstreffTest {
             status = JobbsøkerStatus.LAGT_TIL,
         )
         db.leggTilJobbsøkere(listOf(jobbsøker1))
-        jobbsøkerRepository.inviter(listOf(jobbsøker1.personTreffId), treffId, navIdent)
+        jobbsøkerService.inviter(listOf(jobbsøker1.personTreffId), treffId, navIdent)
 
         // Prøv å registrere endringer på upublisert treff (skal avvises)
         val endringer = """

@@ -9,6 +9,9 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -40,6 +43,10 @@ private class AutorisasjonsTest {
     private val database = TestDatabase()
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
     private val eierRepository = EierRepository(database.dataSource)
+    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
+    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+    private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
 
     private val erEier = true
     private val erIkkeEier = false
@@ -109,8 +116,7 @@ private class AutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        rekrutteringstreffRepository.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
-        gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
+        gyldigRekrutteringstreff = rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
     }
 
     @AfterEach
@@ -162,6 +168,10 @@ private class AutorisasjonsTest {
         SlettRekrutteringstreff(
             { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" },
             {HttpRequest.newBuilder().DELETE()}
+        ),
+        HentAlleHendelser(
+            { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/allehendelser" },
+            {HttpRequest.newBuilder().GET()}
         )
     }
 
@@ -197,6 +207,11 @@ private class AutorisasjonsTest {
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Utvikler, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
     ).stream()
 
     private fun autorisasjonsCaserMedEier() = listOf(
@@ -209,7 +224,12 @@ private class AutorisasjonsTest {
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.SlettRekrutteringstreff, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
-    ).stream()
+
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.HentAlleHendelser, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+        ).stream()
 
     @ParameterizedTest
     @MethodSource("autorisasjonsCases")

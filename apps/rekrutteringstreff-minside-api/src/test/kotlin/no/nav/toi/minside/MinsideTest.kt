@@ -124,7 +124,6 @@ class MinsideTest {
                     personTreffId = PersonTreffId(UUID.randomUUID()),
                     treffId = treffId,
                     fødselsnummer = Fødselsnummer(jobbsøkerFnr),
-                    kandidatnummer = Kandidatnummer("123456"),
                     fornavn = Fornavn("Fornavn"),
                     etternavn = Etternavn("Etternavn"),
                     navkontor = Navkontor("NAV Kontor"),

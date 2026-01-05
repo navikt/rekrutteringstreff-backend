@@ -11,10 +11,14 @@ import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.JacksonConfig
 import no.nav.toi.TestRapid
 import no.nav.toi.httpClient
 import no.nav.toi.lagToken
 import no.nav.toi.lagTokenBorger
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
@@ -43,6 +47,10 @@ class PilotkontorTest {
     private val authPort = 18012
     private val database = TestDatabase()
     private val repo = RekrutteringstreffRepository(database.dataSource)
+    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
+    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+    private val service = RekrutteringstreffService(database.dataSource, repo, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
 
     private lateinit var app: App
 
@@ -78,8 +86,7 @@ class PilotkontorTest {
 
     @BeforeEach
     fun setup() {
-        repo.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
-        gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
+        gyldigRekrutteringstreff = service.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
         clearMocks(modiaKlient)
     }
 

@@ -11,7 +11,11 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -55,6 +59,17 @@ class KiAutorisasjonsTest {
     private val database = TestDatabase()
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
     private val kiLoggRepository = KiLoggRepository(database.dataSource)
+    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
+    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+
+    private val rekrutteringstreffService = RekrutteringstreffService(
+        database.dataSource,
+        rekrutteringstreffRepository = rekrutteringstreffRepository,
+        jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper),
+        arbeidsgiverRepository = arbeidsgiverRepository,
+        jobbsøkerService = jobbsøkerService
+    )
 
     private lateinit var app: App
 
@@ -147,7 +162,7 @@ class KiAutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        rekrutteringstreffRepository.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
+        rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
 
         kiLoggRepository.insert(

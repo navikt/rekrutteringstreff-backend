@@ -1,4 +1,4 @@
-package no.nav.toi.jobbsoker
+package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
@@ -6,12 +6,14 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
+import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 
 class AktivitetskortFeilLytter(
     rapidsConnection: RapidsConnection,
-    private val jobbsøkerRepository: JobbsøkerRepository
+    private val jobbsøkerService: JobbsøkerService
 ) : River.PacketListener {
 
     init {
@@ -37,7 +39,7 @@ class AktivitetskortFeilLytter(
         log.info("Mottok feilmelding for aktivitetskort for rekrutteringstreffId: $rekrutteringstreffId")
 
         try {
-            jobbsøkerRepository.registrerAktivitetskortOpprettelseFeilet(fødselsnummer, rekrutteringstreffId, endretAv)
+            jobbsøkerService.registrerAktivitetskortOpprettelseFeilet(fødselsnummer, rekrutteringstreffId, endretAv)
         } catch (e: Exception) {
             log.error(
                 "Klarte ikke å registrere feil-hendelse for aktivitetskort for rekrutteringstreffId $rekrutteringstreffId",

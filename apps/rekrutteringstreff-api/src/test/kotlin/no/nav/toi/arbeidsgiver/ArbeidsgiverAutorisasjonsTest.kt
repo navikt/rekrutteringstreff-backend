@@ -17,6 +17,7 @@ import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
 import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Næringskode
@@ -24,8 +25,11 @@ import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.arbeidsgiver.dto.LeggTilArbeidsgiverDto
 import no.nav.toi.httpClient
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.lagToken
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -66,6 +70,18 @@ class ArbeidsgiverAutorisasjonsTest {
     private val database = TestDatabase()
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
+    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+
+    private val rekrutteringstreffService = RekrutteringstreffService(
+        database.dataSource,
+        rekrutteringstreffRepository = rekrutteringstreffRepository,
+        jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper),
+        arbeidsgiverRepository = arbeidsgiverRepository,
+        jobbsøkerService = jobbsøkerService
+    )
+
+    private val arbeidsgiverService = ArbeidsgiverService(database.dataSource, arbeidsgiverRepository)
 
     private lateinit var app: App
 
@@ -132,7 +148,7 @@ class ArbeidsgiverAutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        rekrutteringstreffRepository.opprett(
+        rekrutteringstreffService.opprett(
             OpprettRekrutteringstreffInternalDto(
                 "Tittel",
                 "A000001",
@@ -142,7 +158,7 @@ class ArbeidsgiverAutorisasjonsTest {
         )
 
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
-        arbeidsgiverRepository.leggTil(
+        arbeidsgiverService.leggTilArbeidsgiver(
             LeggTilArbeidsgiver(
                 orgnr = Orgnr("123456789"),
                 orgnavn = Orgnavn("Example Company"),
