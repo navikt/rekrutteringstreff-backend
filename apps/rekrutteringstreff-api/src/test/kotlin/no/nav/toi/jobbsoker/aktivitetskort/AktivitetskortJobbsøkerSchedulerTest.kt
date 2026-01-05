@@ -1,23 +1,17 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
-import no.nav.toi.*
+import no.nav.toi.JacksonConfig
+import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffServiceTest
-import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
-import no.nav.toi.rekrutteringstreff.Endringsfelt
-import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.*
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
 import java.time.ZonedDateTime
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

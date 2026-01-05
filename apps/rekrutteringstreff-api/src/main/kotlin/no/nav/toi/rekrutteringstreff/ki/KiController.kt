@@ -10,7 +10,6 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
 import java.time.ZonedDateTime
@@ -22,75 +21,19 @@ class KiController (
 ) {
     companion object {
         private const val pathParamTreffId = "id"
-        private const val oldBase = "/api/rekrutteringstreff/ki"
-        private const val newBase = "/api/rekrutteringstreff/{$pathParamTreffId}/ki"
+        private const val baseUrl = "/api/rekrutteringstreff/{$pathParamTreffId}/ki"
     }
 
     init {
-        // New endpoints with treffId in path
-        javalin.post("$newBase/valider", validerOgLoggHandlerNy())
-        javalin.put("$newBase/logg/{loggId}/lagret", oppdaterLagretHandler())
-        javalin.put("$newBase/logg/{loggId}/manuell", oppdaterManuellHandler())
-        javalin.get("$newBase/logg", listHandler())
-        javalin.get("$newBase/logg/{loggId}", getHandler())
-
-        // Backward compatible old endpoints (deprecated)
-        //@Deprecated("Bruk /api/rekrutteringstreff/{id}/ki")
-        javalin.post("$oldBase/valider", validerOgLoggHandlerGammel())
-        javalin.put("$oldBase/logg/{id}/lagret", oppdaterLagretHandler())
-        javalin.put("$oldBase/logg/{id}/manuell", oppdaterManuellHandler())
-        javalin.get("$oldBase/logg", listHandler())
-        javalin.get("$oldBase/logg/{id}", getHandler())
-    }
-
-    @Deprecated("Bruk nytt endepunkt med treffId i path")
-    @OpenApi(
-        summary = "Valider tekst via KI og logg spørringen (gammelt endepunkt).",
-        security = [OpenApiSecurity(name = "BearerAuth")],
-        requestBody = OpenApiRequestBody(
-            required = true,
-            content = [OpenApiContent(
-                from = ValiderMedLoggRequestDto::class,
-                example = """{
-              "treffId": "550e8400-e29b-41d4-a716-446655440000",
-              "feltType": "tittel",
-              "tekst": "Vi søker etter en blid og motivert medarbeider."
-            }"""
-            )]
-        ),
-        responses = [OpenApiResponse(
-            status = "200",
-            description = "Resultat fra validering og referanse til logglinje.",
-            content = [OpenApiContent(
-                from = ValiderMedLoggResponseDto::class,
-                example = """{
-              "loggId": "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d",
-              "bryterRetningslinjer": false,
-              "begrunnelse": "Ingen sensitive opplysninger eller diskriminerende formuleringer."
-            }"""
-            )]
-        )],
-        path = "$oldBase/valider",
-        methods = [HttpMethod.POST]
-    )
-    private fun validerOgLoggHandlerGammel(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        log.info("Gammelt endepunkt for validering KI")
-        val req = ctx.bodyAsClass<ValiderMedLoggRequestDto>()
-        val treffId = UUID.fromString(req.treffId)
-        val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =
-            OpenAiClient(repo = kiLoggRepository).validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
-        ctx.status(200).json(
-            ValiderMedLoggResponseDto(
-                loggId = loggId?.toString() ?: "",
-                bryterRetningslinjer = result.bryterRetningslinjer,
-                begrunnelse = result.begrunnelse
-            )
-        )
+        javalin.post("$baseUrl/valider", validerOgLoggHandler())
+        javalin.put("$baseUrl/logg/{loggId}/lagret", oppdaterLagretHandler())
+        javalin.put("$baseUrl/logg/{loggId}/manuell", oppdaterManuellHandler())
+        javalin.get("$baseUrl/logg", listHandler())
+        javalin.get("$baseUrl/logg/{loggId}", getHandler())
     }
 
     @OpenApi(
-        summary = "Valider tekst via KI og logg spørringen (nytt endepunkt).",
+        summary = "Valider tekst via KI og logg spørringen.",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, example = "550e8400-e29b-41d4-a716-446655440000")],
         requestBody = OpenApiRequestBody(
@@ -115,10 +58,10 @@ class KiController (
             }"""
             )]
         )],
-        path = "$newBase/valider",
+        path = "$baseUrl/valider",
         methods = [HttpMethod.POST]
     )
-    private fun validerOgLoggHandlerNy(): (Context) -> Unit = { ctx ->
+    private fun validerOgLoggHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val req = ctx.bodyAsClass<ValiderMedLoggRequestUtenTreffIdDto>()
         val treffId = UUID.fromString(ctx.pathParam(pathParamTreffId))
@@ -152,11 +95,11 @@ class KiController (
             description = "Oppdatert.",
             content = [OpenApiContent(from = Map::class, example = "{}")]
         )],
-        path = "$newBase/logg/{loggId}/lagret",
+        path = "$baseUrl/logg/{loggId}/lagret",
         methods = [HttpMethod.PUT]
     )
     private fun oppdaterLagretHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER, Rolle.ARBEIDSGIVER_RETTET)
         val id = UUID.fromString(runCatching { ctx.pathParam("loggId") }.getOrElse { ctx.pathParam("id") })
         val req = ctx.bodyAsClass<OppdaterLagretRequestDto>()
         if (kiLoggRepository.setLagret(id, req.lagret) == 0) throw NotFoundResponse("Logg ikke funnet")
@@ -182,7 +125,7 @@ class KiController (
             description = "Oppdatert.",
             content = [OpenApiContent(from = Map::class, example = "{}")]
         )],
-        path = "$newBase/logg/{loggId}/manuell",
+        path = "$baseUrl/logg/{loggId}/manuell",
         methods = [HttpMethod.PUT]
     )
     private fun oppdaterManuellHandler(): (Context) -> Unit = { ctx ->
@@ -269,7 +212,7 @@ class KiController (
             ]"""
             )]
         )],
-        path = "$newBase/logg",
+        path = "$baseUrl/logg",
         methods = [HttpMethod.GET]
     )
     private fun listHandler(): (Context) -> Unit = { ctx ->
@@ -349,7 +292,7 @@ class KiController (
             }"""
             )]
         )],
-        path = "$newBase/logg/{id}",
+        path = "$baseUrl/logg/{id}",
         methods = [HttpMethod.GET]
     )
     private fun getHandler(): (Context) -> Unit = { ctx ->
@@ -402,12 +345,6 @@ data class ValiderMedLoggResponseDto(
     val loggId: String,
     val bryterRetningslinjer: Boolean,
     val begrunnelse: String
-)
-
-data class ValiderMedLoggRequestDto(
-    val treffId: String,
-    val feltType: String,
-    val tekst: String
 )
 
 data class ValiderMedLoggRequestUtenTreffIdDto(

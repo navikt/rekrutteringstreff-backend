@@ -14,10 +14,11 @@ gcp_db_tier: db-f1-micro
 gcp_disk_autoresize: false
 postgres: POSTGRES_17
 adGruppeUtvikler: "a1749d9a-52e0-4116-bb9f-935c38f6c74a"
+adGruppeArbeidsgiverrettet: "52bc2af7-38d1-468b-b68d-0f3a4de45af2"
+adGruppeJobbsokerrettet: "0dba8374-bf36-4d89-bbba-662447d57b94"
 openai_azure_host: "arbeidsmarked-dev.openai.azure.com"
 openai_deployment: "toi-gpt-4.1"
 openai_api_version: "2025-01-01-preview"
-adGruppeArbeidsgiverrettet: "52bc2af7-38d1-468b-b68d-0f3a4de45af2"
 kandidatsok_api_url: "http://rekrutteringsbistand-kandidatsok-api"
 kandidatsok_api_scope: "api://dev-gcp.toi.rekrutteringsbistand-kandidatsok-api/.default"
 kafka_consumer_group_id: rekrutteringstreff-rapid-1

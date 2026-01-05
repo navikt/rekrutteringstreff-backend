@@ -1,4 +1,4 @@
-package no.nav.toi.jobbsoker;
+package no.nav.toi.jobbsoker
 
 import io.javalin.Javalin
 import io.javalin.http.Context
@@ -55,7 +55,6 @@ class JobbsøkerInnloggetBorgerController(
             jobbsøkerService.svarJaTilInvitasjon(Fødselsnummer(pid), treffId, pid)
             ctx.status(200)
         }
-
     }
 
     @OpenApi(

@@ -42,7 +42,7 @@ class MinsideVarselSvarLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        log.info("Mottok minsideVarselSvar men skipper foreløpig");
+        log.info("Mottok minsideVarselSvar men skipper foreløpig")
         val avsenderReferanseId = packet["avsenderReferanseId"].asText()
         val fnr = packet["fnr"].asText()
 

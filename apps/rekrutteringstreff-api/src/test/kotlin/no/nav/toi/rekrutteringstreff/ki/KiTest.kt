@@ -13,6 +13,7 @@ import com.nimbusds.jwt.SignedJWT
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
@@ -47,9 +48,7 @@ class KiTest {
     private val authPort = 18013
     private val db = TestDatabase()
     private val appPort = ubruktPortnr()
-    private val oldBase = "/api/rekrutteringstreff/ki"
-    private val newBaseTemplate = "/api/rekrutteringstreff/%s/ki"
-    private val base = oldBase
+    private val baseTemplate = "/api/rekrutteringstreff/%s/ki"
 
     private lateinit var app: App
 
@@ -74,6 +73,7 @@ class KiTest {
                 )
             ),
             db.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet,
             utvikler,
             kandidatsokApiUrl = "",
@@ -126,6 +126,7 @@ class KiTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val base = baseTemplate.format(treffId)
         val requestBody = """
             {
               "treffId": "$treffId",
@@ -167,13 +168,13 @@ class KiTest {
         """.trimIndent()
 
         wireMockServer.stubFor(
-            WireMock.post(
-                WireMock.urlEqualTo(TEST_OPENAI_PATH)
+            post(
+                urlEqualTo(TEST_OPENAI_PATH)
             )
-                .withRequestBody(WireMock.containing(forventetFiltrertTekst))
-                .withRequestBody(WireMock.not(WireMock.containing(fodselsnummer)))
+                .withRequestBody(containing(forventetFiltrertTekst))
+                .withRequestBody(not(WireMock.containing(fodselsnummer)))
                 .willReturn(
-                    WireMock.aResponse()
+                    aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody(responseBody)
@@ -183,6 +184,7 @@ class KiTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val base = baseTemplate.format(treffId)
 
         val requestBody = """
         {
@@ -265,6 +267,7 @@ class KiTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val loggId = opprettLogg(treffId, token)
+        val base = baseTemplate.format(treffId)
 
         val fake = """
             {
@@ -296,65 +299,12 @@ class KiTest {
     }
 
     @Test
-    fun lister_logglinjer_for_alle_treff_nar_treffId_er_utelatt__og_respekterer_lagret_promptmeta_eller_null() {
-        stubOpenAi()
-        val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
-
-        val treffId1 = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
-        val treffId2 = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
-        val id1 = opprettLogg(treffId1, token)
-        Thread.sleep(5)
-        val id2 = opprettLogg(treffId2, token)
-
-        val meta1 = """
-            {
-              "promptVersjonsnummer": 0,
-              "promptEndretTidspunkt": "2024-04-10T09:00:00+02:00[Europe/Oslo]",
-              "promptHash": "c0ffee"
-            }
-        """.trimIndent()
-        oppdaterEkstra(UUID.fromString(id1), meta1)
-        oppdaterEkstra(UUID.fromString(id2), null) // simuler gammel rad uten ekstra -> null
-
-        val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?limit=50&offset=0")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
-                override fun deserialize(content: String): List<KiLoggOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(
-                        List::class.java,
-                        KiLoggOutboundDto::class.java
-                    )
-                    return mapper.readValue(content, type)
-                }
-            })
-
-        assertThat(listRes.statusCode).isEqualTo(200)
-        listResult as Result.Success
-        val alle = listResult.value
-
-        assertThat(alle.map { it.id }).containsExactly(id2, id1) // rekkefølge (nyeste først)
-        assertThat(alle.size).isEqualTo(2)
-
-        val byId = alle.associateBy { it.id }
-        val r1 = byId[id1]!!
-        val r2 = byId[id2]!!
-
-        assertThat(r1.promptVersjonsnummer).isEqualTo(0)
-        assertThat(r1.promptHash).isEqualTo("c0ffee")
-        assertThat(r1.promptEndretTidspunkt).isEqualTo(ZonedDateTime.parse("2024-04-10T09:00:00+02:00[Europe/Oslo]"))
-
-        assertThat(r2.promptVersjonsnummer).isNull()
-        assertThat(r2.promptHash).isNull()
-        assertThat(r2.promptEndretTidspunkt).isNull()
-    }
-
-    @Test
     fun markerer_logglinje_som_lagret() {
         stubOpenAi()
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val base = baseTemplate.format(treffId)
         val loggId = opprettLogg(treffId, token)
         val (_, putRes, _) = Fuel.put("http://localhost:$appPort$base/logg/$loggId/lagret")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -370,6 +320,7 @@ class KiTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val base = baseTemplate.format(treffId)
         val loggId = opprettLogg(treffId, token)
         val (_, putRes, _) = Fuel.put("http://localhost:$appPort$base/logg/$loggId/manuell")
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -389,6 +340,7 @@ class KiTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val loggId = opprettLogg(treffId, token)
+        val base = baseTemplate.format(treffId)
 
         oppdaterEkstra(UUID.fromString(loggId), null) // fjerne ekstra
 
@@ -416,13 +368,14 @@ class KiTest {
     fun forbudteKiEndepunkt(): Stream<Arguments> = Stream.of(
         Arguments.of("GET", "/logg?limit=10&offset=0"),
         Arguments.of("GET", "/logg/123"),
-        Arguments.of("PUT", "/logg/123/lagret"),
         Arguments.of("PUT", "/logg/123/manuell")
     )
 
     @ParameterizedTest(name = "{index}: {0} {1} -> 403")
     @MethodSource("forbudteKiEndepunkt")
-    fun arbeidsgiverrettet_faar_403_pa_alle_ki_logg_endepunkt(method: String, path: String) {
+    fun arbeidsgiverrettet_faar_403_pa_ki_logg_endepunkt(method: String, path: String) {
+        val base = "/api/rekrutteringstreff/123455/ki"
+
         val token = authServer.lagToken(authPort, navIdent = "A123456", groups = listOf(arbeidsgiverrettet))
         val url = "http://localhost:$appPort$base$path"
 
@@ -447,7 +400,7 @@ class KiTest {
                   "tekst": "Dette er en uskyldig tittel"
                 }
             """.trimIndent()
-            val baseNew = newBaseTemplate.format(treffId)
+            val baseNew = baseTemplate.format(treffId)
             val (_, response, result) = Fuel.post("http://localhost:$appPort$baseNew/valider")
                 .body(requestBody)
                 .header("Authorization", "Bearer ${token.serialize()}")
@@ -467,8 +420,8 @@ class KiTest {
             val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
             val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
             val loggId = opprettLogg(treffId, token)
-            val baseNew = newBaseTemplate.format(treffId)
-            val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$baseNew/logg")
+            val base = baseTemplate.format(treffId)
+            val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg")
                 .header("Authorization", "Bearer ${token.serialize()}")
                 .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
                     override fun deserialize(content: String): List<KiLoggOutboundDto> {
@@ -521,6 +474,7 @@ class KiTest {
               "tekst": "En uskyldig tittel"
             }
         """.trimIndent()
+        val base = baseTemplate.format(treffId)
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
             .body(requestBody)

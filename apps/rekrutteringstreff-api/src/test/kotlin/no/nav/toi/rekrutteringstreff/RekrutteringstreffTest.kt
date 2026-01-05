@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
@@ -61,9 +62,10 @@ class RekrutteringstreffTest {
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            db.dataSource,
-            arbeidsgiverrettet,
-            utvikler,
+            dataSource = db.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
+            arbeidsgiverrettet = arbeidsgiverrettet,
+            utvikler = utvikler,
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
             rapidsConnection = TestRapid(),
@@ -206,8 +208,8 @@ class RekrutteringstreffTest {
             is Failure -> throw result.error
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readValue(result.get(), RekrutteringstreffDetaljOutboundDto::class.java)
-                assertThat(dto.rekrutteringstreff.tittel).isEqualTo(originalTittel)
+                val rekrutteringstreff = mapper.readValue(result.get(), RekrutteringstreffDto::class.java)
+                assertThat(rekrutteringstreff.tittel).isEqualTo(originalTittel)
             }
         }
     }
@@ -377,31 +379,6 @@ class RekrutteringstreffTest {
         result as Success
         val list = result.value
         assertThat(list.map { it.hendelsestype }).containsExactly("OPPDATERT", "OPPRETTET")
-    }
-
-    @Test
-    fun `hent rekrutteringstreff returnerer hendelser`() {
-        val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
-
-        val id = db.opprettRekrutteringstreffIDatabase(navIdent)
-
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<RekrutteringstreffDetaljOutboundDto> {
-                override fun deserialize(content: String): RekrutteringstreffDetaljOutboundDto =
-                    mapper.readValue(content, RekrutteringstreffDetaljOutboundDto::class.java)
-            })
-
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val dto = result.value
-                assertThat(dto.hendelser).hasSize(1)
-                assertThat(dto.hendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET.name)
-            }
-        }
     }
 
     @Test
