@@ -246,7 +246,7 @@ class KiAutorisasjonsTest {
 
         Arguments.of(Endepunkt.OppdaterLagret, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
         Arguments.of(Endepunkt.OppdaterLagret, Gruppe.Utvikler, HTTP_OK),
-        Arguments.of(Endepunkt.OppdaterLagret, Gruppe.Arbeidsgiverrettet, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.OppdaterLagret, Gruppe.Arbeidsgiverrettet, HTTP_OK),
         Arguments.of(Endepunkt.OppdaterLagret, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.OppdaterManuell, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),

@@ -99,7 +99,7 @@ class KiController (
         methods = [HttpMethod.PUT]
     )
     private fun oppdaterLagretHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER, Rolle.ARBEIDSGIVER_RETTET)
         val id = UUID.fromString(runCatching { ctx.pathParam("loggId") }.getOrElse { ctx.pathParam("id") })
         val req = ctx.bodyAsClass<OppdaterLagretRequestDto>()
         if (kiLoggRepository.setLagret(id, req.lagret) == 0) throw NotFoundResponse("Logg ikke funnet")

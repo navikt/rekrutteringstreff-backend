@@ -368,13 +368,12 @@ class KiTest {
     fun forbudteKiEndepunkt(): Stream<Arguments> = Stream.of(
         Arguments.of("GET", "/logg?limit=10&offset=0"),
         Arguments.of("GET", "/logg/123"),
-        Arguments.of("PUT", "/logg/123/lagret"),
         Arguments.of("PUT", "/logg/123/manuell")
     )
 
     @ParameterizedTest(name = "{index}: {0} {1} -> 403")
     @MethodSource("forbudteKiEndepunkt")
-    fun arbeidsgiverrettet_faar_403_pa_alle_ki_logg_endepunkt(method: String, path: String) {
+    fun arbeidsgiverrettet_faar_403_pa_ki_logg_endepunkt(method: String, path: String) {
         val base = "/api/rekrutteringstreff/123455/ki"
 
         val token = authServer.lagToken(authPort, navIdent = "A123456", groups = listOf(arbeidsgiverrettet))
