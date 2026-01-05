@@ -31,7 +31,7 @@ class MinsideVarselSvarLytter(
             }
             validate {
                 it.requireKey("varselId", "avsenderReferanseId", "fnr")
-                it.interestedIn("eksternStatus", "minsideStatus", "opprettet", "avsenderNavident", "eksternFeilmelding", "eksternKanal", "mal")
+                it.interestedIn("eksternStatus", "minsideStatus", "opprettet", "avsenderNavident", "eksternFeilmelding", "eksternKanal", "mal", "flettedata")
             }
         }.register(this)
     }
@@ -61,7 +61,8 @@ class MinsideVarselSvarLytter(
             avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             eksternFeilmelding = packet["eksternFeilmelding"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             eksternKanal = packet["eksternKanal"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            mal = packet["mal"].takeIf { !it.isNull && !it.isMissingNode }?.asText()
+            mal = packet["mal"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
+            flettedata = packet["flettedata"].takeIf { !it.isNull && !it.isMissingNode && it.isArray }?.map { it.asText() }
         )
 
         val hendelseDataJson = objectMapper.writeValueAsString(minsideVarselSvarData)
