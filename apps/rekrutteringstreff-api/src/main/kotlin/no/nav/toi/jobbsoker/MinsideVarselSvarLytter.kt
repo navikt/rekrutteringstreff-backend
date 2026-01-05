@@ -3,14 +3,11 @@ package no.nav.toi.jobbsoker
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
-import com.github.navikt.tbd_libs.rapids_and_rivers.asLocalDateTime
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
-import no.nav.toi.AktørType
-import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -21,7 +18,7 @@ import no.nav.toi.rekrutteringstreff.TreffId
  */
 class MinsideVarselSvarLytter(
     rapidsConnection: RapidsConnection,
-    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val jobbsøkerService: JobbsøkerService,
     private val objectMapper: ObjectMapper
 ) : River.PacketListener {
 
@@ -48,7 +45,6 @@ class MinsideVarselSvarLytter(
         log.info("Mottok minsideVarselSvar men skipper foreløpig");
         val avsenderReferanseId = packet["avsenderReferanseId"].asText()
         val fnr = packet["fnr"].asText()
-        val avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asText()
 
         log.info("Mottok minsideVarselSvar for rekrutteringstreffId: $avsenderReferanseId")
 
@@ -62,7 +58,7 @@ class MinsideVarselSvarLytter(
             eksternStatus = packet["eksternStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             minsideStatus = packet["minsideStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             opprettet = packet["opprettet"].takeIf { !it.isNull && !it.isMissingNode }?.asText()?.let { java.time.ZonedDateTime.parse(it) },
-            avsenderNavident = avsenderNavident,
+            avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             eksternFeilmelding = packet["eksternFeilmelding"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             eksternKanal = packet["eksternKanal"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             mal = packet["mal"].takeIf { !it.isNull && !it.isMissingNode }?.asText()
@@ -71,9 +67,9 @@ class MinsideVarselSvarLytter(
         val hendelseDataJson = objectMapper.writeValueAsString(minsideVarselSvarData)
 
         try {
-            jobbsøkerRepository.registrerMinsideVarselSvar(
-                fødselsnummer = fødselsnummer,
-                treff = treffId,
+            jobbsøkerService.registrerMinsideVarselSvar(
+                fnr = fødselsnummer,
+                treffId = treffId,
                 opprettetAv = "MIN_SIDE",
                 hendelseData = hendelseDataJson
             )

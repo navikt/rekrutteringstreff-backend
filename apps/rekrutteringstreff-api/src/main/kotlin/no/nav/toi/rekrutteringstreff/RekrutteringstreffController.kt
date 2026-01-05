@@ -272,7 +272,7 @@ class RekrutteringstreffController(
         val navIdent = ctx.extractNavIdent()
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             log.info("Sletter rekrutteringstreff med id $treffId")
-            rekrutteringstreffService.slett(treffId, navIdent)
+            rekrutteringstreffService.markerSlettet(treffId, navIdent)
             ctx.status(200).result("Rekrutteringstreff slettet")
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke slette det")

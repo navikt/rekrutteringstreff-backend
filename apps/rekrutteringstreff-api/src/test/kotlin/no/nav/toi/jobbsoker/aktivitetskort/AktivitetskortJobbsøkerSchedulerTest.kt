@@ -30,6 +30,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private lateinit var rekrutteringstreffService: RekrutteringstreffService
         private lateinit var arbeidsgiverRepository: ArbeidsgiverRepository
+        private lateinit var jobbsøkerService: JobbsøkerService
         private val mapper = JacksonConfig.mapper
     }
 
@@ -40,7 +41,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
         arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
     }
 
     @BeforeEach
@@ -48,7 +50,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         db.slettAlt()
     }
 
-    // ==================== INVITASJONSTESTER ====================
 
     @Test
     fun `skal sende invitasjoner på rapid og markere dem som pollet dersom vi har nok data`() {
@@ -98,7 +99,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(1)
     }
 
-    // ==================== SVARTESTER ====================
 
     @Test
     fun `skal sende ja-svar på rapid og markere dem som pollet`() {
@@ -107,7 +107,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
-        jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
+        jobbsøkerService.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
 
         scheduler.behandleJobbsøkerHendelser()
 
@@ -131,7 +131,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
-        jobbsøkerRepository.svarNeiTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
+        jobbsøkerService.svarNeiTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
 
         scheduler.behandleJobbsøkerHendelser()
 
@@ -155,7 +155,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
 
-        jobbsøkerRepository.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
+        jobbsøkerService.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
 
         scheduler.behandleJobbsøkerHendelser()
         scheduler.behandleJobbsøkerHendelser()
@@ -163,7 +163,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 svar (ikke duplikater)
     }
 
-    // ==================== TREFF ENDRET TESTER ====================
 
     @Test
     fun `skal sende oppdatering av aktivitetskort OG minside-varsel når relevante felt er endret`() {
@@ -356,7 +355,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 oppdatering
     }
 
-    // ==================== MINSIDE VARSLING TESTER ====================
 
     @Test
     fun `skal sende oppdatering med endredeFelter når skalVarsle er true for tittel`() {
@@ -601,7 +599,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactly("STED")
     }
 
-    // ==================== TREFFSTATUS ENDRET TESTER ====================
 
     @Test
     fun `skal sende avlyst-status paa rapid og markere dem som pollet`() {
@@ -610,7 +607,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
-        jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
+        jobbsøkerService.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
         rekrutteringstreffService.avlys(treffId, expectedFnr.asString)
@@ -637,7 +634,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
-        jobbsøkerRepository.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
+        jobbsøkerService.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
         db.endreTilTidTilPassert(treffId, expectedFnr.asString)
@@ -666,7 +663,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
         val treffId = opprettPersonOgInviter(fnr, rapid, scheduler)
 
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, fnr.asString)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, fnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
         rekrutteringstreffService.avlys(treffId, fnr.asString)
@@ -676,7 +673,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status (ikke duplikat)
     }
 
-    // ==================== REKKEFØLGE TESTER ====================
 
     @Test
     fun `skal behandle hendelser i riktig rekkefølge basert på tidspunkt`() {
@@ -687,7 +683,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         // Opprett flere hendelser i database
         opprettOgInviterJobbsøker(treffId, fødselsnummer)  // Hendelse 1: INVITERT
-        jobbsøkerRepository.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)  // Hendelse 2: SVART_JA
+        jobbsøkerService.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)  // Hendelse 2: SVART_JA
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyTittel = "Endret tittel"
@@ -719,7 +715,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(0)
     }
 
-    // ==================== IKKE-SVART TESTER ====================
 
     @Test
     fun `skal sende avbrutt-status for jobbsøker med kun INVITERT når treff fullføres`() {
@@ -732,7 +727,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         // Person 1: Svarer ja
         opprettOgInviterJobbsøker(treffId, fnrSvartJa)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
+        jobbsøkerService.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
 
         // Person 2: Blir invitert men svarer ikke
         opprettOgInviterJobbsøker(treffId, fnrIkkeSvart)
@@ -788,7 +783,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         // Person 1: Svarer ja
         opprettOgInviterJobbsøker(treffId, fnrSvartJa)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
+        jobbsøkerService.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
 
         // Person 2: Blir invitert men svarer ikke
         opprettOgInviterJobbsøker(treffId, fnrIkkeSvart)
@@ -829,7 +824,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         // Person svarer nei
         opprettOgInviterJobbsøker(treffId, fnrSvartNei)
-        jobbsøkerRepository.svarNeiTilInvitasjon(fnrSvartNei, treffId, fnrSvartNei.asString)
+        jobbsøkerService.svarNeiTilInvitasjon(fnrSvartNei, treffId, fnrSvartNei.asString)
 
         scheduler.behandleJobbsøkerHendelser()
 
@@ -858,7 +853,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         // Person 1: Svarer ja
         opprettOgInviterJobbsøker(treffId, fnrSvartJa)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
+        jobbsøkerService.svarJaTilInvitasjon(fnrSvartJa, treffId, fnrSvartJa.asString)
 
         // Person 2 og 3: Blir invitert men svarer ikke
         opprettOgInviterJobbsøker(treffId, fnrIkkeSvart1)
@@ -891,7 +886,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(hendelserForIkkeSvart2.last()["treffstatus"].asText()).isEqualTo("fullført")
     }
 
-    // ==================== HJELPEMETODER ====================
 
     private fun opprettPersonOgInviter(fødselsnummer: Fødselsnummer, rapid: TestRapid, scheduler: AktivitetskortJobbsøkerScheduler): no.nav.toi.rekrutteringstreff.TreffId {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
@@ -901,7 +895,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     }
 
     private fun opprettOgInviterJobbsøker(treffId: no.nav.toi.rekrutteringstreff.TreffId, fødselsnummer: Fødselsnummer) {
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
@@ -914,7 +908,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
             ), treffId, "Z123456"
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, "Z123456")
     }
 }
 

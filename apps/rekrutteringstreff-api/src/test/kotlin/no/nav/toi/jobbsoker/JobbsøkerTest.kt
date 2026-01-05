@@ -418,6 +418,7 @@ class JobbsøkerTest {
     @Test
     fun `hentJobbsøker skal inkludere hendelseData i responsen`() {
         val repository = JobbsøkerRepository(db.dataSource, mapper)
+        val service = JobbsøkerService(db.dataSource, repository)
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         eierRepository.leggTil(treffId, listOf("A123456"))
@@ -435,9 +436,9 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
 
-        // Registrer hendelse med data via repository
+        // Registrer hendelse med data via service
         val hendelseDataJson = """{"fnr": "12345678901", "svar": "JA"}"""
-        repository.registrerMinsideVarselSvar(fødselsnummer, treffId, "SYSTEM", hendelseDataJson)
+        service.registrerMinsideVarselSvar(fødselsnummer, treffId, "SYSTEM", hendelseDataJson)
 
         // Hent jobbsøkere via API
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")

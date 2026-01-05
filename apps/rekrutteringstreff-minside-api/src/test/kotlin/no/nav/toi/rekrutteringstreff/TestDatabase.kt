@@ -6,6 +6,7 @@ import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
+import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
@@ -21,18 +22,34 @@ import javax.sql.DataSource
 
 class TestDatabase {
 
+    private val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
+    private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
+    private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
+
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
-    ): TreffId =
-        RekrutteringstreffRepository(dataSource).opprett(
-            OpprettRekrutteringstreffInternalDto(
-                tittel = tittel,
-                opprettetAvNavkontorEnhetId = "Original Kontor",
-                opprettetAvPersonNavident = navIdent,
-                opprettetAvTidspunkt = nowOslo().minusDays(10),
+    ): TreffId {
+        return dataSource.connection.use { connection ->
+            val (treffId, treffDbId) = rekrutteringstreffRepository.opprett(
+                connection,
+                OpprettRekrutteringstreffInternalDto(
+                    tittel = tittel,
+                    opprettetAvNavkontorEnhetId = "Original Kontor",
+                    opprettetAvPersonNavident = navIdent,
+                    opprettetAvTidspunkt = nowOslo().minusDays(10),
+                )
             )
-        )
+            rekrutteringstreffRepository.leggTilHendelse(
+                connection,
+                treffDbId,
+                RekrutteringstreffHendelsestype.OPPRETTET,
+                AktørType.ARRANGØR,
+                navIdent
+            )
+            treffId
+        }
+    }
 
     fun slettAlt() = dataSource.connection.use {c ->
         listOf(
@@ -201,31 +218,42 @@ class TestDatabase {
     )
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
-        val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
-        arbeidsgivere.forEach {
-            repo.leggTil(LeggTilArbeidsgiver(it.orgnr, it.orgnavn, emptyList(), it.gateadresse, it.postnummer, it.poststed), it.treffId, "testperson")
+        arbeidsgivere.forEach { ag ->
+            dataSource.connection.use { connection ->
+                val arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(
+                    connection,
+                    LeggTilArbeidsgiver(ag.orgnr, ag.orgnavn, emptyList(), ag.gateadresse, ag.postnummer, ag.poststed),
+                    ag.treffId
+                )
+                arbeidsgiverRepository.leggTilHendelse(
+                    connection,
+                    arbeidsgiverTreffId,
+                    ArbeidsgiverHendelsestype.OPPRETTET,
+                    AktørType.ARRANGØR,
+                    "testperson"
+                )
+            }
         }
     }
 
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
-        val repo = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         jobbsøkere
             .groupBy { it.treffId }
-            .forEach { (treffId, jsListe) ->
-                repo.leggTil(
-                    jsListe.map {
+            .forEach { (treffId, jobbsøkereListe) ->
+                dataSource.connection.use { connection ->
+                    val leggTilJobbsøkere = jobbsøkereListe.map { js ->
                         LeggTilJobbsøker(
-                            it.fødselsnummer,
-                            it.fornavn,
-                            it.etternavn,
-                            it.navkontor,
-                            it.veilederNavn,
-                            it.veilederNavIdent
+                            fødselsnummer = js.fødselsnummer,
+                            fornavn = js.fornavn,
+                            etternavn = js.etternavn,
+                            navkontor = js.navkontor,
+                            veilederNavn = js.veilederNavn,
+                            veilederNavIdent = js.veilederNavIdent
                         )
-                    },
-                    treffId,
-                    "testperson"
-                )
+                    }
+                    val personTreffIder = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
+                    jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, "testperson")
+                }
             }
     }
 

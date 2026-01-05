@@ -8,6 +8,9 @@ import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -39,6 +42,10 @@ private class AutorisasjonsTest {
     private val database = TestDatabase()
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
     private val eierRepository = EierRepository(database.dataSource)
+    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
+    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+    private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
 
     private val erEier = true
     private val erIkkeEier = false
@@ -107,8 +114,7 @@ private class AutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        rekrutteringstreffRepository.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
-        gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
+        gyldigRekrutteringstreff = rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
     }
 
     @AfterEach

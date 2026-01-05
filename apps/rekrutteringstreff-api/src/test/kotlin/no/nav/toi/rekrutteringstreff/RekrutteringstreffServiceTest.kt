@@ -14,6 +14,7 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
@@ -40,6 +41,7 @@ class RekrutteringstreffServiceTest {
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private lateinit var jobbsøkerRepository: JobbsøkerRepository
         private lateinit var arbeidsgiverRepository: ArbeidsgiverRepository
+        private lateinit var jobbsøkerService: JobbsøkerService
         private lateinit var rekrutteringstreffService: RekrutteringstreffService
 
         @BeforeAll
@@ -53,11 +55,13 @@ class RekrutteringstreffServiceTest {
             rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
             jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
             arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
+            jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
             rekrutteringstreffService = RekrutteringstreffService(
                 db.dataSource,
                 rekrutteringstreffRepository,
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
+                jobbsøkerService
             )
         }
     }
@@ -92,9 +96,9 @@ class RekrutteringstreffServiceTest {
             opprettetAvNavkontorEnhetId = "0605",
             opprettetAvTidspunkt = nowOslo(),
         )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
-        val treffId2 = rekrutteringstreffRepository.opprett(rekrutteringstreff2)
-        val treffId3 = rekrutteringstreffRepository.opprett(rekrutteringstreff3)
+        val treffId1 = rekrutteringstreffService.opprett(rekrutteringstreff1)
+        val treffId2 = rekrutteringstreffService.opprett(rekrutteringstreff2)
+        val treffId3 = rekrutteringstreffService.opprett(rekrutteringstreff3)
 
         val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreff()
 
@@ -187,7 +191,7 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Act
         rekrutteringstreffService.avlys(treffId, navIdent)
@@ -208,7 +212,7 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Act
         db.endreTilTidTilPassert(treffId, navIdent)
@@ -231,7 +235,7 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
@@ -274,7 +278,7 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
@@ -400,7 +404,7 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Publiser før avlysning
         publiserTreff(treffId, navIdent)
@@ -430,12 +434,12 @@ class RekrutteringstreffServiceTest {
 
         // Jobbsøker 1: Invitert og svart ja
         leggTilOgInviterJobbsøker(treffId, fnr1, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr1, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr1, treffId, navIdent)
 
         // Jobbsøker 2: Invitert, svart ja, ombestemt seg til nei
         leggTilOgInviterJobbsøker(treffId, fnr2, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr2, treffId, navIdent)
-        jobbsøkerRepository.svarNeiTilInvitasjon(fnr2, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr2, treffId, navIdent)
+        jobbsøkerService.svarNeiTilInvitasjon(fnr2, treffId, navIdent)
 
         // Jobbsøker 3: Kun invitert
         leggTilOgInviterJobbsøker(treffId, fnr3, navIdent)
@@ -474,11 +478,11 @@ class RekrutteringstreffServiceTest {
 
         // Jobbsøker 2: Svart ja
         leggTilOgInviterJobbsøker(treffId, fnr2, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr2, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr2, treffId, navIdent)
 
         // Jobbsøker 3: Svart nei
         leggTilOgInviterJobbsøker(treffId, fnr3, navIdent)
-        jobbsøkerRepository.svarNeiTilInvitasjon(fnr3, treffId, navIdent)
+        jobbsøkerService.svarNeiTilInvitasjon(fnr3, treffId, navIdent)
 
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
@@ -508,7 +512,7 @@ class RekrutteringstreffServiceTest {
 
         // Legg til og inviter jobbsøker
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
@@ -546,7 +550,7 @@ class RekrutteringstreffServiceTest {
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
 
         assertThrows<UlovligOppdateringException> {
-            rekrutteringstreffService.slett(treffId, navIdent)
+            rekrutteringstreffService.markerSlettet(treffId, navIdent)
         }
     }
 
@@ -574,7 +578,7 @@ class RekrutteringstreffServiceTest {
         assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
         assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.AKTIV }).isTrue()
 
-        rekrutteringstreffService.slett(treffId, navIdent)
+        rekrutteringstreffService.markerSlettet(treffId, navIdent)
 
         assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.SLETTET)
         assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.SLETTET }).isTrue()
@@ -584,7 +588,7 @@ class RekrutteringstreffServiceTest {
     }
 
     private fun leggTilOgInviterJobbsøker(treffId: TreffId, fnr: Fødselsnummer, navIdent: String) {
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fnr,
@@ -597,7 +601,7 @@ class RekrutteringstreffServiceTest {
             ), treffId, navIdent
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fnr)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, navIdent)
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, navIdent)
     }
 
     private fun hentRekrutteringstreffHendelser(treffId: TreffId): List<RekrutteringstreffHendelsestype> {
@@ -707,7 +711,7 @@ class RekrutteringstreffServiceTest {
             opprettetAvNavkontorEnhetId = "0605",
             opprettetAvTidspunkt = nowOslo(),
         )
-        return rekrutteringstreffRepository.opprett(rekrutteringstreff)
+        return rekrutteringstreffService.opprett(rekrutteringstreff)
     }
 
     private fun publiserTreff(treffId: TreffId, navIdent: String) {

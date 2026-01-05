@@ -21,7 +21,7 @@ import java.util.*
 
 
 class JobbsøkerController(
-    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
     javalin: Javalin
 ) {
@@ -82,7 +82,7 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        jobbsøkerRepository.leggTil(dtoer.map { it.domene() }, treff, ctx.extractNavIdent())
+        jobbsøkerService.leggTilJobbsøkere(dtoer.map { it.domene() }, treff, ctx.extractNavIdent())
         ctx.status(201)
     }
 
@@ -140,7 +140,7 @@ class JobbsøkerController(
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treff)
+            val jobbsøkere = jobbsøkerService.hentJobbsøkere(treff)
             ctx.status(200).json(jobbsøkere.toOutboundDto())
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente jobbsøkere")
@@ -168,19 +168,13 @@ class JobbsøkerController(
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             log.info("Sletter jobbsøker $jobbsøkerId for treff $treffId")
 
-            val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(jobbsøkerId)
-            if (fødselsnummer == null) {
-                log.info("Fant ikke jobbsøker med id $jobbsøkerId for treff $treffId")
-                ctx.status(404)
-            } else {
-                val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
-                if (jobbsøker!!.status != JobbsøkerStatus.LAGT_TIL) {
-                    // Vi støtter kun sletting av jobbsøkere som er i "LAGT_TIL" status
-                    ctx.status(422)
-                } else {
-                    jobbsøkerRepository.endreStatus(jobbsøkerId.somUuid, JobbsøkerStatus.SLETTET)
-                    ctx.status(200)
+            when (jobbsøkerService.markerSlettet(jobbsøkerId, treffId, navIdent)) {
+                MarkerSlettetResultat.OK -> ctx.status(200)
+                MarkerSlettetResultat.IKKE_FUNNET -> {
+                    log.info("Fant ikke jobbsøker med id $jobbsøkerId for treff $treffId")
+                    ctx.status(404)
                 }
+                MarkerSlettetResultat.IKKE_TILLATT -> ctx.status(422)
             }
         }
     }
@@ -242,7 +236,7 @@ class JobbsøkerController(
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             log.info("Henter jobbsøkerhendelser for treff $treff")
-            val hendelser = jobbsøkerRepository.hentJobbsøkerHendelser(treff)
+            val hendelser = jobbsøkerService.hentJobbsøkerHendelser(treff)
             ctx.status(200).json(hendelser.map { h ->
                 JobbsøkerHendelseMedJobbsøkerDataOutboundDto(
                     id = h.id.toString(),
@@ -285,7 +279,7 @@ class JobbsøkerController(
         val navIdent = ctx.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            jobbsøkerRepository.inviter(personTreffIder, treffId, navIdent)
+            jobbsøkerService.inviter(personTreffIder, treffId, navIdent)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke invitere jobbsøkere")

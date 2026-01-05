@@ -21,20 +21,114 @@ import javax.sql.DataSource
 class TestDatabase {
 
     private val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
+    private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
     private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
+
+    /**
+     * Legger til jobbsøkere med OPPRETTET-hendelse via repository.
+     */
+    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson") {
+        dataSource.connection.use { connection ->
+            val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
+            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv)
+        }
+    }
+
+    /**
+     * Inviterer jobbsøkere via repository - legger til INVITERT-hendelse og oppdaterer status.
+     */
+    fun inviterJobbsøkere(personTreffIds: List<PersonTreffId>, treffId: TreffId, inviterende: String = "testperson") {
+        dataSource.connection.use { connection ->
+            jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                connection,
+                JobbsøkerHendelsestype.INVITERT,
+                personTreffIds,
+                inviterende,
+                AktørType.ARRANGØR
+            )
+            personTreffIds.forEach { personTreffId ->
+                jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.INVITERT)
+            }
+        }
+    }
+
+    /**
+     * Registrerer svar ja via repository - legger til hendelse og oppdaterer status.
+     */
+    fun svarJaTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, svarAv: String) {
+        dataSource.connection.use { connection ->
+            val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
+                ?: throw IllegalArgumentException("Jobbsøker ikke funnet for fnr og treffId")
+            jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                connection,
+                JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+                listOf(personTreffId),
+                svarAv,
+                AktørType.JOBBSØKER
+            )
+            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
+        }
+    }
+
+    /**
+     * Henter jobbsøkere via repository.
+     */
+    fun hentJobbsøkereViaRepository(treffId: TreffId): List<Jobbsøker> {
+        return jobbsøkerRepository.hentJobbsøkere(treffId)
+    }
+
+    /**
+     * Legger til arbeidsgiver med OPPRETTET-hendelse via repository.
+     */
+    fun leggTilArbeidsgiverMedHendelse(input: LeggTilArbeidsgiver, treffId: TreffId, opprettetAv: String = "testperson") {
+        dataSource.connection.use { connection ->
+            val arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(connection, input, treffId)
+            arbeidsgiverRepository.leggTilNaringskoder(connection, arbeidsgiverTreffId, input.næringskoder)
+            arbeidsgiverRepository.leggTilHendelse(
+                connection,
+                arbeidsgiverTreffId,
+                ArbeidsgiverHendelsestype.OPPRETTET,
+                AktørType.ARRANGØR,
+                opprettetAv
+            )
+        }
+    }
+
+    /**
+     * Markerer arbeidsgiver som slettet via repository.
+     */
+    fun markerArbeidsgiverSlettet(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String = "testperson"): Boolean {
+        val arbeidsgiver = arbeidsgiverRepository.hentArbeidsgivere(treffId)
+            .find { it.arbeidsgiverTreffId.somUuid == arbeidsgiverId }
+            ?: return false
+
+        dataSource.connection.use { connection ->
+            val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
+            arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId)
+            arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
+        }
+        return true
+    }
 
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
     ): TreffId {
-        return rekrutteringstreffRepository.opprett(
-            OpprettRekrutteringstreffInternalDto(
-                tittel = tittel,
-                opprettetAvNavkontorEnhetId = "Original Kontor",
-                opprettetAvPersonNavident = navIdent,
-                opprettetAvTidspunkt = nowOslo().minusDays(10),
+        return dataSource.connection.use { connection ->
+            val (id, _) = rekrutteringstreffRepository.opprett(
+                connection,
+                OpprettRekrutteringstreffInternalDto(
+                    tittel = tittel,
+                    opprettetAvNavkontorEnhetId = "Original Kontor",
+                    opprettetAvPersonNavident = navIdent,
+                    opprettetAvTidspunkt = nowOslo().minusDays(10),
+                )
             )
-        )
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, id, RekrutteringstreffHendelsestype.OPPRETTET, navIdent
+            )
+            id
+        }
     }
 
     fun opprettRekrutteringstreffMedAlleFelter(
@@ -60,36 +154,37 @@ class TestDatabase {
         )
 
         // Bruk repository-metode for å oppdatere
-        rekrutteringstreffRepository.oppdater(
-            treffId,
-            no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
-                tittel = tittel,
-                beskrivelse = beskrivelse,
-                fraTid = fraTid,
-                tilTid = tilTid,
-                svarfrist = svarfrist,
-                gateadresse = gateadresse,
-                postnummer = postnummer,
-                poststed = poststed,
-                kommune = kommune,
-                kommunenummer = kommunenummer,
-                fylke = fylke,
-                fylkesnummer = fylkesnummer
-            ),
-            oppdatertAv = navIdent
-        )
+        dataSource.connection.use { connection ->
+            rekrutteringstreffRepository.oppdater(
+                connection,
+                treffId,
+                no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
+                    tittel = tittel,
+                    beskrivelse = beskrivelse,
+                    fraTid = fraTid,
+                    tilTid = tilTid,
+                    svarfrist = svarfrist,
+                    gateadresse = gateadresse,
+                    postnummer = postnummer,
+                    poststed = poststed,
+                    kommune = kommune,
+                    kommunenummer = kommunenummer,
+                    fylke = fylke,
+                    fylkesnummer = fylkesnummer
+                ),
+                navIdent
+            )
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.OPPDATERT, navIdent
+            )
 
-        // Status må oppdateres separat siden det ikke er del av OppdaterRekrutteringstreffDto
-        if (status != RekrutteringstreffStatus.UTKAST) {
-            dataSource.connection.use {
-                it.prepareStatement("UPDATE rekrutteringstreff SET status = ? WHERE id = ?").apply {
-                    setString(1, status.name)
-                    setObject(2, treffId.somUuid)
-                }.executeUpdate()
+            // Status oppdateres via repository
+            if (status != RekrutteringstreffStatus.UTKAST) {
+                rekrutteringstreffRepository.endreStatus(connection, treffId, status)
             }
         }
 
-        // Oppdater opprettet_av_kontor_enhetid hvis nødvendig
+        // Oppdater opprettet_av_kontor_enhetid hvis nødvendig (ingen repository-metode for dette)
         if (opprettetAvNavkontorEnhetId != "Original Kontor") {
             dataSource.connection.use {
                 it.prepareStatement("UPDATE rekrutteringstreff SET opprettet_av_kontor_enhetid = ? WHERE id = ?").apply {
@@ -102,7 +197,7 @@ class TestDatabase {
         return treffId
     }
 
-    fun slettAlt() = dataSource.executeInTransaction { conn ->
+    fun slettAlt() = dataSource.connection.use { conn ->
         conn.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
         conn.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
@@ -137,24 +232,30 @@ class TestDatabase {
             ?: throw IllegalArgumentException("Treff $id finnes ikke")
 
         // Bruk repository.oppdater med merge av nye og gamle verdier
-        rekrutteringstreffRepository.oppdater(
-            id,
-            no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
-                tittel = tittel ?: gjeldende.tittel,
-                beskrivelse = beskrivelse ?: gjeldende.beskrivelse,
-                fraTid = fraTid ?: gjeldende.fraTid,
-                tilTid = tilTid ?: gjeldende.tilTid,
-                svarfrist = gjeldende.svarfrist,
-                gateadresse = gateadresse ?: gjeldende.gateadresse,
-                postnummer = postnummer ?: gjeldende.postnummer,
-                poststed = poststed ?: gjeldende.poststed,
-                kommune = gjeldende.kommune,
-                kommunenummer = gjeldende.kommunenummer,
-                fylke = gjeldende.fylke,
-                fylkesnummer = gjeldende.fylkesnummer,
-            ),
-            oppdatertAv = "test"
-        )
+        dataSource.connection.use { connection ->
+            rekrutteringstreffRepository.oppdater(
+                connection,
+                id,
+                no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto(
+                    tittel = tittel ?: gjeldende.tittel,
+                    beskrivelse = beskrivelse ?: gjeldende.beskrivelse,
+                    fraTid = fraTid ?: gjeldende.fraTid,
+                    tilTid = tilTid ?: gjeldende.tilTid,
+                    svarfrist = gjeldende.svarfrist,
+                    gateadresse = gateadresse ?: gjeldende.gateadresse,
+                    postnummer = postnummer ?: gjeldende.postnummer,
+                    poststed = poststed ?: gjeldende.poststed,
+                    kommune = gjeldende.kommune,
+                    kommunenummer = gjeldende.kommunenummer,
+                    fylke = gjeldende.fylke,
+                    fylkesnummer = gjeldende.fylkesnummer,
+                ),
+                "test"
+            )
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, id, RekrutteringstreffHendelsestype.OPPDATERT, "test"
+            )
+        }
     }
 
     fun registrerTreffEndretNotifikasjon(
@@ -200,52 +301,36 @@ class TestDatabase {
 
     fun hentAlleRekrutteringstreffSomIkkeErSlettet(): List<Rekrutteringstreff> = rekrutteringstreffRepository.hentAlleSomIkkeErSlettet()
 
-    fun hentEiere(id: TreffId): List<String> = dataSource.connection.use {
-        val rs = it.prepareStatement("SELECT eiere FROM rekrutteringstreff WHERE id = ?").apply {
-            setObject(1, id.somUuid)
-        }.executeQuery()
-        if (rs.next()) (rs.getArray("eiere").array as Array<*>).map(Any?::toString) else emptyList()
-    }
+    fun hentEiere(id: TreffId): List<String> =
+        rekrutteringstreffRepository.hent(id)?.eiere ?: emptyList()
 
     fun hentAlleArbeidsgivere(): List<Arbeidsgiver> = dataSource.connection.use {
+        // Bruker SQL her fordi repository.hentArbeidsgivere() filtrerer bort slettede
         val sql = """
-            SELECT ag.id, ag.orgnr, ag.orgnavn, ag.gateadresse, ag.postnummer, ag.poststed, rt.id as treff_id
+            SELECT ag.id, ag.orgnr, ag.orgnavn, ag.status, ag.gateadresse, ag.postnummer, ag.poststed, rt.id as treff_id
               FROM arbeidsgiver ag
               JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
              ORDER BY ag.arbeidsgiver_id
         """.trimIndent()
         val rs = it.prepareStatement(sql).executeQuery()
-        generateSequence { if (rs.next()) konverterTilArbeidsgiver(rs) else null }.toList()
+        generateSequence {
+            if (rs.next()) Arbeidsgiver(
+                arbeidsgiverTreffId = ArbeidsgiverTreffId(rs.getObject("id", UUID::class.java)),
+                treffId = TreffId(rs.getString("treff_id")),
+                orgnr = Orgnr(rs.getString("orgnr")),
+                orgnavn = Orgnavn(rs.getString("orgnavn")),
+                status = ArbeidsgiverStatus.valueOf(rs.getString("status")),
+                gateadresse = rs.getString("gateadresse"),
+                postnummer = rs.getString("postnummer"),
+                poststed = rs.getString("poststed"),
+            ) else null
+        }.toList()
     }
 
-    fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelse> = dataSource.connection.use { connection ->
-        val sql = """
-            SELECT jh.id,
-                   jh.tidspunkt,
-                   jh.hendelsestype,
-                   jh.opprettet_av_aktortype,
-                   jh.aktøridentifikasjon
-              FROM jobbsoker_hendelse jh
-              JOIN jobbsoker js   ON jh.jobbsoker_id = js.jobbsoker_id
-              JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-             WHERE rt.id = ?
-             ORDER BY jh.tidspunkt
-        """.trimIndent()
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setObject(1, treff.somUuid)
-            stmt.executeQuery().use { rs ->
-                generateSequence {
-                    if (rs.next()) JobbsøkerHendelse(
-                        id = UUID.fromString(rs.getString("id")),
-                        tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                        hendelsestype = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
-                        opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
-                        aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
-                    ) else null
-                }.toList()
-            }
-        }
-    }
+    fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelse> =
+        jobbsøkerRepository.hentJobbsøkere(treff)
+            .flatMap { it.hendelser }
+            .sortedBy { it.tidspunkt }
 
     fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> =
         dataSource.connection.use { connection ->
@@ -277,56 +362,10 @@ class TestDatabase {
             }
         }
 
-    fun hentAlleJobbsøkere(): List<Jobbsøker> = dataSource.connection.use {
-        val sql = """
-            SELECT js.id,
-                   js.fodselsnummer,
-                   js.fornavn,
-                   js.etternavn,
-                   js.navkontor,
-                   js.veileder_navn,
-                   js.veileder_navident,
-                   rt.id as treff_id
-              FROM jobbsoker js
-              JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-             ORDER BY js.jobbsoker_id
-        """.trimIndent()
-        val rs = it.prepareStatement(sql).executeQuery()
-        generateSequence { if (rs.next()) konverterTilJobbsøker(rs) else null }.toList()
-    }
+    fun hentAlleJobbsøkere(): List<Jobbsøker> =
+        hentAlleRekrutteringstreff().flatMap { jobbsøkerRepository.hentJobbsøkere(it.id) }
 
-    fun hentJobbsøkereForTreff(treffId: TreffId): List<Jobbsøker> = dataSource.connection.use {
-        val sql = """
-            SELECT js.id,
-                   js.fodselsnummer,
-                   js.fornavn,
-                   js.etternavn,
-                   js.navkontor,
-                   js.veileder_navn,
-                   js.veileder_navident,
-                   rt.id as treff_id
-              FROM jobbsoker js
-              JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-             WHERE rt.id = ?
-             ORDER BY js.jobbsoker_id
-        """.trimIndent()
-        val ps = it.prepareStatement(sql).apply {
-            setObject(1, treffId.somUuid)
-        }
-        val rs = ps.executeQuery()
-        generateSequence { if (rs.next()) konverterTilJobbsøker(rs) else null }.toList()
-    }
-
-    fun hentAlleNæringskoder(): List<Næringskode> = dataSource.connection.use {
-        val sql = """
-            SELECT nk.kode, nk.beskrivelse
-              FROM naringskode nk
-              JOIN arbeidsgiver ag ON ag.arbeidsgiver_id = nk.arbeidsgiver_id
-             ORDER BY nk.naringskode_id
-        """.trimIndent()
-        val rs = it.prepareStatement(sql).executeQuery()
-        generateSequence { if (rs.next()) konverterTilNæringskoder(rs) else null }.toList()
-    }
+    fun hentJobbsøkereForTreff(treffId: TreffId): List<Jobbsøker> = jobbsøkerRepository.hentJobbsøkere(treffId)
 
     fun hentNæringskodeForArbeidsgiverPåTreff(treffId: TreffId, orgnr: Orgnr): List<Næringskode> = dataSource.connection.use {
         val sql = """
@@ -345,57 +384,10 @@ class TestDatabase {
         generateSequence { if (rs.next()) konverterTilNæringskoder(rs) else null }.toList()
     }
 
-    private fun konverterTilRekrutteringstreff(rs: ResultSet) = Rekrutteringstreff(
-        id = TreffId(rs.getObject("id", UUID::class.java)),
-        tittel = rs.getString("tittel"),
-        beskrivelse = rs.getString("beskrivelse"),
-        fraTid = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
-        tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
-        svarfrist = rs.getTimestamp("svarfrist")?.toInstant()?.atOslo(),
-        gateadresse = rs.getString("gateadresse"),
-        postnummer = rs.getString("postnummer"),
-        poststed = rs.getString("poststed"),
-        kommune = rs.getString("kommune"),
-        kommunenummer = rs.getString("kommunenummer"),
-        fylke = rs.getString("fylke"),
-        fylkesnummer = rs.getString("fylkesnummer"),
-        status = RekrutteringstreffStatus.valueOf(rs.getString("status")),
-        opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
-        opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
-        opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
-        eiere = (rs.getArray("eiere").array as Array<String>).toList(),
-        sistEndret = rs.getTimestamp("sist_endret").toInstant().atOslo(),
-        sistEndretAv = rs.getString("sist_endret_av") ?: "Ukjent"
-    )
-
-    private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
-        arbeidsgiverTreffId = ArbeidsgiverTreffId(rs.getObject("id", UUID::class.java)),
-        treffId = TreffId(rs.getString("treff_id")),
-        orgnr = Orgnr(rs.getString("orgnr")),
-        orgnavn = Orgnavn(rs.getString("orgnavn")),
-        status = ArbeidsgiverStatus.AKTIV,
-        gateadresse = rs.getString("gateadresse"),
-        postnummer = rs.getString("postnummer"),
-        poststed = rs.getString("poststed"),
-    )
-
     private fun konverterTilNæringskoder(rs: ResultSet) = Næringskode(
         kode = rs.getString("kode"),
         beskrivelse = rs.getString("beskrivelse")
     )
-
-    private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
-        personTreffId = PersonTreffId(rs.getObject("id", UUID::class.java)),
-        treffId = TreffId(rs.getString("treff_id")),
-        fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
-        fornavn = Fornavn(rs.getString("fornavn")),
-        etternavn = Etternavn(rs.getString("etternavn")),
-        navkontor = rs.getString("navkontor")?.let(::Navkontor),
-        veilederNavn = rs.getString("veileder_navn")?.let(::VeilederNavn),
-        veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent),
-        status = JobbsøkerStatus.LAGT_TIL,
-    )
-
 
     fun leggTilArbeidsgivere(
         arbeidsgivere: List<Arbeidsgiver>,
@@ -403,7 +395,7 @@ class TestDatabase {
     ) {
         arbeidsgivere.forEach { ag ->
             val næringskoder = næringskoderPerOrgnr[ag.orgnr].orEmpty()
-            arbeidsgiverRepository.leggTil(
+            leggTilArbeidsgiverMedHendelse(
                 LeggTilArbeidsgiver(
                     ag.orgnr,
                     ag.orgnavn,
@@ -420,7 +412,7 @@ class TestDatabase {
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
         // Kan ikke bruke jobbsøkerRepository.leggTil() her fordi testene trenger å spesifisere PersonTreffId
         // Repository.leggTil() genererer nye UUID-er som gjør at inviter() feiler
-        dataSource.executeInTransaction { c ->
+        dataSource.connection.use { c ->
             jobbsøkere.forEach { js ->
                 // Hent treff_db_id
                 val treffDbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?")
@@ -473,29 +465,9 @@ class TestDatabase {
         treffId: TreffId,
         hendelsestype: RekrutteringstreffHendelsestype,
         aktørIdent: String
-    ) =
-        dataSource.connection.use { c ->
-            val treffDbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").apply {
-                setObject(1, treffId.somUuid)
-            }.executeQuery().let {
-                if (it.next()) it.getLong(1) else error("Treff $treffId finnes ikke i test-DB")
-            }
-
-            c.prepareStatement(
-                """
-                INSERT INTO rekrutteringstreff_hendelse
-                  (id, rekrutteringstreff_id, tidspunkt,
-                   hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
-                VALUES (?, ?, now(), ?, ?, ?)
-                """.trimIndent()
-            ).apply {
-                setObject(1, UUID.randomUUID())
-                setLong(2, treffDbId)
-                setString(3, hendelsestype.name)
-                setString(4, AktørType.ARRANGØR.name)
-                setString(5, aktørIdent)
-            }.executeUpdate()
-        }
+    ) = dataSource.connection.use { connection ->
+        rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, hendelsestype, aktørIdent)
+    }
 
     fun hentFødselsnummerForJobbsøkerHendelse(hendelseId: UUID): Fødselsnummer? =
         dataSource.connection.use { c ->
@@ -542,14 +514,25 @@ class TestDatabase {
         rekrutteringstreffRepository.hentHendelser(treff)
 
     fun endreTilTidTilPassert(treffId: TreffId, navIdent: String) {
-        val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId) ?: throw RekrutteringstreffIkkeFunnetException("Treff $treffId finnes ikke")
+        val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
+            ?: throw RekrutteringstreffIkkeFunnetException("Treff $treffId finnes ikke")
         val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(
             rekrutteringstreff.tilRekrutteringstreffDto(1,1)).copy(tilTid = nowOslo().minusDays(1)
         )
-        rekrutteringstreffRepository.oppdater(treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
+        dataSource.connection.use { connection ->
+            rekrutteringstreffRepository.oppdater(connection, treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.OPPDATERT, navIdent
+            )
+        }
     }
 
     fun publiser(treffId: TreffId, navIdent: String) {
-        rekrutteringstreffRepository.publiser(treffId, navIdent)
+        dataSource.connection.use { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.PUBLISERT, navIdent
+            )
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)
+        }
     }
 }

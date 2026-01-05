@@ -17,6 +17,7 @@ import org.assertj.core.api.Assertions.within
 class AktivitetskortFeilLytterTest {
 
     private lateinit var jobbsøkerRepository: JobbsøkerRepository
+    private lateinit var jobbsøkerService: JobbsøkerService
     private val db = TestDatabase()
     private val objectMapper = JacksonConfig.mapper
 
@@ -24,6 +25,7 @@ class AktivitetskortFeilLytterTest {
     fun beforeAll() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, objectMapper)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
     }
 
     @BeforeEach
@@ -34,13 +36,13 @@ class AktivitetskortFeilLytterTest {
     @Test
     fun `skal lagre feil-hendelse når aktivitetskort-opprettelse feiler`() {
         val rapid = TestRapid()
-        AktivitetskortFeilLytter(rapid, jobbsøkerRepository)
+        AktivitetskortFeilLytter(rapid, jobbsøkerService)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
