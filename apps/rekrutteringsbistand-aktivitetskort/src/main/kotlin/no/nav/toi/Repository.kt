@@ -167,6 +167,68 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
         }
     }
 
+    fun markerOppdateringPublisertPaaRapid(messageId: String) {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                UPDATE aktivitetskort 
+                SET publisert_paa_rapid_tidspunkt = CURRENT_TIMESTAMP
+                WHERE message_id = ?
+                """.trimIndent()
+            ).apply {
+                setObject(1, UUID.fromString(messageId))
+            }.executeUpdate()
+        }
+    }
+
+    fun hentSendteIkkePubliserteOppdateringer(): List<Aktivitetskort.AktivitetskortOppdatering> =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+            SELECT a.*, rt.rekrutteringstreff_id
+            FROM aktivitetskort a
+            JOIN rekrutteringstreff rt ON a.aktivitetskort_id = rt.aktivitetskort_id
+            WHERE a.sendt_tidspunkt IS NOT NULL 
+              AND a.publisert_paa_rapid_tidspunkt IS NULL
+              AND a.action_type = 'UPSERT_AKTIVITETSKORT_V1'
+            """.trimIndent()
+            ).executeQuery().use { resultSet ->
+                generateSequence {
+                    if (resultSet.next()) {
+                        Aktivitetskort.AktivitetskortOppdatering(
+                            Aktivitetskort(
+                                repository = this,
+                                messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
+                                aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java)
+                                    .toString(),
+                                fnr = resultSet.getString("fnr"),
+                                tittel = resultSet.getString("tittel"),
+                                beskrivelse = resultSet.getString("beskrivelse"),
+                                startDato = resultSet.getTimestamp("start_dato")?.toLocalDateTime()?.toLocalDate(),
+                                sluttDato = resultSet.getTimestamp("slutt_dato")?.toLocalDateTime()?.toLocalDate(),
+                                actionType = resultSet.getString("action_type").let(::enumValueOf),
+                                endretAv = resultSet.getString("endret_av"),
+                                endretAvType = resultSet.getString("endret_av_type").let(::enumValueOf),
+                                endretTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toInstant().atOslo(),
+                                aktivitetsStatus = resultSet.getString("aktivitets_status").let(::enumValueOf),
+                                detaljer = AktivitetskortDetalj.fraAkaasJson(resultSet.getString("detaljer")),
+                                handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
+                                etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
+                                oppgave = resultSet.getString("oppgave")
+                                    ?.let { AktivitetskortOppgave.fraAkaasJson(it) },
+                                avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
+                                sendtTidspunkt = resultSet.getTimestamp("sendt_tidspunkt").toInstant().atOslo(),
+                            ),
+                            rekrutteringstreffId = resultSet.getObject("rekrutteringstreff_id", UUID::class.java)
+                                .toString(),
+                        )
+                    } else {
+                        null
+                    }
+                }.toList()
+            }
+        }
+
     fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortFeil> =
         dataSource.connection.use { connection ->
             connection.prepareStatement(

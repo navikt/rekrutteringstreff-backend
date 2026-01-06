@@ -116,6 +116,32 @@ class JobbsøkerService(
         logger.info("Registrerte hendelse om at opprettelse av aktivitetskort feilet for rekrutteringstreffId: ${treffId.somString}")
     }
 
+    fun registrerAktivitetskortOppdatering(fnr: Fødselsnummer, treffId: TreffId, endretAv: String, aktivitetsStatus: String) {
+        logger.info("Skal oppdatere hendelse for aktivitetskort-oppdatering med status $aktivitetsStatus for TreffId: $treffId")
+        secure(logger).info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+
+        val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
+        if (personTreffId == null) {
+            logger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: (se securelog)")
+            secure(logger).error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+            return
+        }
+
+        val hendelseData = """{"aktivitetsStatus": "$aktivitetsStatus"}"""
+
+        dataSource.executeInTransaction { connection ->
+            jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                connection,
+                JobbsøkerHendelsestype.AKTIVITETSKORT_OPPDATERING,
+                listOf(personTreffId),
+                endretAv,
+                AktørType.ARRANGØR,
+                hendelseData
+            )
+        }
+        logger.info("Registrerte aktivitetskort-oppdatering hendelse med status $aktivitetsStatus for rekrutteringstreffId: ${treffId.somString}")
+    }
+
     fun registrerMinsideVarselSvar(fnr: Fødselsnummer, treffId: TreffId, opprettetAv: String, hendelseData: String) {
         logger.info("Skal oppdatere hendelse for minside varsel svar for TreffId: $treffId")
         secure(logger).info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")

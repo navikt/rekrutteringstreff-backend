@@ -23,6 +23,7 @@ import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdateringLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
 import no.nav.toi.kandidatsok.KandidatsøkKlient
@@ -249,6 +250,7 @@ class App(
     fun startRR(jobbsøkerService: JobbsøkerService) {
         log.info("Starting RapidsConnection")
         AktivitetskortFeilLytter(rapidsConnection, jobbsøkerService)
+        AktivitetskortOppdateringLytter(rapidsConnection, jobbsøkerService)
         MinsideVarselSvarLytter(rapidsConnection, jobbsøkerService, JacksonConfig.mapper)
         Thread {
             try {

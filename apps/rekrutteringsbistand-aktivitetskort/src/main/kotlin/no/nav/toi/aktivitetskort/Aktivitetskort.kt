@@ -97,6 +97,29 @@ class Aktivitetskort (
                 aktivitetskortHendelse.repository.markerFeilkøhendelseSomSendt(aktivitetskortHendelse.messageId)
             }
         }
+
+        class AktivitetskortOppdatering(
+            private val aktivitetskortHendelse: Aktivitetskort,
+            private val rekrutteringstreffId: String
+        ) {
+            fun sendTilRapid(rapidPublish: (String, String) -> Unit) {
+                val now = ZonedDateTime.now()
+                rapidPublish(aktivitetskortHendelse.fnr,
+                    """
+                        {
+                            "@event_name": "aktivitetskort-oppdatering",
+                            "fnr": "${aktivitetskortHendelse.fnr}",
+                            "aktivitetskortId": "${aktivitetskortHendelse.aktivitetskortId}",
+                            "rekrutteringstreffId": "$rekrutteringstreffId",
+                            "aktivitetsStatus": "${aktivitetskortHendelse.aktivitetsStatus.name}",
+                            "endretAv": "${aktivitetskortHendelse.endretAv}",
+                            "messageId": "${aktivitetskortHendelse.messageId}",
+                            "timestamp": "$now"
+                        }
+                    """.trimIndent())
+                aktivitetskortHendelse.repository.markerOppdateringPublisertPaaRapid(aktivitetskortHendelse.messageId)
+            }
+        }
 }
 
 fun <T> List<T>.joinToJson(transform: (T) -> String) =

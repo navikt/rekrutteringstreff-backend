@@ -28,9 +28,13 @@ fun scheduler(
 ) = runBlocking {
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
+    val scheduledOppdateringExecutor = Executors.newScheduledThreadPool(1)
     val myJob = AktivitetskortJobb(repository, producer)
     consumer.subscribe(listOf("dab.aktivitetskort-feil-v1"))
     val myErrorJob = AktivitetskortFeilJobb(repository, consumer) { key, message ->
+        rapidsConnection.publish(key, message)
+    }
+    val myOppdateringJob = AktivitetskortOppdateringJobb(repository) { key, message ->
         rapidsConnection.publish(key, message)
     }
 
@@ -41,6 +45,7 @@ fun scheduler(
 
     scheduledExecutor.scheduleAtFixedRate(myJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
     scheduledFeilExecutor.scheduleAtFixedRate(myErrorJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
+    scheduledOppdateringExecutor.scheduleAtFixedRate(myOppdateringJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
 }
 
 class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>): Runnable {
@@ -95,6 +100,22 @@ class AktivitetskortFeilJobb(
     fun sendFeilKøHendelserPåRapid() {
         repository.hentUsendteFeilkøHendelser().forEach { usendtFeil ->
             usendtFeil.sendTilRapid(rapidPublish)
+        }
+    }
+}
+
+class AktivitetskortOppdateringJobb(
+    private val repository: Repository,
+    private val rapidPublish: (String, String) -> Unit
+): Runnable {
+    override fun run() {
+        log.info("Kjører AktivitetskortOppdateringJobb")
+        repository.hentSendteIkkePubliserteOppdateringer().forEach { oppdatering ->
+            try {
+                oppdatering.sendTilRapid(rapidPublish)
+            } catch (e: Exception) {
+                secure(log).error("Feil ved sending av AktivitetskortOppdatering til rapid", e)
+            }
         }
     }
 }
