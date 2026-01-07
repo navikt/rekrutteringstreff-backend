@@ -5,6 +5,7 @@ import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
+import no.nav.toi.AuditLog
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
@@ -141,6 +142,7 @@ class JobbsøkerController(
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             val jobbsøkere = jobbsøkerService.hentJobbsøkere(treff)
+            AuditLog.loggVisningAvRekrutteringstreff(navIdent, treff)
             ctx.status(200).json(jobbsøkere.toOutboundDto())
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente jobbsøkere")

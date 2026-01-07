@@ -9,7 +9,6 @@ import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.helse.rapids_rivers.RapidApplication
-import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
@@ -90,6 +89,8 @@ class App(
 
     private lateinit var javalin: Javalin
     private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
+    private val secureLog = SecureLog(log)
+
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
@@ -147,7 +148,7 @@ class App(
                     "feil" to "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes. Slett barn først."
                 ))
             } else {
-                secure(log).error("SQL-feil", e)
+               secureLog.error("SQL-feil", e)
                 ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod på serveren."))
             }
         }
