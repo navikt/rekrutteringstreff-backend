@@ -16,7 +16,7 @@ class AuditLog {
             navId: String,
             treffId: TreffId,
         ) {
-            val loggmelding = "Rekrutteringstreff med uuid $treffId er vist til veileder"
+            val loggmelding = "Rekrutteringstreff med uuid $treffId er vist til Nav ansatt"
             val cefMessage = createCefMessage(null, navId, CefMessageEvent.ACCESS, loggmelding)
             auditLogger.log(cefMessage)
             secureLogger.info("Auditlogg - $loggmelding: $cefMessage")

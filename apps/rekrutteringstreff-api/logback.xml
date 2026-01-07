@@ -6,10 +6,10 @@
         <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
         <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
             <evaluator class="ch.qos.logback.classic.boolex.OnMarkerEvaluator">
-                <marker>SECURE_LOG</marker>
+                <marker>TEAM_LOGS</marker>
             </evaluator>
-            <OnMismatch>NEUTRAL</OnMismatch>
-            <OnMatch>DENY</OnMatch>
+            <OnMatch>ACCEPT</OnMatch>
+            <OnMismatch>DENY</OnMismatch>
         </filter>
     </appender>
 
