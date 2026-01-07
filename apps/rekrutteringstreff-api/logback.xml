@@ -13,13 +13,7 @@
         </filter>
     </appender>
 
-    <appender name="auditLogger" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <destination>audit.nais:6514</destination>
-        <writeBufferSize>128000</writeBufferSize>
-        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <pattern>${HOSTNAME} ${NAIS_APP_NAME}: %msg%n</pattern>
-        </encoder>
-    </appender>
+   <include resource="no/nav/common/audit_log/logback-naudit.xml"/>
 
     <appender name="team-logs" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
         <destination>team-logs.nais-system:5170</destination>
