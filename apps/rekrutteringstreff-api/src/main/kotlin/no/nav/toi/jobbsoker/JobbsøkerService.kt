@@ -20,9 +20,11 @@ class JobbsøkerService(
     fun leggTilJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, navIdent: String) {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val nyeJobbsøkere = jobbsøkere.filterNot { eksisterendeJobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } }
-        dataSource.executeInTransaction { connection ->
-            val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId)
-            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
+        if (nyeJobbsøkere.isNotEmpty()) {
+            dataSource.executeInTransaction { connection ->
+                val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId)
+                jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
+            }
         }
     }
 
