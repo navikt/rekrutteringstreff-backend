@@ -8,8 +8,8 @@
             <evaluator class="ch.qos.logback.classic.boolex.OnMarkerEvaluator">
                 <marker>TEAM_LOGS</marker>
             </evaluator>
-            <OnMatch>ACCEPT</OnMatch>
-            <OnMismatch>DENY</OnMismatch>
+            <OnMatch>DENY</OnMatch>
+            <OnMismatch>ACCEPT</OnMismatch>
         </filter>
     </appender>
 
