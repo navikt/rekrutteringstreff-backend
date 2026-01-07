@@ -81,6 +81,55 @@ class JobbsøkerServiceTest {
     }
 
     @Test
+    fun `leggTilJobbsøkere skal ikke legge til samme person på nytt dersom de allerede er lagt til på treffet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val jobbsøkere = listOf(
+            LeggTilJobbsøker(
+                Fødselsnummer("12345678901"),
+                Fornavn("Ola"),
+                Etternavn("Nordmann"),
+                Navkontor("NAV Oslo"),
+                VeilederNavn("Kari Veileder"),
+                VeilederNavIdent("V123")
+            ),
+            LeggTilJobbsøker(
+                Fødselsnummer("10987654321"),
+                Fornavn("Kari"),
+                Etternavn("Nordmann"),
+                null,
+                null,
+                null
+            )
+        )
+
+        jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
+
+        val hentedeJobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(hentedeJobbsøkere).hasSize(2)
+        val flereJobbsøkere = listOf(
+            LeggTilJobbsøker(
+                Fødselsnummer("12345678902"),
+                Fornavn("Geir"),
+                Etternavn("Nordmann"),
+                Navkontor("NAV Oslo"),
+                VeilederNavn("Kari Veileder"),
+                VeilederNavIdent("V123")
+            ),
+            LeggTilJobbsøker(
+                Fødselsnummer("10987654321"),
+                Fornavn("Kari"),
+                Etternavn("Nordmann"),
+                null,
+                null,
+                null
+            )
+        )
+        jobbsøkerService.leggTilJobbsøkere(flereJobbsøkere, treffId, "testperson")
+        val hentedeFlereJobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(hentedeFlereJobbsøkere).hasSize(3)
+    }
+
+    @Test
     fun `inviter skal opprette hendelser og oppdatere status i samme transaksjon`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val jobbsøkere = listOf(
