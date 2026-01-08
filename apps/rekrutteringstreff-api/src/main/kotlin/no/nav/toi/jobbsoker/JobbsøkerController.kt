@@ -142,7 +142,7 @@ class JobbsøkerController(
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             val jobbsøkere = jobbsøkerService.hentJobbsøkere(treff)
-            AuditLog.loggVisningAvRekrutteringstreff(navIdent, treff)
+            AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
             ctx.status(200).json(jobbsøkere.toOutboundDto())
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente jobbsøkere")

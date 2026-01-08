@@ -12,11 +12,11 @@ class AuditLog {
         private val auditLogger: AuditLogger = AuditLoggerImpl()
         private val secureLogger = SecureLog(log)
 
-        fun loggVisningAvRekrutteringstreff(
+        fun loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(
             navId: String,
             treffId: TreffId,
         ) {
-            val loggmelding = "Rekrutteringstreff med uuid $treffId er vist til Nav ansatt"
+            val loggmelding = "Jobbsøkere tilhørendes rekrutteringstreff med uuid $treffId er vist til Nav ansatt"
             val cefMessage = createCefMessage(null, navId, CefMessageEvent.ACCESS, loggmelding)
             auditLogger.log(cefMessage)
             secureLogger.info("Auditlogg - $loggmelding: $cefMessage")
