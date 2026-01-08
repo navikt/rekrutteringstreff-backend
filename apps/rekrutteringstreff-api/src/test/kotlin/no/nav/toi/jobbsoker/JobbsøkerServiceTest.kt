@@ -550,4 +550,55 @@ class JobbsøkerServiceTest {
             assertThat(hendelseData).isNotNull
         }
     }
+
+    // --- Synlighets-tester ---
+
+    @Test
+    fun `oppdaterSynlighetFraEvent oppdaterer synlighet for alle rekrutteringstreff med samme fødselsnummer`() {
+        // Opprett to rekrutteringstreff med samme jobbsøker (simulerer at personen er lagt til flere treff)
+        val treff1 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff 1")
+        val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff 2")
+
+        val fnr = "12345678901"
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
+
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff1, "testperson")
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff2, "testperson")
+
+        // Verifiser at begge er synlige (default)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treff1)).hasSize(1)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treff2)).hasSize(1)
+
+        // Oppdater synlighet (simulerer event fra synlighetsmotor)
+        val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, false, Instant.now())
+        assertThat(oppdatert).isEqualTo(2) // Begge rekrutteringstreff skal oppdateres
+
+        // Verifiser at begge nå er ikke-synlige
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treff1)).isEmpty()
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treff2)).isEmpty()
+    }
+
+    @Test
+    fun `oppdaterSynlighetFraNeed oppdaterer kun hvis synlighet ikke er satt fra før`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = "12345678901"
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
+
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
+
+        // Need-oppdatering skal fungere når synlighet_sist_oppdatert er NULL
+        val oppdatert1 = jobbsøkerService.oppdaterSynlighetFraNeed(fnr, false, Instant.now())
+        assertThat(oppdatert1).isEqualTo(1)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty()
+
+        // Event-oppdatering skal overskrive
+        val oppdatert2 = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, Instant.now())
+        assertThat(oppdatert2).isEqualTo(1)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
+
+        // Need-oppdatering skal IKKE fungere etter at synlighet er satt
+        val oppdatert3 = jobbsøkerService.oppdaterSynlighetFraNeed(fnr, false, Instant.now())
+        assertThat(oppdatert3).isEqualTo(0)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1) // Fortsatt synlig
+    }
 }

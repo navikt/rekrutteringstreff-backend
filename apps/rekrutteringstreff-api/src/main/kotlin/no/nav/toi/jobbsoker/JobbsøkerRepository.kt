@@ -197,7 +197,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             FROM jobbsoker js
             JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
             LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-            WHERE rt.id = ? and js.status != 'SLETTET'
+            WHERE rt.id = ? AND js.status != 'SLETTET' AND js.er_synlig = TRUE
             GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
                      js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             ORDER BY js.jobbsoker_id;
@@ -219,7 +219,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                         COUNT(1) AS antall_jobbsøkere
                     FROM jobbsoker js
                     JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                    WHERE rt.id = ?
+                    WHERE rt.id = ? AND js.status != 'SLETTET' AND js.er_synlig = TRUE
                 """
             ).use { ps ->
                 ps.setObject(1, treff.somUuid)
@@ -309,7 +309,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 FROM jobbsoker_hendelse jh
                 JOIN jobbsoker js ON jh.jobbsoker_id = js.jobbsoker_id
                 JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                WHERE rt.id = ?
+                WHERE rt.id = ? AND js.er_synlig = TRUE
                 ORDER BY jh.tidspunkt DESC;
             """.trimIndent()
 
@@ -375,7 +375,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 FROM jobbsoker js
                 JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-                WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET'
+                WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET' AND js.er_synlig = TRUE
                 GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
                          js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             """
@@ -401,5 +401,70 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             setString(++i, jobbsøkerStatus.name)
             setObject(++i, personTreffId.somUuid)
         }.executeUpdate()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Synlighet
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Oppdaterer synlighet for en person i alle rekrutteringstreff de er med i.
+     * Oppdaterer kun der meldingen er nyere enn eksisterende tidsstempel (eller der tidsstempel er NULL).
+     *
+     * @param fodselsnummer Fødselsnummeret til personen
+     * @param erSynlig Om personen skal være synlig
+     * @param meldingTidspunkt Tidspunktet meldingen ble opprettet
+     * @return Antall rekrutteringstreff der synlighet ble oppdatert
+     */
+    fun oppdaterSynlighet(
+        fodselsnummer: String,
+        erSynlig: Boolean,
+        meldingTidspunkt: Instant
+    ): Int = dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+            UPDATE jobbsoker
+            SET er_synlig = ?,
+                synlighet_sist_oppdatert = ?
+            WHERE fodselsnummer = ?
+              AND (synlighet_sist_oppdatert IS NULL OR synlighet_sist_oppdatert < ?)
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setBoolean(1, erSynlig)
+            stmt.setTimestamp(2, Timestamp.from(meldingTidspunkt))
+            stmt.setString(3, fodselsnummer)
+            stmt.setTimestamp(4, Timestamp.from(meldingTidspunkt))
+            stmt.executeUpdate()
+        }
+    }
+
+    /**
+     * Oppdaterer synlighet kun der synlighet ikke allerede er satt (synlighet_sist_oppdatert er NULL).
+     * Brukes for need-svar som ikke skal overskrive data fra event-strømmen.
+     *
+     * @param fodselsnummer Fødselsnummeret til personen
+     * @param erSynlig Om personen skal være synlig
+     * @param meldingTidspunkt Tidspunktet meldingen ble opprettet
+     * @return Antall rekrutteringstreff der synlighet ble oppdatert
+     */
+    fun oppdaterSynlighetHvisIkkeSatt(
+        fodselsnummer: String,
+        erSynlig: Boolean,
+        meldingTidspunkt: Instant
+    ): Int = dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+            UPDATE jobbsoker
+            SET er_synlig = ?,
+                synlighet_sist_oppdatert = ?
+            WHERE fodselsnummer = ?
+              AND synlighet_sist_oppdatert IS NULL
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setBoolean(1, erSynlig)
+            stmt.setTimestamp(2, Timestamp.from(meldingTidspunkt))
+            stmt.setString(3, fodselsnummer)
+            stmt.executeUpdate()
+        }
     }
 }

@@ -25,6 +25,9 @@ import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovPublisher
+import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -92,14 +95,15 @@ class App(
     private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
-        startJavalin(jobbsøkerRepository)
+        val synlighetsBehovPublisher = SynlighetsBehovPublisher(rapidsConnection)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, synlighetsBehovPublisher)
+        startJavalin(jobbsøkerRepository, synlighetsBehovPublisher)
         startSchedulere()
         startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
 
-    private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository) {
+    private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository, synlighetsBehovPublisher: SynlighetsBehovPublisher) {
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
 
@@ -190,7 +194,7 @@ class App(
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val kiLoggRepository = KiLoggRepository(dataSource)
 
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, synlighetsBehovPublisher)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
         val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
         val eierService = EierService(eierRepository)
@@ -257,6 +261,8 @@ class App(
         log.info("Starting RapidsConnection")
         AktivitetskortFeilLytter(rapidsConnection, jobbsøkerService)
         MinsideVarselSvarLytter(rapidsConnection, jobbsøkerService, JacksonConfig.mapper)
+        SynlighetsLytter(rapidsConnection, jobbsøkerService)
+        SynlighetsBehovLytter(rapidsConnection, jobbsøkerService)
         Thread {
             try {
                 rapidsConnection.start()

@@ -6,6 +6,7 @@ import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovPublisher
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -13,7 +14,8 @@ import javax.sql.DataSource
 
 class JobbsøkerService(
     private val dataSource: DataSource,
-    private val jobbsøkerRepository: JobbsøkerRepository
+    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val synlighetsBehovPublisher: SynlighetsBehovPublisher? = null
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
@@ -24,6 +26,19 @@ class JobbsøkerService(
             dataSource.executeInTransaction { connection ->
                 val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId)
                 jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
+            }
+
+            // Send synlighetsbehov for hver ny jobbsøker (utenfor transaksjon for å unngå blokkering)
+            synlighetsBehovPublisher?.let { publisher ->
+                nyeJobbsøkere.forEach { jobbsøker ->
+                    try {
+                        publisher.publiserSynlighetsBehov(jobbsøker.fødselsnummer.asString)
+                    } catch (e: Exception) {
+                        logger.error("Feilet å publisere synlighetsbehov for jobbsøker (se securelog)", e)
+                        secure(logger).error("Feilet å publisere synlighetsbehov for fødselsnummer: ${jobbsøker.fødselsnummer.asString}", e)
+                        // Vi fortsetter selv om publisering feiler - synlighet oppdateres via event-strømmen
+                    }
+                }
             }
         }
     }
@@ -200,6 +215,12 @@ class JobbsøkerService(
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
         )
     }
+
+    fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: java.time.Instant): Int =
+        jobbsøkerRepository.oppdaterSynlighet(fodselsnummer, erSynlig, meldingTidspunkt)
+
+    fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: java.time.Instant): Int =
+        jobbsøkerRepository.oppdaterSynlighetHvisIkkeSatt(fodselsnummer, erSynlig, meldingTidspunkt)
 }
 
 enum class MarkerSlettetResultat {

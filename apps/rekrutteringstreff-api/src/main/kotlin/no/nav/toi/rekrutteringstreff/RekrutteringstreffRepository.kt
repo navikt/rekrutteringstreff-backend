@@ -214,7 +214,7 @@ class RekrutteringstreffRepository(
                 FROM   jobbsoker_hendelse jh
                 JOIN   jobbsoker js        ON js.jobbsoker_id = jh.jobbsoker_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = js.rekrutteringstreff_id
-                WHERE  r.id = ?
+                WHERE  r.id = ? AND js.er_synlig = TRUE
 
                 UNION ALL
 

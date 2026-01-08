@@ -210,6 +210,28 @@ class TestDatabase {
         conn.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
     }
 
+    /**
+     * Oppdaterer synlighet for en jobbsøker direkte i databasen.
+     * Brukes i tester for å simulere at synlighetsmotor har satt synlighet.
+     */
+    fun settSynlighet(personTreffId: PersonTreffId, erSynlig: Boolean) = dataSource.connection.use { conn ->
+        conn.prepareStatement("UPDATE jobbsoker SET er_synlig = ? WHERE id = ?").apply {
+            setBoolean(1, erSynlig)
+            setObject(2, personTreffId.somUuid)
+        }.executeUpdate()
+    }
+
+    /**
+     * Oppdaterer synlighet for en jobbsøker basert på fødselsnummer.
+     * Brukes i tester for å simulere at synlighetsmotor har satt synlighet.
+     */
+    fun settSynlighetForFnr(fodselsnummer: String, erSynlig: Boolean) = dataSource.connection.use { conn ->
+        conn.prepareStatement("UPDATE jobbsoker SET er_synlig = ? WHERE fodselsnummer = ?").apply {
+            setBoolean(1, erSynlig)
+            setString(2, fodselsnummer)
+        }.executeUpdate()
+    }
+
     fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) = dataSource.connection.use {
         it.prepareStatement("UPDATE rekrutteringstreff SET eiere = ? WHERE id = ?").apply {
             setArray(1, connection.createArrayOf("text", eiere.toTypedArray()))
