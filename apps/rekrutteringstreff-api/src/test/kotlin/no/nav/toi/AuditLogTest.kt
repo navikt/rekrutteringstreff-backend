@@ -1,7 +1,5 @@
-package no.nav.toi.rekrutteringstreff.no.nav.toi
-
+package no.nav.toi
 import no.nav.common.audit_log.cef.CefMessageEvent
-import no.nav.toi.AuditLog
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 

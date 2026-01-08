@@ -148,7 +148,7 @@ class App(
                     "feil" to "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes. Slett barn først."
                 ))
             } else {
-               secureLog.error("SQL-feil", e)
+                secureLog.error("SQL-feil", e)
                 ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod på serveren."))
             }
         }

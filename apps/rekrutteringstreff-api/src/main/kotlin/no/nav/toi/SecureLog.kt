@@ -3,7 +3,6 @@ package no.nav.toi
 import org.slf4j.Logger
 import org.slf4j.Marker
 import org.slf4j.MarkerFactory
-import kotlin.TODO
 
 private val teamLogsMarker: Marker = MarkerFactory.getMarker("TEAM_LOGS")
 
