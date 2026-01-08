@@ -8,7 +8,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
-import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.SecureLog
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 
@@ -35,6 +35,8 @@ class MinsideVarselSvarLytter(
             }
         }.register(this)
     }
+
+    private val secureLogger = SecureLog(log)
 
     override fun onPacket(
         packet: JsonMessage,
@@ -77,7 +79,7 @@ class MinsideVarselSvarLytter(
             log.info("Registrerte MOTTATT_SVAR_FRA_MINSIDE-hendelse for rekrutteringstreffId: $avsenderReferanseId")
         } catch (e: Exception) {
             log.error("Klarte ikke å registrere MOTTATT_SVAR_FRA_MINSIDE-hendelse for rekrutteringstreffId: $avsenderReferanseId", e)
-            secure(log).error("Feil ved registrering av minside varsel svar for fnr: $fnr, treffId: $avsenderReferanseId", e)
+            secureLogger.error("Feil ved registrering av minside varsel svar for fnr: $fnr, treffId: $avsenderReferanseId", e)
             throw e
         }
     }
@@ -88,7 +90,7 @@ class MinsideVarselSvarLytter(
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av minsideVarselSvar: $problems")
-        secure(log).error("Feil ved behandling av minsideVarselSvar: ${problems.toExtendedReport()}")
+        secureLogger.error("Feil ved behandling av minsideVarselSvar: ${problems.toExtendedReport()}")
     }
 
     override fun onSevere(
@@ -96,6 +98,6 @@ class MinsideVarselSvarLytter(
         context: MessageContext
     ) {
         log.error("Alvorlig feil ved behandling av minsideVarselSvar", error)
-        secure(log).error("Alvorlig feil ved behandling av minsideVarselSvar: ${error.problems.toExtendedReport()}", error)
+        secureLogger.error("Alvorlig feil ved behandling av minsideVarselSvar: ${error.problems.toExtendedReport()}", error)
     }
 }

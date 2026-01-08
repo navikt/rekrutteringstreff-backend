@@ -2,7 +2,7 @@ package no.nav.toi.jobbsoker
 
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.SecureLog
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
@@ -16,6 +16,7 @@ class JobbsøkerService(
     private val jobbsøkerRepository: JobbsøkerRepository
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
+    private val secureLogger: Logger = SecureLog(logger)
 
     fun leggTilJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, navIdent: String) {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
@@ -99,12 +100,12 @@ class JobbsøkerService(
 
     fun registrerAktivitetskortOpprettelseFeilet(fnr: Fødselsnummer, treffId: TreffId, endretAv: String) {
         logger.info("Skal oppdatere hendelse for aktivitetskortfeil for TreffId: $treffId")
-        secure(logger).info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+        secureLogger.info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
 
         val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
         if (personTreffId == null) {
             logger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: (se securelog)")
-            secure(logger).error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+            secureLogger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
             return
         }
 
@@ -122,12 +123,12 @@ class JobbsøkerService(
 
     fun registrerMinsideVarselSvar(fnr: Fødselsnummer, treffId: TreffId, opprettetAv: String, hendelseData: String) {
         logger.info("Skal oppdatere hendelse for minside varsel svar for TreffId: $treffId")
-        secure(logger).info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+        secureLogger.info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
 
         val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
         if (personTreffId == null) {
             logger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} for minside varsel svar (fødselsnummer i securelog)")
-            secure(logger).error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+            secureLogger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
             return
         }
 
