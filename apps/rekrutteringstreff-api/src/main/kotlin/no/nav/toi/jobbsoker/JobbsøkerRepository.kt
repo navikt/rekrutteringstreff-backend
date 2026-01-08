@@ -403,19 +403,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }.executeUpdate()
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Synlighet
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Oppdaterer synlighet for en person i alle rekrutteringstreff de er med i.
-     * Oppdaterer kun der meldingen er nyere enn eksisterende tidsstempel (eller der tidsstempel er NULL).
-     *
-     * @param fodselsnummer Fødselsnummeret til personen
-     * @param erSynlig Om personen skal være synlig
-     * @param meldingTidspunkt Tidspunktet meldingen ble opprettet
-     * @return Antall rekrutteringstreff der synlighet ble oppdatert
-     */
     fun oppdaterSynlighet(
         fodselsnummer: String,
         erSynlig: Boolean,
@@ -437,16 +424,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.executeUpdate()
         }
     }
-
-    /**
-     * Oppdaterer synlighet kun der synlighet ikke allerede er satt (synlighet_sist_oppdatert er NULL).
-     * Brukes for need-svar som ikke skal overskrive data fra event-strømmen.
-     *
-     * @param fodselsnummer Fødselsnummeret til personen
-     * @param erSynlig Om personen skal være synlig
-     * @param meldingTidspunkt Tidspunktet meldingen ble opprettet
-     * @return Antall rekrutteringstreff der synlighet ble oppdatert
-     */
+    
     fun oppdaterSynlighetHvisIkkeSatt(
         fodselsnummer: String,
         erSynlig: Boolean,
