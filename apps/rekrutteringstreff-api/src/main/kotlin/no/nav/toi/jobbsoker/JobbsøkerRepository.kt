@@ -424,7 +424,10 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.executeUpdate()
         }
     }
-    
+
+    /*
+    Trenger en ekstra metode som aldri overskriver data, som kun setter synlighet hvis den ikke er oppdatert fra før.
+     */
     fun oppdaterSynlighetHvisIkkeSatt(
         fodselsnummer: String,
         erSynlig: Boolean,
