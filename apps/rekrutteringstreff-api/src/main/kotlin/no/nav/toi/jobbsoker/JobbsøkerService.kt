@@ -19,9 +19,13 @@ class JobbsøkerService(
     private val secureLogger: Logger = SecureLog(logger)
 
     fun leggTilJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, navIdent: String) {
-        dataSource.executeInTransaction { connection ->
-            val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
-            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
+        val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
+        val nyeJobbsøkere = jobbsøkere.filterNot { eksisterendeJobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } }
+        if (nyeJobbsøkere.isNotEmpty()) {
+            dataSource.executeInTransaction { connection ->
+                val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId)
+                jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
+            }
         }
     }
 
