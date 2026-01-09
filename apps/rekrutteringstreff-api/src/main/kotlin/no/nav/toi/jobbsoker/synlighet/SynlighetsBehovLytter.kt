@@ -37,6 +37,7 @@ class SynlighetsBehovLytter(
             validate {
                 it.requireKey("fodselsnummer")
                 it.requireKey("@opprettet")
+                it.interestedIn("synlighetRekrutteringstreff")
             }
         }.register(this)
     }

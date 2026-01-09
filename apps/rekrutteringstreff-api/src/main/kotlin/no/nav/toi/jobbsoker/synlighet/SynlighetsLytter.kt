@@ -36,6 +36,7 @@ class SynlighetsLytter(
             validate {
                 it.requireKey("fodselsnummer")
                 it.requireKey("@opprettet")
+                it.interestedIn("synlighet")
             }
         }.register(this)
     }

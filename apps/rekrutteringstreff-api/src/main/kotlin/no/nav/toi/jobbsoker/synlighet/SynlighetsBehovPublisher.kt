@@ -11,15 +11,15 @@ import no.nav.toi.log
  * Når en person legges til et rekrutteringstreff, sender vi en need-melding
  * for å få synlighetsstatus fra toi-synlighetsmotor.
  */
-class SynlighetsBehovPublisher(
-    private val rapidsConnection: RapidsConnection
+open class SynlighetsBehovPublisher(
+    private val rapidsConnection: RapidsConnection?
 ) {
     /**
      * Publiserer et synlighetsbehov for en person.
      *
      * @param fodselsnummer Fødselsnummeret til personen
      */
-    fun publiserSynlighetsBehov(fodselsnummer: String) {
+    open fun publiserSynlighetsBehov(fodselsnummer: String) {
         val melding = JsonMessage.newMessage(
             mapOf(
                 "@event_name" to "behov",
@@ -31,6 +31,7 @@ class SynlighetsBehovPublisher(
         log.info("Publiserer synlighetsbehov for person (fødselsnummer i securelog)")
         secure(log).info("Publiserer synlighetsbehov for fødselsnummer: $fodselsnummer")
 
-        rapidsConnection.publish(fodselsnummer, melding.toJson())
+        rapidsConnection?.publish(fodselsnummer, melding.toJson())
+            ?: throw IllegalStateException("RapidsConnection er ikke satt - kan ikke publisere synlighetsbehov")
     }
 }

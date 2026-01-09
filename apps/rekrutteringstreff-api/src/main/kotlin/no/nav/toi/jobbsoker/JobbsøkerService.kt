@@ -24,19 +24,15 @@ class JobbsøkerService(
         val nyeJobbsøkere = jobbsøkere.filterNot { eksisterendeJobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } }
         if (nyeJobbsøkere.isNotEmpty()) {
             dataSource.executeInTransaction { connection ->
+                // 1. Legg til jobbsøkere i database
                 val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId)
                 jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
-            }
 
-            // Send synlighetsbehov for hver ny jobbsøker (utenfor transaksjon for å unngå blokkering)
-            synlighetsBehovPublisher?.let { publisher ->
-                nyeJobbsøkere.forEach { jobbsøker ->
-                    try {
+                // 2. Publiser synlighetsbehov - må skje ETTER at person er lagret (slik at need-svar har noe å oppdatere)
+                //    men INNE i transaksjonen (slik at vi ruller tilbake hvis publisering feiler)
+                synlighetsBehovPublisher?.let { publisher ->
+                    nyeJobbsøkere.forEach { jobbsøker ->
                         publisher.publiserSynlighetsBehov(jobbsøker.fødselsnummer.asString)
-                    } catch (e: Exception) {
-                        logger.error("Feilet å publisere synlighetsbehov for jobbsøker (se securelog)", e)
-                        secure(logger).error("Feilet å publisere synlighetsbehov for fødselsnummer: ${jobbsøker.fødselsnummer.asString}", e)
-                        // Vi fortsetter selv om publisering feiler - synlighet oppdateres via event-strømmen
                     }
                 }
             }
