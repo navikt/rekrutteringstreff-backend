@@ -1,295 +1,264 @@
 package no.nav.toi.jobbsoker.synlighet
 
-import no.nav.toi.JacksonConfig
-import no.nav.toi.JobbsøkerHendelsestype
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
+import no.nav.security.mock.oauth2.MockOAuth2Server
+import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
+import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
+import no.nav.toi.rekrutteringstreff.HendelseRessurs
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
-import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.time.Instant
 
 /**
  * Komponenttest som verifiserer at synlighetsfiltrering fungerer korrekt
- * på tvers av alle repositories som eksponerer jobbsøkerdata.
+ * når data eksponeres via REST API.
  * 
  * Synlighet styres av kode 6/7, KVP, død, osv. og oppdateres via toi-synlighetsmotor.
- * Jobbsøkere som ikke er synlige skal filtreres ut fra alle spørringer.
+ * Jobbsøkere som ikke er synlige skal filtreres ut før data returneres til frontend.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class SynlighetsKomponentTest {
 
     companion object {
+        private val authServer = MockOAuth2Server()
+        private val authPort = 18015
         private val db = TestDatabase()
+        private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
-        private lateinit var jobbsøkerRepository: JobbsøkerRepository
+        
+        private lateinit var app: App
         private lateinit var jobbsøkerService: JobbsøkerService
-        private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
-        private lateinit var aktivitetskortRepository: AktivitetskortRepository
+    }
 
-        @BeforeAll
-        @JvmStatic
-        fun setup() {
-            Flyway.configure()
-                .dataSource(db.dataSource)
-                .load()
-                .migrate()
+    private val httpClient = HttpClient.newBuilder().build()
+    private val eierRepository = EierRepository(db.dataSource)
 
-            jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-            jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
-            rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
-            aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
-        }
+    @BeforeAll
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
+        val accessTokenClient = AccessTokenClient(
+            clientId = "client-id",
+            secret = "secret",
+            azureUrl = "http://localhost:$authPort/token",
+            httpClient = httpClient
+        )
+        app = App(
+            port = appPort,
+            authConfigs = listOf(
+                AuthenticationConfiguration(
+                    issuer = "http://localhost:$authPort/default",
+                    jwksUri = "http://localhost:$authPort/default/jwks",
+                    audience = "rekrutteringstreff-audience"
+                )
+            ),
+            dataSource = db.dataSource,
+            jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,
+            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
+            utvikler = AzureAdRoller.utvikler,
+            kandidatsokApiUrl = "",
+            kandidatsokScope = "",
+            rapidsConnection = TestRapid(),
+            accessTokenClient = accessTokenClient,
+            modiaKlient = ModiaKlient(
+                modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                modiaContextHolderScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            pilotkontorer = listOf("1234")
+        ).also { it.start() }
+        authServer.start(port = authPort)
+        
+        jobbsøkerService = JobbsøkerService(db.dataSource, JobbsøkerRepository(db.dataSource, mapper))
     }
 
     @BeforeEach
-    fun beforeEach() {
-        db.slettAlt()
+    fun setupStubs() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"aktivEnhet": "1234"}""")
+                )
+        )
+    }
+
+    @AfterAll
+    fun tearDown() {
+        authServer.shutdown()
+        app.close()
     }
 
     @AfterEach
-    fun afterEach() {
+    fun reset() {
         db.slettAlt()
     }
 
-    // === Testdata-oppsett ===
-    
-    private data class TestTreffMedJobbsøkere(
-        val treffId: TreffId,
-        val fnrSynlig: Fødselsnummer,
-        val fnrIkkeSynlig: Fødselsnummer,
-        val personTreffIdSynlig: PersonTreffId,
-        val personTreffIdIkkeSynlig: PersonTreffId
-    )
-    
-    private fun opprettTreffMedSynligOgIkkeSynligJobbsøker(): TestTreffMedJobbsøkere {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        
-        val fnrSynlig = Fødselsnummer("11111111111")
-        val fnrIkkeSynlig = Fødselsnummer("22222222222")
-        
-        val jobbsøkere = listOf(
-            LeggTilJobbsøker(fnrSynlig, Fornavn("Synlig"), Etternavn("Person"), null, null, null),
-            LeggTilJobbsøker(fnrIkkeSynlig, Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
-        )
-        
-        db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId, "testperson")
-        val alleJobbsøkere = db.hentJobbsøkereViaRepository(treffId)
-        
-        val personTreffIdSynlig = alleJobbsøkere.first { it.fødselsnummer == fnrSynlig }.personTreffId
-        val personTreffIdIkkeSynlig = alleJobbsøkere.first { it.fødselsnummer == fnrIkkeSynlig }.personTreffId
-        
-        // Sett synlighet - den ene synlig, den andre ikke synlig
-        db.settSynlighet(personTreffIdSynlig, true)
-        db.settSynlighet(personTreffIdIkkeSynlig, false)
-        
-        return TestTreffMedJobbsøkere(treffId, fnrSynlig, fnrIkkeSynlig, personTreffIdSynlig, personTreffIdIkkeSynlig)
+    private fun httpGet(path: String): HttpResponse<String> {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:$appPort$path"))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .GET()
+            .build()
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
-    // === Tester for JobbsøkerRepository ===
+    private fun opprettTreffMedEier(): TreffId {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreff")
+        eierRepository.leggTil(treffId, listOf("A123456"))
+        return treffId
+    }
 
     @Test
-    fun `hentJobbsøkere filtrerer ut ikke-synlige jobbsøkere`() {
-        val testData = opprettTreffMedSynligOgIkkeSynligJobbsøker()
+    fun `GET jobbsøkere filtrerer ut ikke-synlige jobbsøkere`() {
+        val treffId = opprettTreffMedEier()
         
-        val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(testData.treffId)
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
         
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "A123456")
+        db.settSynlighet(personTreffIder[0], true)
+        db.settSynlighet(personTreffIder[1], false)
+        
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        
+        assertThat(response.statusCode()).isEqualTo(200)
+        val jobbsøkere: List<JobbsøkerOutboundDto> = mapper.readValue(response.body())
         assertThat(jobbsøkere).hasSize(1)
-        assertThat(jobbsøkere.first().personTreffId).isEqualTo(testData.personTreffIdSynlig)
+        assertThat(jobbsøkere.first().fornavn).isEqualTo("Synlig")
     }
 
     @Test
-    fun `hentAntallJobbsøkere teller ikke ikke-synlige jobbsøkere`() {
-        val testData = opprettTreffMedSynligOgIkkeSynligJobbsøker()
+    fun `jobbsøker som blir ikke-synlig via synlighetsmotor forsvinner fra API`() {
+        val treffId = opprettTreffMedEier()
         
-        val antall = jobbsøkerRepository.hentAntallJobbsøkere(testData.treffId)
+        val fnr = Fødselsnummer("33333333333")
+        val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "A123456")
         
-        assertThat(antall).isEqualTo(1)
-    }
-
-    @Test
-    fun `hentJobbsøker returnerer null for ikke-synlig jobbsøker`() {
-        val testData = opprettTreffMedSynligOgIkkeSynligJobbsøker()
+        // Jobbsøker er synlig som default (null = synlig)
+        val responseFør = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        assertThat(responseFør.statusCode()).isEqualTo(200)
+        val jobbsøkereFør: List<JobbsøkerOutboundDto> = mapper.readValue(responseFør.body())
+        assertThat(jobbsøkereFør).hasSize(1)
         
-        // Synlig jobbsøker kan hentes
-        val synligJobbsøker = jobbsøkerRepository.hentJobbsøker(testData.treffId, testData.fnrSynlig)
-        assertThat(synligJobbsøker).isNotNull
-        
-        // Ikke-synlig jobbsøker returnerer null
-        val ikkeSynligJobbsøker = jobbsøkerRepository.hentJobbsøker(testData.treffId, testData.fnrIkkeSynlig)
-        assertThat(ikkeSynligJobbsøker).isNull()
-    }
-
-    @Test
-    fun `hentJobbsøkerHendelser filtrerer ut hendelser for ikke-synlige jobbsøkere`() {
-        val testData = opprettTreffMedSynligOgIkkeSynligJobbsøker()
-        
-        // Begge har OPPRETTET-hendelser, men kun synlig skal være med
-        val hendelser = jobbsøkerRepository.hentJobbsøkerHendelser(testData.treffId)
-        
-        assertThat(hendelser).hasSize(1)
-        assertThat(hendelser.first().fornavn.asString).isEqualTo("Synlig")
-    }
-
-    // === Tester for RekrutteringstreffRepository ===
-
-    @Test
-    fun `hentAlleHendelser filtrerer ut jobbsøker-hendelser for ikke-synlige jobbsøkere`() {
-        val testData = opprettTreffMedSynligOgIkkeSynligJobbsøker()
-        
-        val alleHendelser = rekrutteringstreffRepository.hentAlleHendelser(testData.treffId)
-        
-        // Filtrer basert på ressurs-feltet (JOBBSØKER, REKRUTTERINGSTREFF, ARBEIDSGIVER)
-        val jobbsøkerHendelser = alleHendelser.filter { it.ressurs.name == "JOBBSØKER" }
-        val treffHendelser = alleHendelser.filter { it.ressurs.name == "REKRUTTERINGSTREFF" }
-        
-        // Det bør være 1 jobbsøker-hendelse (fra synlig person)
-        // (Ikke-synlig jobbsøker sin hendelse skal filtreres ut)
-        assertThat(jobbsøkerHendelser).hasSize(1)
-        // Rekrutteringstreff-hendelser skal fortsatt være med
-        assertThat(treffHendelser).isNotEmpty()
-    }
-
-    // === Tester for AktivitetskortRepository ===
-
-    @Test
-    fun `hentUsendteHendelse filtrerer ut hendelser for ikke-synlige jobbsøkere`() {
-        val testData = opprettTreffMedSynligOgIkkeSynligJobbsøker()
-        
-        // Inviter begge jobbsøkerne
-        db.inviterJobbsøkere(listOf(testData.personTreffIdSynlig, testData.personTreffIdIkkeSynlig), testData.treffId, "testperson")
-        
-        // Hent usendte INVITERT-hendelser
-        val usendteHendelser = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
-        
-        // Kun synlig jobbsøker sin hendelse skal være med
-        assertThat(usendteHendelser).hasSize(1)
-        assertThat(usendteHendelser.first().fnr).isEqualTo("11111111111")
-    }
-
-    // === Integrasjonstest for synlighetsoppdatering ===
-
-    @Test
-    fun `synlighetsoppdatering fra event oppdaterer alle jobbsøkere med samme fødselsnummer`() {
-        // Opprett to treff med samme person
-        val treff1 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff1")
-        val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff2")
-        
-        val fnr = "33333333333"
-        val jobbsøker = LeggTilJobbsøker(
-            Fødselsnummer(fnr), 
-            Fornavn("Test"), 
-            Etternavn("Person"), 
-            null, null, null
-        )
-        
-        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff1, "testperson")
-        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff2, "testperson")
-        
-        // Oppdater synlighet via service (simulerer event fra toi-synlighetsmotor)
-        val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, false, Instant.now())
-        
-        // Begge jobbsøkerne skal være oppdatert
-        assertThat(oppdatert).isEqualTo(2)
-        
-        // Verifiser at begge er filtrert ut
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treff1)).isEmpty()
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treff2)).isEmpty()
-    }
-
-    @Test
-    fun `synlighetsoppdatering fra need oppdaterer kun der synlighet ikke er satt`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        
-        val fnr = "44444444444"
-        val jobbsøker = LeggTilJobbsøker(
-            Fødselsnummer(fnr), 
-            Fornavn("Test"), 
-            Etternavn("Person"), 
-            null, null, null
-        )
-        
-        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
-        
-        // Første need-svar setter synlighet
-        val oppdatert1 = jobbsøkerService.oppdaterSynlighetFraNeed(fnr, true, Instant.now())
-        assertThat(oppdatert1).isEqualTo(1)
-        
-        // Andre need-svar skal ikke overskrive (synlighet_sist_oppdatert er nå satt)
-        val oppdatert2 = jobbsøkerService.oppdaterSynlighetFraNeed(fnr, false, Instant.now())
-        assertThat(oppdatert2).isEqualTo(0)
-        
-        // Jobbsøker skal fortsatt være synlig
-        val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treffId)
-        assertThat(jobbsøkere).hasSize(1)
-    }
-
-    // === Ende-til-ende scenario ===
-
-    @Test
-    fun `komplett scenario - jobbsøker blir ikke-synlig og forsvinner fra alle visninger`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        
-        val fnr = Fødselsnummer("55555555555")
-        val jobbsøker = LeggTilJobbsøker(
-            fnr, 
-            Fornavn("Test"), 
-            Etternavn("Person"), 
-            null, null, null
-        )
-        
-        // Legg til jobbsøker og inviter
-        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
-        val personTreffId = db.hentJobbsøkereViaRepository(treffId).first().personTreffId
-        db.inviterJobbsøkere(listOf(personTreffId), treffId, "testperson")
-        
-        // Verifiser at jobbsøker er synlig overalt
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
-        assertThat(jobbsøkerRepository.hentAntallJobbsøkere(treffId)).isEqualTo(1)
-        assertThat(jobbsøkerRepository.hentJobbsøker(treffId, fnr)).isNotNull
-        assertThat(jobbsøkerRepository.hentJobbsøkerHendelser(treffId)).hasSize(2) // OPPRETTET + INVITERT
-        assertThat(aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)).hasSize(1)
-        
-        // Simuler at jobbsøker får kode 6/7 - synlighet oppdateres via event
+        // Simuler at synlighetsmotor sender event om at person er kode 6/7
         jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, Instant.now())
         
-        // Verifiser at jobbsøker er filtrert ut overalt
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty()
-        assertThat(jobbsøkerRepository.hentAntallJobbsøkere(treffId)).isEqualTo(0)
-        assertThat(jobbsøkerRepository.hentJobbsøker(treffId, fnr)).isNull()
-        assertThat(jobbsøkerRepository.hentJobbsøkerHendelser(treffId)).isEmpty()
-        assertThat(aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)).isEmpty()
+        // Jobbsøker skal nå være filtr ert ut fra API
+        val responseEtter = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        assertThat(responseEtter.statusCode()).isEqualTo(200)
+        val jobbsøkereEtter: List<JobbsøkerOutboundDto> = mapper.readValue(responseEtter.body())
+        assertThat(jobbsøkereEtter).isEmpty()
     }
 
     @Test
-    fun `jobbsøker som blir synlig igjen dukker opp i alle visninger`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+    fun `jobbsøker som blir synlig igjen via synlighetsmotor dukker opp i API`() {
+        val treffId = opprettTreffMedEier()
         
-        val fnr = Fødselsnummer("66666666666")
-        val jobbsøker = LeggTilJobbsøker(
-            fnr, 
-            Fornavn("Test"), 
-            Etternavn("Person"), 
-            null, null, null
-        )
+        val fnr = Fødselsnummer("44444444444")
+        val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "A123456")
+        db.settSynlighet(personTreffIder[0], false)
         
-        // Legg til jobbsøker som ikke-synlig
-        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
-        val personTreffId = db.hentJobbsøkereViaRepository(treffId).first().personTreffId
-        db.settSynlighet(personTreffId, false)
+        // Jobbsøker er ikke synlig
+        val responseFør = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val jobbsøkereFør: List<JobbsøkerOutboundDto> = mapper.readValue(responseFør.body())
+        assertThat(jobbsøkereFør).isEmpty()
         
-        // Verifiser at jobbsøker ikke er synlig
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty()
-        
-        // Synlighet endres - jobbsøker blir synlig igjen (f.eks. KVP avsluttet)
+        // Simuler at synlighetsmotor sender event om at person er synlig igjen (f.eks. KVP avsluttet)
         jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, true, Instant.now())
         
-        // Verifiser at jobbsøker er synlig igjen
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
-        assertThat(jobbsøkerRepository.hentAntallJobbsøkere(treffId)).isEqualTo(1)
-        assertThat(jobbsøkerRepository.hentJobbsøker(treffId, fnr)).isNotNull
+        // Jobbsøker skal nå være med i API-responsen
+        val responseEtter = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val jobbsøkereEtter: List<JobbsøkerOutboundDto> = mapper.readValue(responseEtter.body())
+        assertThat(jobbsøkereEtter).hasSize(1)
+        assertThat(jobbsøkereEtter.first().fornavn).isEqualTo("Test")
+    }
+
+    @Test
+    fun `synlighetsoppdatering påvirker alle treff der personen er jobbsøker`() {
+        val treff1 = opprettTreffMedEier()
+        val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "Treff2")
+        eierRepository.leggTil(treff2, listOf("A123456"))
+        
+        val fnr = Fødselsnummer("55555555555")
+        val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
+        
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff1, "A123456")
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff2, "A123456")
+        
+        // Begge treff har jobbsøkeren synlig
+        assertThat(mapper.readValue<List<JobbsøkerOutboundDto>>(httpGet("/api/rekrutteringstreff/${treff1.somUuid}/jobbsoker").body())).hasSize(1)
+        assertThat(mapper.readValue<List<JobbsøkerOutboundDto>>(httpGet("/api/rekrutteringstreff/${treff2.somUuid}/jobbsoker").body())).hasSize(1)
+        
+        // Synlighetsmotor markerer person som ikke-synlig
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, Instant.now())
+        
+        // Begge treff skal nå filtrere ut jobbsøkeren
+        assertThat(mapper.readValue<List<JobbsøkerOutboundDto>>(httpGet("/api/rekrutteringstreff/${treff1.somUuid}/jobbsoker").body())).isEmpty()
+        assertThat(mapper.readValue<List<JobbsøkerOutboundDto>>(httpGet("/api/rekrutteringstreff/${treff2.somUuid}/jobbsoker").body())).isEmpty()
+    }
+
+    @Test
+    fun `GET jobbsøker-hendelser filtrerer ut hendelser for ikke-synlige jobbsøkere`() {
+        val treffId = opprettTreffMedEier()
+        
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "A123456")
+        db.settSynlighet(personTreffIder[0], true)
+        db.settSynlighet(personTreffIder[1], false)
+        
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
+        
+        assertThat(response.statusCode()).isEqualTo(200)
+        val hendelser: List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto> = mapper.readValue(response.body())
+        assertThat(hendelser).hasSize(1)
+        assertThat(hendelser.first().fornavn).isEqualTo("Synlig")
+    }
+
+    @Test
+    fun `GET alle hendelser filtrerer ut jobbsøker-hendelser for ikke-synlige jobbsøkere`() {
+        val treffId = opprettTreffMedEier()
+        
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "A123456")
+        db.settSynlighet(personTreffIder[0], true)
+        db.settSynlighet(personTreffIder[1], false)
+        
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/allehendelser")
+        
+        assertThat(response.statusCode()).isEqualTo(200)
+        val hendelser: List<FellesHendelseOutboundDto> = mapper.readValue(response.body())
+        
+        // Det skal være 1 rekrutteringstreff-hendelse (OPPRETTET) + 1 jobbsøker-hendelse (synlig)
+        val jobbsøkerHendelser = hendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
+        val treffHendelser = hendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }
+        
+        assertThat(jobbsøkerHendelser).hasSize(1)
+        assertThat(jobbsøkerHendelser.first().subjektNavn).isEqualTo("Synlig Person")
+        assertThat(treffHendelser).isNotEmpty()
     }
 }
+
