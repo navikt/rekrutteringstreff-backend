@@ -410,13 +410,13 @@ class JobbsøkerRepositoryTest {
         val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("To"), Etternavn("Person"), null, null, null)
         val jobbsøker3 = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Tre"), Etternavn("Person"), null, null, null)
 
-        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker1, jobbsøker2, jobbsøker3), treffId, "testperson")
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker1, jobbsøker2, jobbsøker3), treffId, "testperson")
 
         // Verifiser at alle 3 telles
         assertThat(repository.hentAntallJobbsøkere(treffId)).isEqualTo(3)
 
         // Sett én som ikke-synlig
-        db.settSynlighetForFnr("22222222222", false)
+        db.settSynlighet(personTreffIder[1], false)
 
         // Verifiser at bare 2 telles
         assertThat(repository.hentAntallJobbsøkere(treffId)).isEqualTo(2)
@@ -429,14 +429,14 @@ class JobbsøkerRepositoryTest {
         val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
         val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
 
-        db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "testperson")
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "testperson")
 
         // Begge har OPPRETTET-hendelse, så vi forventer 2 hendelser
         val alleHendelser = repository.hentJobbsøkerHendelser(treffId)
         assertThat(alleHendelser).hasSize(2)
 
         // Sett én som ikke-synlig
-        db.settSynlighetForFnr("22222222222", false)
+        db.settSynlighet(personTreffIder[1], false)
 
         // Verifiser at bare hendelser for synlig jobbsøker returneres
         val synligeHendelser = repository.hentJobbsøkerHendelser(treffId)
@@ -450,14 +450,14 @@ class JobbsøkerRepositoryTest {
         val fnr = Fødselsnummer("12345678901")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
 
-        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
         // Verifiser at jobbsøker finnes
         val hentetJobbsøker = repository.hentJobbsøker(treffId, fnr)
         assertThat(hentetJobbsøker).isNotNull
 
         // Sett som ikke-synlig
-        db.settSynlighetForFnr("12345678901", false)
+        db.settSynlighet(personTreffIder[0], false)
 
         // Verifiser at jobbsøker ikke returneres
         val ikkeSynligJobbsøker = repository.hentJobbsøker(treffId, fnr)

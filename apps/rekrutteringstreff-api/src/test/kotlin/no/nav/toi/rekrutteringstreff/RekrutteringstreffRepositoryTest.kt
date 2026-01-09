@@ -101,7 +101,7 @@ class RekrutteringstreffRepositoryTest {
         // Legg til to jobbsøkere
         val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
         val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
-        db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, navIdent)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, navIdent)
 
         // Hent alle hendelser - skal inkludere rekrutteringstreff OPPRETTET + 2 jobbsøker OPPRETTET
         val alleHendelser = repository.hentAlleHendelser(treffId)
@@ -109,7 +109,7 @@ class RekrutteringstreffRepositoryTest {
         assertThat(jobbsøkerHendelser).hasSize(2)
 
         // Sett én jobbsøker som ikke-synlig
-        db.settSynlighetForFnr("22222222222", false)
+        db.settSynlighet(personTreffIder[1], false)
 
         // Hent igjen - skal nå bare inkludere hendelse for synlig jobbsøker
         val filtrerteHendelser = repository.hentAlleHendelser(treffId)
@@ -125,8 +125,8 @@ class RekrutteringstreffRepositoryTest {
 
         // Legg til en jobbsøker og sett som ikke-synlig
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Test"), Etternavn("Person"), null, null, null)
-        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, navIdent)
-        db.settSynlighetForFnr("11111111111", false)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, navIdent)
+        db.settSynlighet(personTreffIder[0], false)
 
         // Hent alle hendelser - skal fortsatt inkludere rekrutteringstreff OPPRETTET
         val alleHendelser = repository.hentAlleHendelser(treffId)

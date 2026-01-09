@@ -14,11 +14,6 @@ import no.nav.toi.log
 open class SynlighetsBehovPublisher(
     private val rapidsConnection: RapidsConnection?
 ) {
-    /**
-     * Publiserer et synlighetsbehov for en person.
-     *
-     * @param fodselsnummer Fødselsnummeret til personen
-     */
     open fun publiserSynlighetsBehov(fodselsnummer: String) {
         val melding = JsonMessage.newMessage(
             mapOf(

@@ -27,10 +27,11 @@ class TestDatabase {
     /**
      * Legger til jobbsøkere med OPPRETTET-hendelse via repository.
      */
-    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson") {
-        dataSource.connection.use { connection ->
+    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson"): List<PersonTreffId> {
+        return dataSource.connection.use { connection ->
             val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
             jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv)
+            personTreffIder
         }
     }
 
@@ -210,25 +211,10 @@ class TestDatabase {
         conn.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
     }
 
-    /**
-     * Oppdaterer synlighet for en jobbsøker direkte i databasen.
-     * Brukes i tester for å simulere at synlighetsmotor har satt synlighet.
-     */
     fun settSynlighet(personTreffId: PersonTreffId, erSynlig: Boolean) = dataSource.connection.use { conn ->
         conn.prepareStatement("UPDATE jobbsoker SET er_synlig = ? WHERE id = ?").apply {
             setBoolean(1, erSynlig)
             setObject(2, personTreffId.somUuid)
-        }.executeUpdate()
-    }
-
-    /**
-     * Oppdaterer synlighet for en jobbsøker basert på fødselsnummer.
-     * Brukes i tester for å simulere at synlighetsmotor har satt synlighet.
-     */
-    fun settSynlighetForFnr(fodselsnummer: String, erSynlig: Boolean) = dataSource.connection.use { conn ->
-        conn.prepareStatement("UPDATE jobbsoker SET er_synlig = ? WHERE fodselsnummer = ?").apply {
-            setBoolean(1, erSynlig)
-            setString(2, fodselsnummer)
         }.executeUpdate()
     }
 
