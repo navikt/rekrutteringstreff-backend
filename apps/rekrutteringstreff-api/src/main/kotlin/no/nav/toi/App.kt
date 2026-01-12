@@ -25,7 +25,7 @@ import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
-import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovPublisher
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
@@ -92,19 +92,19 @@ class App(
 
     private lateinit var javalin: Javalin
     private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
+    private lateinit var synlighetsBehovScheduler: SynlighetsBehovScheduler
     private val secureLog = SecureLog(log)
 
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
-        val synlighetsBehovPublisher = SynlighetsBehovPublisher(rapidsConnection)
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, synlighetsBehovPublisher)
-        startJavalin(jobbsøkerRepository, synlighetsBehovPublisher)
-        startSchedulere()
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
+        startJavalin(jobbsøkerRepository)
+        startSchedulere(jobbsøkerRepository)
         startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
 
-    private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository, synlighetsBehovPublisher: SynlighetsBehovPublisher) {
+    private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository) {
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
 
@@ -195,7 +195,7 @@ class App(
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val kiLoggRepository = KiLoggRepository(dataSource)
 
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, synlighetsBehovPublisher)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
         val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
         val eierService = EierService(eierRepository)
@@ -242,8 +242,8 @@ class App(
         javalin.start(port)
     }
 
-    private fun startSchedulere() {
-        log.info("Starting scheduler")
+    private fun startSchedulere(jobbsøkerRepository: JobbsøkerRepository) {
+        log.info("Starting schedulers")
 
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
@@ -256,6 +256,12 @@ class App(
             objectMapper = JacksonConfig.mapper
         )
         aktivitetskortJobbsøkerScheduler.start()
+
+        synlighetsBehovScheduler = SynlighetsBehovScheduler(
+            jobbsøkerRepository = jobbsøkerRepository,
+            rapidsConnection = rapidsConnection
+        )
+        synlighetsBehovScheduler.start()
     }
 
     fun startRR(jobbsøkerService: JobbsøkerService) {
@@ -277,6 +283,7 @@ class App(
     fun close() {
         log.info("Shutting down application")
         if (::aktivitetskortJobbsøkerScheduler.isInitialized) aktivitetskortJobbsøkerScheduler.stop()
+        if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")

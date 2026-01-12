@@ -6,7 +6,6 @@ import no.nav.toi.SecureLog
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
-import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovPublisher
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -14,8 +13,7 @@ import javax.sql.DataSource
 
 class JobbsøkerService(
     private val dataSource: DataSource,
-    private val jobbsøkerRepository: JobbsøkerRepository,
-    private val synlighetsBehovPublisher: SynlighetsBehovPublisher? = null
+    private val jobbsøkerRepository: JobbsøkerRepository
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
@@ -25,17 +23,11 @@ class JobbsøkerService(
         val nyeJobbsøkere = jobbsøkere.filterNot { eksisterendeJobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } }
         if (nyeJobbsøkere.isNotEmpty()) {
             dataSource.executeInTransaction { connection ->
-                // 1. Legg til jobbsøkere i database
                 val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId)
                 jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
-
-                // 2. Publiser synlighetsbehov - må skje ETTER at person er lagret (slik at need-svar har noe å oppdatere)
-                synlighetsBehovPublisher?.let { publisher ->
-                    nyeJobbsøkere.forEach { jobbsøker ->
-                        publisher.publiserSynlighetsBehov(jobbsøker.fødselsnummer.asString)
-                    }
-                }
             }
+            // Synlighetsbehov publiseres av SynlighetsBehovScheduler som periodisk
+            // finner jobbsøkere uten evaluert synlighet og trigger need-meldinger.
         }
     }
 

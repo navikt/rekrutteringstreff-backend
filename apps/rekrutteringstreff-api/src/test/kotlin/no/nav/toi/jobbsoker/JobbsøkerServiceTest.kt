@@ -624,52 +624,17 @@ class JobbsøkerServiceTest {
     }
 
     @Test
-    fun `leggTilJobbsøkere feiler og ruller tilbake hvis need-publisering feiler`() {
-        val feilendePublisher = object : no.nav.toi.jobbsoker.synlighet.SynlighetsBehovPublisher(null) {
-            override fun publiserSynlighetsBehov(fnr: String) {
-                throw RuntimeException("Simulert feil i publisering")
-            }
-        }
-        
-        val serviceMedFeilendePublisher = JobbsøkerService(db.dataSource, jobbsøkerRepository, feilendePublisher)
-        
+    fun `leggTilJobbsøkere legger til jobbsøker uten evaluert synlighet - scheduleren vil trigge need`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val jobbsøkere = listOf(
             LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Test"), Etternavn("Person"), null, null, null)
         )
 
-        // Forventer at operasjonen feiler
-        assertThrows<RuntimeException> {
-            serviceMedFeilendePublisher.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
-        }
+        jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
 
-        // Jobbsøkeren skal IKKE være lagt til (transaksjonen rulles tilbake når publisering feiler)
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty()
-    }
-
-    @Test
-    fun `leggTilJobbsøkere legger til jobbsøkere når publisering lykkes`() {
-        val vellykketPublisher = object : no.nav.toi.jobbsoker.synlighet.SynlighetsBehovPublisher(null) {
-            val publiserteFnr = mutableListOf<String>()
-            override fun publiserSynlighetsBehov(fnr: String) {
-                publiserteFnr.add(fnr)
-            }
-        }
-        
-        val serviceMedPublisher = JobbsøkerService(db.dataSource, jobbsøkerRepository, vellykketPublisher)
-        
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val jobbsøkere = listOf(
-            LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Test"), Etternavn("Person"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("10987654321"), Fornavn("Test2"), Etternavn("Person2"), null, null, null)
-        )
-
-        serviceMedPublisher.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
-
-        // Begge jobbsøkerne skal være lagt til
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(2)
-        
-        // Begge skal ha fått publisert synlighetsbehov
-        assertThat(vellykketPublisher.publiserteFnr).containsExactlyInAnyOrder("12345678901", "10987654321")
+        // Jobbsøkeren skal være lagt til med synlighet_sist_oppdatert = NULL
+        // SynlighetsBehovScheduler vil fange opp og trigge need-melding
+        val fødselsnumreUtenSynlighet = jobbsøkerRepository.hentFødselsnumreUtenEvaluertSynlighet()
+        assertThat(fødselsnumreUtenSynlighet).contains("12345678901")
     }
 }

@@ -403,6 +403,25 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }.executeUpdate()
     }
 
+    /**
+     * Henter distinkte fødselsnumre for jobbsøkere der synlighet ikke er evaluert ennå.
+     * Brukes av SynlighetsBehovScheduler for å trigge need-meldinger for de som mangler synlighetsstatus.
+     */
+    fun hentFødselsnumreUtenEvaluertSynlighet(): List<String> = dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+            SELECT DISTINCT fodselsnummer
+            FROM jobbsoker
+            WHERE synlighet_sist_oppdatert IS NULL
+              AND status != 'SLETTET'
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) rs.getString("fodselsnummer") else null }.toList()
+            }
+        }
+    }
+
     fun oppdaterSynlighet(
         fodselsnummer: String,
         erSynlig: Boolean,

@@ -16,7 +16,7 @@ import java.time.Instant
 /**
  * Lytter på svar fra need-meldinger (synlighetRekrutteringstreff).
  *
- * Når en person legges til et rekrutteringstreff, sendes en need-melding til toi-synlighetsmotor.
+ * SynlighetsBehovScheduler sender need-meldinger for jobbsøkere som mangler synlighetsstatus.
  * Denne lytteren mottar svaret og oppdaterer synlighet for personen i alle treff de er med i
  * (der synlighet ikke allerede er satt).
  *

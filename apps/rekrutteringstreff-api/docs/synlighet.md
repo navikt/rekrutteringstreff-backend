@@ -16,7 +16,7 @@ flowchart TB
         JS[JobbsøkerService]
         SL[SynlighetsLytter]
         SBL[SynlighetsBehovLytter]
-        SBP[SynlighetsBehovPublisher]
+        SBS[SynlighetsBehovScheduler]
         DB[(PostgreSQL)]
     end
 
@@ -33,9 +33,9 @@ flowchart TB
     Frontend --> API
     API --> JR
     JR --> DB
-    JS --> SBP
+    SBS --> JR
 
-    SBP -->|need: synlighetRekrutteringstreff| RAPID
+    SBS -->|need: synlighetRekrutteringstreff| RAPID
     RAPID -->|need-svar| SBL
     SBL --> JS
 
@@ -56,25 +56,30 @@ sequenceDiagram
     participant V as Veileder
     participant API as rekrutteringstreff-api
     participant DB as Database
+    participant Sched as SynlighetsBehovScheduler
     participant Kafka as Kafka Rapid
     participant SM as toi-synlighetsmotor
 
     V->>API: POST /jobbsokere
-    API->>DB: Lagre jobbsøker (er_synlig=TRUE)
-    API->>Kafka: Publiser need: synlighetRekrutteringstreff
+    API->>DB: Lagre jobbsøker (er_synlig=TRUE, synlighet_sist_oppdatert=NULL)
     API-->>V: 201 Created
+
+    Note over Sched: Scheduler kjører periodisk (hvert minutt)
+    Sched->>DB: Finn jobbsøkere uten evaluert synlighet
+    Sched->>Kafka: Publiser need: synlighetRekrutteringstreff
 
     Kafka->>SM: Motta need
     SM->>SM: Slå opp synlighet
     SM->>Kafka: Publiser svar
 
     Kafka->>API: Motta need-svar
-    API->>DB: Oppdater synlighet (kun hvis ikke allerede satt)
+    API->>DB: Oppdater synlighet (kun hvis synlighet_sist_oppdatert er NULL)
 ```
 
 **Nøkkelpunkter:**
 
 - Jobbsøkeren er **synlig fra start** (optimistisk tilnærming)
+- Scheduler finner jobbsøkere uten evaluert synlighet og trigger need-meldinger
 - Need-svar oppdaterer kun hvis synlighet ikke allerede er satt av event-strømmen
 
 ### Ved synlighetsendring (event-strøm)
@@ -131,9 +136,9 @@ sequenceDiagram
 | ---------------------------- | ---------------------- | ------------------------------------------------------------ |
 | **SynlighetsLytter**         | `jobbsoker/synlighet/` | Lytter på synlighets-events fra event-strømmen               |
 | **SynlighetsBehovLytter**    | `jobbsoker/synlighet/` | Lytter på svar fra need-meldinger                            |
-| **SynlighetsBehovPublisher** | `jobbsoker/synlighet/` | Sender need-meldinger ved opprettelse                        |
+| **SynlighetsBehovScheduler** | `jobbsoker/synlighet/` | Finner jobbsøkere uten synlighet og publiserer need-meldinger |
 | **JobbsøkerRepository**      | `jobbsoker/`           | Synlighetsfiltrering i alle spørringer + oppdateringsmetoder |
-| **JobbsøkerService**         | `jobbsoker/`           | Delegerer til repository + publiserer need                   |
+| **JobbsøkerService**         | `jobbsoker/`           | Delegerer til repository                                     |
 
 ### toi-synlighetsmotor
 
