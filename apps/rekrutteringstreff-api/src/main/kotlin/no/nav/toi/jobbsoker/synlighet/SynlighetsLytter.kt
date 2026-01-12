@@ -7,9 +7,10 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
-import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.SecureLog
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.log
+import org.slf4j.Logger
 import java.time.Instant
 
 /**
@@ -25,6 +26,8 @@ class SynlighetsLytter(
     rapidsConnection: RapidsConnection,
     private val jobbsøkerService: JobbsøkerService
 ) : River.PacketListener {
+
+    private val secureLogger: Logger = SecureLog(log)
 
     init {
         log.info("SynlighetsLytter initialisert")
@@ -53,13 +56,13 @@ class SynlighetsLytter(
         val meldingTidspunkt = Instant.parse(opprettetTekst)
 
         log.info("Mottok synlighetsmelding fra event-strøm: erSynlig=$erSynlig, tidspunkt=$opprettetTekst")
-        secure(log).info("Mottok synlighetsmelding for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig")
+        secureLogger.info("Mottok synlighetsmelding for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig")
 
         val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, meldingTidspunkt)
 
         if (oppdatert > 0) {
             log.info("Oppdaterte synlighet i $oppdatert rekrutteringstreff fra event-strøm")
-            secure(log).info("Oppdaterte synlighet for fødselsnummer $fodselsnummer i $oppdatert treff, erSynlig=$erSynlig")
+            secureLogger.info("Oppdaterte synlighet for fødselsnummer $fodselsnummer i $oppdatert treff, erSynlig=$erSynlig")
         }
     }
 
