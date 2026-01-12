@@ -211,7 +211,7 @@ Viktige indekser for ytelse:
 | `idx_rekrutteringstreff_hendelse_rekrutteringstreff_id` | rekrutteringstreff_hendelse | FK-indeks                                       |
 | `ki_spørring_logg_treff_uuid_idx`                       | ki_spørring_logg            | Indeks på treff_id                              |
 | `naringskode_arbeidsgiver_id_idx`                       | naringskode                 | FK-indeks                                       |
-| `idx_jobbsoker_synlig`                                  | jobbsoker                   | Partielt indeks der `er_synlig = FALSE` (V9)    |
+| `idx_jobbsoker_synlig`                                  | jobbsoker                   | Delvis indeks der `er_synlig = TRUE` (V9)       |
 | `idx_jobbsoker_fodselsnummer`                           | jobbsoker                   | Indeks for oppslag ved synlighetsmeldinger (V9) |
 
 ## Constraints
