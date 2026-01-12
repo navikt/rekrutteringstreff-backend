@@ -15,6 +15,7 @@ val nimbusVersion = "10.0.1"
 val wiremockVersion = "3.12.0"
 val jacksonDatatypeJsr310Version = "2.18.2" // JavaTimeModule, se https://github.com/FasterXML/jackson-modules-java8
 val resilience4jVersion = "2.2.0"
+val navCommonVersion = "3.2024.11.26_16.35-432a29107830"
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
@@ -36,6 +37,7 @@ dependencies {
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
     implementation("org.ehcache:ehcache:3.10.8")
     implementation("io.github.resilience4j:resilience4j-retry:$resilience4jVersion")
+    implementation("no.nav.common:audit-log:$navCommonVersion")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
