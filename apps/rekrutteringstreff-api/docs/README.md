@@ -4,10 +4,10 @@ Denne mappen inneholder dokumentasjon for rekrutteringstreff-api.
 
 ## Innhold
 
-| Dokument | Beskrivelse |
-|----------|-------------|
-| [database-schema.md](database-schema.md) | Databaseskjema med ER-diagram og Flyway-migrasjoner |
-| [synlighet.md](synlighet.md) | Integrasjon med toi-synlighetsmotor for synlighetsfiltrering |
+| Dokument                                 | Beskrivelse                                                  |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| [database-schema.md](database-schema.md) | Databaseskjema med ER-diagram og Flyway-migrasjoner          |
+| [synlighet.md](synlighet.md)             | Integrasjon med toi-synlighetsmotor for synlighetsfiltrering |
 
 ## Mermaid-diagrammer
 

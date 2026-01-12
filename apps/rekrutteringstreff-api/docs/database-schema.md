@@ -15,21 +15,21 @@ erDiagram
     rekrutteringstreff ||--o{ innlegg : "har"
     rekrutteringstreff ||--o{ rekrutteringstreff_hendelse : "logger"
     rekrutteringstreff ||--o{ ki_spørring_logg : "refererer til"
-    
+
     arbeidsgiver ||--o{ naringskode : "har"
     arbeidsgiver ||--o{ arbeidsgiver_hendelse : "logger"
-    
+
     jobbsoker ||--o{ jobbsoker_hendelse : "logger"
-    
+
     jobbsoker_hendelse ||--o{ aktivitetskort_polling : "sender"
-    
+
     rekrutteringstreff {
         bigserial rekrutteringstreff_id PK "Intern primærnøkkel"
         uuid id UK "Unik UUID for treffet"
         text tittel "Tittel på rekrutteringstreffet"
         text status "Status: OPPRETTET, PUBLISERT, AVLYST osv."
-        text opprettet_av_person_navident "NAV-ident for oppretteren"
-        text opprettet_av_kontor_enhetid "NAV-kontor enhetid"
+        text opprettet_av_person_navident "Nav-ident for oppretteren"
+        text opprettet_av_kontor_enhetid "Nav-kontor enhetid"
         timestamptz opprettet_av_tidspunkt "Når treffet ble opprettet"
         timestamptz fratid "Start tidspunkt for treffet"
         timestamptz tiltid "Slutt tidspunkt for treffet"
@@ -39,12 +39,12 @@ erDiagram
         text fylke "Fylke for treffstedet (V5)"
         text kommune "Kommune for treffstedet (V5)"
         timestamptz svarfrist "Frist for påmelding/svar"
-        text[] eiere "Array av NAV-identer som eier treffet"
+        text[] eiere "Array av Nav-identer som eier treffet"
         text beskrivelse "Beskrivelse av treffet"
-        text sist_endret_av_person_navident "NAV-ident for sist endring (V6)"
+        text sist_endret_av_person_navident "Nav-ident for sist endring (V6)"
         timestamptz sist_endret_av_tidspunkt "Tidspunkt for sist endring (V6)"
     }
-    
+
     arbeidsgiver {
         bigserial arbeidsgiver_id PK "Intern primærnøkkel"
         bigint rekrutteringstreff_id FK "Referanse til rekrutteringstreff"
@@ -56,28 +56,28 @@ erDiagram
         text postnummer "Postnummer for arbeidsgiver (V7)"
         text poststed "Poststed for arbeidsgiver (V7)"
     }
-    
+
     jobbsoker {
         bigserial jobbsoker_id PK "Intern primærnøkkel"
         bigint rekrutteringstreff_id FK "Referanse til rekrutteringstreff"
         text fodselsnummer "Fødselsnummer for jobbsøker"
         text fornavn "Fornavn på jobbsøker"
         text etternavn "Etternavn på jobbsøker"
-        text navkontor "NAV-kontor som følger opp jobbsøker"
+        text navkontor "Nav-kontor som følger opp jobbsøker"
         text veileder_navn "Veilederens navn"
-        text veileder_navident "Veilederens NAV-ident"
+        text veileder_navident "Veilederens Nav-ident"
         uuid id "Unik UUID for jobbsøker i treffet"
         text status "Status for jobbsøker (V4)"
         boolean er_synlig "Synlighet fra synlighetsmotor (V9)"
         timestamptz synlighet_sist_oppdatert "Når synlighet sist ble oppdatert (V9)"
     }
-    
+
     innlegg {
         bigserial innlegg_id PK "Intern primærnøkkel"
         uuid id UK "Unik UUID (auto-generert)"
         bigint rekrutteringstreff_id FK "Referanse til rekrutteringstreff"
         text tittel "Tittel på innlegget"
-        text opprettet_av_person_navident "NAV-ident til oppretteren"
+        text opprettet_av_person_navident "Nav-ident til oppretteren"
         text opprettet_av_person_navn "Navn på oppretteren"
         text opprettet_av_person_beskrivelse "Beskrivelse av oppretterens rolle"
         timestamptz sendes_til_jobbsoker_tidspunkt "Når innlegget sendes til jobbsøker"
@@ -85,7 +85,7 @@ erDiagram
         timestamptz opprettet_tidspunkt "Når innlegget ble opprettet"
         timestamptz sist_oppdatert_tidspunkt "Sist oppdatert tidspunkt"
     }
-    
+
     jobbsoker_hendelse {
         bigserial jobbsoker_hendelse_id PK "Intern primærnøkkel"
         uuid id "Unik UUID for hendelsen"
@@ -96,7 +96,7 @@ erDiagram
         text aktøridentifikasjon "Identifikasjon av aktøren"
         jsonb hendelse_data "Ekstra data knyttet til hendelsen (V2)"
     }
-    
+
     arbeidsgiver_hendelse {
         bigserial arbeidsgiver_hendelse_id PK "Intern primærnøkkel"
         uuid id "Unik UUID for hendelsen"
@@ -107,7 +107,7 @@ erDiagram
         text aktøridentifikasjon "Identifikasjon av aktøren"
         jsonb hendelse_data "Ekstra data knyttet til hendelsen (V2)"
     }
-    
+
     rekrutteringstreff_hendelse {
         bigserial rekrutteringstreff_hendelse_id PK "Intern primærnøkkel"
         uuid id "Unik UUID for hendelsen"
@@ -118,13 +118,13 @@ erDiagram
         text aktøridentifikasjon "Identifikasjon av aktøren"
         jsonb hendelse_data "Ekstra data knyttet til hendelsen (V2)"
     }
-    
+
     aktivitetskort_polling {
         bigserial aktivitetskort_polling_id PK "Intern primærnøkkel"
         bigint jobbsoker_hendelse_id FK "Referanse til jobbsøker_hendelse"
         timestamptz sendt_tidspunkt "Når aktivitetskortet ble sendt"
     }
-    
+
     ki_spørring_logg {
         bigserial ki_spørring_logg_id PK "Intern primærnøkkel"
         uuid id "Unik UUID (auto-generert)"
@@ -142,10 +142,10 @@ erDiagram
         integer svartid_ms "Svartid i millisekunder"
         boolean lagret "Om svaret ble lagret/brukt"
         boolean manuell_kontroll_bryter_retningslinjer "Manuell overprøving av moderering"
-        text manuell_kontroll_utført_av "NAV-ident for manuell kontrollør"
+        text manuell_kontroll_utført_av "Nav-ident for manuell kontrollør"
         timestamptz manuell_kontroll_tidspunkt "Når manuell kontroll ble utført"
     }
-    
+
     naringskode {
         bigserial naringskode_id PK "Intern primærnøkkel"
         bigint arbeidsgiver_id FK "Referanse til arbeidsgiver"
@@ -175,7 +175,7 @@ erDiagram
 Alle hendelse-tabeller har en `hendelse_data jsonb` kolonne som kan inneholde ekstra strukturert data knyttet til hendelsen:
 
 - **rekrutteringstreff_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING` hendelser
-- **jobbsoker_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` hendelser  
+- **jobbsoker_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` hendelser
 - **arbeidsgiver_hendelse.hendelse_data**: Reservert for fremtidig bruk
 
 Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
@@ -187,32 +187,32 @@ Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>
 
 ## Flyway-migrasjoner
 
-| Versjon | Fil | Beskrivelse |
-|---------|-----|-------------|
-| V1 | `V1__initiell_last.sql` | Initiell opprettelse av alle tabeller |
-| V2 | `V2__hendelse_data.sql` | Legger til `hendelse_data` JSONB-kolonne på alle hendelse-tabeller |
-| V3 | `V3__arbeidsgiver_status.sql` | Legger til `status`-kolonne på arbeidsgiver |
-| V4 | `V4__jobbsoker_status.sql` | Legger til `status`-kolonne på jobbsøker |
-| V5 | `V5__rekrutteringstreff_kommune_og_fylke.sql` | Legger til `fylke` og `kommune` på rekrutteringstreff |
-| V6 | `V6__legg_til_endret_felter_rekrutteringstreff.sql` | Legger til `sist_endret_av_person_navident` og `sist_endret_av_tidspunkt` |
-| V7 | `V7__arbeidsgiver_adresse.sql` | Legger til adressefelt på arbeidsgiver (`gateadresse`, `postnummer`, `poststed`) |
-| V8 | `V8__fjerne_kandidatnummer.sql` | Fjerner `kandidatnummer`-kolonnen fra jobbsoker (hentes nå on-demand) |
-| V9 | `V9__synlighet_jobbsoker.sql` | Legger til synlighet-felt (`er_synlig`, `synlighet_sist_oppdatert`) og indekser |
+| Versjon | Fil                                                 | Beskrivelse                                                                      |
+| ------- | --------------------------------------------------- | -------------------------------------------------------------------------------- |
+| V1      | `V1__initiell_last.sql`                             | Initiell opprettelse av alle tabeller                                            |
+| V2      | `V2__hendelse_data.sql`                             | Legger til `hendelse_data` JSONB-kolonne på alle hendelse-tabeller               |
+| V3      | `V3__arbeidsgiver_status.sql`                       | Legger til `status`-kolonne på arbeidsgiver                                      |
+| V4      | `V4__jobbsoker_status.sql`                          | Legger til `status`-kolonne på jobbsøker                                         |
+| V5      | `V5__rekrutteringstreff_kommune_og_fylke.sql`       | Legger til `fylke` og `kommune` på rekrutteringstreff                            |
+| V6      | `V6__legg_til_endret_felter_rekrutteringstreff.sql` | Legger til `sist_endret_av_person_navident` og `sist_endret_av_tidspunkt`        |
+| V7      | `V7__arbeidsgiver_adresse.sql`                      | Legger til adressefelt på arbeidsgiver (`gateadresse`, `postnummer`, `poststed`) |
+| V8      | `V8__fjerne_kandidatnummer.sql`                     | Fjerner `kandidatnummer`-kolonnen fra jobbsoker (hentes nå on-demand)            |
+| V9      | `V9__synlighet_jobbsoker.sql`                       | Legger til synlighet-felt (`er_synlig`, `synlighet_sist_oppdatert`) og indekser  |
 
 ## Indekser
 
 Viktige indekser for ytelse:
 
-| Indeks | Tabell | Beskrivelse |
-|--------|--------|-------------|
-| `rekrutteringstreff_id_uq` | rekrutteringstreff | Unik indeks på id |
-| `idx_innlegg_rekrutteringstreff_id` | innlegg | FK-indeks |
-| `idx_arbeidsgiver_hendelse_arbeidsgiver_id` | arbeidsgiver_hendelse | FK-indeks |
-| `idx_rekrutteringstreff_hendelse_rekrutteringstreff_id` | rekrutteringstreff_hendelse | FK-indeks |
-| `ki_spørring_logg_treff_uuid_idx` | ki_spørring_logg | Indeks på treff_id |
-| `naringskode_arbeidsgiver_id_idx` | naringskode | FK-indeks |
-| `idx_jobbsoker_synlig` | jobbsoker | Partielt indeks der `er_synlig = FALSE` (V9) |
-| `idx_jobbsoker_fodselsnummer` | jobbsoker | Indeks for oppslag ved synlighetsmeldinger (V9) |
+| Indeks                                                  | Tabell                      | Beskrivelse                                     |
+| ------------------------------------------------------- | --------------------------- | ----------------------------------------------- |
+| `rekrutteringstreff_id_uq`                              | rekrutteringstreff          | Unik indeks på id                               |
+| `idx_innlegg_rekrutteringstreff_id`                     | innlegg                     | FK-indeks                                       |
+| `idx_arbeidsgiver_hendelse_arbeidsgiver_id`             | arbeidsgiver_hendelse       | FK-indeks                                       |
+| `idx_rekrutteringstreff_hendelse_rekrutteringstreff_id` | rekrutteringstreff_hendelse | FK-indeks                                       |
+| `ki_spørring_logg_treff_uuid_idx`                       | ki_spørring_logg            | Indeks på treff_id                              |
+| `naringskode_arbeidsgiver_id_idx`                       | naringskode                 | FK-indeks                                       |
+| `idx_jobbsoker_synlig`                                  | jobbsoker                   | Partielt indeks der `er_synlig = FALSE` (V9)    |
+| `idx_jobbsoker_fodselsnummer`                           | jobbsoker                   | Indeks for oppslag ved synlighetsmeldinger (V9) |
 
 ## Constraints
 
@@ -223,6 +223,7 @@ Viktige indekser for ytelse:
 ## Visning av diagrammet
 
 Dette diagrammet kan vises i:
+
 - GitHub (støtter Mermaid direkte)
 - IntelliJ IDEA (installer Mermaid plugin)
 - VS Code (installer Mermaid preview extension)

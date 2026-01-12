@@ -34,15 +34,15 @@ flowchart TB
     API --> JR
     JR --> DB
     JS --> SBP
-    
+
     SBP -->|need: synlighetRekrutteringstreff| RAPID
     RAPID -->|need-svar| SBL
     SBL --> JS
-    
+
     SGL -->|synlighet-event| RAPID
     RAPID -->|synlighet-event| SL
     SL --> JS
-    
+
     SRL -->|lytter på need| RAPID
     SRL --> SMDB
 ```
@@ -63,16 +63,17 @@ sequenceDiagram
     API->>DB: Lagre jobbsøker (er_synlig=TRUE)
     API->>Kafka: Publiser need: synlighetRekrutteringstreff
     API-->>V: 201 Created
-    
+
     Kafka->>SM: Motta need
     SM->>SM: Slå opp synlighet
     SM->>Kafka: Publiser svar
-    
+
     Kafka->>API: Motta need-svar
     API->>DB: Oppdater synlighet (kun hvis ikke allerede satt)
 ```
 
 **Nøkkelpunkter:**
+
 - Jobbsøkeren er **synlig fra start** (optimistisk tilnærming)
 - Need-svar oppdaterer kun hvis synlighet ikke allerede er satt av event-strømmen
 
@@ -89,13 +90,14 @@ sequenceDiagram
     Kilde->>SM: Kandidatdata endres
     SM->>SM: Evaluer synlighet
     SM->>Kafka: Publiser synlighets-event
-    
+
     Kafka->>API: Motta synlighets-event
     API->>DB: Oppdater alle jobbsøkere med fødselsnummer
     Note over DB: Kun nyere meldinger får effekt
 ```
 
 **Nøkkelpunkter:**
+
 - Event-strømmen har **alltid lov til å oppdatere** (så lenge meldingen er nyere)
 - Oppdaterer **alle rekrutteringstreff** der personen er jobbsøker
 
@@ -103,18 +105,18 @@ sequenceDiagram
 
 ### Synlighetsfelt i jobbsøker-tabellen
 
-| Felt | Type | Beskrivelse |
-|------|------|-------------|
-| `er_synlig` | BOOLEAN NOT NULL DEFAULT TRUE | Om jobbsøkeren skal vises i frontend |
-| `synlighet_sist_oppdatert` | TIMESTAMP WITH TIME ZONE | Når synlighet sist ble oppdatert fra synlighetsmotor |
+| Felt                       | Type                          | Beskrivelse                                          |
+| -------------------------- | ----------------------------- | ---------------------------------------------------- |
+| `er_synlig`                | BOOLEAN NOT NULL DEFAULT TRUE | Om jobbsøkeren skal vises i frontend                 |
+| `synlighet_sist_oppdatert` | TIMESTAMP WITH TIME ZONE      | Når synlighet sist ble oppdatert fra synlighetsmotor |
 
 ### Tolkning av feltkombinasjon
 
-| er_synlig | synlighet_sist_oppdatert | Betydning |
-|-----------|--------------------------|-----------|
-| TRUE | NULL | Synlig (default), synlighetsmotor har ikke svart ennå |
-| TRUE | timestamp | Synlighetsmotor har bekreftet at personen er synlig |
-| FALSE | timestamp | Synlighetsmotor har markert personen som ikke-synlig |
+| er_synlig | synlighet_sist_oppdatert | Betydning                                             |
+| --------- | ------------------------ | ----------------------------------------------------- |
+| TRUE      | NULL                     | Synlig (default), synlighetsmotor har ikke svart ennå |
+| TRUE      | timestamp                | Synlighetsmotor har bekreftet at personen er synlig   |
+| FALSE     | timestamp                | Synlighetsmotor har markert personen som ikke-synlig  |
 
 ### Indekser
 
@@ -125,20 +127,20 @@ sequenceDiagram
 
 ### rekrutteringstreff-api
 
-| Komponent | Plassering | Ansvar |
-|-----------|------------|--------|
-| **SynlighetsLytter** | `jobbsoker/synlighet/` | Lytter på synlighets-events fra event-strømmen |
-| **SynlighetsBehovLytter** | `jobbsoker/synlighet/` | Lytter på svar fra need-meldinger |
-| **SynlighetsBehovPublisher** | `jobbsoker/synlighet/` | Sender need-meldinger ved opprettelse |
-| **JobbsøkerRepository** | `jobbsoker/` | Synlighetsfiltrering i alle spørringer + oppdateringsmetoder |
-| **JobbsøkerService** | `jobbsoker/` | Delegerer til repository + publiserer need |
+| Komponent                    | Plassering             | Ansvar                                                       |
+| ---------------------------- | ---------------------- | ------------------------------------------------------------ |
+| **SynlighetsLytter**         | `jobbsoker/synlighet/` | Lytter på synlighets-events fra event-strømmen               |
+| **SynlighetsBehovLytter**    | `jobbsoker/synlighet/` | Lytter på svar fra need-meldinger                            |
+| **SynlighetsBehovPublisher** | `jobbsoker/synlighet/` | Sender need-meldinger ved opprettelse                        |
+| **JobbsøkerRepository**      | `jobbsoker/`           | Synlighetsfiltrering i alle spørringer + oppdateringsmetoder |
+| **JobbsøkerService**         | `jobbsoker/`           | Delegerer til repository + publiserer need                   |
 
 ### toi-synlighetsmotor
 
-| Komponent | Ansvar |
-|-----------|--------|
+| Komponent                             | Ansvar                                             |
+| ------------------------------------- | -------------------------------------------------- |
 | **SynlighetRekrutteringstreffLytter** | Besvarer need-meldinger fra rekrutteringstreff-api |
-| **SynlighetsgrunnlagLytter** | Evaluerer og publiserer synlighet til event-strøm |
+| **SynlighetsgrunnlagLytter**          | Evaluerer og publiserer synlighet til event-strøm  |
 
 ## Race condition-håndtering
 
@@ -163,13 +165,13 @@ sequenceDiagram
     participant NL as Need-lytter
 
     Note over DB: synlighet_sist_oppdatert = NULL
-    
+
     EL->>DB: Oppdater (erSynlig=FALSE, tid=T2)
     Note over DB: synlighet_sist_oppdatert = T2
-    
+
     NL->>DB: Prøv oppdater (erSynlig=TRUE)
     Note over DB: Ingen endring (timestamp != NULL)
-    
+
     EL->>DB: Prøv oppdater (erSynlig=TRUE, tid=T1)
     Note over DB: Ingen endring (T1 < T2)
 ```
@@ -192,11 +194,11 @@ Synlighetsmotor evaluerer følgende kriterier (uten å eksponere hvilke):
 
 ## Default-oppførsel
 
-| Scenario | Default |
-|----------|---------|
+| Scenario                                 | Default                                  |
+| ---------------------------------------- | ---------------------------------------- |
 | Ved opprettelse i rekrutteringstreff-api | `erSynlig = TRUE` (synlig frem til svar) |
-| Person ikke funnet i synlighetsmotor | `erSynlig = FALSE` (ikke synlig) |
-| `ferdigBeregnet = FALSE` | Behandles som ikke-synlig |
+| Person ikke funnet i synlighetsmotor     | `erSynlig = FALSE` (ikke synlig)         |
+| `ferdigBeregnet = FALSE`                 | Behandles som ikke-synlig                |
 
 ## Tester
 
