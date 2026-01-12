@@ -146,4 +146,41 @@ class SynlighetsBehovLytterTest {
 
         // Skal ikke kaste exception - bare returnere 0 oppdaterte
     }
+
+    @Test
+    fun `skal sette person som ikke-synlig når synlighetsmotor ikke kjenner personen`() {
+        // Dette tester scenarioet hvor synlighetsmotor returnerer erSynlig=false
+        // fordi personen ikke finnes i synlighetsmotor-databasen.
+        // rekrutteringstreff-api viser personen som synlig ved opprettelse (default),
+        // men når need-svaret kommer med erSynlig=false, skal personen skjules.
+        
+        val rapid = TestRapid()
+        SynlighetsBehovLytter(rapid, jobbsøkerService)
+
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = "12345678901"
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
+
+        // Personen er synlig ved opprettelse (default)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
+
+        // Synlighetsmotor returnerer erSynlig=false fordi personen ikke finnes i dens database
+        // (dette er default-oppførselen i toi-synlighetsmotor)
+        rapid.sendTestMessage(
+            """
+            {
+                "synlighetRekrutteringstreff": {
+                    "erSynlig": false,
+                    "ferdigBeregnet": true
+                },
+                "fodselsnummer": "$fnr",
+                "@opprettet": "${Instant.now()}"
+            }
+            """.trimIndent()
+        )
+
+        // Personen skal nå være skjult
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty()
+    }
 }
