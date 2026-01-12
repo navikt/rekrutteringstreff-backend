@@ -96,7 +96,7 @@ class SynlighetsBehovLytterTest {
     }
 
     @Test
-    fun `skal ignorere need-svar der ferdigBeregnet er false`() {
+    fun `skal behandle need-svar med ferdigBeregnet=false som ikke-synlig`() {
         val rapid = TestRapid()
         SynlighetsBehovLytter(rapid, jobbsøkerService)
 
@@ -105,8 +105,10 @@ class SynlighetsBehovLytterTest {
         val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
-        // Send need-svar med ferdigBeregnet=false - meldingen matcher ikke precondition fordi erSynlig finnes ikke
-        // Så denne testen verifiserer at meldinger uten erSynlig ignoreres
+        // Verifiser at jobbsøker er synlig (default)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
+
+        // Send need-svar med ferdigBeregnet=false - ved usikkerhet skal person behandles som ikke-synlig
         rapid.sendTestMessage(
             """
             {
@@ -119,8 +121,8 @@ class SynlighetsBehovLytterTest {
             """.trimIndent()
         )
 
-        // Skal fortsatt være synlig (ufullstendig data ignoreres)
-        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
+        // Skal nå være ikke-synlig (ved usikkerhet = ikke synlig, fail-safe)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty()
     }
 
     @Test

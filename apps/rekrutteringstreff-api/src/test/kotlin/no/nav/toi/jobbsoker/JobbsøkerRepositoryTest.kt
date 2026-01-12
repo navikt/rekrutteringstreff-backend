@@ -463,7 +463,4 @@ class JobbsøkerRepositoryTest {
         val ikkeSynligJobbsøker = repository.hentJobbsøker(treffId, fnr)
         assertThat(ikkeSynligJobbsøker).isNull()
     }
-
-    // Synlighets-oppdaterings-tester er flyttet til JobbsøkerServiceTest
-    // siden forretningslogikken nå ligger i service-laget
 }

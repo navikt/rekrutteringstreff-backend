@@ -19,6 +19,9 @@ import java.time.Instant
  * Denne lytteren mottar svaret og oppdaterer synlighet for personen i alle treff de er med i
  * (der synlighet ikke allerede er satt).
  *
+ * Hvis ferdigBeregnet=false eller erSynlig mangler, behandles personen som ikke-synlig.
+ * Dette sikrer at ved usikkerhet om synlighet, skjules personen (fail-safe).
+ *
  * Skriver KUN hvis synlighet_sist_oppdatert er NULL.
  * Dette forhindrer at need-svar overskriver nyere data fra event-strømmen.
  */
@@ -31,13 +34,14 @@ class SynlighetsBehovLytter(
         log.info("SynlighetsBehovLytter initialisert")
         River(rapidsConnection).apply {
             precondition {
-                // Lytter på meldinger der synlighetRekrutteringstreff-behovet er løst
-                it.requireKey("synlighetRekrutteringstreff.erSynlig")
+                // Lytter på meldinger der synlighetRekrutteringstreff-behovet finnes (løst eller ikke)
+                it.requireKey("synlighetRekrutteringstreff")
             }
             validate {
                 it.requireKey("fodselsnummer")
                 it.requireKey("@opprettet")
-                it.interestedIn("synlighetRekrutteringstreff")
+                it.interestedIn("synlighetRekrutteringstreff.erSynlig")
+                it.interestedIn("synlighetRekrutteringstreff.ferdigBeregnet")
             }
         }.register(this)
     }
@@ -49,11 +53,22 @@ class SynlighetsBehovLytter(
         meterRegistry: MeterRegistry
     ) {
         val fodselsnummer = packet["fodselsnummer"].asText()
-        val erSynlig = packet["synlighetRekrutteringstreff"]["erSynlig"].asBoolean()
         val opprettetTekst = packet["@opprettet"].asText()
         val meldingTidspunkt = Instant.parse(opprettetTekst)
+        
+        val synlighetNode = packet["synlighetRekrutteringstreff"]
+        val ferdigBeregnet = synlighetNode["ferdigBeregnet"]?.asBoolean() ?: false
+        val erSynligNode = synlighetNode["erSynlig"]
+        
+        // Hvis ikke ferdigBeregnet eller erSynlig mangler, behandle som ikke-synlig (fail-safe)
+        val erSynlig = if (ferdigBeregnet && erSynligNode != null && !erSynligNode.isNull) {
+            erSynligNode.asBoolean()
+        } else {
+            log.info("Need-svar ufullstendig (ferdigBeregnet=$ferdigBeregnet, erSynlig=${erSynligNode?.asBoolean()}) - behandler som ikke-synlig")
+            false
+        }
 
-        log.info("Mottok need-svar for synlighetRekrutteringstreff: erSynlig=$erSynlig")
+        log.info("Mottok need-svar for synlighetRekrutteringstreff: erSynlig=$erSynlig, ferdigBeregnet=$ferdigBeregnet")
         secure(log).info("Mottok need-svar for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig")
 
         val oppdatert = jobbsøkerService.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, meldingTidspunkt)

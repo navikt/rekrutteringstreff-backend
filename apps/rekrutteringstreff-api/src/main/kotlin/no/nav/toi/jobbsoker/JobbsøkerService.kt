@@ -29,7 +29,6 @@ class JobbsøkerService(
                 jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
 
                 // 2. Publiser synlighetsbehov - må skje ETTER at person er lagret (slik at need-svar har noe å oppdatere)
-                //    men INNE i transaksjonen (slik at vi ruller tilbake hvis publisering feiler)
                 synlighetsBehovPublisher?.let { publisher ->
                     nyeJobbsøkere.forEach { jobbsøker ->
                         publisher.publiserSynlighetsBehov(jobbsøker.fødselsnummer.asString)

@@ -162,7 +162,7 @@ class SynlighetsKomponentTest {
         // Simuler at synlighetsmotor sender event om at person er kode 6/7
         jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, Instant.now())
         
-        // Jobbsøker skal nå være filtr ert ut fra API
+        // Jobbsøker skal nå være filtrert ut fra API
         val responseEtter = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
         assertThat(responseEtter.statusCode()).isEqualTo(200)
         val jobbsøkereEtter: List<JobbsøkerOutboundDto> = mapper.readValue(responseEtter.body())
