@@ -37,7 +37,8 @@ class SynlighetsBehovScheduler(
         val now = LocalDateTime.now()
         val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
 
-        scheduler.scheduleAtFixedRate(::behandleJobbsøkereUtenSynlighet, initialDelay, 1, TimeUnit.MINUTES)
+        // Kjører hvert minutt
+        scheduler.scheduleAtFixedRate(::behandleJobbsøkereUtenSynlighet, initialDelay, 60, TimeUnit.SECONDS)
     }
 
     fun stop() {
@@ -53,7 +54,7 @@ class SynlighetsBehovScheduler(
     }
 
     fun behandleJobbsøkereUtenSynlighet() {
-        log.info("Kjører SynlighetsBehovScheduler for å finne jobbsøkere uten evaluert synlighet")  
+        log.info("Kjører SynlighetsBehovScheduler for å finne jobbsøkere uten evaluert synlighet")
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av SynlighetsBehovScheduler er ikke ferdig, skipper denne kjøringen.")
             return
