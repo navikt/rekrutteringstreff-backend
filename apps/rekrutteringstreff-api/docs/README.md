@@ -21,3 +21,4 @@ Dokumentene inneholder Mermaid-diagrammer som kan vises i:
 ## Relaterte dokumenter
 
 - [Planleggingsdokument for synlighet](../../../../synlighet-teknisk-design.md) - Detaljert teknisk design med kodeeksempler
+
