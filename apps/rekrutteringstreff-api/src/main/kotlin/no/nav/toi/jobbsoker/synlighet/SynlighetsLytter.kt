@@ -11,7 +11,6 @@ import no.nav.toi.SecureLog
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.log
 import org.slf4j.Logger
-import java.time.Instant
 
 /**
  * Lytter på synlighetsmeldinger fra event-strømmen (toi-synlighetsmotor).
@@ -53,7 +52,7 @@ class SynlighetsLytter(
         val fodselsnummer = packet["fodselsnummer"].asText()
         val erSynlig = packet["synlighet"]["erSynlig"].asBoolean()
         val opprettetTekst = packet["@opprettet"].asText()
-        val meldingTidspunkt = Instant.parse(opprettetTekst)
+        val meldingTidspunkt = parseOpprettetTidspunktAsInstant(opprettetTekst)
 
         log.info("Mottok synlighetsmelding fra event-strøm: erSynlig=$erSynlig, tidspunkt=$opprettetTekst")
         secureLogger.info("Mottok synlighetsmelding for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig")

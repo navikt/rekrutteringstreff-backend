@@ -11,7 +11,6 @@ import no.nav.toi.SecureLog
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.log
 import org.slf4j.Logger
-import java.time.Instant
 
 /**
  * Lytter på svar fra need-meldinger (synlighetRekrutteringstreff).
@@ -57,8 +56,8 @@ class SynlighetsBehovLytter(
     ) {
         val fodselsnummer = packet["fodselsnummer"].asText()
         val opprettetTekst = packet["@opprettet"].asText()
-        val meldingTidspunkt = Instant.parse(opprettetTekst)
-        
+        val meldingTidspunkt = parseOpprettetTidspunktAsInstant(opprettetTekst)
+
         val synlighetNode = packet["synlighetRekrutteringstreff"]
         val ferdigBeregnet = synlighetNode["ferdigBeregnet"]?.asBoolean() ?: false
         val erSynligNode = synlighetNode["erSynlig"]

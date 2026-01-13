@@ -70,6 +70,7 @@ erDiagram
         text status "Status for jobbsøker (V4)"
         boolean er_synlig "Synlighet fra synlighetsmotor (V9)"
         timestamptz synlighet_sist_oppdatert "Når synlighet sist ble oppdatert (V9)"
+        text synlighet_kilde "Kilde: EVENT (event-strøm) eller NEED (scheduler) (V10)"
     }
 
     innlegg {
@@ -198,6 +199,7 @@ Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>
 | V7      | `V7__arbeidsgiver_adresse.sql`                      | Legger til adressefelt på arbeidsgiver (`gateadresse`, `postnummer`, `poststed`) |
 | V8      | `V8__fjerne_kandidatnummer.sql`                     | Fjerner `kandidatnummer`-kolonnen fra jobbsoker (hentes nå on-demand)            |
 | V9      | `V9__synlighet_jobbsoker.sql`                       | Legger til synlighet-felt (`er_synlig`, `synlighet_sist_oppdatert`) og indekser  |
+| V10     | `V10__synlighet_kilde.sql`                          | Legger til `synlighet_kilde` for å skille event fra need-svar                    |
 
 ## Indekser
 

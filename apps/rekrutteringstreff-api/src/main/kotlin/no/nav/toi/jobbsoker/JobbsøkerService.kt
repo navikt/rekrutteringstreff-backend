@@ -7,6 +7,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.rekrutteringstreff.TreffId
+import java.time.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
@@ -204,11 +205,11 @@ class JobbsøkerService(
         )
     }
 
-    fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: java.time.Instant): Int =
-        jobbsøkerRepository.oppdaterSynlighet(fodselsnummer, erSynlig, meldingTidspunkt)
+    fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int =
+        jobbsøkerRepository.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, meldingTidspunkt)
 
-    fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: java.time.Instant): Int =
-        jobbsøkerRepository.oppdaterSynlighetHvisIkkeSatt(fodselsnummer, erSynlig, meldingTidspunkt)
+    fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int =
+        jobbsøkerRepository.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, meldingTidspunkt)
 }
 
 enum class MarkerSlettetResultat {

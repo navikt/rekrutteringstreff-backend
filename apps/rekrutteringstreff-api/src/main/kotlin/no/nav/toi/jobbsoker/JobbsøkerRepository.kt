@@ -422,47 +422,59 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    fun oppdaterSynlighet(
+    /**
+     * Oppdaterer synlighet fra event-strømmen.
+     *
+     * Event har prioritet og overskriver:
+     * - Alltid hvis eksisterende kilde er NEED
+     * - Kun hvis nyere tidspunkt når eksisterende kilde er EVENT
+     */
+    fun oppdaterSynlighetFraEvent(
         fodselsnummer: String,
         erSynlig: Boolean,
-        meldingTidspunkt: Instant
+        tidspunkt: Instant
     ): Int = dataSource.connection.use { connection ->
         connection.prepareStatement(
             """
             UPDATE jobbsoker
             SET er_synlig = ?,
-                synlighet_sist_oppdatert = ?
+                synlighet_sist_oppdatert = ?,
+                synlighet_kilde = 'EVENT'
             WHERE fodselsnummer = ?
-              AND (synlighet_sist_oppdatert IS NULL OR synlighet_sist_oppdatert < ?)
+              AND (synlighet_sist_oppdatert IS NULL
+                   OR synlighet_kilde = 'NEED'
+                   OR synlighet_sist_oppdatert < ?)
             """.trimIndent()
         ).use { stmt ->
             stmt.setBoolean(1, erSynlig)
-            stmt.setTimestamp(2, Timestamp.from(meldingTidspunkt))
+            stmt.setTimestamp(2, Timestamp.from(tidspunkt))
             stmt.setString(3, fodselsnummer)
-            stmt.setTimestamp(4, Timestamp.from(meldingTidspunkt))
+            stmt.setTimestamp(4, Timestamp.from(tidspunkt))
             stmt.executeUpdate()
         }
     }
 
-    /*
-    Trenger en ekstra metode som aldri overskriver data, som kun setter synlighet hvis den ikke er oppdatert fra før.
+    /**
+     * Oppdaterer synlighet fra need-svar (scheduler).
+     * Skriver KUN hvis synlighet ikke er satt fra før.
      */
-    fun oppdaterSynlighetHvisIkkeSatt(
+    fun oppdaterSynlighetFraNeed(
         fodselsnummer: String,
         erSynlig: Boolean,
-        meldingTidspunkt: Instant
+        tidspunkt: Instant
     ): Int = dataSource.connection.use { connection ->
         connection.prepareStatement(
             """
             UPDATE jobbsoker
             SET er_synlig = ?,
-                synlighet_sist_oppdatert = ?
+                synlighet_sist_oppdatert = ?,
+                synlighet_kilde = 'NEED'
             WHERE fodselsnummer = ?
               AND synlighet_sist_oppdatert IS NULL
             """.trimIndent()
         ).use { stmt ->
             stmt.setBoolean(1, erSynlig)
-            stmt.setTimestamp(2, Timestamp.from(meldingTidspunkt))
+            stmt.setTimestamp(2, Timestamp.from(tidspunkt))
             stmt.setString(3, fodselsnummer)
             stmt.executeUpdate()
         }
