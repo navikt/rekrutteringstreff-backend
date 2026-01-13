@@ -53,6 +53,7 @@ class SynlighetsBehovScheduler(
     }
 
     fun behandleJobbsøkereUtenSynlighet() {
+        log.info("Kjører SynlighetsBehovScheduler for å finne jobbsøkere uten evaluert synlighet")  
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av SynlighetsBehovScheduler er ikke ferdig, skipper denne kjøringen.")
             return
