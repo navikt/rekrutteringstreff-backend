@@ -37,8 +37,7 @@ class SynlighetsBehovScheduler(
         val now = LocalDateTime.now()
         val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
 
-        // TODO skkal kjøre hvert minutt
-        scheduler.scheduleAtFixedRate(::behandleJobbsøkereUtenSynlighet, initialDelay, 60, TimeUnit.HOURS)
+        scheduler.scheduleAtFixedRate(::behandleJobbsøkereUtenSynlighet, initialDelay, 1, TimeUnit.MINUTES)
     }
 
     fun stop() {
