@@ -54,7 +54,8 @@ class SynlighetsLytterTest {
                     "ferdigBeregnet": true
                 },
                 "fodselsnummer": "$fnr",
-                "@opprettet": "${Instant.now()}"
+                "@opprettet": "${Instant.now()}",
+                "@slutt_av_hendelseskjede": true
             }
             """.trimIndent()
         )
@@ -85,7 +86,8 @@ class SynlighetsLytterTest {
                     "ferdigBeregnet": true
                 },
                 "fodselsnummer": "$fnr",
-                "@opprettet": "${Instant.now()}"
+                "@opprettet": "${Instant.now()}",
+                "@slutt_av_hendelseskjede": true
             }
             """.trimIndent()
         )
@@ -117,7 +119,8 @@ class SynlighetsLytterTest {
                     "ferdigBeregnet": true
                 },
                 "fodselsnummer": "$fnr",
-                "@opprettet": "$nyTidspunkt"
+                "@opprettet": "$nyTidspunkt",
+                "@slutt_av_hendelseskjede": true
             }
             """.trimIndent()
         )
@@ -132,7 +135,8 @@ class SynlighetsLytterTest {
                     "ferdigBeregnet": true
                 },
                 "fodselsnummer": "$fnr",
-                "@opprettet": "$gammelTidspunkt"
+                "@opprettet": "$gammelTidspunkt",
+                "@slutt_av_hendelseskjede": true
             }
             """.trimIndent()
         )
@@ -155,12 +159,44 @@ class SynlighetsLytterTest {
                     "ferdigBeregnet": true
                 },
                 "fodselsnummer": "99999999999",
-                "@opprettet": "${Instant.now()}"
+                "@opprettet": "${Instant.now()}",
+                "@slutt_av_hendelseskjede": true
             }
             """.trimIndent()
         )
 
         // Skal ikke kaste exception - bare returnere 0 oppdaterte
         // (vi verifiserer at testen ikke feiler)
+    }
+
+    @Test
+    fun `skal ignorere meldinger uten slutt_av_hendelseskjede`() {
+        val rapid = TestRapid()
+        SynlighetsLytter(rapid, jobbsøkerService)
+
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = "12345678901"
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
+
+        // Verifiser at jobbsøker er synlig (default)
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
+
+        // Send synlighets-event UTEN @slutt_av_hendelseskjede (midt i kjeden)
+        rapid.sendTestMessage(
+            """
+            {
+                "synlighet": {
+                    "erSynlig": false,
+                    "ferdigBeregnet": true
+                },
+                "fodselsnummer": "$fnr",
+                "@opprettet": "${Instant.now()}"
+            }
+            """.trimIndent()
+        )
+
+        // Jobbsøker skal fortsatt være synlig - meldingen ble ignorert
+        assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
     }
 }
