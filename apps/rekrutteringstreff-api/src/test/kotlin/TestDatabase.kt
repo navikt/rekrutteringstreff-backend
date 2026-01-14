@@ -27,10 +27,11 @@ class TestDatabase {
     /**
      * Legger til jobbsøkere med OPPRETTET-hendelse via repository.
      */
-    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson") {
-        dataSource.connection.use { connection ->
+    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson"): List<PersonTreffId> {
+        return dataSource.connection.use { connection ->
             val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
             jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv)
+            personTreffIder
         }
     }
 
@@ -208,6 +209,13 @@ class TestDatabase {
         conn.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
         conn.prepareStatement("DELETE FROM ki_spørring_logg").executeUpdate()
         conn.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
+    }
+
+    fun settSynlighet(personTreffId: PersonTreffId, erSynlig: Boolean) = dataSource.connection.use { conn ->
+        conn.prepareStatement("UPDATE jobbsoker SET er_synlig = ? WHERE id = ?").apply {
+            setBoolean(1, erSynlig)
+            setObject(2, personTreffId.somUuid)
+        }.executeUpdate()
     }
 
     fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) = dataSource.connection.use {

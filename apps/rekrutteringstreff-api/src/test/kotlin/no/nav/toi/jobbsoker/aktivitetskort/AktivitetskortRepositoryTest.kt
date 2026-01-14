@@ -141,5 +141,36 @@ class AktivitetskortRepositoryTest {
         val opprettet = repository.hentUsendteHendelse(JobbsøkerHendelsestype.OPPRETTET)
         assertThat(opprettet).hasSize(1) // OPPRETTET-hendelsen finnes også
     }
+
+    @Test
+    fun `hentUsendteHendelse skal filtrere ut hendelser for ikke-synlige jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        
+        // Opprett synlig jobbsøker
+        val fnrSynlig = Fødselsnummer("12345678901")
+        val jobbsøkerSynlig = LeggTilJobbsøker(fnrSynlig, Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        
+        // Opprett ikke-synlig jobbsøker
+        val fnrIkkeSynlig = Fødselsnummer("98765432109")
+        val jobbsøkerIkkeSynlig = LeggTilJobbsøker(fnrIkkeSynlig, Fornavn("Skjult"), Etternavn("Person"), null, null, null)
+
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøkerSynlig, jobbsøkerIkkeSynlig), treffId, "testperson")
+        val jobbsøkere = db.hentJobbsøkereViaRepository(treffId)
+        
+        // Hent person_treff_id for begge og inviter dem
+        val personTreffIdSynlig = jobbsøkere.first { it.fødselsnummer == fnrSynlig }.personTreffId
+        val personTreffIdIkkeSynlig = jobbsøkere.first { it.fødselsnummer == fnrIkkeSynlig }.personTreffId
+        
+        db.inviterJobbsøkere(listOf(personTreffIdSynlig, personTreffIdIkkeSynlig), treffId, "testperson")
+        
+        // Sett den ene som ikke-synlig
+        db.settSynlighet(personTreffIdIkkeSynlig, false)
+
+        // Hent usendte hendelser - skal kun få hendelser for synlig jobbsøker
+        val usendteHendelser = repository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
+
+        assertThat(usendteHendelser).hasSize(1)
+        assertThat(usendteHendelser.first().fnr).isEqualTo(fnrSynlig.asString)
+    }
 }
 

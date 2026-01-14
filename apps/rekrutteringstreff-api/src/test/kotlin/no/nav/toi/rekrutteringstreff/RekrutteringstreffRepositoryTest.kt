@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 import no.nav.toi.*
+import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
@@ -86,5 +87,54 @@ class RekrutteringstreffRepositoryTest {
 
         val oppdatertTreff = repository.hent(id)
         assertThat(oppdatertTreff?.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Synlighets-tester
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `hentAlleHendelser skal filtrere ut jobbsøker-hendelser for ikke-synlige jobbsøkere`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
+
+        // Legg til to jobbsøkere
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, navIdent)
+
+        // Hent alle hendelser - skal inkludere rekrutteringstreff OPPRETTET + 2 jobbsøker OPPRETTET
+        val alleHendelser = repository.hentAlleHendelser(treffId)
+        val jobbsøkerHendelser = alleHendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
+        assertThat(jobbsøkerHendelser).hasSize(2)
+
+        // Sett én jobbsøker som ikke-synlig
+        db.settSynlighet(personTreffIder[1], false)
+
+        // Hent igjen - skal nå bare inkludere hendelse for synlig jobbsøker
+        val filtrerteHendelser = repository.hentAlleHendelser(treffId)
+        val filtrerteJobbsøkerHendelser = filtrerteHendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
+        assertThat(filtrerteJobbsøkerHendelser).hasSize(1)
+        assertThat(filtrerteJobbsøkerHendelser.first().subjektNavn).isEqualTo("Synlig Person")
+    }
+
+    @Test
+    fun `hentAlleHendelser skal fortsatt inkludere rekrutteringstreff- og arbeidsgiver-hendelser`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
+
+        // Legg til en jobbsøker og sett som ikke-synlig
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Test"), Etternavn("Person"), null, null, null)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, navIdent)
+        db.settSynlighet(personTreffIder[0], false)
+
+        // Hent alle hendelser - skal fortsatt inkludere rekrutteringstreff OPPRETTET
+        val alleHendelser = repository.hentAlleHendelser(treffId)
+        val treffHendelser = alleHendelser.filter { it.ressurs == HendelseRessurs.REKRUTTERINGSTREFF }
+        val jobbsøkerHendelser = alleHendelser.filter { it.ressurs == HendelseRessurs.JOBBSØKER }
+
+        assertThat(treffHendelser).hasSize(1)
+        assertThat(treffHendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET.name)
+        assertThat(jobbsøkerHendelser).isEmpty() // Ikke-synlig jobbsøker filtreres ut
     }
 }

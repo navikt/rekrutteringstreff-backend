@@ -7,6 +7,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.rekrutteringstreff.TreffId
+import java.time.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
@@ -26,6 +27,8 @@ class JobbsøkerService(
                 val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId)
                 jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
             }
+            // Synlighetsbehov publiseres av SynlighetsBehovScheduler som periodisk
+            // finner jobbsøkere uten evaluert synlighet og trigger need-meldinger.
         }
     }
 
@@ -201,6 +204,12 @@ class JobbsøkerService(
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
         )
     }
+
+    fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int =
+        jobbsøkerRepository.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, meldingTidspunkt)
+
+    fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int =
+        jobbsøkerRepository.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, meldingTidspunkt)
 }
 
 enum class MarkerSlettetResultat {
