@@ -38,6 +38,15 @@ Selv om dagens fokus er mindre treff, forbereder vi for større arrangementer:
 
 > **Merknad**: Detaljert skalerbarhetsdokumentasjon kan utvides ved behov.
 
+### Tilpasning til Workops-møter
+
+NAV har et konsept med "Workops" der det arrangeres formøter med kandidater før selve møtet med arbeidsgivere. Dette kan kreve tilpasninger:
+
+- **Formøte uten arbeidsgivere**: I et formøte med kandidater er det ikke nødvendigvis behov for å legge til arbeidsgivere. For Workops-møter kan det bli aktuelt å tillate at treff arrangeres uten arbeidsgivere.
+- **Kobling mellom formøte og hovedmøte**: Det kan bli relevant å koble et formøte med kandidater til det påfølgende møtet med arbeidsgivere, slik at kandidatene følger med fra formøte til hovedmøte.
+
+> **Innsikt nødvendig**: Det kreves ytterligere brukerinnsikt for å forstå behovene og finne riktig løsning for Workops-flyten.
+
 ## Arkitekturprinsipper for utvidbarhet
 
 ### Hendelsesdrevet utvidelse
