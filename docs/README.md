@@ -17,20 +17,25 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 3. **[Personvern](3-personvern/)**
    - [Synlighet](3-personvern/synlighet.md) - Integrasjon med toi-synlighetsmotor for synlighetsfiltrering
 4. **[Integrasjoner og flyt](4-integrasjoner-og-flyt/)**
+   - [Invitasjon](4-integrasjoner-og-flyt/invitasjon.md) - Flyt for invitasjon av jobbsøkere til rekrutteringstreff
    - [Varsling](4-integrasjoner-og-flyt/varsling.md) - Varsling til jobbsøkere via SMS, e-post og MinSide
    - [Aktivitetskort](4-integrasjoner-og-flyt/aktivitetskort.md) - Aktivitetskort-integrasjon med aktivitetsplanen
+   - [MinSide-flyt](4-integrasjoner-og-flyt/minside-flyt.md) - Jobbsøkers flyt for å se treff og svare på invitasjon
 5. **[KI og innholdsvalidering](5-ki-og-innholdsvalidering/)**
    - [KI-moderering](5-ki-og-innholdsvalidering/ki-moderering.md) - Bruk av KI for å validere rekrutteringstreff-innhold
 6. **[Database](6-database/)**
    - [Database-schema](6-database/database-schema.md) - Databaseskjema med ER-diagram og Flyway-migrasjoner
+7. **[Utvidbarhet og vedlikehold](7-utvidbarhet-og-vedlikehold/)**
+   - [Utvidbarhet](7-utvidbarhet-og-vedlikehold/utvidbarhet.md) - Planlagte utvidelsesmuligheter og arkitekturprinsipper
+   - [Vedlikeholdbarhet](7-utvidbarhet-og-vedlikehold/vedlikeholdbarhet.md) - Hvordan applikasjonen er utformet for vedlikehold
 
 ## Applikasjoner i monorepoet
 
-| Applikasjon                        | Beskrivelse                                                      |
-| ---------------------------------- | ---------------------------------------------------------------- |
-| `rekrutteringstreff-api`           | Hovedapplikasjon med REST API for veiledere og markedskontakter  |
-| `rekrutteringstreff-minside-api`   | API for jobbsøkere, kommuniserer med rekrutteringstreff-api      |
-| `rekrutteringsbistand-aktivitetskort` | Lytter på Kafka og synkroniserer aktivitetskort                |
+| Applikasjon                           | Beskrivelse                                                     |
+| ------------------------------------- | --------------------------------------------------------------- |
+| `rekrutteringstreff-api`              | Hovedapplikasjon med REST API for veiledere og markedskontakter |
+| `rekrutteringstreff-minside-api`      | API for jobbsøkere, kommuniserer med rekrutteringstreff-api     |
+| `rekrutteringsbistand-aktivitetskort` | Lytter på Kafka og synkroniserer aktivitetskort                 |
 
 ## Mermaid-diagrammer
 

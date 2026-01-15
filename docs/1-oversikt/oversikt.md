@@ -125,10 +125,10 @@ Evalueringstjeneste som:
 
 ### REST-kommunikasjon
 
-| Fra                            | Til                    | Beskrivelse                                      |
-| ------------------------------ | ---------------------- | ------------------------------------------------ |
+| Fra                            | Til                    | Beskrivelse                                       |
+| ------------------------------ | ---------------------- | ------------------------------------------------- |
 | rekrutteringsbistand-frontend  | rekrutteringstreff-api | Veiledere og markedskontakter administrerer treff |
-| rekrutteringstreff-minside-api | rekrutteringstreff-api | Jobbsøkere ser og svarer på invitasjoner         |
+| rekrutteringstreff-minside-api | rekrutteringstreff-api | Jobbsøkere ser og svarer på invitasjoner          |
 
 ### Rapids & Rivers (Kafka)
 
@@ -136,63 +136,7 @@ Se [Tekniske prinsipper](02-tekniske-prinsipper.md) for detaljer om meldingsflyt
 
 ## Eksempel på hendelsesflyt
 
-### Invitasjon av jobbsøker
+Se egne dokumenter for detaljert beskrivelse:
 
-```mermaid
-sequenceDiagram
-    participant Veileder
-    participant Frontend
-    participant API
-    participant Rapids
-    participant Synlighet
-    participant Varsel
-    participant Aktivitetskort
-
-    Veileder->>Frontend: Legger til jobbsøker på treff
-    Frontend->>API: POST /jobbsoker
-    API->>Rapids: synlighetRekrutteringstreff (behov)
-    Rapids->>Synlighet: Sjekk synlighet
-    Synlighet->>Rapids: Synlighetssvar
-    Rapids->>API: Synlighetssvar
-    API->>API: Lagrer jobbsøker med synlighetsstatus
-
-    Veileder->>Frontend: Inviterer jobbsøker
-    Frontend->>API: PUT /jobbsoker/inviter
-    API->>API: Oppdaterer status til INVITERT
-    API->>Rapids: rekrutteringstreffinvitasjon (event)
-
-    Rapids->>Varsel: Ny invitasjon
-    Varsel->>Varsel: Sender SMS/e-post via MinSide
-    Varsel->>Rapids: minsideVarselSvar (status)
-    Rapids->>API: Varselstatus
-
-    Rapids->>Aktivitetskort: Ny invitasjon
-    Aktivitetskort->>Aktivitetskort: Oppretter aktivitetskort
-```
-
-### Jobbsøker svarer på invitasjon
-
-```mermaid
-sequenceDiagram
-    participant Jobbsøker
-    participant Landingsside
-    participant MinsideAPI as rekrutteringstreff-minside-api
-    participant API as rekrutteringstreff-api
-    participant Rapids
-    participant Aktivitetskort
-
-    Jobbsøker->>Landingsside: Åpner invitasjonslink
-    Landingsside->>MinsideAPI: GET /treff/{id}
-    MinsideAPI->>API: GET /api/rekrutteringstreff/{id}/jobbsoker/borger
-    API->>MinsideAPI: Treffdetaljer
-    MinsideAPI->>Landingsside: Treffdetaljer
-
-    Jobbsøker->>Landingsside: Svarer JA/NEI
-    Landingsside->>MinsideAPI: POST /svar
-    MinsideAPI->>API: POST /api/rekrutteringstreff/{id}/jobbsoker/borger/svar-ja
-    API->>API: Oppdaterer status
-    API->>Rapids: rekrutteringstreffSvarOgStatus (event)
-
-    Rapids->>Aktivitetskort: Oppdatert status
-    Aktivitetskort->>Aktivitetskort: Oppdaterer aktivitetskort
-```
+- [Invitasjon](../4-integrasjoner-og-flyt/invitasjon.md) - Flyt for invitasjon av jobbsøkere
+- [MinSide-flyt](../4-integrasjoner-og-flyt/minside-flyt.md) - Flyt for jobbsøkers svar
