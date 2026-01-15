@@ -198,11 +198,8 @@ class JobbsøkerService(
         // Ta den nyeste hendelsen
         val sisteRelevanteHendelse = relevanteHendelser.first()
 
-        // Varsle kun hvis siste relevante hendelse er INVITERT eller SVART_JA_TIL_INVITASJON
-        return sisteRelevanteHendelse.hendelsestype in setOf(
-            JobbsøkerHendelsestype.INVITERT,
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
-        )
+        // Varsle kun hvis siste relevante hendelse er SVART_JA_TIL_INVITASJON
+        return sisteRelevanteHendelse.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
     }
 
     fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int =

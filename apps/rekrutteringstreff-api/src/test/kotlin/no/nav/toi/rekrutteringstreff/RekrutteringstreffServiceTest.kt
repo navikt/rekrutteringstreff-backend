@@ -375,7 +375,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `skal varsle jobbsøker med INVITERT som siste hendelse om endring`() {
+    fun `skal ikke varsle jobbsøker med INVITERT som siste hendelse om endring`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fnr = Fødselsnummer("12345678901")
@@ -391,9 +391,9 @@ class RekrutteringstreffServiceTest {
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
 
-        // Assert - jobbsøker med INVITERT skal varsles
+        // Assert - jobbsøker med INVITERT skal ikke varsles
         val jobbsøkerHendelser = hentJobbsøkerHendelser(treffId, fnr)
-        assertThat(jobbsøkerHendelser).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøkerHendelser).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
     @Test
@@ -460,7 +460,7 @@ class RekrutteringstreffServiceTest {
         assertThat(hendelser2).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
 
         val hendelser3 = hentJobbsøkerHendelser(treffId, fnr3)
-        assertThat(hendelser3).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(hendelser3).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
     @Test
@@ -494,7 +494,7 @@ class RekrutteringstreffServiceTest {
 
         // Assert
         val hendelser1 = hentJobbsøkerHendelser(treffId, fnr1)
-        assertThat(hendelser1).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(hendelser1).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
 
         val hendelser2 = hentJobbsøkerHendelser(treffId, fnr2)
         assertThat(hendelser2).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
