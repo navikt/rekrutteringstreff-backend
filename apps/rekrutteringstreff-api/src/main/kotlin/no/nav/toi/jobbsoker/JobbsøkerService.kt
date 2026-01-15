@@ -107,14 +107,6 @@ class JobbsøkerService(
         )
     }
 
-    fun hentAntallSkjulteJobbsøkere(treffId: TreffId): Int {
-        return jobbsøkerRepository.hentAntallSkjulteJobbsøkere(treffId)
-    }
-
-    fun hentAntallSlettedeJobbsøkere(treffId: TreffId): Int {
-        return jobbsøkerRepository.hentAntallSlettedeJobbsøkere(treffId)
-    }
-
     fun hentJobbsøker(treffId: TreffId, fnr: Fødselsnummer): Jobbsøker? {
         return jobbsøkerRepository.hentJobbsøker(treffId, fnr)
     }
