@@ -229,13 +229,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    /**
-     * Henter tellinger for jobbsøkere i ett kall.
-     *
-     * Kategoriene er gjensidig utelukkende:
-     * - antallSkjulte: status != SLETTET OG er_synlig = FALSE
-     * - antallSlettede: status = SLETTET (uansett er_synlig)
-     */
     fun hentJobbsøkerTellinger(treff: TreffId): JobbsøkerTellinger =
         dataSource.connection.use { c ->
             c.prepareStatement(
