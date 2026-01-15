@@ -229,6 +229,32 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
+    fun hentJobbsøkerTellinger(treff: TreffId): JobbsøkerTellinger =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                    SELECT
+                        COUNT(*) FILTER (WHERE js.status != 'SLETTET' AND js.er_synlig = FALSE) AS antall_skjulte,
+                        COUNT(*) FILTER (WHERE js.status = 'SLETTET') AS antall_slettede
+                    FROM jobbsoker js
+                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                    WHERE rt.id = ?
+                """
+            ).use { ps ->
+                ps.setObject(1, treff.somUuid)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        JobbsøkerTellinger(
+                            antallSkjulte = rs.getInt("antall_skjulte"),
+                            antallSlettede = rs.getInt("antall_slettede")
+                        )
+                    } else {
+                        JobbsøkerTellinger(antallSkjulte = 0, antallSlettede = 0)
+                    }
+                }
+            }
+        }
+
     fun hentPersonTreffId(treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
         dataSource.connection.use { c ->
             hentPersonTreffId(c, treffId, fødselsnummer)
