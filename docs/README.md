@@ -8,26 +8,38 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 
 ## Innhold
 
-1. **[Oversikt](1-oversikt/)**
-   - [Oversikt](1-oversikt/oversikt.md) - Oversikt over rekrutteringstreff-domenet og systemarkitektur
-2. **[Tekniske prinsipper og arkitektur](2-tekniske-prinsipper-og-arkitektur/)**
-   - [Tekniske prinsipper](2-tekniske-prinsipper-og-arkitektur/tekniske-prinsipper.md) - Tekniske prinsipper og arkitekturbeslutninger
-   - [Tilgangsstyring](2-tekniske-prinsipper-og-arkitektur/tilgangsstyring.md) - Håndtering av tilgangskontroll
-   - [Audit logging](2-tekniske-prinsipper-og-arkitektur/audit-logging.md) - Logging av hendelser for revisjon
-3. **[Personvern](3-personvern/)**
-   - [Synlighet](3-personvern/synlighet.md) - Integrasjon med toi-synlighetsmotor for synlighetsfiltrering
-4. **[Integrasjoner og flyt](4-integrasjoner-og-flyt/)**
-   - [Invitasjon](4-integrasjoner-og-flyt/invitasjon.md) - Flyt for invitasjon av jobbsøkere til rekrutteringstreff
-   - [Varsling](4-integrasjoner-og-flyt/varsling.md) - Varsling til jobbsøkere via SMS, e-post og MinSide
-   - [Aktivitetskort](4-integrasjoner-og-flyt/aktivitetskort.md) - Aktivitetskort-integrasjon med aktivitetsplanen
-   - [MinSide-flyt](4-integrasjoner-og-flyt/minside-flyt.md) - Jobbsøkers flyt for å se treff og svare på invitasjon
-5. **[KI og innholdsvalidering](5-ki-og-innholdsvalidering/)**
-   - [KI-moderering](5-ki-og-innholdsvalidering/ki-moderering.md) - Bruk av KI for å validere rekrutteringstreff-innhold
-6. **[Database](6-database/)**
-   - [Database-schema](6-database/database-schema.md) - Databaseskjema med ER-diagram og Flyway-migrasjoner
-7. **[Utvidbarhet og vedlikehold](7-utvidbarhet-og-vedlikehold/)**
-   - [Utvidbarhet](7-utvidbarhet-og-vedlikehold/utvidbarhet.md) - Planlagte utvidelsesmuligheter og arkitekturprinsipper
-   - [Vedlikeholdbarhet](7-utvidbarhet-og-vedlikehold/vedlikeholdbarhet.md) - Hvordan applikasjonen er utformet for vedlikehold
+### 1. [Oversikt](1-oversikt/)
+
+- [Oversikt](1-oversikt/oversikt.md) - Introduksjon til rekrutteringstreff-domenet og systemarkitektur
+
+### 2. [Arkitektur](2-arkitektur/)
+
+- [Prinsipper](2-arkitektur/prinsipper.md) - Rammeverk, lagdeling og arkitekturprinsipper
+- [Database](2-arkitektur/database.md) - Databaseskjema, ER-diagram og Flyway-migrasjoner
+
+### 3. [Sikkerhet](3-sikkerhet/)
+
+- [Tilgangsstyring](3-sikkerhet/tilgangsstyring.md) - Roller og tilgangskontroll
+- [Synlighet](3-sikkerhet/synlighet.md) - Synlighetsfiltrering via toi-synlighetsmotor
+- [Audit-logging](3-sikkerhet/audit-logging.md) - Logging av hendelser for revisjon
+
+### 4. [Integrasjoner](4-integrasjoner/)
+
+- [Rapids and Rivers](4-integrasjoner/rapids-and-rivers.md) - Kafka-basert meldingsutveksling
+- [Invitasjon](4-integrasjoner/invitasjon.md) - Flyt for invitasjon av jobbsøkere
+- [Varsling](4-integrasjoner/varsling.md) - Varsling via SMS, e-post og MinSide
+- [Aktivitetskort](4-integrasjoner/aktivitetskort.md) - Synkronisering med aktivitetsplanen
+- [MinSide-flyt](4-integrasjoner/minside-flyt.md) - Jobbsøkers flyt for å se treff og svare
+
+### 5. [KI](5-ki/)
+
+- [KI-moderering](5-ki/ki-moderering.md) - Validering av rekrutteringstreff-innhold med KI
+
+### 6. [Kvalitet](6-kvalitet/)
+
+- [Testing](6-kvalitet/testing.md) - Teststrategi og testnivåer
+- [Utvidbarhet](6-kvalitet/utvidbarhet.md) - Planlagte utvidelser og arkitekturprinsipper
+- [Vedlikeholdbarhet](6-kvalitet/vedlikeholdbarhet.md) - Design for vedlikehold
 
 ## Applikasjoner i monorepoet
 
