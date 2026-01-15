@@ -9,6 +9,7 @@ import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
+import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.rekrutteringstreff.HendelseRessurs
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -140,7 +141,7 @@ class SynlighetsKomponentTest {
         val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
         
         assertThat(response.statusCode()).isEqualTo(200)
-        val jobbsøkere: List<JobbsøkerOutboundDto> = mapper.readValue(response.body())
+        val jobbsøkere = mapper.readValue<JobbsøkereOutboundDto>(response.body()).jobbsøkere
         assertThat(jobbsøkere).hasSize(1)
         assertThat(jobbsøkere.first().fornavn).isEqualTo("Synlig")
     }
@@ -156,7 +157,7 @@ class SynlighetsKomponentTest {
         // Jobbsøker er synlig som default (null = synlig)
         val responseFør = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
         assertThat(responseFør.statusCode()).isEqualTo(200)
-        val jobbsøkereFør: List<JobbsøkerOutboundDto> = mapper.readValue(responseFør.body())
+        val jobbsøkereFør = mapper.readValue<JobbsøkereOutboundDto>(responseFør.body()).jobbsøkere
         assertThat(jobbsøkereFør).hasSize(1)
         
         // Simuler at synlighetsmotor sender event om at person er kode 6/7
@@ -165,7 +166,7 @@ class SynlighetsKomponentTest {
         // Jobbsøker skal nå være filtrert ut fra API
         val responseEtter = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
         assertThat(responseEtter.statusCode()).isEqualTo(200)
-        val jobbsøkereEtter: List<JobbsøkerOutboundDto> = mapper.readValue(responseEtter.body())
+        val jobbsøkereEtter = mapper.readValue<JobbsøkereOutboundDto>(responseEtter.body()).jobbsøkere
         assertThat(jobbsøkereEtter).isEmpty()
     }
 
@@ -180,7 +181,7 @@ class SynlighetsKomponentTest {
         
         // Jobbsøker er ikke synlig
         val responseFør = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
-        val jobbsøkereFør: List<JobbsøkerOutboundDto> = mapper.readValue(responseFør.body())
+        val jobbsøkereFør = mapper.readValue<JobbsøkereOutboundDto>(responseFør.body()).jobbsøkere
         assertThat(jobbsøkereFør).isEmpty()
         
         // Simuler at synlighetsmotor sender event om at person er synlig igjen (f.eks. KVP avsluttet)
@@ -188,7 +189,7 @@ class SynlighetsKomponentTest {
         
         // Jobbsøker skal nå være med i API-responsen
         val responseEtter = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
-        val jobbsøkereEtter: List<JobbsøkerOutboundDto> = mapper.readValue(responseEtter.body())
+        val jobbsøkereEtter = mapper.readValue<JobbsøkereOutboundDto>(responseEtter.body()).jobbsøkere
         assertThat(jobbsøkereEtter).hasSize(1)
         assertThat(jobbsøkereEtter.first().fornavn).isEqualTo("Test")
     }
@@ -206,15 +207,15 @@ class SynlighetsKomponentTest {
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff2, "A123456")
         
         // Begge treff har jobbsøkeren synlig
-        assertThat(mapper.readValue<List<JobbsøkerOutboundDto>>(httpGet("/api/rekrutteringstreff/${treff1.somUuid}/jobbsoker").body())).hasSize(1)
-        assertThat(mapper.readValue<List<JobbsøkerOutboundDto>>(httpGet("/api/rekrutteringstreff/${treff2.somUuid}/jobbsoker").body())).hasSize(1)
+        assertThat(mapper.readValue<JobbsøkereOutboundDto>(httpGet("/api/rekrutteringstreff/${treff1.somUuid}/jobbsoker").body()).jobbsøkere).hasSize(1)
+        assertThat(mapper.readValue<JobbsøkereOutboundDto>(httpGet("/api/rekrutteringstreff/${treff2.somUuid}/jobbsoker").body()).jobbsøkere).hasSize(1)
         
         // Synlighetsmotor markerer person som ikke-synlig
         jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, Instant.now())
         
         // Begge treff skal nå filtrere ut jobbsøkeren
-        assertThat(mapper.readValue<List<JobbsøkerOutboundDto>>(httpGet("/api/rekrutteringstreff/${treff1.somUuid}/jobbsoker").body())).isEmpty()
-        assertThat(mapper.readValue<List<JobbsøkerOutboundDto>>(httpGet("/api/rekrutteringstreff/${treff2.somUuid}/jobbsoker").body())).isEmpty()
+        assertThat(mapper.readValue<JobbsøkereOutboundDto>(httpGet("/api/rekrutteringstreff/${treff1.somUuid}/jobbsoker").body()).jobbsøkere).isEmpty()
+        assertThat(mapper.readValue<JobbsøkereOutboundDto>(httpGet("/api/rekrutteringstreff/${treff2.somUuid}/jobbsoker").body()).jobbsøkere).isEmpty()
     }
 
     @Test
