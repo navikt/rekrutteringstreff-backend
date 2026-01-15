@@ -463,4 +463,43 @@ class JobbsøkerRepositoryTest {
         val ikkeSynligJobbsøker = repository.hentJobbsøker(treffId, fnr)
         assertThat(ikkeSynligJobbsøker).isNull()
     }
+
+    @Test
+    fun `hentJobbsøkerTellinger returnerer gjensidig utelukkende tellinger`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+
+        // Lag 4 jobbsøkere
+        val jobbsøkere = listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Synlig2"), Etternavn("Person"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Skjult"), Etternavn("Person"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Slettet"), Etternavn("Person"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("55555555555"), Fornavn("SlettetOgSkjult"), Etternavn("Person"), null, null, null)
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId, "testperson")
+
+        // Sett én som skjult (ikke slettet)
+        db.settSynlighet(personTreffIder[2], false)
+
+        // Slett én (synlig)
+        db.settJobbsøkerStatus(personTreffIder[3], JobbsøkerStatus.SLETTET)
+
+        // Slett og skjul én (skal telles som slettet, ikke skjult)
+        db.settSynlighet(personTreffIder[4], false)
+        db.settJobbsøkerStatus(personTreffIder[4], JobbsøkerStatus.SLETTET)
+
+        // Hent tellinger
+        val tellinger = repository.hentJobbsøkerTellinger(treffId)
+
+        // Verifiser gjensidig utelukkende kategorier
+        assertThat(tellinger.antallSkjulte).isEqualTo(1)  // Bare "Skjult" (ikke slettet)
+        assertThat(tellinger.antallSlettede).isEqualTo(2)  // "Slettet" og "SlettetOgSkjult"
+
+        // Verifiser at synlige jobbsøkere er korrekt
+        val synligeJobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(synligeJobbsøkere).hasSize(2)  // "Synlig1" og "Synlig2"
+
+        // Invariant: synlige + skjulte + slettede = totalt (5)
+        assertThat(synligeJobbsøkere.size + tellinger.antallSkjulte + tellinger.antallSlettede).isEqualTo(5)
+    }
 }
