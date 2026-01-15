@@ -229,6 +229,75 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
+    fun hentAntallSkjulteJobbsøkere(treff: TreffId): Int =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                    SELECT
+                        COUNT(*) AS antall_skjulte
+                    FROM jobbsoker js
+                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                    WHERE rt.id = ? AND js.status != 'SLETTET' AND js.er_synlig = FALSE
+                """
+            ).use { ps ->
+                ps.setObject(1, treff.somUuid)
+                ps.executeQuery().use { rs ->
+                    return if (rs.next()) rs.getInt("antall_skjulte") else 0
+                }
+            }
+        }
+
+    fun hentAntallSlettedeJobbsøkere(treff: TreffId): Int =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                    SELECT
+                        COUNT(*) AS antall_slettede
+                    FROM jobbsoker js
+                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                    WHERE rt.id = ? AND js.status = 'SLETTET'
+                """
+            ).use { ps ->
+                ps.setObject(1, treff.somUuid)
+                ps.executeQuery().use { rs ->
+                    return if (rs.next()) rs.getInt("antall_slettede") else 0
+                }
+            }
+        }
+
+    /**
+     * Henter tellinger for jobbsøkere i ett kall.
+     *
+     * Kategoriene er gjensidig utelukkende:
+     * - antallSkjulte: status != SLETTET OG er_synlig = FALSE
+     * - antallSlettede: status = SLETTET (uansett er_synlig)
+     */
+    fun hentJobbsøkerTellinger(treff: TreffId): JobbsøkerTellinger =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                    SELECT
+                        COUNT(*) FILTER (WHERE js.status != 'SLETTET' AND js.er_synlig = FALSE) AS antall_skjulte,
+                        COUNT(*) FILTER (WHERE js.status = 'SLETTET') AS antall_slettede
+                    FROM jobbsoker js
+                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                    WHERE rt.id = ?
+                """
+            ).use { ps ->
+                ps.setObject(1, treff.somUuid)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) {
+                        JobbsøkerTellinger(
+                            antallSkjulte = rs.getInt("antall_skjulte"),
+                            antallSlettede = rs.getInt("antall_slettede")
+                        )
+                    } else {
+                        JobbsøkerTellinger(antallSkjulte = 0, antallSlettede = 0)
+                    }
+                }
+            }
+        }
+
     fun hentPersonTreffId(treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
         dataSource.connection.use { c ->
             hentPersonTreffId(c, treffId, fødselsnummer)

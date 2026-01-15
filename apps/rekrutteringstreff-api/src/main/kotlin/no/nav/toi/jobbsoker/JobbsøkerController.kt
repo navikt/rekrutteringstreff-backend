@@ -13,6 +13,7 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
+import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
@@ -100,36 +101,41 @@ class JobbsøkerController(
         responses = [OpenApiResponse(
             status = "200",
             content = [OpenApiContent(
-                from = Array<JobbsøkerOutboundDto>::class,
-                example = """[
-                {   
-                    "personTreffId": "any-uuid",
-                    "fødselsnummer": "12345678901",
-                    "fornavn": "Ola",
-                    "etternavn": "Nordmann",
-                    "navkontor": "Oslo",
-                    "veilederNavn": "Kari Nordmann",
-                    "veilederNavIdent": "NAV123",
-                    "hendelser": [
+                from = JobbsøkereOutboundDto::class,
+                example = """{
+                    "jobbsøkere": [
+                        {   
+                            "personTreffId": "any-uuid",
+                            "fødselsnummer": "12345678901",
+                            "fornavn": "Ola",
+                            "etternavn": "Nordmann",
+                            "navkontor": "Oslo",
+                            "veilederNavn": "Kari Nordmann",
+                            "veilederNavIdent": "NAV123",
+                            "hendelser": [
+                                {
+                                    "id": "any-uuid",
+                                    "tidspunkt": "2025-04-14T10:38:41Z",
+                                    "hendelsestype": "OPPRETTET",
+                                    "opprettetAvAktørType": "ARRANGØR",
+                                    "aktørIdentifikasjon": "testperson"
+                                }
+                            ]
+                        },
                         {
-                            "id": "any-uuid",
-                            "tidspunkt": "2025-04-14T10:38:41Z",
-                            "hendelsestype": "OPPRETTET",
-                            "opprettetAvAktørType": "ARRANGØR",
-                            "aktørIdentifikasjon": "testperson"
+                            "fødselsnummer": "10987654321",
+                            "fornavn": "Kari",
+                            "etternavn": "Nordmann",
+                            "navkontor": null,
+                            "veilederNavn": null,
+                            "veilederNavIdent": null,
+                            "hendelser": []
                         }
-                    ]
-                },
-                {
-                    "fødselsnummer": "10987654321",
-                    "fornavn": "Kari",
-                    "etternavn": "Nordmann",
-                    "navkontor": null,
-                    "veilederNavn": null,
-                    "veilederNavIdent": null,
-                    "hendelser": []
-                }
-            ]"""
+                    ],
+                    "antallSynlige": 2,
+                    "antallSkjulte": 2,
+                    "antallSlettede": 1
+                }"""
             )]
         )],
         path = jobbsøkerPath,
@@ -141,9 +147,14 @@ class JobbsøkerController(
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            val jobbsøkere = jobbsøkerService.hentJobbsøkere(treff)
+            val jobbsøkereMedTellinger = jobbsøkerService.hentJobbsøkereMedTellinger(treff)
             AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
-            ctx.status(200).json(jobbsøkere.toOutboundDto())
+            ctx.status(200).json(JobbsøkereOutboundDto(
+                jobbsøkere = jobbsøkereMedTellinger.jobbsøkere.toOutboundDto(),
+                antallSynlige = jobbsøkereMedTellinger.antallSynlige,
+                antallSkjulte = jobbsøkereMedTellinger.antallSkjulte,
+                antallSlettede = jobbsøkereMedTellinger.antallSlettede
+            ))
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente jobbsøkere")
         }
