@@ -278,5 +278,5 @@ Dette diagrammet kan vises i:
 
 ## Relaterte dokumenter
 
-- [Synlighet](05-synlighet.md) - Detaljert beskrivelse av synlighetsintegrasjonen
-- [KI-moderering](08-ki-moderering.md) - Beskrivelse av KI-loggingen
+- [Synlighet](../3-sikkerhet/synlighet.md) - Detaljert beskrivelse av synlighetsintegrasjonen
+- [KI-moderering](../5-ki/ki-moderering.md) - Beskrivelse av KI-loggingen

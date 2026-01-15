@@ -10,7 +10,9 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 
 ### 1. [Oversikt](1-oversikt/)
 
+- [Kom i gang](1-oversikt/kom-i-gang.md) - **Start her!** Oppsett av utviklingsmiljø og kjøreinstruksjoner
 - [Oversikt](1-oversikt/oversikt.md) - Introduksjon til rekrutteringstreff-domenet og systemarkitektur
+- [Ordliste](1-oversikt/ordliste.md) - Forklaring av domenebegreper og tekniske termer
 
 ### 2. [Arkitektur](2-arkitektur/)
 
@@ -34,6 +36,7 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 ### 5. [KI](5-ki/)
 
 - [KI-moderering](5-ki/ki-moderering.md) - Validering av rekrutteringstreff-innhold med KI
+- [Copilot-arbeidsflyt](5-ki/copilot-arbeidsflyt.md) - Prosess for å bruke GitHub Copilot effektivt på kompliserte oppgaver
 
 ### 6. [Kvalitet](6-kvalitet/)
 

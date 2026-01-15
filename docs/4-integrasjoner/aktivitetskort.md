@@ -197,5 +197,5 @@ Kun synlige jobbsøkere får aktivitetskort.
 
 ## Relatert dokumentasjon
 
-- [Varsling](06-varsling.md) - Varsling til jobbsøkere
+- [Varsling](varsling.md) - Varsling til jobbsøkere
 - [Database-schema](09-database-schema.md) - Komplett databaseoversikt

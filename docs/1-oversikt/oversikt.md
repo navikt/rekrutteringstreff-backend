@@ -132,11 +132,11 @@ Evalueringstjeneste som:
 
 ### Rapids & Rivers (Kafka)
 
-Se [Tekniske prinsipper](02-tekniske-prinsipper.md) for detaljer om meldingsflyten.
+Se [Arkitekturprinsipper](../2-arkitektur/prinsipper.md) for detaljer om meldingsflyten.
 
 ## Eksempel på hendelsesflyt
 
 Se egne dokumenter for detaljert beskrivelse:
 
-- [Invitasjon](../4-integrasjoner-og-flyt/invitasjon.md) - Flyt for invitasjon av jobbsøkere
-- [MinSide-flyt](../4-integrasjoner-og-flyt/minside-flyt.md) - Flyt for jobbsøkers svar
+- [Invitasjon](../4-integrasjoner/invitasjon.md) - Flyt for invitasjon av jobbsøkere
+- [MinSide-flyt](../4-integrasjoner/minside-flyt.md) - Flyt for jobbsøkers svar

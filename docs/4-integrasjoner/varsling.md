@@ -200,6 +200,7 @@ sequenceDiagram
 ### Scheduler (AktivitetskortJobbsøkerScheduler)
 
 Kjører hvert 10. sekund og:
+
 1. Henter usendte hendelser fra database (`INVITERT` og `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON`)
 2. Publiserer hendelser til Rapids & Rivers
 3. Markerer hendelser som sendt
@@ -227,11 +228,13 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
 `FERDIGSTILT`-status kan ta lang tid å motta fra MinSide, selv om meldingen allerede ligger i MinSide og er sendt til jobbsøker. Ved å bruke `SENDT`-status får vi raskere tilbakemelding til markedskontakt om at varselet er levert, uten å vente på den endelige ferdigstillingen.
 
 **MinsideStatus:**
+
 - `UNDER_UTSENDING` - Varselet sendes
 - `OPPRETTET` - MinSide har bekreftet opprettelse
 - `SLETTET` - Varselet er slettet
 
 **EksternStatus (kun SENDT og FEILET publiseres til rapids):**
+
 - `SENDT` - ✅ Publiseres - Varsel sendt vellykket (SMS eller e-post)
 - `FEILET` - ✅ Publiseres - Feil ved sending
 - `FERDIGSTILT` - ❌ Publiseres ikke - Ferdig behandlet (tar ofte lang tid)
@@ -240,6 +243,7 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
 - `UNDER_UTSENDING` - ❌ Publiseres ikke - Vi kan vurdere å legge det til senere dersom vi erfarer at meldinger tar lang tid.
 
 **EksternFeilmelding:**
+
 - `person_ikke_funnet` - Personen mangler kontaktinfo i KRR
 
 ---
@@ -249,6 +253,7 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
 ### Rapids-meldinger
 
 **rekrutteringstreffinvitasjon:**
+
 ```json
 {
   "@event_name": "rekrutteringstreffinvitasjon",
@@ -319,5 +324,5 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
 
 ## Relatert dokumentasjon
 
-- [Aktivitetskort for Rekrutteringstreff](07-aktivitetskort.md)
+- [Aktivitetskort for Rekrutteringstreff](aktivitetskort.md)
 - [MinSide dokumentasjon](https://navikt.github.io/tms-dokumentasjon/varsler/produsere)

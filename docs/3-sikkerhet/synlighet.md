@@ -132,13 +132,13 @@ sequenceDiagram
 
 ### rekrutteringstreff-api
 
-| Komponent                    | Plassering             | Ansvar                                                       |
-| ---------------------------- | ---------------------- | ------------------------------------------------------------ |
-| **SynlighetsLytter**         | `jobbsoker/synlighet/` | Lytter på synlighets-events fra event-strømmen               |
-| **SynlighetsBehovLytter**    | `jobbsoker/synlighet/` | Lytter på svar fra need-meldinger                            |
+| Komponent                    | Plassering             | Ansvar                                                        |
+| ---------------------------- | ---------------------- | ------------------------------------------------------------- |
+| **SynlighetsLytter**         | `jobbsoker/synlighet/` | Lytter på synlighets-events fra event-strømmen                |
+| **SynlighetsBehovLytter**    | `jobbsoker/synlighet/` | Lytter på svar fra need-meldinger                             |
 | **SynlighetsBehovScheduler** | `jobbsoker/synlighet/` | Finner jobbsøkere uten synlighet og publiserer need-meldinger |
-| **JobbsøkerRepository**      | `jobbsoker/`           | Synlighetsfiltrering i alle spørringer + oppdateringsmetoder |
-| **JobbsøkerService**         | `jobbsoker/`           | Delegerer til repository                                     |
+| **JobbsøkerRepository**      | `jobbsoker/`           | Synlighetsfiltrering i alle spørringer + oppdateringsmetoder  |
+| **JobbsøkerService**         | `jobbsoker/`           | Delegerer til repository                                      |
 
 ### toi-synlighetsmotor
 
@@ -216,4 +216,4 @@ Se testklasser for eksempler på bruk og forventet oppførsel:
 
 ## Relaterte dokumenter
 
-- [Database-schema](09-database-schema.md) - Komplett databaseoversikt
+- [Database](../2-arkitektur/database.md) - Komplett databaseoversikt

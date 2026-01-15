@@ -5,6 +5,7 @@
 Vi bruker kunstig intelligens (KI) for å validere at tittel og beskrivelse av rekrutteringstreff ikke er diskriminerende eller bryter med NAVs retningslinjer.
 
 Valideringen sikrer at:
+
 - Tekst ikke er direkte eller indirekte diskriminerende
 - Personvernregler følges
 - Likestillings- og diskrimineringsloven overholdes
@@ -54,16 +55,17 @@ flowchart TB
 
 Vi har satt opp en deployment i Azure OpenAI med følgende konfigurasjon:
 
-| Egenskap                | Verdi                     |
-| ----------------------- | ------------------------- |
-| **Modell**              | GPT-4.1                   |
-| **Deployment-type**     | Standard                  |
-| **Azure-region**        | Norway East               |
-| **Content Filter**      | Standard (hateful speech) |
+| Egenskap            | Verdi                     |
+| ------------------- | ------------------------- |
+| **Modell**          | GPT-4.1                   |
+| **Deployment-type** | Standard                  |
+| **Azure-region**    | Norway East               |
+| **Content Filter**  | Standard (hateful speech) |
 
 ### Valg av modell
 
 Vi velger modell basert på:
+
 1. **Standard deployment-støtte** - Kreves for vårt bruksområde
 2. **Instruction following** - Modellen må følge systemprompt nøyaktig
 3. **JSON-output** - Modellen må kunne returnere strukturert JSON
@@ -71,6 +73,7 @@ Vi velger modell basert på:
 ### Innebygd content filter
 
 Azure OpenAI har et innebygd content filter som fanger opp:
+
 - Hatefulle ytringer
 - Voldelig innhold
 - Seksuelt innhold
@@ -89,6 +92,7 @@ Systemprompten definerer reglene KI-modellen skal følge ved validering av tekst
 ### Versjonering
 
 Systemprompten versjoneres med:
+
 - **Versjonsnummer** - Inkrementeres ved hver endring
 - **Tidsstempel** - Når endringen ble gjort
 - **Hash** - SHA-256 hash av prompten (6 tegn)
@@ -124,7 +128,7 @@ sequenceDiagram
     PF-->>KC: Filtrert tekst
     KC->>OAC: validateRekrutteringstreffOgLogg()
     OAC->>AOAI: Chat Completion API<br/>(system + user message)
-    
+
     alt 200 OK
         AOAI-->>OAC: JSON: {bryterRetningslinjer, begrunnelse}
         OAC->>DB: Logg spørring og resultat
@@ -137,13 +141,14 @@ sequenceDiagram
         AOAI-->>OAC: Too Many Requests
         OAC-->>KC: RuntimeException
     end
-    
+
     KC-->>FE: {bryterRetningslinjer, begrunnelse}
 ```
 
 ### Persondata-filtrering
 
 Før teksten sendes til KI, filtreres personsensitive data ut:
+
 - Fødselsnummer
 - Telefonnummer
 - E-postadresser
@@ -190,20 +195,20 @@ Dette sikrer at personopplysninger aldri sendes til ekstern KI-tjeneste.
 
 Alle KI-spørringer logges i `ki_spørring_logg`-tabellen for å sikre full sporbarhet og mulighet for kvalitetskontroll:
 
-| Felt                        | Beskrivelse                                    |
-| --------------------------- | ---------------------------------------------- |
-| `treff_id`                  | Referanse til rekrutteringstreffet             |
-| `felt_type`                 | TITTEL eller BESKRIVELSE                       |
-| `spørring_fra_frontend`     | Original tekst fra bruker                      |
-| `spørring_filtrert`         | Tekst etter persondata-filtrering              |
-| `systemprompt`              | Systemprompt brukt i kallet                    |
-| `ekstra_parametre`          | JSON med promptversjon, hash, tidsstempel      |
-| `bryter_retningslinjer`     | Boolean resultat fra KI                        |
-| `begrunnelse`               | KIs begrunnelse                                |
-| `ki_navn`                   | azure-openai                                   |
-| `ki_versjon`                | Deployment-navn (f.eks. toi-gpt-4.1)           |
-| `svartid_ms`                | Responstid i millisekunder                     |
-| `lagret`                    | Om teksten ble brukt/lagret                    |
+| Felt                    | Beskrivelse                               |
+| ----------------------- | ----------------------------------------- |
+| `treff_id`              | Referanse til rekrutteringstreffet        |
+| `felt_type`             | TITTEL eller BESKRIVELSE                  |
+| `spørring_fra_frontend` | Original tekst fra bruker                 |
+| `spørring_filtrert`     | Tekst etter persondata-filtrering         |
+| `systemprompt`          | Systemprompt brukt i kallet               |
+| `ekstra_parametre`      | JSON med promptversjon, hash, tidsstempel |
+| `bryter_retningslinjer` | Boolean resultat fra KI                   |
+| `begrunnelse`           | KIs begrunnelse                           |
+| `ki_navn`               | azure-openai                              |
+| `ki_versjon`            | Deployment-navn (f.eks. toi-gpt-4.1)      |
+| `svartid_ms`            | Responstid i millisekunder                |
+| `lagret`                | Om teksten ble brukt/lagret               |
 
 ### Hvorfor vi logger
 
@@ -234,7 +239,7 @@ flowchart TB
     LOGUI -->|GET /api/ki/logg| KC
     KC --> KLR
     KLR --> DB
-    
+
     ADMIN --> VURD
     VURD -->|PUT /api/ki/logg/{id}/manuell-kontroll| KC
     KC --> KLR
@@ -255,11 +260,11 @@ flowchart TB
 
 Tabellen støtter manuell overprøving for kvalitetssikring:
 
-| Felt                                       | Beskrivelse                          |
-| ------------------------------------------ | ------------------------------------ |
-| `manuell_kontroll_bryter_retningslinjer`   | Domeneekspertens vurdering           |
-| `manuell_kontroll_utført_av`               | NAV-ident for kontrollør             |
-| `manuell_kontroll_tidspunkt`               | Når kontrollen ble utført            |
+| Felt                                     | Beskrivelse                |
+| ---------------------------------------- | -------------------------- |
+| `manuell_kontroll_bryter_retningslinjer` | Domeneekspertens vurdering |
+| `manuell_kontroll_utført_av`             | NAV-ident for kontrollør   |
+| `manuell_kontroll_tidspunkt`             | Når kontrollen ble utført  |
 
 ### Bruk av loggdata til forbedring
 
@@ -317,11 +322,11 @@ Vi har en testsuite for å benchmarke systemprompter og modeller. Testsuiten er 
 
 ### Testklasser
 
-| Testklasse              | Beskrivelse                                                  |
-| ----------------------- | ------------------------------------------------------------ |
-| `KiAutorisasjonsTest`   | Tester tilgangskontroll til KI-endepunktene                  |
-| `KiLoggRepositoryTest`  | Tester logging av KI-spørringer                              |
-| `OpenAiTestClient`      | Hjelpeklasse for testing mot Azure OpenAI                    |
+| Testklasse             | Beskrivelse                                 |
+| ---------------------- | ------------------------------------------- |
+| `KiAutorisasjonsTest`  | Tester tilgangskontroll til KI-endepunktene |
+| `KiLoggRepositoryTest` | Tester logging av KI-spørringer             |
+| `OpenAiTestClient`     | Hjelpeklasse for testing mot Azure OpenAI   |
 
 ### Formål med testsuiten
 
@@ -387,16 +392,16 @@ flowchart LR
 
 ### Modellparametere
 
-| Parameter       | Verdi      | Beskrivelse                           |
-| --------------- | ---------- | ------------------------------------- |
-| `temperature`   | 0.0        | Deterministisk output                 |
-| `max_tokens`    | 400        | Maks lengde på respons                |
-| `top_p`         | 1.0        | Ingen sampling-begrensning            |
-| `response_format` | json_object | Krever JSON-output                 |
+| Parameter         | Verdi       | Beskrivelse                |
+| ----------------- | ----------- | -------------------------- |
+| `temperature`     | 0.0         | Deterministisk output      |
+| `max_tokens`      | 400         | Maks lengde på respons     |
+| `top_p`           | 1.0         | Ingen sampling-begrensning |
+| `response_format` | json_object | Krever JSON-output         |
 
 ---
 
 ## Relaterte dokumenter
 
-- [Database-schema](09-database-schema.md) - Beskrivelse av `ki_spørring_logg`-tabellen
-- [Tekniske prinsipper](02-tekniske-prinsipper.md) - Overordnet arkitektur
+- [Database](../2-arkitektur/database.md) - Beskrivelse av `ki_spørring_logg`-tabellen
+- [Arkitekturprinsipper](../2-arkitektur/prinsipper.md) - Overordnet arkitektur
