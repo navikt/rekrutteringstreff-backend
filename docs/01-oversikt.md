@@ -9,7 +9,7 @@ Tjenesten er primært designet for markedskontakter i NAV, men veiledere skal og
 ### Tjenester for jobbsøkere
 
 - **Varsling**: SMS, e-post og varsel på MinSide når de inviteres til treff
-- **Landingsside**: Jobbsøkere kan se og svare på invitasjoner
+- **Landingsside**: Jobbsøkere kan se og svare på invitasjoner via rekrutteringstreff-minside-api
 - **Aktivitetskort**: Oppdatering av aktivitetskort i aktivitetsplanen for brukere under oppfølging
 
 ### Fremtidige planer
@@ -25,23 +25,30 @@ graph TB
         RBF[rekrutteringsbistand-frontend<br/>Brukergrensesnitt for veiledere<br/>og markedskontakter]
     end
 
-    subgraph Backend
+    subgraph "Minside (Jobbsøker)"
+        MINSIDE_FE[minside-frontend<br/>Landingsside for jobbsøkere]
+    end
+
+    subgraph "rekrutteringstreff-backend"
         API[rekrutteringstreff-api<br/>Forretningslogikk og REST API<br/>Håndterer treff og invitasjoner]
+        MINSIDE_API[rekrutteringstreff-minside-api<br/>API for jobbsøkere<br/>via MinSide]
+        AK[rekrutteringsbistand-aktivitetskort<br/>Oppretter og vedlikeholder<br/>aktivitetskort]
     end
 
     subgraph Støttetjenester
-        AK[rekrutteringsbistand-aktivitetskort<br/>Oppretter og vedlikeholder<br/>aktivitetskort]
         VARSEL[rekrutteringsbistand-kandidatvarsel-api<br/>Sender SMS og e-post<br/>til jobbsøkere]
         SYN[toi-synlighetsmotor<br/>Evaluerer om kandidater<br/>er synlige for arbeidsgivere]
     end
 
     subgraph Eksterne_systemer
         RAPIDS[Rapids & Rivers<br/>Kafka event-bus]
-        MINSIDE[MinSide<br/>NAVs brukerportal]
         AKTIVITET[Aktivitetsplan]
     end
 
     RBF -->|REST| API
+    MINSIDE_FE -->|REST| MINSIDE_API
+    MINSIDE_API -->|REST| API
+
     API -->|Publiserer events| RAPIDS
     API -->|Ber om synlighet| RAPIDS
 
@@ -52,7 +59,7 @@ graph TB
     SYN -->|Synlighetssvar| RAPIDS
     RAPIDS -->|Synlighetssvar| API
 
-    VARSEL -->|Sender varsler| MINSIDE
+    VARSEL -->|Sender varsler| MINSIDE_FE
     VARSEL -->|Varselstatus| RAPIDS
     RAPIDS -->|Varselstatus| API
 
@@ -79,12 +86,22 @@ Hovedapplikasjon som:
 - Publiserer events når jobbsøkere inviteres eller treff oppdateres
 - Mottar synlighetsevalueringer fra toi-synlighetsmotor
 - Mottar varselstatus fra kandidatvarsel-api
+- Validerer innhold med KI-moderering
+
+#### rekrutteringstreff-minside-api
+
+API for jobbsøkere som:
+
+- Tilbyr REST API for MinSide-landingssiden
+- Kommuniserer med rekrutteringstreff-api via REST for å hente treff-informasjon
+- Håndterer jobbsøkernes svar på invitasjoner
+- Bruker TokenX for sikker autentisering på vegne av jobbsøker
 
 #### rekrutteringsbistand-aktivitetskort
 
 Mellomtjeneste som:
 
-- Lytter på events om invitasjoner og oppdateringer
+- Lytter på events om invitasjoner og oppdateringer via Rapids & Rivers
 - Oppretter og oppdaterer aktivitetskort i brukerens aktivitetsplan
 - Mapper rekrutteringstreff-statuser til aktivitetskort-statuser
 
@@ -104,7 +121,20 @@ Evalueringstjeneste som:
 - Kontrollerer om kandidaten har CV, samtykke og annen nødvendig informasjon
 - Sikrer at kun synlige kandidater vises for arbeidsgivere
 
-## Hendelsesflyt
+## Integrasjonsmønstre
+
+### REST-kommunikasjon
+
+| Fra                            | Til                    | Beskrivelse                                      |
+| ------------------------------ | ---------------------- | ------------------------------------------------ |
+| rekrutteringsbistand-frontend  | rekrutteringstreff-api | Veiledere og markedskontakter administrerer treff |
+| rekrutteringstreff-minside-api | rekrutteringstreff-api | Jobbsøkere ser og svarer på invitasjoner         |
+
+### Rapids & Rivers (Kafka)
+
+Se [Tekniske prinsipper](02-tekniske-prinsipper.md) for detaljer om meldingsflyten.
+
+## Eksempel på hendelsesflyt
 
 ### Invitasjon av jobbsøker
 
@@ -146,16 +176,20 @@ sequenceDiagram
 sequenceDiagram
     participant Jobbsøker
     participant Landingsside
-    participant API
+    participant MinsideAPI as rekrutteringstreff-minside-api
+    participant API as rekrutteringstreff-api
     participant Rapids
     participant Aktivitetskort
 
     Jobbsøker->>Landingsside: Åpner invitasjonslink
-    Landingsside->>API: GET /minside/treff
-    API->>Landingsside: Treffdetaljer
+    Landingsside->>MinsideAPI: GET /treff/{id}
+    MinsideAPI->>API: GET /api/rekrutteringstreff/{id}/jobbsoker/borger
+    API->>MinsideAPI: Treffdetaljer
+    MinsideAPI->>Landingsside: Treffdetaljer
 
     Jobbsøker->>Landingsside: Svarer JA/NEI
-    Landingsside->>API: PUT /minside/svar
+    Landingsside->>MinsideAPI: POST /svar
+    MinsideAPI->>API: POST /api/rekrutteringstreff/{id}/jobbsoker/borger/svar-ja
     API->>API: Oppdaterer status
     API->>Rapids: rekrutteringstreffSvarOgStatus (event)
 

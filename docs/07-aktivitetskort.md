@@ -120,7 +120,7 @@ enum class AktivitetsStatus {
 
 ### Mapping-logikk
 
-[RekrutteringstreffSvarOgStatusLytter.kt](rekrutteringstreff-backend/apps/rekrutteringsbistand-aktivitetskort/src/main/kotlin/no/nav/toi/rekrutteringstreff/RekrutteringstreffSvarOgStatusLytter.kt)
+Se kildekode: `apps/rekrutteringsbistand-aktivitetskort/src/main/kotlin/no/nav/toi/rekrutteringstreff/RekrutteringstreffSvarOgStatusLytter.kt`
 
 ### Oppsummert mapping-tabell
 
@@ -138,8 +138,6 @@ enum class AktivitetsStatus {
 ## Frontend-hendelser til backend-status
 
 ### Frontend-actions
-
-Fra [constants.ts](rekrutteringsbistand-frontend/app/rekrutteringstreff/_types/constants.ts):
 
 ```typescript
 export const JobbsøkerHendelsestype = {
@@ -179,7 +177,7 @@ export const JobbsøkerHendelsestype = {
 
 Når aktivitetskort-tjenesten returnerer feil, publiseres dette tilbake på Rapids.
 
-[AktivitetskortFeilLytter.kt](rekrutteringstreff-backend/apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/jobbsoker/aktivitetskort/AktivitetskortFeilLytter.kt)
+Se kildekode: `apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/jobbsoker/aktivitetskort/AktivitetskortFeilLytter.kt`
 
 Lytter på `aktivitetskort-feil` og registrerer `AKTIVITETSKORT_OPPRETTELSE_FEIL` hendelse på jobbsøker.
 
@@ -193,4 +191,11 @@ Sporer hvilke hendelser som er sendt for å unngå duplikater.
 
 ### Synlighetsfilter
 
-Kun synlige jobbsøkere får aktivitetskort
+Kun synlige jobbsøkere får aktivitetskort.
+
+---
+
+## Relatert dokumentasjon
+
+- [Varsling](06-varsling.md) - Varsling til jobbsøkere
+- [Database-schema](09-database-schema.md) - Komplett databaseoversikt

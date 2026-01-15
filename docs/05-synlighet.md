@@ -216,5 +216,4 @@ Se testklasser for eksempler på bruk og forventet oppførsel:
 
 ## Relaterte dokumenter
 
-- [Planleggingsdokument](../../../../../synlighet-teknisk-design.md) - Detaljert teknisk design med kodeeksempler
-- [Database-schema](database-schema.md) - Komplett databaseoversikt
+- [Database-schema](09-database-schema.md) - Komplett databaseoversikt

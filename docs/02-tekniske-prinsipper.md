@@ -1,12 +1,12 @@
-# Tekniske prinsipper - rekrutteringstreff-api
+# Tekniske prinsipper
 
-Dette dokumentet beskriver de tekniske prinsippene og arkitekturbeslutningene for rekrutteringstreff-api. Disse prinsippene gjelder primært for denne applikasjonen og er ikke nødvendigvis førende for andre deler av monorepoet.
+Dette dokumentet beskriver de tekniske prinsippene og arkitekturbeslutningene for rekrutteringstreff-backend. Disse prinsippene gjelder primært for rekrutteringstreff-api, men de overordnede prinsippene er relevante for hele monorepoet.
 
 ---
 
 ## Overordnet rammeverkstrategi
 
-Vi har valgt å bruke **nøye utvalgte mindre rammeverk** fremfor enten omfattende rammeverk (som Spring) eller mest mulig ren Kotlin uten rammeverk.
+Vi har valgt å bruke **utvalgte mindre rammeverk** fremfor enten omfattende rammeverk (som Spring) eller mest mulig ren Kotlin uten rammeverk.
 
 ### Fordeler med denne tilnærmingen
 
@@ -133,49 +133,6 @@ Kombinert med separate hendelsestabeller:
 - **Synlig i frontend**: Vi kan vise brukere hele endringshistorikken
 - **Asynkron reaksjon**: Vi kan reagere på lagrede hendelser via schedulers
 - **Fleksibilitet**: Best of both worlds - enkel lesing og komplett audit trail
-
-#### Typisk interaksjonsmønster
-
-En vanlig flyt i applikasjonen:
-
-```mermaid
-sequenceDiagram
-    participant Frontend
-    participant Controller
-    participant Service
-    participant DB as Database
-    participant Scheduler
-
-    Frontend->>Controller: POST /api/rekrutteringstreff/{id}/jobbsoker
-    Controller->>Service: leggTilJobbsøkere()
-
-    Service->>DB: INSERT INTO jobbsoker (current state)
-    Service->>DB: INSERT INTO jobbsoker_hendelse
-    DB-->>Service: ✓
-
-    Service-->>Controller: ✓
-    Controller-->>Frontend: 201 Created
-
-    Note over Scheduler: Kjører periodisk
-    Scheduler->>DB: SELECT * FROM jobbsoker_hendelse<br/>WHERE type = 'LAGT_TIL'<br/>AND processed = false
-    DB-->>Scheduler: Ubehandlede hendelser
-
-    Scheduler->>Scheduler: Prosesser hendelse<br/>(f.eks. send varsel)
-    Scheduler->>DB: UPDATE jobbsoker_hendelse<br/>SET processed = true
-```
-
-**Flytbeskrivelse:**
-
-1. Frontend sender en forespørsel om å legge til en jobbsøker
-2. Service-laget lagrer i **samme transaksjon**:
-   - Current state i `jobbsoker`-tabellen
-   - Hendelse i `jobbsoker_hendelse`-tabellen
-3. Frontend får respons umiddelbart
-4. En scheduler kjører periodisk og:
-   - Finner ubehandlede hendelser
-   - Prosesserer dem (f.eks. sender varsel, oppdaterer aktivitetskort)
-   - Markerer hendelsene som behandlet
-
 Denne tilnærmingen sikrer at vi aldri mister hendelser, og at all prosessering kan skje asynkront uten å blokkere brukerforespørsler.
 
 ### PostgreSQL
@@ -193,7 +150,7 @@ Vi bruker **ren SQL** uten ORM-rammeverk eller abstrahering av SQL. Dette gir os
 
 ### Flyway for migrasjoner
 
-Database-migrasjoner håndteres med **Flyway**. Migrasjonsfilene ligger i `src/main/resources/db/migration/`.
+Database-migrasjoner håndteres med **Flyway**. Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/migration/`.
 
 ### HikariCP for connection pooling
 
@@ -201,15 +158,71 @@ Vi bruker **HikariCP** som connection pool for effektiv håndtering av database-
 
 ---
 
-## 4. Meldingsflyt
+## 4. Integrasjoner
 
-### Rapids and Rivers
+Vi bruker to hovedmønstre for integrasjon mellom systemer:
+
+1. **REST** - For synkron kommunikasjon
+2. **Rapids and Rivers (Kafka)** - For asynkron, event-drevet kommunikasjon
+
+```mermaid
+graph TB
+    subgraph Frontend
+        FE[rekrutteringsbistand-frontend]
+    end
+
+    subgraph "rekrutteringstreff-backend"
+        API[rekrutteringstreff-api]
+        MINSIDE[rekrutteringstreff-minside-api]
+        AK[rekrutteringsbistand-aktivitetskort]
+    end
+
+    subgraph Eksterne_tjenester
+        VARSEL[kandidatvarsel-api]
+        SYN[toi-synlighetsmotor]
+    end
+
+    RAPIDS[Rapids & Rivers<br/>Kafka]
+
+    FE -->|REST| API
+    MINSIDE -->|REST| API
+
+    API <-->|Events + Needs| RAPIDS
+    AK <-->|Events| RAPIDS
+    VARSEL <-->|Events| RAPIDS
+    SYN <-->|Needs| RAPIDS
+
+    style FE fill:#fff4e1
+    style MINSIDE fill:#e1f5ff
+    style API fill:#e8f5e9
+    style AK fill:#e8f5e9
+    style RAPIDS fill:#fce4ec
+```
+
+### REST-integrasjoner
+
+Vi bruker REST for synkron kommunikasjon der vi trenger umiddelbar respons:
+
+| Fra                              | Til                    | Beskrivelse                                               |
+| -------------------------------- | ---------------------- | --------------------------------------------------------- |
+| `rekrutteringsbistand-frontend`  | `rekrutteringstreff-api` | Veiledere og markedskontakter administrerer treff       |
+| `rekrutteringstreff-minside-api` | `rekrutteringstreff-api` | Jobbsøkere ser og svarer på invitasjoner via MinSide    |
+
+REST brukes når:
+- Klienten trenger umiddelbar respons
+- Operasjonen er bruker-initiert og synkron
+- Vi ønsker enkel request/response-semantikk
+
+### Rapids and Rivers (Kafka)
 
 Vi bruker **Rapids and Rivers**-biblioteket for asynkron meldingsutveksling via Kafka. Dette gir oss:
 
 - Event-drevet arkitektur
 - Løs kobling mellom systemer
 - Skalerbar meldingshåndtering
+- Mulighet for retry og feilhåndtering
+
+**Merk:** `rekrutteringstreff-minside-api` bruker **REST** mot `rekrutteringstreff-api` og bruker ikke Rapids & Rivers direkte.
 
 ### Need-pattern for datahenting
 

@@ -193,8 +193,6 @@ sequenceDiagram
     end
 ```
 
-````
-
 ---
 
 ## Felles komponenter
@@ -265,7 +263,7 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
   "postnummer": "0123",
   "poststed": "Oslo"
 }
-````
+```
 
 **rekrutteringstreffoppdatering:**
 
@@ -321,5 +319,5 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
 
 ## Relatert dokumentasjon
 
-- [Aktivitetskort for Rekrutteringstreff](rekrutteringstreff-aktivitetskort.md)
+- [Aktivitetskort for Rekrutteringstreff](07-aktivitetskort.md)
 - [MinSide dokumentasjon](https://navikt.github.io/tms-dokumentasjon/varsler/produsere)
