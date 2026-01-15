@@ -274,31 +274,60 @@ class SynlighetsKomponentTest {
     }
 
     @Test
-    fun `GET jobbsøkere - slettet jobbsøker telles som slettet uavhengig av synlighet`() {
+    fun `GET jobbsøkere - slettet jobbsøker telles som slettet uavhengig av senere synlighetsendring`() {
         val treffId = opprettTreffMedEier()
         
-        // Opprett en jobbsøker som er synlig, og en som er skjult - begge skal slettes
-        val synligSomSlettes = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("SynligSlettet"), Etternavn("Person"), null, null, null)
-        val skjultSomSlettes = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("SkjultSlettet"), Etternavn("Person"), null, null, null)
+        // Opprett to synlige jobbsøkere som skal slettes
+        val fnr1 = Fødselsnummer("11111111111")
+        val fnr2 = Fødselsnummer("22222222222")
+        val slettet1 = LeggTilJobbsøker(fnr1, Fornavn("Slettet1"), Etternavn("Person"), null, null, null)
+        val slettet2 = LeggTilJobbsøker(fnr2, Fornavn("Slettet2"), Etternavn("Person"), null, null, null)
         
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligSomSlettes, skjultSomSlettes), treffId, "A123456")
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(slettet1, slettet2), treffId, "A123456")
         db.settSynlighet(personTreffIder[0], true)
-        db.settSynlighet(personTreffIder[1], false)
+        db.settSynlighet(personTreffIder[1], true)
         
-        // Slett begge jobbsøkerne
+        // Slett begge jobbsøkerne mens de er synlige
         jobbsøkerService.markerSlettet(personTreffIder[0], treffId, "A123456")
         jobbsøkerService.markerSlettet(personTreffIder[1], treffId, "A123456")
+        
+        // Endre synlighet til false for én av dem (simulerer synlighetsmotor-event)
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr1.asString, false, java.time.Instant.now())
         
         val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
         
         assertThat(response.statusCode()).isEqualTo(200)
         val dto = mapper.readValue<JobbsøkereOutboundDto>(response.body())
         
-        // Begge skal telles som slettet, ingen som synlige eller skjulte
+        // Begge skal fortsatt telles som slettet, uavhengig av synlighetsendring
         assertThat(dto.jobbsøkere).isEmpty()
         assertThat(dto.antallSynlige).isEqualTo(0)
         assertThat(dto.antallSkjulte).isEqualTo(0)
         assertThat(dto.antallSlettede).isEqualTo(2)
+    }
+
+    @Test
+    fun `skjulte jobbsøkere kan ikke slettes via API - returnerer IKKE_FUNNET`() {
+        val treffId = opprettTreffMedEier()
+        
+        // Opprett en skjult jobbsøker
+        val skjultJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Skjult"), Etternavn("Person"), null, null, null)
+        
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(skjultJobbsøker), treffId, "A123456")
+        db.settSynlighet(personTreffIder[0], false)
+        
+        // Forsøk å slette - skal returnere IKKE_FUNNET fordi skjulte jobbsøkere ikke er tilgjengelige
+        val resultat = jobbsøkerService.markerSlettet(personTreffIder[0], treffId, "A123456")
+        
+        assertThat(resultat).isEqualTo(MarkerSlettetResultat.IKKE_FUNNET)
+        
+        // Jobbsøkeren skal fortsatt telles som skjult, ikke slettet
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val dto = mapper.readValue<JobbsøkereOutboundDto>(response.body())
+        
+        assertThat(dto.antallSynlige).isEqualTo(0)
+        assertThat(dto.antallSkjulte).isEqualTo(1)
+        assertThat(dto.antallSlettede).isEqualTo(0)
     }
 
     @Test
