@@ -21,7 +21,7 @@ graph TB
     end
 
     subgraph "rekrutteringsbistand-<br/>aktivitetskort"
-        Lyttere["Lyttere (Kafka-konsumenter)"]
+        Lyttere["Lyttere"]
         AktDB[("Aktivitetskort Database")]
     end
 
