@@ -2,11 +2,11 @@
 
 Rekrutteringstreff er designet for å kunne utvides til nye brukergrupper og bruksscenarier uten store arkitekturendringer.
 
-## Planlagte utvidelsesmuligheter
+## Diskuterte utvidelsesmuligheter
 
 ### Uavhengighet fra CV-krav
 
-I dag kreves det at jobbsøkere har CV og samtykke for å være synlige. Vi forbereder for at dette kravet kan gå bort:
+I dag kreves det at jobbsøkere har CV og samtykke for å være synlige. Vi tilrettelegger for at vi muligens kan fjerne dette kravet:
 
 - Synlighetssjekk er isolert i egen integrasjon mot toi-synlighetsmotor
 - Kan enkelt gjøres valgfri eller betinget per treff-type
@@ -14,7 +14,7 @@ I dag kreves det at jobbsøkere har CV og samtykke for å være synlige. Vi forb
 
 ### Brukere utenfor oppfølging
 
-Dagens løsning er knyttet til NAVs oppfølgingsløp, men vi forbereder for brukere som ikke er under oppfølging:
+Dagens løsning er knyttet til NAVs oppfølgingsløp, men vi tilrettelegger for at vi muligens kan støtte brukere som ikke er under oppfølging:
 
 - **Aktivitetskort er valgfritt**: Integrasjonen skal kunne deaktiveres per bruker/treff dersom det blir ønskelig.
 - **MinSide som primærkanal**: To innganger til MinSide (varsel + aktivitetskort) sikrer at brukere uten aktivitetsplan fortsatt kan nås via varsel
