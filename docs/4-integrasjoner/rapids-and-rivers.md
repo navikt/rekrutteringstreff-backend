@@ -23,9 +23,11 @@ graph TB
     VARSEL <-->|Events| RAPIDS
     SYN <-->|Needs| RAPIDS
 
-    style API fill:#e8f5e9
-    style AK fill:#e8f5e9
-    style RAPIDS fill:#fce4ec
+    style API fill:#e8f5e9,color:#000,stroke:#333
+    style AK fill:#e8f5e9,color:#000,stroke:#333
+    style RAPIDS fill:#fce4ec,color:#000,stroke:#333
+    style VARSEL fill:#fff,color:#000,stroke:#333
+    style SYN fill:#fff,color:#000,stroke:#333
 ```
 
 **Merk:** `rekrutteringstreff-minside-api` bruker **REST** mot `rekrutteringstreff-api` og bruker ikke Rapids & Rivers direkte.
@@ -61,13 +63,13 @@ Brukes når vi må hente data fra andre databaser eller systemer:
 
 ## REST vs Rapids & Rivers
 
-| Bruksområde | REST | Rapids & Rivers |
-|-------------|------|-----------------|
-| Klienten trenger umiddelbar respons | ✓ | |
-| Operasjonen er bruker-initiert | ✓ | |
-| Eventual consistency er ok | | ✓ |
-| Flere systemer skal reagere | | ✓ |
-| Retry og feilhåndtering viktig | | ✓ |
+| Bruksområde                         | REST | Rapids & Rivers |
+| ----------------------------------- | ---- | --------------- |
+| Klienten trenger umiddelbar respons | ✓    |                 |
+| Operasjonen er bruker-initiert      | ✓    |                 |
+| Eventual consistency er ok          |      | ✓               |
+| Flere systemer skal reagere         |      | ✓               |
+| Retry og feilhåndtering viktig      |      | ✓               |
 
 ## Relaterte dokumenter
 
