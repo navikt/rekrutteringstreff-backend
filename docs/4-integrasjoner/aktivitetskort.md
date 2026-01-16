@@ -62,12 +62,12 @@ graph TB
 
     Repo -.->|Markerer som sendt| DB
 
-    style UI fill:#e1f5ff
-    style Scheduler fill:#fff4e1
-    style InvLytter fill:#e8f5e9
-    style SvarLytter fill:#e8f5e9
-    style OppdLytter fill:#e8f5e9
-    style AKTopic fill:#f3e5f5
+    style UI fill:#e1f5ff,color:#333,stroke:#333
+    style Scheduler fill:#fff4e1,color:#333,stroke:#333
+    style InvLytter fill:#e8f5e9,color:#333,stroke:#333
+    style SvarLytter fill:#e8f5e9,color:#333,stroke:#333
+    style OppdLytter fill:#e8f5e9,color:#333,stroke:#333
+    style AKTopic fill:#f3e5f5,color:#333,stroke:#333
 ```
 
 > **Tegnforklaring:**
