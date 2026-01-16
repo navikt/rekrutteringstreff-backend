@@ -43,7 +43,10 @@ For kompliserte oppgaver i public repos, velg en modell som håndterer stor kont
 | **GPT 5.1 Codex Max** eller nyere | Spesialisert for kode                   |
 | **Gemini 3 Pro** eller nyere      | Godt alternativ med stort kontekstvindu |
 
-> **Tips:** Sjekk gjerne oppdaterte benchmarks(for eksempel https://lmarena.ai/leaderboard) før du velger – modellene forbedres kontinuerlig.
+> **Tips:** Sjekk gjerne oppdaterte benchmarks før du velger – modellene forbedres kontinuerlig.
+
+- https://lmarena.ai/leaderboard/text/coding
+- https://lmarena.ai/leaderboard/webdev
 
 ---
 
