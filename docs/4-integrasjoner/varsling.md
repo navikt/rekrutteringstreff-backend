@@ -17,13 +17,7 @@ Når veileder inviterer en jobbsøker til et treff, sendes det automatisk et var
 
 ### Innhold i meldingen
 
-Varselet inneholder:
-
-- Treffets navn og introduksjon
-- Tidspunkt (dato, fra-til)
-- Sted (adresse)
-- Svarfrist
-- Lenke til svarside hvor jobbsøker kan svare ja eller nei
+Varselet inneholder en kort tekst som ber jobbsøker om å logge inn på Nav for å se detaljer og svare på invitasjonen.
 
 ### Mal som brukes
 
