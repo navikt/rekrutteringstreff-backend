@@ -67,6 +67,8 @@ Vi bruker **Javalin**, et lett HTTP-rammeverk bygget på Jetty.
 - **400 Bad Request**: Ugyldig input fra klient
 - **403 Forbidden**: Bruker mangler tilgang
 - **404 Not Found**: Ressurs finnes ikke
+- **409 Conflict**: Konflikt med eksisterende ressurs eller ugyldig tilstandsendring
+- **422 Unprocessable Entity**: Semantisk ugyldig input (f.eks. sletting ikke tillatt)
 - **500 Internal Server Error**: Uventede feil
 
 ### Service-laget
