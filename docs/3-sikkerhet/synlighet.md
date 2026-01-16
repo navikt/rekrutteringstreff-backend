@@ -37,7 +37,7 @@ flowchart TB
     SL --> JS
     JS --> JR
     JR --> DB
-    
+
     SRL --> SMDB
     SMDB ~~~ SGL
 
