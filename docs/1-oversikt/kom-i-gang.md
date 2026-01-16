@@ -40,7 +40,7 @@ Vi kjører **ikke** applikasjonen lokalt. I stedet bruker vi:
 
 ### Kjøre tester
 
-Testene bruker Testcontainers og spinner opp en PostgreSQL-database automatisk:
+Testene bruker Testcontainers og spinner opp en PostgreSQL-database automatisk. Sørg for at Docker eller Colima kjører før du kjører testene.
 
 ```bash
 # Kjør alle tester
@@ -82,28 +82,6 @@ rekrutteringstreff-backend/
 ├── docs/                                     # Dokumentasjon (du er her!)
 └── buildSrc/                                 # Gradle-konfigurasjon
 ```
-
----
-
-## Vanlige oppgaver
-
-### Legge til en ny Flyway-migrasjon
-
-1. Opprett fil i `apps/rekrutteringstreff-api/src/main/resources/db/migration/`
-2. Navngi filen `V<neste_nummer>__beskrivelse.sql`
-3. Skriv SQL-migrasjon
-4. Oppdater [database.md](../2-arkitektur/database.md) med beskrivelse
-
-### Legge til et nytt API-endepunkt
-
-1. Opprett eller utvid Controller i relevant modul
-2. Legg til forretningslogikk i Service
-3. Skriv komponenttest
-4. Oppdater Swagger-dokumentasjon ved behov
-
-### Publisere hendelser til Rapids & Rivers
-
-Se [rapids-and-rivers.md](../4-integrasjoner/rapids-and-rivers.md) for mønster og eksempler.
 
 ---
 
