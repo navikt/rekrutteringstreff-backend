@@ -62,6 +62,12 @@ graph TB
 
     Repo -.->|Markerer som sendt| DB
 
+    %% Tvungen layout: Sørg for at boksene havner under hverandre
+    UI ~~~ API
+    API ~~~ Scheduler
+    Scheduler ~~~ InvLytter
+    InvLytter ~~~ AKTopic
+
     style UI fill:#e1f5ff
     style Scheduler fill:#fff4e1
     style InvLytter fill:#e8f5e9
