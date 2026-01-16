@@ -40,4 +40,11 @@ Det er også mulig å be agenten forsøke å gjennomgå hele dokumentasjonsstruk
 
 > "@workspace Skann gjennom alle markdown-filer i `docs/`-mappen. Sjekk innholdet opp mot koden i `src/`. Lag en liste over områder som ser ut til å være utdaterte, eller foreslå direkte endringer for å bringe dokumentasjonen i sync med koden."
 
-**Merk:** Resultatet av en slik "helsesjekk" på hele mappen avhenger sterkt av kontekstvinduet til KI-modellen du bruker. Med dagens modeller kan det forekomme at den overser detaljer i store kodebaser, men dette vil fungere stadig bedre etter hvert som modellene i fremtiden får større kapasitet og bedre forståelse av hele repoet.
+**Merk:** Resultatet av en slik "helsesjekk" på hele mappen avhenger sterkt av kontekstvinduet til KI-modellen du bruker. Kombinasjonen av **store kodebaser** og det å forsøke å **oppdatere alle dokumentene samtidig** kan forårsake problemer med dagens modeller, som at den overser detaljer. Dette vil imidlertid fungere stadig bedre etter hvert som modellene i fremtiden får større kapasitet og bedre forståelse av hele repoet.
+
+## Verifisering av endringer
+
+Det er viktig å alltid **gå gjennom endringene** Copilot foreslår før du committer:
+
+1.  Bruk **Diff View** i IDE-en for å se nøyaktig hva som er endret i teksten.
+2.  For **Mermaid-diagrammer**, bør du åpne forhåndsvisningen (Preview) av markdown-filen. Kodeendringer i Mermaid-syntaksen er vanskelige å visualisere kun ved å se på diff-en, så sjekk at diagrammet genereres korrekt og ser fornuftig ut.
