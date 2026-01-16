@@ -22,11 +22,11 @@ Dagens løsning er knyttet til NAVs oppfølgingsløp, men vi tilrettelegger for 
 
 ### Alternative innganger for påmelding
 
-Løsningen skal ikke være låst til internt kandidatsøk som eneste kilde til jobbsøkere:
+Løsningen bør ikke være låst til internt kandidatsøk som eneste kilde til jobbsøkere. Vi bør tilrettelegge for alternative innganger hvis behovet oppstår:
 
 - **Stillingssøk**: Rekrutteringstreff kan vises sammen med stillinger, med mulighet for selvpåmelding
 - **Målrettede landingssider**: Egne sider for f.eks. ungdom eller spesifikke målgrupper med direktelenke til påmelding
-- **Ekstern påmelding**: API-et støtter at jobbsøkere registreres fra flere kilder
+- **Ekstern påmelding**: API-et bør kunne støtte at jobbsøkere registreres fra flere kilder
 
 ### Skalerbarhet for store arrangementer
 
