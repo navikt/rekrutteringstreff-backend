@@ -45,8 +45,14 @@ flowchart TB
     OAC -->|Valideringsresultat| KC
     KC -->|bryterRetningslinjer + begrunnelse| FE
 
-    style AOAI fill:#e8f5e9
-    style DB fill:#e1f5ff
+    style AOAI fill:#e8f5e9,color:#000,stroke:#333
+    style DB fill:#e1f5ff,color:#000,stroke:#333
+
+    style KC fill:#fff,color:#000,stroke:#333
+    style OAC fill:#fff,color:#000,stroke:#333
+    style PF fill:#fff,color:#000,stroke:#333
+    style SP fill:#fff,color:#000,stroke:#333
+    style KLR fill:#fff,color:#000,stroke:#333
 ```
 
 ---
@@ -245,8 +251,13 @@ flowchart TB
     KC --> KLR
     KLR -->|Oppdater manuell_kontroll_*| DB
 
-    style ADMIN fill:#fff4e1
-    style DB fill:#e1f5ff
+    style ADMIN fill:#fff4e1,color:#000,stroke:#333
+    style DB fill:#e1f5ff,color:#000,stroke:#333
+    
+    style LOGUI fill:#fff,color:#000,stroke:#333
+    style VURD fill:#fff,color:#000,stroke:#333
+    style KC fill:#fff,color:#000,stroke:#333
+    style KLR fill:#fff,color:#000,stroke:#333
 ```
 
 #### Funksjonalitet
