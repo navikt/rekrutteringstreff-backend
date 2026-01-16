@@ -43,7 +43,6 @@ graph TD
     RBF -->|REST| API
     MINSIDE_FE -->|REST| MINSIDE_API
     MINSIDE_API -->|REST| API
-    VARSEL -->|REST: Sender varsler| MINSIDE_FE
     AK -->|REST: Oppretter kort| AKTIVITET
 
     %% Kafka-flyt (Rapids & Rivers)
@@ -51,6 +50,7 @@ graph TD
     API -.->|Events: Invitasjon| AK
     API -.->|Events: Invitasjon| VARSEL
     API -.->|Behov: Synlighet| SYN
+    VARSEL -.->|Kafka: Bestiller varsel| MINSIDE_FE
 
     SYN -.->|Løsning: Synlighet| API
     VARSEL -.->|Event: Varselstatus| API
