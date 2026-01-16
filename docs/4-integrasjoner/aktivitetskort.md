@@ -46,11 +46,15 @@ graph TB
     Lyttere --> AktDB
     Lyttere -.->|Publiserer aktivitetskort| Aktivitetsplan
 
-    style UI fill:#e1f5ff,color:#333,stroke:#333
-    style Scheduler fill:#fff4e1,color:#333,stroke:#333
-    style Lyttere fill:#e8f5e9,color:#333,stroke:#333
-    style Aktivitetsplan fill:#f3e5f5,color:#333,stroke:#333
+    style UI fill:#e1f5ff,color:#000,stroke:#333
+    style Scheduler fill:#fff4e1,color:#000,stroke:#333
+    style Lyttere fill:#e8f5e9,color:#000,stroke:#333
+    style Aktivitetsplan fill:#f3e5f5,color:#000,stroke:#333
     style Spacer fill:none,stroke:none,color:transparent
+
+    style API fill:#fff,color:#000,stroke:#333
+    style DB fill:#fff,color:#000,stroke:#333
+    style AktDB fill:#fff,color:#000,stroke:#333
 ```
 
 > **Tegnforklaring:**
