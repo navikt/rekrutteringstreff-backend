@@ -21,9 +21,10 @@ flowchart TB
     end
 
     subgraph toi-synlighetsmotor
+        direction TB
         SRL[SynlighetRekrutteringstreffLytter]
-        SGL[SynlighetsgrunnlagLytter]
         SMDB[(Synlighetsmotor DB)]
+        SGL[SynlighetsgrunnlagLytter]
     end
 
     %% Interne koblinger
@@ -34,6 +35,7 @@ flowchart TB
     SBL --> JS
     SL --> JS
     SRL --> SMDB
+    SMDB ~~~ SGL
 
     %% Kafka-flyt (Rapids & Rivers)
     SBS -.->|Need: synlighetRekrutteringstreff| SRL
