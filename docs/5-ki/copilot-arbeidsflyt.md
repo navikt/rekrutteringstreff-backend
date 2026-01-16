@@ -36,14 +36,14 @@
 
 For kompliserte oppgaver i public repos, velg en modell som håndterer stor kontekst og tyngre oppgaver:
 
-| Modell                            | Beskrivelse                                                                            |
-| --------------------------------- | -------------------------------------------------------------------------------------- |
-| **Claude Opus 4.5** eller nyere   | Beste valg for store kodeoppgaver per januar 2025 (ifølge de fleste public benchmarks) |
-| **GPT 5.2** eller nyere           | Solid alternativ for komplekse oppgaver                                                |
-| **GPT 5.1 Codex Max** eller nyere | Spesialisert for kode                                                                  |
-| **Gemini 3 Pro** eller nyere      | Godt alternativ med stort kontekstvindu                                                |
+| Modell                            | Beskrivelse                             |
+| --------------------------------- | --------------------------------------- |
+| **Claude Opus 4.5** eller nyere   | God på store kodebaser                  |
+| **GPT 5.2** eller nyere           | Solid alternativ for komplekse oppgaver |
+| **GPT 5.1 Codex Max** eller nyere | Spesialisert for kode                   |
+| **Gemini 3 Pro** eller nyere      | Godt alternativ med stort kontekstvindu |
 
-> **Tips:** Sjekk oppdaterte benchmarks før du velger – modellene forbedres kontinuerlig.
+> **Tips:** Sjekk gjerne oppdaterte benchmarks(for eksempel https://lmarena.ai/leaderboard) før du velger – modellene forbedres kontinuerlig.
 
 ---
 

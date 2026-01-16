@@ -1,60 +1,46 @@
 # Tilgangsstyring
 
-Løsningen har tre typer tilganger:
+Løsningen har tre brukergrupper med ulike tilganger.
 
-## 1. Sluttbruker (Borger)
+## 1. Personbruker
 
-Sluttbrukere autentiseres via TokenX/ID-porten. Denne tilgangen brukes av:
+Personbrukere autentiseres via ID-porten. Tilgangen gir mulighet til å:
 
-- **rekrutteringstreff-minside-api**: Fronter sluttbrukerflaten. Autentiserer borgere med `pid`-claim (personnummer) fra TokenX.
-- **rekrutteringstreff-api**: Støtter også `BORGER`-rollen, men kun fordi minside-api videresender kall med TokenX-token. Borger har tilgang til:
-  - Hente informasjon om rekrutteringstreff de er invitert til
-  - Svare ja/nei på invitasjoner
-  - Se innlegg og arbeidsgivere knyttet til treffet
+- Se rekrutteringstreff de er invitert til
+- Svare på invitasjoner
+- Se relevant informasjon om treffet
 
 ## 2. NAV-ansatt
 
 NAV-ansatte autentiseres via Azure AD og får roller basert på AD-gruppemedlemskap. Det er tre roller:
 
-### Veileder (`JOBBSØKER_RETTET`)
+### Jobbsøkerrettet
 
-- **AD-gruppe**: `AD_GRUPPE_REKRUTTERINGSBISTAND_JOBBSOKERRETTET`
-- **Tilgang**:
-  - Hente og se rekrutteringstreff
-  - Legge til jobbsøkere (kandidater) til treff
-  - Se innlegg
-- **Ikke tilgang til**:
-  - Opprette, oppdatere eller slette rekrutteringstreff
-  - Administrere arbeidsgivere
-  - KI-funksjonalitet
+Grunnleggende lesetilgang og mulighet til å jobbe med jobbsøkere:
 
-### Markedskontakt (`ARBEIDSGIVER_RETTET`)
+- Se rekrutteringstreff
+- Legge til jobbsøkere på treff
 
-- **AD-gruppe**: `AD_GRUPPE_REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET`
-- **Tilgang**:
-  - Opprette rekrutteringstreff
-  - Oppdatere og slette egne treff (der de er eier)
-  - Administrere arbeidsgivere og jobbsøkere på egne treff
-  - Legge til jobbsøkere på andres treff
-  - Hente og se alle rekrutteringstreff
-  - Se hendelseslogg for egne treff
-- **Eierskap**: Kun eier av et treff kan oppdatere/slette det og se detaljert hendelseslogg
+### Arbeidsgiverrettet
 
-### Administrator/Utvikler (`UTVIKLER`)
+Utvidet tilgang for å opprette og administrere rekrutteringstreff:
 
-- **AD-gruppe**: `AD_GRUPPE_REKRUTTERINGSBISTAND_UTVIKLER`
-- **Tilgang**:
-  - Full tilgang til alle funksjoner, uavhengig av eierskap
-  - KI-validering og logging (kun tilgjengelig for utviklere)
-  - Hente og administrere alle treff
+- Opprette og administrere egne rekrutteringstreff
+- Administrere deltakere på egne treff
+- Bidra med jobbsøkere på andres treff
+- Se hendelseslogg for egne treff
+
+### Utvikler/Admin
+
+Full tilgang til alle funksjoner, inkludert:
+
+- Administrere alle treff uavhengig av eierskap
+- Tilgang til utviklerverktøy og diagnostikk
 
 ## 3. System
 
-Systemtilgang brukes for maskin-til-maskin-kommunikasjon, for eksempel:
-
-- Lytting på Kafka-meldinger (rapids-and-rivers)
-- Interne API-kall mellom tjenester
+Systemtilgang brukes for maskin-til-maskin-kommunikasjon mellom tjenester.
 
 ## Pilotkontorer
 
-I tillegg til rollekrav må NAV-ansatte (unntatt utviklere) i pilotperioden være innlogget på et pilotkontor for å få tilgang til rekrutteringstreff-funksjonalitet.
+I pilotperioden må NAV-ansatte (unntatt utviklere) være innlogget på et pilotkontor for å få tilgang.
