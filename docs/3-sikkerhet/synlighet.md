@@ -26,26 +26,25 @@ flowchart TB
         SMDB[(Synlighetsmotor DB)]
     end
 
-    subgraph Kafka
-        RAPID[Rapids & Rivers]
-    end
-
+    %% Interne koblinger
     Frontend --> API
     API --> JR
     JR --> DB
     SBS --> JR
-
-    SBS -->|need: synlighetRekrutteringstreff| RAPID
-    RAPID -->|need-svar| SBL
     SBL --> JS
-
-    SGL -->|synlighet-event| RAPID
-    RAPID -->|synlighet-event| SL
     SL --> JS
-
-    SRL -->|lytter på need| RAPID
     SRL --> SMDB
+
+    %% Kafka-flyt (Rapids & Rivers)
+    SBS -.->|Need: synlighetRekrutteringstreff| SRL
+    SRL -.->|Løsning: synlighetRekrutteringstreff| SBL
+    SGL -.->|Event: synlighet-event| SL
 ```
+
+> **Tegnforklaring:**
+>
+> - Hel linje (`-->`): Synkron/direkte kommunikasjon (metodekall/SQL)
+> - Stiplet linje (`-.->`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
 
 ## Hvordan det fungerer
 
