@@ -31,6 +31,12 @@ cd rekrutteringstreff-backend
 
 ---
 
+## Utviklingsmiljø
+
+Vi anbefaler å bruke **IntelliJ IDEA** som utviklingsmiljø. Det gir utmerket støtte for Kotlin, Gradle og integrasjon med testene.
+
+---
+
 ## Utvikling
 
 Vi kjører **ikke** applikasjonen lokalt. I stedet bruker vi:
