@@ -57,6 +57,7 @@ graph TD
 ```
 
 > **Tegnforklaring:**
+>
 > - Hel linje (`-->`): Synkron REST-kommunikasjon
 > - Stiplet linje (`-.->`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
 
@@ -127,10 +128,3 @@ Evalueringstjeneste som:
 ### Rapids & Rivers (Kafka)
 
 Se [Arkitekturprinsipper](../2-arkitektur/prinsipper.md) for detaljer om meldingsflyten.
-
-## Eksempel på hendelsesflyt
-
-Se egne dokumenter for detaljert beskrivelse:
-
-- [Invitasjon](../4-integrasjoner/invitasjon.md) - Flyt for invitasjon av jobbsøkere
-- [MinSide-flyt](../4-integrasjoner/minside-flyt.md) - Flyt for jobbsøkers svar
