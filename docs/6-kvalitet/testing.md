@@ -12,7 +12,7 @@ Tester hele applikasjonen med ekte HTTP-kall mot en embedded database (Testconta
 
 - Starter opp applikasjonen i test-modus
 - Bruker Testcontainers for PostgreSQL
-- Gjør ekte HTTP-kall mot API-et
+- Gjør ekte HTTP-kall mot API-et ved hjelp av `httpClient`
 - Verifiserer hele flyten fra request til respons
 
 **Eksempel:**
