@@ -217,7 +217,7 @@ Alle KI-spørringer logges i `ki_spørring_logg`-tabellen for å sikre full spor
 
 ### Logggrensesnitt for administratorer
 
-Vi tilbyr et logggrensesnitt i brukerflaten for brukere med admin-tilgang:
+Vi tilbyr et logg-grensesnitt i brukerflaten for brukere med admin-tilgang:
 
 ```mermaid
 flowchart TB
@@ -234,12 +234,12 @@ flowchart TB
     end
 
     ADMIN --> LOGUI
-    LOGUI -->|GET /api/ki/logg| KC
+    LOGUI -->|"GET /api/ki/logg"| KC
     KC --> KLR
     KLR --> DB
 
     ADMIN --> VURD
-    VURD -->|PUT /api/ki/logg/{id}/manuell-kontroll| KC
+    VURD -->|"PUT /api/ki/logg/{id}/manuell-kontroll"| KC
     KC --> KLR
     KLR -->|Oppdater manuell_kontroll_*| DB
 
