@@ -36,32 +36,29 @@ graph TD
     end
 
     subgraph Eksterne_systemer
-        RAPIDS[Rapids & Rivers]
         AKTIVITET[Aktivitetsplan]
     end
 
-    %% Kommunikasjon
+    %% Kommunikasjon (REST)
     RBF -->|REST| API
     MINSIDE_FE -->|REST| MINSIDE_API
     MINSIDE_API -->|REST| API
+    VARSEL -->|REST: Sender varsler| MINSIDE_FE
+    AK -->|REST: Oppretter kort| AKTIVITET
 
-    %% Kafka-flyt
-    API -->|Publiserer events| RAPIDS
-    API -->|Ber om synlighet| RAPIDS
+    %% Kafka-flyt (Rapids & Rivers)
+    %% Stiplet linje indikerer asynkron kommunikasjon via Kafka
+    API -.->|Events: Invitasjon| AK
+    API -.->|Events: Invitasjon| VARSEL
+    API -.->|Behov: Synlighet| SYN
 
-    RAPIDS -->|Henter invitasjon| AK
-    RAPIDS -->|Henter invitasjon| VARSEL
-    RAPIDS -->|Sjekker synlighet| SYN
-
-    SYN -->|Synlighetssvar| RAPIDS
-    RAPIDS -->|Synlighetssvar| API
-
-    VARSEL -->|Sender varsler| MINSIDE_FE
-    VARSEL -->|Varselstatus| RAPIDS
-    RAPIDS -->|Varselstatus| API
-
-    AK -->|Oppretter kort| AKTIVITET
+    SYN -.->|Løsning: Synlighet| API
+    VARSEL -.->|Event: Varselstatus| API
 ```
+
+> **Tegnforklaring:**
+> - Hel linje (`-->`): Synkron REST-kommunikasjon
+> - Stiplet linje (`-.->`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
 
 ### Applikasjonsbeskrivelser
 
