@@ -9,13 +9,12 @@ Løsningen synker automatisk status for rekrutteringstreff og jobbsøker med akt
 ## Teknisk flyt
 
 ```mermaid
-flowchart TD
+graph TB
     subgraph Frontend
         UI[Veileder inviterer jobbsøker]
     end
 
     subgraph "rekrutteringstreff-api"
-        direction TB
         API[API endpoint]
         DB[(Database)]
         Scheduler[AktivitetskortJobbsøkerScheduler]
@@ -24,7 +23,6 @@ flowchart TD
     end
 
     subgraph "rekrutteringsbistand-aktivitetskort"
-        direction TB
         InvLytter[RekrutteringstreffInvitasjonLytter]
         SvarLytter[RekrutteringstreffSvarOgStatusLytter]
         OppdLytter[RekrutteringstreffOppdateringLytter]
@@ -32,7 +30,6 @@ flowchart TD
     end
 
     subgraph "Aktivitetsplanen"
-        direction TB
         AKTopic[aktivitetskort-v1.1 topic]
         Aktivitetsplan[Aktivitetsplanen]
     end
