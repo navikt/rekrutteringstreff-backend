@@ -324,7 +324,7 @@ class JobbsøkerServiceTest {
     }
 
     @Test
-    fun `skalVarslesOmEndringer skal returnere true for jobbsøker med INVITERT som siste relevante hendelse`() {
+    fun `skalVarslesOmEndringer skal returnere false for jobbsøker med INVITERT som siste relevante hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr = Fødselsnummer("12345678901")
         val jobbsøkere = listOf(
@@ -337,7 +337,7 @@ class JobbsøkerServiceTest {
         val jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fnr)
         val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker!!.hendelser)
 
-        assertThat(skalVarsles).isTrue()
+        assertThat(skalVarsles).isFalse()
     }
 
     @Test
