@@ -121,6 +121,7 @@ Dette sikrer sporbarhet og gjør det mulig å analysere hvordan endringer påvir
 ### Valideringsflyt
 
 ```mermaid
+%%{init: {'sequence': {'mirrorActors': false}}}%%
 sequenceDiagram
     participant FE as Frontend
     participant KC as KiController
@@ -244,7 +245,7 @@ flowchart TB
 
     style ADMIN fill:#fff4e1,color:#000,stroke:#333
     style DB fill:#e1f5ff,color:#000,stroke:#333
-    
+
     style LOGUI fill:#fff,color:#000,stroke:#333
     style VURD fill:#fff,color:#000,stroke:#333
     style KC fill:#fff,color:#000,stroke:#333
