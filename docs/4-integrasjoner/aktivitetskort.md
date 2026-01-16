@@ -18,56 +18,34 @@ graph TB
         API[API endpoint]
         DB[(Database)]
         Scheduler[AktivitetskortJobbsøkerScheduler]
-        Repo[AktivitetskortRepository]
-        FeilLytter[AktivitetskortFeilLytter]
     end
 
     subgraph "rekrutteringsbistand-aktivitetskort"
-        InvLytter[RekrutteringstreffInvitasjonLytter]
-        SvarLytter[RekrutteringstreffSvarOgStatusLytter]
-        OppdLytter[RekrutteringstreffOppdateringLytter]
+        Lyttere[Lyttere]
         AktDB[(Aktivitetskort DB)]
     end
 
-    subgraph "Aktivitetsplanen"
-        AKTopic[aktivitetskort-v1.1 topic]
+    subgraph "Eksternt system"
         Aktivitetsplan[Aktivitetsplanen]
     end
 
-    UI -->|POST /jobbsokere/inviter| API
-    API -->|Lagrer jobbsøker-hendelse| DB
+    UI --> API
+    API --> DB
 
-    Scheduler -->|Poller usendte hendelser| DB
-    DB -->|Jobbsøker-hendelser| Scheduler
+    Scheduler --> DB
+    DB --> Scheduler
 
     %% Kafka-flyt (Rapids & Rivers)
     %% Stiplet linje indikerer asynkron kommunikasjon via Kafka
-    Scheduler -.->|rekrutteringstreffinvitasjon| InvLytter
-    Scheduler -.->|rekrutteringstreffSvarOgStatus| SvarLytter
-    Scheduler -.->|rekrutteringstreffoppdatering| OppdLytter
+    Scheduler -.->|Events: Invitasjon, svar, endring| Lyttere
 
-    InvLytter -->|Oppretter aktivitetskort| AktDB
-    InvLytter -->|Sender aktivitetskort-melding| AKTopic
-
-    SvarLytter -->|Oppdaterer status| AktDB
-    SvarLytter -->|Sender oppdatering| AKTopic
-
-    OppdLytter -->|Oppdaterer detaljer| AktDB
-    OppdLytter -->|Sender oppdatering| AKTopic
-
-    AKTopic -->|Konsumerer| Aktivitetsplan
-
-    InvLytter -.->|Ved feil: aktivitetskort-feil| FeilLytter
-    FeilLytter -.->|Registrerer AKTIVITETSKORT_OPPRETTELSE_FEIL| DB
-
-    Repo -.->|Markerer som sendt| DB
+    Lyttere --> AktDB
+    Lyttere -.->|Publiserer aktivitetskort| Aktivitetsplan
 
     style UI fill:#e1f5ff,color:#333,stroke:#333
     style Scheduler fill:#fff4e1,color:#333,stroke:#333
-    style InvLytter fill:#e8f5e9,color:#333,stroke:#333
-    style SvarLytter fill:#e8f5e9,color:#333,stroke:#333
-    style OppdLytter fill:#e8f5e9,color:#333,stroke:#333
-    style AKTopic fill:#f3e5f5,color:#333,stroke:#333
+    style Lyttere fill:#e8f5e9,color:#333,stroke:#333
+    style Aktivitetsplan fill:#f3e5f5,color:#333,stroke:#333
 ```
 
 > **Tegnforklaring:**
