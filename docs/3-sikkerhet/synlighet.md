@@ -27,6 +27,8 @@ flowchart TB
         SGL[SynlighetsgrunnlagLytter]
     end
 
+    EXT[Eksterne eventer for<br/>synlighet kandidat]
+
     %% Interne koblinger
     Frontend --> JC
     JC --> JS
@@ -40,6 +42,7 @@ flowchart TB
     SMDB ~~~ SGL
 
     %% Kafka-flyt (Rapids & Rivers)
+    EXT -.-> SGL
     SBS -.->|Need: synlighetRekrutteringstreff| SRL
     SRL -.->|Løsning: synlighetRekrutteringstreff| SBL
     SGL -.->|Event: synlighet-event| SL
