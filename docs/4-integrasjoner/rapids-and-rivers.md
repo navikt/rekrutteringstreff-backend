@@ -71,6 +71,28 @@ Brukes når vi må hente data fra andre databaser eller systemer:
 | Flere systemer skal reagere         |      | ✓               |
 | Retry og feilhåndtering viktig      |      | ✓               |
 
+## Oppsett av Rapids and Rivers (RapidApplication vs Bibliotek)
+
+Vi har to måter å inkludere Rapids and Rivers på i applikasjonene våre, avhengig av om applikasjonen også kjører en egen webserver (f.eks. for REST-endepunkter).
+
+### 1. Som bibliotek ("libs") uten Ktor-server
+Brukes når applikasjonen **allerede har en egen server** (som Javalin).
+
+*   **Eksempler:** `rekrutteringstreff-api`, `kandidatvarsel-api`.
+*   **Årsak:** Disse applikasjonene bruker `Javalin` for å tilby REST-endepunkter.
+*   **Problem ved bruk av RapidApplication:** Hvis vi hadde brukt `RapidApplication` her, ville den forsøkt å starte sin egen interne Ktor-server. Dette ville ført til konflikter fordi:
+    *   To servere prøver å binde seg til porter.
+    *   Vi ville fått to sett med helsesjekker (`isAlive`, `isReady`).
+    *   Det ville blitt komplisert å håndtere livssyklus og restart hvis den ene serveren går ned men den andre lever.
+*   **Løsning:** Vi inkluderer kun Rapids and Rivers-bibliotekene som avhengigheter og instansierer `RapidsConnection` manuelt, slik at den kjører side-om-side med Javalin-serveren.
+
+### 2. RapidApplication (med innebygd server)
+Brukes når applikasjonen er en **ren konsument/produsent av events** uten behov for egne REST-endepunkter utover helsesjekker.
+
+*   **Eksempel:** `rekrutteringsbistand-aktivitetskort`.
+*   **Årsak:** Denne applikasjonen mottar events via Kafka og har ingen brukerflate eller REST-API som krever en separat server.
+*   **Fordel:** `RapidApplication` setter automatisk opp en Ktor-server som eksponerer `isAlive` og `isReady`-endepunkter, samt Prometheus-metrikker. Dette forenkler oppsettet betraktelig siden vi får "alt i ett".
+
 ## Relaterte dokumenter
 
 - [Varsling](varsling.md) - Bruker Rapids & Rivers for varsling
