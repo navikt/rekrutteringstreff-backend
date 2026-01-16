@@ -30,13 +30,10 @@ Løsningen bør ikke være låst til internt kandidatsøk som eneste kilde til j
 
 ### Skalerbarhet for store arrangementer
 
-Selv om dagens fokus er mindre treff, forbereder vi for større arrangementer:
+Selv om dagens fokus er mindre treff, bør vi tilrettelegge for at vi i fremtiden kan få større treff:
 
-- Asynkron hendelseshåndtering via Rapids & Rivers tåler høy last
-- Schedulere håndterer batch-operasjoner (varsling, aktivitetskort)
-- Database-skjema støtter mange jobbsøkere per treff
-
-> **Merknad**: Detaljert skalerbarhetsdokumentasjon kan utvides ved behov.
+- Vi støtter foreløpig ikke jobbmesser, men om vi i fremtiden gjør det bør vi tilrettelegge for slike større arrangementer.
+- Løsningen bør også ytelsestestes for større volum (se [Ytelsestesting](ytelsestesting.md)).
 
 ### Tilpasning til Workops-møter
 
