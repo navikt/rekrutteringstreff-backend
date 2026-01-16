@@ -31,8 +31,8 @@ graph TD
     end
 
     subgraph Støttetjenester
-        VARSEL[rekrutteringsbistand-<br/>kandidatvarsel-api]
         SYN[toi-synlighetsmotor]
+        VARSEL[rekrutteringsbistand-<br/>kandidatvarsel-api]
     end
 
     subgraph Eksterne_systemer
@@ -128,3 +128,4 @@ Evalueringstjeneste som:
 ### Rapids & Rivers (Kafka)
 
 Se [Arkitekturprinsipper](../2-arkitektur/prinsipper.md) for detaljer om meldingsflyten.
+toi
