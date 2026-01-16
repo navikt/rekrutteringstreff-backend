@@ -135,18 +135,9 @@ sequenceDiagram
     KC->>OAC: validateRekrutteringstreffOgLogg()
     OAC->>AOAI: Chat Completion API<br/>(system + user message)
 
-    alt 200 OK
-        AOAI-->>OAC: JSON: {bryterRetningslinjer, begrunnelse}
-        OAC->>DB: Logg spørring og resultat
-        OAC-->>KC: ValiderRekrutteringstreffResponsDto
-    else 400 Content Filter
-        AOAI-->>OAC: Error: content_filter_result
-        OAC->>DB: Logg med bryterRetningslinjer=true
-        OAC-->>KC: Forklarende feilmelding
-    else 429 Rate Limit
-        AOAI-->>OAC: Too Many Requests
-        OAC-->>KC: RuntimeException
-    end
+    AOAI-->>OAC: JSON: {bryterRetningslinjer, begrunnelse}
+    OAC->>DB: Logg spørring og resultat
+    OAC-->>KC: ValiderRekrutteringstreffResponsDto
 
     KC-->>FE: {bryterRetningslinjer, begrunnelse}
 ```
