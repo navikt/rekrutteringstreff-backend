@@ -196,6 +196,9 @@ sequenceDiagram
 
     EL->>DB: Prøv oppdater (erSynlig=TRUE, tid=T1)
     Note over DB: Ingen endring (T1 < T2)
+
+    EL->>DB: Oppdater (erSynlig=TRUE, tid=T3)
+    Note over DB: synlighet_sist_oppdatert = T3 (T3 > T2)
 ```
 
 ## Synlighetskriterier
