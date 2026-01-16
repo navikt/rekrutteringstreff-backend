@@ -7,7 +7,7 @@ For generelle tips om bruk av AI-verktøyene, se [Copilot Arbeidsflyt](../5-ki/c
 
 Noen ganger avhenger dokumentasjonen av samspillet mellom flere applikasjoner (f.eks. integrasjoner mot `kandidatvarsel` eller `synlighetsmotor`). For at Copilot skal få full oversikt, kan det være lurt å ha flere prosjekter åpne samtidig.
 
-1.  Lag en rot-mappe hvor du sjekker ut både `rekrutteringstreff-backend`, `toi-synlighetsmotor`, og `rekrutteringsbistand-kandidatvarsel-api`.
+1.  Lag en rot-mappe hvor du sjekker ut både `rekrutteringstreff-backend`, `rekrutteringsbistand-frontend`, `toi-synlighetsmotor` og `rekrutteringsbistand-kandidatvarsel-api`.
 2.  Åpne denne rot-mappen i din IDE (IntelliJ eller VS Code).
 3.  Når du nå spør Copilot, vil den ha tilgang til koden i alle prosjektene samtidig, og kan dermed gi mye mer presise oppdateringer av flytdiagrammer og integrasjonsdokumentasjon.
 ## Fremgangsmåte
