@@ -11,9 +11,9 @@ Synlighetsinformasjonen kommer fra **toi-synlighetsmotor**, som evaluerer kandid
 ```mermaid
 flowchart TB
     subgraph rekrutteringstreff-api
-        API[REST API]
-        JR[JobbsøkerRepository]
+        JC[JobbsøkerController]
         JS[JobbsøkerService]
+        JR[JobbsøkerRepository]
         SL[SynlighetsLytter]
         SBL[SynlighetsBehovLytter]
         SBS[SynlighetsBehovScheduler]
@@ -28,12 +28,14 @@ flowchart TB
     end
 
     %% Interne koblinger
-    Frontend --> API
-    API --> JR
-    JR --> DB
-    SBS --> JR
+    Frontend --> JC
+    JC --> JS
+    SBS --> JS
     SBL --> JS
     SL --> JS
+    JS --> JR
+    JR --> DB
+    
     SRL --> SMDB
     SMDB ~~~ SGL
 
