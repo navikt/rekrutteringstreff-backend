@@ -38,7 +38,7 @@ flowchart LR
     Service --> Repository[Repository-laget]
     Repository --> Database[(PostgreSQL)]
 
-    Kafka[Rapids & Rivers<br/>Kafka-meldinger] -.-> Service
+    Kafka[Rapids & Rivers<br/>Kafka-meldinger] <.-> Service
 
     style Controller fill:#e1f5ff
     style Service fill:#fff4e1
