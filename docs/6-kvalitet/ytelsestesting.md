@@ -2,7 +2,7 @@
 
 ## Mål
 
-Vi bør ytelsesteste løsningen for å sikre at den skalerer for fremtidige behov, spesielt hvis vi skal støtte større arrangementer som jobbmesser.
+Vi bør ytelsesteste løsningen for å sikre at den skalerer for fremtidige behov, spesielt dersom vi på et tidspunkt beslutter å støtte større arrangementer som jobbmesser.
 
 ### Testscenarioer
 
