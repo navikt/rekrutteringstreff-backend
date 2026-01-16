@@ -84,6 +84,7 @@ Brukes når applikasjonen **allerede har en egen server** (som Javalin).
     *   To servere prøver å binde seg til porter.
     *   Vi ville fått to sett med helsesjekker (`isAlive`, `isReady`).
     *   Det ville blitt komplisert å håndtere livssyklus og restart hvis den ene serveren går ned men den andre lever.
+    *   Vi unngår unødvendige Ktor-avhengigheter i en Javalin-app, noe som forenkler vedlikehold og reduserer behovet for sikkerhetspatching av biblioteker vi egentlig ikke trenger.
 *   **Løsning:** Vi inkluderer kun Rapids and Rivers-bibliotekene som avhengigheter og instansierer `RapidsConnection` manuelt, slik at den kjører side-om-side med Javalin-serveren.
 
 ### 2. RapidApplication (med innebygd server)
