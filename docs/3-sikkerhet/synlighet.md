@@ -89,7 +89,7 @@ sequenceDiagram
     SM->>Kafka: Publiser svar
 
     Kafka->>API: Motta need-svar
-    API->>DB: Oppdater synlighet (overskriver ikke hvis event-strøm har oppdatert)
+    API->>DB: Oppdater synlighet (kun hvis synlighet_sist_oppdatert er NULL)
 ```
 
 **Nøkkelpunkter:**
@@ -182,9 +182,9 @@ Systemet håndterer to potensielle race conditions:
 
 ```mermaid
 sequenceDiagram
-    participant DB as Database
     participant EL as Event-lytter
     participant NL as Need-lytter
+    participant DB as Database
 
     Note over DB: synlighet_sist_oppdatert = NULL
 
