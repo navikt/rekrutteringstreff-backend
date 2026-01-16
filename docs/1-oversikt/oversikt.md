@@ -12,49 +12,46 @@ Tjenesten er primært designet for markedskontakter i NAV, men veiledere skal og
 - **Landingsside**: Jobbsøkere kan se og svare på invitasjoner via rekrutteringstreff-minside-api
 - **Aktivitetskort**: Oppdatering av aktivitetskort i aktivitetsplanen for brukere under oppfølging
 
-### Fremtidige planer
-
-- Tilby tjenesten også for jobbsøkere som ikke er under oppfølging i NAV
-- Legge til inngangsporter fra andre NAV-tjenester, som for eksempel stillingssøket
-
 ## Systemarkitektur
 
 ```mermaid
-graph TB
+graph TD
     subgraph Frontend
-        RBF[rekrutteringsbistand-frontend<br/>Brukergrensesnitt for veiledere<br/>og markedskontakter]
+        RBF[rekrutteringsbistand-frontend]
     end
 
     subgraph "Minside (Jobbsøker)"
-        MINSIDE_FE[minside-frontend<br/>Landingsside for jobbsøkere]
+        MINSIDE_FE[minside-frontend]
     end
 
     subgraph "rekrutteringstreff-backend"
-        API[rekrutteringstreff-api<br/>Forretningslogikk og REST API<br/>Håndterer treff og invitasjoner]
-        MINSIDE_API[rekrutteringstreff-minside-api<br/>API for jobbsøkere<br/>via MinSide]
-        AK[rekrutteringsbistand-aktivitetskort<br/>Oppretter og vedlikeholder<br/>aktivitetskort]
+        API[rekrutteringstreff-api]
+        MINSIDE_API[rekrutteringstreff-minside-api]
+        AK[rekrutteringsbistand-aktivitetskort]
     end
 
     subgraph Støttetjenester
-        VARSEL[rekrutteringsbistand-kandidatvarsel-api<br/>Sender SMS og e-post<br/>til jobbsøkere]
-        SYN[toi-synlighetsmotor<br/>Evaluerer om kandidater<br/>er synlige for arbeidsgivere]
+        VARSEL[rekrutteringsbistand-kandidatvarsel-api]
+        SYN[toi-synlighetsmotor]
     end
 
     subgraph Eksterne_systemer
-        RAPIDS[Rapids & Rivers<br/>Kafka event-bus]
+        RAPIDS[Rapids & Rivers]
         AKTIVITET[Aktivitetsplan]
     end
 
+    %% Kommunikasjon
     RBF -->|REST| API
     MINSIDE_FE -->|REST| MINSIDE_API
     MINSIDE_API -->|REST| API
 
+    %% Kafka-flyt
     API -->|Publiserer events| RAPIDS
     API -->|Ber om synlighet| RAPIDS
 
-    RAPIDS -->|Invitasjon og oppdateringer| AK
-    RAPIDS -->|Invitasjon og oppdateringer| VARSEL
-    RAPIDS -->|Synlighetsbehov| SYN
+    RAPIDS -->|Henter invitasjon| AK
+    RAPIDS -->|Henter invitasjon| VARSEL
+    RAPIDS -->|Sjekker synlighet| SYN
 
     SYN -->|Synlighetssvar| RAPIDS
     RAPIDS -->|Synlighetssvar| API
