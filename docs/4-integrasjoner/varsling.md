@@ -44,7 +44,6 @@ sequenceDiagram
     participant API as rekrutteringstreff-api<br/>(JobbsøkerController)
     participant DB as Database<br/>(jobbsoker_hendelse)
     participant Scheduler as AktivitetskortJobbsøkerScheduler
-    participant Rapids as Kafka Rapids
     participant KV as kandidatvarsel-api<br/>(RekrutteringstreffInvitasjonLytter)
     participant MS as MinSide<br/>(SMS/Epost/MinSide)
 
@@ -54,13 +53,12 @@ sequenceDiagram
     loop Hvert 10. sekund
         Scheduler->>DB: Hent usendte INVITERT-hendelser
         DB-->>Scheduler: Liste med hendelser
-        Scheduler->>Rapids: Publiser "rekrutteringstreffinvitasjon"
+        Scheduler-->>KV: Publiser "rekrutteringstreffinvitasjon"
         Scheduler->>DB: Marker som sendt
     end
 
-    Rapids->>KV: Mottar "rekrutteringstreffinvitasjon"
     KV->>KV: Opprett varsel med mal<br/>KANDIDAT_INVITERT_TREFF
-    KV->>MS: Send varselbestilling via Kafka
+    KV-->>MS: Send varselbestilling via Kafka
 
     MS->>MS: Hent kontaktinfo fra KRR
     alt Telefon finnes
@@ -71,13 +69,12 @@ sequenceDiagram
         MS-->>MS: Lagre på MinSide
     end
 
-    MS->>KV: Publiser varselstatus via Kafka
+    MS-->>KV: Publiser varselstatus via Kafka
     KV->>KV: Filter: Kun SENDT eller FEILET publiseres
 
     alt Status er SENDT eller FEILET
-        KV->>Rapids: Publiser "minsideVarselSvar"
-        Rapids->>API: Mottar "minsideVarselSvar"<br/>(MinsideVarselSvarLytter)
-        API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE
+        KV-->>API: Publiser "minsideVarselSvar"
+        API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE<br/>(MinsideVarselSvarLytter)
     else Status er FERDIGSTILT, VENTER, etc.
         KV->>KV: Ikke publisert til rapids
     end
@@ -90,6 +87,11 @@ sequenceDiagram
         FE->>FE: Vis varselstatus i jobbsøkerkort
     end
 ```
+
+> **Tegnforklaring:**
+>
+> - Hel linje (`->>`): Synkron/direkte kommunikasjon
+> - Stiplet linje (`-->>`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
 
 ---
 
@@ -145,7 +147,6 @@ sequenceDiagram
     participant API as rekrutteringstreff-api<br/>(RekrutteringstreffController)
     participant DB as Database<br/>(jobbsoker_hendelse)
     participant Scheduler as AktivitetskortJobbsøkerScheduler
-    participant Rapids as Kafka Rapids
     participant KV as kandidatvarsel-api<br/>(RekrutteringstreffOppdateringLytter)
     participant MS as MinSide<br/>(SMS/Epost/MinSide)
 
@@ -156,13 +157,12 @@ sequenceDiagram
     loop Hvert 10. sekund
         Scheduler->>DB: Hent usendte TREFF_ENDRET-hendelser
         DB-->>Scheduler: Liste med hendelser
-        Scheduler->>Rapids: Publiser "rekrutteringstreffoppdatering"<br/>(inkl. flettedata: ["tidspunkt", "sted"])
+        Scheduler-->>KV: Publiser "rekrutteringstreffoppdatering"<br/>(inkl. flettedata: ["tidspunkt", "sted"])
         Scheduler->>DB: Marker som sendt
     end
 
-    Rapids->>KV: Mottar "rekrutteringstreffoppdatering"
     KV->>KV: Opprett varsel med mal<br/>KANDIDAT_INVITERT_TREFF_ENDRET<br/>(erstatt placeholder med flettedata)
-    KV->>MS: Send varselbestilling via Kafka
+    KV-->>MS: Send varselbestilling via Kafka
 
     MS->>MS: Hent kontaktinfo fra KRR
     alt Telefon finnes
@@ -173,13 +173,12 @@ sequenceDiagram
         MS-->>MS: Lagre på MinSide
     end
 
-    MS->>KV: Publiser varselstatus via Kafka
+    MS-->>KV: Publiser varselstatus via Kafka
     KV->>KV: Filter: Kun SENDT eller FEILET publiseres
 
     alt Status er SENDT eller FEILET
-        KV->>Rapids: Publiser "minsideVarselSvar"<br/>(inkl. flettedata og mal)
-        Rapids->>API: Mottar "minsideVarselSvar"<br/>(MinsideVarselSvarLytter)
-        API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE
+        KV-->>API: Publiser "minsideVarselSvar"<br/>(inkl. flettedata og mal)
+        API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE<br/>(MinsideVarselSvarLytter)
     else Status er FERDIGSTILT, VENTER, etc.
         KV->>KV: Ikke publisert til rapids
     end
@@ -192,6 +191,11 @@ sequenceDiagram
         FE->>FE: Vis varselstatus i jobbsøkerkort
     end
 ```
+
+> **Tegnforklaring:**
+>
+> - Hel linje (`->>`): Synkron/direkte kommunikasjon
+> - Stiplet linje (`-->>`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
 
 ---
 

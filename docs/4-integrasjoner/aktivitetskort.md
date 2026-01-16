@@ -22,10 +22,6 @@ graph TB
         FeilLytter[AktivitetskortFeilLytter]
     end
 
-    subgraph "Rapids & Rivers"
-        Rapid[Kafka rapid]
-    end
-
     subgraph "rekrutteringsbistand-aktivitetskort"
         InvLytter[RekrutteringstreffInvitasjonLytter]
         SvarLytter[RekrutteringstreffSvarOgStatusLytter]
@@ -43,24 +39,25 @@ graph TB
 
     Scheduler -->|Poller usendte hendelser| DB
     DB -->|Jobbsøker-hendelser| Scheduler
-    Scheduler -->|Publiserer rekrutteringstreffinvitasjon| Rapid
 
-    Rapid -->|event: rekrutteringstreffinvitasjon| InvLytter
+    %% Kafka-flyt (Rapids & Rivers)
+    %% Stiplet linje indikerer asynkron kommunikasjon via Kafka
+    Scheduler -.->|rekrutteringstreffinvitasjon| InvLytter
+    Scheduler -.->|rekrutteringstreffSvarOgStatus| SvarLytter
+    Scheduler -.->|rekrutteringstreffoppdatering| OppdLytter
+
     InvLytter -->|Oppretter aktivitetskort| AktDB
     InvLytter -->|Sender aktivitetskort-melding| AKTopic
 
-    Rapid -->|event: rekrutteringstreffSvarOgStatus| SvarLytter
     SvarLytter -->|Oppdaterer status| AktDB
     SvarLytter -->|Sender oppdatering| AKTopic
 
-    Rapid -->|event: rekrutteringstreffoppdatering| OppdLytter
     OppdLytter -->|Oppdaterer detaljer| AktDB
     OppdLytter -->|Sender oppdatering| AKTopic
 
     AKTopic -->|Konsumerer| Aktivitetsplan
 
-    InvLytter -.->|Ved feil: aktivitetskort-feil| Rapid
-    Rapid -.->|Feilmelding| FeilLytter
+    InvLytter -.->|Ved feil: aktivitetskort-feil| FeilLytter
     FeilLytter -.->|Registrerer AKTIVITETSKORT_OPPRETTELSE_FEIL| DB
 
     Repo -.->|Markerer som sendt| DB
@@ -72,6 +69,11 @@ graph TB
     style OppdLytter fill:#e8f5e9
     style AKTopic fill:#f3e5f5
 ```
+
+> **Tegnforklaring:**
+>
+> - Hel linje (`-->`): Synkron/direkte kommunikasjon
+> - Stiplet linje (`-.->`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
 
 ### Flytbeskrivelse
 

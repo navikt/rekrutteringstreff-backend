@@ -9,7 +9,6 @@ sequenceDiagram
     participant Veileder
     participant Frontend as rekrutteringsbistand-frontend
     participant API as rekrutteringstreff-api
-    participant Rapids as Rapids & Rivers
     participant Synlighet as toi-synlighetsmotor
     participant Varsel as kandidatvarsel-api
     participant Aktivitetskort
@@ -18,10 +17,8 @@ sequenceDiagram
 
     Veileder->>Frontend: Legger til jobbsøker
     Frontend->>API: POST /jobbsoker
-    API->>Rapids: synlighetRekrutteringstreff (behov)
-    Rapids->>Synlighet: Sjekk synlighet
-    Synlighet->>Rapids: Synlighetssvar
-    Rapids->>API: Synlighetssvar
+    API-->>Synlighet: synlighetRekrutteringstreff (behov)
+    Synlighet-->>API: Synlighetssvar
     API->>API: Lagrer jobbsøker med synlighetsstatus
 
     Note over Veileder,Aktivitetskort: Invitere jobbsøker
@@ -29,18 +26,21 @@ sequenceDiagram
     Veileder->>Frontend: Inviterer jobbsøker
     Frontend->>API: PUT /jobbsoker/inviter
     API->>API: Oppdaterer status til INVITERT
-    API->>Rapids: rekrutteringstreffinvitasjon (event)
 
     par Parallelle prosesser
-        Rapids->>Varsel: Ny invitasjon
+        API-->>Varsel: rekrutteringstreffinvitasjon (event)
         Varsel->>Varsel: Sender SMS/e-post
-        Varsel->>Rapids: minsideVarselSvar (status)
-        Rapids->>API: Varselstatus
+        Varsel-->>API: minsideVarselSvar (status)
     and
-        Rapids->>Aktivitetskort: Ny invitasjon
+        API-->>Aktivitetskort: rekrutteringstreffinvitasjon (event)
         Aktivitetskort->>Aktivitetskort: Oppretter aktivitetskort
     end
 ```
+
+> **Tegnforklaring:**
+>
+> - Hel linje (`->>`): Synkron/direkte kommunikasjon
+> - Stiplet linje (`-->>`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
 
 ## Steg-for-steg
 
