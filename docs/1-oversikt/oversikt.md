@@ -17,7 +17,7 @@ Tjenesten er primært designet for markedskontakter i NAV, men veiledere skal og
 ```mermaid
 graph TD
     subgraph Frontend
-        RBF[rekrutteringsbistand-frontend]
+        RBF[rekrutteringsbistand-<br/>frontend]
     end
 
     subgraph "Minside (Jobbsøker)"
@@ -26,12 +26,12 @@ graph TD
 
     subgraph "rekrutteringstreff-backend"
         API[rekrutteringstreff-api]
-        MINSIDE_API[rekrutteringstreff-minside-api]
-        AK[rekrutteringsbistand-aktivitetskort]
+        MINSIDE_API[rekrutteringstreff-<br/>minside-api]
+        AK[rekrutteringsbistand-<br/>aktivitetskort]
     end
 
     subgraph Støttetjenester
-        VARSEL[rekrutteringsbistand-kandidatvarsel-api]
+        VARSEL[rekrutteringsbistand-<br/>kandidatvarsel-api]
         SYN[toi-synlighetsmotor]
     end
 
