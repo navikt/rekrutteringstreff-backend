@@ -59,6 +59,7 @@ flowchart TB
 
 ```mermaid
 sequenceDiagram
+    %%{init: {'sequence': {'mirrorActors': false}}}%%
     participant V as Veileder
     participant API as rekrutteringstreff-api
     participant DB as Database
@@ -72,6 +73,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
+    %%{init: {'sequence': {'mirrorActors': false}}}%%
     participant Sched as SynlighetsBehovScheduler
     participant DB as Database
     participant Kafka as Kafka Rapid
