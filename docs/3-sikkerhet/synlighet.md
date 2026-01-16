@@ -62,13 +62,21 @@ sequenceDiagram
     participant V as Veileder
     participant API as rekrutteringstreff-api
     participant DB as Database
-    participant Sched as SynlighetsBehovScheduler
-    participant Kafka as Kafka Rapid
-    participant SM as toi-synlighetsmotor
 
     V->>API: POST /jobbsokere
     API->>DB: Lagre jobbsøker (er_synlig=TRUE, synlighet_sist_oppdatert=NULL)
     API-->>V: 201 Created
+```
+
+#### Asynkron synlighetssjekk
+
+```mermaid
+sequenceDiagram
+    participant Sched as SynlighetsBehovScheduler
+    participant DB as Database
+    participant Kafka as Kafka Rapid
+    participant SM as toi-synlighetsmotor
+    participant API as rekrutteringstreff-api
 
     Note over Sched: Scheduler kjører periodisk (hvert minutt)
     Sched->>DB: Finn jobbsøkere uten evaluert synlighet
