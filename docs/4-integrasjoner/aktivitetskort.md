@@ -20,7 +20,7 @@ graph TB
         Scheduler[AktivitetskortJobbsøkerScheduler]
     end
 
-    subgraph "rekrutteringsbistand-aktivitetskort"
+    subgraph "rekrutteringsbistand-<br/>aktivitetskort"
         Lyttere[Lyttere]
         AktDB[(Aktivitetskort DB)]
     end
@@ -168,10 +168,6 @@ Lytter på `aktivitetskort-feil` og registrerer `AKTIVITETSKORT_OPPRETTELSE_FEIL
 ### aktivitetskort_polling-tabell
 
 Sporer hvilke hendelser som er sendt for å unngå duplikater.
-
-### Synlighetsfilter
-
-Kun synlige jobbsøkere får aktivitetskort.
 
 ---
 
