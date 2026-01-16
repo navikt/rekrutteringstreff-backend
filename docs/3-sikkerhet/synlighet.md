@@ -89,7 +89,7 @@ sequenceDiagram
     SM->>Kafka: Publiser svar
 
     Kafka->>API: Motta need-svar
-    API->>DB: Oppdater synlighet (kun hvis synlighet_sist_oppdatert er NULL)
+    API->>DB: Oppdater synlighet (overskriver ikke hvis event-strøm har oppdatert)
 ```
 
 **Nøkkelpunkter:**
@@ -102,6 +102,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
+    %%{init: {'sequence': {'mirrorActors': false}}}%%
     participant Kilde as Kildesystem
     participant SM as toi-synlighetsmotor
     participant Kafka as Kafka Rapid
