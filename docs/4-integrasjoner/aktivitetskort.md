@@ -21,8 +21,8 @@ graph TB
     end
 
     subgraph "rekrutteringsbistand-<br/>aktivitetskort"
-        Lyttere[Lyttere]
-        AktDB[(Aktivitetskort DB)]
+        Lyttere[Lyttere (Kafka-konsumenter)]
+        AktDB[(Aktivitetskort Database)]
     end
 
     subgraph "Eksternt system"
