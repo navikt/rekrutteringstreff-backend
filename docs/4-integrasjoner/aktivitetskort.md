@@ -21,8 +21,12 @@ graph TB
     end
 
     subgraph "rekrutteringsbistand-<br/>aktivitetskort"
-        Lyttere["Lyttere"]
+        direction TB
+        %% Spacer for å unngå at tittelen kræsjer med noden
+        Spacer[ ]
+        Lyttere["Lyttere (Kafka-konsumenter)"]
         AktDB[("Aktivitetskort Database")]
+        Spacer ~~~ Lyttere
     end
 
     subgraph "Eksternt system"
