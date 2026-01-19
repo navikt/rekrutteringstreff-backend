@@ -99,7 +99,7 @@ class App(
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         startJavalin(jobbsøkerRepository)
-        startSchedulere(jobbsøkerRepository)
+        startSchedulere(jobbsøkerService)
         startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
@@ -242,7 +242,7 @@ class App(
         javalin.start(port)
     }
 
-    private fun startSchedulere(jobbsøkerRepository: JobbsøkerRepository) {
+    private fun startSchedulere(jobbsøkerService: JobbsøkerService) {
         log.info("Starting schedulers")
 
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
@@ -258,7 +258,7 @@ class App(
         aktivitetskortJobbsøkerScheduler.start()
 
         synlighetsBehovScheduler = SynlighetsBehovScheduler(
-            jobbsøkerRepository = jobbsøkerRepository,
+            jobbsøkerService = jobbsøkerService,
             rapidsConnection = rapidsConnection
         )
         synlighetsBehovScheduler.start()

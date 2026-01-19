@@ -36,7 +36,7 @@ class SynlighetsBehovSchedulerTest {
     @Test
     fun `skal publisere need for jobbsøker som ikke har evaluert synlighet`() {
         val rapid = TestRapid()
-        val scheduler = SynlighetsBehovScheduler(jobbsøkerRepository, rapid)
+        val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr = "12345678901"
@@ -63,7 +63,7 @@ class SynlighetsBehovSchedulerTest {
     @Test
     fun `skal ikke publisere need for jobbsøker som allerede har evaluert synlighet`() {
         val rapid = TestRapid()
-        val scheduler = SynlighetsBehovScheduler(jobbsøkerRepository, rapid)
+        val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr = "12345678901"
@@ -89,7 +89,7 @@ class SynlighetsBehovSchedulerTest {
     @Test
     fun `skal publisere need for flere jobbsøkere som mangler synlighet`() {
         val rapid = TestRapid()
-        val scheduler = SynlighetsBehovScheduler(jobbsøkerRepository, rapid)
+        val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr1 = "12345678901"
@@ -113,7 +113,7 @@ class SynlighetsBehovSchedulerTest {
     @Test
     fun `skal kun publisere need for jobbsøkere som mangler synlighet - ikke de som allerede er evaluert`() {
         val rapid = TestRapid()
-        val scheduler = SynlighetsBehovScheduler(jobbsøkerRepository, rapid)
+        val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnrMedSynlighet = "12345678901"
@@ -139,7 +139,7 @@ class SynlighetsBehovSchedulerTest {
     @Test
     fun `skal ikke publisere noe når ingen jobbsøkere mangler synlighet`() {
         val rapid = TestRapid()
-        val scheduler = SynlighetsBehovScheduler(jobbsøkerRepository, rapid)
+        val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid)
 
         // Ingen jobbsøkere i databasen
 
@@ -153,7 +153,7 @@ class SynlighetsBehovSchedulerTest {
     @Test
     fun `skal publisere need for samme fødselsnummer i flere treff - men kun én gang`() {
         val rapid = TestRapid()
-        val scheduler = SynlighetsBehovScheduler(jobbsøkerRepository, rapid)
+        val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid)
 
         val fnr = "12345678901"
         val treffId1 = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "Treff1")
@@ -176,7 +176,7 @@ class SynlighetsBehovSchedulerTest {
     @Test
     fun `skal ikke publisere need for slettede jobbsøkere`() {
         val rapid = TestRapid()
-        val scheduler = SynlighetsBehovScheduler(jobbsøkerRepository, rapid)
+        val scheduler = SynlighetsBehovScheduler(jobbsøkerService, rapid)
 
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr = "12345678901"

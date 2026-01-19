@@ -221,6 +221,9 @@ class JobbsøkerService(
 
     fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int =
         jobbsøkerRepository.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, meldingTidspunkt)
+
+    fun hentFødselsnumreUtenEvaluertSynlighet(): List<String> =
+        jobbsøkerRepository.hentFødselsnumreUtenEvaluertSynlighet()
 }
 
 enum class MarkerSlettetResultat {

@@ -634,7 +634,7 @@ class JobbsøkerServiceTest {
 
         // Jobbsøkeren skal være lagt til med synlighet_sist_oppdatert = NULL
         // SynlighetsBehovScheduler vil fange opp og trigge need-melding
-        val fødselsnumreUtenSynlighet = jobbsøkerRepository.hentFødselsnumreUtenEvaluertSynlighet()
+        val fødselsnumreUtenSynlighet = jobbsøkerService.hentFødselsnumreUtenEvaluertSynlighet()
         assertThat(fødselsnumreUtenSynlighet).contains("12345678901")
     }
 }

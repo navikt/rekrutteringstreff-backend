@@ -3,7 +3,7 @@ package no.nav.toi.jobbsoker.synlighet
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.SecureLog
-import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.log
 import org.slf4j.Logger
 import java.time.Duration
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * så event-strømmen (som setter synlighet_sist_oppdatert) har alltid prioritet.
  */
 class SynlighetsBehovScheduler(
-    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val jobbsøkerService: JobbsøkerService,
     private val rapidsConnection: RapidsConnection
 ) {
     private val scheduler = Executors.newScheduledThreadPool(1)
@@ -61,7 +61,7 @@ class SynlighetsBehovScheduler(
         }
 
         try {
-            val fødselsnumreUtenSynlighet = jobbsøkerRepository.hentFødselsnumreUtenEvaluertSynlighet()
+            val fødselsnumreUtenSynlighet = jobbsøkerService.hentFødselsnumreUtenEvaluertSynlighet()
 
             if (fødselsnumreUtenSynlighet.isEmpty()) {
                 log.debug("Ingen jobbsøkere uten evaluert synlighet.")
