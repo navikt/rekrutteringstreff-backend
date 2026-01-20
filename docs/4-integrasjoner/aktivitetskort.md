@@ -64,37 +64,28 @@ graph TB
 
 ## Komponenter
 
-| Komponent                          | App                                 | Beskrivelse                                                                      |
-| ---------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------- |
-| `AktivitetskortJobbsøkerScheduler` | rekrutteringstreff-api              | Poller DB hvert 10s, publiserer til Rapids                                       |
-| `AktivitetskortFeilLytter`         | rekrutteringstreff-api              | Lytter på `aktivitetskort-feil`, lagrer feil i DB                                |
-| `Lyttere`                          | rekrutteringsbistand-aktivitetskort | Konsumerer Rapids-events, lagrer i DB                                            |
-| `AktivitetskortJobb`               | rekrutteringsbistand-aktivitetskort | Poller DB hvert minutt, sender til `aktivitetskort-v1.1`                         |
+| Komponent                          | App                                 | Beskrivelse                                                                       |
+| ---------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------- |
+| `AktivitetskortJobbsøkerScheduler` | rekrutteringstreff-api              | Poller DB hvert 10s, publiserer til Rapids                                        |
+| `AktivitetskortFeilLytter`         | rekrutteringstreff-api              | Lytter på `aktivitetskort-feil`, lagrer feil i DB                                 |
+| `Lyttere`                          | rekrutteringsbistand-aktivitetskort | Konsumerer Rapids-events, lagrer i DB                                             |
+| `AktivitetskortJobb`               | rekrutteringsbistand-aktivitetskort | Poller DB hvert minutt, sender til `aktivitetskort-v1.1`                          |
 | `AktivitetskortFeilJobb`           | rekrutteringsbistand-aktivitetskort | Konsumerer `dab.aktivitetskort-feil-v1`, lagrer i DB, poller og sender til Rapids |
 
 ---
 
 ## Hendelser og aktivitetskort-status
 
-Når en hendelse skjer, publiseres et Rapids-event som oppdaterer aktivitetskortet:
-
-| Hendelse | Rapids event | Aktivitetskort-status |
-|----------|--------------|----------------------|
-| Inviter jobbsøker | `rekrutteringstreffinvitasjon` | **PLANLAGT** (oppretter kort) |
-| Jobbsøker svarer ja | `rekrutteringstreffSvarOgStatus` | **GJENNOMFORES** |
-| Jobbsøker svarer nei | `rekrutteringstreffSvarOgStatus` | **AVBRUTT** |
-| Treff endret | `rekrutteringstreffoppdatering` | Oppdaterer detaljer |
-| Treff fullført/avlyst | `rekrutteringstreffSvarOgStatus` | Se tabell under |
-
-### Status ved treff fullført/avlyst
-
-Aktivitetskort-status avhenger av jobbsøkerens svar:
-
-| Jobbsøkers svar | Treff fullført | Treff avlyst |
-|-----------------|----------------|--------------|
-| Ja | FULLFORT | AVBRUTT |
-| Nei | AVBRUTT | AVBRUTT |
-| Ikke svart | AVBRUTT | AVBRUTT |
+| Hendelse                           | Rapids event                     | Aktivitetskort-status |
+| ---------------------------------- | -------------------------------- | --------------------- |
+| Inviter jobbsøker                  | `rekrutteringstreffinvitasjon`   | PLANLAGT              |
+| Jobbsøker svarer ja                | `rekrutteringstreffSvarOgStatus` | GJENNOMFORES          |
+| Jobbsøker svarer nei               | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
+| Svart ja → treff fullført          | `rekrutteringstreffSvarOgStatus` | FULLFORT              |
+| Svart ja → treff avlyst            | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
+| Svart nei → treff fullført/avlyst  | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
+| Ikke svart → treff fullført/avlyst | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
+| Treff endret                       | `rekrutteringstreffoppdatering`  | (oppdaterer detaljer) |
 
 ---
 
