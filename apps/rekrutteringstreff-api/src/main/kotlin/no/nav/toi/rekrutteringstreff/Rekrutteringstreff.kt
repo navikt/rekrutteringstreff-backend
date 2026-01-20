@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdatering
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
+import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffAvlysning
 import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffSvarOgStatus
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
@@ -99,6 +100,16 @@ class Rekrutteringstreff(
         poststed = poststed!!,
         endretAv = avsenderNavident,
         endredeFelter = endredeFelter
+    )
+
+    fun aktivitetskortAvlysningFor(
+        fnr: String,
+        hendelseId: UUID
+    ) = RekrutteringstreffAvlysning(
+        fnr = fnr,
+        rekrutteringstreffId = id,
+        hendelseId = hendelseId,
+        tittel = tittel
     )
 }
 
