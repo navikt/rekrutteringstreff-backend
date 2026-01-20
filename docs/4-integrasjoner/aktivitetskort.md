@@ -41,6 +41,8 @@ graph TB
 
     %% Feilflyt
     Aktivitetsplan -.->|dab.aktivitetskort-feil-v1| FeilJobb
+    FeilJobb --> AktDB
+    AktDB --> FeilJobb
     FeilJobb -.->|aktivitetskort-feil| FeilLytter
     FeilLytter --> DB
 
