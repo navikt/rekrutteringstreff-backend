@@ -65,16 +65,18 @@ sequenceDiagram
 
 ### Forskjeller mellom løpene
 
-| Aspekt            | Invitasjon                           | Endring                                       | Avlysning                           |
-| ----------------- | ------------------------------------ | --------------------------------------------- | ----------------------------------- |
-| **Trigger**       | Veileder inviterer jobbsøker         | Markedskontakt endrer publisert treff         | Markedskontakt avlyser treff        |
-| **API-endepunkt** | `POST /jobbsokere/inviter`           | `PUT /rekrutteringstreff/:id`                 | `PUT /rekrutteringstreff/:id/avlys` |
-| **Hendelsestype** | `INVITERT`                           | `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` | `SVART_JA_TREFF_AVLYST`             |
-| **Rapids-event**  | `rekrutteringstreffinvitasjon`       | `rekrutteringstreffoppdatering`               | `rekrutteringstreffavlysning`       |
-| **Lytter**        | `RekrutteringstreffInvitasjonLytter` | `RekrutteringstreffOppdateringLytter`         | `RekrutteringstreffAvlysningLytter` |
-| **Mal**           | `KANDIDAT_INVITERT_TREFF`            | `KANDIDAT_INVITERT_TREFF_ENDRET`              | `KANDIDAT_INVITERT_TREFF_AVLYST`    |
-| **Mottakere**     | Den inviterte jobbsøkeren            | Inviterte + svart ja                          | Kun svart ja                        |
-| **Flettedata**    | Nei                                  | Ja (valgte endrede felter)                    | Nei                                 |
+| Aspekt            | Invitasjon                     | Endring                                       | Avlysning                           |
+| ----------------- | ------------------------------ | --------------------------------------------- | ----------------------------------- |
+| **Trigger**       | Veileder inviterer jobbsøker   | Markedskontakt endrer publisert treff         | Markedskontakt avlyser treff        |
+| **API-endepunkt** | `POST /jobbsokere/inviter`     | `PUT /rekrutteringstreff/:id`                 | `PUT /rekrutteringstreff/:id/avlys` |
+| **Hendelsestype** | `INVITERT`                     | `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` | `SVART_JA_TREFF_AVLYST`             |
+| **Rapids-event**  | `rekrutteringstreffinvitasjon` | `rekrutteringstreffoppdatering`               | `rekrutteringstreffSvarOgStatus`\*  |
+| **Lytter**        | `KandidatInvitertLytter`       | `KandidatInvitertTreffEndretLytter`           | `KandidatTreffAvlystLytter`         |
+| **Mal**           | `KANDIDAT_INVITERT_TREFF`      | `KANDIDAT_INVITERT_TREFF_ENDRET`              | `KANDIDAT_INVITERT_TREFF_AVLYST`    |
+| **Mottakere**     | Den inviterte jobbsøkeren      | Inviterte + svart ja                          | Kun svart ja                        |
+| **Flettedata**    | Nei                            | Ja (valgte endrede felter)                    | Nei                                 |
+
+\* Avlysning gjenbruker `rekrutteringstreffSvarOgStatus`-eventen med `svar=true` og `treffstatus=avlyst`. Samme event brukes også av aktivitetskort-appen for å oppdatere aktivitetskortstatus.
 
 ---
 
@@ -273,19 +275,24 @@ Inneholder `flettedata` – hvilke felter som er endret og skal nevnes i SMS.
 }
 ```
 
-#### rekrutteringstreffavlysning (Løp 3)
+#### rekrutteringstreffSvarOgStatus for avlysning (Løp 3)
 
-Enkel melding uten flettedata – fast SMS-tekst.
+Gjenbruker samme event som aktivitetskort-oppdatering. Kandidatvarsel-api lytter kun når `svar=true` og `treffstatus=avlyst`.
 
 ```json
 {
-  "@event_name": "rekrutteringstreffavlysning",
+  "@event_name": "rekrutteringstreffSvarOgStatus",
   "fnr": "12345678910",
   "rekrutteringstreffId": "uuid",
   "hendelseId": "uuid",
-  "tittel": "Jobbtreff hos bedrift AS"
+  "svar": true,
+  "treffstatus": "avlyst",
+  "endretAv": "12345678910",
+  "endretAvPersonbruker": false
 }
 ```
+
+> **Merk:** `hendelseId` er kun inkludert når `treffstatus=avlyst` for å støtte idempotens i varsling.
 
 #### minsideVarselSvar (tilbakemelding fra alle løp)
 
@@ -321,8 +328,9 @@ Returneres fra kandidatvarsel-api etter at MinSide har behandlet varselet. Inneh
 
 **kandidatvarsel-api:**
 
-- `RekrutteringstreffInvitasjonLytter` - Lytter på invitasjoner
-- `RekrutteringstreffOppdateringLytter` - Lytter på endringer
+- `KandidatInvitertLytter` - Lytter på invitasjoner
+- `KandidatInvitertTreffEndretLytter` - Lytter på endringer
+- `KandidatTreffAvlystLytter` - Lytter på avlysninger (filtrerer `rekrutteringstreffSvarOgStatus` med `svar=true` og `treffstatus=avlyst`)
 - `MinsideClient` - Sender varsel til MinSide via Kafka
 
 **rekrutteringsbistand-frontend:**
