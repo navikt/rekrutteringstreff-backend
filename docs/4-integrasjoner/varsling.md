@@ -30,21 +30,19 @@ sequenceDiagram
     FE->>API: Brukerhandling (inviter/endre/avlys)
     API->>DB: Lagre hendelse per jobbsøker<br/>(inkl. hendelse_data JSON ved endring)
 
-    loop Hvert 10. sekund
-        Scheduler->>DB: Hent usendte hendelser
-        DB-->>Scheduler: Hendelser inkl. hendelse_data
-        Scheduler-->>KV: Publiser event til Rapids<br/>(flettedata fra hendelse_data)
-        Scheduler->>DB: Marker som sendt
-    end
+    Note over Scheduler,DB: Polling hvert 10. sekund
+    Scheduler->>DB: Hent usendte hendelser
+    DB-->>Scheduler: Hendelser inkl. hendelse_data
+    Scheduler-->>KV: Publiser event til Rapids<br/>(flettedata fra hendelse_data)
+    Scheduler->>DB: Marker som sendt
 
     KV->>KVDB: Lagre varsel med mal og flettedata
 
-    loop Hvert minutt
-        KVScheduler->>KVDB: Hent usendte varsler
-        KVDB-->>KVScheduler: Varsler med mal og flettedata
-        KVScheduler-->>MS: Send varselbestilling via Kafka
-        KVScheduler->>KVDB: Marker som sendt
-    end
+    Note over KVScheduler,KVDB: Polling hvert minutt
+    KVScheduler->>KVDB: Hent usendte varsler
+    KVDB-->>KVScheduler: Varsler med mal og flettedata
+    KVScheduler-->>MS: Send varselbestilling via Kafka
+    KVScheduler->>KVDB: Marker som sendt
 
     MS->>MS: Hent kontaktinfo fra KRR
     MS-->>Jobbsøker: Send SMS/e-post (eller lagre på MinSide)
@@ -53,10 +51,9 @@ sequenceDiagram
     KV-->>API: Publiser "minsideVarselSvar"<br/>(kun SENDT/FEILET, inkl. flettedata)
     API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE<br/>(inkl. flettedata i hendelse_data)
 
-    loop Polling hvert 10. sekund
-        FE->>API: GET /jobbsokere
-        API-->>FE: Jobbsøkere med varselstatus
-    end
+    Note over FE,API: Polling hvert 10. sekund
+    FE->>API: GET /jobbsokere
+    API-->>FE: Jobbsøkere med varselstatus
 ```
 
 > **Tegnforklaring:**
