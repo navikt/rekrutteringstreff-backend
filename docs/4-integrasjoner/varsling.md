@@ -215,7 +215,7 @@ Varselet inneholder:
 
 ### Mal som brukes
 
-**KANDIDAT_INVITERT_TREFF_AVLYST** (ny mal)
+**KANDIDAT_INVITERT_TREFF_AVLYST**
 
 **SMS-tekst:**
 
@@ -239,8 +239,6 @@ sequenceDiagram
     API->>DB: Lagre AVLYST-hendelse på treff
     API->>DB: Lagre SVART_JA_TREFF_AVLYST<br/>for jobbsøkere som har svart ja
     API->>DB: Lagre IKKE_SVART_TREFF_AVLYST<br/>for inviterte som ikke har svart
-
-    Note over Scheduler,MS: Ny funksjonalitet: Varsling
 
     loop Hvert 10. sekund
         Scheduler->>DB: Hent usendte SVART_JA_TREFF_AVLYST-hendelser
@@ -293,15 +291,15 @@ Kun synlige jobbsøkere (`er_synlig = TRUE`) får varsler.
 
 Løsningen bruker to måter å overføre tilleggsinformasjon på, avhengig av behov:
 
-| Løp         | Trenger dynamisk innhold? | Lagring                | Beskrivelse                                                   |
-| ----------- | ------------------------- | ---------------------- | ------------------------------------------------------------- |
-| Invitasjon  | Nei                       | Ingen ekstra data      | Fast SMS-tekst, ingen variabler                               |
-| Endring     | Ja                        | `hendelse_data` (JSON) | Bruker velger hvilke felter som skal nevnes i meldingen       |
-| Avlysning   | Nei                       | Ingen ekstra data      | Fast SMS-tekst, ingen variabler                               |
+| Løp        | Trenger dynamisk innhold? | Lagring                | Beskrivelse                                             |
+| ---------- | ------------------------- | ---------------------- | ------------------------------------------------------- |
+| Invitasjon | Nei                       | Ingen ekstra data      | Fast SMS-tekst, ingen variabler                         |
+| Endring    | Ja                        | `hendelse_data` (JSON) | Bruker velger hvilke felter som skal nevnes i meldingen |
+| Avlysning  | Nei                       | Ingen ekstra data      | Fast SMS-tekst, ingen variabler                         |
 
 **Hvorfor flettedata kun for endring?**
 
-Ved invitasjon og avlysning brukes en fast meldingstekst uten variabler. Ved endring må meldingen inneholde *hvilke* felter som er endret (f.eks. "tidspunkt og sted"), og dette velges av markedskontakt i frontend.
+Ved invitasjon og avlysning brukes en fast meldingstekst uten variabler. Ved endring må meldingen inneholde _hvilke_ felter som er endret (f.eks. "tidspunkt og sted"), og dette velges av markedskontakt i frontend.
 
 **Flyt for hendelse_data:**
 
@@ -317,7 +315,7 @@ Frontend → API → Database (hendelse_data JSON) → Scheduler → Rapids (fle
 }
 ```
 
-Scheduleren leser denne JSON-en og inkluderer `flettedata` i Rapids-meldingen. kandidatvarsel-api bruker dette til å bygge SMS-teksten: *"Det er endringer i et treff du er invitert til: tidspunkt og sted."*
+Scheduleren leser denne JSON-en og inkluderer `flettedata` i Rapids-meldingen. kandidatvarsel-api bruker dette til å bygge SMS-teksten: _"Det er endringer i et treff du er invitert til: tidspunkt og sted."_
 
 ### Varselkanaler (fra MinSide)
 
@@ -433,6 +431,7 @@ Returneres fra kandidatvarsel-api etter at MinSide har behandlet varselet. Inneh
 ```
 
 > **Merk:** `flettedata` i `minsideVarselSvar` er kun relevant for Løp 2 (endring). For andre løp er feltet tomt eller fraværende.
+
 ```
 
 ### Nøkkelklasser
@@ -463,3 +462,4 @@ Returneres fra kandidatvarsel-api etter at MinSide har behandlet varselet. Inneh
 
 - [Aktivitetskort for Rekrutteringstreff](aktivitetskort.md)
 - [MinSide dokumentasjon](https://navikt.github.io/tms-dokumentasjon/varsler/produsere)
+```
