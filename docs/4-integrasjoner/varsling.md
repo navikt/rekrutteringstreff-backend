@@ -283,11 +283,41 @@ sequenceDiagram
 
 Kjører hvert 10. sekund og:
 
-1. Henter usendte hendelser fra database (`INVITERT` og `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON`)
+1. Henter usendte hendelser fra database (`INVITERT`, `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` og `SVART_JA_TREFF_AVLYST`)
 2. Publiserer hendelser til Rapids & Rivers
 3. Markerer hendelser som sendt
 
 Kun synlige jobbsøkere (`er_synlig = TRUE`) får varsler.
+
+### Flettedata og hendelse_data
+
+Løsningen bruker to måter å overføre tilleggsinformasjon på, avhengig av behov:
+
+| Løp         | Trenger dynamisk innhold? | Lagring                | Beskrivelse                                                   |
+| ----------- | ------------------------- | ---------------------- | ------------------------------------------------------------- |
+| Invitasjon  | Nei                       | Ingen ekstra data      | Fast SMS-tekst, ingen variabler                               |
+| Endring     | Ja                        | `hendelse_data` (JSON) | Bruker velger hvilke felter som skal nevnes i meldingen       |
+| Avlysning   | Nei                       | Ingen ekstra data      | Fast SMS-tekst, ingen variabler                               |
+
+**Hvorfor flettedata kun for endring?**
+
+Ved invitasjon og avlysning brukes en fast meldingstekst uten variabler. Ved endring må meldingen inneholde *hvilke* felter som er endret (f.eks. "tidspunkt og sted"), og dette velges av markedskontakt i frontend.
+
+**Flyt for hendelse_data:**
+
+```
+Frontend → API → Database (hendelse_data JSON) → Scheduler → Rapids (flettedata) → kandidatvarsel-api → SMS
+```
+
+**Eksempel på hendelse_data i database:**
+
+```json
+{
+  "flettedata": ["tidspunkt", "sted"]
+}
+```
+
+Scheduleren leser denne JSON-en og inkluderer `flettedata` i Rapids-meldingen. kandidatvarsel-api bruker dette til å bygge SMS-teksten: *"Det er endringer i et treff du er invitert til: tidspunkt og sted."*
 
 ### Varselkanaler (fra MinSide)
 
@@ -334,7 +364,11 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
 
 ### Rapids-meldinger
 
-**rekrutteringstreffinvitasjon:**
+De tre løpene bruker ulike Rapids-meldinger med ulikt innhold:
+
+#### rekrutteringstreffinvitasjon (Løp 1)
+
+Inneholder treffdetaljer for aktivitetskort. Ingen flettedata – fast SMS-tekst.
 
 ```json
 {
@@ -352,7 +386,9 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
 }
 ```
 
-**rekrutteringstreffoppdatering:**
+#### rekrutteringstreffoppdatering (Løp 2)
+
+Inneholder `flettedata` – hvilke felter som er endret og skal nevnes i SMS.
 
 ```json
 {
@@ -364,7 +400,23 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
 }
 ```
 
-**minsideVarselSvar:**
+#### rekrutteringstreffavlysning (Løp 3)
+
+Enkel melding uten flettedata – fast SMS-tekst.
+
+```json
+{
+  "@event_name": "rekrutteringstreffavlysning",
+  "fnr": "12345678910",
+  "rekrutteringstreffId": "uuid",
+  "hendelseId": "uuid",
+  "tittel": "Jobbtreff hos bedrift AS"
+}
+```
+
+#### minsideVarselSvar (tilbakemelding fra alle løp)
+
+Returneres fra kandidatvarsel-api etter at MinSide har behandlet varselet. Inneholder `flettedata` og `mal` slik at vi kan spore hvilken type varsel det gjelder.
 
 ```json
 {
@@ -372,12 +424,15 @@ Kun statuser `SENDT` og `FEILET` publiseres fra kandidatvarsel-api til rapids.
   "varselId": "uuid",
   "avsenderReferanseId": "rekrutteringstreffId",
   "fnr": "12345678910",
-  "eksternStatus": "FERDIGSTILT",
+  "eksternStatus": "SENDT",
   "minsideStatus": "OPPRETTET",
   "eksternKanal": "SMS",
   "mal": "KANDIDAT_INVITERT_TREFF",
   "flettedata": ["tidspunkt", "sted"]
 }
+```
+
+> **Merk:** `flettedata` i `minsideVarselSvar` er kun relevant for Løp 2 (endring). For andre løp er feltet tomt eller fraværende.
 ```
 
 ### Nøkkelklasser
