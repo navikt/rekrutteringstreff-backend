@@ -1,8 +1,6 @@
 # Aktivitetskort for Rekrutteringstreff
 
-## Overordnet
-
-Løsningen synker automatisk status for rekrutteringstreff og jobbsøker med aktivitetskort i oppfølgingsplanen. Når en jobbsøker inviteres til et treff, opprettes et aktivitetskort som viser invitasjonen i aktivitetsplanen. Aktivitetskortet oppdateres automatisk basert på jobbsøkerens svar og treffets status (avlyst/fullført).
+Løsningen synker automatisk status for rekrutteringstreff med aktivitetskort i aktivitetsplanen. Når en jobbsøker inviteres til et treff, opprettes et aktivitetskort. Kortet oppdateres basert på jobbsøkerens svar og treffets status.
 
 ---
 
@@ -18,105 +16,63 @@ graph TB
         API[API endpoint]
         DB[(Database)]
         Scheduler[AktivitetskortJobbsøkerScheduler]
+        FeilLytter[AktivitetskortFeilLytter]
     end
 
-    subgraph "rekrutteringsbistand-<br/>aktivitetskort"
-        direction TB
-        %% Spacer for å unngå at tittelen kræsjer med noden
-        Spacer[ ]
+    subgraph "rekrutteringsbistand-aktivitetskort"
         Lyttere["Lyttere (Kafka-konsumenter)"]
-        AktDB[("Aktivitetskort Database")]
+        AktDB[(Database)]
         AktJobb[AktivitetskortJobb]
-        Spacer ~~~ Lyttere
+        FeilJobb[AktivitetskortFeilJobb]
     end
 
-    subgraph "Eksternt system"
+    subgraph "Ekstern"
         Aktivitetsplan[Aktivitetsplanen]
     end
 
+    %% Hovedflyt
     UI --> API
     API --> DB
-
-    Scheduler --> DB
     DB --> Scheduler
-
-    %% Kafka-flyt (Rapids & Rivers)
-    %% Stiplet linje indikerer asynkron kommunikasjon via Kafka
-    Scheduler -.->|Events: Invitasjon, svar, endring| Lyttere
-
+    Scheduler -.->|Rapids events| Lyttere
     Lyttere --> AktDB
     AktDB --> AktJobb
     AktJobb -.->|aktivitetskort-v1.1| Aktivitetsplan
 
+    %% Feilflyt
+    Aktivitetsplan -.->|dab.aktivitetskort-feil-v1| FeilJobb
+    FeilJobb -.->|aktivitetskort-feil| FeilLytter
+    FeilLytter --> DB
+
     style UI fill:#e1f5ff,color:#000,stroke:#333
     style Scheduler fill:#fff4e1,color:#000,stroke:#333
-    style Lyttere fill:#e8f5e9,color:#000,stroke:#333
     style AktJobb fill:#fff4e1,color:#000,stroke:#333
+    style Lyttere fill:#e8f5e9,color:#000,stroke:#333
+    style FeilLytter fill:#ffebee,color:#000,stroke:#333
+    style FeilJobb fill:#ffebee,color:#000,stroke:#333
     style Aktivitetsplan fill:#f3e5f5,color:#000,stroke:#333
-    style Spacer fill:none,stroke:none,color:transparent
-
     style API fill:#fff,color:#000,stroke:#333
     style DB fill:#fff,color:#000,stroke:#333
     style AktDB fill:#fff,color:#000,stroke:#333
 ```
 
-> **Tegnforklaring:**
->
-> - Hel linje (`-->`): Synkron/direkte kommunikasjon
-> - Stiplet linje (`-.->`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
-
-### Flytbeskrivelse
-
-1. **Veileder inviterer jobbsøker** → API lagrer hendelse i database
-2. **Scheduler** (kjører periodisk) henter usendte hendelser fra database
-3. **Scheduler publiserer** hendelse på rapids (events: `rekrutteringstreffinvitasjon`, `rekrutteringstreffSvarOgStatus`, `rekrutteringstreffoppdatering`)
-4. **Lyttere** i `rekrutteringsbistand-aktivitetskort` plukker opp hendelser fra rapid
-5. **Lyttere lagrer** i egen database og sender melding til `aktivitetskort-v1.1` topic
-6. **Aktivitetsplanen** konsumerer fra topic og viser aktivitetskort
-7. **Ved feil** publiseres `aktivitetskort-feil` på rapid, som `AktivitetskortFeilLytter` plukker opp og registrerer i database
+**Tegnforklaring:** Hel linje = synkron, stiplet = Kafka
 
 ---
 
-## Nøkkelklasser
+## Komponenter
 
-### rekrutteringstreff-api
-
-- **AktivitetskortJobbsøkerScheduler** - Scheduler som poller database og publiserer hendelser
-- **AktivitetskortRepository** - Håndterer database-operasjoner for aktivitetskort-hendelser
-- **AktivitetskortFeilLytter** - Lytter på feil fra aktivitetskort-appen
-
-### rekrutteringsbistand-aktivitetskort
-
-- **RekrutteringstreffInvitasjonLytter** - Lytter på `rekrutteringstreffinvitasjon`
-- **RekrutteringstreffSvarOgStatusLytter** - Lytter på `rekrutteringstreffSvarOgStatus`
-- **RekrutteringstreffOppdateringLytter** - Lytter på `rekrutteringstreffoppdatering`
-- **ScheduledJobb / AktivitetskortJobb** - Scheduler som henter aktivitetskort fra database og publiserer til `aktivitetskort-v1.1` topic
-- **AktivitetskortFeilJobb** - Konsumerer feil fra `dab.aktivitetskort-feil-v1` og publiserer til Rapids
-
-1. Henter eksisterende aktivitetskort-ID for jobbsøker/treff
-2. Beregner ny `AktivitetsStatus` basert på svar og treffstatus
-3. Oppdaterer aktivitetskortet
+| Komponent                          | App                                 | Beskrivelse                                                    |
+| ---------------------------------- | ----------------------------------- | -------------------------------------------------------------- |
+| `AktivitetskortJobbsøkerScheduler` | rekrutteringstreff-api              | Poller DB hvert 10s, publiserer til Rapids                     |
+| `AktivitetskortFeilLytter`         | rekrutteringstreff-api              | Lytter på `aktivitetskort-feil`, lagrer feil i DB              |
+| `Lyttere`                          | rekrutteringsbistand-aktivitetskort | Konsumerer Rapids-events, lagrer i DB                          |
+| `AktivitetskortJobb`               | rekrutteringsbistand-aktivitetskort | Poller DB hvert minutt, sender til `aktivitetskort-v1.1`       |
+| `AktivitetskortFeilJobb`           | rekrutteringsbistand-aktivitetskort | Konsumerer `dab.aktivitetskort-feil-v1`, publiserer til Rapids |
 
 ---
 
 ## Status-mapping
-
-### AktivitetsStatus (aktivitetsplanen)
-
-```kotlin
-enum class AktivitetsStatus {
-    PLANLAGT,      // Invitert, ikke svart ennå
-    GJENNOMFORES,  // Svart ja, treff pågår
-    FULLFORT,      // Svart ja, treff fullført
-    AVBRUTT        // Svart nei, avlyst, eller ikke svart ved fullført
-}
-```
-
-### Mapping-logikk
-
-Se kildekode: `apps/rekrutteringsbistand-aktivitetskort/src/main/kotlin/no/nav/toi/rekrutteringstreff/RekrutteringstreffSvarOgStatusLytter.kt`
-
-### Oppsummert mapping-tabell
 
 | Svar         | Treffstatus | AktivitetsStatus |
 | ------------ | ----------- | ---------------- |
@@ -129,104 +85,20 @@ Se kildekode: `apps/rekrutteringsbistand-aktivitetskort/src/main/kotlin/no/nav/t
 
 ---
 
-## Frontend-hendelser til backend-status
+## Hendelse → Rapids-event → Aktivitetskort
 
-### Frontend-actions
-
-```typescript
-export const JobbsøkerHendelsestype = {
-  OPPRETTET: "OPPRETTET",
-  OPPDATERT: "OPPDATERT",
-  SLETTET: "SLETTET",
-  INVITERT: "INVITERT",
-  SVART_JA_TIL_INVITASJON: "SVART_JA_TIL_INVITASJON",
-  SVART_NEI_TIL_INVITASJON: "SVART_NEI_TIL_INVITASJON",
-  SVART_JA_TREFF_AVLYST: "SVART_JA_TREFF_AVLYST",
-  SVART_JA_TREFF_FULLFØRT: "SVART_JA_TREFF_FULLFØRT",
-  IKKE_SVART_TREFF_AVLYST: "IKKE_SVART_TREFF_AVLYST",
-  IKKE_SVART_TREFF_FULLFØRT: "IKKE_SVART_TREFF_FULLFØRT",
-  AKTIVITETSKORT_OPPRETTELSE_FEIL: "AKTIVITETSKORT_OPPRETTELSE_FEIL",
-  MOTTATT_SVAR_FRA_MINSIDE: "MOTTATT_SVAR_FRA_MINSIDE",
-  TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON:
-    "TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON",
-} as const;
-```
-
-### Mapping fra frontend-action til Rapids-event
-
-| Frontend action   | Backend hendelse           | Rapids event                     | Aktivitetskort status |
-| ----------------- | -------------------------- | -------------------------------- | --------------------- |
-| Inviter           | `INVITERT`                 | `rekrutteringstreffinvitasjon`   | PLANLAGT (opprett)    |
-| Svar ja (borger)  | `SVART_JA_TIL_INVITASJON`  | `rekrutteringstreffSvarOgStatus` | GJENNOMFORES          |
-| Svar nei (borger) | `SVART_NEI_TIL_INVITASJON` | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
-| Fullført treff    | `SVART_JA_TREFF_FULLFØRT`  | `rekrutteringstreffSvarOgStatus` | FULLFORT              |
-| Avlyst treff      | `SVART_JA_TREFF_AVLYST`    | `rekrutteringstreffSvarOgStatus` | AVBRUTT               |
-| Treff endret      | `TREFF_ENDRET_...`         | `rekrutteringstreffoppdatering`  | (oppdater detaljer)   |
-
----
-
-## Feilhåndtering
-
-### AktivitetskortFeil
-
-Når aktivitetskort-tjenesten returnerer feil, publiseres dette tilbake på Rapids.
-
-Se kildekode: `apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/jobbsoker/aktivitetskort/AktivitetskortFeilLytter.kt`
-
-Lytter på `aktivitetskort-feil` og registrerer `AKTIVITETSKORT_OPPRETTELSE_FEIL` hendelse på jobbsøker.
-
----
-
-## Scheduler og Polling-mekanisme
-
-### AktivitetskortJobbsøkerScheduler
-
-Scheduleren er ansvarlig for å hente usendte hendelser fra databasen og publisere dem på Kafka (Rapids & Rivers).
-
-**Kildekode:** `apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/jobbsoker/aktivitetskort/AktivitetskortJobbsøkerScheduler.kt`
-
-#### Hvordan det fungerer
-
-1. **Oppstart:** Scheduleren starter ved applikasjonsstart og kjører hvert 10. sekund
-2. **Polling:** Henter alle usendte hendelser fra `jobbsoker_hendelse`-tabellen som ikke finnes i `aktivitetskort_polling`
-3. **Behandling:** For hver hendelse:
-   - Publiserer til Rapids basert på hendelsestype (se [Mapping fra frontend-action til Rapids-event](#mapping-fra-frontend-action-til-rapids-event))
-   - Lagrer pollingstatus i `aktivitetskort_polling`-tabellen for å unngå duplikater
-4. **Transaksjonssikkerhet:** Polling-status lagres i samme transaksjon som publisering for å sikre konsistens
-
-### aktivitetskort_polling-tabell
-
-Sporer hvilke hendelser som er sendt for å unngå duplikater. Hver rad kobles til en `jobbsoker_hendelse` via `jobbsoker_hendelse_id`.
-
-### AktivitetskortJobb (rekrutteringsbistand-aktivitetskort)
-
-Etter at lytterne har lagret aktivitetskort i databasen, er det en scheduler som henter dem og sender til Aktivitetsplanen.
-
-**Kildekode:** `apps/rekrutteringsbistand-aktivitetskort/src/main/kotlin/no/nav/toi/aktivitetskort/ScheduledJobb.kt`
-
-#### Hvordan det fungerer
-
-1. **Oppstart:** Scheduleren starter ved applikasjonsstart og kjører hvert minutt
-2. **Polling:** `AktivitetskortJobb` henter alle usendte aktivitetskort-hendelser fra databasen
-3. **Publisering:** Sender hver hendelse til `aktivitetskort-v1.1` topic (konsumeres av Aktivitetsplanen)
-4. **Feilhåndtering:** `AktivitetskortFeilJobb` konsumerer fra `dab.aktivitetskort-feil-v1` topic og publiserer feil tilbake på Rapids
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│              rekrutteringsbistand-aktivitetskort                │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Lyttere ──► Database ──► AktivitetskortJobb ──► aktivitetskort-v1.1
-│  (Rapids)                 (scheduler)            (Kafka topic)  │
-│                                                                 │
-│                           AktivitetskortFeilJobb ◄── dab.aktivitetskort-feil-v1
-│                           (konsumerer feil)                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+| Hendelse       | Rapids event                     | Aktivitetskort     |
+| -------------- | -------------------------------- | ------------------ |
+| Inviter        | `rekrutteringstreffinvitasjon`   | Opprett (PLANLAGT) |
+| Svar ja        | `rekrutteringstreffSvarOgStatus` | GJENNOMFORES       |
+| Svar nei       | `rekrutteringstreffSvarOgStatus` | AVBRUTT            |
+| Treff fullført | `rekrutteringstreffSvarOgStatus` | FULLFORT/AVBRUTT   |
+| Treff avlyst   | `rekrutteringstreffSvarOgStatus` | AVBRUTT            |
+| Treff endret   | `rekrutteringstreffoppdatering`  | Oppdater detaljer  |
 
 ---
 
 ## Relatert dokumentasjon
 
-- [Varsling](varsling.md) - Varsling til jobbsøkere
-- [Database-schema](09-database-schema.md) - Komplett databaseoversikt
+- [Varsling](varsling.md)
+- [Database-schema](../2-arkitektur/09-database-schema.md)
