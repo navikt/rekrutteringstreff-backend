@@ -1,12 +1,55 @@
-# Database Schema - Rekrutteringstreff
+# Database
+
+## Arkitekturtilnærming
+
+### Hybrid hendelseshåndtering
+
+Vi har valgt en **hybrid tilnærming** med current state-tabeller kombinert med hendelsestabeller.
+
+#### Alternativer som ble vurdert
+
+1. **Current state database** - Kun nåværende tilstand, ingen historikk
+2. **Append-only database** - All data lagres som hendelser (event sourcing)
+3. **Current state + hendelsestabeller** ✅ - Valgt løsning
+
+#### Vårt valg
+
+Vi bruker current state-tabeller for:
+
+- `rekrutteringstreff`
+- `jobbsoker`
+- `arbeidsgiver`
+
+Kombinert med separate hendelsestabeller:
+
+- `rekrutteringstreff_hendelse`
+- `jobbsoker_hendelse`
+- `arbeidsgiver_hendelse`
+
+#### Fordeler med denne tilnærmingen
+
+- **Enkel og rask SQL**: Spørringer mot current state er enkle og performante
+- **Komplett historikk**: Alle endringer er sporbare via hendelsestabeller
+- **Synlig i frontend**: Vi kan vise brukere hele endringshistorikken
+- **Asynkron reaksjon**: Vi kan reagere på lagrede hendelser via schedulers
+- **Fleksibilitet**: Best of both worlds - enkel lesing og komplett audit trail
+
+Denne tilnærmingen sikrer at vi aldri mister hendelser, og at all prosessering kan skje asynkront uten å blokkere brukerforespørsler.
+
+### Teknologivalg
+
+- **PostgreSQL** som database
+- **Ren SQL uten ORM** - Full kontroll over SQL-spørringer, enkel debugging
+- **Flyway** for migrasjoner
+- **HikariCP** for connection pooling
+
+---
+
+## Entity Relationship Diagram
 
 Vis denne filen i Github for å se en grafisk fremstilling av databaseskjemaet ved hjelp av Mermaid.
 
-Dette er en grafisk oversikt over databaseskjemaet for rekrutteringstreff-systemet.
-
 Husk å endre denne filen ved endringer i flywayscriptene. Bruk gjerne copilot til å oppdatere denne filen.
-
-## Entity Relationship Diagram
 
 ```mermaid
 erDiagram
@@ -184,9 +227,11 @@ Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>
 ### Støttetabeller
 
 - **naringskode**: Næringskoder for arbeidsgivere (kan ha flere per arbeidsgiver)
-- **ki_spørring_logg**: Logger AI/KI-spørringer med metadata og modereringsinfo
+- **ki_spørring_logg**: Logger AI/KI-spørringer med metadata og modereringsinfo - se [KI-moderering](08-ki-moderering.md)
 
 ## Flyway-migrasjoner
+
+Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/migration/`.
 
 | Versjon | Fil                                                 | Beskrivelse                                                                      |
 | ------- | --------------------------------------------------- | -------------------------------------------------------------------------------- |
@@ -233,4 +278,5 @@ Dette diagrammet kan vises i:
 
 ## Relaterte dokumenter
 
-- [Synlighet-dokumentasjon](synlighet.md) - Detaljert beskrivelse av synlighetsintegrasjonen
+- [Synlighet](05-synlighet.md) - Detaljert beskrivelse av synlighetsintegrasjonen
+- [KI-moderering](08-ki-moderering.md) - Beskrivelse av KI-loggingen

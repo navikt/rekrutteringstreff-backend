@@ -11,9 +11,9 @@ Synlighetsinformasjonen kommer fra **toi-synlighetsmotor**, som evaluerer kandid
 ```mermaid
 flowchart TB
     subgraph rekrutteringstreff-api
-        API[REST API]
-        JR[JobbsøkerRepository]
+        JC[JobbsøkerController]
         JS[JobbsøkerService]
+        JR[JobbsøkerRepository]
         SL[SynlighetsLytter]
         SBL[SynlighetsBehovLytter]
         SBS[SynlighetsBehovScheduler]
@@ -21,31 +21,37 @@ flowchart TB
     end
 
     subgraph toi-synlighetsmotor
+        direction TB
         SRL[SynlighetRekrutteringstreffLytter]
-        SGL[SynlighetsgrunnlagLytter]
         SMDB[(Synlighetsmotor DB)]
+        SGL[SynlighetsgrunnlagLytter]
     end
 
-    subgraph Kafka
-        RAPID[Rapids & Rivers]
-    end
+    EXT[Eksterne eventer for<br/>synlighet kandidat]
 
-    Frontend --> API
-    API --> JR
-    JR --> DB
-    SBS --> JR
-
-    SBS -->|need: synlighetRekrutteringstreff| RAPID
-    RAPID -->|need-svar| SBL
+    %% Interne koblinger
+    Frontend --> JC
+    JC --> JS
+    SBS --> JS
     SBL --> JS
-
-    SGL -->|synlighet-event| RAPID
-    RAPID -->|synlighet-event| SL
     SL --> JS
+    JS --> JR
+    JR --> DB
 
-    SRL -->|lytter på need| RAPID
     SRL --> SMDB
+    SMDB ~~~ SGL
+
+    %% Kafka-flyt (Rapids & Rivers)
+    EXT -.-> SGL
+    SBS -.->|Need: synlighetRekrutteringstreff| SRL
+    SRL -.->|Løsning: synlighetRekrutteringstreff| SBL
+    SGL -.->|Event: synlighet-event| SL
 ```
+
+> **Tegnforklaring:**
+>
+> - Hel linje (`-->`): Synkron/direkte kommunikasjon (metodekall/SQL)
+> - Stiplet linje (`-.->`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
 
 ## Hvordan det fungerer
 
@@ -53,16 +59,26 @@ flowchart TB
 
 ```mermaid
 sequenceDiagram
+    %%{init: {'sequence': {'mirrorActors': false}}}%%
     participant V as Veileder
     participant API as rekrutteringstreff-api
     participant DB as Database
-    participant Sched as SynlighetsBehovScheduler
-    participant Kafka as Kafka Rapid
-    participant SM as toi-synlighetsmotor
 
     V->>API: POST /jobbsokere
     API->>DB: Lagre jobbsøker (er_synlig=TRUE, synlighet_sist_oppdatert=NULL)
     API-->>V: 201 Created
+```
+
+#### Asynkron synlighetssjekk
+
+```mermaid
+sequenceDiagram
+    %%{init: {'sequence': {'mirrorActors': false}}}%%
+    participant Sched as SynlighetsBehovScheduler
+    participant DB as Database
+    participant Kafka as Kafka Rapid
+    participant SM as toi-synlighetsmotor
+    participant API as rekrutteringstreff-api
 
     Note over Sched: Scheduler kjører periodisk (hvert minutt)
     Sched->>DB: Finn jobbsøkere uten evaluert synlighet
@@ -86,6 +102,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
+    %%{init: {'sequence': {'mirrorActors': false}}}%%
     participant Kilde as Kildesystem
     participant SM as toi-synlighetsmotor
     participant Kafka as Kafka Rapid
@@ -132,13 +149,13 @@ sequenceDiagram
 
 ### rekrutteringstreff-api
 
-| Komponent                    | Plassering             | Ansvar                                                       |
-| ---------------------------- | ---------------------- | ------------------------------------------------------------ |
-| **SynlighetsLytter**         | `jobbsoker/synlighet/` | Lytter på synlighets-events fra event-strømmen               |
-| **SynlighetsBehovLytter**    | `jobbsoker/synlighet/` | Lytter på svar fra need-meldinger                            |
+| Komponent                    | Plassering             | Ansvar                                                        |
+| ---------------------------- | ---------------------- | ------------------------------------------------------------- |
+| **SynlighetsLytter**         | `jobbsoker/synlighet/` | Lytter på synlighets-events fra event-strømmen                |
+| **SynlighetsBehovLytter**    | `jobbsoker/synlighet/` | Lytter på svar fra need-meldinger                             |
 | **SynlighetsBehovScheduler** | `jobbsoker/synlighet/` | Finner jobbsøkere uten synlighet og publiserer need-meldinger |
-| **JobbsøkerRepository**      | `jobbsoker/`           | Synlighetsfiltrering i alle spørringer + oppdateringsmetoder |
-| **JobbsøkerService**         | `jobbsoker/`           | Delegerer til repository                                     |
+| **JobbsøkerRepository**      | `jobbsoker/`           | Synlighetsfiltrering i alle spørringer + oppdateringsmetoder  |
+| **JobbsøkerService**         | `jobbsoker/`           | Delegerer til repository                                      |
 
 ### toi-synlighetsmotor
 
@@ -165,9 +182,9 @@ Systemet håndterer to potensielle race conditions:
 
 ```mermaid
 sequenceDiagram
-    participant DB as Database
     participant EL as Event-lytter
     participant NL as Need-lytter
+    participant DB as Database
 
     Note over DB: synlighet_sist_oppdatert = NULL
 
@@ -179,6 +196,9 @@ sequenceDiagram
 
     EL->>DB: Prøv oppdater (erSynlig=TRUE, tid=T1)
     Note over DB: Ingen endring (T1 < T2)
+
+    EL->>DB: Oppdater (erSynlig=TRUE, tid=T3)
+    Note over DB: synlighet_sist_oppdatert = T3 (T3 > T2)
 ```
 
 ## Synlighetskriterier
@@ -216,5 +236,4 @@ Se testklasser for eksempler på bruk og forventet oppførsel:
 
 ## Relaterte dokumenter
 
-- [Planleggingsdokument](../../../../../synlighet-teknisk-design.md) - Detaljert teknisk design med kodeeksempler
-- [Database-schema](database-schema.md) - Komplett databaseoversikt
+- [Database](../2-arkitektur/database.md) - Komplett databaseoversikt
