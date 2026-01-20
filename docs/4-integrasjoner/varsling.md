@@ -26,16 +26,16 @@ sequenceDiagram
     participant MS as MinSide<br/>(SMS/Epost/MinSide)
 
     FE->>API: Brukerhandling (inviter/endre/avlys)
-    API->>DB: Lagre hendelse per jobbsøker
+    API->>DB: Lagre hendelse per jobbsøker<br/>(inkl. hendelse_data JSON ved endring)
 
     loop Hvert 10. sekund
         Scheduler->>DB: Hent usendte hendelser
-        DB-->>Scheduler: Liste med hendelser
-        Scheduler-->>KV: Publiser event til Rapids
+        DB-->>Scheduler: Hendelser inkl. hendelse_data
+        Scheduler-->>KV: Publiser event til Rapids<br/>(flettedata fra hendelse_data)
         Scheduler->>DB: Marker som sendt
     end
 
-    KV->>KV: Opprett varsel med riktig mal
+    KV->>KV: Opprett varsel med mal<br/>(bygg melding med flettedata)
     KV-->>MS: Send varselbestilling via Kafka
 
     MS->>MS: Hent kontaktinfo fra KRR
@@ -51,8 +51,8 @@ sequenceDiagram
     KV->>KV: Filter: Kun SENDT eller FEILET
 
     alt Status er SENDT eller FEILET
-        KV-->>API: Publiser "minsideVarselSvar"
-        API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE
+        KV-->>API: Publiser "minsideVarselSvar"<br/>(inkl. flettedata for sporing)
+        API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE<br/>(inkl. flettedata i hendelse_data)
     end
 
     loop Polling hvert 10. sekund
@@ -65,6 +65,8 @@ sequenceDiagram
 >
 > - Hel linje (`->>`): Synkron/direkte kommunikasjon
 > - Stiplet linje (`-->>`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
+> - `hendelse_data`: JSON-kolonne i database for tilleggsdata (brukes kun ved endring)
+> - `flettedata`: Feltnavn som sendes via Rapids og brukes til å bygge meldingstekst
 
 ### Forskjeller mellom løpene
 
