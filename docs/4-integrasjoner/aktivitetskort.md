@@ -26,6 +26,7 @@ graph TB
         Spacer[ ]
         Lyttere["Lyttere (Kafka-konsumenter)"]
         AktDB[("Aktivitetskort Database")]
+        AktJobb[AktivitetskortJobb]
         Spacer ~~~ Lyttere
     end
 
@@ -44,11 +45,13 @@ graph TB
     Scheduler -.->|Events: Invitasjon, svar, endring| Lyttere
 
     Lyttere --> AktDB
-    Lyttere -.->|Publiserer aktivitetskort| Aktivitetsplan
+    AktDB --> AktJobb
+    AktJobb -.->|aktivitetskort-v1.1| Aktivitetsplan
 
     style UI fill:#e1f5ff,color:#000,stroke:#333
     style Scheduler fill:#fff4e1,color:#000,stroke:#333
     style Lyttere fill:#e8f5e9,color:#000,stroke:#333
+    style AktJobb fill:#fff4e1,color:#000,stroke:#333
     style Aktivitetsplan fill:#f3e5f5,color:#000,stroke:#333
     style Spacer fill:none,stroke:none,color:transparent
 
@@ -87,6 +90,8 @@ graph TB
 - **RekrutteringstreffInvitasjonLytter** - Lytter på `rekrutteringstreffinvitasjon`
 - **RekrutteringstreffSvarOgStatusLytter** - Lytter på `rekrutteringstreffSvarOgStatus`
 - **RekrutteringstreffOppdateringLytter** - Lytter på `rekrutteringstreffoppdatering`
+- **ScheduledJobb / AktivitetskortJobb** - Scheduler som henter aktivitetskort fra database og publiserer til `aktivitetskort-v1.1` topic
+- **AktivitetskortFeilJobb** - Konsumerer feil fra `dab.aktivitetskort-feil-v1` og publiserer til Rapids
 
 1. Henter eksisterende aktivitetskort-ID for jobbsøker/treff
 2. Beregner ny `AktivitetsStatus` basert på svar og treffstatus
@@ -172,11 +177,52 @@ Lytter på `aktivitetskort-feil` og registrerer `AKTIVITETSKORT_OPPRETTELSE_FEIL
 
 ---
 
-## Polling-mekanisme
+## Scheduler og Polling-mekanisme
+
+### AktivitetskortJobbsøkerScheduler
+
+Scheduleren er ansvarlig for å hente usendte hendelser fra databasen og publisere dem på Kafka (Rapids & Rivers).
+
+**Kildekode:** `apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/jobbsoker/aktivitetskort/AktivitetskortJobbsøkerScheduler.kt`
+
+#### Hvordan det fungerer
+
+1. **Oppstart:** Scheduleren starter ved applikasjonsstart og kjører hvert 10. sekund
+2. **Polling:** Henter alle usendte hendelser fra `jobbsoker_hendelse`-tabellen som ikke finnes i `aktivitetskort_polling`
+3. **Behandling:** For hver hendelse:
+   - Publiserer til Rapids basert på hendelsestype (se [Mapping fra frontend-action til Rapids-event](#mapping-fra-frontend-action-til-rapids-event))
+   - Lagrer pollingstatus i `aktivitetskort_polling`-tabellen for å unngå duplikater
+4. **Transaksjonssikkerhet:** Polling-status lagres i samme transaksjon som publisering for å sikre konsistens
 
 ### aktivitetskort_polling-tabell
 
-Sporer hvilke hendelser som er sendt for å unngå duplikater.
+Sporer hvilke hendelser som er sendt for å unngå duplikater. Hver rad kobles til en `jobbsoker_hendelse` via `jobbsoker_hendelse_id`.
+
+### AktivitetskortJobb (rekrutteringsbistand-aktivitetskort)
+
+Etter at lytterne har lagret aktivitetskort i databasen, er det en scheduler som henter dem og sender til Aktivitetsplanen.
+
+**Kildekode:** `apps/rekrutteringsbistand-aktivitetskort/src/main/kotlin/no/nav/toi/aktivitetskort/ScheduledJobb.kt`
+
+#### Hvordan det fungerer
+
+1. **Oppstart:** Scheduleren starter ved applikasjonsstart og kjører hvert minutt
+2. **Polling:** `AktivitetskortJobb` henter alle usendte aktivitetskort-hendelser fra databasen
+3. **Publisering:** Sender hver hendelse til `aktivitetskort-v1.1` topic (konsumeres av Aktivitetsplanen)
+4. **Feilhåndtering:** `AktivitetskortFeilJobb` konsumerer fra `dab.aktivitetskort-feil-v1` topic og publiserer feil tilbake på Rapids
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              rekrutteringsbistand-aktivitetskort                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Lyttere ──► Database ──► AktivitetskortJobb ──► aktivitetskort-v1.1
+│  (Rapids)                 (scheduler)            (Kafka topic)  │
+│                                                                 │
+│                           AktivitetskortFeilJobb ◄── dab.aktivitetskort-feil-v1
+│                           (konsumerer feil)                     │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
