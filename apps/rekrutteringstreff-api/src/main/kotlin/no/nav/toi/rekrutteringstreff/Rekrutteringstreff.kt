@@ -2,7 +2,6 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdatering
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
-import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffAvlysning
 import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffSvarOgStatus
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
@@ -73,14 +72,16 @@ class Rekrutteringstreff(
         svar: Boolean? = null,
         treffstatus: String? = null,
         endretAvPersonbruker: Boolean,
-        endretAv: String? = null
+        endretAv: String? = null,
+        hendelseId: UUID? = null
     ) = RekrutteringstreffSvarOgStatus(
         fnr = fnr,
         rekrutteringstreffId = id,
         endretAv = endretAv ?: if (endretAvPersonbruker) fnr else opprettetAvPersonNavident,
         endretAvPersonbruker = endretAvPersonbruker,
         svar = svar,
-        treffstatus = treffstatus
+        treffstatus = treffstatus,
+        hendelseId = hendelseId
     )
 
     fun aktivitetskortOppdateringFor(
@@ -100,16 +101,6 @@ class Rekrutteringstreff(
         poststed = poststed!!,
         endretAv = avsenderNavident,
         endredeFelter = endredeFelter
-    )
-
-    fun aktivitetskortAvlysningFor(
-        fnr: String,
-        hendelseId: UUID
-    ) = RekrutteringstreffAvlysning(
-        fnr = fnr,
-        rekrutteringstreffId = id,
-        hendelseId = hendelseId,
-        tittel = tittel
     )
 }
 

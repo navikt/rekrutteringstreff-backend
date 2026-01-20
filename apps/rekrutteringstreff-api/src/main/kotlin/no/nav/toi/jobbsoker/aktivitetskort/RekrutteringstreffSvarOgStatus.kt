@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker.aktivitetskort
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.TreffId
+import java.util.UUID
 
 class RekrutteringstreffSvarOgStatus(
     private val fnr: String,
@@ -11,6 +12,7 @@ class RekrutteringstreffSvarOgStatus(
     private val endretAvPersonbruker: Boolean,
     private val svar: Boolean?,
     private val treffstatus: String?,
+    private val hendelseId: UUID? = null,
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
         val messageMap = mutableMapOf<String, Any>(
@@ -22,6 +24,7 @@ class RekrutteringstreffSvarOgStatus(
 
         svar?.let { messageMap["svar"] = it }
         treffstatus?.let { messageMap["treffstatus"] = it }
+        hendelseId?.let { messageMap["hendelseId"] = it }
 
         val message = JsonMessage.newMessage(
             eventName = "rekrutteringstreffSvarOgStatus",

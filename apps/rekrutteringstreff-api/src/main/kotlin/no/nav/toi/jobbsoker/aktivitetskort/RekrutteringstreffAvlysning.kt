@@ -13,8 +13,7 @@ import java.util.UUID
 class RekrutteringstreffAvlysning(
     private val fnr: String,
     private val rekrutteringstreffId: TreffId,
-    private val hendelseId: UUID,
-    private val tittel: String
+    private val hendelseId: UUID
 ) {
 
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
@@ -23,8 +22,7 @@ class RekrutteringstreffAvlysning(
             map = mapOf(
                 "fnr" to fnr,
                 "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
-                "hendelseId" to hendelseId,
-                "tittel" to tittel
+                "hendelseId" to hendelseId
             )
         )
 

@@ -168,16 +168,15 @@ class AktivitetskortJobbsøkerScheduler(
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
-        // Send aktivitetskort-oppdatering (svar og status)
-        treff.aktivitetskortSvarOgStatusFor(fnr = hendelse.fnr, svar = true, treffstatus = treffstatus, endretAvPersonbruker = false, endretAv = hendelse.fnr)
-            .publiserTilRapids(rapidsConnection)
-
-        // Send avlysningsvarsel til kandidatvarsel-api (kun ved avlysning)
-        if (treffstatus == "avlyst") {
-            treff.aktivitetskortAvlysningFor(fnr = hendelse.fnr, hendelseId = hendelse.hendelseId)
-                .publiserTilRapids(rapidsConnection)
-            log.info("Sendt rekrutteringstreffavlysning for treff ${hendelse.rekrutteringstreffUuid}")
-        }
+        // Send aktivitetskort-oppdatering (svar og status) - kandidatvarsel-api lytter også på denne for avlysning
+        treff.aktivitetskortSvarOgStatusFor(
+            fnr = hendelse.fnr,
+            svar = true,
+            treffstatus = treffstatus,
+            endretAvPersonbruker = false,
+            endretAv = hendelse.fnr,
+            hendelseId = hendelse.hendelseId
+        ).publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
     }
