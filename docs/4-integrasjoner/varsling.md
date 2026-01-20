@@ -23,6 +23,7 @@ sequenceDiagram
     participant DB as Database<br/>(jobbsoker_hendelse)
     participant Scheduler as AktivitetskortJobbsøkerScheduler
     participant KV as kandidatvarsel-api
+    participant KVScheduler as VarselScheduler
     participant KVDB as Database<br/>(kandidatvarsel)
     participant MS as MinSide<br/>(SMS/Epost/MinSide)
 
@@ -37,7 +38,14 @@ sequenceDiagram
     end
 
     KV->>KVDB: Lagre varsel med mal og flettedata
-    KV-->>MS: Send varselbestilling via Kafka
+
+    loop Hvert minutt
+        KVScheduler->>KVDB: Hent usendte varsler
+        KVDB-->>KVScheduler: Varsler med mal og flettedata
+        KVScheduler-->>MS: Send varselbestilling via Kafka
+        KVScheduler->>KVDB: Marker som sendt
+    end
+
     MS->>MS: Hent kontaktinfo fra KRR
     MS-->>Jobbsøker: Send SMS/e-post (eller lagre på MinSide)
     MS-->>KV: Publiser varselstatus via Kafka
