@@ -74,29 +74,27 @@ graph TB
 
 ---
 
-## Status-mapping
+## Hendelser og aktivitetskort-status
 
-| Svar         | Treffstatus | AktivitetsStatus |
-| ------------ | ----------- | ---------------- |
-| JA           | (uendret)   | GJENNOMFORES     |
-| JA           | fullført    | FULLFORT         |
-| JA           | avlyst      | AVBRUTT          |
-| NEI          | \*          | AVBRUTT          |
-| (ikke svart) | fullført    | AVBRUTT          |
-| (ikke svart) | avlyst      | AVBRUTT          |
+Når en hendelse skjer, publiseres et Rapids-event som oppdaterer aktivitetskortet:
 
----
+| Hendelse | Rapids event | Aktivitetskort-status |
+|----------|--------------|----------------------|
+| Inviter jobbsøker | `rekrutteringstreffinvitasjon` | **PLANLAGT** (oppretter kort) |
+| Jobbsøker svarer ja | `rekrutteringstreffSvarOgStatus` | **GJENNOMFORES** |
+| Jobbsøker svarer nei | `rekrutteringstreffSvarOgStatus` | **AVBRUTT** |
+| Treff endret | `rekrutteringstreffoppdatering` | Oppdaterer detaljer |
+| Treff fullført/avlyst | `rekrutteringstreffSvarOgStatus` | Se tabell under |
 
-## Hendelse → Rapids-event → Aktivitetskort
+### Status ved treff fullført/avlyst
 
-| Hendelse       | Rapids event                     | Aktivitetskort     |
-| -------------- | -------------------------------- | ------------------ |
-| Inviter        | `rekrutteringstreffinvitasjon`   | Opprett (PLANLAGT) |
-| Svar ja        | `rekrutteringstreffSvarOgStatus` | GJENNOMFORES       |
-| Svar nei       | `rekrutteringstreffSvarOgStatus` | AVBRUTT            |
-| Treff fullført | `rekrutteringstreffSvarOgStatus` | FULLFORT/AVBRUTT   |
-| Treff avlyst   | `rekrutteringstreffSvarOgStatus` | AVBRUTT            |
-| Treff endret   | `rekrutteringstreffoppdatering`  | Oppdater detaljer  |
+Aktivitetskort-status avhenger av jobbsøkerens svar:
+
+| Jobbsøkers svar | Treff fullført | Treff avlyst |
+|-----------------|----------------|--------------|
+| Ja | FULLFORT | AVBRUTT |
+| Nei | AVBRUTT | AVBRUTT |
+| Ikke svart | AVBRUTT | AVBRUTT |
 
 ---
 
