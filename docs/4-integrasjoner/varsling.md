@@ -37,23 +37,11 @@ sequenceDiagram
 
     KV->>KV: Opprett varsel med mal<br/>(bygg melding med flettedata)
     KV-->>MS: Send varselbestilling via Kafka
-
     MS->>MS: Hent kontaktinfo fra KRR
-    alt Telefon finnes
-        MS-->>Jobbsøker: Send SMS
-    else Epost finnes
-        MS-->>Jobbsøker: Send e-post
-    else Ingen kontaktinfo
-        MS-->>MS: Lagre på MinSide
-    end
-
+    MS-->>Jobbsøker: Send SMS/e-post (eller lagre på MinSide)
     MS-->>KV: Publiser varselstatus via Kafka
-    KV->>KV: Filter: Kun SENDT eller FEILET
-
-    alt Status er SENDT eller FEILET
-        KV-->>API: Publiser "minsideVarselSvar"<br/>(inkl. flettedata for sporing)
-        API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE<br/>(inkl. flettedata i hendelse_data)
-    end
+    KV-->>API: Publiser "minsideVarselSvar"<br/>(kun SENDT/FEILET, inkl. flettedata)
+    API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE<br/>(inkl. flettedata i hendelse_data)
 
     loop Polling hvert 10. sekund
         FE->>API: GET /jobbsokere
