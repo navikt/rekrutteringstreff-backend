@@ -98,5 +98,6 @@ Begge veier leder til samme landingsside der jobbsøker kan se treffdetaljer og 
 ## Relaterte dokumenter
 
 - [Varsling](varsling.md) - Detaljer om varslingsmekanismen
+- [MinSide-flyt](minside-flyt.md) - Jobbsøkerens flyt for å se og svare
 - [Aktivitetskort](aktivitetskort.md) - Detaljer om aktivitetskort-integrasjonen
 - [MinSide-flyt](minside-flyt.md) - Jobbsøkerens flyt for å se og svare

@@ -2,10 +2,11 @@
 
 ## Overordnet
 
-Løsningen sender automatiske varsler til jobbsøkere i to situasjoner:
+Løsningen sender automatiske varsler til jobbsøkere i følgende situasjoner:
 
 1. **Invitasjon** - Når en jobbsøker inviteres til et rekrutteringstreff
 2. **Endring** - Når et publisert treff med inviterte jobbsøkere endres
+3. **Avlysning** - Når et treff avlyses
 
 Varsling skjer via **SMS** eller **e-post**, avhengig av hvilken kontaktinformasjon som finnes i Kontakt- og reservasjonsregisteret (KRR). Dersom jobbsøker ikke har registrert kontaktinformasjon, lagres varselet på **MinSide** der jobbsøkeren kan se det ved pålogging.
 
@@ -183,6 +184,89 @@ sequenceDiagram
         DB-->>API: Jobbsøkerdata inkl. hendelser
         API-->>FE: Liste med jobbsøkere + varselstatus
         FE->>FE: Vis varselstatus i jobbsøkerkort
+    end
+```
+
+> **Tegnforklaring:**
+>
+> - Hel linje (`->>`): Synkron/direkte kommunikasjon
+> - Stiplet linje (`-->>`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
+
+---
+
+## Løp 3: Avlysning av treff
+
+Når et publisert treff avlyses, sendes det automatisk varsel til jobbsøkere som har svart ja på invitasjonen.
+
+### Hvem får varsel?
+
+Kun jobbsøkere som:
+
+- Har **svart ja** til invitasjonen
+
+Jobbsøkere som kun er invitert (ikke svart) eller har svart nei, får **ikke** varsel om avlysning.
+
+### Innhold i meldingen
+
+Varselet inneholder:
+
+- Informasjon om at treffet er avlyst
+- Lenke til oppdatert informasjon på MinSide
+
+### Mal som brukes
+
+**KANDIDAT_INVITERT_TREFF_AVLYST** (ny mal)
+
+**SMS-tekst:**
+
+```
+Hei! Treffet du hadde takket ja til er dessverre avlyst. Logg inn på Nav for mer informasjon. Vennlig hilsen Nav
+```
+
+### Flyt: Avlysning
+
+```mermaid
+sequenceDiagram
+    participant FE as rekrutteringsbistand-frontend
+    participant API as rekrutteringstreff-api<br/>(RekrutteringstreffController)
+    participant DB as Database<br/>(jobbsoker_hendelse)
+    participant Scheduler as AktivitetskortJobbsøkerScheduler
+    participant KV as kandidatvarsel-api<br/>(RekrutteringstreffAvlysningLytter)
+    participant MS as MinSide<br/>(SMS/Epost/MinSide)
+
+    FE->>FE: Markedskontakt avlyser treff
+    FE->>API: PUT /rekrutteringstreff/:id/avlys
+    API->>DB: Lagre AVLYST-hendelse på treff
+    API->>DB: Lagre SVART_JA_TREFF_AVLYST<br/>for jobbsøkere som har svart ja
+    API->>DB: Lagre IKKE_SVART_TREFF_AVLYST<br/>for inviterte som ikke har svart
+
+    Note over Scheduler,MS: Ny funksjonalitet: Varsling
+
+    loop Hvert 10. sekund
+        Scheduler->>DB: Hent usendte SVART_JA_TREFF_AVLYST-hendelser
+        DB-->>Scheduler: Liste med hendelser
+        Scheduler-->>KV: Publiser "rekrutteringstreffavlysning"
+        Scheduler->>DB: Marker som sendt
+    end
+
+    KV->>KV: Opprett varsel med mal<br/>KANDIDAT_INVITERT_TREFF_AVLYST
+    KV-->>MS: Send varselbestilling via Kafka
+
+    MS->>MS: Hent kontaktinfo fra KRR
+    alt Telefon finnes
+        MS-->>Jobbsøker: Send SMS
+    else Epost finnes
+        MS-->>Jobbsøker: Send e-post
+    else Ingen kontaktinfo
+        MS-->>MS: Lagre på MinSide
+    end
+
+    MS-->>KV: Publiser varselstatus via Kafka
+    KV->>KV: Filter: Kun SENDT eller FEILET publiseres
+
+    alt Status er SENDT eller FEILET
+        KV-->>API: Publiser "minsideVarselSvar"
+        API->>DB: Lagre MOTTATT_SVAR_FRA_MINSIDE<br/>(MinsideVarselSvarLytter)
     end
 ```
 
