@@ -275,7 +275,7 @@ Inneholder `flettedata` – hvilke felter som er endret og skal nevnes i SMS.
 }
 ```
 
-#### rekrutteringstreffSvarOgStatus for avlysning (Løp 3)
+#### Event: `rekrutteringstreffSvarOgStatus` – brukes for avlysning (Løp 3)
 
 Gjenbruker samme event som aktivitetskort-oppdatering. Kandidatvarsel-api lytter kun når `svar=true` og `treffstatus=avlyst`.
 
@@ -292,7 +292,7 @@ Gjenbruker samme event som aktivitetskort-oppdatering. Kandidatvarsel-api lytter
 }
 ```
 
-> **Merk:** `hendelseId` er kun inkludert når `treffstatus=avlyst` for å støtte idempotens i varsling.
+> **Merk:** `hendelseId` er inkludert for alle oppdateringer der `svar=true` og `treffstatus` er satt (f.eks. `avlyst`, `fullført`), for å støtte idempotens i varsling.
 
 #### minsideVarselSvar (tilbakemelding fra alle løp)
 

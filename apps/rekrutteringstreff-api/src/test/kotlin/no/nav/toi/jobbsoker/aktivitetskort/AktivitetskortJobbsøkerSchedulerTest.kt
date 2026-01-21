@@ -616,7 +616,6 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
         assertThat(melding["svar"].asBoolean()).isTrue
         assertThat(melding["treffstatus"].asText()).isEqualTo("avlyst")
-        // hendelseId er med så kandidatvarsel-api kan bruke den for idempotens
         assertThat(melding.has("hendelseId")).isTrue
 
         val usendteEtterpaa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
