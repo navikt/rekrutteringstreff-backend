@@ -62,7 +62,7 @@ class AktivitetskortTest {
         localPostgres.close()
     }
 
-    /*@Test  // TODO legg inn igjen denne testen etter duplikatfeiltesten er gjennomført
+    @Test  // TODO legg inn igjen denne testen etter duplikatfeiltesten er gjennomført
     fun `bestill aktivitetskort`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         val expectedFnr = "12345678910"
@@ -72,7 +72,6 @@ class AktivitetskortTest {
         val expectedStartDato = LocalDate.now().plusDays(1)
         val expectedSluttDato = LocalDate.now().plusDays(2)
         val expectedEndretAv = "testuser"
-        val expectedEndretTidspunkt = ZonedDateTime.now()
         val expectedGateAdresse = "Test Sted"
         val expectedPostnummer = "1234"
         val expectedPoststed = "Test Poststed"
@@ -86,13 +85,12 @@ class AktivitetskortTest {
             sluttDato = expectedSluttDato,
             tid = expectedTid,
             endretAv = expectedEndretAv,
-            endretTidspunkt = expectedEndretTidspunkt,
             gateAdresse = expectedGateAdresse,
             postnummer = expectedPostnummer,
             poststed = expectedPoststed
         )
 
-        AktivitetskortJobb(repository, producer, {_,_->}).run()
+        AktivitetskortJobb(repository, producer).run()
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
         record.value().let (objectMapper::readTree).apply {
@@ -108,8 +106,6 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["sluttDato"].asText()).isEqualTo(expectedSluttDato.toString())
             assertThat(this["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(expectedBeskrivelse)
             assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedEndretAv)
-            assertThat(this["aktivitetskort"]["endretTidspunkt"].asText().let(ZonedDateTime::parse))
-                .isCloseTo(expectedEndretTidspunkt, within (1, ChronoUnit.SECONDS))
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
             val expectedDetaljer = objectMapper.readTree("""[{"label":"Sted","verdi":"$expectedGateAdresse, $expectedPostnummer $expectedPoststed"},{"label":"Tid","verdi":"$expectedTid"}]""")
@@ -139,17 +135,16 @@ class AktivitetskortTest {
             sluttDato = LocalDate.now().plusDays(2),
             tid = "Whatever",
             endretAv = "testuser",
-            endretTidspunkt = ZonedDateTime.now(),
             gateAdresse = "Test Sted",
             postnummer = "1234",
             poststed = "Test Poststed"
         )
 
-        AktivitetskortJobb(repository, producer,{_,_->}).run()
-        AktivitetskortJobb(repository, producer,{_,_->}).run()
+        AktivitetskortJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer).run()
 
         assertThat(producer.history()).hasSize(1)
-    }*/
+    }
 
     @Test
     fun `AktivitetsJobb skal ikke feile ved tom database`() {
