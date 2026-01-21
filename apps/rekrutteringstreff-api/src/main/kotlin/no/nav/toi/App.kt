@@ -24,6 +24,9 @@ import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
+import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -89,13 +92,14 @@ class App(
 
     private lateinit var javalin: Javalin
     private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
+    private lateinit var synlighetsBehovScheduler: SynlighetsBehovScheduler
     private val secureLog = SecureLog(log)
 
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         startJavalin(jobbsøkerRepository)
-        startSchedulere()
+        startSchedulere(jobbsøkerService)
         startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
@@ -238,8 +242,8 @@ class App(
         javalin.start(port)
     }
 
-    private fun startSchedulere() {
-        log.info("Starting scheduler")
+    private fun startSchedulere(jobbsøkerService: JobbsøkerService) {
+        log.info("Starting schedulers")
 
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
@@ -252,12 +256,20 @@ class App(
             objectMapper = JacksonConfig.mapper
         )
         aktivitetskortJobbsøkerScheduler.start()
+
+        synlighetsBehovScheduler = SynlighetsBehovScheduler(
+            jobbsøkerService = jobbsøkerService,
+            rapidsConnection = rapidsConnection
+        )
+        synlighetsBehovScheduler.start()
     }
 
     fun startRR(jobbsøkerService: JobbsøkerService) {
         log.info("Starting RapidsConnection")
         AktivitetskortFeilLytter(rapidsConnection, jobbsøkerService)
         MinsideVarselSvarLytter(rapidsConnection, jobbsøkerService, JacksonConfig.mapper)
+        SynlighetsLytter(rapidsConnection, jobbsøkerService)
+        SynlighetsBehovLytter(rapidsConnection, jobbsøkerService)
         Thread {
             try {
                 rapidsConnection.start()
@@ -271,6 +283,7 @@ class App(
     fun close() {
         log.info("Shutting down application")
         if (::aktivitetskortJobbsøkerScheduler.isInitialized) aktivitetskortJobbsøkerScheduler.stop()
+        if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")

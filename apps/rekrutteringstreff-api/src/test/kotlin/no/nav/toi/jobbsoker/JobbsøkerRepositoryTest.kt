@@ -375,6 +375,131 @@ class JobbsøkerRepositoryTest {
         val alleJobbsøkereEtterSletting = repository.hentJobbsøkere(treffId)
         assertThat(alleJobbsøkereEtterSletting).hasSize(0)
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Synlighets-tester
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `hentJobbsøkere skal filtrere ut ikke-synlige jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+
+        db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "testperson")
+
+        // Hent begge for å få personTreffId, og sett synlighet
+        val alleJobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(alleJobbsøkere).hasSize(2)
+
+        val ikkeSynligId = alleJobbsøkere.find { it.fødselsnummer.asString == "22222222222" }!!.personTreffId
+        db.settSynlighet(ikkeSynligId, false)
+
+        // Hent igjen - skal nå bare returnere synlig jobbsøker
+        val synligeJobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(synligeJobbsøkere).hasSize(1)
+        assertThat(synligeJobbsøkere.first().fødselsnummer.asString).isEqualTo("11111111111")
+    }
+
+    @Test
+    fun `hentAntallJobbsøkere skal ikke telle ikke-synlige jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+
+        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("En"), Etternavn("Person"), null, null, null)
+        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("To"), Etternavn("Person"), null, null, null)
+        val jobbsøker3 = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Tre"), Etternavn("Person"), null, null, null)
+
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker1, jobbsøker2, jobbsøker3), treffId, "testperson")
+
+        // Verifiser at alle 3 telles
+        assertThat(repository.hentAntallJobbsøkere(treffId)).isEqualTo(3)
+
+        // Sett én som ikke-synlig
+        db.settSynlighet(personTreffIder[1], false)
+
+        // Verifiser at bare 2 telles
+        assertThat(repository.hentAntallJobbsøkere(treffId)).isEqualTo(2)
+    }
+
+    @Test
+    fun `hentJobbsøkerHendelser skal filtrere ut hendelser for ikke-synlige jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+
+        val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
+        val ikkeSynligJobbsøker = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("IkkeSynlig"), Etternavn("Person"), null, null, null)
+
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(synligJobbsøker, ikkeSynligJobbsøker), treffId, "testperson")
+
+        // Begge har OPPRETTET-hendelse, så vi forventer 2 hendelser
+        val alleHendelser = repository.hentJobbsøkerHendelser(treffId)
+        assertThat(alleHendelser).hasSize(2)
+
+        // Sett én som ikke-synlig
+        db.settSynlighet(personTreffIder[1], false)
+
+        // Verifiser at bare hendelser for synlig jobbsøker returneres
+        val synligeHendelser = repository.hentJobbsøkerHendelser(treffId)
+        assertThat(synligeHendelser).hasSize(1)
+        assertThat(synligeHendelser.first().fødselsnummer.asString).isEqualTo("11111111111")
+    }
+
+    @Test
+    fun `hentJobbsøker skal returnere null for ikke-synlig jobbsøker`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = Fødselsnummer("12345678901")
+        val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
+
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
+
+        // Verifiser at jobbsøker finnes
+        val hentetJobbsøker = repository.hentJobbsøker(treffId, fnr)
+        assertThat(hentetJobbsøker).isNotNull
+
+        // Sett som ikke-synlig
+        db.settSynlighet(personTreffIder[0], false)
+
+        // Verifiser at jobbsøker ikke returneres
+        val ikkeSynligJobbsøker = repository.hentJobbsøker(treffId, fnr)
+        assertThat(ikkeSynligJobbsøker).isNull()
+    }
+
+    @Test
+    fun `hentJobbsøkerTellinger returnerer gjensidig utelukkende tellinger`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+
+        // Lag 4 jobbsøkere
+        val jobbsøkere = listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Synlig2"), Etternavn("Person"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Skjult"), Etternavn("Person"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Slettet"), Etternavn("Person"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("55555555555"), Fornavn("SlettetOgSkjult"), Etternavn("Person"), null, null, null)
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId, "testperson")
+
+        // Sett én som skjult (ikke slettet)
+        db.settSynlighet(personTreffIder[2], false)
+
+        // Slett én (synlig)
+        db.settJobbsøkerStatus(personTreffIder[3], JobbsøkerStatus.SLETTET)
+
+        // Slett og skjul én (skal telles som slettet, ikke skjult)
+        db.settSynlighet(personTreffIder[4], false)
+        db.settJobbsøkerStatus(personTreffIder[4], JobbsøkerStatus.SLETTET)
+
+        // Hent tellinger
+        val tellinger = repository.hentJobbsøkerTellinger(treffId)
+
+        // Verifiser gjensidig utelukkende kategorier
+        assertThat(tellinger.antallSkjulte).isEqualTo(1)  // Bare "Skjult" (ikke slettet)
+        assertThat(tellinger.antallSlettede).isEqualTo(2)  // "Slettet" og "SlettetOgSkjult"
+
+        // Verifiser at synlige jobbsøkere er korrekt
+        val synligeJobbsøkere = repository.hentJobbsøkere(treffId)
+        assertThat(synligeJobbsøkere).hasSize(2)  // "Synlig1" og "Synlig2"
+
+        // Invariant: synlige + skjulte + slettede = totalt (5)
+        assertThat(synligeJobbsøkere.size + tellinger.antallSkjulte + tellinger.antallSlettede).isEqualTo(5)
+    }
 }
-
-

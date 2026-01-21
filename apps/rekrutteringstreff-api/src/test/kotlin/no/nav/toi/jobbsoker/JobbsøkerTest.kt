@@ -14,7 +14,7 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
-import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
+import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -228,16 +228,16 @@ class JobbsøkerTest {
         eierRepository.leggTil(treffId2, listOf("A123456"))
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker")
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
-                override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
-                    return mapper.readValue(content, mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java))
+            .responseObject(object : ResponseDeserializable<JobbsøkereOutboundDto> {
+                override fun deserialize(content: String): JobbsøkereOutboundDto {
+                    return mapper.readValue(content, JobbsøkereOutboundDto::class.java)
                 }
             })
         assertStatuscodeEquals(HTTP_OK, response, result)
         when (result) {
             is Failure -> throw result.error
             is Success -> {
-                val actualJobbsøkere = result.value
+                val actualJobbsøkere = result.value.jobbsøkere
                 assertThat(actualJobbsøkere.size).isEqualTo(2)
                 actualJobbsøkere.forEach { jobbsøker ->
                     assertThatCode { UUID.fromString(jobbsøker.personTreffId) }.doesNotThrowAnyException()
@@ -279,16 +279,16 @@ class JobbsøkerTest {
         assertStatuscodeEquals(HTTP_CREATED, postResponse, postResult)
         val (_, getResponse, getResult) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
-                override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
-                    return mapper.readValue(content, mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java))
+            .responseObject(object : ResponseDeserializable<JobbsøkereOutboundDto> {
+                override fun deserialize(content: String): JobbsøkereOutboundDto {
+                    return mapper.readValue(content, JobbsøkereOutboundDto::class.java)
                 }
             })
         assertStatuscodeEquals(HTTP_OK, getResponse, getResult)
         when (getResult) {
             is Failure -> throw getResult.error
             is Success -> {
-                val actualJobbsøkere = getResult.value
+                val actualJobbsøkere = getResult.value.jobbsøkere
                 assertThat(actualJobbsøkere.size).isEqualTo(1)
                 val jobbsoeker = actualJobbsøkere.first()
                 assertThatCode { UUID.fromString(jobbsoeker.personTreffId) }.doesNotThrowAnyException()
@@ -445,9 +445,9 @@ class JobbsøkerTest {
         // Hent jobbsøkere via API
         val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
             .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<JobbsøkerOutboundDto>> {
-                override fun deserialize(content: String): List<JobbsøkerOutboundDto> {
-                    return mapper.readValue(content, mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerOutboundDto::class.java))
+            .responseObject(object : ResponseDeserializable<JobbsøkereOutboundDto> {
+                override fun deserialize(content: String): JobbsøkereOutboundDto {
+                    return mapper.readValue(content, JobbsøkereOutboundDto::class.java)
                 }
             })
 
@@ -456,7 +456,7 @@ class JobbsøkerTest {
         when (result) {
             is Failure -> throw result.error
             is Success -> {
-                val jobbsøkere = result.value
+                val jobbsøkere = result.value.jobbsøkere
                 assertThat(jobbsøkere).hasSize(1)
                 val js = jobbsøkere.first()
 
