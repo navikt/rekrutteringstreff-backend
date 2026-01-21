@@ -8,7 +8,6 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
-import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.rekrutteringstreff.HendelseRessurs
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -292,7 +291,7 @@ class SynlighetsKomponentTest {
         jobbsøkerService.markerSlettet(personTreffIder[1], treffId, "A123456")
         
         // Endre synlighet til false for én av dem (simulerer synlighetsmotor-event)
-        jobbsøkerService.oppdaterSynlighetFraEvent(fnr1.asString, false, java.time.Instant.now())
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr1.asString, false, Instant.now())
         
         val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
         

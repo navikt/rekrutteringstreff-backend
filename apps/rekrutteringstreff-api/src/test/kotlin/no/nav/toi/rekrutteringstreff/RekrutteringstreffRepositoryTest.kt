@@ -1,7 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
-import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
