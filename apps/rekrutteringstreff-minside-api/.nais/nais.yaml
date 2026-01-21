@@ -22,8 +22,6 @@ spec:
   replicas:
     min: {{ min_replicas }}
     max: {{ max_replicas }}
-  secureLogs:
-    enabled: true
   resources:
     limits:
       cpu: 3000m
@@ -38,6 +36,8 @@ spec:
     outbound:
       rules:
         - application: rekrutteringstreff-api
+        - application: logging
+          namespace: nais-system
   tokenx:
     enabled: true
   env:
