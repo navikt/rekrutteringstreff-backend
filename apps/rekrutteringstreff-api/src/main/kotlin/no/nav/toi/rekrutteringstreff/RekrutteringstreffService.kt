@@ -108,19 +108,17 @@ class RekrutteringstreffService(
 
     fun hentAlleRekrutteringstreff(): List<RekrutteringstreffDto> {
         val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleSomIkkeErSlettet()
-        val rekrutteringstreffDto: ArrayList<RekrutteringstreffDto> = ArrayList<RekrutteringstreffDto>()
-        alleRekrutteringstreff.forEach {
-            val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(it.id)
-            val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(it.id)
-            rekrutteringstreffDto.add(it.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere))
-        }
-        return rekrutteringstreffDto
+        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreff)
     }
 
     fun hentAlleRekrutteringstreffForEttKontor(kontorId: String): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleForEttKontorSomIkkeErSlettet(kontorId)
+        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentAlleForEttKontorSomIkkeErSlettet(kontorId)
+        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontor)
+    }
+
+    private fun tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(rekrutteringstreffListe: List<Rekrutteringstreff>): List<RekrutteringstreffDto> {
         val rekrutteringstreffDto: ArrayList<RekrutteringstreffDto> = ArrayList<RekrutteringstreffDto>()
-        alleRekrutteringstreff.forEach {
+        rekrutteringstreffListe.forEach {
             val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(it.id)
             val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(it.id)
             rekrutteringstreffDto.add(it.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere))
