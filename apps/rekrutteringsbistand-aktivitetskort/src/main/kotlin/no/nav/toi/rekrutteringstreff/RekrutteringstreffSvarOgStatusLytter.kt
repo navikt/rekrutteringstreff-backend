@@ -9,7 +9,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.Repository
-import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.SecureLog
 import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.log
@@ -25,6 +25,7 @@ class RekrutteringstreffSvarOgStatusLytter(
     rapidsConnection: RapidsConnection,
     private val repository: Repository
 ) : River.PacketListener {
+    private val secureLog = SecureLog(log)
 
     init {
         River(rapidsConnection).apply {
@@ -55,7 +56,7 @@ class RekrutteringstreffSvarOgStatusLytter(
 
         if (aktivitetskortId == null) {
             log.error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId (se secure log)")
-            secure(log).error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr")
+            secureLog.error("Fant ikke aktivitetskort for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr")
             return
         }
 
@@ -65,7 +66,7 @@ class RekrutteringstreffSvarOgStatusLytter(
         val aktivitetsStatus = beregnAktivitetsStatus(svar, treffstatus, rekrutteringstreffId, fnr) ?: return
 
         val endretAvPersonbruker = packet["endretAvPersonbruker"].asBoolean()
-        secure(log).info("Oppdaterer aktivitetsstatus for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr til $aktivitetsStatus (svar=$svar, treffstatus=$treffstatus)")
+        secureLog.info("Oppdaterer aktivitetsstatus for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr til $aktivitetsStatus (svar=$svar, treffstatus=$treffstatus)")
 
         repository.oppdaterAktivitetsstatus(
             aktivitetskortId = aktivitetskortId,
@@ -87,7 +88,7 @@ class RekrutteringstreffSvarOgStatusLytter(
             svar == SVART_JA && treffstatus == TREFFSTATUS_UENDRET -> AktivitetsStatus.GJENNOMFORES
             svar == SVART_JA -> {
                 log.error("Ukjent treffstatus '$treffstatus' for bruker som har svart ja, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
-                secure(log).error("Ukjent treffstatus '$treffstatus' for bruker som har svart ja, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
+                secureLog.error("Ukjent treffstatus '$treffstatus' for bruker som har svart ja, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
                 null
             }
 
@@ -97,12 +98,12 @@ class RekrutteringstreffSvarOgStatusLytter(
             svar == IKKE_SVART && treffstatus == TREFFSTATUS_AVLYST -> AktivitetsStatus.AVBRUTT
             svar == IKKE_SVART && treffstatus != TREFFSTATUS_UENDRET -> {
                 log.error("Ukjent treffstatus '$treffstatus' for bruker som ikke har svart, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
-                secure(log).error("Ukjent treffstatus '$treffstatus' for bruker som ikke har svart, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
+                secureLog.error("Ukjent treffstatus '$treffstatus' for bruker som ikke har svart, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
                 null
             }
             else -> {
                 log.error("Melding mangler både svar og treffstatus, rekrutteringstreffId=$rekrutteringstreffId (se secure log)")
-                secure(log).error("Melding mangler både svar og treffstatus, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
+                secureLog.error("Melding mangler både svar og treffstatus, rekrutteringstreffId=$rekrutteringstreffId, fnr=$fnr. Hopper over oppdatering.")
                 null
             }
         }
@@ -114,7 +115,7 @@ class RekrutteringstreffSvarOgStatusLytter(
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av rekrutteringstreffSvarOgStatus: $problems")
-        secure(log).error("Feil ved behandling av rekrutteringstreffSvarOgStatus: ${problems.toExtendedReport()}")
+        secureLog.error("Feil ved behandling av rekrutteringstreffSvarOgStatus: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }

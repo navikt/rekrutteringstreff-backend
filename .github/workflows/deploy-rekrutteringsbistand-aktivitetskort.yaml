@@ -13,7 +13,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/parametisert-endringsmelding-minside
+      deploy_dev_branch: refs/heads/fiks_securelog
     secrets: inherit
     permissions:
       contents: read

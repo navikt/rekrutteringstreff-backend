@@ -9,11 +9,12 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.Repository
-import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.SecureLog
 import no.nav.toi.log
 
 class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, private val repository: Repository) :
     River.PacketListener {
+    private val secureLog = SecureLog(log)
 
     init {
         River(rapidsConnection).apply {
@@ -31,7 +32,6 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
 
         }.register(this)
     }
-
 
     override fun onPacket(
         packet: JsonMessage,
@@ -70,7 +70,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av rekrutteringstreffinvitasjon: $problems")
-        secure(log).error("Feil ved behandling av rekrutteringstreffinvitasjon: ${problems.toExtendedReport()}")
+        secureLog.error("Feil ved behandling av rekrutteringstreffinvitasjon: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }
