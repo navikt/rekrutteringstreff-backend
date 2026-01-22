@@ -168,7 +168,6 @@ class RekrutteringstreffController(
        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
        val kontorId = ctx.authenticatedUser().extractKontorId()
        if (kontorId.isNullOrEmpty() && ctx.authenticatedUser().erUtvikler()) {
-           log.info("Henter alle rekrutteringstreff for kontor $kontorId")
            log.info("Utvikler som ikke har valgt et kontor - henter alle rekrutteringstreff")
            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
        }
