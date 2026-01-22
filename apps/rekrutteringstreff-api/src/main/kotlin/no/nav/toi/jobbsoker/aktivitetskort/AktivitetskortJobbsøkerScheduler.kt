@@ -125,8 +125,12 @@ class AktivitetskortJobbsøkerScheduler(
     private fun behandleSvar(hendelse: JobbsøkerHendelseForAktivitetskort, svar: Boolean) {
         val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
-        treff.aktivitetskortSvarOgStatusFor(fnr = hendelse.fnr, svar = svar, endretAvPersonbruker = true)
-            .publiserTilRapids(rapidsConnection)
+        treff.aktivitetskortSvarOgStatusFor(
+            fnr = hendelse.fnr,
+            hendelseId = hendelse.hendelseId,
+            endretAvPersonbruker = true,
+            svar = svar,
+        ).publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
     }
@@ -168,14 +172,13 @@ class AktivitetskortJobbsøkerScheduler(
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
-        // Send aktivitetskort-oppdatering (svar og status) - kandidatvarsel-api lytter også på denne for avlysning
         treff.aktivitetskortSvarOgStatusFor(
             fnr = hendelse.fnr,
+            hendelseId = hendelse.hendelseId,
+            endretAvPersonbruker = false,
             svar = true,
             treffstatus = treffstatus,
-            endretAvPersonbruker = false,
             endretAv = hendelse.fnr,
-            hendelseId = hendelse.hendelseId
         ).publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
@@ -185,8 +188,12 @@ class AktivitetskortJobbsøkerScheduler(
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
-        treff.aktivitetskortSvarOgStatusFor(fnr = hendelse.fnr, treffstatus = treffstatus, endretAvPersonbruker = false)
-            .publiserTilRapids(rapidsConnection)
+        treff.aktivitetskortSvarOgStatusFor(
+            fnr = hendelse.fnr,
+            hendelseId = hendelse.hendelseId,
+            endretAvPersonbruker = false,
+            treffstatus = treffstatus,
+        ).publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
     }

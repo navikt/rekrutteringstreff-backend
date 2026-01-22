@@ -10,9 +10,9 @@ class RekrutteringstreffSvarOgStatus(
     private val rekrutteringstreffId: TreffId,
     private val endretAv: String,
     private val endretAvPersonbruker: Boolean,
-    private val svar: Boolean?,
-    private val treffstatus: String?,
-    private val hendelseId: UUID? = null,
+    private val hendelseId: UUID,
+    private val svar: Boolean? = null,
+    private val treffstatus: String? = null,
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
         val messageMap = mutableMapOf<String, Any>(
@@ -20,11 +20,11 @@ class RekrutteringstreffSvarOgStatus(
             "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
             "endretAv" to endretAv,
             "endretAvPersonbruker" to endretAvPersonbruker,
+            "hendelseId" to hendelseId,
         )
 
         svar?.let { messageMap["svar"] = it }
         treffstatus?.let { messageMap["treffstatus"] = it }
-        hendelseId?.let { messageMap["hendelseId"] = it }
 
         val message = JsonMessage.newMessage(
             eventName = "rekrutteringstreffSvarOgStatus",

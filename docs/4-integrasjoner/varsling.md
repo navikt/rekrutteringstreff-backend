@@ -164,6 +164,12 @@ Kjører hvert 10. sekund og:
 
 Kun synlige jobbsøkere (`er_synlig = TRUE`) får varsler.
 
+### hendelseId og idempotens
+
+Alle hendelser som sendes til kandidatvarsel-api via Rapids inneholder en unik `hendelseId` (generert i rekrutteringstreff-api). Kandidatvarsel-api bruker denne verdien som `varselId` i sin database.
+
+Normalt genererer kandidatvarsel-api sin egen `varselId` (UUID), men ved å sende inn `hendelseId` overstyrer vi dette. Før varsel opprettes sjekker kandidatvarsel-api om `varselId` allerede finnes i databasen – hvis den finnes, opprettes ikke nytt varsel. Dette beskytter mot at jobbsøkere får samme SMS/e-post flere ganger ved f.eks. nettverksfeil eller retry fra Kafka.
+
 ### Flettedata og hendelse_data
 
 Løsningen bruker to måter å overføre tilleggsinformasjon på, avhengig av behov:
@@ -275,9 +281,9 @@ Inneholder `flettedata` – hvilke felter som er endret og skal nevnes i SMS.
 }
 ```
 
-#### Event: `rekrutteringstreffSvarOgStatus` – brukes for avlysning (Løp 3)
+#### Event: `rekrutteringstreffSvarOgStatus` – brukes for svar og statusendringer
 
-Gjenbruker samme event som aktivitetskort-oppdatering. Kandidatvarsel-api lytter kun når `svar=true` og `treffstatus=avlyst`.
+Brukes til alle svar (ja/nei) og statusendringer (avlyst/fullført). Kandidatvarsel-api lytter på denne for avlysningsvarsler (filtrerer på `svar=true` og `treffstatus=avlyst`).
 
 ```json
 {
@@ -292,7 +298,7 @@ Gjenbruker samme event som aktivitetskort-oppdatering. Kandidatvarsel-api lytter
 }
 ```
 
-> **Merk:** `hendelseId` er inkludert for alle oppdateringer der `svar=true` og `treffstatus` er satt (f.eks. `avlyst`, `fullført`), for å støtte idempotens i varsling.
+> **Merk:** Kandidatvarsel-api lytter kun på hendelser der `svar=true` og `treffstatus=avlyst`.
 
 #### minsideVarselSvar (tilbakemelding fra alle løp)
 
