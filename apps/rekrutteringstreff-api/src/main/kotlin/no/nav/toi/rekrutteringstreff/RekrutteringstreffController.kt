@@ -25,7 +25,7 @@ class RekrutteringstreffController(
     companion object {
         private const val pathParamTreffId = "id"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
-        private const val endepunktRekrutteringstreffMittKontor = "/api/rekrutteringstreff/mittkontor"
+        private const val endepunktRekrutteringstreffMittKontor = "$endepunktRekrutteringstreff/mittkontor"
         private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/hendelser"
         private const val publiserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/publiser"
         private const val gjenapnPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/gjenapn"
@@ -168,12 +168,12 @@ class RekrutteringstreffController(
        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
        val kontorId = ctx.authenticatedUser().extractKontorId()
        if (kontorId.isNullOrEmpty() && ctx.authenticatedUser().erUtvikler()) {
-        log.info("Henter alle rekrutteringstreff for kontor $kontorId")
-            log.info("Utvikler som ikke har valgt et kontor - henter alle rekrutteringstreff")
-            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
+           log.info("Henter alle rekrutteringstreff for kontor $kontorId")
+           log.info("Utvikler som ikke har valgt et kontor - henter alle rekrutteringstreff")
+           ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
        }
-       if (kontorId.isNullOrEmpty())  {
-            throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
+       if (kontorId.isNullOrEmpty()) {
+           throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
        }
        log.info("Henter alle rekrutteringstreff for kontor $kontorId")
        ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor(kontorId))

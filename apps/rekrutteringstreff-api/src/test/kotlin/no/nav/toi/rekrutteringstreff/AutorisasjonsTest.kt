@@ -137,6 +137,7 @@ private class AutorisasjonsTest {
 
         )}),
         HentAlleRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff" }, {HttpRequest.newBuilder().GET()}),
+        HentAlleRekrutteringstreffForMittKontor({ "http://localhost:$appPort/api/rekrutteringstreff/mittkontor" }, {HttpRequest.newBuilder().GET()}),
         HentRekrutteringstreff(
             { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" },
             {HttpRequest.newBuilder().GET()}
@@ -192,6 +193,11 @@ private class AutorisasjonsTest {
         Arguments.of(Endepunkt.HentAlleRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_OK),
         Arguments.of(Endepunkt.HentAlleRekrutteringstreff, Gruppe.Jobbsøkerrettet, HTTP_OK),
         Arguments.of(Endepunkt.HentAlleRekrutteringstreff, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+
+        Arguments.of(Endepunkt.HentAlleRekrutteringstreffForMittKontor, Gruppe.Utvikler, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleRekrutteringstreffForMittKontor, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleRekrutteringstreffForMittKontor, Gruppe.Jobbsøkerrettet, HTTP_OK),
+        Arguments.of(Endepunkt.HentAlleRekrutteringstreffForMittKontor, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.HentRekrutteringstreff, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.HentRekrutteringstreff, Gruppe.Arbeidsgiverrettet, HTTP_OK),
