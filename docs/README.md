@@ -42,6 +42,10 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 - [Utvidbarhet](6-kvalitet/utvidbarhet.md) - Planlagte utvidelser og arkitekturprinsipper
 - [Vedlikeholdbarhet](6-kvalitet/vedlikeholdbarhet.md) - Design for vedlikehold
 
+### 7. [Manuelle akseptansetester](7-manuelle-akseptansetester/)
+
+- [Akseptansetester](7-manuelle-akseptansetester/akseptansetester.md) - Manuelle tester for domeneeksperter før pilot/prodsetting
+
 ## Applikasjoner i monorepoet
 
 | Applikasjon                           | Beskrivelse                                                     |
