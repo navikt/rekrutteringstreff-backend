@@ -1,9 +1,7 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.executeInTransaction
 import java.sql.Connection
-import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.ZonedDateTime
 import java.util.UUID

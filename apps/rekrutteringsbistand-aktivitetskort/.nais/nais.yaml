@@ -24,8 +24,6 @@ spec:
   replicas:
     min: {{ min_replicas }}
     max: {{ max_replicas }}
-  secureLogs:
-    enabled: true
   resources:
     limits:
       cpu: 3000m
@@ -42,6 +40,11 @@ spec:
         diskAutoresize: {{ gcp_disk_autoresize }}
         databases:
           - name: aktivitetskort-db
+  accessPolicy:
+    outbound:
+      rules:
+        - application: logging
+          namespace: nais-system
   env:
     - name: KAFKA_RAPID_TOPIC
       value: toi.rapid-1
