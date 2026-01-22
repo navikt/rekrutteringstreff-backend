@@ -113,6 +113,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isTrue
         assertThat(melding["svar"].asBoolean()).isTrue
+        assertThat(melding.has("hendelseId")).isTrue
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
         assertThat(usendteEtterpå).isEmpty()
@@ -137,6 +138,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(melding["endretAv"].asText()).isEqualTo(expectedFnr.asString)
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isTrue
         assertThat(melding["svar"].asBoolean()).isFalse
+        assertThat(melding.has("hendelseId")).isTrue
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
         assertThat(usendteEtterpå).isEmpty()
@@ -595,7 +597,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
 
     @Test
-    fun `skal sende avlyst-status paa rapid og markere dem som pollet`() {
+    fun `skal sende avlyst-status med hendelseId for jobbsøker som har svart ja`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
         val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, rapid, mapper)
@@ -607,7 +609,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         rekrutteringstreffService.avlys(treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
-        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status
+        assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + avlyst-status
         val melding = rapid.inspektør.message(2)
         assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
         assertThat(melding["fnr"].asText()).isEqualTo(expectedFnr.asString)
@@ -616,6 +618,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
         assertThat(melding["svar"].asBoolean()).isTrue
         assertThat(melding["treffstatus"].asText()).isEqualTo("avlyst")
+        assertThat(melding.has("hendelseId")).isTrue
 
         val usendteEtterpaa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
         assertThat(usendteEtterpaa).isEmpty()
@@ -645,6 +648,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
         assertThat(melding["svar"].asBoolean()).isTrue
         assertThat(melding["treffstatus"].asText()).isEqualTo("fullført")
+        assertThat(melding.has("hendelseId")).isTrue
 
         val usendteEtterpaa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
         assertThat(usendteEtterpaa).isEmpty()
@@ -767,7 +771,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
     }
 
     @Test
-    fun `skal sende avbrutt-status for jobbsøker med kun INVITERT når treff avlyses`() {
+    fun `skal sende avlyst-status til alle jobbsøkere med hendelseId`() {
         val fnrSvartJa = Fødselsnummer("12345678901")
         val fnrIkkeSvart = Fødselsnummer("12345678902")
         val rapid = TestRapid()
@@ -788,7 +792,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         rekrutteringstreffService.avlys(treffId, fnrSvartJa.asString)
         scheduler.behandleJobbsøkerHendelser()
 
-        // Verifiser at begge personer får avbrutt-status
+        // 5 meldinger: invitasjon (fnr1) + svar (fnr1) + invitasjon (fnr2) + status (fnr1) + status (fnr2)
         assertThat(rapid.inspektør.size).isEqualTo(5)
 
         val hendelserForSvartJa = (0 until rapid.inspektør.size)
@@ -799,13 +803,18 @@ class AktivitetskortJobbsøkerSchedulerTest {
             .map { rapid.inspektør.message(it) }
             .filter { it["fnr"].asText() == fnrIkkeSvart.asString }
 
-        // Person som svarte ja skal få avlyst-status
-        assertThat(hendelserForSvartJa.last()["treffstatus"].asText()).isEqualTo("avlyst")
+        // Person som svarte ja skal få avlyst-status med hendelseId
+        val svarOgStatusMeldingForSvartJa = hendelserForSvartJa.find { it["@event_name"].asText() == "rekrutteringstreffSvarOgStatus" && it.has("treffstatus") }
+        assertThat(svarOgStatusMeldingForSvartJa!!["treffstatus"].asText()).isEqualTo("avlyst")
+        assertThat(svarOgStatusMeldingForSvartJa["svar"].asBoolean()).isTrue
+        assertThat(svarOgStatusMeldingForSvartJa.has("hendelseId")).isTrue
 
-        // Person som ikke svarte skal få rekrutteringstreffSvarOgStatus med avlyst treffstatus
-        assertThat(hendelserForIkkeSvart.last()["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
-        assertThat(hendelserForIkkeSvart.last().has("svar")).isFalse
-        assertThat(hendelserForIkkeSvart.last()["treffstatus"].asText()).isEqualTo("avlyst")
+        // Person som ikke svarte skal også få avlyst-status med hendelseId
+        val statusMeldingForIkkeSvart = hendelserForIkkeSvart.last()
+        assertThat(statusMeldingForIkkeSvart["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(statusMeldingForIkkeSvart.has("svar")).isFalse
+        assertThat(statusMeldingForIkkeSvart["treffstatus"].asText()).isEqualTo("avlyst")
+        assertThat(statusMeldingForIkkeSvart.has("hendelseId")).isTrue
     }
 
     @Test

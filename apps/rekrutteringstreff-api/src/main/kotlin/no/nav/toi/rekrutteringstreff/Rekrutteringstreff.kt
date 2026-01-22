@@ -69,17 +69,19 @@ class Rekrutteringstreff(
     )
     fun aktivitetskortSvarOgStatusFor(
         fnr: String,
+        hendelseId: UUID,
+        endretAvPersonbruker: Boolean,
         svar: Boolean? = null,
         treffstatus: String? = null,
-        endretAvPersonbruker: Boolean,
-        endretAv: String? = null
+        endretAv: String? = null,
     ) = RekrutteringstreffSvarOgStatus(
         fnr = fnr,
         rekrutteringstreffId = id,
         endretAv = endretAv ?: if (endretAvPersonbruker) fnr else opprettetAvPersonNavident,
         endretAvPersonbruker = endretAvPersonbruker,
+        hendelseId = hendelseId,
         svar = svar,
-        treffstatus = treffstatus
+        treffstatus = treffstatus,
     )
 
     fun aktivitetskortOppdateringFor(
