@@ -137,11 +137,11 @@ Evalueringstjeneste som:
 
 ### REST-kommunikasjon
 
-| Fra                            | Til                          | Beskrivelse                                       |
-| ------------------------------ | ---------------------------- | ------------------------------------------------- |
-| rekrutteringsbistand-frontend  | rekrutteringstreff-api       | Veiledere og markedskontakter administrerer treff |
-| rekrutteringstreff-bruker      | rekrutteringstreff-minside-api | Jobbsøkere ser treff og svarer på invitasjoner  |
-| rekrutteringstreff-minside-api | rekrutteringstreff-api       | Videresender jobbsøkerforespørsler med TokenX     |
+| Fra                            | Til                            | Beskrivelse                                       |
+| ------------------------------ | ------------------------------ | ------------------------------------------------- |
+| rekrutteringsbistand-frontend  | rekrutteringstreff-api         | Veiledere og markedskontakter administrerer treff |
+| rekrutteringstreff-bruker      | rekrutteringstreff-minside-api | Jobbsøkere ser treff og svarer på invitasjoner    |
+| rekrutteringstreff-minside-api | rekrutteringstreff-api         | Videresender jobbsøkerforespørsler med TokenX     |
 
 ### Rapids & Rivers (Kafka)
 

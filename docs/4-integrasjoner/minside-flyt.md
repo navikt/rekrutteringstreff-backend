@@ -6,10 +6,10 @@ Jobbsøkere kan se rekrutteringstreff de er invitert til og svare på invitasjon
 
 Jobbsøker kan nå rekrutteringstreff-bruker via to innganger:
 
-| Inngang                    | Beskrivelse                                                                                     |
-| -------------------------- | ----------------------------------------------------------------------------------------------- |
-| **Varsel på MinSide**      | SMS/e-post inneholder lenke. Jobbsøker klikker og kommer til rekrutteringstreff-bruker          |
-| **Aktivitetskort**         | Aktivitetskortet i aktivitetsplanen har lenke til rekrutteringstreff-bruker                     |
+| Inngang               | Beskrivelse                                                                            |
+| --------------------- | -------------------------------------------------------------------------------------- |
+| **Varsel på MinSide** | SMS/e-post inneholder lenke. Jobbsøker klikker og kommer til rekrutteringstreff-bruker |
+| **Aktivitetskort**    | Aktivitetskortet i aktivitetsplanen har lenke til rekrutteringstreff-bruker            |
 
 Begge veier leder til samme visning der jobbsøker kan se treffdetaljer og svare på invitasjonen.
 
@@ -56,15 +56,15 @@ Frontend-applikasjon spesielt laget for jobbsøkere. Viser treffdetaljer og lar 
 
 ### Tilstander i visningen
 
-| Tilstand        | Visning for jobbsøker                                              |
-| --------------- | ------------------------------------------------------------------ |
-| Invitert        | Svarknapper (ja/nei), svarfrist, treffdetaljer                    |
-| Svart ja        | Bekreftelse på påmelding, treffdetaljer                           |
-| Svart nei       | Bekreftelse på avmelding                                           |
-| Ikke invitert   | Info om at treffet har begrenset plass, tips om å kontakte veileder|
-| Treff pågår     | Info om at treffet er i gang                                       |
-| Treff passert   | Info om at treffet er over                                         |
-| Treff avlyst    | Tydelig avlysningsmelding                                          |
+| Tilstand      | Visning for jobbsøker                                               |
+| ------------- | ------------------------------------------------------------------- |
+| Invitert      | Svarknapper (ja/nei), svarfrist, treffdetaljer                      |
+| Svart ja      | Bekreftelse på påmelding, treffdetaljer                             |
+| Svart nei     | Bekreftelse på avmelding                                            |
+| Ikke invitert | Info om at treffet har begrenset plass, tips om å kontakte veileder |
+| Treff pågår   | Info om at treffet er i gang                                        |
+| Treff passert | Info om at treffet er over                                          |
+| Treff avlyst  | Tydelig avlysningsmelding                                           |
 
 ### Teknisk
 
