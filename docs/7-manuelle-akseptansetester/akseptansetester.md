@@ -99,14 +99,13 @@ Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å 
 
 #### CV og jobbprofil
 
-| #    | Test                                       | Forventet resultat |
-| ---- | ------------------------------------------ | ------------------ |
-| 4.5  | Person med aktiv CV                        | Synlig ✅          |
-| 4.6  | Person uten CV                             | Ikke synlig ❌     |
-| 4.7  | Person med slettet CV (meldingstype SLETT) | Ikke synlig ❌     |
-| 4.8  | Person med CV men uten jobbprofil          | Ikke synlig ❌     |
-| 4.9  | Person med opprettJobbprofil               | Synlig ✅          |
-| 4.10 | Person med endreJobbprofil                 | Synlig ✅          |
+| #   | Test                                       | Forventet resultat |
+| --- | ------------------------------------------ | ------------------ |
+| 4.5 | Person med aktiv CV                        | Synlig ✅          |
+| 4.6 | Person uten CV                             | Ikke synlig ❌     |
+| 4.7 | Person med slettet CV (meldingstype SLETT) | Ikke synlig ❌     |
+| 4.8 | Person med CV men uten jobbprofil          | Ikke synlig ❌     |
+| 4.9 | Person med jobbprofil                      | Synlig ✅          |
 
 #### Arbeidssøkerregister (ny regel)
 
