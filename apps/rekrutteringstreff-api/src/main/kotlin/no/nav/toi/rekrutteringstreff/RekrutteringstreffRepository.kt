@@ -142,6 +142,19 @@ class RekrutteringstreffRepository(
             }
         }
 
+    fun hentAlleForEttKontorSomIkkeErSlettet(kontorId: String): List<Rekrutteringstreff> =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT * FROM $tabellnavn where status != ? and $opprettetAvKontorEnhetid = ?").use { s ->
+                s.setString(1, RekrutteringstreffStatus.SLETTET.name)
+                s.setObject(2, kontorId)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+
     fun hent(treff: TreffId): Rekrutteringstreff? =
         dataSource.connection.use { c ->
             c.prepareStatement("SELECT * FROM $tabellnavn WHERE $id = ?").use { s ->

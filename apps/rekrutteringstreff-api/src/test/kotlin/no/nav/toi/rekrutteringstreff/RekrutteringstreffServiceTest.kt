@@ -108,6 +108,37 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
+    fun `Skal kunne hente alle rekrutteringstreff for ett kontor`() {
+        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 1",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0605",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+        val rekrutteringstreff2 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 2",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0605",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+        val rekrutteringstreff3 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 3",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0600",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+        val treffId1 = rekrutteringstreffService.opprett(rekrutteringstreff1)
+        val treffId2 = rekrutteringstreffService.opprett(rekrutteringstreff2)
+        val treffId3 = rekrutteringstreffService.opprett(rekrutteringstreff3)
+
+        val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor("0605")
+
+        assertThat(rekrutteringstreff.any { it.id == treffId1.somUuid }).isTrue
+        assertThat(rekrutteringstreff.any { it.id == treffId2.somUuid }).isTrue
+        assertThat(rekrutteringstreff.any { it.id == treffId3.somUuid }).isFalse
+    }
+
+    @Test
     fun `Skal kunne hente et rekrutteringstreff`() {
         val treffId1 = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)

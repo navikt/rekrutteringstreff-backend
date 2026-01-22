@@ -41,6 +41,7 @@ class AuthenticationConfiguration(
 
 interface AuthenticatedUser {
     fun extractNavIdent(): String
+    fun extractKontorId(): String
     fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle)
     fun extractPid(): String
     fun erUtvikler(): Boolean = false
@@ -81,14 +82,15 @@ private class AuthenticatedNavUser(
     private val modiaKlient: ModiaKlient,
     private val pilotkontorer: List<String>
 ) : AuthenticatedUser {
+    var veiledersKontor: String? = null
+
     override fun verifiserAutorisasjon(vararg gyldigeRoller: Rolle) {
         if (!erEnAvRollene(*gyldigeRoller)) {
             throw ForbiddenResponse()
         } else if (erUtvikler()) {
             return
         } else {
-            val veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(jwt)
-
+            veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(jwt)
             if (veiledersKontor.isNullOrEmpty()) {
                 throw ForbiddenResponse("Finner ikke veileders innloggede kontor")
             } else if (veiledersKontor !in pilotkontorer) {
@@ -99,6 +101,7 @@ private class AuthenticatedNavUser(
 
     fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
     override fun extractNavIdent() = navIdent
+    override fun extractKontorId() = veiledersKontor ?: throw IllegalStateException("Finner ikke veileders innloggede kontor")
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
     override fun erUtvikler() = roller.any { it == Rolle.UTVIKLER }
 }
@@ -107,6 +110,7 @@ private class AuthenticatedCitizenUser(
     private val pid: String
 ) : AuthenticatedUser {
     override fun extractNavIdent() = throw ForbiddenResponse()
+    override fun extractKontorId() = throw ForbiddenResponse()
     override fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle) {
         if (Rolle.BORGER !in arbeidsgiverRettet) throw ForbiddenResponse()
     }
