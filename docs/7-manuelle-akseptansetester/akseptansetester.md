@@ -93,15 +93,64 @@ Veileder legger til en jobbsøker på et publisert treff. Jobbsøkere kan kun le
 
 ### Synlighet
 
-Synlighetsregler evalueres asynkront. Test disse ved å endre egenskaper på testperson i Dolly.
+Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å endre egenskaper på testperson i Dolly. **Alle** kriterier må være oppfylt for at jobbsøker skal være synlig.
 
-| #   | Test                                              | Forventet resultat                             |
-| --- | ------------------------------------------------- | ---------------------------------------------- |
-| 4.4 | Legg adressebeskyttelse på person som er lagt til | Person forsvinner fra jobbsøkerlisten (~1 min) |
-| 4.5 | Fjern adressebeskyttelse                          | Person dukker opp igjen i listen               |
-| 4.6 | Marker person som død                             | Person forsvinner fra listen                   |
-| 4.7 | Fjern dødmarkering                                | Person dukker opp igjen                        |
-| 4.8 | Slett CV for person                               | Person blir ikke-synlig (kan ta lengre tid)    |
+> **Tips:** Synlighetsendringer kan ta ~1 minutt å propagere. For negative tester (fjerne synlighet), vent til personen forsvinner. For positive tester, vent til personen dukker opp igjen.
+
+#### CV og jobbprofil
+
+| #    | Test                                       | Forventet resultat |
+| ---- | ------------------------------------------ | ------------------ |
+| 4.5  | Person med aktiv CV                        | Synlig ✅          |
+| 4.6  | Person uten CV                             | Ikke synlig ❌     |
+| 4.7  | Person med slettet CV (meldingstype SLETT) | Ikke synlig ❌     |
+| 4.8  | Person med CV men uten jobbprofil          | Ikke synlig ❌     |
+| 4.9  | Person med opprettJobbprofil               | Synlig ✅          |
+| 4.10 | Person med endreJobbprofil                 | Synlig ✅          |
+
+#### Arbeidssøkerregister (ny regel)
+
+| #    | Test                                       | Forventet resultat |
+| ---- | ------------------------------------------ | ------------------ |
+| 4.11 | Person registrert i arbeidssøkerregisteret | Synlig ✅          |
+| 4.12 | Person IKKE i arbeidssøkerregisteret       | Ikke synlig ❌     |
+| 4.13 | Person med avsluttet arbeidssøkerperiode   | Ikke synlig ❌     |
+
+#### Oppfølging
+
+| #    | Test                                    | Forventet resultat |
+| ---- | --------------------------------------- | ------------------ |
+| 4.14 | Person under aktiv oppfølging           | Synlig ✅          |
+| 4.15 | Person med avsluttet oppfølgingsperiode | Ikke synlig ❌     |
+| 4.16 | Person uten oppfølgingsinformasjon      | Ikke synlig ❌     |
+
+#### Adressebeskyttelse (diskresjonskode)
+
+| #    | Test                                   | Forventet resultat         |
+| ---- | -------------------------------------- | -------------------------- |
+| 4.17 | Person uten adressebeskyttelse         | Synlig ✅                  |
+| 4.18 | Person med kode 6 (strengt fortrolig)  | Ikke synlig ❌             |
+| 4.19 | Person med kode 7 (fortrolig)          | Ikke synlig ❌             |
+| 4.20 | Person med UGRADERT adressebeskyttelse | Synlig ✅                  |
+| 4.21 | Fjern adressebeskyttelse               | Person dukker opp igjen ✅ |
+
+#### KVP (Kvalifiseringsprogram)
+
+| #    | Test                     | Forventet resultat |
+| ---- | ------------------------ | ------------------ |
+| 4.22 | Person uten KVP          | Synlig ✅          |
+| 4.23 | Person med startet KVP   | Ikke synlig ❌     |
+| 4.24 | Person med avsluttet KVP | Synlig ✅          |
+
+#### Andre ekskluderingskriterier
+
+| #    | Test                              | Forventet resultat         |
+| ---- | --------------------------------- | -------------------------- |
+| 4.25 | Person som ikke er død            | Synlig ✅                  |
+| 4.26 | Person markert som død            | Ikke synlig ❌             |
+| 4.27 | Fjern dødmarkering                | Person dukker opp igjen ✅ |
+| 4.28 | Person som ikke er sperret ansatt | Synlig ✅                  |
+| 4.29 | Person markert som sperret ansatt | Ikke synlig ❌             |
 
 ---
 
