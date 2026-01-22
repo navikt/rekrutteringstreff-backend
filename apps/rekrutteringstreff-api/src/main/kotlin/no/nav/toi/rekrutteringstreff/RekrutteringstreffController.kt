@@ -165,10 +165,18 @@ class RekrutteringstreffController(
         methods = [HttpMethod.GET]
     )
     private fun hentAlleRekrutteringstreffForMittKontorHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
-        val kontorId = ctx.authenticatedUser().extractKontorId()
+       ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+       val kontorId = ctx.authenticatedUser().extractKontorId()
+       if (kontorId.isNullOrEmpty() && ctx.authenticatedUser().erUtvikler()) {
         log.info("Henter alle rekrutteringstreff for kontor $kontorId")
-        ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor(kontorId))
+            log.info("Utvikler som ikke har valgt et kontor - henter alle rekrutteringstreff")
+            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
+       }
+       if (kontorId.isNullOrEmpty())  {
+            throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
+       }
+       log.info("Henter alle rekrutteringstreff for kontor $kontorId")
+       ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor(kontorId))
     }
 
     @OpenApi(
