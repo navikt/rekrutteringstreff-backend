@@ -128,6 +128,7 @@ class RekrutteringstreffController(
     )
     private fun hentAlleRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+        log.info("Henter alle rekrutteringstreff")
         ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
     }
 
@@ -166,6 +167,7 @@ class RekrutteringstreffController(
     private fun hentAlleRekrutteringstreffForMittKontorHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val kontorId = ctx.authenticatedUser().extractKontorId()
+        log.info("Henter alle rekrutteringstreff for kontor $kontorId")
         ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor(kontorId))
     }
 
