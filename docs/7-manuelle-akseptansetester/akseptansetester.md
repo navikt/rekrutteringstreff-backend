@@ -29,6 +29,19 @@ Markedskontakt oppretter et nytt rekrutteringstreff. Dette er første steg, og t
 | 1.3 | Markedskontakt - Opprett treff med ugyldig data           | Valideringsfeil vises, treff opprettes ikke |
 | 1.4 | Markedskontakt - Sjekk at andre ikke ser upublisert treff | Treffet vises kun for oppretter             |
 
+### Autolagring (kladd-modus)
+
+I kladd-modus lagres endringer automatisk. Felter som er lagret vises med avhukning i sidemenyen.
+
+| #   | Test                                              | Forventet resultat                         |
+| --- | ------------------------------------------------- | ------------------------------------------ |
+| 1.5 | Markedskontakt - Skriv tittel i kladd             | Tittel lagres automatisk, hake i sidemeny  |
+| 1.6 | Markedskontakt - Lukk og åpne treffet på nytt     | Tittel er bevart                           |
+| 1.7 | Markedskontakt - Skriv innlegg i kladd            | Innlegg lagres automatisk, hake i sidemeny |
+| 1.8 | Markedskontakt - Lukk og åpne treffet på nytt     | Innlegg er bevart                          |
+| 1.9 | Markedskontakt - Endre flere felt, lukk nettleser | Alle felt er bevart ved neste innlogging   |
+| 1.10| Markedskontakt - Se sidemeny etter lagring        | Felter vises med avhukning når lagret      |
+
 ---
 
 ## 2. Legge til arbeidsgiver
@@ -381,7 +394,7 @@ Markedskontakt legger til et innlegg (introduksjonstekst) på treffet som jobbs�
 
 ---
 
-## 11. KI-moderering og autolagring
+## 11. KI-moderering
 
 Når markedskontakt skriver tittel eller innlegg, valideres teksten automatisk av KI for å sjekke om den er diskriminerende eller bryter retningslinjer. Med utviklertilgang kan man se KI-loggen.
 
@@ -400,40 +413,27 @@ Når markedskontakt skriver tittel eller innlegg, valideres teksten automatisk a
    - **Før publisering (kladd):** Autolagring - lagret=true umiddelbart når felt endres
    - **Etter publisering:** lagret=true kun når markedskontakt åpner endringsdialog og trykker "Lagre"
 
-### Autolagring (før publisering)
-
-I kladd-modus lagres endringer automatisk. Felter som er lagret vises med avhukning i sidemenyen.
-
-| #    | Test                                              | Forventet resultat                         |
-| ---- | ------------------------------------------------- | ------------------------------------------ |
-| 11.1 | Markedskontakt - Skriv tittel i kladd             | Tittel lagres automatisk, hake i sidemeny  |
-| 11.2 | Markedskontakt - Lukk og åpne treffet på nytt     | Tittel er bevart                           |
-| 11.3 | Markedskontakt - Skriv innlegg i kladd            | Innlegg lagres automatisk, hake i sidemeny |
-| 11.4 | Markedskontakt - Lukk og åpne treffet på nytt     | Innlegg er bevart                          |
-| 11.5 | Markedskontakt - Endre flere felt, lukk nettleser | Alle felt er bevart ved neste innlogging   |
-| 11.6 | Markedskontakt - Se sidemeny etter lagring        | Felter vises med avhukning når lagret      |
-
 ### KI-validering av tittel
 
 Tittel valideres både ved autolagring (kladd) og ved endring etter publisering.
 
-| #     | Test                                                          | Forventet resultat                        |
-| ----- | ------------------------------------------------------------- | ----------------------------------------- |
-| 11.7  | Markedskontakt - Skriv nøytral tittel (kladd)                 | Ingen advarsel, tekst godkjennes          |
-| 11.8  | Markedskontakt - Skriv diskriminerende tittel (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |
-| 11.9  | Markedskontakt - Endre tittel (etter publisering)             | KI validerer ved "Lagre" i dialog         |
-| 11.10 | Markedskontakt - Endre til diskriminerende tittel (publisert) | Advarsel vises, kan ikke lagre uten knapp |
+| #    | Test                                                          | Forventet resultat                        |
+| ---- | ------------------------------------------------------------- | ----------------------------------------- |
+| 11.1 | Markedskontakt - Skriv nøytral tittel (kladd)                 | Ingen advarsel, tekst godkjennes          |
+| 11.2 | Markedskontakt - Skriv diskriminerende tittel (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |
+| 11.3 | Markedskontakt - Endre tittel (etter publisering)             | KI validerer ved "Lagre" i dialog         |
+| 11.4 | Markedskontakt - Endre til diskriminerende tittel (publisert) | Advarsel vises, kan ikke lagre uten knapp |
 
 ### KI-validering av innlegg
 
 Innlegg valideres på samme måte som tittel.
 
-| #     | Test                                                           | Forventet resultat                        |
-| ----- | -------------------------------------------------------------- | ----------------------------------------- |
-| 11.11 | Markedskontakt - Skriv nøytralt innlegg (kladd)                | Ingen advarsel, tekst godkjennes          |
-| 11.12 | Markedskontakt - Skriv diskriminerende innlegg (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |
-| 11.13 | Markedskontakt - Endre innlegg (etter publisering)             | KI validerer ved "Lagre" i dialog         |
-| 11.14 | Markedskontakt - Endre til diskriminerende innlegg (publisert) | Advarsel vises, kan ikke lagre uten knapp |
+| #    | Test                                                           | Forventet resultat                        |
+| ---- | -------------------------------------------------------------- | ----------------------------------------- |
+| 11.5 | Markedskontakt - Skriv nøytralt innlegg (kladd)                | Ingen advarsel, tekst godkjennes          |
+| 11.6 | Markedskontakt - Skriv diskriminerende innlegg (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |
+| 11.7 | Markedskontakt - Endre innlegg (etter publisering)             | KI validerer ved "Lagre" i dialog         |
+| 11.8 | Markedskontakt - Endre til diskriminerende innlegg (publisert) | Advarsel vises, kan ikke lagre uten knapp |
 
 ### "Lagre likevel"-funksjonalitet
 
@@ -441,20 +441,20 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 
 | #     | Test                                                       | Forventet resultat                       |
 | ----- | ---------------------------------------------------------- | ---------------------------------------- |
-| 11.15 | Markedskontakt - Advarsel vist, IKKE trykk "Lagre likevel" | Kan ikke publisere/lagre treffet         |
-| 11.16 | Markedskontakt - Advarsel vist, trykk "Lagre likevel"      | Teksten lagres, kan fortsette            |
-| 11.17 | Markedskontakt - Prøv å publisere uten "Lagre likevel"     | Publisering blokkert inntil valg er tatt |
+| 11.9  | Markedskontakt - Advarsel vist, IKKE trykk "Lagre likevel" | Kan ikke publisere/lagre treffet         |
+| 11.10 | Markedskontakt - Advarsel vist, trykk "Lagre likevel"      | Teksten lagres, kan fortsette            |
+| 11.11 | Markedskontakt - Prøv å publisere uten "Lagre likevel"     | Publisering blokkert inntil valg er tatt |
 
 ### KI-logg (krever utviklertilgang)
 
 | #     | Test                                          | Forventet resultat                                  |
 | ----- | --------------------------------------------- | --------------------------------------------------- |
-| 11.18 | Utvikler - Åpne KI-logg                       | Ser liste over alle KI-valideringer                 |
-| 11.19 | Utvikler - Sjekk logg for kladd-treff         | lagret=true for tekst som ble autolagret            |
-| 11.20 | Utvikler - Sjekk logg etter publisert endring | lagret=true kun når bruker trykket "Lagre" i dialog |
-| 11.21 | Utvikler - Sjekk tekst som ble forkastet      | lagret=false for tekst som ble endret før lagring   |
-| 11.22 | Utvikler - Legg inn manuell vurdering         | Kan registrere egen vurdering for kvalitetskontroll |
-| 11.23 | Utvikler - Filtrer på avvik                   | Kan finne tilfeller der KI vurderte feil            |
+| 11.12 | Utvikler - Åpne KI-logg                       | Ser liste over alle KI-valideringer                 |
+| 11.13 | Utvikler - Sjekk logg for kladd-treff         | lagret=true for tekst som ble autolagret            |
+| 11.14 | Utvikler - Sjekk logg etter publisert endring | lagret=true kun når bruker trykket "Lagre" i dialog |
+| 11.15 | Utvikler - Sjekk tekst som ble forkastet      | lagret=false for tekst som ble endret før lagring   |
+| 11.16 | Utvikler - Legg inn manuell vurdering         | Kan registrere egen vurdering for kvalitetskontroll |
+| 11.17 | Utvikler - Filtrer på avvik                   | Kan finne tilfeller der KI vurderte feil            |
 
 ---
 
