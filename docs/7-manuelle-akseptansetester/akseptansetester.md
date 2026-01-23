@@ -31,16 +31,16 @@ Markedskontakt oppretter et nytt rekrutteringstreff. Dette er første steg, og t
 
 ### Autolagring (kladd-modus)
 
-I kladd-modus lagres endringer automatisk. Felter som er lagret vises med avhukning i sidemenyen.
+I kladd-modus lagres endringer automatisk. Felter som er lagret vises med avhukning i sidepanelet.
 
-| #   | Test                                              | Forventet resultat                         |
-| --- | ------------------------------------------------- | ------------------------------------------ |
-| 1.5 | Markedskontakt - Skriv tittel i kladd             | Tittel lagres automatisk, hake i sidemeny  |
-| 1.6 | Markedskontakt - Lukk og åpne treffet på nytt     | Tittel er bevart                           |
-| 1.7 | Markedskontakt - Skriv innlegg i kladd            | Innlegg lagres automatisk, hake i sidemeny |
-| 1.8 | Markedskontakt - Lukk og åpne treffet på nytt     | Innlegg er bevart                          |
-| 1.9 | Markedskontakt - Endre flere felt, lukk nettleser | Alle felt er bevart ved neste innlogging   |
-| 1.10| Markedskontakt - Se sidemeny etter lagring        | Felter vises med avhukning når lagret      |
+| #    | Test                                              | Forventet resultat                           |
+| ---- | ------------------------------------------------- | -------------------------------------------- |
+| 1.5  | Markedskontakt - Skriv tittel i kladd             | Tittel lagres automatisk, hake i sidepanel   |
+| 1.6  | Markedskontakt - Lukk og åpne treffet på nytt     | Tittel er bevart                             |
+| 1.7  | Markedskontakt - Skriv innlegg i kladd            | Innlegg lagres automatisk, hake i sidepanel  |
+| 1.8  | Markedskontakt - Lukk og åpne treffet på nytt     | Innlegg er bevart                            |
+| 1.9  | Markedskontakt - Endre flere felt, lukk nettleser | Alle felt er bevart ved neste innlogging     |
+| 1.10 | Markedskontakt - Se sidepanel etter lagring       | Felter vises med avhukning i sidepanel       |
 
 ---
 
