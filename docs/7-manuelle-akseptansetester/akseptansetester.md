@@ -84,16 +84,18 @@ Veileder legger til en jobbsøker på et publisert treff. Jobbsøkere kan kun le
 
 **Hva skjer:** Jobbsøkeren legges til med status "Lagt til". En synlighetssjekk kjører i bakgrunnen via Kafka. Jobbsøkere som ikke oppfyller synlighetskravene vil forsvinne fra listen.
 
-| #   | Test                                 | Forventet resultat                             |
-| --- | ------------------------------------ | ---------------------------------------------- |
-| 4.1 | Veileder - Legg til synlig jobbsøker | Jobbsøker vises i listen med status "Lagt til" |
-| 4.2 | Veileder - Legg til flere jobbsøkere | Alle vises i listen                            |
-| 4.3 | Veileder - Fjern jobbsøker fra treff | Jobbsøker fjernes fra listen                   |
-| 4.4 | MK - Legg til jobbsøker              | MK kan også legge til jobbsøkere               |
+| #   | Test                                        | Forventet resultat                                  |
+| --- | ------------------------------------------- | --------------------------------------------------- |
+| 4.1 | Legg til synlig jobbsøker                   | Jobbsøker vises i listen med status "Lagt til"      |
+| 4.2 | Legg til flere jobbsøkere                   | Alle vises i listen                                 |
+| 4.3 | Fjern jobbsøker fra treff                   | Jobbsøker fjernes fra listen                        |
+| 4.4 | Legg til jobbsøker som tidligere er slettet | Jobbsøker legges til igjen, "Slettet"-teller synker |
 
 ### Synlighet
 
 Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å endre egenskaper på testperson i Dolly. **Alle** kriterier må være oppfylt for at jobbsøker skal være synlig.
+
+> **Forutsetning:** Før synlighetstestene kan starte må testpersonen være **synlig** og allerede **lagt til på treffet**. Test deretter at endringer i Dolly propagerer til rekrutteringstreff.
 
 > **Tips:** Synlighetsendringer kan ta ~1 minutt å propagere. For negative tester (fjerne synlighet), vent til personen forsvinner. For positive tester, vent til personen dukker opp igjen.
 
@@ -123,23 +125,24 @@ Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å 
 | 4.15 | Person med avsluttet oppfølgingsperiode | Ikke synlig ❌     |
 | 4.16 | Person uten oppfølgingsinformasjon      | Ikke synlig ❌     |
 
-#### Adressebeskyttelse (diskresjonskode)
+#### Adressebeskyttelse
 
-| #    | Test                                   | Forventet resultat         |
-| ---- | -------------------------------------- | -------------------------- |
-| 4.17 | Person uten adressebeskyttelse         | Synlig ✅                  |
-| 4.18 | Person med kode 6 (strengt fortrolig)  | Ikke synlig ❌             |
-| 4.19 | Person med kode 7 (fortrolig)          | Ikke synlig ❌             |
-| 4.20 | Person med UGRADERT adressebeskyttelse | Synlig ✅                  |
-| 4.21 | Fjern adressebeskyttelse               | Person dukker opp igjen ✅ |
+PDL har 4 graderinger: UGRADERT, FORTROLIG (kode 7), STRENGT_FORTROLIG (kode 6), STRENGT_FORTROLIG_UTLAND (§19).
+
+| #    | Test                                         | Forventet resultat         |
+| ---- | -------------------------------------------- | -------------------------- |
+| 4.17 | Person med UGRADERT                          | Synlig ✅                  |
+| 4.18 | Person med FORTROLIG (kode 7)                | Ikke synlig ❌             |
+| 4.19 | Person med STRENGT_FORTROLIG (kode 6)        | Ikke synlig ❌             |
+| 4.20 | Person med STRENGT_FORTROLIG_UTLAND (§19)    | Ikke synlig ❌             |
+| 4.21 | Fjern adressebeskyttelse (sett til UGRADERT) | Person dukker opp igjen ✅ |
 
 #### KVP (Kvalifiseringsprogram)
 
-| #    | Test                     | Forventet resultat |
-| ---- | ------------------------ | ------------------ |
-| 4.22 | Person uten KVP          | Synlig ✅          |
-| 4.23 | Person med startet KVP   | Ikke synlig ❌     |
-| 4.24 | Person med avsluttet KVP | Synlig ✅          |
+| #    | Test                           | Forventet resultat |
+| ---- | ------------------------------ | ------------------ |
+| 4.22 | Person uten aktiv KVP          | Synlig ✅          |
+| 4.23 | Person med aktiv KVP (startet) | Ikke synlig ❌     |
 
 #### Andre ekskluderingskriterier
 
@@ -155,11 +158,11 @@ Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å 
 
 ## 5. Invitere jobbsøker
 
-Veileder inviterer jobbsøker til treffet. Dette trigger både varsling og opprettelse av aktivitetskort.
+Markedskontakt (MK) inviterer jobbsøker til treffet. Dette trigger både varsling og opprettelse av aktivitetskort. Merk: Kun MK med arbeidsgiverrettet tilgang kan invitere - veileder kan kun legge til jobbsøkere.
 
 **Hvor:**
 
-- Veileder: rekrutteringsbistand
+- MK: rekrutteringsbistand
 - Jobbsøker: SMS/e-post → rekrutteringstreff-bruker, aktivitetsplan
 
 **Hva skjer:**
@@ -169,43 +172,44 @@ Veileder inviterer jobbsøker til treffet. Dette trigger både varsling og oppre
 3. Aktivitetskort opprettes i jobbsøkers aktivitetsplan med status "Planlagt"
 4. Jobbsøker kan åpne treffet via lenke i varsel eller aktivitetskort
 
-| #   | Test                                       | Forventet resultat                                      |
-| --- | ------------------------------------------ | ------------------------------------------------------- |
-| 5.1 | Veileder - Inviter jobbsøker               | Status endres til "Invitert"                            |
-| 5.2 | Veileder - Sjekk varselstatus (~1 min)     | Varselstatus viser "Sendt"                              |
-| 5.3 | Jobbsøker - Motta SMS                      | SMS med lenke til rekrutteringstreff-bruker             |
-| 5.4 | Jobbsøker - Klikk lenke i SMS              | Kommer til rekrutteringstreff-bruker, ser treffdetaljer |
-| 5.5 | Jobbsøker - Sjekk aktivitetskort           | Aktivitetskort finnes med status "Planlagt"             |
-| 5.6 | Jobbsøker - Klikk lenke i aktivitetskort   | Kommer til rekrutteringstreff-bruker                    |
-| 5.7 | Veileder - Se aktivitetskort for jobbsøker | Ser samme kort med status "Planlagt"                    |
+| #   | Test                                     | Forventet resultat                                      |
+| --- | ---------------------------------------- | ------------------------------------------------------- |
+| 5.1 | MK - Inviter jobbsøker                   | Status endres til "Invitert"                            |
+| 5.2 | MK - Sjekk varselstatus (~1 min)         | Varselstatus viser "Sendt"                              |
+| 5.3 | Jobbsøker - Motta SMS                    | SMS med lenke til rekrutteringstreff-bruker             |
+| 5.4 | Jobbsøker - Klikk lenke i SMS            | Kommer til rekrutteringstreff-bruker, ser treffdetaljer |
+| 5.5 | Jobbsøker - Sjekk aktivitetskort         | Aktivitetskort finnes med status "Planlagt"             |
+| 5.6 | Jobbsøker - Klikk lenke i aktivitetskort | Kommer til rekrutteringstreff-bruker                    |
+| 5.7 | MK - Se aktivitetskort for jobbsøker     | Ser samme kort med status "Planlagt"                    |
+| 5.8 | Veileder - Prøv å invitere jobbsøker     | Inviter-knapp er IKKE synlig for veileder               |
 
 ### Varselkanaler
 
 Hvilken kanal som brukes avhenger av jobbsøkers registrering i Kontakt- og reservasjonsregisteret (KRR).
 
-| #    | Test                                     | Forventet resultat                              |
-| ---- | ---------------------------------------- | ----------------------------------------------- |
-| 5.8  | Inviter jobbsøker med mobilnr i KRR      | SMS sendes, varselstatus = "Sendt"              |
-| 5.9  | Inviter jobbsøker med kun e-post i KRR   | E-post sendes, varselstatus = "Sendt"           |
-| 5.10 | Inviter jobbsøker uten kontaktinfo i KRR | Varsel på MinSide, status = "Lagret på MinSide" |
+| #    | Test                                     | Forventet resultat                           |
+| ---- | ---------------------------------------- | -------------------------------------------- |
+| 5.9  | Inviter jobbsøker med mobilnr i KRR      | SMS sendes, varselstatus = "Sendt"           |
+| 5.10 | Inviter jobbsøker med kun e-post i KRR   | E-post sendes, varselstatus = "Sendt"        |
+| 5.11 | Inviter jobbsøker uten kontaktinfo i KRR | Varsel på MinSide, status = "Varsel MinSide" |
 
 ### Feilsituasjoner
 
 | #    | Test                                   | Forventet resultat                       |
 | ---- | -------------------------------------- | ---------------------------------------- |
-| 5.11 | Dobbelt-klikk på inviter-knapp         | Kun én invitasjon registreres            |
-| 5.12 | Inviter jobbsøker som blir ikke-synlig | Jobbsøker forsvinner, varsel sendes ikke |
+| 5.12 | Trykk to ganger på inviter-knapp       | Kun én invitasjon registreres            |
+| 5.13 | Inviter jobbsøker som blir ikke-synlig | Jobbsøker forsvinner, varsel sendes ikke |
 
 ---
 
 ## 6. Jobbsøker svarer på invitasjon
 
-Jobbsøker åpner treffet og svarer ja eller nei. Svaret synkroniseres tilbake til veileder og oppdaterer aktivitetskortet.
+Jobbsøker åpner treffet og svarer ja eller nei. Svaret synkroniseres tilbake til aktivitetsplanen og oppdaterer aktivitetskortet.
 
 **Hvor:**
 
 - Jobbsøker: rekrutteringstreff-bruker, aktivitetsplan
-- Veileder: rekrutteringsbistand, aktivitetsplan (veiledervisning)
+- MK: rekrutteringsbistand (ser status i jobbsøkerlisten)
 
 **Hva skjer:**
 
@@ -217,11 +221,11 @@ Jobbsøker åpner treffet og svarer ja eller nei. Svaret synkroniseres tilbake t
 | #   | Test                                       | Forventet resultat                                     |
 | --- | ------------------------------------------ | ------------------------------------------------------ |
 | 6.1 | Jobbsøker - Svar "Ja"                      | Bekreftelse vises, svarknapper erstattes med status    |
-| 6.2 | Veileder - Sjekk status etter ja-svar      | Status viser "Påmeldt" / "Svart ja"                    |
+| 6.2 | MK - Sjekk status etter ja-svar            | Status viser "Påmeldt" / "Svart ja"                    |
 | 6.3 | Jobbsøker - Sjekk aktivitetskort etter ja  | Status er "Gjennomføres"                               |
-| 6.4 | Veileder - Sjekk aktivitetskort etter ja   | Ser samme status "Gjennomføres"                        |
+| 6.4 | MK - Sjekk aktivitetskort etter ja         | Ser samme status "Gjennomføres"                        |
 | 6.5 | Jobbsøker - Svar "Nei"                     | Bekreftelse på avmelding vises                         |
-| 6.6 | Veileder - Sjekk status etter nei-svar     | Status viser "Avmeldt" / "Svart nei"                   |
+| 6.6 | MK - Sjekk status etter nei-svar           | Status viser "Avmeldt" / "Svart nei"                   |
 | 6.7 | Jobbsøker - Sjekk aktivitetskort etter nei | Status er "Avbrutt"                                    |
 | 6.8 | Jobbsøker - Endre svar fra ja til nei      | Nytt svar registreres, aktivitetskort → "Avbrutt"      |
 | 6.9 | Jobbsøker - Endre svar fra nei til ja      | Nytt svar registreres, aktivitetskort → "Gjennomføres" |
@@ -238,10 +242,10 @@ Test at jobbsøker ser riktig informasjon basert på status.
 
 ### Feilsituasjoner
 
-| #    | Test                                    | Forventet resultat       |
-| ---- | --------------------------------------- | ------------------------ |
-| 6.13 | Jobbsøker - Åpne ugyldig treff-ID       | Vennlig feilmelding      |
-| 6.14 | Jobbsøker - Dobbelt-klikk på svar-knapp | Kun ett svar registreres |
+| #    | Test                                      | Forventet resultat       |
+| ---- | ----------------------------------------- | ------------------------ |
+| 6.13 | Jobbsøker - Åpne ugyldig treff-ID         | Vennlig feilmelding      |
+| 6.14 | Jobbsøker - Trykk to ganger på svar-knapp | Kun ett svar registreres |
 
 ---
 
@@ -260,7 +264,10 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 2. Dialog åpnes med valg: "Send varsel til inviterte?" (ja/nei)
 3. Hvis ja: Switch-knapper for hvert endret felt (tidspunkt, sted, svarfrist, etc.)
 4. Valgte felter nevnes i SMS-teksten til jobbsøker
-5. De som svarte nei får IKKE varsel
+5. Mottakere:
+   - **Invitert (ikke svart):** Får varsel
+   - **Svart ja:** Får varsel
+   - **Svart nei:** Får IKKE varsel
 
 ### Varseldialog og feltvalg
 
@@ -275,12 +282,12 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 
 ### Mottakere og varselinnhold
 
-| #    | Test                                        | Forventet resultat                       |
-| ---- | ------------------------------------------- | ---------------------------------------- |
-| 7.7  | Jobbsøker (invitert) - Motta endringsvarsel | SMS/e-post med info om valgte felt       |
-| 7.8  | Jobbsøker (svart ja) - Motta endringsvarsel | SMS/e-post med info om valgte felt       |
-| 7.9  | Jobbsøker (svart nei) - Sjekk varsel        | Skal IKKE motta varsel                   |
-| 7.10 | Jobbsøker - Sjekk SMS-tekst                 | Teksten inneholder de valgte feltnavnene |
+| #    | Test                                                    | Forventet resultat                       |
+| ---- | ------------------------------------------------------- | ---------------------------------------- |
+| 7.7  | Jobbsøker (invitert, ikke svart) - Motta endringsvarsel | SMS/e-post med info om valgte felt       |
+| 7.8  | Jobbsøker (svart ja) - Motta endringsvarsel             | SMS/e-post med info om valgte felt       |
+| 7.9  | Jobbsøker (svart nei) - Sjekk varsel                    | Skal IKKE motta varsel                   |
+| 7.10 | Jobbsøker - Sjekk SMS-tekst                             | Teksten inneholder de valgte feltnavnene |
 
 ### Oppdatering i systemer
 
@@ -318,7 +325,7 @@ Markedskontakt avlyser et treff. Kun jobbsøkere som har svart ja varsles.
 | 8.6 | Jobbsøker (svart nei) - Sjekk varsel          | Skal IKKE motta varsel                           |
 | 8.7 | Jobbsøker (svart nei) - Sjekk aktivitetskort  | Status er "Avbrutt"                              |
 | 8.8 | Jobbsøker - Åpne avlyst treff                 | Ser tydelig avlysningsmelding                    |
-| 8.9 | Veileder - Se jobbsøkerliste etter avlysning  | Alle jobbsøkere vises fortsatt med sine statuser |
+| 8.9 | MK (eier) - Se jobbsøkerliste etter avlysning | Alle jobbsøkere vises fortsatt med sine statuser |
 
 ---
 
@@ -338,15 +345,15 @@ Treffet passerer i tid. Aktivitetskort oppdateres automatisk basert på jobbsøk
 3. Aktivitetskort for invitert/svart nei → "Avbrutt"
 4. rekrutteringstreff-bruker viser "Treffet er over"
 
-| #   | Test                                         | Forventet resultat                      |
-| --- | -------------------------------------------- | --------------------------------------- |
-| 9.1 | Jobbsøker - Åpne treff som pågår             | Ser "Treffet er i gang"                 |
-| 9.2 | Jobbsøker - Åpne treff som er passert        | Ser "Treffet er over"                   |
-| 9.3 | Jobbsøker (svart ja) - Sjekk aktivitetskort  | Status er "Fullført"                    |
-| 9.4 | Jobbsøker (invitert) - Sjekk aktivitetskort  | Status er "Avbrutt"                     |
-| 9.5 | Jobbsøker (svart nei) - Sjekk aktivitetskort | Status er "Avbrutt"                     |
-| 9.6 | Veileder - Sjekk aktivitetskort (svart ja)   | Status er "Fullført"                    |
-| 9.7 | Veileder - Se jobbsøkerliste etter treff     | Alle jobbsøkere vises med sine statuser |
+| #   | Test                                                    | Forventet resultat                      |
+| --- | ------------------------------------------------------- | --------------------------------------- |
+| 9.1 | Jobbsøker - Åpne treff som pågår                        | Ser "Treffet er i gang"                 |
+| 9.2 | Jobbsøker - Åpne treff som er passert                   | Ser "Treffet er over"                   |
+| 9.3 | Jobbsøker (svart ja) - Sjekk aktivitetskort             | Status er "Fullført"                    |
+| 9.4 | Jobbsøker (invitert, ikke svart) - Sjekk aktivitetskort | Status er "Avbrutt"                     |
+| 9.5 | Jobbsøker (svart nei) - Sjekk aktivitetskort            | Status er "Avbrutt"                     |
+| 9.6 | MK - Sjekk aktivitetskort (svart ja)                    | Status er "Fullført"                    |
+| 9.7 | MK (eier) - Se jobbsøkerliste etter treff               | Alle jobbsøkere vises med sine statuser |
 
 ---
 
@@ -517,16 +524,16 @@ Løsningen har tre roller med ulike tilganger. Test at hver rolle kun kan gjøre
 
 Veileder skal kunne se publiserte treff og legge til egne jobbsøkere, men IKKE se andre jobbsøkere eller redigere treffet.
 
-| #    | Test                                     | Forventet resultat                     |
-| ---- | ---------------------------------------- | -------------------------------------- |
-| 15.1 | Veileder - Åpne publisert treff          | Ser treffdetaljer i lesemodus          |
-| 15.2 | Veileder - Prøv å redigere treffdetaljer | Ingen redigeringsknapper synlige       |
-| 15.3 | Veileder - Se jobbsøkerlisten            | Ser IKKE andre veilederes jobbsøkere   |
-| 15.4 | Veileder - Legg til jobbsøker            | Kan legge til jobbsøker på treffet     |
-| 15.5 | Veileder - Se egen jobbsøker             | Ser jobbsøkeren man selv la til        |
-| 15.6 | Veileder - Inviter jobbsøker             | Kan invitere jobbsøker man selv la til |
-| 15.7 | Veileder - Prøv å se Hendelser-fanen     | Fanen er ikke synlig/tilgjengelig      |
-| 15.8 | Veileder - Prøv å opprette nytt treff    | Knapp for opprett treff ikke synlig    |
+| #    | Test                                     | Forventet resultat                        |
+| ---- | ---------------------------------------- | ----------------------------------------- |
+| 15.1 | Veileder - Åpne publisert treff          | Ser treffdetaljer i lesemodus             |
+| 15.2 | Veileder - Prøv å redigere treffdetaljer | Ingen redigeringsknapper synlige          |
+| 15.3 | Veileder - Se jobbsøkerlisten            | Ser IKKE andre veilederes jobbsøkere      |
+| 15.4 | Veileder - Legg til jobbsøker            | Kan legge til jobbsøker på treffet        |
+| 15.5 | Veileder - Se egen jobbsøker             | Ser jobbsøkeren man selv la til           |
+| 15.6 | Veileder - Prøv å invitere jobbsøker     | Inviter-knapp er IKKE synlig for veileder |
+| 15.7 | Veileder - Prøv å se Hendelser-fanen     | Fanen er ikke synlig/tilgjengelig         |
+| 15.8 | Veileder - Prøv å opprette nytt treff    | Knapp for opprett treff ikke synlig       |
 
 ### Markedskontakt (arbeidsgiverrettet) - ikke eier
 
