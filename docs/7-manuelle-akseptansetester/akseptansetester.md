@@ -6,7 +6,7 @@ Testscenarier for domeneeksperter før pilot og prodsetting. Testene er organise
 
 **Tester:** **\*\***\_\_\_**\*\***  
 **Dato:** **\*\***\_\_\_**\*\***  
-**Miljø:** Dev / Test / Prod
+**Miljø:** Dev
 
 ## Statusforklaring
 
