@@ -22,25 +22,25 @@ Markedskontakt oppretter et nytt rekrutteringstreff. Dette er første steg, og t
 
 **Hva skjer:** Treffet lagres i databasen. Ingen varsler eller aktivitetskort - det skjer først ved invitasjon.
 
-| #   | Test                                                      | Forventet resultat                          |
-| --- | --------------------------------------------------------- | ------------------------------------------- |
-| 1.1 | Markedskontakt - Opprett treff med påkrevde felter        | Treff opprettes, vises i "Mine treff"       |
-| 1.2 | Markedskontakt - Opprett treff, fyll ut alle felter       | Alle felter lagres og vises korrekt         |
-| 1.3 | Markedskontakt - Opprett treff med ugyldig data           | Valideringsfeil vises, treff opprettes ikke |
-| 1.4 | Markedskontakt - Sjekk at andre ikke ser upublisert treff | Treffet vises kun for oppretter             |
+| #   | Test                                                      | Forventet resultat                          | Status | Notat |
+| --- | --------------------------------------------------------- | ------------------------------------------- | ------ | ----- |
+| 1.1 | Markedskontakt - Opprett treff med påkrevde felter        | Treff opprettes, vises i "Mine treff"       |        |       |
+| 1.2 | Markedskontakt - Opprett treff, fyll ut alle felter       | Alle felter lagres og vises korrekt         |        |       |
+| 1.3 | Markedskontakt - Opprett treff med ugyldig data           | Valideringsfeil vises, treff opprettes ikke |        |       |
+| 1.4 | Markedskontakt - Sjekk at andre ikke ser upublisert treff | Treffet vises kun for oppretter             |        |       |
 
 ### Autolagring (kladd-modus)
 
 I kladd-modus lagres endringer automatisk. Felter som er lagret vises med avhukning i sidepanelet.
 
-| #    | Test                                              | Forventet resultat                           |
-| ---- | ------------------------------------------------- | -------------------------------------------- |
-| 1.5  | Markedskontakt - Skriv tittel i kladd             | Tittel lagres automatisk, hake i sidepanel   |
-| 1.6  | Markedskontakt - Lukk og åpne treffet på nytt     | Tittel er bevart                             |
-| 1.7  | Markedskontakt - Skriv innlegg i kladd            | Innlegg lagres automatisk, hake i sidepanel  |
-| 1.8  | Markedskontakt - Lukk og åpne treffet på nytt     | Innlegg er bevart                            |
-| 1.9  | Markedskontakt - Endre flere felt, lukk nettleser | Alle felt er bevart ved neste innlogging     |
-| 1.10 | Markedskontakt - Se sidepanel etter lagring       | Felter vises med avhukning i sidepanel       |
+| #    | Test                                              | Forventet resultat                          | Status | Notat |
+| ---- | ------------------------------------------------- | ------------------------------------------- | ------ | ----- |
+| 1.5  | Markedskontakt - Skriv tittel i kladd             | Tittel lagres automatisk, hake i sidepanel  |        |       |
+| 1.6  | Markedskontakt - Lukk og åpne treffet på nytt     | Tittel er bevart                            |        |       |
+| 1.7  | Markedskontakt - Skriv innlegg i kladd            | Innlegg lagres automatisk, hake i sidepanel |        |       |
+| 1.8  | Markedskontakt - Lukk og åpne treffet på nytt     | Innlegg er bevart                           |        |       |
+| 1.9  | Markedskontakt - Endre flere felt, lukk nettleser | Alle felt er bevart ved neste innlogging    |        |       |
+| 1.10 | Markedskontakt - Se sidepanel etter lagring       | Felter vises med avhukning i sidepanel      |        |       |
 
 ---
 
@@ -54,20 +54,20 @@ Markedskontakt legger til arbeidsgivere på treffet. Dette kan gjøres både fø
 
 ### I kladd-modus (før publisering)
 
-| #   | Test                                           | Forventet resultat                     |
-| --- | ---------------------------------------------- | -------------------------------------- |
-| 2.1 | Markedskontakt - Legg til arbeidsgiver via søk | Arbeidsgiver vises i listen på treffet |
-| 2.2 | Markedskontakt - Legg til flere arbeidsgivere  | Alle vises i listen                    |
-| 2.3 | Markedskontakt - Fjern arbeidsgiver            | Arbeidsgiver fjernes fra listen        |
+| #   | Test                                           | Forventet resultat                     | Status | Notat |
+| --- | ---------------------------------------------- | -------------------------------------- | ------ | ----- |
+| 2.1 | Markedskontakt - Legg til arbeidsgiver via søk | Arbeidsgiver vises i listen på treffet |        |       |
+| 2.2 | Markedskontakt - Legg til flere arbeidsgivere  | Alle vises i listen                    |        |       |
+| 2.3 | Markedskontakt - Fjern arbeidsgiver            | Arbeidsgiver fjernes fra listen        |        |       |
 
 ### Etter publisering
 
-| #   | Test                                                  | Forventet resultat                              |
-| --- | ----------------------------------------------------- | ----------------------------------------------- |
-| 2.4 | Markedskontakt - Åpne "Arbeidsgivere"-fanen           | Ser liste over arbeidsgivere på treffet         |
-| 2.5 | Markedskontakt - Legg til ny arbeidsgiver             | Arbeidsgiver legges til og vises i listen       |
-| 2.6 | Markedskontakt - Fjern arbeidsgiver etter publisering | Arbeidsgiver fjernes fra listen                 |
-| 2.7 | Jobbsøker - Sjekk arbeidsgiverliste                   | Ser oppdatert liste i rekrutteringstreff-bruker |
+| #   | Test                                                  | Forventet resultat                              | Status | Notat |
+| --- | ----------------------------------------------------- | ----------------------------------------------- | ------ | ----- |
+| 2.4 | Markedskontakt - Åpne "Arbeidsgivere"-fanen           | Ser liste over arbeidsgivere på treffet         |        |       |
+| 2.5 | Markedskontakt - Legg til ny arbeidsgiver             | Arbeidsgiver legges til og vises i listen       |        |       |
+| 2.6 | Markedskontakt - Fjern arbeidsgiver etter publisering | Arbeidsgiver fjernes fra listen                 |        |       |
+| 2.7 | Jobbsøker - Sjekk arbeidsgiverliste                   | Ser oppdatert liste i rekrutteringstreff-bruker |        |       |
 
 ---
 
@@ -83,11 +83,11 @@ Markedskontakt publiserer treffet. Dette gjør at:
 
 **Hva skjer:** Treffet blir synlig for alle i rekrutteringsbistand. Fortsatt ingen varsler eller aktivitetskort - det skjer først ved invitasjon.
 
-| #   | Test                                 | Forventet resultat                     |
-| --- | ------------------------------------ | -------------------------------------- |
-| 3.1 | Markedskontakt - Publiser treff      | Status endres til "Publisert"          |
-| 3.2 | Veileder - Søk etter publisert treff | Treffet dukker opp i søkeresultater    |
-| 3.3 | Veileder - Åpne publisert treff      | Kan se treffdetaljer og jobbsøkerliste |
+| #   | Test                                 | Forventet resultat                     | Status | Notat |
+| --- | ------------------------------------ | -------------------------------------- | ------ | ----- |
+| 3.1 | Markedskontakt - Publiser treff      | Status endres til "Publisert"          |        |       |
+| 3.2 | Veileder - Søk etter publisert treff | Treffet dukker opp i søkeresultater    |        |       |
+| 3.3 | Veileder - Åpne publisert treff      | Kan se treffdetaljer og jobbsøkerliste |        |       |
 
 ---
 
@@ -99,13 +99,13 @@ Både veileder og markedskontakt kan legge til jobbsøkere på et publisert tref
 
 **Hva skjer:** Jobbsøkeren legges til med status "Lagt til". En synlighetssjekk kjører i bakgrunnen via Kafka. Jobbsøkere som ikke oppfyller synlighetskravene vil forsvinne fra listen.
 
-| #   | Test                                        | Forventet resultat                                  |
-| --- | ------------------------------------------- | --------------------------------------------------- |
-| 4.1 | Veileder - Legg til synlig jobbsøker        | Jobbsøker vises i listen med status "Lagt til"      |
-| 4.2 | Markedskontakt - Legg til synlig jobbsøker  | Jobbsøker vises i listen med status "Lagt til"      |
-| 4.3 | Legg til flere jobbsøkere                   | Alle vises i listen                                 |
-| 4.4 | Fjern jobbsøker fra treff                   | Jobbsøker fjernes fra listen                        |
-| 4.5 | Legg til jobbsøker som tidligere er slettet | Jobbsøker legges til igjen, "Slettet"-teller synker |
+| #   | Test                                        | Forventet resultat                                  | Status | Notat |
+| --- | ------------------------------------------- | --------------------------------------------------- | ------ | ----- |
+| 4.1 | Veileder - Legg til synlig jobbsøker        | Jobbsøker vises i listen med status "Lagt til"      |        |       |
+| 4.2 | Markedskontakt - Legg til synlig jobbsøker  | Jobbsøker vises i listen med status "Lagt til"      |        |       |
+| 4.3 | Legg til flere jobbsøkere                   | Alle vises i listen                                 |        |       |
+| 4.4 | Fjern jobbsøker fra treff                   | Jobbsøker fjernes fra listen                        |        |       |
+| 4.5 | Legg til jobbsøker som tidligere er slettet | Jobbsøker legges til igjen, "Slettet"-teller synker |        |       |
 
 ### Synlighet
 
@@ -117,58 +117,58 @@ Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å 
 
 #### CV og jobbprofil
 
-| #   | Test                                       | Forventet resultat |
-| --- | ------------------------------------------ | ------------------ |
-| 4.5 | Person med aktiv CV                        | Synlig ✅          |
-| 4.6 | Person uten CV                             | Ikke synlig ❌     |
-| 4.7 | Person med slettet CV (meldingstype SLETT) | Ikke synlig ❌     |
-| 4.8 | Person med CV men uten jobbprofil          | Ikke synlig ❌     |
-| 4.9 | Person med jobbprofil                      | Synlig ✅          |
+| #   | Test                                       | Forventet resultat | Status | Notat |
+| --- | ------------------------------------------ | ------------------ | ------ | ----- |
+| 4.5 | Person med aktiv CV                        | Synlig ✅          |        |       |
+| 4.6 | Person uten CV                             | Ikke synlig ❌     |        |       |
+| 4.7 | Person med slettet CV (meldingstype SLETT) | Ikke synlig ❌     |        |       |
+| 4.8 | Person med CV men uten jobbprofil          | Ikke synlig ❌     |        |       |
+| 4.9 | Person med jobbprofil                      | Synlig ✅          |        |       |
 
 #### Arbeidssøkerregister (ny regel)
 
-| #    | Test                                       | Forventet resultat |
-| ---- | ------------------------------------------ | ------------------ |
-| 4.11 | Person registrert i arbeidssøkerregisteret | Synlig ✅          |
-| 4.12 | Person IKKE i arbeidssøkerregisteret       | Ikke synlig ❌     |
-| 4.13 | Person med avsluttet arbeidssøkerperiode   | Ikke synlig ❌     |
+| #    | Test                                       | Forventet resultat | Status | Notat |
+| ---- | ------------------------------------------ | ------------------ | ------ | ----- |
+| 4.11 | Person registrert i arbeidssøkerregisteret | Synlig ✅          |        |       |
+| 4.12 | Person IKKE i arbeidssøkerregisteret       | Ikke synlig ❌     |        |       |
+| 4.13 | Person med avsluttet arbeidssøkerperiode   | Ikke synlig ❌     |        |       |
 
 #### Oppfølging
 
-| #    | Test                                                        | Forventet resultat |
-| ---- | ----------------------------------------------------------- | ------------------ |
-| 4.14 | Person under aktiv oppfølging                               | Synlig ✅          |
-| 4.15 | Person med avsluttet oppfølgingsperiode                     | Ikke synlig ❌     |
-| 4.16 | Person uten oppfølgingsperiode eller oppfølgingsinformasjon | Ikke synlig ❌     |
+| #    | Test                                                        | Forventet resultat | Status | Notat |
+| ---- | ----------------------------------------------------------- | ------------------ | ------ | ----- |
+| 4.14 | Person under aktiv oppfølging                               | Synlig ✅          |        |       |
+| 4.15 | Person med avsluttet oppfølgingsperiode                     | Ikke synlig ❌     |        |       |
+| 4.16 | Person uten oppfølgingsperiode eller oppfølgingsinformasjon | Ikke synlig ❌     |        |       |
 
 #### Adressebeskyttelse
 
 PDL har 4 graderinger: UGRADERT, FORTROLIG (kode 7), STRENGT_FORTROLIG (kode 6), STRENGT_FORTROLIG_UTLAND (§19).
 
-| #    | Test                                         | Forventet resultat         |
-| ---- | -------------------------------------------- | -------------------------- |
-| 4.17 | Person med UGRADERT                          | Synlig ✅                  |
-| 4.18 | Person med FORTROLIG (kode 7)                | Ikke synlig ❌             |
-| 4.19 | Person med STRENGT_FORTROLIG (kode 6)        | Ikke synlig ❌             |
-| 4.20 | Person med STRENGT_FORTROLIG_UTLAND (§19)    | Ikke synlig ❌             |
-| 4.21 | Fjern adressebeskyttelse (sett til UGRADERT) | Person dukker opp igjen ✅ |
+| #    | Test                                         | Forventet resultat         | Status | Notat |
+| ---- | -------------------------------------------- | -------------------------- | ------ | ----- |
+| 4.17 | Person med UGRADERT                          | Synlig ✅                  |        |       |
+| 4.18 | Person med FORTROLIG (kode 7)                | Ikke synlig ❌             |        |       |
+| 4.19 | Person med STRENGT_FORTROLIG (kode 6)        | Ikke synlig ❌             |        |       |
+| 4.20 | Person med STRENGT_FORTROLIG_UTLAND (§19)    | Ikke synlig ❌             |        |       |
+| 4.21 | Fjern adressebeskyttelse (sett til UGRADERT) | Person dukker opp igjen ✅ |        |       |
 
 #### KVP (Kvalifiseringsprogram)
 
-| #    | Test                           | Forventet resultat |
-| ---- | ------------------------------ | ------------------ |
-| 4.22 | Person uten aktiv KVP          | Synlig ✅          |
-| 4.23 | Person med aktiv KVP (startet) | Ikke synlig ❌     |
+| #    | Test                           | Forventet resultat | Status | Notat |
+| ---- | ------------------------------ | ------------------ | ------ | ----- |
+| 4.22 | Person uten aktiv KVP          | Synlig ✅          |        |       |
+| 4.23 | Person med aktiv KVP (startet) | Ikke synlig ❌     |        |       |
 
 #### Andre ekskluderingskriterier
 
-| #    | Test                              | Forventet resultat         |
-| ---- | --------------------------------- | -------------------------- |
-| 4.25 | Person som ikke er død            | Synlig ✅                  |
-| 4.26 | Person markert som død            | Ikke synlig ❌             |
-| 4.27 | Fjern dødmarkering                | Person dukker opp igjen ✅ |
-| 4.28 | Person som ikke er sperret ansatt | Synlig ✅                  |
-| 4.29 | Person markert som sperret ansatt | Ikke synlig ❌             |
+| #    | Test                              | Forventet resultat         | Status | Notat |
+| ---- | --------------------------------- | -------------------------- | ------ | ----- |
+| 4.25 | Person som ikke er død            | Synlig ✅                  |        |       |
+| 4.26 | Person markert som død            | Ikke synlig ❌             |        |       |
+| 4.27 | Fjern dødmarkering                | Person dukker opp igjen ✅ |        |       |
+| 4.28 | Person som ikke er sperret ansatt | Synlig ✅                  |        |       |
+| 4.29 | Person markert som sperret ansatt | Ikke synlig ❌             |        |       |
 
 ---
 
@@ -188,33 +188,33 @@ Markedskontakt inviterer jobbsøker til treffet. Dette trigger både varsling og
 3. Aktivitetskort opprettes i jobbsøkers aktivitetsplan med status "Planlagt"
 4. Jobbsøker kan åpne treffet via lenke i varsel eller aktivitetskort
 
-| #   | Test                                             | Forventet resultat                                      |
-| --- | ------------------------------------------------ | ------------------------------------------------------- |
-| 5.1 | Markedskontakt - Inviter jobbsøker               | Status endres til "Invitert"                            |
-| 5.2 | Markedskontakt - Sjekk varselstatus (~1 min)     | Varselstatus viser "Sendt"                              |
-| 5.3 | Jobbsøker - Motta SMS                            | SMS med lenke til rekrutteringstreff-bruker             |
-| 5.4 | Jobbsøker - Klikk lenke i SMS                    | Kommer til rekrutteringstreff-bruker, ser treffdetaljer |
-| 5.5 | Jobbsøker - Sjekk aktivitetskort                 | Aktivitetskort finnes med status "Planlagt"             |
-| 5.6 | Jobbsøker - Klikk lenke i aktivitetskort         | Kommer til rekrutteringstreff-bruker                    |
-| 5.7 | Markedskontakt - Se aktivitetskort for jobbsøker | Ser samme kort med status "Planlagt"                    |
-| 5.8 | Veileder - Prøv å invitere jobbsøker             | Inviter-knapp er IKKE synlig for veileder               |
+| #   | Test                                             | Forventet resultat                                      | Status | Notat |
+| --- | ------------------------------------------------ | ------------------------------------------------------- | ------ | ----- |
+| 5.1 | Markedskontakt - Inviter jobbsøker               | Status endres til "Invitert"                            |        |       |
+| 5.2 | Markedskontakt - Sjekk varselstatus (~1 min)     | Varselstatus viser "Sendt"                              |        |       |
+| 5.3 | Jobbsøker - Motta SMS                            | SMS med lenke til rekrutteringstreff-bruker             |        |       |
+| 5.4 | Jobbsøker - Klikk lenke i SMS                    | Kommer til rekrutteringstreff-bruker, ser treffdetaljer |        |       |
+| 5.5 | Jobbsøker - Sjekk aktivitetskort                 | Aktivitetskort finnes med status "Planlagt"             |        |       |
+| 5.6 | Jobbsøker - Klikk lenke i aktivitetskort         | Kommer til rekrutteringstreff-bruker                    |        |       |
+| 5.7 | Markedskontakt - Se aktivitetskort for jobbsøker | Ser samme kort med status "Planlagt"                    |        |       |
+| 5.8 | Veileder - Prøv å invitere jobbsøker             | Inviter-knapp er IKKE synlig for veileder               |        |       |
 
 ### Varselkanaler
 
 Hvilken kanal som brukes avhenger av jobbsøkers registrering i Kontakt- og reservasjonsregisteret (KRR).
 
-| #    | Test                                     | Forventet resultat                           |
-| ---- | ---------------------------------------- | -------------------------------------------- |
-| 5.9  | Inviter jobbsøker med mobilnr i KRR      | SMS sendes, varselstatus = "Sendt"           |
-| 5.10 | Inviter jobbsøker med kun e-post i KRR   | E-post sendes, varselstatus = "Sendt"        |
-| 5.11 | Inviter jobbsøker uten kontaktinfo i KRR | Varsel på MinSide, status = "Varsel MinSide" |
+| #    | Test                                     | Forventet resultat                           | Status | Notat |
+| ---- | ---------------------------------------- | -------------------------------------------- | ------ | ----- |
+| 5.9  | Inviter jobbsøker med mobilnr i KRR      | SMS sendes, varselstatus = "Sendt"           |        |       |
+| 5.10 | Inviter jobbsøker med kun e-post i KRR   | E-post sendes, varselstatus = "Sendt"        |        |       |
+| 5.11 | Inviter jobbsøker uten kontaktinfo i KRR | Varsel på MinSide, status = "Varsel MinSide" |        |       |
 
 ### Feilsituasjoner
 
-| #    | Test                                   | Forventet resultat                       |
-| ---- | -------------------------------------- | ---------------------------------------- |
-| 5.12 | Trykk to ganger på inviter-knapp       | Kun én invitasjon registreres            |
-| 5.13 | Inviter jobbsøker som blir ikke-synlig | Jobbsøker forsvinner, varsel sendes ikke |
+| #    | Test                                   | Forventet resultat                       | Status | Notat |
+| ---- | -------------------------------------- | ---------------------------------------- | ------ | ----- |
+| 5.12 | Trykk to ganger på inviter-knapp       | Kun én invitasjon registreres            |        |       |
+| 5.13 | Inviter jobbsøker som blir ikke-synlig | Jobbsøker forsvinner, varsel sendes ikke |        |       |
 
 ---
 
@@ -234,34 +234,34 @@ Jobbsøker åpner treffet og svarer ja eller nei. Svaret synkroniseres tilbake t
 3. Aktivitetskort oppdateres: Ja → "Gjennomføres", Nei → "Avbrutt"
 4. Jobbsøker kan endre svar før svarfrist
 
-| #   | Test                                           | Forventet resultat                                     |
-| --- | ---------------------------------------------- | ------------------------------------------------------ |
-| 6.1 | Jobbsøker - Svar "Ja"                          | Bekreftelse vises, svarknapper erstattes med status    |
-| 6.2 | Markedskontakt - Sjekk status etter ja-svar    | Status viser "Påmeldt" / "Svart ja"                    |
-| 6.3 | Jobbsøker - Sjekk aktivitetskort etter ja      | Status er "Gjennomføres"                               |
-| 6.4 | Markedskontakt - Sjekk aktivitetskort etter ja | Ser samme status "Gjennomføres"                        |
-| 6.5 | Jobbsøker - Svar "Nei"                         | Bekreftelse på avmelding vises                         |
-| 6.6 | Markedskontakt - Sjekk status etter nei-svar   | Status viser "Avmeldt" / "Svart nei"                   |
-| 6.7 | Jobbsøker - Sjekk aktivitetskort etter nei     | Status er "Avbrutt"                                    |
-| 6.8 | Jobbsøker - Endre svar fra ja til nei          | Nytt svar registreres, aktivitetskort → "Avbrutt"      |
-| 6.9 | Jobbsøker - Endre svar fra nei til ja          | Nytt svar registreres, aktivitetskort → "Gjennomføres" |
+| #   | Test                                           | Forventet resultat                                     | Status | Notat |
+| --- | ---------------------------------------------- | ------------------------------------------------------ | ------ | ----- |
+| 6.1 | Jobbsøker - Svar "Ja"                          | Bekreftelse vises, svarknapper erstattes med status    |        |       |
+| 6.2 | Markedskontakt - Sjekk status etter ja-svar    | Status viser "Påmeldt" / "Svart ja"                    |        |       |
+| 6.3 | Jobbsøker - Sjekk aktivitetskort etter ja      | Status er "Gjennomføres"                               |        |       |
+| 6.4 | Markedskontakt - Sjekk aktivitetskort etter ja | Ser samme status "Gjennomføres"                        |        |       |
+| 6.5 | Jobbsøker - Svar "Nei"                         | Bekreftelse på avmelding vises                         |        |       |
+| 6.6 | Markedskontakt - Sjekk status etter nei-svar   | Status viser "Avmeldt" / "Svart nei"                   |        |       |
+| 6.7 | Jobbsøker - Sjekk aktivitetskort etter nei     | Status er "Avbrutt"                                    |        |       |
+| 6.8 | Jobbsøker - Endre svar fra ja til nei          | Nytt svar registreres, aktivitetskort → "Avbrutt"      |        |       |
+| 6.9 | Jobbsøker - Endre svar fra nei til ja          | Nytt svar registreres, aktivitetskort → "Gjennomføres" |        |       |
 
 ### Tilstander i rekrutteringstreff-bruker
 
 Test at jobbsøker ser riktig informasjon basert på status.
 
-| #    | Test                                | Forventet resultat                                       |
-| ---- | ----------------------------------- | -------------------------------------------------------- |
-| 6.10 | Åpne invitasjon før svarfrist       | Ser svarknapper, svarfrist, treffinfo                    |
-| 6.11 | Åpne etter svarfrist utløpt         | Ser "Svarfrist er utløpt", ingen svarknapper             |
-| 6.12 | Åpne treff man ikke er invitert til | Ser info om begrenset plass, tips om å kontakte veileder |
+| #    | Test                                | Forventet resultat                                       | Status | Notat |
+| ---- | ----------------------------------- | -------------------------------------------------------- | ------ | ----- |
+| 6.10 | Åpne invitasjon før svarfrist       | Ser svarknapper, svarfrist, treffinfo                    |        |       |
+| 6.11 | Åpne etter svarfrist utløpt         | Ser "Svarfrist er utløpt", ingen svarknapper             |        |       |
+| 6.12 | Åpne treff man ikke er invitert til | Ser info om begrenset plass, tips om å kontakte veileder |        |       |
 
 ### Feilsituasjoner
 
-| #    | Test                                      | Forventet resultat       |
-| ---- | ----------------------------------------- | ------------------------ |
-| 6.13 | Jobbsøker - Åpne ugyldig treff-ID         | Vennlig feilmelding      |
-| 6.14 | Jobbsøker - Trykk to ganger på svar-knapp | Kun ett svar registreres |
+| #    | Test                                      | Forventet resultat       | Status | Notat |
+| ---- | ----------------------------------------- | ------------------------ | ------ | ----- |
+| 6.13 | Jobbsøker - Åpne ugyldig treff-ID         | Vennlig feilmelding      |        |       |
+| 6.14 | Jobbsøker - Trykk to ganger på svar-knapp | Kun ett svar registreres |        |       |
 
 ---
 
@@ -287,31 +287,31 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 
 ### Varseldialog og feltvalg
 
-| #   | Test                                              | Forventet resultat                                |
-| --- | ------------------------------------------------- | ------------------------------------------------- |
-| 7.1 | Markedskontakt - Endre felt og lagre              | Dialog åpnes med spørsmål om varsel               |
-| 7.2 | Markedskontakt - Velg "Ikke send varsel"          | Endring lagres, ingen varsel sendes               |
-| 7.3 | Markedskontakt - Velg "Send varsel", alle felt på | Varsel sendes med alle endrede felt nevnt         |
-| 7.4 | Markedskontakt - "Send varsel", kun tidspunkt på  | Varsel nevner kun tidspunkt, ikke andre endringer |
-| 7.5 | Markedskontakt - Velg "Send varsel", kun sted på  | Varsel nevner kun sted                            |
-| 7.6 | Markedskontakt - "Send varsel", ingen felt valgt  | Varsel sendes med generell melding om endring     |
+| #   | Test                                              | Forventet resultat                                | Status | Notat |
+| --- | ------------------------------------------------- | ------------------------------------------------- | ------ | ----- |
+| 7.1 | Markedskontakt - Endre felt og lagre              | Dialog åpnes med spørsmål om varsel               |        |       |
+| 7.2 | Markedskontakt - Velg "Ikke send varsel"          | Endring lagres, ingen varsel sendes               |        |       |
+| 7.3 | Markedskontakt - Velg "Send varsel", alle felt på | Varsel sendes med alle endrede felt nevnt         |        |       |
+| 7.4 | Markedskontakt - "Send varsel", kun tidspunkt på  | Varsel nevner kun tidspunkt, ikke andre endringer |        |       |
+| 7.5 | Markedskontakt - Velg "Send varsel", kun sted på  | Varsel nevner kun sted                            |        |       |
+| 7.6 | Markedskontakt - "Send varsel", ingen felt valgt  | Varsel sendes med generell melding om endring     |        |       |
 
 ### Mottakere og varselinnhold
 
-| #    | Test                                                    | Forventet resultat                       |
-| ---- | ------------------------------------------------------- | ---------------------------------------- |
-| 7.7  | Jobbsøker (invitert, ikke svart) - Motta endringsvarsel | SMS/e-post med info om valgte felt       |
-| 7.8  | Jobbsøker (svart ja) - Motta endringsvarsel             | SMS/e-post med info om valgte felt       |
-| 7.9  | Jobbsøker (svart nei) - Sjekk varsel                    | Skal IKKE motta varsel                   |
-| 7.10 | Jobbsøker - Sjekk SMS-tekst                             | Teksten inneholder de valgte feltnavnene |
+| #    | Test                                                    | Forventet resultat                       | Status | Notat |
+| ---- | ------------------------------------------------------- | ---------------------------------------- | ------ | ----- |
+| 7.7  | Jobbsøker (invitert, ikke svart) - Motta endringsvarsel | SMS/e-post med info om valgte felt       |        |       |
+| 7.8  | Jobbsøker (svart ja) - Motta endringsvarsel             | SMS/e-post med info om valgte felt       |        |       |
+| 7.9  | Jobbsøker (svart nei) - Sjekk varsel                    | Skal IKKE motta varsel                   |        |       |
+| 7.10 | Jobbsøker - Sjekk SMS-tekst                             | Teksten inneholder de valgte feltnavnene |        |       |
 
 ### Oppdatering i systemer
 
-| #    | Test                                           | Forventet resultat                                  |
-| ---- | ---------------------------------------------- | --------------------------------------------------- |
-| 7.11 | Jobbsøker - Åpne treff etter endring           | Ser oppdaterte detaljer i rekrutteringstreff-bruker |
-| 7.12 | Jobbsøker - Sjekk aktivitetskort etter endring | Aktivitetskort har oppdaterte detaljer              |
-| 7.13 | Veileder - Sjekk aktivitetskort etter endring  | Ser oppdaterte detaljer                             |
+| #    | Test                                           | Forventet resultat                                  | Status | Notat |
+| ---- | ---------------------------------------------- | --------------------------------------------------- | ------ | ----- |
+| 7.11 | Jobbsøker - Åpne treff etter endring           | Ser oppdaterte detaljer i rekrutteringstreff-bruker |        |       |
+| 7.12 | Jobbsøker - Sjekk aktivitetskort etter endring | Aktivitetskort har oppdaterte detaljer              |        |       |
+| 7.13 | Veileder - Sjekk aktivitetskort etter endring  | Ser oppdaterte detaljer                             |        |       |
 
 ---
 
@@ -331,17 +331,17 @@ Markedskontakt avlyser et treff. Kun jobbsøkere som har svart ja varsles.
 3. Aktivitetskort for alle inviterte settes til "Avbrutt"
 4. Jobbsøker ser avlysningsmelding i rekrutteringstreff-bruker
 
-| #   | Test                                                      | Forventet resultat                               |
-| --- | --------------------------------------------------------- | ------------------------------------------------ |
-| 8.1 | Markedskontakt - Avlys treff                              | Status endres til "Avlyst"                       |
-| 8.2 | Jobbsøker (svart ja) - Motta avlysningsvarsel             | SMS/e-post om at treffet er avlyst               |
-| 8.3 | Jobbsøker (svart ja) - Sjekk aktivitetskort               | Status er "Avbrutt"                              |
-| 8.4 | Jobbsøker (invitert) - Sjekk varsel                       | Skal IKKE motta varsel                           |
-| 8.5 | Jobbsøker (invitert) - Sjekk aktivitetskort               | Status er "Avbrutt"                              |
-| 8.6 | Jobbsøker (svart nei) - Sjekk varsel                      | Skal IKKE motta varsel                           |
-| 8.7 | Jobbsøker (svart nei) - Sjekk aktivitetskort              | Status er "Avbrutt"                              |
-| 8.8 | Jobbsøker - Åpne avlyst treff                             | Ser tydelig avlysningsmelding                    |
-| 8.9 | Markedskontakt (eier) - Se jobbsøkerliste etter avlysning | Alle jobbsøkere vises fortsatt med sine statuser |
+| #   | Test                                                      | Forventet resultat                               | Status | Notat |
+| --- | --------------------------------------------------------- | ------------------------------------------------ | ------ | ----- |
+| 8.1 | Markedskontakt - Avlys treff                              | Status endres til "Avlyst"                       |        |       |
+| 8.2 | Jobbsøker (svart ja) - Motta avlysningsvarsel             | SMS/e-post om at treffet er avlyst               |        |       |
+| 8.3 | Jobbsøker (svart ja) - Sjekk aktivitetskort               | Status er "Avbrutt"                              |        |       |
+| 8.4 | Jobbsøker (invitert) - Sjekk varsel                       | Skal IKKE motta varsel                           |        |       |
+| 8.5 | Jobbsøker (invitert) - Sjekk aktivitetskort               | Status er "Avbrutt"                              |        |       |
+| 8.6 | Jobbsøker (svart nei) - Sjekk varsel                      | Skal IKKE motta varsel                           |        |       |
+| 8.7 | Jobbsøker (svart nei) - Sjekk aktivitetskort              | Status er "Avbrutt"                              |        |       |
+| 8.8 | Jobbsøker - Åpne avlyst treff                             | Ser tydelig avlysningsmelding                    |        |       |
+| 8.9 | Markedskontakt (eier) - Se jobbsøkerliste etter avlysning | Alle jobbsøkere vises fortsatt med sine statuser |        |       |
 
 ---
 
@@ -361,15 +361,15 @@ Treffet passerer i tid. Aktivitetskort oppdateres automatisk basert på jobbsøk
 3. Aktivitetskort for invitert/svart nei → "Avbrutt"
 4. rekrutteringstreff-bruker viser "Treffet er over"
 
-| #   | Test                                                    | Forventet resultat                      |
-| --- | ------------------------------------------------------- | --------------------------------------- |
-| 9.1 | Jobbsøker - Åpne treff som pågår                        | Ser "Treffet er i gang"                 |
-| 9.2 | Jobbsøker - Åpne treff som er passert                   | Ser "Treffet er over"                   |
-| 9.3 | Jobbsøker (svart ja) - Sjekk aktivitetskort             | Status er "Fullført"                    |
-| 9.4 | Jobbsøker (invitert, ikke svart) - Sjekk aktivitetskort | Status er "Avbrutt"                     |
-| 9.5 | Jobbsøker (svart nei) - Sjekk aktivitetskort            | Status er "Avbrutt"                     |
-| 9.6 | Markedskontakt - Sjekk aktivitetskort (svart ja)        | Status er "Fullført"                    |
-| 9.7 | Markedskontakt (eier) - Se jobbsøkerliste etter treff   | Alle jobbsøkere vises med sine statuser |
+| #   | Test                                                    | Forventet resultat                      | Status | Notat |
+| --- | ------------------------------------------------------- | --------------------------------------- | ------ | ----- |
+| 9.1 | Jobbsøker - Åpne treff som pågår                        | Ser "Treffet er i gang"                 |        |       |
+| 9.2 | Jobbsøker - Åpne treff som er passert                   | Ser "Treffet er over"                   |        |       |
+| 9.3 | Jobbsøker (svart ja) - Sjekk aktivitetskort             | Status er "Fullført"                    |        |       |
+| 9.4 | Jobbsøker (invitert, ikke svart) - Sjekk aktivitetskort | Status er "Avbrutt"                     |        |       |
+| 9.5 | Jobbsøker (svart nei) - Sjekk aktivitetskort            | Status er "Avbrutt"                     |        |       |
+| 9.6 | Markedskontakt - Sjekk aktivitetskort (svart ja)        | Status er "Fullført"                    |        |       |
+| 9.7 | Markedskontakt (eier) - Se jobbsøkerliste etter treff   | Alle jobbsøkere vises med sine statuser |        |       |
 
 ---
 
@@ -384,13 +384,13 @@ Markedskontakt legger til et innlegg (introduksjonstekst) på treffet som jobbs�
 
 **Hva skjer:** Innlegget vises under "Siste aktivitet" i rekrutteringstreff-bruker. Ingen varsel sendes for innlegg.
 
-| #    | Test                                                    | Forventet resultat                              |
-| ---- | ------------------------------------------------------- | ----------------------------------------------- |
-| 10.1 | Markedskontakt - Legg til innlegg                       | Innlegg vises på treffet i rekrutteringsbistand |
-| 10.2 | Jobbsøker - Se innlegg                                  | Innlegg vises under "Siste aktivitet"           |
-| 10.3 | Markedskontakt - Rediger eksisterende innlegg           | Samme innlegg oppdateres, ikke nytt             |
-| 10.4 | Markedskontakt - Sjekk at det ikke kan legges til flere | Ingen knapp for å legge til nytt innlegg        |
-| 10.5 | Markedskontakt - Tøm innlegget                          | Innlegget fjernes fra visningen                 |
+| #    | Test                                                    | Forventet resultat                              | Status | Notat |
+| ---- | ------------------------------------------------------- | ----------------------------------------------- | ------ | ----- |
+| 10.1 | Markedskontakt - Legg til innlegg                       | Innlegg vises på treffet i rekrutteringsbistand |        |       |
+| 10.2 | Jobbsøker - Se innlegg                                  | Innlegg vises under "Siste aktivitet"           |        |       |
+| 10.3 | Markedskontakt - Rediger eksisterende innlegg           | Samme innlegg oppdateres, ikke nytt             |        |       |
+| 10.4 | Markedskontakt - Sjekk at det ikke kan legges til flere | Ingen knapp for å legge til nytt innlegg        |        |       |
+| 10.5 | Markedskontakt - Tøm innlegget                          | Innlegget fjernes fra visningen                 |        |       |
 
 ---
 
@@ -417,44 +417,44 @@ Når markedskontakt skriver tittel eller innlegg, valideres teksten automatisk a
 
 Tittel valideres både ved autolagring (kladd) og ved endring etter publisering.
 
-| #    | Test                                                          | Forventet resultat                        |
-| ---- | ------------------------------------------------------------- | ----------------------------------------- |
-| 11.1 | Markedskontakt - Skriv nøytral tittel (kladd)                 | Ingen advarsel, tekst godkjennes          |
-| 11.2 | Markedskontakt - Skriv diskriminerende tittel (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |
-| 11.3 | Markedskontakt - Endre tittel (etter publisering)             | KI validerer ved "Lagre" i dialog         |
-| 11.4 | Markedskontakt - Endre til diskriminerende tittel (publisert) | Advarsel vises, kan ikke lagre uten knapp |
+| #    | Test                                                          | Forventet resultat                        | Status | Notat |
+| ---- | ------------------------------------------------------------- | ----------------------------------------- | ------ | ----- |
+| 11.1 | Markedskontakt - Skriv nøytral tittel (kladd)                 | Ingen advarsel, tekst godkjennes          |        |       |
+| 11.2 | Markedskontakt - Skriv diskriminerende tittel (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |        |       |
+| 11.3 | Markedskontakt - Endre tittel (etter publisering)             | KI validerer ved "Lagre" i dialog         |        |       |
+| 11.4 | Markedskontakt - Endre til diskriminerende tittel (publisert) | Advarsel vises, kan ikke lagre uten knapp |        |       |
 
 ### KI-validering av innlegg
 
 Innlegg valideres på samme måte som tittel.
 
-| #    | Test                                                           | Forventet resultat                        |
-| ---- | -------------------------------------------------------------- | ----------------------------------------- |
-| 11.5 | Markedskontakt - Skriv nøytralt innlegg (kladd)                | Ingen advarsel, tekst godkjennes          |
-| 11.6 | Markedskontakt - Skriv diskriminerende innlegg (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |
-| 11.7 | Markedskontakt - Endre innlegg (etter publisering)             | KI validerer ved "Lagre" i dialog         |
-| 11.8 | Markedskontakt - Endre til diskriminerende innlegg (publisert) | Advarsel vises, kan ikke lagre uten knapp |
+| #    | Test                                                           | Forventet resultat                        | Status | Notat |
+| ---- | -------------------------------------------------------------- | ----------------------------------------- | ------ | ----- |
+| 11.5 | Markedskontakt - Skriv nøytralt innlegg (kladd)                | Ingen advarsel, tekst godkjennes          |        |       |
+| 11.6 | Markedskontakt - Skriv diskriminerende innlegg (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |        |       |
+| 11.7 | Markedskontakt - Endre innlegg (etter publisering)             | KI validerer ved "Lagre" i dialog         |        |       |
+| 11.8 | Markedskontakt - Endre til diskriminerende innlegg (publisert) | Advarsel vises, kan ikke lagre uten knapp |        |       |
 
 ### "Lagre likevel"-funksjonalitet
 
 Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 
-| #     | Test                                                       | Forventet resultat                       |
-| ----- | ---------------------------------------------------------- | ---------------------------------------- |
-| 11.9  | Markedskontakt - Advarsel vist, IKKE trykk "Lagre likevel" | Kan ikke publisere/lagre treffet         |
-| 11.10 | Markedskontakt - Advarsel vist, trykk "Lagre likevel"      | Teksten lagres, kan fortsette            |
-| 11.11 | Markedskontakt - Prøv å publisere uten "Lagre likevel"     | Publisering blokkert inntil valg er tatt |
+| #     | Test                                                       | Forventet resultat                       | Status | Notat |
+| ----- | ---------------------------------------------------------- | ---------------------------------------- | ------ | ----- |
+| 11.9  | Markedskontakt - Advarsel vist, IKKE trykk "Lagre likevel" | Kan ikke publisere/lagre treffet         |        |       |
+| 11.10 | Markedskontakt - Advarsel vist, trykk "Lagre likevel"      | Teksten lagres, kan fortsette            |        |       |
+| 11.11 | Markedskontakt - Prøv å publisere uten "Lagre likevel"     | Publisering blokkert inntil valg er tatt |        |       |
 
 ### KI-logg (krever utviklertilgang)
 
-| #     | Test                                          | Forventet resultat                                  |
-| ----- | --------------------------------------------- | --------------------------------------------------- |
-| 11.12 | Utvikler - Åpne KI-logg                       | Ser liste over alle KI-valideringer                 |
-| 11.13 | Utvikler - Sjekk logg for kladd-treff         | lagret=true for tekst som ble autolagret            |
-| 11.14 | Utvikler - Sjekk logg etter publisert endring | lagret=true kun når bruker trykket "Lagre" i dialog |
-| 11.15 | Utvikler - Sjekk tekst som ble forkastet      | lagret=false for tekst som ble endret før lagring   |
-| 11.16 | Utvikler - Legg inn manuell vurdering         | Kan registrere egen vurdering for kvalitetskontroll |
-| 11.17 | Utvikler - Filtrer på avvik                   | Kan finne tilfeller der KI vurderte feil            |
+| #     | Test                                          | Forventet resultat                                  | Status | Notat |
+| ----- | --------------------------------------------- | --------------------------------------------------- | ------ | ----- |
+| 11.12 | Utvikler - Åpne KI-logg                       | Ser liste over alle KI-valideringer                 |        |       |
+| 11.13 | Utvikler - Sjekk logg for kladd-treff         | lagret=true for tekst som ble autolagret            |        |       |
+| 11.14 | Utvikler - Sjekk logg etter publisert endring | lagret=true kun når bruker trykket "Lagre" i dialog |        |       |
+| 11.15 | Utvikler - Sjekk tekst som ble forkastet      | lagret=false for tekst som ble endret før lagring   |        |       |
+| 11.16 | Utvikler - Legg inn manuell vurdering         | Kan registrere egen vurdering for kvalitetskontroll |        |       |
+| 11.17 | Utvikler - Filtrer på avvik                   | Kan finne tilfeller der KI vurderte feil            |        |       |
 
 ---
 
@@ -466,12 +466,12 @@ Veiledere og markedskontakter kan finne publiserte rekrutteringstreff for å leg
 
 **Hva skjer:** Publiserte treff vises i oversikten. Brukeren kan åpne treff for å se detaljer og eventuelt legge til jobbsøkere.
 
-| #    | Test                                               | Forventet resultat                            |
-| ---- | -------------------------------------------------- | --------------------------------------------- |
-| 12.1 | Veileder - Åpne rekrutteringstreff-oversikten      | Ser liste over publiserte treff               |
-| 12.2 | Markedskontakt - Åpne oversikten                   | Ser publiserte treff + egne upubliserte treff |
-| 12.3 | Veileder - Klikk på et treff                       | Åpner treffet i lesemodus                     |
-| 12.4 | Markedskontakt (ikke eier) - Klikk på andres treff | Åpner treffet i lesemodus                     |
+| #    | Test                                               | Forventet resultat                            | Status | Notat |
+| ---- | -------------------------------------------------- | --------------------------------------------- | ------ | ----- |
+| 12.1 | Veileder - Åpne rekrutteringstreff-oversikten      | Ser liste over publiserte treff               |        |       |
+| 12.2 | Markedskontakt - Åpne oversikten                   | Ser publiserte treff + egne upubliserte treff |        |       |
+| 12.3 | Veileder - Klikk på et treff                       | Åpner treffet i lesemodus                     |        |       |
+| 12.4 | Markedskontakt (ikke eier) - Klikk på andres treff | Åpner treffet i lesemodus                     |        |       |
 
 ---
 
@@ -483,14 +483,14 @@ Markedskontakt eller veileder kan søke etter kandidater i CV-databasen for å l
 
 **Hva skjer:** Åpner kandidatsøk med filter. Brukeren kan søke, filtrere og legge til kandidater på treffet.
 
-| #    | Test                                            | Forventet resultat             |
-| ---- | ----------------------------------------------- | ------------------------------ |
-| 13.1 | Markedskontakt (eier) - Klikk "Finn jobbsøkere" | Åpner kandidatsøk med filter   |
-| 13.2 | Markedskontakt - Søk med kompetansefilter       | Kandidater som matcher vises   |
-| 13.3 | Markedskontakt - Legg til kandidat fra søk      | Kandidat legges til på treffet |
-| 13.4 | Markedskontakt - Legg til flere kandidater      | Alle legges til på treffet     |
-| 13.5 | Veileder (ikke eier) - Klikk "Finn jobbsøkere"  | Åpner kandidatsøk              |
-| 13.6 | Veileder - Legg til kandidat                    | Kandidat legges til på treffet |
+| #    | Test                                            | Forventet resultat             | Status | Notat |
+| ---- | ----------------------------------------------- | ------------------------------ | ------ | ----- |
+| 13.1 | Markedskontakt (eier) - Klikk "Finn jobbsøkere" | Åpner kandidatsøk med filter   |        |       |
+| 13.2 | Markedskontakt - Søk med kompetansefilter       | Kandidater som matcher vises   |        |       |
+| 13.3 | Markedskontakt - Legg til kandidat fra søk      | Kandidat legges til på treffet |        |       |
+| 13.4 | Markedskontakt - Legg til flere kandidater      | Alle legges til på treffet     |        |       |
+| 13.5 | Veileder (ikke eier) - Klikk "Finn jobbsøkere"  | Åpner kandidatsøk              |        |       |
+| 13.6 | Veileder - Legg til kandidat                    | Kandidat legges til på treffet |        |       |
 
 ---
 
@@ -504,16 +504,16 @@ Markedskontakt (eier) kan se en logg over alle hendelser som har skjedd på tref
 
 > **Tips:** Test dette på et treff der du allerede har gjort mange andre tester, slik at det finnes data for alle hendelsestyper. Hvis noen hendelsestyper mangler, utfør de relevante handlingene først (legg til/fjern jobbsøker, inviter, endre treff, etc.).
 
-| #    | Test                                         | Forventet resultat                            |
-| ---- | -------------------------------------------- | --------------------------------------------- |
-| 14.1 | Markedskontakt (eier) - Åpne Hendelser-fanen | Ser liste over alle hendelser på treffet      |
-| 14.2 | Sjekk at opprettelse vises                   | "Opprettet" med tidspunkt og utført av        |
-| 14.3 | Sjekk at publisering vises                   | "Publisert" med tidspunkt                     |
-| 14.4 | Sjekk at jobbsøker-hendelser vises           | "Lagt til", "Invitert", "Svart ja/nei" etc.   |
-| 14.5 | Sjekk at arbeidsgiver-hendelser vises        | "Lagt til", "Fjernet" etc.                    |
-| 14.6 | Sjekk at endringshendelser vises             | "Endret" med info om hva som ble endret       |
-| 14.7 | Sjekk kronologisk rekkefølge                 | Nyeste hendelser øverst eller tydelig sortert |
-| 14.8 | Veileder (ikke eier) - Prøv Hendelser-fanen  | Fanen er ikke tilgjengelig                    |
+| #    | Test                                         | Forventet resultat                            | Status | Notat |
+| ---- | -------------------------------------------- | --------------------------------------------- | ------ | ----- |
+| 14.1 | Markedskontakt (eier) - Åpne Hendelser-fanen | Ser liste over alle hendelser på treffet      |        |       |
+| 14.2 | Sjekk at opprettelse vises                   | "Opprettet" med tidspunkt og utført av        |        |       |
+| 14.3 | Sjekk at publisering vises                   | "Publisert" med tidspunkt                     |        |       |
+| 14.4 | Sjekk at jobbsøker-hendelser vises           | "Lagt til", "Invitert", "Svart ja/nei" etc.   |        |       |
+| 14.5 | Sjekk at arbeidsgiver-hendelser vises        | "Lagt til", "Fjernet" etc.                    |        |       |
+| 14.6 | Sjekk at endringshendelser vises             | "Endret" med info om hva som ble endret       |        |       |
+| 14.7 | Sjekk kronologisk rekkefølge                 | Nyeste hendelser øverst eller tydelig sortert |        |       |
+| 14.8 | Veileder (ikke eier) - Prøv Hendelser-fanen  | Fanen er ikke tilgjengelig                    |        |       |
 
 ---
 
@@ -531,68 +531,68 @@ Løsningen har tre roller med ulike tilganger. Test at hver rolle kun kan gjøre
 
 Veileder skal kunne se publiserte treff og legge til egne jobbsøkere, men IKKE se andre jobbsøkere, invitere eller redigere treffet.
 
-| #    | Test                                     | Forventet resultat                        |
-| ---- | ---------------------------------------- | ----------------------------------------- |
-| 15.1 | Veileder - Åpne publisert treff          | Ser treffdetaljer i lesemodus             |
-| 15.2 | Veileder - Prøv å redigere treffdetaljer | Ingen redigeringsknapper synlige          |
-| 15.3 | Veileder - Se jobbsøkerlisten            | Ser IKKE andre veilederes jobbsøkere      |
-| 15.4 | Veileder - Legg til jobbsøker            | Kan legge til jobbsøker på treffet        |
-| 15.5 | Veileder - Se egen jobbsøker             | Ser jobbsøkeren man selv la til           |
-| 15.6 | Veileder - Prøv å invitere jobbsøker     | Inviter-knapp er IKKE synlig for veileder |
-| 15.7 | Veileder - Prøv å se Hendelser-fanen     | Fanen er ikke synlig/tilgjengelig         |
-| 15.8 | Veileder - Prøv å opprette nytt treff    | Knapp for opprett treff ikke synlig       |
+| #    | Test                                     | Forventet resultat                        | Status | Notat |
+| ---- | ---------------------------------------- | ----------------------------------------- | ------ | ----- |
+| 15.1 | Veileder - Åpne publisert treff          | Ser treffdetaljer i lesemodus             |        |       |
+| 15.2 | Veileder - Prøv å redigere treffdetaljer | Ingen redigeringsknapper synlige          |        |       |
+| 15.3 | Veileder - Se jobbsøkerlisten            | Ser IKKE andre veilederes jobbsøkere      |        |       |
+| 15.4 | Veileder - Legg til jobbsøker            | Kan legge til jobbsøker på treffet        |        |       |
+| 15.5 | Veileder - Se egen jobbsøker             | Ser jobbsøkeren man selv la til           |        |       |
+| 15.6 | Veileder - Prøv å invitere jobbsøker     | Inviter-knapp er IKKE synlig for veileder |        |       |
+| 15.7 | Veileder - Prøv å se Hendelser-fanen     | Fanen er ikke synlig/tilgjengelig         |        |       |
+| 15.8 | Veileder - Prøv å opprette nytt treff    | Knapp for opprett treff ikke synlig       |        |       |
 
 ### Markedskontakt (arbeidsgiverrettet) - ikke eier
 
 Markedskontakt som ikke er eier av treffet kan legge til jobbsøkere og opprette egne treff, men ikke redigere andres treff.
 
-| #     | Test                                                | Forventet resultat                |
-| ----- | --------------------------------------------------- | --------------------------------- |
-| 15.9  | Markedskontakt - Åpne andres publiserte treff       | Ser treffdetaljer i lesemodus     |
-| 15.10 | Markedskontakt - Prøv å redigere andres treff       | Ingen redigeringsknapper synlige  |
-| 15.11 | Markedskontakt - Se jobbsøkerlisten på andres treff | Ser IKKE andres jobbsøkere        |
-| 15.12 | Markedskontakt - Legg til jobbsøker på andres treff | Kan legge til jobbsøker           |
-| 15.13 | Markedskontakt - Opprette eget treff                | Knapp synlig, kan opprette        |
-| 15.14 | Markedskontakt - Invitere jobbsøker på andres treff | Kan invitere jobbsøker man la til |
+| #     | Test                                                | Forventet resultat                | Status | Notat |
+| ----- | --------------------------------------------------- | --------------------------------- | ------ | ----- |
+| 15.9  | Markedskontakt - Åpne andres publiserte treff       | Ser treffdetaljer i lesemodus     |        |       |
+| 15.10 | Markedskontakt - Prøv å redigere andres treff       | Ingen redigeringsknapper synlige  |        |       |
+| 15.11 | Markedskontakt - Se jobbsøkerlisten på andres treff | Ser IKKE andres jobbsøkere        |        |       |
+| 15.12 | Markedskontakt - Legg til jobbsøker på andres treff | Kan legge til jobbsøker           |        |       |
+| 15.13 | Markedskontakt - Opprette eget treff                | Knapp synlig, kan opprette        |        |       |
+| 15.14 | Markedskontakt - Invitere jobbsøker på andres treff | Kan invitere jobbsøker man la til |        |       |
 
 ### Markedskontakt (arbeidsgiverrettet) - eier
 
 Markedskontakt som er eier har full tilgang til eget treff.
 
-| #     | Test                                                   | Forventet resultat                   |
-| ----- | ------------------------------------------------------ | ------------------------------------ |
-| 15.15 | Markedskontakt (eier) - Åpne eget treff                | Ser alle faner inkl. Hendelser       |
-| 15.16 | Markedskontakt (eier) - Redigere treffdetaljer         | Kan redigere tittel, tid, sted, etc. |
-| 15.17 | Markedskontakt (eier) - Se alle jobbsøkere             | Ser alle jobbsøkere på treffet       |
-| 15.18 | Markedskontakt (eier) - Invitere alle jobbsøkere       | Kan invitere alle, ikke bare egne    |
-| 15.19 | Markedskontakt (eier) - Publisere treff                | Publiser-knapp synlig og fungerer    |
-| 15.20 | Markedskontakt (eier) - Avlyse treff                   | Avlys-knapp synlig og fungerer       |
-| 15.21 | Markedskontakt (eier) - Legge til/fjerne arbeidsgivere | Kan administrere arbeidsgiverlisten  |
+| #     | Test                                                   | Forventet resultat                   | Status | Notat |
+| ----- | ------------------------------------------------------ | ------------------------------------ | ------ | ----- |
+| 15.15 | Markedskontakt (eier) - Åpne eget treff                | Ser alle faner inkl. Hendelser       |        |       |
+| 15.16 | Markedskontakt (eier) - Redigere treffdetaljer         | Kan redigere tittel, tid, sted, etc. |        |       |
+| 15.17 | Markedskontakt (eier) - Se alle jobbsøkere             | Ser alle jobbsøkere på treffet       |        |       |
+| 15.18 | Markedskontakt (eier) - Invitere alle jobbsøkere       | Kan invitere alle, ikke bare egne    |        |       |
+| 15.19 | Markedskontakt (eier) - Publisere treff                | Publiser-knapp synlig og fungerer    |        |       |
+| 15.20 | Markedskontakt (eier) - Avlyse treff                   | Avlys-knapp synlig og fungerer       |        |       |
+| 15.21 | Markedskontakt (eier) - Legge til/fjerne arbeidsgivere | Kan administrere arbeidsgiverlisten  |        |       |
 
 ### Utvikler
 
 Utviklere har full tilgang til alt, uavhengig av kontor og eierskap.
 
-| #     | Test                                | Forventet resultat                  |
-| ----- | ----------------------------------- | ----------------------------------- |
-| 15.22 | Utvikler - Åpne KI-logg             | Ser liste over alle KI-valideringer |
-| 15.23 | Utvikler - Se alle treff            | Kan se alle treff inkludert kladder |
-| 15.24 | Utvikler - Tilgang uten pilotkontor | Får tilgang uansett kontor          |
-| 15.25 | Utvikler - Se andres hendelseslogg  | Kan se hendelser på alle treff      |
+| #     | Test                                | Forventet resultat                  | Status | Notat |
+| ----- | ----------------------------------- | ----------------------------------- | ------ | ----- |
+| 15.22 | Utvikler - Åpne KI-logg             | Ser liste over alle KI-valideringer |        |       |
+| 15.23 | Utvikler - Se alle treff            | Kan se alle treff inkludert kladder |        |       |
+| 15.24 | Utvikler - Tilgang uten pilotkontor | Får tilgang uansett kontor          |        |       |
+| 15.25 | Utvikler - Se andres hendelseslogg  | Kan se hendelser på alle treff      |        |       |
 
 ### Pilotkontor-tilgang
 
 I pilotperioden må brukeren være innlogget på et pilotkontor for å få tilgang.
 
-| #     | Test                                                         | Forventet resultat                                       |
-| ----- | ------------------------------------------------------------ | -------------------------------------------------------- |
-| 15.26 | Veileder på pilotkontor - Åpne rekrutteringstreff            | Får tilgang til rekrutteringstreff                       |
-| 15.27 | Veileder på ikke-pilotkontor - Åpne rekrutteringstreff       | Ser melding "Du har ikke tilgang til rekrutteringstreff" |
-| 15.28 | Markedskontakt på pilotkontor - Åpne rekrutteringstreff      | Får tilgang til rekrutteringstreff                       |
-| 15.29 | Markedskontakt på ikke-pilotkontor - Åpne rekrutteringstreff | Ser melding "Du har ikke tilgang til rekrutteringstreff" |
-| 15.30 | Markedskontakt på pilotkontor - Opprette treff               | Kan opprette treff                                       |
-| 15.31 | Markedskontakt på ikke-pilotkontor - Opprette treff          | Kan IKKE opprette treff                                  |
-| 15.32 | Utvikler - Åpne uansett kontor                               | Får alltid tilgang                                       |
+| #     | Test                                                         | Forventet resultat                                       | Status | Notat |
+| ----- | ------------------------------------------------------------ | -------------------------------------------------------- | ------ | ----- |
+| 15.26 | Veileder på pilotkontor - Åpne rekrutteringstreff            | Får tilgang til rekrutteringstreff                       |        |       |
+| 15.27 | Veileder på ikke-pilotkontor - Åpne rekrutteringstreff       | Ser melding "Du har ikke tilgang til rekrutteringstreff" |        |       |
+| 15.28 | Markedskontakt på pilotkontor - Åpne rekrutteringstreff      | Får tilgang til rekrutteringstreff                       |        |       |
+| 15.29 | Markedskontakt på ikke-pilotkontor - Åpne rekrutteringstreff | Ser melding "Du har ikke tilgang til rekrutteringstreff" |        |       |
+| 15.30 | Markedskontakt på pilotkontor - Opprette treff               | Kan opprette treff                                       |        |       |
+| 15.31 | Markedskontakt på ikke-pilotkontor - Opprette treff          | Kan IKKE opprette treff                                  |        |       |
+| 15.32 | Utvikler - Åpne uansett kontor                               | Får alltid tilgang                                       |        |       |
 
 ---
 
