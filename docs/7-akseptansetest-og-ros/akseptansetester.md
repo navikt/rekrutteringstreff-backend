@@ -678,28 +678,6 @@ Utviklere har full tilgang til alt, uavhengig av kontor og eierskap.
 | 15.23 | Utvikler - Se alle treff                     | Kan se alle treff inkludert kladder                             |      |       |
 | 15.24 | Utvikler - Tilgang uten pilotkontor          | Får tilgang uansett kontor                                      |      |       |
 | 15.25 | Utvikler - Se andres hendelseslogg           | Kan se hendelser på alle treff                                  |      |       |
-| 15.36 | Utvikler - Sjekk logg etter robusthetstester | Logger fra test 11.25-11.29 er synlige for analyse av svakheter |      |       |
-
-### KI-infrastruktur (ROS 29025, 29263, 29330)
-
-Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
-
-| #     | Test                                              | Forventet resultat                              | ✅❌ | Notat |
-| ----- | ------------------------------------------------- | ----------------------------------------------- | ---- | ----- |
-| 15.37 | Utvikler - Verifiser deployment-type i Azure      | Deployment er "Standard" i EU/EØS (ikke Global) |      |       |
-| 15.38 | Utvikler - Verifiser abuse monitoring er aktivert | Content filtering er aktivert med høyeste nivå  |      |       |
-| 15.39 | Utvikler - Sjekk at logger slettes automatisk     | Logger eldre enn definert retensjon finnes ikke |      |       |
-| 15.40 | Utvikler - Verifiser modellversjon                | Modellen er dokumentert og har ikke utgått      |      |       |
-
-### Produksjonsmiljø-indikator (ROS 29337)
-
-Test at det er tydelig når man jobber i produksjonsmiljø.
-
-| #     | Test                                                  | Forventet resultat                                           | ✅❌ | Notat |
-| ----- | ----------------------------------------------------- | ------------------------------------------------------------ | ---- | ----- |
-| 15.33 | Utvikler - Åpne løsningen i prod                      | Ser tydelig banner/indikator om at man er i produksjonsmiljø |      |       |
-| 15.34 | Utvikler - Åpne løsningen i dev                       | Ingen prod-banner, men ev. dev-indikator                     |      |       |
-| 15.35 | Utvikler - Sjekk at prod-banner er synlig ved KI-logg | Banneret er synlig når man jobber med sensitive logger       |      |       |
 
 ### Pilotkontor-tilgang
 
@@ -714,6 +692,35 @@ I pilotperioden må brukeren være innlogget på et pilotkontor for å få tilga
 | 15.30 | Markedskontakt på pilotkontor - Opprette treff               | Kan opprette treff                                       |      |       |
 | 15.31 | Markedskontakt på ikke-pilotkontor - Opprette treff          | Kan IKKE opprette treff                                  |      |       |
 | 15.32 | Utvikler - Åpne uansett kontor                               | Får alltid tilgang                                       |      |       |
+
+### Produksjonsmiljø-indikator (ROS 29337)
+
+Test at det er tydelig når man jobber i produksjonsmiljø.
+
+| #     | Test                                                  | Forventet resultat                                           | ✅❌ | Notat |
+| ----- | ----------------------------------------------------- | ------------------------------------------------------------ | ---- | ----- |
+| 15.33 | Utvikler - Åpne løsningen i prod                      | Ser tydelig banner/indikator om at man er i produksjonsmiljø |      |       |
+| 15.34 | Utvikler - Åpne løsningen i dev                       | Ingen prod-banner, men ev. dev-indikator                     |      |       |
+| 15.35 | Utvikler - Sjekk at prod-banner er synlig ved KI-logg | Banneret er synlig når man jobber med sensitive logger       |      |       |
+
+### KI-logg og robusthetstesting (ROS 27546)
+
+Verifiser at logger fra robusthetstesting er tilgjengelige for analyse.
+
+| #     | Test                                         | Forventet resultat                                              | ✅❌ | Notat |
+| ----- | -------------------------------------------- | --------------------------------------------------------------- | ---- | ----- |
+| 15.36 | Utvikler - Sjekk logg etter robusthetstester | Logger fra test 11.25-11.29 er synlige for analyse av svakheter |      |       |
+
+### KI-infrastruktur (ROS 29025, 29023, 29263, 29330)
+
+Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
+
+| #     | Test                                              | Forventet resultat                              | ✅❌ | Notat |
+| ----- | ------------------------------------------------- | ----------------------------------------------- | ---- | ----- |
+| 15.37 | Utvikler - Verifiser deployment-type i Azure      | Deployment er "Standard" i EU/EØS (ikke Global) |      |       |
+| 15.38 | Utvikler - Verifiser abuse monitoring er aktivert | Content filtering er aktivert med høyeste nivå  |      |       |
+| 15.39 | Utvikler - Sjekk at logger slettes automatisk     | Logger eldre enn definert retensjon finnes ikke |      |       |
+| 15.40 | Utvikler - Verifiser modellversjon                | Modellen er dokumentert og har ikke utgått      |      |       |
 
 ---
 
