@@ -6,13 +6,18 @@ Testscenarier for domeneeksperter før pilot og prodsetting. Testene er organise
 
 ## Testmiljø
 
-| System                    | URL (dev)                              | Brukes av                |
-| ------------------------- | -------------------------------------- | ------------------------ |
-| rekrutteringsbistand      | rekrutteringsbistand.intern.dev.nav.no | Veileder, Markedskontakt |
-| rekrutteringstreff-bruker | rekrutteringstreff.ekstern.dev.nav.no  | Jobbsøker                |
-| Aktivitetsplan (veileder) | veilarbpersonflate.intern.dev.nav.no   | Veileder                 |
-| Aktivitetsplan (bruker)   | aktivitetsplan.ekstern.dev.nav.no      | Jobbsøker                |
-| MinSide                   | min-side.dev.nav.no                    | Jobbsøker                |
+| System                    | URL (dev)                              | Brukes av                | Også kalt       |
+| ------------------------- | -------------------------------------- | ------------------------ | ---------------- |
+| rekrutteringsbistand      | rekrutteringsbistand.intern.dev.nav.no | Veileder, Markedskontakt | -                |
+| rekrutteringstreff-bruker | rekrutteringstreff.ekstern.dev.nav.no  | Jobbsøker                | "Treffsiden"     |
+| Aktivitetsplan (veileder) | veilarbpersonflate.intern.dev.nav.no   | Veileder                 | -                |
+| Aktivitetsplan (bruker)   | aktivitetsplan.ekstern.dev.nav.no      | Jobbsøker                | -                |
+| MinSide                   | min-side.dev.nav.no                    | Jobbsøker                | "MinSide-varsel" |
+
+> **Terminologi:**
+> - **Treffsiden** = rekrutteringstreff-bruker der jobbsøker ser treffdetaljer og svarer
+> - **MinSide-varsel** = Varsler på min-side.dev.nav.no for jobbsøkere uten KRR-kontaktinfo
+> - **SMS/e-post** = Varsler som sendes med lenke til treffsiden (ikke selve endringene)
 
 ---
 
@@ -305,25 +310,26 @@ Test at jobbsøker ser riktig informasjon basert på status.
 
 ## 7. Endre publisert treff
 
-> **ROS:** 28065, 27482
+> **ROS:** 28065, 27482, 27383
 
 Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere. Ved lagring åpnes en dialog der markedskontakt velger om det skal sendes varsel, og hvilke felter som skal nevnes i varselet.
 
 **Hvor:**
 
 - Markedskontakt: rekrutteringsbistand
-- Jobbsøker: SMS/e-post (hvis varsel sendes), rekrutteringstreff-bruker
+- Jobbsøker: SMS/e-post (hvis varsel sendes), treffsiden (rekrutteringstreff-bruker)
 
 **Hva skjer:**
 
 1. Markedskontakt gjør endringer og trykker "Lagre"
 2. Dialog åpnes med valg: "Send varsel til inviterte?" (ja/nei)
 3. Hvis ja: Switch-knapper for hvert endret felt (tidspunkt, sted, svarfrist, etc.)
-4. Valgte felter nevnes i SMS-teksten til jobbsøker
+4. Valgte felter nevnes i SMS/e-post-teksten til jobbsøker
 5. Mottakere:
    - **Invitert (ikke svart):** Får varsel
    - **Svart ja:** Får varsel
    - **Svart nei:** Får IKKE varsel
+6. **Treffsiden oppdateres umiddelbart** - jobbsøker ser alltid siste versjon når de åpner treffsiden
 
 ### Varseldialog og feltvalg
 
@@ -345,13 +351,15 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 | 7.9  | Jobbsøker (svart nei) - Sjekk varsel                    | Skal IKKE motta varsel                   |      |       |
 | 7.10 | Jobbsøker - Sjekk SMS-tekst                             | Teksten inneholder de valgte feltnavnene |      |       |
 
-### Oppdatering i systemer
+### Oppdatering i treffsiden og aktivitetskort (ROS 27383)
 
-| #    | Test                                           | Forventet resultat                                  | ✅❌ | Notat |
-| ---- | ---------------------------------------------- | --------------------------------------------------- | ---- | ----- |
-| 7.11 | Jobbsøker - Åpne treff etter endring           | Ser oppdaterte detaljer i rekrutteringstreff-bruker |      |       |
-| 7.12 | Jobbsøker - Sjekk aktivitetskort etter endring | Aktivitetskort har oppdaterte detaljer              |      |       |
-| 7.13 | Veileder - Sjekk aktivitetskort etter endring  | Ser oppdaterte detaljer                             |      |       |
+Test at jobbsøker ser korrekt og oppdatert info på treffsiden (rekrutteringstreff-bruker) etter at markedskontakt har gjort endringer.
+
+| #    | Test                                                         | Forventet resultat                                                 | ✅❌ | Notat |
+| ---- | ------------------------------------------------------------ | ------------------------------------------------------------------ | ---- | ----- |
+| 7.11 | Jobbsøker - Åpne treffsiden etter endring                     | Ser oppdaterte detaljer (tittel, tidspunkt, sted, svarfrist)       |      |       |
+| 7.12 | Jobbsøker - Sjekk aktivitetskort etter endring               | Aktivitetskort har oppdaterte detaljer                             |      |       |
+| 7.13 | Veileder - Sjekk aktivitetskort etter endring                | Ser oppdaterte detaljer                                            |      |       |
 
 ### Endring og synkronisering (ROS 28065)
 

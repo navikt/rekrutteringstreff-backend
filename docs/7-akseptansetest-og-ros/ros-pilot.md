@@ -32,7 +32,7 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | 27388  | Feilregistrering ved deltakelsesvalg          | ✅     | -                             | AT 6.1-6.9               |
 | 27386  | Aktivitetskort blir ikke opprettet            | ✅     | -                             | AT 5.5-5.7               |
 | 27385  | Nav-ansatte mangler info om frivillighet      | 🔄     | Info til fagpersoner          | AT 5.14-5.15             |
-| 27383  | Jobbsøker får feil info i treffsiden          | ✅     | Manuell kontroll              | AT 7.11-7.18             |
+| 27383  | Jobbsøker får feil info i treffsiden          | ✅     | Manuell kontroll              | AT 7.11-7.13             |
 | 27381  | Deltaker mottar samme varsel gjentatte ganger | ✅     | -                             | AT 5.12                  |
 | 27379  | Menneskelig feil - feil person får invitasjon | ⚠️     | Manuell kontroll              | -                        |
 | 27378  | Teknisk feil - feil person får invitasjon     | ✅     | -                             | AT 4.1-4.5, 5.1-5.7      |
@@ -260,18 +260,21 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 
 ### 27383 - Jobbsøker får feil info i treffsiden
 
-**Risiko:** Jobbsøker får feil informasjon i treffsiden (navn på treffet, dato, tidspunkt, sted og svarfrist).
+**Risiko:** Jobbsøker får feil informasjon på treffsiden (rekrutteringstreff-bruker) - f.eks. navn på treffet, dato, tidspunkt, sted og svarfrist.
+
+> **Merk:** Treffsiden = rekrutteringstreff-bruker. SMS/e-post inneholder kun lenke til treffsiden og en oppsummering av endringer, men jobbsøker må åpne treffsiden for å se all oppdatert info.
 
 **Tiltak:**
 | Tiltak | Test-ID | Status |
 |--------|---------|--------|
+| Treffsiden viser oppdaterte detaljer etter endring | 7.11 | ✅ Testet |
 | Mulig for markedskontakt å redigere info | 7.1-7.6 | ✅ Testet |
+| Aktivitetskort oppdateres | 7.12-7.13 | ✅ Testet |
 | Rutiner for å informere ved feil | - | 📝 Rutine |
 | Manuell kontroll av info til jobbsøker | - | 📝 Rutine |
-| Automatiske tester for aktivitetskort | 7.11-7.18 | ✅ Testet |
 | Begrense deltakere i pilot | - | 📝 Rutine |
 
-**Relaterte tester:** [7.1-7.18](akseptansetester.md#7-endre-publisert-treff)
+**Relaterte tester:** [7.11-7.13](akseptansetester.md#oppdatering-i-treffsiden-og-aktivitetskort-ros-27383)
 
 ---
 
