@@ -6,7 +6,8 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 
 - ✅ = Tiltak definert (akseptansetester, systemdok, eller utviklerrutiner)
 - 🔄 = Delvis definert (noen tiltak gjenstår)
-- ⚠️ = Kun manuell rutine / ikke relevant for pilot
+- ⚠️ = Kun manuell rutine (ingen teknisk test)
+- ➖ = Ikke relevant for pilot
 
 **Referanseforklaring:**
 
@@ -22,7 +23,7 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | 27487  | Kort flyttes ikke til avbrutt                 | ✅     | Prosedyre for sletting        | AT 6.7, 8.3-8.7, 9.4-9.5 |
 | 27486  | Data forsvinner ved sletting                  | ✅     | Sletteregler                  | AT 1.11-1.13             |
 | 27485  | Deltakere forstår ikke invitasjon             | 🔄     | Intern komm., markedskontakt  | AT 5.14-5.15, 6.5        |
-| 27484  | Treff arkiveres for tidlig                    | ⚠️     | -                             | Ikke relevant i pilot    |
+| 27484  | Treff arkiveres for tidlig                    | ➖     | -                             | Ikke relevant i pilot    |
 | 27483  | Feil data sendes for arbeidsgiver             | ✅     | -                             | AT 2.8-2.9               |
 | 27482  | Feil arbeidsgiver legges til                  | ✅     | -                             | AT 2.1-2.7, 7.7-7.10     |
 | 27433  | Arbeidsgiver uten reelt rekrutteringsbehov    | ⚠️     | Vurdering av behov            | -                        |

@@ -6,7 +6,8 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 
 - ✅ = Tiltak definert (akseptansetester, systemdok, eller utviklerrutiner)
 - 🔄 = Delvis definert (noen tiltak gjenstår)
-- ⚠️ = Kun manuell rutine / ikke relevant for pilot
+- ⚠️ = Kun manuell rutine (ingen teknisk test)
+- ➖ = Ikke relevant for pilot
 
 **Referanseforklaring:**
 
