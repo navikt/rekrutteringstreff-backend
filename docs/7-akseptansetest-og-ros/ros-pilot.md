@@ -43,9 +43,9 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | 27223  | Adressefelt brukt til andre formål            | ✅     | Manuell kontroll              | AT 1.14-1.16                    |
 | 27222  | Feil arbeidsgiver/virksomhet registreres      | ✅     | -                             | AT 2.1-2.7                      |
 | 27220  | Tilgang til kontor utenfor pilot              | ✅     | Manuell kontroll              | AT 15.26-15.32                  |
-| 27219  | Særlige kategorier i tittel/beskrivelse       | ✅     | Manuell kontroll              | AT 11.30-11.37                  |
+| 27219  | Særlige kategorier i tittel/beskrivelse       | ✅     | Manuell kontroll              | AT 11.36-11.43                  |
 | 27217  | Tilgang til treff man ikke skulle hatt        | ✅     | -                             | AT 15.1-15.32                   |
-| 27216  | KI identifiserer ikke diskriminerende tekst   | ✅     | Feedback fra brukere          | AT 11.9-11.17                   |
+| 27216  | KI identifiserer ikke diskriminerende tekst   | ✅     | Feedback fra brukere          | AT 11.2-11.14, 11.32-11.33      |
 | 27215  | Brudd på informasjons-/tilgangskontroll       | ✅     | -                             | AT 15.1-15.32                   |
 
 ### Oppsummering manuelle rutiner
@@ -433,12 +433,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 |--------|---------|--------|
 | Manuell kontroll av pilotkontor | - | 📝 Rutine |
 | Ikke lagre personopplysninger i KI-logger | - | 🔧 Implementert |
-| Tall (4+ siffer) fjernes før Azure OpenAI | 11.30-11.36 | ✅ Testet (persondata-filter) |
-| E-postadresser fjernes før Azure OpenAI | 11.37 | ✅ Testet (persondata-filter) |
+| Tall (4+ siffer) fjernes før Azure OpenAI | 11.36-11.42 | ✅ Testet (persondata-filter) |
+| E-postadresser fjernes før Azure OpenAI | 11.43 | ✅ Testet (persondata-filter) |
 
 **Merknad:** Systemet gir ikke feilmelding til bruker - tall og e-post fjernes automatisk før innsending. Verifiseres i KI-logg ved å sammenligne "originalTekst" og "sendtTekst".
 
-**Relaterte tester:** [11.30-11.37](akseptansetester.md#persondata-filtrering-ros-27219)
+**Relaterte tester:** [11.36-11.43](akseptansetester.md#persondata-filtrering-ros-27219)
 
 ---
 
@@ -464,13 +464,23 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Test-ID | Status |
 |--------|---------|--------|
-| Modellkontroll gjennom tester/stikkprøver | 11.12-11.17 | ✅ Testet |
+| Test diskriminering på alder (tittel) | 11.2 | ✅ Testet |
+| Test diskriminering på kjønn (tittel) | 11.3 | ✅ Testet |
+| Test diskriminering på helse (tittel) | 11.4 | ✅ Testet |
+| Test diskriminering på etnisitet (tittel) | 11.5 | ✅ Testet |
+| Test diskriminering på alder (innlegg) | 11.9 | ✅ Testet |
+| Test diskriminering på kjønn (innlegg) | 11.10 | ✅ Testet |
+| Test diskriminering på helse (innlegg) | 11.11 | ✅ Testet |
+| Test diskriminering på etnisitet (innlegg) | 11.12 | ✅ Testet |
+| Test subtil diskriminering | 11.32 | ✅ Testet |
+| Test diskriminering på annet språk | 11.33 | ✅ Testet |
+| Modellkontroll gjennom KI-logg | 11.18-11.23 | ✅ Testet |
 | Retningslinjer for fritekstfelt | - | 📝 Dokumentert |
 | Rutiner for bruk av KI-verktøy | - | 📝 Rutine |
 | Feedback fra brukere | - | 📝 Brukertest |
-| Toggle for å overskride KI-vurdering | 11.9-11.11 | ✅ Testet |
+| Toggle for å overskride KI-vurdering | 11.15-11.17 | ✅ Testet |
 
-**Relaterte tester:** [11.1-11.17](akseptansetester.md#11-ki-moderering)
+**Relaterte tester:** [11.2-11.14](akseptansetester.md#ki-validering-av-tittel-ros-27216), [11.32-11.33](akseptansetester.md#robusthetstesting-av-ki-ros-27546)
 
 ---
 

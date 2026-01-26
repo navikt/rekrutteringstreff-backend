@@ -480,27 +480,33 @@ Når markedskontakt skriver tittel eller innlegg, valideres teksten automatisk a
    - **Før publisering (kladd):** Autolagring - lagret=true umiddelbart når felt endres
    - **Etter publisering:** lagret=true kun når markedskontakt åpner endringsdialog og trykker "Lagre"
 
-### KI-validering av tittel
+### KI-validering av tittel (ROS 27216)
 
 Tittel valideres både ved autolagring (kladd) og ved endring etter publisering.
 
-| #    | Test                                                          | Forventet resultat                        | ✅❌ | Notat |
-| ---- | ------------------------------------------------------------- | ----------------------------------------- | ---- | ----- |
-| 11.1 | Markedskontakt - Skriv nøytral tittel (kladd)                 | Ingen advarsel, tekst godkjennes          |      |       |
-| 11.2 | Markedskontakt - Skriv diskriminerende tittel (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |      |       |
-| 11.3 | Markedskontakt - Endre tittel (etter publisering)             | KI validerer ved "Lagre" i dialog         |      |       |
-| 11.4 | Markedskontakt - Endre til diskriminerende tittel (publisert) | Advarsel vises, kan ikke lagre uten knapp |      |       |
+| #    | Test                                                          | Eksempeltekst                           | Forventet resultat                        | ✅❌ | Notat |
+| ---- | ------------------------------------------------------------- | --------------------------------------- | ----------------------------------------- | ---- | ----- |
+| 11.1 | Markedskontakt - Skriv nøytral tittel (kladd)                 | `Rekrutteringstreff for lagerarbeidere` | Ingen advarsel, tekst godkjennes          |      |       |
+| 11.2 | Markedskontakt - Diskriminerende tittel (alder)               | `Kun for unge under 30 år`              | Advarsel vises, "Lagre likevel"-knapp     |      |       |
+| 11.3 | Markedskontakt - Diskriminerende tittel (kjønn)               | `Søker kvinnelig deltaker`              | Advarsel vises, "Lagre likevel"-knapp     |      |       |
+| 11.4 | Markedskontakt - Diskriminerende tittel (helse)               | `Må være frisk og ha god helse`         | Advarsel vises, "Lagre likevel"-knapp     |      |       |
+| 11.5 | Markedskontakt - Diskriminerende tittel (etnisitet)           | `Norsk bakgrunn foretrukket`            | Advarsel vises, "Lagre likevel"-knapp     |      |       |
+| 11.6 | Markedskontakt - Endre tittel (etter publisering)             | _(nøytral tekst)_                       | KI validerer ved "Lagre" i dialog         |      |       |
+| 11.7 | Markedskontakt - Endre til diskriminerende tittel (publisert) | `Kun for unge under 30 år`              | Advarsel vises, kan ikke lagre uten knapp |      |       |
 
-### KI-validering av innlegg
+### KI-validering av innlegg (ROS 27216)
 
 Innlegg valideres på samme måte som tittel.
 
-| #    | Test                                                           | Forventet resultat                        | ✅❌ | Notat |
-| ---- | -------------------------------------------------------------- | ----------------------------------------- | ---- | ----- |
-| 11.5 | Markedskontakt - Skriv nøytralt innlegg (kladd)                | Ingen advarsel, tekst godkjennes          |      |       |
-| 11.6 | Markedskontakt - Skriv diskriminerende innlegg (kladd)         | Advarsel vises, "Lagre likevel"-knapp     |      |       |
-| 11.7 | Markedskontakt - Endre innlegg (etter publisering)             | KI validerer ved "Lagre" i dialog         |      |       |
-| 11.8 | Markedskontakt - Endre til diskriminerende innlegg (publisert) | Advarsel vises, kan ikke lagre uten knapp |      |       |
+| #     | Test                                                           | Eksempeltekst                                       | Forventet resultat                        | ✅❌ | Notat |
+| ----- | -------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------- | ---- | ----- |
+| 11.8  | Markedskontakt - Skriv nøytralt innlegg (kladd)                | `Vi inviterer til treff hos arbeidsgiver`           | Ingen advarsel, tekst godkjennes          |      |       |
+| 11.9  | Markedskontakt - Diskriminerende innlegg (alder)               | `Vi ønsker primært yngre kandidater til stillingen` | Advarsel vises, "Lagre likevel"-knapp     |      |       |
+| 11.10 | Markedskontakt - Diskriminerende innlegg (kjønn)               | `Stillingen passer best for menn`                   | Advarsel vises, "Lagre likevel"-knapp     |      |       |
+| 11.11 | Markedskontakt - Diskriminerende innlegg (helse)               | `Krever god fysisk og psykisk helse`                | Advarsel vises, "Lagre likevel"-knapp     |      |       |
+| 11.12 | Markedskontakt - Diskriminerende innlegg (etnisitet)           | `Foretrekker kandidater med norsk som morsmål`      | Advarsel vises, "Lagre likevel"-knapp     |      |       |
+| 11.13 | Markedskontakt - Endre innlegg (etter publisering)             | _(nøytral tekst)_                                   | KI validerer ved "Lagre" i dialog         |      |       |
+| 11.14 | Markedskontakt - Endre til diskriminerende innlegg (publisert) | `Vi ønsker primært yngre kandidater`                | Advarsel vises, kan ikke lagre uten knapp |      |       |
 
 ### "Lagre likevel"-funksjonalitet
 
@@ -508,20 +514,20 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 
 | #     | Test                                                       | Forventet resultat                       | ✅❌ | Notat |
 | ----- | ---------------------------------------------------------- | ---------------------------------------- | ---- | ----- |
-| 11.9  | Markedskontakt - Advarsel vist, IKKE trykk "Lagre likevel" | Kan ikke publisere/lagre treffet         |      |       |
-| 11.10 | Markedskontakt - Advarsel vist, trykk "Lagre likevel"      | Teksten lagres, kan fortsette            |      |       |
-| 11.11 | Markedskontakt - Prøv å publisere uten "Lagre likevel"     | Publisering blokkert inntil valg er tatt |      |       |
+| 11.15 | Markedskontakt - Advarsel vist, IKKE trykk "Lagre likevel" | Kan ikke publisere/lagre treffet         |      |       |
+| 11.16 | Markedskontakt - Advarsel vist, trykk "Lagre likevel"      | Teksten lagres, kan fortsette            |      |       |
+| 11.17 | Markedskontakt - Prøv å publisere uten "Lagre likevel"     | Publisering blokkert inntil valg er tatt |      |       |
 
 ### KI-logg (krever utviklertilgang)
 
 | #     | Test                                          | Forventet resultat                                  | ✅❌ | Notat |
 | ----- | --------------------------------------------- | --------------------------------------------------- | ---- | ----- |
-| 11.12 | Utvikler - Åpne KI-logg                       | Ser liste over alle KI-valideringer                 |      |       |
-| 11.13 | Utvikler - Sjekk logg for kladd-treff         | lagret=true for tekst som ble autolagret            |      |       |
-| 11.14 | Utvikler - Sjekk logg etter publisert endring | lagret=true kun når bruker trykket "Lagre" i dialog |      |       |
-| 11.15 | Utvikler - Sjekk tekst som ble forkastet      | lagret=false for tekst som ble endret før lagring   |      |       |
-| 11.16 | Utvikler - Legg inn manuell vurdering         | Kan registrere egen vurdering for kvalitetskontroll |      |       |
-| 11.17 | Utvikler - Filtrer på avvik                   | Kan finne tilfeller der KI vurderte feil            |      |       |
+| 11.18 | Utvikler - Åpne KI-logg                       | Ser liste over alle KI-valideringer                 |      |       |
+| 11.19 | Utvikler - Sjekk logg for kladd-treff         | lagret=true for tekst som ble autolagret            |      |       |
+| 11.20 | Utvikler - Sjekk logg etter publisert endring | lagret=true kun når bruker trykket "Lagre" i dialog |      |       |
+| 11.21 | Utvikler - Sjekk tekst som ble forkastet      | lagret=false for tekst som ble endret før lagring   |      |       |
+| 11.22 | Utvikler - Legg inn manuell vurdering         | Kan registrere egen vurdering for kvalitetskontroll |      |       |
+| 11.23 | Utvikler - Filtrer på avvik                   | Kan finne tilfeller der KI vurderte feil            |      |       |
 
 ### UI-tekst og brukeransvar (ROS 27979, 27545, 27321)
 
@@ -529,11 +535,11 @@ Test at løsningen tydeliggjør at KI-sjekken kun er et verktøy og at brukeren 
 
 | #     | Test                                                              | Forventet resultat                                                   | ✅❌ | Notat |
 | ----- | ----------------------------------------------------------------- | -------------------------------------------------------------------- | ---- | ----- |
-| 11.18 | Markedskontakt - Sjekk info ved tittelfeltet                      | Ser tekst om at KI-sjekken ikke garanterer korrekthet                |      |       |
-| 11.19 | Markedskontakt - Sjekk info ved innleggsfeltet                    | Ser tekst om brukerens eget ansvar for innholdet                     |      |       |
-| 11.20 | Markedskontakt - Sjekk at KI-sjekken IKKE viser grønn "ok"-tekst  | Ingen grønn bekreftelse - kun advarsler ved problemer                |      |       |
-| 11.21 | Markedskontakt - Sjekk hvilke felt som analyseres                 | Tydelig visuell markering av hvilke felt KI-sjekken sjekker          |      |       |
-| 11.22 | Markedskontakt - Sjekk at det er tydelig hvilken tekst som sendes | Bruker kan se hvilken tekst som blir analysert før den sendes til KI |      |       |
+| 11.24 | Markedskontakt - Sjekk info ved tittelfeltet                      | Ser tekst om at KI-sjekken ikke garanterer korrekthet                |      |       |
+| 11.25 | Markedskontakt - Sjekk info ved innleggsfeltet                    | Ser tekst om brukerens eget ansvar for innholdet                     |      |       |
+| 11.26 | Markedskontakt - Sjekk at KI-sjekken IKKE viser grønn "ok"-tekst  | Ingen grønn bekreftelse - kun advarsler ved problemer                |      |       |
+| 11.27 | Markedskontakt - Sjekk hvilke felt som analyseres                 | Tydelig visuell markering av hvilke felt KI-sjekken sjekker          |      |       |
+| 11.28 | Markedskontakt - Sjekk at det er tydelig hvilken tekst som sendes | Bruker kan se hvilken tekst som blir analysert før den sendes til KI |      |       |
 
 ### Avvikshåndtering (ROS 27321)
 
@@ -541,24 +547,24 @@ Test at brukere kan rapportere feil og avvik i KI-sjekken.
 
 | #     | Test                                             | Forventet resultat                                              | ✅❌ | Notat |
 | ----- | ------------------------------------------------ | --------------------------------------------------------------- | ---- | ----- |
-| 11.23 | Markedskontakt - Finn lenke til avvikshåndtering | Lenke til avviksskjema/rapportering er synlig ved KI-validering |      |       |
-| 11.24 | Markedskontakt - Klikk på avvikslenke            | Kommer til riktig skjema for å rapportere KI-feil               |      |       |
+| 11.29 | Markedskontakt - Finn lenke til avvikshåndtering | Lenke til avviksskjema/rapportering er synlig ved KI-validering |      |       |
+| 11.30 | Markedskontakt - Klikk på avvikslenke            | Kommer til riktig skjema for å rapportere KI-feil               |      |       |
 
 ### Robusthetstesting av KI (ROS 27546)
 
 Test at KI-sjekken håndterer uvanlige tekster på en trygg måte.
 
-> ⚠️ **Krever utviklerhjelp:** Noen av disse testene (11.25, 11.28) krever spesifikke testeksempler som utvikler gir deg. Dette er for å unngå at angrepsteknikker publiseres i offentlig dokumentasjon.
+> ⚠️ **Krever utviklerhjelp:** Noen av disse testene (11.31, 11.34) krever spesifikke testeksempler som utvikler gir deg. Dette er for å unngå at angrepsteknikker publiseres i offentlig dokumentasjon.
 
 | #     | Test                                    | Eksempeltekst                                         | Forventet resultat                                 | Utviklerhjelp | ✅❌ | Notat |
 | ----- | --------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- | ------------- | ---- | ----- |
-| 11.25 | Skriv tekst som prøver å "lure" KI      | _(Utvikler gir eksempeltekst)_                        | KI håndterer teksten trygt                         | Ja            |      |       |
-| 11.26 | Skriv subtil diskriminerende tekst      | `Passer best for unge, friske personer med god helse` | KI gir advarsel om mulig aldersdiskriminering      | Nei           |      |       |
-| 11.27 | Skriv tekst på et annet språk           | `We are looking for young, healthy workers only`      | KI gir advarsel eller håndterer det uten å krasje  | Nei           |      |       |
-| 11.28 | Skriv tekst med spesialtegn og symboler | _(Utvikler gir eksempeltekst)_                        | Systemet krasjer ikke                              | Ja            |      |       |
-| 11.29 | Skriv veldig lang tekst                 | (Lim inn en hel artikkel eller 1000+ tegn)            | Systemet håndterer lang tekst, ev. med feilmelding | Nei           |      |       |
+| 11.31 | Skriv tekst som prøver å "lure" KI      | _(Utvikler gir eksempeltekst)_                        | KI håndterer teksten trygt                         | Ja            |      |       |
+| 11.32 | Skriv subtil diskriminerende tekst      | `Passer best for unge, friske personer med god helse` | KI gir advarsel om mulig aldersdiskriminering      | Nei           |      |       |
+| 11.33 | Skriv tekst på et annet språk           | `We are looking for young, healthy workers only`      | KI gir advarsel eller håndterer det uten å krasje  | Nei           |      |       |
+| 11.34 | Skriv tekst med spesialtegn og symboler | _(Utvikler gir eksempeltekst)_                        | Systemet krasjer ikke                              | Ja            |      |       |
+| 11.35 | Skriv veldig lang tekst                 | (Lim inn en hel artikkel eller 1000+ tegn)            | Systemet håndterer lang tekst, ev. med feilmelding | Nei           |      |       |
 
-> **Tips:** Hvis KI-sjekken IKKE gir advarsel på 11.26-11.27, noter dette som et avvik. Det betyr ikke at testen feilet - det betyr at vi har funnet en svakhet som bør undersøkes.
+> **Tips:** Hvis KI-sjekken IKKE gir advarsel på 11.32-11.33, noter dette som et avvik. Det betyr ikke at testen feilet - det betyr at vi har funnet en svakhet som bør undersøkes.
 
 ### Persondata-filtrering (ROS 27219)
 
@@ -568,16 +574,16 @@ Test at tall med 4 siffer eller mer fjernes før tekst sendes til Azure OpenAI. 
 
 | #     | Test                                                | Eksempeltekst                     | Forventet i KI-logg                          | ✅❌ | Notat |
 | ----- | --------------------------------------------------- | --------------------------------- | -------------------------------------------- | ---- | ----- |
-| 11.30 | Skriv tekst med 4-sifret tall                       | `Ring meg på 1234 for mer info`   | "sendtTekst" inneholder ikke "1234"          |      |       |
-| 11.31 | Skriv tekst med fødselsnummer (11 siffer)           | `Kandidat 12345678901 er aktuell` | "sendtTekst" inneholder ikke fødselsnummeret |      |       |
-| 11.32 | Skriv tekst med telefonnummer (8 siffer)            | `Ta kontakt på 98765432`          | "sendtTekst" inneholder ikke telefonnummeret |      |       |
-| 11.33 | Skriv tekst med D-nummer                            | `Jobbsøker med D-nr 41234567890`  | "sendtTekst" inneholder ikke D-nummeret      |      |       |
-| 11.34 | Skriv tekst med kontonummer                         | `Utbetaling til 1234.56.78901`    | "sendtTekst" inneholder ikke kontonummeret   |      |       |
-| 11.35 | Skriv tekst med organisasjonsnummer                 | `Arbeidsgiver org.nr 912345678`   | "sendtTekst" inneholder ikke org.nummeret    |      |       |
-| 11.36 | Skriv tekst med 3-sifret tall (skal IKKE filtreres) | `Treffet varer i 120 minutter`    | "sendtTekst" inneholder fortsatt "120"       |      |       |
-| 11.37 | Skriv tekst med e-postadresse                       | `Send til ola.nordmann@nav.no`    | "sendtTekst" inneholder ikke e-postadressen  |      |       |
+| 11.36 | Skriv tekst med 4-sifret tall                       | `Ring meg på 1234 for mer info`   | "sendtTekst" inneholder ikke "1234"          |      |       |
+| 11.37 | Skriv tekst med fødselsnummer (11 siffer)           | `Kandidat 12345678901 er aktuell` | "sendtTekst" inneholder ikke fødselsnummeret |      |       |
+| 11.38 | Skriv tekst med telefonnummer (8 siffer)            | `Ta kontakt på 98765432`          | "sendtTekst" inneholder ikke telefonnummeret |      |       |
+| 11.39 | Skriv tekst med D-nummer                            | `Jobbsøker med D-nr 41234567890`  | "sendtTekst" inneholder ikke D-nummeret      |      |       |
+| 11.40 | Skriv tekst med kontonummer                         | `Utbetaling til 1234.56.78901`    | "sendtTekst" inneholder ikke kontonummeret   |      |       |
+| 11.41 | Skriv tekst med organisasjonsnummer                 | `Arbeidsgiver org.nr 912345678`   | "sendtTekst" inneholder ikke org.nummeret    |      |       |
+| 11.42 | Skriv tekst med 3-sifret tall (skal IKKE filtreres) | `Treffet varer i 120 minutter`    | "sendtTekst" inneholder fortsatt "120"       |      |       |
+| 11.43 | Skriv tekst med e-postadresse                       | `Send til ola.nordmann@nav.no`    | "sendtTekst" inneholder ikke e-postadressen  |      |       |
 
-> **Verifisering:** Åpne KI-logg (11.12), finn valideringen, og sammenlign feltene for å bekrefte at filtrering skjedde.
+> **Verifisering:** Åpne KI-logg (11.18), finn valideringen, og sammenlign feltene for å bekrefte at filtrering skjedde.
 
 ---
 
