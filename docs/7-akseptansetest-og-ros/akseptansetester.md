@@ -2,6 +2,8 @@
 
 Testscenarier for domeneeksperter før pilot og prodsetting. Testene er organisert etter situasjoner slik brukerne opplever dem.
 
+> **Målgruppe:** Domeneeksperter uten dyp teknisk bakgrunn. Testene er skrevet slik at du kan følge instruksjonene uten hjelp fra utviklere. Noen få tester er merket "Utvikler" - disse krever utviklertilgang og kan hoppes over av domeneeksperter.
+
 ## Testmiljø
 
 | System                    | URL (dev)                              | Brukes av                |
@@ -448,7 +450,7 @@ Markedskontakt legger til et innlegg (introduksjonstekst) på treffet som jobbs�
 
 ---
 
-## 11. KI-moderering
+## 11. KI-tekstvalideringstjenesten
 
 > **ROS:** 27216, 27219
 
@@ -511,6 +513,43 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 | 11.15 | Utvikler - Sjekk tekst som ble forkastet      | lagret=false for tekst som ble endret før lagring   |      |       |
 | 11.16 | Utvikler - Legg inn manuell vurdering         | Kan registrere egen vurdering for kvalitetskontroll |      |       |
 | 11.17 | Utvikler - Filtrer på avvik                   | Kan finne tilfeller der KI vurderte feil            |      |       |
+
+### UI-tekst og brukeransvar (ROS 27979, 27545, 27321)
+
+Test at løsningen tydeliggjør at KI-sjekken kun er et verktøy og at brukeren har ansvar for innholdet.
+
+| #     | Test                                                              | Forventet resultat                                                   | ✅❌ | Notat |
+| ----- | ----------------------------------------------------------------- | -------------------------------------------------------------------- | ---- | ----- |
+| 11.18 | Markedskontakt - Sjekk info ved tittelfeltet                      | Ser tekst om at KI-sjekken ikke garanterer korrekthet                |      |       |
+| 11.19 | Markedskontakt - Sjekk info ved innleggsfeltet                    | Ser tekst om brukerens eget ansvar for innholdet                     |      |       |
+| 11.20 | Markedskontakt - Sjekk at KI-sjekken IKKE viser grønn "ok"-tekst  | Ingen grønn bekreftelse - kun advarsler ved problemer                |      |       |
+| 11.21 | Markedskontakt - Sjekk hvilke felt som analyseres                 | Tydelig visuell markering av hvilke felt KI-sjekken sjekker          |      |       |
+| 11.22 | Markedskontakt - Sjekk at det er tydelig hvilken tekst som sendes | Bruker kan se hvilken tekst som blir analysert før den sendes til KI |      |       |
+
+### Avvikshåndtering (ROS 27321)
+
+Test at brukere kan rapportere feil og avvik i KI-sjekken.
+
+| #     | Test                                             | Forventet resultat                                              | ✅❌ | Notat |
+| ----- | ------------------------------------------------ | --------------------------------------------------------------- | ---- | ----- |
+| 11.23 | Markedskontakt - Finn lenke til avvikshåndtering | Lenke til avviksskjema/rapportering er synlig ved KI-validering |      |       |
+| 11.24 | Markedskontakt - Klikk på avvikslenke            | Kommer til riktig skjema for å rapportere KI-feil               |      |       |
+
+### Robusthetstesting av KI (ROS 27546)
+
+Test at KI-sjekken håndterer uvanlige tekster på en trygg måte.
+
+> ⚠️ **Krever utviklerhjelp:** Noen av disse testene (11.25, 11.28) krever spesifikke testeksempler som utvikler gir deg. Dette er for å unngå at angrepsteknikker publiseres i offentlig dokumentasjon.
+
+| #     | Test                                    | Eksempeltekst                                         | Forventet resultat                                 | Utviklerhjelp | ✅❌ | Notat |
+| ----- | --------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- | ------------- | ---- | ----- |
+| 11.25 | Skriv tekst som prøver å "lure" KI      | _(Utvikler gir eksempeltekst)_                        | KI håndterer teksten trygt                         | Ja            |      |       |
+| 11.26 | Skriv subtil diskriminerende tekst      | `Passer best for unge, friske personer med god helse` | KI gir advarsel om mulig aldersdiskriminering      | Nei           |      |       |
+| 11.27 | Skriv tekst på et annet språk           | `We are looking for young, healthy workers only`      | KI gir advarsel eller håndterer det uten å krasje  | Nei           |      |       |
+| 11.28 | Skriv tekst med spesialtegn og symboler | _(Utvikler gir eksempeltekst)_                        | Systemet krasjer ikke                              | Ja            |      |       |
+| 11.29 | Skriv veldig lang tekst                 | (Lim inn en hel artikkel eller 1000+ tegn)            | Systemet håndterer lang tekst, ev. med feilmelding | Nei           |      |       |
+
+> **Tips:** Hvis KI-sjekken IKKE gir advarsel på 11.26-11.27, noter dette som et avvik. Det betyr ikke at testen feilet - det betyr at vi har funnet en svakhet som bør undersøkes.
 
 ---
 
@@ -633,12 +672,34 @@ Markedskontakt som er eier har full tilgang til eget treff.
 
 Utviklere har full tilgang til alt, uavhengig av kontor og eierskap.
 
-| #     | Test                                | Forventet resultat                  | ✅❌ | Notat |
-| ----- | ----------------------------------- | ----------------------------------- | ---- | ----- |
-| 15.22 | Utvikler - Åpne KI-logg             | Ser liste over alle KI-valideringer |      |       |
-| 15.23 | Utvikler - Se alle treff            | Kan se alle treff inkludert kladder |      |       |
-| 15.24 | Utvikler - Tilgang uten pilotkontor | Får tilgang uansett kontor          |      |       |
-| 15.25 | Utvikler - Se andres hendelseslogg  | Kan se hendelser på alle treff      |      |       |
+| #     | Test                                         | Forventet resultat                                              | ✅❌ | Notat |
+| ----- | -------------------------------------------- | --------------------------------------------------------------- | ---- | ----- |
+| 15.22 | Utvikler - Åpne KI-logg                      | Ser liste over alle KI-valideringer                             |      |       |
+| 15.23 | Utvikler - Se alle treff                     | Kan se alle treff inkludert kladder                             |      |       |
+| 15.24 | Utvikler - Tilgang uten pilotkontor          | Får tilgang uansett kontor                                      |      |       |
+| 15.25 | Utvikler - Se andres hendelseslogg           | Kan se hendelser på alle treff                                  |      |       |
+| 15.36 | Utvikler - Sjekk logg etter robusthetstester | Logger fra test 11.25-11.29 er synlige for analyse av svakheter |      |       |
+
+### KI-infrastruktur (ROS 29025, 29263, 29330)
+
+Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
+
+| #     | Test                                              | Forventet resultat                              | ✅❌ | Notat |
+| ----- | ------------------------------------------------- | ----------------------------------------------- | ---- | ----- |
+| 15.37 | Utvikler - Verifiser deployment-type i Azure      | Deployment er "Standard" i EU/EØS (ikke Global) |      |       |
+| 15.38 | Utvikler - Verifiser abuse monitoring er aktivert | Content filtering er aktivert med høyeste nivå  |      |       |
+| 15.39 | Utvikler - Sjekk at logger slettes automatisk     | Logger eldre enn definert retensjon finnes ikke |      |       |
+| 15.40 | Utvikler - Verifiser modellversjon                | Modellen er dokumentert og har ikke utgått      |      |       |
+
+### Produksjonsmiljø-indikator (ROS 29337)
+
+Test at det er tydelig når man jobber i produksjonsmiljø.
+
+| #     | Test                                                  | Forventet resultat                                           | ✅❌ | Notat |
+| ----- | ----------------------------------------------------- | ------------------------------------------------------------ | ---- | ----- |
+| 15.33 | Utvikler - Åpne løsningen i prod                      | Ser tydelig banner/indikator om at man er i produksjonsmiljø |      |       |
+| 15.34 | Utvikler - Åpne løsningen i dev                       | Ingen prod-banner, men ev. dev-indikator                     |      |       |
+| 15.35 | Utvikler - Sjekk at prod-banner er synlig ved KI-logg | Banneret er synlig når man jobber med sensitive logger       |      |       |
 
 ### Pilotkontor-tilgang
 
@@ -664,4 +725,4 @@ I pilotperioden må brukeren være innlogget på et pilotkontor for å få tilga
 - [Varsling](../4-integrasjoner/varsling.md) - Varslingsmekanismer og maler
 - [Aktivitetskort](../4-integrasjoner/aktivitetskort.md) - Aktivitetskort-synkronisering
 - [MinSide-flyt](../4-integrasjoner/minside-flyt.md) - Jobbsøkerflyt og rekrutteringstreff-bruker
-- [KI-moderering](../5-ki/ki-moderering.md) - Teknisk dokumentasjon KI-validering og logging
+- [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md) - Teknisk dokumentasjon KI-validering og logging

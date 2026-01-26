@@ -1,39 +1,49 @@
 # ROS-tiltak og testdekning
 
-Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av akseptansetester, og identifiserer gap der det mangler testdekning.
+Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av akseptansetester og systemdokumentasjon.
+
+**Statusforklaring:**
+
+- ✅ Ja = Dokumentert i akseptansetester, systemdok, eller utviklerrutiner
+- ⚠️ N/A = Brukerrutine utenfor systemdok (opplæring av sluttbrukere, etc.)
+
+**Referanseforklaring:**
+
+- AT = Akseptansetest (se [akseptansetester.md](akseptansetester.md))
+- Filnavn = Systemdokumentasjon eller utviklerrutine (se [docs/](../README.md))
 
 ## Oversikt over risikoer
 
-| ROS-ID | Risiko                                        | Testet | Akseptansetest           | Gap                                   |
-| ------ | --------------------------------------------- | ------ | ------------------------ | ------------------------------------- |
-| 28065  | Jobbsøker får ikke info om endringer          | ✅ Ja  | AT 6.1-6.9, 7.1-7.18     | -                                     |
-| 27487  | Kort flyttes ikke til avbrutt                 | ✅ Ja  | AT 6.7, 8.3-8.7, 9.4-9.5 | -                                     |
-| 27486  | Data forsvinner ved sletting                  | ✅ Ja  | AT 1.11-1.13             | -                                     |
-| 27485  | Deltakere forstår ikke invitasjon             | ✅ Ja  | AT 5.14-5.15, 6.5        | -                                     |
-| 27484  | Treff arkiveres for tidlig                    | ⚠️ N/A | -                        | Ikke relevant for pilot               |
-| 27483  | Feil data sendes for arbeidsgiver             | ✅ Ja  | AT 2.8-2.9               | -                                     |
-| 27482  | Feil arbeidsgiver legges til                  | ✅ Ja  | AT 2.1-2.7, 7.7-7.10     | -                                     |
-| 27433  | Arbeidsgiver uten reelt rekrutteringsbehov    | ⚠️ N/A | -                        | Manuell rutine, ikke testet i løsning |
-| 27390  | Arrangør kvalitetssikrer ikke KI-tekst        | ✅ Ja  | AT 11.1-11.17            | -                                     |
-| 27389  | ROB manipuleres til feilaktige vurderinger    | ✅ Ja  | AT 11.9-11.17            | -                                     |
-| 27388  | Feilregistrering ved deltakelsesvalg          | ✅ Ja  | AT 6.1-6.9               | -                                     |
-| 27386  | Aktivitetskort blir ikke opprettet            | ✅ Ja  | AT 5.5-5.7               | -                                     |
-| 27385  | Nav-ansatte mangler info om frivillighet      | ✅ Ja  | AT 5.14-5.15             | + Rutine                              |
-| 27383  | Jobbsøker får feil info i treffsiden          | ✅ Ja  | AT 7.11-7.18             | -                                     |
-| 27381  | Deltaker mottar samme varsel gjentatte ganger | ✅ Ja  | AT 5.12                  | -                                     |
-| 27379  | Menneskelig feil - feil person får invitasjon | ⚠️ N/A | -                        | Manuell rutine                        |
-| 27378  | Teknisk feil - feil person får invitasjon     | ✅ Ja  | AT 4.1-4.5, 5.1-5.7      | -                                     |
-| 27275  | Usynlige kandidater ikke skjult               | ✅ Ja  | AT 4.5-4.29              | -                                     |
-| 27273  | Jobbsøker får feil/mangelfull info pga feil   | ✅ Ja  | AT 7.1-7.18, 5.14-5.15   | -                                     |
-| 27227  | Behandler flere opplysninger enn nødvendig    | ✅ Ja  | -                        | Arkitekturbeslutning                  |
-| 27225  | Ansatte får ikke tilgang                      | ✅ Ja  | AT 15.26-15.32           | -                                     |
-| 27223  | Adressefelt brukt til andre formål            | ✅ Ja  | AT 1.14-1.16             | -                                     |
-| 27222  | Feil arbeidsgiver/virksomhet registreres      | ✅ Ja  | AT 2.1-2.7               | Ligner 27482                          |
-| 27220  | Tilgang til kontor utenfor pilot              | ✅ Ja  | AT 15.26-15.32           | -                                     |
-| 27219  | Særlige kategorier i tittel/beskrivelse       | ✅ Ja  | AT 11.1-11.17            | Dekket av KI-moderering               |
-| 27217  | Tilgang til treff man ikke skulle hatt        | ✅ Ja  | AT 15.1-15.32            | -                                     |
-| 27216  | KI identifiserer ikke diskriminerende tekst   | ✅ Ja  | AT 11.9-11.17            | -                                     |
-| 27215  | Brudd på informasjons-/tilgangskontroll       | ✅ Ja  | AT 15.1-15.32            | -                                     |
+| ROS-ID | Risiko                                        | Testet | Referanse                                   | Gap                                 |
+| ------ | --------------------------------------------- | ------ | ------------------------------------------- | ----------------------------------- |
+| 28065  | Jobbsøker får ikke info om endringer          | ✅ Ja  | AT 6.1-6.9, 7.1-7.18, varsling.md           | -                                   |
+| 27487  | Kort flyttes ikke til avbrutt                 | ✅ Ja  | AT 6.7, 8.3-8.7, 9.4-9.5, aktivitetskort.md | -                                   |
+| 27486  | Data forsvinner ved sletting                  | ✅ Ja  | AT 1.11-1.13                                | -                                   |
+| 27485  | Deltakere forstår ikke invitasjon             | ✅ Ja  | AT 5.14-5.15, 6.5, invitasjon.md            | -                                   |
+| 27484  | Treff arkiveres for tidlig                    | ⚠️ N/A | -                                           | Ikke relevant for pilot             |
+| 27483  | Feil data sendes for arbeidsgiver             | ✅ Ja  | AT 2.8-2.9                                  | -                                   |
+| 27482  | Feil arbeidsgiver legges til                  | ✅ Ja  | AT 2.1-2.7, 7.7-7.10                        | -                                   |
+| 27433  | Arbeidsgiver uten reelt rekrutteringsbehov    | ⚠️ N/A | -                                           | Brukerrutine, ikke testet i løsning |
+| 27390  | Arrangør kvalitetssikrer ikke KI-tekst        | ✅ Ja  | AT 11.1-11.17, ki-tekstvalideringstjeneste.md             | -                                   |
+| 27389  | ROB manipuleres til feilaktige vurderinger    | ✅ Ja  | AT 11.9-11.17, ki-tekstvalideringstjeneste.md             | -                                   |
+| 27388  | Feilregistrering ved deltakelsesvalg          | ✅ Ja  | AT 6.1-6.9                                  | -                                   |
+| 27386  | Aktivitetskort blir ikke opprettet            | ✅ Ja  | AT 5.5-5.7, aktivitetskort.md               | -                                   |
+| 27385  | Nav-ansatte mangler info om frivillighet      | ✅ Ja  | AT 5.14-5.15                                | + Brukerrutine                      |
+| 27383  | Jobbsøker får feil info i treffsiden          | ✅ Ja  | AT 7.11-7.18, minside-flyt.md               | -                                   |
+| 27381  | Deltaker mottar samme varsel gjentatte ganger | ✅ Ja  | AT 5.12, varsling.md                        | -                                   |
+| 27379  | Menneskelig feil - feil person får invitasjon | ⚠️ N/A | -                                           | Brukerrutine                        |
+| 27378  | Teknisk feil - feil person får invitasjon     | ✅ Ja  | AT 4.1-4.5, 5.1-5.7, invitasjon.md          | -                                   |
+| 27275  | Usynlige kandidater ikke skjult               | ✅ Ja  | AT 4.5-4.29, synlighet.md                   | -                                   |
+| 27273  | Jobbsøker får feil/mangelfull info pga feil   | ✅ Ja  | AT 7.1-7.18, 5.14-5.15                      | -                                   |
+| 27227  | Behandler flere opplysninger enn nødvendig    | ✅ Ja  | arkitektur.md                               | Arkitekturbeslutning                |
+| 27225  | Ansatte får ikke tilgang                      | ✅ Ja  | AT 15.26-15.32, tilgangsstyring.md          | -                                   |
+| 27223  | Adressefelt brukt til andre formål            | ✅ Ja  | AT 1.14-1.16                                | -                                   |
+| 27222  | Feil arbeidsgiver/virksomhet registreres      | ✅ Ja  | AT 2.1-2.7                                  | Ligner 27482                        |
+| 27220  | Tilgang til kontor utenfor pilot              | ✅ Ja  | AT 15.26-15.32, tilgangsstyring.md          | -                                   |
+| 27219  | Særlige kategorier i tittel/beskrivelse       | ✅ Ja  | AT 11.1-11.17, ki-tekstvalideringstjeneste.md             | -                                   |
+| 27217  | Tilgang til treff man ikke skulle hatt        | ✅ Ja  | AT 15.1-15.32, tilgangsstyring.md           | -                                   |
+| 27216  | KI identifiserer ikke diskriminerende tekst   | ✅ Ja  | AT 11.9-11.17, ki-tekstvalideringstjeneste.md             | -                                   |
+| 27215  | Brudd på informasjons-/tilgangskontroll       | ✅ Ja  | AT 15.1-15.32, tilgangsstyring.md           | -                                   |
 
 ---
 
@@ -405,7 +415,7 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | Ikke lagre personopplysninger i KI-logger | - | 🔧 Implementert |
 | Sjekk på fnr og e-post før Azure OpenAI | 11.1-11.17 | ✅ Testet (persondata-filter) |
 
-**Merknad:** Dekket av KI-moderering med persondata-filtrering før tekst sendes til OpenAI.
+**Merknad:** Dekket av KI-tekstvalideringstjenesten med persondata-filtrering før tekst sendes til OpenAI.
 
 **Relaterte tester:** [11.1-11.17](akseptansetester.md#11-ki-moderering)
 
@@ -490,11 +500,11 @@ Følgende gap er nå dekket med tester:
 
 ## Vurdering: Utviklerrutiner-mappe
 
-ROS-analysen nevner ikke eksplisitt rutiner for å deploye eller ta i bruk nye KI-modeller hos OpenAI. Imidlertid finnes det allerede dokumentasjon om dette i [KI-moderering](../5-ki/ki-moderering.md) under seksjonen "Prosess for evaluering av ny systemprompt eller modell".
+ROS-analysen nevner ikke eksplisitt rutiner for å deploye eller ta i bruk nye KI-modeller hos OpenAI. Imidlertid finnes det allerede dokumentasjon om dette i [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md) under seksjonen "Prosess for evaluering av ny systemprompt eller modell".
 
 **Anbefaling:** Det er ikke nødvendig å opprette en egen `utviklerrutiner`-mappe per nå, da:
 
-1. KI-modellbytte er allerede dokumentert i `5-ki/ki-moderering.md`
+1. KI-modellbytte er allerede dokumentert i `5-ki/ki-tekstvalideringstjeneste.md`
 2. Deploy-rutiner er typisk beskrevet i `README.md` eller `nais/`-konfigurasjon
 3. ROS-tiltakene handler primært om funksjonelle kontroller, ikke deploy-rutiner
 
@@ -513,6 +523,6 @@ docs/
 ## Relaterte dokumenter
 
 - [Akseptansetester](akseptansetester.md) - Fullstendige testscenarier
-- [ROS-tiltak for KI](ros-ki.md) - ROS-tiltak spesifikke for KI-sjekken (ROB)
-- [KI-moderering](../5-ki/ki-moderering.md) - KI-validering og logging (inkl. modellbytte-prosess)
+- [ROS-tiltak for KI](ros-ki-pilot.md) - ROS-tiltak spesifikke for KI-sjekken (ROB)
+- [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md) - KI-validering og logging (inkl. modellbytte-prosess)
 - [Tilgangsstyring](../3-sikkerhet/tilgangsstyring.md) - Roller og tilgang

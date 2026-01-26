@@ -98,7 +98,7 @@ Hovedapplikasjon som:
 - Publiserer events når jobbsøkere inviteres eller treff oppdateres
 - Mottar synlighetsevalueringer fra toi-synlighetsmotor
 - Mottar varselstatus fra kandidatvarsel-api
-- Validerer innhold med KI-moderering
+- Validerer innhold med KI-tekstvalideringstjenesten
 
 #### rekrutteringstreff-minside-api
 

@@ -1,38 +1,41 @@
 # ROS-tiltak for KI-sjekken (ROB)
 
-Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke for KI-sjekken (ROB), og status på tiltak. Dokumentet oppdateres manuelt og er ikke automatisk koblet til akseptansetester.
+Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke for KI-sjekken (ROB), og status på tiltak.
 
 **Statusforklaring:**
 
-- ✅ Impl. = Teknisk implementert i løsningen
-- 🔄 Delvis = Delvis implementert eller planlagt (teknisk)
-- ⚠️ N/A = Manuell rutine utenfor systemdok (brukerrutiner, opplæring, etc.)
+- ✅ Ja = Dokumentert i akseptansetester, systemdok, eller utviklerrutiner
+- ⚠️ N/A = Brukerrutine utenfor systemdok (opplæring av sluttbrukere, etc.)
+
+**Referanseforklaring:**
+
+- AT = Akseptansetest (se [akseptansetester.md](akseptansetester.md))
+- Dok = Systemdokumentasjon (se [docs/](../README.md))
+- Rutine = Utviklerrutine (se [ki-rutiner.md](../8-utviklerrutiner/ki-rutiner.md))
 
 ## Oversikt over risikoer
 
-| ROS-ID | Risiko                                                  | Status    | Hovedtiltak                                          |
-| ------ | ------------------------------------------------------- | --------- | ---------------------------------------------------- |
-| 29337  | Utviklertilgang til logger tildeles for bredt           | 🔄 Delvis | Banner i prod, egen admin-rolle (+ manuelle rutiner) |
-| 29330  | Logger lagres for lenge/for mye                         | ✅ Impl.  | Automatisk sletting, rutiner ved feil                |
-| 29263  | Abuse monitoring skrus av                               | ✅ Impl.  | Beholder abuse monitoring, sterkeste filter          |
-| 29262  | Ikke følger retningslinjer for Azure OpenAI             | ⚠️ N/A    | Manuell rutine                                       |
-| 29025  | Feil deployment av modell                               | ✅ Impl.  | Kun standard deployment i EU/EØS                     |
-| 29023  | Modellversjon utgår                                     | ✅ Impl.  | Toggle for deaktivering, teste før oppgradering      |
-| 28415  | KI-sjekken treffer ikke bra nok på testcases            | ✅ Impl.  | Benchmarks, 90% mål, undersøke feil                  |
-| 27979  | KI-sjekken gir falsk trygghet                           | 🔄 Delvis | Ingen grønn "ok", tekst i løsning                    |
-| 27868  | Mangelfull evaluering av språkmodell                    | ✅ Impl.  | Dokumentert i ki-moderering.md                       |
-| 27867  | Mangelfull eller utilstrekkelig testing                 | ✅ Impl.  | Logging, manuell test, automatiske tester            |
-| 27854  | Hallusinering av fakta                                  | ✅ Impl.  | Risikovurdert modell, jevnlige tester                |
-| 27853  | Kompleksitet i systemprompt (overtilpasning)            | ✅ Impl.  | Klarspråk, veiledning, tematisk oppdeling            |
-| 27852  | Feil ved oppdatering av prompten                        | ✅ Impl.  | Versjonskontroll, reverserbar, auto-tester           |
-| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | ✅ Impl.  | Admin-kontroll, tester (+ manuelle rutiner)          |
-| 27546  | KI-sjekken manipuleres                                  | 🔄 Delvis | Overstyre, logging, penetrasjonstesting              |
-| 27545  | Arrangør gjør ikke selvstendig vurdering                | 🔄 Delvis | Informasjonstekst, design                            |
-| 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | ⚠️ N/A    | Manuell rutine                                       |
-| 27542  | Feil/dårlig veiledning pga manglende kontekstforståelse | ✅ Impl.  | Testing av grensetilfeller                           |
-| 27321  | Personopplysninger av særlig kategori i tekst           | 🔄 Delvis | Avvikslenke, validering, testing                     |
-
----
+| ROS-ID | Risiko                                                  | Testet | Hovedtiltak                                          | Referanse                                              |
+| ------ | ------------------------------------------------------- | ------ | ---------------------------------------------------- | ------------------------------------------------------ |
+| 29337  | Utviklertilgang til logger tildeles for bredt           | ✅ Ja  | Banner i prod, egen admin-rolle (+ manuelle rutiner) | AT 15.33-15.35, tilgangsstyring.md, tilgangsrutiner.md |
+| 29330  | Logger lagres for lenge/for mye                         | ✅ Ja  | Automatisk sletting, rutiner ved feil                | AT 15.39, ki-rutiner.md                                |
+| 29263  | Abuse monitoring skrus av                               | ✅ Ja  | Beholder abuse monitoring, sterkeste filter          | AT 15.38                                               |
+| 29262  | Ikke følger retningslinjer for Azure OpenAI             | ✅ Ja  | Manuell rutine                                       | ki-rutiner.md                                          |
+| 29025  | Feil deployment av modell                               | ✅ Ja  | Kun standard deployment i EU/EØS                     | AT 15.37, 15.40                                        |
+| 29023  | Modellversjon utgår                                     | ✅ Ja  | Toggle for deaktivering, teste før oppgradering      | AT 15.40, ki-rutiner.md                                |
+| 28415  | KI-sjekken treffer ikke bra nok på testcases            | ✅ Ja  | Benchmarks, 90% mål, undersøke feil                  | AT 11.1-11.17                                          |
+| 27979  | KI-sjekken gir falsk trygghet                           | ✅ Ja  | Ingen grønn "ok", tekst i løsning                    | AT 11.18-11.22                                         |
+| 27868  | Mangelfull evaluering av språkmodell                    | ✅ Ja  | Evaluering dokumentert                               | ki-rutiner.md                                          |
+| 27867  | Mangelfull eller utilstrekkelig testing                 | ✅ Ja  | Logging, manuell test, automatiske tester            | AT 11.1-11.17                                          |
+| 27854  | Hallusinering av fakta                                  | ✅ Ja  | Risikovurdert modell, jevnlige tester                | ki-rutiner.md                                          |
+| 27853  | Kompleksitet i systemprompt (overtilpasning)            | ✅ Ja  | Klarspråk, veiledning, tematisk oppdeling            | ki-rutiner.md                                          |
+| 27852  | Feil ved oppdatering av prompten                        | ✅ Ja  | Versjonskontroll, reverserbar, auto-tester           | ki-rutiner.md                                          |
+| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | ✅ Ja  | Admin-kontroll, tester (+ manuelle rutiner)          | AT 11.12-11.17                                         |
+| 27546  | KI-sjekken manipuleres                                  | ✅ Ja  | Overstyre, logging, robusthetstesting                | AT 11.25-11.29, 15.36                                  |
+| 27545  | Arrangør gjør ikke selvstendig vurdering                | ✅ Ja  | Informasjonstekst, design                            | AT 11.18-11.22                                         |
+| 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | ✅ Ja  | Manuell rutine                                       | ki-rutiner.md                                          |
+| 27542  | Feil/dårlig veiledning pga manglende kontekstforståelse | ✅ Ja  | Testing av grensetilfeller                           | AT 11.25-11.29                                         |
+| 27321  | Personopplysninger av særlig kategori i tekst           | ✅ Ja  | Avvikslenke, validering, testing                     | AT 11.23-11.24                                         |
 
 ## Detaljert gjennomgang
 
@@ -43,10 +46,10 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Legge inn banner i løsning at man er i prod | 🔄 Planlagt | Teknisk |
+| Legge inn banner i løsning at man er i prod | ✅ Implementert | AT 15.33-15.35 |
 | Opplæring i test før utviklertilgang tildeles | ⚠️ N/A | Manuell rutine |
 | Lage rutine for bruk av rollene (hva er lov/ikke lov) | ⚠️ N/A | Manuell rutine |
-| Lage egen administrasjonstilgang (Toi) som kun gir tilgang til løsningen | 🔄 Planlagt | Teknisk |
+| Lage egen administrasjonstilgang (Toi) som kun gir tilgang til løsningen | ✅ Implementert | Egen admin-rolle |
 | Fjerne tilgang når den ikke er nødvendig lenger | ⚠️ N/A | Manuell rutine |
 
 ---
@@ -95,7 +98,7 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
 | Lage side på Loop med hva vi får lov til å lage (for utviklere) | ⚠️ N/A | Ekstern dokumentasjon |
-| Risikovurdere nye modeller/versjoner før bruk | ✅ Implementert | Dokumentert i ki-moderering.md |
+| Risikovurdere nye modeller/versjoner før bruk | ✅ Implementert | Dokumentert i ki-tekstvalideringstjeneste.md |
 | Velge riktig deployment i prod i tillegg til dev | ✅ Implementert | |
 | Kun språkmodeller med standard deployment i EU/EØS | ✅ Implementert | |
 
@@ -111,7 +114,7 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 | Lage side på Loop med hva vi får lov til å lage (for utviklere) | ⚠️ N/A | Ekstern dokumentasjon |
 | Mulighet for å deaktivere AI hvis ikke trygg modell | ✅ Implementert | Toggle finnes |
 | Sjekke jevnlig og merke utløpsdato for modellen | ⚠️ N/A | Manuell rutine |
-| Teste før oppgradering av modell | ✅ Implementert | Dokumentert i ki-moderering.md |
+| Teste før oppgradering av modell | ✅ Implementert | Dokumentert i ki-tekstvalideringstjeneste.md |
 
 ---
 
@@ -137,10 +140,10 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| KI-sjekken viser ikke grønn "ok" tekst | 🔄 Planlagt | Teknisk - UI-design |
+| KI-sjekken viser ikke grønn "ok" tekst | ✅ Implementert | AT 11.20 |
 | Gjennomføre tester fortløpende | ✅ Implementert | |
 | Lage retningslinjer for bruk av KI-sjekken i fritekst | ⚠️ N/A | Manuell rutine |
-| Legge inn tekst ved fritekstfelt som beskriver hva KI-sjekken gjør/ikke gjør | 🔄 Planlagt | Teknisk - UI-tekst |
+| Legge inn tekst ved fritekstfelt som beskriver hva KI-sjekken gjør/ikke gjør | ✅ Implementert | AT 11.18-11.19 |
 
 ---
 
@@ -151,7 +154,7 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Evaluering ved valg/oppgradering av modell | 🔄 Delvis | Dokumentert i ki-moderering.md |
+| Evaluering ved valg/oppgradering av modell | 🔄 Delvis | Dokumentert i ki-tekstvalideringstjeneste.md |
 
 ---
 
@@ -231,10 +234,10 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Retningslinjer i løsningen om at ROB kun er et verktøy | 🔄 Planlagt | Teknisk - UI-tekst |
-| Manipulasjonstesting/penetrasjonstesting av ROB | 🔄 Planlagt | Teknisk test |
-| La bruker overstyre ROB (menneskelig kontroll) | ✅ Implementert | |
-| Logging av svar for å avdekke manipulasjoner | ✅ Implementert | |
+| Retningslinjer i løsningen om at ROB kun er et verktøy | ✅ Implementert | AT 11.18-11.19 |
+| Robusthetstesting av KI-sjekken | ✅ Implementert | AT 11.25-11.29 |
+| La bruker overstyre ROB (menneskelig kontroll) | ✅ Implementert | AT 11.9-11.11 |
+| Logging av svar for å avdekke forsøk på manipulasjon | ✅ Implementert | AT 15.36 |
 
 ---
 
@@ -245,8 +248,8 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Tydelig informasjonstekst om brukerens eget ansvar | 🔄 Planlagt | Teknisk - UI-tekst |
-| Brukervennlig design/flyt som viser hvilke felt som analyseres | 🔄 Delvis | Teknisk - UI-design |
+| Tydelig informasjonstekst om brukerens eget ansvar | ✅ Implementert | AT 11.18-11.19 |
+| Brukervennlig design/flyt som viser hvilke felt som analyseres | ✅ Implementert | AT 11.21-11.22 |
 | Tydelige retningslinjer for ansvarlig bruk av KI-sjekken | ⚠️ N/A | Manuell rutine |
 
 ---
@@ -282,40 +285,35 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Lenke til avvikshåndtering i løsningen | 🔄 Planlagt | Teknisk - UI |
-| Funksjonalitet som tvinger bruker til å validere teksten | 🔄 Planlagt | Teknisk - UI-flyt |
+| Lenke til avvikshåndtering i løsningen | ✅ Implementert | AT 11.23-11.24 |
+| Funksjonalitet som tvinger bruker til å validere teksten | ✅ Implementert | AT 11.9-11.11 |
 | Teste systemet før implementering | ✅ Implementert | |
 | Jevnlige tester for å sjekke og forbedre | ✅ Implementert | |
-| Synlig tekstlig beskrivelse om at KI kan feile | 🔄 Planlagt | Teknisk - UI-tekst |
+| Synlig tekstlig beskrivelse om at KI kan feile | ✅ Implementert | AT 11.18-11.19 |
 
 ---
 
 ## Oppsummering
 
-### ✅ Implementerte tiltak (teknisk)
+### ✅ Testede tiltak
 
-| Kategori                | Beskrivelse                                                         |
-| ----------------------- | ------------------------------------------------------------------- |
-| Logging                 | Logger for etterprøving i produksjon, versjonslogg for systemprompt |
-| Automatisk sletting     | Logger slettes automatisk etter definert tid                        |
-| Deployment              | Kun standard deployment i EU/EØS                                    |
-| Abuse monitoring        | Aktivert med sterkeste filter                                       |
-| Testing                 | Automatiske tester, benchmarks, 90% målsetting, grensetilfeller     |
-| Overstyre KI            | Bruker kan overstyre ROB-vurdering                                  |
-| Systemprompt            | Versjonskontroll, reverserbar, tematisk oppdelt                     |
-| Administrasjonskontroll | Registrere fornøydhet med ROB i produksjon                          |
-| Risikovurdering         | Kartlagt feilscenarier, dokumentert i ROS                           |
-
-### 🔄 Planlagte tiltak (teknisk)
-
-| Kategori             | Beskrivelse                                                     |
-| -------------------- | --------------------------------------------------------------- |
-| UI-tekst             | Tekst om at KI kan feile, ansvar for innhold, ROB er et verktøy |
-| UI-design            | Ingen grønn "ok", tydelig hvilke felt som analyseres            |
-| UI-flyt              | Funksjonalitet som tvinger validering av tekst                  |
-| Tilgangsstyring      | Egen admin-rolle, banner i prod                                 |
-| Manipulasjonstesting | Penetrasjonstesting av ROB                                      |
-| Avvikslenke          | Lenke til avvikshåndtering i løsningen                          |
+| Kategori                | Beskrivelse                                                         | Akseptansetest |
+| ----------------------- | ------------------------------------------------------------------- | -------------- |
+| Logging                 | Logger for etterprøving i produksjon, versjonslogg for systemprompt | AT 11.12-11.17 |
+| Automatisk sletting     | Logger slettes automatisk etter definert tid                        | -              |
+| Deployment              | Kun standard deployment i EU/EØS                                    | -              |
+| Abuse monitoring        | Aktivert med sterkeste filter                                       | -              |
+| Testing                 | Automatiske tester, benchmarks, 90% målsetting, grensetilfeller     | AT 11.1-11.17  |
+| Overstyre KI            | Bruker kan overstyre ROB-vurdering                                  | AT 11.9-11.11  |
+| Systemprompt            | Versjonskontroll, reverserbar, tematisk oppdelt                     | -              |
+| Administrasjonskontroll | Registrere fornøydhet med ROB i produksjon                          | AT 11.16-11.17 |
+| Risikovurdering         | Kartlagt feilscenarier, dokumentert i ROS                           | -              |
+| UI-tekst                | Tekst om at KI kan feile, ansvar for innhold, ROB er et verktøy     | AT 11.18-11.22 |
+| UI-design               | Ingen grønn "ok", tydelig hvilke felt som analyseres                | AT 11.20-11.22 |
+| UI-flyt                 | Funksjonalitet som tvinger validering av tekst                      | AT 11.9-11.11  |
+| Tilgangsstyring         | Egen admin-rolle, banner i prod                                     | AT 15.33-15.35 |
+| Robusthetstesting       | Testing av KI-sjekken med uvanlige tekster                          | AT 11.25-11.29 |
+| Avvikslenke             | Lenke til avvikshåndtering i løsningen                              | AT 11.23-11.24 |
 
 ### ⚠️ Manuelle rutiner (utenfor systemdok)
 
@@ -327,21 +325,10 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 | Overvåking      | Sjekke utløpsdato for modell, overvåke lovverk |
 | Brukerrutiner   | Retningslinjer for bruk, feedback fra brukere  |
 
-### ⚠️ Høy risiko som bør prioriteres
-
-| ROS-ID | Risiko                      | Manglende tiltak                    |
-| ------ | --------------------------- | ----------------------------------- |
-| 27867  | Mangelfull testing          | Ansvarliggjøre brukere i løsningen  |
-| 29025  | Feil deployment             | Loop-dokumentasjon                  |
-| 27854  | Hallusinering               | Kartlegging av feilscenarier        |
-| 28415  | Treffprosent                | - (hovedsakelig implementert)       |
-| 27979  | Falsk trygghet              | Ingen grønn "ok", informasjonstekst |
-| 27852  | Feil ved prompt-oppdatering | - (hovedsakelig implementert)       |
-
 ---
 
 ## Relaterte dokumenter
 
-- [ROS-tiltak (generelt)](ros.md) - Generelle ROS-tiltak for Rekrutteringstreff
-- [KI-moderering](../5-ki/ki-moderering.md) - Teknisk dokumentasjon for KI-validering
+- [ROS-tiltak (generelt)](ros-pilot.md) - Generelle ROS-tiltak for Rekrutteringstreff
+- [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md) - Teknisk dokumentasjon for KI-validering
 - [Akseptansetester](akseptansetester.md) - Fullstendige testscenarier

@@ -227,7 +227,7 @@ Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>
 ### Støttetabeller
 
 - **naringskode**: Næringskoder for arbeidsgivere (kan ha flere per arbeidsgiver)
-- **ki_spørring_logg**: Logger AI/KI-spørringer med metadata og modereringsinfo - se [KI-moderering](08-ki-moderering.md)
+- **ki_spørring_logg**: Logger AI/KI-spørringer med metadata og modereringsinfo - se [KI-tekstvalideringstjenesten](08-ki-tekstvalideringstjeneste.md)
 
 ## Flyway-migrasjoner
 
@@ -279,4 +279,4 @@ Dette diagrammet kan vises i:
 ## Relaterte dokumenter
 
 - [Synlighet](05-synlighet.md) - Detaljert beskrivelse av synlighetsintegrasjonen
-- [KI-moderering](08-ki-moderering.md) - Beskrivelse av KI-loggingen
+- [KI-tekstvalideringstjenesten](08-ki-tekstvalideringstjeneste.md) - Beskrivelse av KI-loggingen

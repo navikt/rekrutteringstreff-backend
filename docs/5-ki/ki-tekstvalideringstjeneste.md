@@ -1,4 +1,4 @@
-# KI-moderering av rekrutteringstreff-innhold
+# KI-tekstvalideringstjenesten (ROB)
 
 ## Formål
 
