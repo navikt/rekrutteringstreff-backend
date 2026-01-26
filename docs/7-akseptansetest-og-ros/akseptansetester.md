@@ -6,7 +6,7 @@ Testscenarier for domeneeksperter før pilot og prodsetting. Testene er organise
 
 ## Testmiljø
 
-| System                    | URL (dev)                              | Brukes av                | Også kalt       |
+| System                    | URL (dev)                              | Brukes av                | Også kalt        |
 | ------------------------- | -------------------------------------- | ------------------------ | ---------------- |
 | rekrutteringsbistand      | rekrutteringsbistand.intern.dev.nav.no | Veileder, Markedskontakt | -                |
 | rekrutteringstreff-bruker | rekrutteringstreff.ekstern.dev.nav.no  | Jobbsøker                | "Treffsiden"     |
@@ -15,6 +15,7 @@ Testscenarier for domeneeksperter før pilot og prodsetting. Testene er organise
 | MinSide                   | min-side.dev.nav.no                    | Jobbsøker                | "MinSide-varsel" |
 
 > **Terminologi:**
+>
 > - **Treffsiden** = rekrutteringstreff-bruker der jobbsøker ser treffdetaljer og svarer
 > - **MinSide-varsel** = Varsler på min-side.dev.nav.no for jobbsøkere uten KRR-kontaktinfo
 > - **SMS/e-post** = Varsler som sendes med lenke til treffsiden (ikke selve endringene)
@@ -149,13 +150,13 @@ Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å 
 
 #### CV og jobbprofil
 
-| #   | Test                                       | Forventet resultat | ✅❌ | Notat |
-| --- | ------------------------------------------ | ------------------ | ---- | ----- |
-| 4.5 | Person med aktiv CV                        | Synlig ✅          |      |       |
-| 4.6 | Person uten CV                             | Ikke synlig ❌     |      |       |
-| 4.7 | Person med slettet CV (meldingstype SLETT) | Ikke synlig ❌     |      |       |
-| 4.8 | Person med CV men uten jobbprofil          | Ikke synlig ❌     |      |       |
-| 4.9 | Person med jobbprofil                      | Synlig ✅          |      |       |
+| #    | Test                                       | Forventet resultat | ✅❌ | Notat |
+| ---- | ------------------------------------------ | ------------------ | ---- | ----- |
+| 4.6  | Person med aktiv CV                        | Synlig ✅          |      |       |
+| 4.7  | Person uten CV                             | Ikke synlig ❌     |      |       |
+| 4.8  | Person med slettet CV (meldingstype SLETT) | Ikke synlig ❌     |      |       |
+| 4.9  | Person med CV men uten jobbprofil          | Ikke synlig ❌     |      |       |
+| 4.10 | Person med jobbprofil                      | Synlig ✅          |      |       |
 
 #### Arbeidssøkerregister (ny regel)
 
@@ -355,11 +356,11 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 
 Test at jobbsøker ser korrekt og oppdatert info på treffsiden (rekrutteringstreff-bruker) etter at markedskontakt har gjort endringer.
 
-| #    | Test                                                         | Forventet resultat                                                 | ✅❌ | Notat |
-| ---- | ------------------------------------------------------------ | ------------------------------------------------------------------ | ---- | ----- |
-| 7.11 | Jobbsøker - Åpne treffsiden etter endring                     | Ser oppdaterte detaljer (tittel, tidspunkt, sted, svarfrist)       |      |       |
-| 7.12 | Jobbsøker - Sjekk aktivitetskort etter endring               | Aktivitetskort har oppdaterte detaljer                             |      |       |
-| 7.13 | Veileder - Sjekk aktivitetskort etter endring                | Ser oppdaterte detaljer                                            |      |       |
+| #    | Test                                           | Forventet resultat                                           | ✅❌ | Notat |
+| ---- | ---------------------------------------------- | ------------------------------------------------------------ | ---- | ----- |
+| 7.11 | Jobbsøker - Åpne treffsiden etter endring      | Ser oppdaterte detaljer (tittel, tidspunkt, sted, svarfrist) |      |       |
+| 7.12 | Jobbsøker - Sjekk aktivitetskort etter endring | Aktivitetskort har oppdaterte detaljer                       |      |       |
+| 7.13 | Veileder - Sjekk aktivitetskort etter endring  | Ser oppdaterte detaljer                                      |      |       |
 
 ### Endring og synkronisering (ROS 28065)
 
