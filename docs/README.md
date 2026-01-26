@@ -42,9 +42,11 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 - [Utvidbarhet](6-kvalitet/utvidbarhet.md) - Planlagte utvidelser og arkitekturprinsipper
 - [Vedlikeholdbarhet](6-kvalitet/vedlikeholdbarhet.md) - Design for vedlikehold
 
-### 7. [Manuelle akseptansetester](7-manuelle-akseptansetester/)
+### 7. [Akseptansetest og ROS](7-akseptansetest-og-ros/)
 
-- [Akseptansetester](7-manuelle-akseptansetester/akseptansetester.md) - Manuelle tester for domeneeksperter før pilot/prodsetting
+- [Akseptansetester](7-akseptansetest-og-ros/akseptansetester.md) - Manuelle tester for domeneeksperter før pilot/prodsetting
+- [ROS-tiltak](7-akseptansetest-og-ros/ros.md) - Risikovurdering og tiltak
+- [ROS-tiltak for KI](7-akseptansetest-og-ros/ros-ki.md) - Risikovurdering for KI-sjekken (ROB)
 
 ## Applikasjoner i monorepoet
 
