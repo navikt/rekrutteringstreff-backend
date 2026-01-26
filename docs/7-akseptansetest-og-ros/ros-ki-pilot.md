@@ -2,40 +2,56 @@
 
 Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke for KI-sjekken (ROB), og status på tiltak.
 
-**Statusforklaring:**
+**Statusforklaring (Impl.):**
 
-- ✅ Ja = Dokumentert i akseptansetester, systemdok, eller utviklerrutiner
-- ⚠️ N/A = Brukerrutine utenfor systemdok (opplæring av sluttbrukere, etc.)
+- ✅ = Fullt implementert (akseptansetester, systemdok, eller utviklerrutiner)
+- 🔄 = Delvis implementert (noen tiltak gjenstår)
+- ⚠️ = Kun manuell rutine utenfor systemdok
+
+**Statusforklaring (Manuell dok):**
+
+- 📝 = Krever brukerrettet dokumentasjon (opplæringsmateriell, prosessbeskrivelser for Nav-ansatte)
+- ➖ = Ikke påkrevd, eller dekket av utviklerrutiner
 
 **Referanseforklaring:**
 
-- AT = Akseptansetest (se [akseptansetester.md](akseptansetester.md))
-- Dok = Systemdokumentasjon (se [docs/](../README.md))
-- Rutine = Utviklerrutine (se [ki-rutiner.md](../8-utviklerrutiner/ki-rutiner.md))
+- AT = Akseptansetest
+- sysdok: = Systemdokumentasjon
+- rutine: = Utviklerrutine
 
 ## Oversikt over risikoer
 
-| ROS-ID | Risiko                                                  | Testet | Hovedtiltak                                          | Referanse                                              |
-| ------ | ------------------------------------------------------- | ------ | ---------------------------------------------------- | ------------------------------------------------------ |
-| 29337  | Utviklertilgang til logger tildeles for bredt           | ✅ Ja  | Banner i prod, egen admin-rolle (+ manuelle rutiner) | AT 15.33-15.35, tilgangsstyring.md, tilgangsrutiner.md |
-| 29330  | Logger lagres for lenge/for mye                         | ✅ Ja  | Automatisk sletting, rutiner ved feil                | AT 15.39, ki-rutiner.md                                |
-| 29263  | Abuse monitoring skrus av                               | ✅ Ja  | Beholder abuse monitoring, sterkeste filter          | AT 15.38                                               |
-| 29262  | Ikke følger retningslinjer for Azure OpenAI             | ✅ Ja  | Manuell rutine                                       | ki-rutiner.md                                          |
-| 29025  | Feil deployment av modell                               | ✅ Ja  | Kun standard deployment i EU/EØS                     | AT 15.37, 15.40                                        |
-| 29023  | Modellversjon utgår                                     | ✅ Ja  | Toggle for deaktivering, teste før oppgradering      | AT 15.40, ki-rutiner.md                                |
-| 28415  | KI-sjekken treffer ikke bra nok på testcases            | ✅ Ja  | Benchmarks, 90% mål, undersøke feil                  | AT 11.1-11.17                                          |
-| 27979  | KI-sjekken gir falsk trygghet                           | ✅ Ja  | Ingen grønn "ok", tekst i løsning                    | AT 11.18-11.22                                         |
-| 27868  | Mangelfull evaluering av språkmodell                    | ✅ Ja  | Evaluering dokumentert                               | ki-rutiner.md                                          |
-| 27867  | Mangelfull eller utilstrekkelig testing                 | ✅ Ja  | Logging, manuell test, automatiske tester            | AT 11.1-11.17                                          |
-| 27854  | Hallusinering av fakta                                  | ✅ Ja  | Risikovurdert modell, jevnlige tester                | ki-rutiner.md                                          |
-| 27853  | Kompleksitet i systemprompt (overtilpasning)            | ✅ Ja  | Klarspråk, veiledning, tematisk oppdeling            | ki-rutiner.md                                          |
-| 27852  | Feil ved oppdatering av prompten                        | ✅ Ja  | Versjonskontroll, reverserbar, auto-tester           | ki-rutiner.md                                          |
-| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | ✅ Ja  | Admin-kontroll, tester (+ manuelle rutiner)          | AT 11.12-11.17                                         |
-| 27546  | KI-sjekken manipuleres                                  | ✅ Ja  | Overstyre, logging, robusthetstesting                | AT 11.25-11.29, 15.36                                  |
-| 27545  | Arrangør gjør ikke selvstendig vurdering                | ✅ Ja  | Informasjonstekst, design                            | AT 11.18-11.22                                         |
-| 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | ✅ Ja  | Manuell rutine                                       | ki-rutiner.md                                          |
-| 27542  | Feil/dårlig veiledning pga manglende kontekstforståelse | ✅ Ja  | Testing av grensetilfeller                           | AT 11.25-11.29                                         |
-| 27321  | Personopplysninger av særlig kategori i tekst           | ✅ Ja  | Avvikslenke, validering, testing                     | AT 11.23-11.24                                         |
+| ROS-ID | Risiko                                                  | Impl. | Manuell dok | Referanse                               |
+| ------ | ------------------------------------------------------- | ----- | ----------- | --------------------------------------- |
+| 29337  | Utviklertilgang til logger tildeles for bredt           | ✅    | ➖          | AT 15.33-15.35, rutine: tilgangsrutiner |
+| 29330  | Logger lagres for lenge/for mye                         | ✅    | ➖          | AT 15.39, rutine: ki-rutiner            |
+| 29263  | Abuse monitoring skrus av                               | ✅    | ➖          | AT 15.38, rutine: ki-rutiner            |
+| 29262  | Ikke følger retningslinjer for Azure OpenAI             | ✅    | ➖          | rutine: ki-rutiner                      |
+| 29025  | Feil deployment av modell                               | ✅    | ➖          | AT 15.37, 15.40, rutine: ki-rutiner     |
+| 29023  | Modellversjon utgår                                     | ✅    | ➖          | AT 15.40, rutine: ki-rutiner            |
+| 28415  | KI-sjekken treffer ikke bra nok på testcases            | ✅    | ➖          | AT 11.1-11.17                           |
+| 27979  | KI-sjekken gir falsk trygghet                           | 🔄    | 📝          | AT 11.18-11.22                          |
+| 27868  | Mangelfull evaluering av språkmodell                    | ✅    | ➖          | rutine: ki-rutiner                      |
+| 27867  | Mangelfull eller utilstrekkelig testing                 | ✅    | ➖          | AT 11.1-11.17                           |
+| 27854  | Hallusinering av fakta                                  | ✅    | ➖          | rutine: ki-rutiner                      |
+| 27853  | Kompleksitet i systemprompt (overtilpasning)            | ✅    | ➖          | rutine: ki-rutiner                      |
+| 27852  | Feil ved oppdatering av prompten                        | ✅    | ➖          | rutine: ki-rutiner                      |
+| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | 🔄    | 📝          | AT 11.12-11.17                          |
+| 27546  | KI-sjekken manipuleres                                  | ✅    | ➖          | AT 11.25-11.29, 15.36                   |
+| 27545  | Arrangør gjør ikke selvstendig vurdering                | 🔄    | 📝          | AT 11.18-11.22                          |
+| 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | ✅    | ➖          | rutine: ki-rutiner                      |
+| 27542  | Feil/dårlig veiledning pga manglende kontekstforståelse | ✅    | ➖          | AT 11.25-11.29                          |
+| 27321  | Personopplysninger av særlig kategori i tekst           | ✅    | ➖          | AT 11.23-11.24                          |
+
+### Oppsummering brukerrettet dokumentasjon
+
+Følgende risikoer krever brukerrettet dokumentasjon (opplæringsmateriell, prosessbeskrivelser for Nav-ansatte):
+
+| ROS-ID | Hva må dokumenteres                                     |
+| ------ | ------------------------------------------------------- |
+| 27979  | Retningslinjer for bruk av KI-sjekken (for Nav-ansatte) |
+| 27547  | Brukerrutiner, feedback-innhenting fra brukere          |
+| 27545  | Retningslinjer for ansvarlig bruk av KI-sjekken         |
 
 ## Detaljert gjennomgang
 
@@ -47,10 +63,10 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
 | Legge inn banner i løsning at man er i prod | ✅ Implementert | AT 15.33-15.35 |
-| Opplæring i test før utviklertilgang tildeles | ⚠️ N/A | Manuell rutine |
-| Lage rutine for bruk av rollene (hva er lov/ikke lov) | ⚠️ N/A | Manuell rutine |
+| Opplæring i test før utviklertilgang tildeles | ✅ Rutine | rutine: tilgangsrutiner |
+| Lage rutine for bruk av rollene (hva er lov/ikke lov) | ✅ Rutine | rutine: tilgangsrutiner |
 | Lage egen administrasjonstilgang (Toi) som kun gir tilgang til løsningen | ✅ Implementert | Egen admin-rolle |
-| Fjerne tilgang når den ikke er nødvendig lenger | ⚠️ N/A | Manuell rutine |
+| Fjerne tilgang når den ikke er nødvendig lenger | ✅ Rutine | rutine: tilgangsrutiner |
 
 ---
 
@@ -73,7 +89,7 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Lage side på Loop med hva vi får lov til å lage (for utviklere) | ⚠️ N/A | Ekstern dokumentasjon |
+| Dokumentere hva vi får lov til å lage (for utviklere) | ✅ Rutine | rutine: ki-rutiner |
 | Velge sterkeste, moderne filter i henhold til krav | ✅ Implementert | |
 
 ---
@@ -85,8 +101,8 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Følge etablerte retningslinjer for ansvarlig KI i Nav | ⚠️ N/A | Ekstern rutine |
-| Etablere retningslinjer i seksjonen/teamet for ny instans av Azure OpenAI | ⚠️ N/A | Manuell rutine |
+| Følge etablerte retningslinjer for ansvarlig KI i Nav | ✅ Rutine | rutine: ki-rutiner |
+| Etablere retningslinjer i seksjonen/teamet for ny instans av Azure OpenAI | ✅ Rutine | rutine: ki-rutiner |
 
 ---
 
@@ -97,8 +113,8 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Lage side på Loop med hva vi får lov til å lage (for utviklere) | ⚠️ N/A | Ekstern dokumentasjon |
-| Risikovurdere nye modeller/versjoner før bruk | ✅ Implementert | Dokumentert i ki-tekstvalideringstjeneste.md |
+| Dokumentere godkjente deployment-typer (for utviklere) | ✅ Rutine | rutine: ki-rutiner |
+| Risikovurdere nye modeller/versjoner før bruk | ✅ Implementert | sysdok: ki-tekstvalideringstjeneste |
 | Velge riktig deployment i prod i tillegg til dev | ✅ Implementert | |
 | Kun språkmodeller med standard deployment i EU/EØS | ✅ Implementert | |
 
@@ -111,10 +127,10 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Lage side på Loop med hva vi får lov til å lage (for utviklere) | ⚠️ N/A | Ekstern dokumentasjon |
+| Dokumentere godkjente deployment-typer (for utviklere) | ✅ Rutine | rutine: ki-rutiner |
 | Mulighet for å deaktivere AI hvis ikke trygg modell | ✅ Implementert | Toggle finnes |
-| Sjekke jevnlig og merke utløpsdato for modellen | ⚠️ N/A | Manuell rutine |
-| Teste før oppgradering av modell | ✅ Implementert | Dokumentert i ki-tekstvalideringstjeneste.md |
+| Sjekke jevnlig og merke utløpsdato for modellen | ✅ Rutine | rutine: ki-rutiner |
+| Teste før oppgradering av modell | ✅ Implementert | sysdok: ki-tekstvalideringstjeneste |
 
 ---
 
@@ -220,9 +236,9 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Utarbeide og implementere rutiner for brukere | ⚠️ N/A | Manuell rutine |
+| Utarbeide og implementere rutiner for brukere | ⚠️ Brukerrettet | Opplæringsmateriell |
 | Administrasjonskontroll for å registrere fornøydhet med ROB | ✅ Implementert | |
-| Innhente feedback fra brukere, måle gevinst/effektivitet | ⚠️ N/A | Manuell rutine |
+| Innhente feedback fra brukere, måle gevinst/effektivitet | ⚠️ Brukerrettet | Prosess for Nav-ansatte |
 | Modellkontroll gjennom tester/stikkprøver | ✅ Implementert | |
 
 ---
@@ -250,7 +266,7 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 |--------|--------|-----------|
 | Tydelig informasjonstekst om brukerens eget ansvar | ✅ Implementert | AT 11.18-11.19 |
 | Brukervennlig design/flyt som viser hvilke felt som analyseres | ✅ Implementert | AT 11.21-11.22 |
-| Tydelige retningslinjer for ansvarlig bruk av KI-sjekken | ⚠️ N/A | Manuell rutine |
+| Tydelige retningslinjer for ansvarlig bruk av KI-sjekken | ⚠️ Brukerrettet | Opplæringsmateriell |
 
 ---
 
@@ -261,9 +277,9 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Sikre kunnskap om endringer i relevant lovverk | ⚠️ N/A | Manuell rutine |
-| Vurdere behov for oppdatering ved ny versjon av modellen | ⚠️ N/A | Manuell rutine |
-| Rutiner for stikkprøver for å teste at modellen er oppdatert | ⚠️ N/A | Manuell rutine |
+| Sikre kunnskap om endringer i relevant lovverk | ✅ Rutine | rutine: ki-rutiner |
+| Vurdere behov for oppdatering ved ny versjon av modellen | ✅ Rutine | rutine: ki-rutiner |
+| Rutiner for stikkprøver for å teste at modellen er oppdatert | ✅ Rutine | rutine: ki-rutiner |
 
 ---
 
@@ -315,15 +331,12 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 | Robusthetstesting       | Testing av KI-sjekken med uvanlige tekster                          | AT 11.25-11.29 |
 | Avvikslenke             | Lenke til avvikshåndtering i løsningen                              | AT 11.23-11.24 |
 
-### ⚠️ Manuelle rutiner (utenfor systemdok)
+### ⚠️ Brukerrettet dokumentasjon (ikke i systemdok)
 
-| Kategori        | Beskrivelse                                    |
-| --------------- | ---------------------------------------------- |
-| Opplæring       | Opplæring før utviklertilgang                  |
-| Ekstern dok     | Loop-side med hva utviklere får lov til å lage |
-| Tilgangsstyring | Fjerne tilgang ved behov, rutine for rollebruk |
-| Overvåking      | Sjekke utløpsdato for modell, overvåke lovverk |
-| Brukerrutiner   | Retningslinjer for bruk, feedback fra brukere  |
+| Kategori      | Beskrivelse                                          |
+| ------------- | ---------------------------------------------------- |
+| Opplæring     | Retningslinjer for bruk av KI-sjekken (Nav-ansatte)  |
+| Brukerrutiner | Prosessbeskrivelser, feedback-innhenting fra brukere |
 
 ---
 

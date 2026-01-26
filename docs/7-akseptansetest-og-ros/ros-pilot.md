@@ -2,48 +2,67 @@
 
 Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av akseptansetester og systemdokumentasjon.
 
-**Statusforklaring:**
+**Statusforklaring (Impl.):**
 
-- ✅ Ja = Dokumentert i akseptansetester, systemdok, eller utviklerrutiner
-- ⚠️ N/A = Brukerrutine utenfor systemdok (opplæring av sluttbrukere, etc.)
+- ✅ = Fullt implementert (akseptansetester, systemdok, eller utviklerrutiner)
+- 🔄 = Delvis implementert (noen tiltak gjenstår)
+- ⚠️ = Kun manuell rutine utenfor systemdok / Ikke relevant
+
+**Statusforklaring (Manuell dok):**
+
+- 📝 = Krever brukerrettet dokumentasjon (opplæringsmateriell, prosessbeskrivelser for Nav-ansatte)
+- ➖ = Ikke påkrevd, eller dekket av utviklerrutiner
 
 **Referanseforklaring:**
 
-- AT = Akseptansetest (se [akseptansetester.md](akseptansetester.md))
-- Filnavn = Systemdokumentasjon eller utviklerrutine (se [docs/](../README.md))
+- AT = Akseptansetest
+- sysdok: = Systemdokumentasjon
+- rutine: = Utviklerrutine
 
 ## Oversikt over risikoer
 
-| ROS-ID | Risiko                                        | Testet | Referanse                                   | Gap                                 |
-| ------ | --------------------------------------------- | ------ | ------------------------------------------- | ----------------------------------- |
-| 28065  | Jobbsøker får ikke info om endringer          | ✅ Ja  | AT 6.1-6.9, 7.1-7.18, varsling.md           | -                                   |
-| 27487  | Kort flyttes ikke til avbrutt                 | ✅ Ja  | AT 6.7, 8.3-8.7, 9.4-9.5, aktivitetskort.md | -                                   |
-| 27486  | Data forsvinner ved sletting                  | ✅ Ja  | AT 1.11-1.13                                | -                                   |
-| 27485  | Deltakere forstår ikke invitasjon             | ✅ Ja  | AT 5.14-5.15, 6.5, invitasjon.md            | -                                   |
-| 27484  | Treff arkiveres for tidlig                    | ⚠️ N/A | -                                           | Ikke relevant for pilot             |
-| 27483  | Feil data sendes for arbeidsgiver             | ✅ Ja  | AT 2.8-2.9                                  | -                                   |
-| 27482  | Feil arbeidsgiver legges til                  | ✅ Ja  | AT 2.1-2.7, 7.7-7.10                        | -                                   |
-| 27433  | Arbeidsgiver uten reelt rekrutteringsbehov    | ⚠️ N/A | -                                           | Brukerrutine, ikke testet i løsning |
-| 27390  | Arrangør kvalitetssikrer ikke KI-tekst        | ✅ Ja  | AT 11.1-11.17, ki-tekstvalideringstjeneste.md             | -                                   |
-| 27389  | ROB manipuleres til feilaktige vurderinger    | ✅ Ja  | AT 11.9-11.17, ki-tekstvalideringstjeneste.md             | -                                   |
-| 27388  | Feilregistrering ved deltakelsesvalg          | ✅ Ja  | AT 6.1-6.9                                  | -                                   |
-| 27386  | Aktivitetskort blir ikke opprettet            | ✅ Ja  | AT 5.5-5.7, aktivitetskort.md               | -                                   |
-| 27385  | Nav-ansatte mangler info om frivillighet      | ✅ Ja  | AT 5.14-5.15                                | + Brukerrutine                      |
-| 27383  | Jobbsøker får feil info i treffsiden          | ✅ Ja  | AT 7.11-7.18, minside-flyt.md               | -                                   |
-| 27381  | Deltaker mottar samme varsel gjentatte ganger | ✅ Ja  | AT 5.12, varsling.md                        | -                                   |
-| 27379  | Menneskelig feil - feil person får invitasjon | ⚠️ N/A | -                                           | Brukerrutine                        |
-| 27378  | Teknisk feil - feil person får invitasjon     | ✅ Ja  | AT 4.1-4.5, 5.1-5.7, invitasjon.md          | -                                   |
-| 27275  | Usynlige kandidater ikke skjult               | ✅ Ja  | AT 4.5-4.29, synlighet.md                   | -                                   |
-| 27273  | Jobbsøker får feil/mangelfull info pga feil   | ✅ Ja  | AT 7.1-7.18, 5.14-5.15                      | -                                   |
-| 27227  | Behandler flere opplysninger enn nødvendig    | ✅ Ja  | arkitektur.md                               | Arkitekturbeslutning                |
-| 27225  | Ansatte får ikke tilgang                      | ✅ Ja  | AT 15.26-15.32, tilgangsstyring.md          | -                                   |
-| 27223  | Adressefelt brukt til andre formål            | ✅ Ja  | AT 1.14-1.16                                | -                                   |
-| 27222  | Feil arbeidsgiver/virksomhet registreres      | ✅ Ja  | AT 2.1-2.7                                  | Ligner 27482                        |
-| 27220  | Tilgang til kontor utenfor pilot              | ✅ Ja  | AT 15.26-15.32, tilgangsstyring.md          | -                                   |
-| 27219  | Særlige kategorier i tittel/beskrivelse       | ✅ Ja  | AT 11.1-11.17, ki-tekstvalideringstjeneste.md             | -                                   |
-| 27217  | Tilgang til treff man ikke skulle hatt        | ✅ Ja  | AT 15.1-15.32, tilgangsstyring.md           | -                                   |
-| 27216  | KI identifiserer ikke diskriminerende tekst   | ✅ Ja  | AT 11.9-11.17, ki-tekstvalideringstjeneste.md             | -                                   |
-| 27215  | Brudd på informasjons-/tilgangskontroll       | ✅ Ja  | AT 15.1-15.32, tilgangsstyring.md           | -                                   |
+| ROS-ID | Risiko                                        | Impl. | Manuell dok | Referanse                                   |
+| ------ | --------------------------------------------- | ----- | ----------- | ------------------------------------------- |
+| 28065  | Jobbsøker får ikke info om endringer          | ✅    | ➖          | AT 6.1-6.9, 7.1-7.18, sysdok: varsling      |
+| 27487  | Kort flyttes ikke til avbrutt                 | ✅    | ➖          | AT 6.7, 8.3-8.7, 9.4-9.5, sysdok: aktivitet |
+| 27486  | Data forsvinner ved sletting                  | ✅    | ➖          | AT 1.11-1.13                                |
+| 27485  | Deltakere forstår ikke invitasjon             | 🔄    | 📝          | AT 5.14-5.15, 6.5, sysdok: invitasjon       |
+| 27484  | Treff arkiveres for tidlig                    | ⚠️    | ➖          | -                                           |
+| 27483  | Feil data sendes for arbeidsgiver             | ✅    | ➖          | AT 2.8-2.9                                  |
+| 27482  | Feil arbeidsgiver legges til                  | ✅    | ➖          | AT 2.1-2.7, 7.7-7.10                        |
+| 27433  | Arbeidsgiver uten reelt rekrutteringsbehov    | ⚠️    | 📝          | -                                           |
+| 27390  | Arrangør kvalitetssikrer ikke KI-tekst        | 🔄    | 📝          | AT 11.1-11.17                               |
+| 27389  | ROB manipuleres til feilaktige vurderinger    | ✅    | ➖          | AT 11.9-11.17                               |
+| 27388  | Feilregistrering ved deltakelsesvalg          | ✅    | ➖          | AT 6.1-6.9                                  |
+| 27386  | Aktivitetskort blir ikke opprettet            | ✅    | ➖          | AT 5.5-5.7, sysdok: aktivitetskort          |
+| 27385  | Nav-ansatte mangler info om frivillighet      | 🔄    | 📝          | AT 5.14-5.15                                |
+| 27383  | Jobbsøker får feil info i treffsiden          | ✅    | ➖          | AT 7.11-7.18, sysdok: minside-flyt          |
+| 27381  | Deltaker mottar samme varsel gjentatte ganger | ✅    | ➖          | AT 5.12, sysdok: varsling                   |
+| 27379  | Menneskelig feil - feil person får invitasjon | ⚠️    | 📝          | -                                           |
+| 27378  | Teknisk feil - feil person får invitasjon     | ✅    | ➖          | AT 4.1-4.5, 5.1-5.7, sysdok: invitasjon     |
+| 27275  | Usynlige kandidater ikke skjult               | ✅    | ➖          | AT 4.5-4.29, sysdok: synlighet              |
+| 27273  | Jobbsøker får feil/mangelfull info pga feil   | ✅    | ➖          | AT 7.1-7.18, 5.14-5.15                      |
+| 27227  | Behandler flere opplysninger enn nødvendig    | ✅    | ➖          | sysdok: arkitektur                          |
+| 27225  | Ansatte får ikke tilgang                      | ✅    | ➖          | AT 15.26-15.32, sysdok: tilgangsstyring     |
+| 27223  | Adressefelt brukt til andre formål            | ✅    | ➖          | AT 1.14-1.16                                |
+| 27222  | Feil arbeidsgiver/virksomhet registreres      | ✅    | ➖          | AT 2.1-2.7                                  |
+| 27220  | Tilgang til kontor utenfor pilot              | ✅    | ➖          | AT 15.26-15.32, sysdok: tilgangsstyring     |
+| 27219  | Særlige kategorier i tittel/beskrivelse       | ✅    | ➖          | AT 11.1-11.17                               |
+| 27217  | Tilgang til treff man ikke skulle hatt        | ✅    | ➖          | AT 15.1-15.32, sysdok: tilgangsstyring      |
+| 27216  | KI identifiserer ikke diskriminerende tekst   | ✅    | ➖          | AT 11.9-11.17                               |
+| 27215  | Brudd på informasjons-/tilgangskontroll       | ✅    | ➖          | AT 15.1-15.32, sysdok: tilgangsstyring      |
+
+### Oppsummering brukerrettet dokumentasjon
+
+Følgende risikoer krever brukerrettet dokumentasjon (opplæringsmateriell, prosessbeskrivelser for Nav-ansatte):
+
+| ROS-ID | Hva må dokumenteres                                              |
+| ------ | ---------------------------------------------------------------- |
+| 27485  | Plan for intern kommunikasjon, retningslinjer for markedskontakt |
+| 27433  | Rutine for vurdering av arbeidsgivers rekrutteringsbehov         |
+| 27390  | Opplæring før pilot, prosessbeskrivelse for KI-verktøy           |
+| 27385  | Info til Nav-ansatte om frivillighet ved deltakelse              |
+| 27379  | Brukerrutine - manuell kontroll av at riktig person inviteres    |
 
 ---
 
