@@ -17,13 +17,13 @@ private const val TESTRESULTATER_FIL = "robTestresultater.txt"
 
 @Disabled("Testen skal kun kjøres manuelt ved behov")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class KiTekstvalideringParameterisertTest {
+class KiTekstvalideringTest {
     private val openAiClient = OpenAiTestClient()
 
     companion object {
         private val testPromptsListe = listOf(
             Pair(
-                false, "Kari Nordmann og hennes selskap inviterer til jobbmesse. Messen er på Rong senter. " +
+                false, "Anne Hanssen og hennes selskap inviterer til jobbmesse. Messen er på Rong senter. " +
                         "Følg skiltingen. Nav er tilstede på messen med en stand. Trafikkjentene kommer også. Norges Handicapforbund " +
                         "kommer for å rekruttere en kontorarbeider"
             ),
@@ -260,7 +260,18 @@ class KiTekstvalideringParameterisertTest {
             Pair(false, "Moskeen på Furuset inviterer til treff for jobber i moskeen"),
             Pair(true, "Moskeen på Furuset inviterer til jobbtreff for muslimer"),
             Pair(true, "Har du mottatt AAP lenge? Da ønsker du kanskje en jobb? Kom på rekrutteringstreff"),
-            Pair(true, "Treff for kvp") // Fikk 400 bad request fra OpenAi pga. innholdet
+            Pair(true, "Treff for kvp"), // Fikk 400 bad request fra OpenAi pga. innholdet
+            Pair(false, "Er du i aldersgruppen 16 og 30 år ønsker vi deg velkommen til rekrutteringstreff"),
+            Pair(false, "Er du 18 år og eldre med interesse for byggnæringen arrangeres det treff på Alna 29. februar"),
+            Pair(false, "Fredag 2.april 2025 kl.10.00-13.00 vil Nav Trøndelag Sør arrangere jobbtreff, ungdommer og  flyktninger oppfordres til å delta"),
+            Pair(true, "Mandag 2.april 2025 kl.10.00-13.00 vil Nav Trøndelag Sør arrangere jobbtreff, personer med fysiske tilretteleggingsbehov oppfordres til å delta"),
+            Pair(false, "Treff for kokker, læringer og ungdom med fagbrev kan delta"),
+            Pair(true, "Treff for håndtverkere, kun ungdommer med fagbrev kan delta"),
+            Pair(false, "Vi ønsker å invitere unge arbeidssøkere til jobbmesse i NHO sine lokaler"),
+            Pair(false, "Vi ønsker å invitere arbeidssøkere i aldermen 20-30 år i  arbeid, og inviterer derfor til jobbmesse i NHO sine lokaler. Kun 20 plasser tilgjengelig"),
+            Pair(false, "Mandag 2.april 2025 kl.10.00-13.00 vil Nav Trøndelag Sør arrangere jobbtreff, personer som ønsker tilrettelegging hos arbeidsgiver oppfordres til å delta"),
+            Pair(false, "Arbeidsgivere fra hele Sørøst-Norge ønsker å invitere flyktninger som ønsker å komme i arbeid til treff"),
+            Pair(true, "Arbeidsgivere fra hele Sørøst-Norge ønsker å invitere flyktninger fra utviklingsland til rekrutteringstreff"),
         )
 
         @JvmStatic
@@ -328,5 +339,4 @@ class KiTekstvalideringParameterisertTest {
         log.info("ROBs nøyaktighet er: $nøyaktighet %")
         return "ROBs nøyaktighet på de vurderte test-promptsene er: $nøyaktighet %"
     }
-
 }
