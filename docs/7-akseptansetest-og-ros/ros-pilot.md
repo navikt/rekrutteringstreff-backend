@@ -25,7 +25,7 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | 27485  | Deltakere forstår ikke invitasjon             | 🔄     | Intern komm., markedskontakt  | AT 5.14-5.15, 6.5        |
 | 27484  | Treff arkiveres for tidlig                    | ➖     | -                             | Ikke relevant i pilot    |
 | 27483  | Feil data sendes for arbeidsgiver             | ✅     | -                             | AT 2.8-2.9               |
-| 27482  | Feil arbeidsgiver legges til                  | ✅     | -                             | AT 2.1-2.7, 7.7-7.10     |
+| 27482  | Feil arbeidsgiver legges til                  | 🔄     | -                             | AT 2.1-2.7 (varsel etter pilot) |
 | 27433  | Arbeidsgiver uten reelt rekrutteringsbehov    | ⚠️     | Vurdering av behov            | -                        |
 | 27390  | Arrangør kvalitetssikrer ikke KI-tekst        | 🔄     | Opplæring, prosessbeskrivelse | AT 11.1-11.17            |
 | 27389  | ROB manipuleres til feilaktige vurderinger    | ✅     | -                             | AT 11.9-11.17            |
@@ -160,9 +160,11 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 | Tiltak | Test-ID | Status |
 |--------|---------|--------|
 | Forhåndsvisning av arbeidsgiverinfo | 2.1-2.3 | ✅ Testet (implisitt) |
-| Jobbsøker varsles om endringer | 7.7-7.10 | ✅ Testet |
+| Jobbsøker varsles ved arbeidsgiver-endring | - | 📝 Utenfor pilot |
 | Mulig å endre arbeidsgiver | 2.6 | ✅ Testet |
 | Hente mer info fra Brønnøysund | - | 🔧 Teknisk implementasjon |
+
+**Merknad:** Varsel til jobbsøker ved endring av arbeidsgiver er utenfor scope for pilot. Tester 7.7-7.10 dekker varsel ved andre endringer (tidspunkt, sted, etc.), men ikke arbeidsgiver-endringer.
 
 **Relaterte tester:** [2.1-2.7](akseptansetester.md#2-legge-til-arbeidsgiver)
 

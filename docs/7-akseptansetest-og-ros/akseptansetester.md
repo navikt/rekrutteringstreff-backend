@@ -672,12 +672,12 @@ Markedskontakt som er eier har full tilgang til eget treff.
 
 Utviklere har full tilgang til alt, uavhengig av kontor og eierskap.
 
-| #     | Test                                         | Forventet resultat                                              | ✅❌ | Notat |
-| ----- | -------------------------------------------- | --------------------------------------------------------------- | ---- | ----- |
-| 15.22 | Utvikler - Åpne KI-logg                      | Ser liste over alle KI-valideringer                             |      |       |
-| 15.23 | Utvikler - Se alle treff                     | Kan se alle treff inkludert kladder                             |      |       |
-| 15.24 | Utvikler - Tilgang uten pilotkontor          | Får tilgang uansett kontor                                      |      |       |
-| 15.25 | Utvikler - Se andres hendelseslogg           | Kan se hendelser på alle treff                                  |      |       |
+| #     | Test                                | Forventet resultat                  | ✅❌ | Notat |
+| ----- | ----------------------------------- | ----------------------------------- | ---- | ----- |
+| 15.22 | Utvikler - Åpne KI-logg             | Ser liste over alle KI-valideringer |      |       |
+| 15.23 | Utvikler - Se alle treff            | Kan se alle treff inkludert kladder |      |       |
+| 15.24 | Utvikler - Tilgang uten pilotkontor | Får tilgang uansett kontor          |      |       |
+| 15.25 | Utvikler - Se andres hendelseslogg  | Kan se hendelser på alle treff      |      |       |
 
 ### Pilotkontor-tilgang
 
