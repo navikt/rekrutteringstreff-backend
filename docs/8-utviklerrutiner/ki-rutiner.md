@@ -65,6 +65,20 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 
 ---
 
+## Periodisk sjekk av oppsett
+
+**ROS-referanse:** 29263, 29025
+
+**Når:** Kvartalsvis eller ved endring av infrastruktur.
+
+**Rutine:**
+
+1. Verifiser i Azure Portal at Content Filter er aktivert ("Abuse monitoring")
+2. Verifiser at deployment fortsatt er "Standard" (ikke Global)
+3. Verifiser at modellen kjører i EU/EØS-region (Norway East / Sweden Central)
+
+---
+
 ## Oppdatering av kunnskapsgrunnlag
 
 **ROS-referanse:** 27544
