@@ -43,7 +43,7 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | 27223  | Adressefelt brukt til andre formål            | ✅     | Manuell kontroll              | AT 1.14-1.16                    |
 | 27222  | Feil arbeidsgiver/virksomhet registreres      | ✅     | -                             | AT 2.1-2.7                      |
 | 27220  | Tilgang til kontor utenfor pilot              | ✅     | Manuell kontroll              | AT 15.26-15.32                  |
-| 27219  | Særlige kategorier i tittel/beskrivelse       | ✅     | Manuell kontroll              | AT 11.1-11.17                   |
+| 27219  | Særlige kategorier i tittel/beskrivelse       | ✅     | Manuell kontroll              | AT 11.30-11.37                  |
 | 27217  | Tilgang til treff man ikke skulle hatt        | ✅     | -                             | AT 15.1-15.32                   |
 | 27216  | KI identifiserer ikke diskriminerende tekst   | ✅     | Feedback fra brukere          | AT 11.9-11.17                   |
 | 27215  | Brudd på informasjons-/tilgangskontroll       | ✅     | -                             | AT 15.1-15.32                   |
@@ -433,11 +433,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 |--------|---------|--------|
 | Manuell kontroll av pilotkontor | - | 📝 Rutine |
 | Ikke lagre personopplysninger i KI-logger | - | 🔧 Implementert |
-| Sjekk på fnr og e-post før Azure OpenAI | 11.1-11.17 | ✅ Testet (persondata-filter) |
+| Tall (4+ siffer) fjernes før Azure OpenAI | 11.30-11.36 | ✅ Testet (persondata-filter) |
+| E-postadresser fjernes før Azure OpenAI | 11.37 | ✅ Testet (persondata-filter) |
 
-**Merknad:** Dekket av KI-tekstvalideringstjenesten med persondata-filtrering før tekst sendes til OpenAI.
+**Merknad:** Systemet gir ikke feilmelding til bruker - tall og e-post fjernes automatisk før innsending. Verifiseres i KI-logg ved å sammenligne "originalTekst" og "sendtTekst".
 
-**Relaterte tester:** [11.1-11.17](akseptansetester.md#11-ki-moderering)
+**Relaterte tester:** [11.30-11.37](akseptansetester.md#persondata-filtrering-ros-27219)
 
 ---
 

@@ -560,6 +560,25 @@ Test at KI-sjekken håndterer uvanlige tekster på en trygg måte.
 
 > **Tips:** Hvis KI-sjekken IKKE gir advarsel på 11.26-11.27, noter dette som et avvik. Det betyr ikke at testen feilet - det betyr at vi har funnet en svakhet som bør undersøkes.
 
+### Persondata-filtrering (ROS 27219)
+
+Test at tall med 4 siffer eller mer fjernes før tekst sendes til Azure OpenAI. Verifiseres i KI-logg ved å sammenligne "originalTekst" og "sendtTekst".
+
+> **Merk:** Systemet gir **ikke** feilmelding til bruker - tallene fjernes automatisk. Testen verifiseres ved å sjekke KI-logg at tallene er borte fra "sendtTekst".
+
+| #     | Test                                                | Eksempeltekst                     | Forventet i KI-logg                          | ✅❌ | Notat |
+| ----- | --------------------------------------------------- | --------------------------------- | -------------------------------------------- | ---- | ----- |
+| 11.30 | Skriv tekst med 4-sifret tall                       | `Ring meg på 1234 for mer info`   | "sendtTekst" inneholder ikke "1234"          |      |       |
+| 11.31 | Skriv tekst med fødselsnummer (11 siffer)           | `Kandidat 12345678901 er aktuell` | "sendtTekst" inneholder ikke fødselsnummeret |      |       |
+| 11.32 | Skriv tekst med telefonnummer (8 siffer)            | `Ta kontakt på 98765432`          | "sendtTekst" inneholder ikke telefonnummeret |      |       |
+| 11.33 | Skriv tekst med D-nummer                            | `Jobbsøker med D-nr 41234567890`  | "sendtTekst" inneholder ikke D-nummeret      |      |       |
+| 11.34 | Skriv tekst med kontonummer                         | `Utbetaling til 1234.56.78901`    | "sendtTekst" inneholder ikke kontonummeret   |      |       |
+| 11.35 | Skriv tekst med organisasjonsnummer                 | `Arbeidsgiver org.nr 912345678`   | "sendtTekst" inneholder ikke org.nummeret    |      |       |
+| 11.36 | Skriv tekst med 3-sifret tall (skal IKKE filtreres) | `Treffet varer i 120 minutter`    | "sendtTekst" inneholder fortsatt "120"       |      |       |
+| 11.37 | Skriv tekst med e-postadresse                       | `Send til ola.nordmann@nav.no`    | "sendtTekst" inneholder ikke e-postadressen  |      |       |
+
+> **Verifisering:** Åpne KI-logg (11.12), finn valideringen, og sammenlign feltene for å bekrefte at filtrering skjedde.
+
 ---
 
 ## 12. Søke etter rekrutteringstreff
