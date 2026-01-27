@@ -16,18 +16,20 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 
 ## Oppgradering av modellversjon
 
-**ROS-referanse:** 29023
+**ROS-referanse:** 29023, 29025
 
 **Når:** Når Microsoft varsler om at modellversjon utgår, eller ved ønske om oppgradering.
 
 **Rutine:**
 
 1. Les Microsofts release notes for ny versjon
-2. Oppdater modellversjon i dev/test først
-3. Kjør full testsuite inkl. benchmarks (se [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md))
-4. Verifiser at 90%-målet for testcases opprettholdes
-5. Dokumenter eventuelle endringer i oppførsel
-6. Deploy til prod med toggle klar for rask rollback
+2. Verifiser at modellen støtter **standard deployment i EU/EØS** (ikke Global)
+3. Oppdater modellversjon i dev/test først
+4. Kjør full testsuite inkl. benchmarks (se [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md))
+5. Verifiser at 90%-målet for testcases opprettholdes
+6. Dokumenter eventuelle endringer i oppførsel
+7. **Oppdater ROS-dokumentasjon** i tryggnok med ny modellversjon
+8. Deploy til prod med toggle klar for rask rollback
 
 ---
 
