@@ -533,13 +533,13 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 
 Test at løsningen tydeliggjør at KI-sjekken kun er et verktøy og at brukeren har ansvar for innholdet.
 
-| #     | Test                                                              | Forventet resultat                                                   | ✅❌ | Notat |
-| ----- | ----------------------------------------------------------------- | -------------------------------------------------------------------- | ---- | ----- |
-| 11.24 | Markedskontakt - Sjekk info ved tittelfeltet                      | Ser tekst om at KI-sjekken ikke garanterer korrekthet                |      |       |
-| 11.25 | Markedskontakt - Sjekk info ved innleggsfeltet                    | Ser tekst om brukerens eget ansvar for innholdet                     |      |       |
-| 11.26 | Markedskontakt - Sjekk at KI-sjekken IKKE viser grønn "ok"-tekst  | Ingen grønn bekreftelse - kun advarsler ved problemer                |      |       |
-| 11.27 | Markedskontakt - Sjekk hvilke felt som analyseres                 | Tydelig visuell markering av hvilke felt KI-sjekken sjekker          |      |       |
-| 11.28 | Markedskontakt - Sjekk at det er tydelig hvilken tekst som sendes | Bruker kan se hvilken tekst som blir analysert før den sendes til KI |      |       |
+| #     | Test                                                                         | Forventet resultat                                                   | ✅❌ | Notat |
+| ----- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---- | ----- |
+| 11.24 | Markedskontakt - Sjekk info ved tittelfeltet                                 | Ser tekst om at KI-sjekken ikke garanterer korrekthet                |      |       |
+| 11.25 | Markedskontakt - Sjekk info ved innleggsfeltet                               | Ser tekst om brukerens eget ansvar for innholdet                     |      |       |
+| 11.26 | Markedskontakt - Sjekk at KI-sjekken IKKE viser grønn "ok"-tekst             | Ingen grønn bekreftelse - kun advarsler ved problemer                |      |       |
+| 11.27 | Markedskontakt - Sjekk at advarsel viser om det gjelder tittel eller innlegg | Tydelig om advarselen gjelder tittel eller innlegg                   |      |       |
+| 11.28 | Markedskontakt - Sjekk at det er tydelig hvilken tekst som sendes            | Bruker kan se hvilken tekst som blir analysert før den sendes til KI |      |       |
 
 ### Avvikshåndtering (ROS 27321)
 
