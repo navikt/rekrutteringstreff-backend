@@ -59,7 +59,7 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Legge inn banner i løsning at man er i prod | ✅ Implementert | AT 15.33-15.35 |
+| Legge inn banner i løsning at man er i prod | ✅ Implementert | AT 15.37-15.39 |
 | Opplæring i test før utviklertilgang tildeles | ⚠️ Mangler | Må dokumenteres |
 | Lage rutine for bruk av rollene (hva er lov/ikke lov) | ⚠️ Mangler | Må dokumenteres |
 | Lage egen administrasjonstilgang (Toi) som kun gir tilgang til løsningen | ✅ Implementert | Egen admin-rolle |

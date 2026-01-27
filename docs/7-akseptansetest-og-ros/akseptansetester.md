@@ -86,21 +86,33 @@ Markedskontakt legger til arbeidsgivere på treffet. Dette kan gjøres både fø
 | 2.2 | Markedskontakt - Legg til flere arbeidsgivere  | Alle vises i listen                    |      |       |
 | 2.3 | Markedskontakt - Fjern arbeidsgiver            | Arbeidsgiver fjernes fra listen        |      |       |
 
+### Arbeidsgiversøk (pam-search)
+
+Søket henter data fra Enhetsregisteret via pam-search API.
+
+| #   | Test                                             | Forventet resultat                              | ✅❌ | Notat |
+| --- | ------------------------------------------------ | ----------------------------------------------- | ---- | ----- |
+| 2.4 | Markedskontakt - Søk på firmanavn                | Søkeresultater vises med navn, orgnr og adresse |      |       |
+| 2.5 | Markedskontakt - Søk på organisasjonsnummer      | Finn eksakt treff på orgnummer                  |      |       |
+| 2.6 | Markedskontakt - Søk med delvis navn             | Får treff på delvise søkeord                    |      |       |
+| 2.7 | Markedskontakt - Velg arbeidsgiver fra søkeliste | Orgnr, navn og adresse fylles ut                |      |       |
+| 2.8 | Markedskontakt - Søk uten treff                  | Melding om ingen treff vises                    |      |       |
+
 ### Etter publisering
 
-| #   | Test                                                  | Forventet resultat                              | ✅❌ | Notat |
-| --- | ----------------------------------------------------- | ----------------------------------------------- | ---- | ----- |
-| 2.4 | Markedskontakt - Åpne "Arbeidsgivere"-fanen           | Ser liste over arbeidsgivere på treffet         |      |       |
-| 2.5 | Markedskontakt - Legg til ny arbeidsgiver             | Arbeidsgiver legges til og vises i listen       |      |       |
-| 2.6 | Markedskontakt - Fjern arbeidsgiver etter publisering | Arbeidsgiver fjernes fra listen                 |      |       |
-| 2.7 | Jobbsøker - Sjekk arbeidsgiverliste                   | Ser oppdatert liste i rekrutteringstreff-bruker |      |       |
+| #    | Test                                                  | Forventet resultat                              | ✅❌ | Notat |
+| ---- | ----------------------------------------------------- | ----------------------------------------------- | ---- | ----- |
+| 2.9  | Markedskontakt - Åpne "Arbeidsgivere"-fanen           | Ser liste over arbeidsgivere på treffet         |      |       |
+| 2.10 | Markedskontakt - Legg til ny arbeidsgiver             | Arbeidsgiver legges til og vises i listen       |      |       |
+| 2.11 | Markedskontakt - Fjern arbeidsgiver etter publisering | Arbeidsgiver fjernes fra listen                 |      |       |
+| 2.12 | Jobbsøker - Sjekk arbeidsgiverliste                   | Ser oppdatert liste i rekrutteringstreff-bruker |      |       |
 
 ### Feilhåndtering (ROS 27483)
 
-| #   | Test                                        | Forventet resultat                              | ✅❌ | Notat |
-| --- | ------------------------------------------- | ----------------------------------------------- | ---- | ----- |
-| 2.8 | Markedskontakt - Legg til ugyldig orgnummer | Feilmelding vises, arbeidsgiver legges ikke til |      |       |
-| 2.9 | Markedskontakt - Nettverksfeil ved oppslag  | Feilmelding vises, kan prøve på nytt            |      |       |
+| #    | Test                                        | Forventet resultat                              | ✅❌ | Notat |
+| ---- | ------------------------------------------- | ----------------------------------------------- | ---- | ----- |
+| 2.13 | Markedskontakt - Legg til ugyldig orgnummer | Feilmelding vises, arbeidsgiver legges ikke til |      |       |
+| 2.14 | Markedskontakt - Nettverksfeil ved oppslag  | Feilmelding vises, kan prøve på nytt            |      |       |
 
 ---
 
@@ -250,12 +262,22 @@ Hvilken kanal som brukes avhenger av jobbsøkers registrering i Kontakt- og rese
 | 5.10 | Inviter jobbsøker med kun e-post i KRR   | E-post sendes, varselstatus = "Sendt"        |      |       |
 | 5.11 | Inviter jobbsøker uten kontaktinfo i KRR | Varsel på MinSide, status = "Varsel MinSide" |      |       |
 
+### MinSide-varsel for jobbsøkere uten KRR
+
+Jobbsøkere uten registrert kontaktinfo i KRR får varsel på MinSide i stedet for SMS/e-post.
+
+| #    | Test                                     | Forventet resultat                                 | ✅❌ | Notat |
+| ---- | ---------------------------------------- | -------------------------------------------------- | ---- | ----- |
+| 5.12 | Jobbsøker uten KRR - Logg inn på MinSide | Ser varsel om invitasjon til rekrutteringstreff    |      |       |
+| 5.13 | Jobbsøker uten KRR - Klikk på varsel     | Kommer til rekrutteringstreff-bruker               |      |       |
+| 5.14 | Jobbsøker uten KRR - Sjekk varselinnhold | Varselet inneholder tittel og lenke til treffsiden |      |       |
+
 ### Feilsituasjoner
 
 | #    | Test                                   | Forventet resultat                       | ✅❌ | Notat |
 | ---- | -------------------------------------- | ---------------------------------------- | ---- | ----- |
-| 5.12 | Trykk to ganger på inviter-knapp       | Kun én invitasjon registreres            |      |       |
-| 5.13 | Inviter jobbsøker som blir ikke-synlig | Jobbsøker forsvinner, varsel sendes ikke |      |       |
+| 5.15 | Trykk to ganger på inviter-knapp       | Kun én invitasjon registreres            |      |       |
+| 5.16 | Inviter jobbsøker som blir ikke-synlig | Jobbsøker forsvinner, varsel sendes ikke |      |       |
 
 ### Invitasjonsspråk og frivillighet (ROS 27485)
 
@@ -263,9 +285,9 @@ Hvilken kanal som brukes avhenger av jobbsøkers registrering i Kontakt- og rese
 
 | #    | Test                                              | Forventet resultat                                                              | ✅❌ | Notat |
 | ---- | ------------------------------------------------- | ------------------------------------------------------------------------------- | ---- | ----- |
-| 5.14 | Jobbsøker - Sjekk SMS-tekst                       | SMS bruker invitasjonsspråk (ikke påbudsspråk) og lenker til treffsiden         |      |       |
-| 5.15 | Jobbsøker - Sjekk e-post                          | E-post bruker invitasjonsspråk (ikke påbudsspråk) og lenker til treffsiden      |      |       |
-| 5.16 | Jobbsøker - Sjekk frivillighetsinfo på treffsiden | Treffsiden viser tydelig at deltakelse er frivillig før jobbsøker svarer ja/nei |      |       |
+| 5.17 | Jobbsøker - Sjekk SMS-tekst                       | SMS bruker invitasjonsspråk (ikke påbudsspråk) og lenker til treffsiden         |      |       |
+| 5.18 | Jobbsøker - Sjekk e-post                          | E-post bruker invitasjonsspråk (ikke påbudsspråk) og lenker til treffsiden      |      |       |
+| 5.19 | Jobbsøker - Sjekk frivillighetsinfo på treffsiden | Treffsiden viser tydelig at deltakelse er frivillig før jobbsøker svarer ja/nei |      |       |
 
 ---
 
@@ -736,15 +758,26 @@ I pilotperioden må brukeren være innlogget på et pilotkontor for å få tilga
 | 15.31 | Markedskontakt på ikke-pilotkontor - Opprette treff          | Kan IKKE opprette treff                                  |      |       |
 | 15.32 | Utvikler - Åpne uansett kontor                               | Får alltid tilgang                                       |      |       |
 
+### Bytte kontor (modiacontextholder)
+
+NAV-ansatte kan bytte aktivt kontor. Tilgangen oppdateres basert på valgt kontor.
+
+| #     | Test                                                      | Forventet resultat                                | ✅❌ | Notat |
+| ----- | --------------------------------------------------------- | ------------------------------------------------- | ---- | ----- |
+| 15.33 | Veileder - Bytt fra pilotkontor til ikke-pilotkontor      | Mister tilgang, ser melding om manglende tilgang  |      |       |
+| 15.34 | Veileder - Bytt fra ikke-pilotkontor til pilotkontor      | Får tilgang etter kontorbytte                     |      |       |
+| 15.35 | Markedskontakt - Bytt kontor midt i arbeidsøkt            | Ny tilgang gjelder umiddelbart                    |      |       |
+| 15.36 | Markedskontakt - Opprett treff, bytt til ikke-pilotkontor | Kan fortsatt se eget treff, men ikke opprette nye |      |       |
+
 ### Produksjonsmiljø-indikator (ROS 29337)
 
 Test at det er tydelig når man jobber i produksjonsmiljø.
 
 | #     | Test                                                  | Forventet resultat                                           | ✅❌ | Notat |
 | ----- | ----------------------------------------------------- | ------------------------------------------------------------ | ---- | ----- |
-| 15.33 | Utvikler - Åpne løsningen i prod                      | Ser tydelig banner/indikator om at man er i produksjonsmiljø |      |       |
-| 15.34 | Utvikler - Åpne løsningen i dev                       | Ingen prod-banner, men ev. dev-indikator                     |      |       |
-| 15.35 | Utvikler - Sjekk at prod-banner er synlig ved KI-logg | Banneret er synlig når man jobber med sensitive logger       |      |       |
+| 15.37 | Utvikler - Åpne løsningen i prod                      | Ser tydelig banner/indikator om at man er i produksjonsmiljø |      |       |
+| 15.38 | Utvikler - Åpne løsningen i dev                       | Ingen prod-banner, men ev. dev-indikator                     |      |       |
+| 15.39 | Utvikler - Sjekk at prod-banner er synlig ved KI-logg | Banneret er synlig når man jobber med sensitive logger       |      |       |
 
 ### KI-logg og robusthetstesting (ROS 27546)
 
@@ -752,7 +785,7 @@ Verifiser at logger fra robusthetstesting er tilgjengelige for analyse.
 
 | #     | Test                                         | Forventet resultat                                              | ✅❌ | Notat |
 | ----- | -------------------------------------------- | --------------------------------------------------------------- | ---- | ----- |
-| 15.36 | Utvikler - Sjekk logg etter robusthetstester | Logger fra test 11.31-11.35 er synlige for analyse av svakheter |      |       |
+| 15.40 | Utvikler - Sjekk logg etter robusthetstester | Logger fra test 11.31-11.35 er synlige for analyse av svakheter |      |       |
 
 ### KI-infrastruktur (ROS 29025, 29023, 29263, 29330)
 
@@ -760,10 +793,10 @@ Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
 
 | #     | Test                                              | Forventet resultat                              | ✅❌ | Notat |
 | ----- | ------------------------------------------------- | ----------------------------------------------- | ---- | ----- |
-| 15.37 | Utvikler - Verifiser deployment-type i Azure      | Deployment er "Standard" i EU/EØS (ikke Global) |      |       |
-| 15.38 | Utvikler - Verifiser abuse monitoring er aktivert | Content filtering er aktivert med høyeste nivå  |      |       |
-| 15.39 | Utvikler - Sjekk at logger slettes automatisk     | Logger eldre enn definert retensjon finnes ikke |      |       |
-| 15.40 | Utvikler - Verifiser modellversjon                | Modellen er dokumentert og har ikke utgått      |      |       |
+| 15.41 | Utvikler - Verifiser deployment-type i Azure      | Deployment er "Standard" i EU/EØS (ikke Global) |      |       |
+| 15.42 | Utvikler - Verifiser abuse monitoring er aktivert | Content filtering er aktivert med høyeste nivå  |      |       |
+| 15.43 | Utvikler - Sjekk at logger slettes automatisk     | Logger eldre enn definert retensjon finnes ikke |      |       |
+| 15.44 | Utvikler - Verifiser modellversjon                | Modellen er dokumentert og har ikke utgått      |      |       |
 
 ---
 
