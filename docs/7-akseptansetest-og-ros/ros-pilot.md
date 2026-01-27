@@ -52,13 +52,13 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 
 Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i systemdokumentasjonen:
 
-| ROS-ID | Hva må dokumenteres                                              |
-| ------ | ---------------------------------------------------------------- |
-| 27485  | Plan for intern kommunikasjon, retningslinjer for markedskontakt |
-| 27433  | Rutine for vurdering av arbeidsgivers rekrutteringsbehov         |
-| 27390  | Opplæring før pilot, prosessbeskrivelse for KI-verktøy           |
-| 27385  | Info til Nav-ansatte om frivillighet ved deltakelse              |
-| 27379  | Brukerrutine - manuell kontroll av at riktig person inviteres    |
+| ROS-ID | Hva må dokumenteres                                              | Hvor finnes rutinen               |
+| ------ | ---------------------------------------------------------------- | --------------------------------- |
+| 27485  | Plan for intern kommunikasjon, retningslinjer for markedskontakt | Informasjonspakke i Loop          |
+| 27433  | Rutine for vurdering av arbeidsgivers rekrutteringsbehov         | Informasjonspakke i Loop          |
+| 27390  | Opplæring før pilot, prosessbeskrivelse for KI-verktøy           | Eget Loop-dokument for KI-verktøy |
+| 27385  | Info til Nav-ansatte om frivillighet ved deltakelse              | Informasjonspakke i Loop          |
+| 27379  | Brukerrutine - manuell kontroll av at riktig person inviteres    | Informasjonspakke i Loop          |
 
 ---
 
@@ -69,13 +69,13 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Jobbsøker får ikke informasjon i aktivitetskortet (navn, dato, tidspunkt, sted, svarfrist) hvis det skjer endringer.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Jobbsøker kan velge status | 6.1-6.9 | ✅ Testet |
-| Varsler ved endringer | 7.7-7.10 | ✅ Testet |
-| Eiere kan informere deltakere | 7.1-7.6 | ✅ Testet |
-| Aktivitetskort synkroniseres ved endring | 7.14-7.18 | ✅ Testet |
-| MinSide-varsel for jobbsøkere uten KRR | 7.18 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Jobbsøker kan velge status | 6.1-6.9 | ✅ Testet | Funksjonalitet som gjør at jobbsøker kan velge status (Ja/Nei), eller mulighet til å se om jobbsøker har vært inne og sett kortet. |
+| Varsler ved endringer | 7.7-7.10 | ✅ Testet | Ser nærmere på det i endelig løsning. |
+| Eiere kan informere deltakere | 7.1-7.6 | ✅ Testet | Noe som sjekkes under piloten. Spørsmål om arrangør kan sjekke aktivitetsplanen, evt. ta kontakt med arbeidsgiver. |
+| Aktivitetskort synkroniseres ved endring | 7.14-7.18 | ✅ Testet | - |
+| MinSide-varsel for jobbsøkere uten KRR | 7.18 | ✅ Testet | - |
 
 **Relaterte tester:** [6.1-6.9](akseptansetester.md#6-jobbsøker-svarer-på-invitasjon), [7.1-7.18](akseptansetester.md#7-endre-publisert-treff)
 
@@ -86,10 +86,10 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Aktivitetskort flyttes ikke til avbrutt når jobbsøker sier nei eller treffet avlyses.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Prosedyre for sletting | - | 📝 Rutine, ikke teknisk test |
-| Manuelt sjekke at kort flyttes | 6.7, 8.3-8.7, 9.4-9.5 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Prosedyre for sletting | - | 📝 Rutine, ikke teknisk test | Veileder/markedskontakt sjekker at kortet er satt til riktig status. |
+| Manuelt sjekke at kort flyttes | 6.7, 8.3-8.7, 9.4-9.5 | ✅ Testet | Gjennomføres ved testing. |
 
 **Relaterte tester:** [6.7](akseptansetester.md#6-jobbsøker-svarer-på-invitasjon), [8.3-8.7](akseptansetester.md#8-avlyse-treff), [9.4-9.5](akseptansetester.md#9-treff-gjennomføres-og-avsluttes)
 
@@ -100,12 +100,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Noen sletter treff som ikke skulle vært slettet, og data går tapt.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Fjerne cascade fra database | - | 🔧 Teknisk implementasjon |
-| Bekreftelsesknapp før sletting | 1.11-1.13 | ✅ Testet |
-| Sletteregler for spesifikke situasjoner | - | 📝 Rutine |
-| "Myk" sletting (skjule, ikke slette) | - | 🔧 Teknisk implementasjon |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Fjerne cascade fra database | - | 🔧 Teknisk implementasjon | I dag har utviklere tilgang til å slette innhold i treff. Fjerning vil redusere risiko for utilsiktet datatap. |
+| Bekreftelsesknapp før sletting | 1.11-1.13 | ✅ Testet | - |
+| Sletteregler for spesifikke situasjoner | - | 📝 Rutine | Feks. eier bør kunne slette tomme treff/feilopprettede treff. |
+| "Myk" sletting (skjule, ikke slette) | - | 🔧 Teknisk implementasjon | - |
 
 **Relaterte tester:** [1.11-1.13](akseptansetester.md#sletting-av-kladd-ros-27486)
 
@@ -116,15 +116,15 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Jobbsøkere forstår ikke at rekrutteringstreff er frivillig, og mister tillit til NAV.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Lett å svare nei | 6.5 | ✅ Testet |
-| Info om frivillighet på MinSide | - | 📝 Avklares |
-| Plan for intern kommunikasjon i Nav | - | 📝 Rutine |
-| Invitasjon tydeliggjør frivillighet | 5.14-5.15 | ✅ Testet |
-| Retningslinjer for markedskontakt | - | 📝 Rutine |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Lett å svare nei | 6.5 | ✅ Testet | Ved å gjøre det enkelt for jobbsøkeren å avslå en invitasjon til et treff, blir det tydelig at deltakelse er helt frivillig. |
+| Info om frivillighet på MinSide | - | 📝 Avklares | - |
+| Plan for intern kommunikasjon i Nav | - | 📝 Rutine | Klare kanaler og rutiner forebygger feilinformasjon og usikkerhet internt i Nav. |
+| Invitasjon tydeliggjør frivillighet | 5.14-5.15 | ✅ Testet | Det er tydelig i løsningen at treffene skal være frivillig å delta på. Vi har skrevet inn tydelig at deltagelse er frivillig når deltaker svarer på invitasjonen. Hele tiden mulig å endre svar i forkant av treff. Også dokumentert i manuell rutine (Loop). |
+| Retningslinjer for markedskontakt | - | 📝 Rutine | Lage retningslinjer tilpasset Rekrutteringstreff. Informasjonspakke i Loop som skal deles og gjennomgås av eier før gjennomføring av et treff. |
 
-**Relaterte tester:** [5.14-5.15](akseptansetester.md#frivillighetsinfo-i-varsel-ros-27485), [6.5](akseptansetester.md#6-jobbsøker-svarer-på-invitasjon)
+**Relaterte tester:** [5.14-5.15](akseptansetester.md#invitasjonsspråk-og-frivillighet-ros-27485), [6.5](akseptansetester.md#6-jobbsøker-svarer-på-invitasjon)
 
 ---
 
@@ -133,9 +133,9 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Automatisk arkivering slår inn for tidlig og treff forsvinner.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Ikke ha automatisk arkivering i pilot | - | ✅ Ikke relevant for pilot |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Ikke ha automatisk arkivering i pilot | - | ✅ Ikke relevant for pilot | Arkiverer manuelt når teamet vurderer at det er nødvendig. |
 
 ---
 
@@ -144,9 +144,9 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Bruker velger riktig arbeidsgiver, men systemet sender feil orgnummer pga. cache/state-mismatch.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Vise feilmelding hvis arbeidsgiver ikke legges til | 2.8-2.9 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Vise feilmelding hvis arbeidsgiver ikke legges til | 2.8-2.9 | ✅ Testet | Gjelder alle eksterne APIer. Vi henter fra enhetsregisteret. |
 
 **Relaterte tester:** [2.8-2.9](akseptansetester.md#feilhåndtering-ros-27483)
 
@@ -157,12 +157,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Markedskontakt velger feil organisasjon (f.eks. Tentative AS i stedet for Tentativ AS).
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Forhåndsvisning av arbeidsgiverinfo | 2.1-2.3 | ✅ Testet (implisitt) |
-| Jobbsøker varsles ved arbeidsgiver-endring | - | 📝 Utenfor pilot |
-| Mulig å endre arbeidsgiver | 2.6 | ✅ Testet |
-| Hente mer info fra Brønnøysund | - | 🔧 Teknisk implementasjon |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Forhåndsvisning av arbeidsgiverinfo | 2.1-2.3 | ✅ Testet (implisitt) | Forhåndsvise informasjon om arbeidsgiver (navn, organisasjonsnummer, adresse) før de legges til av markedskontakter. Tiltak for å unngå at man foreslår feil arbeidsgiver. Eier får en påminnelse om å kontrollere opplysningene til arbeidsgiver før de legges til. 1) Søk opp arbeidsgiver i systemet, 2) Velg riktig arbeidsgiver fra søkeresultatet, 3) Lagre valget. |
+| Jobbsøker varsles ved arbeidsgiver-endring | - | 📝 Utenfor pilot | Jobbsøkere får beskjed hvis det skjer endringer fra arrangør. Forutsetter at eier oppdager feilen i forkant og kan gi beskjed. Ikke hvis vi endrer eller sletter arbeidsgiver. |
+| Mulig å endre arbeidsgiver | 2.6 | ✅ Testet | Gjøre det mulig å endre arbeidsgiver fortløpende fordi vi ikke har invitasjon som går ut til arbeidsgiver. Vi gjør det enkelt for eier av treffet til å gjøre endringer dersom det oppdages feil. |
+| Hente mer info fra Brønnøysund | - | 🔧 Teknisk implementasjon | Vi henter mer informasjon fra Brønnøysundregisteret. Dersom vi henter ut mer informasjon fra Brønnøysundregisteret reduserer det risikoen for at feil arbeidsgiver legges til. |
 
 **Merknad:** Varsel til jobbsøker ved endring av arbeidsgiver er utenfor scope for pilot. Tester 7.7-7.10 dekker varsel ved andre endringer (tidspunkt, sted, etc.), men ikke arbeidsgiver-endringer.
 
@@ -175,11 +175,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Arbeidsgiver deltar kun for markedsføring, uten reelt rekrutteringsbehov.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Manuell kontroll ved valg av arbeidsgivere | - | 📝 Rutine |
-| Markedskontakt vurderer og dokumenterer behov | - | 📝 Rutine |
-| Retningslinjer for vurdering av behov | - | 📝 Rutine |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Manuell kontroll ved valg av arbeidsgivere | - | 📝 Rutine | Vi lager rutiner for minimumskrav til arbeidsgivere for å sikre at arbeidsgivere som deltar på treffet har et konkret rekrutteringsbehov. Kontrollen må gjennomføres i forkant av treffene, og det er teamet som har ansvar for at det blir gjort. Rutinene er beskrevet i informasjonspakke i Loop. |
+| Markedskontakt vurderer og dokumenterer behov | - | 📝 Rutine | Markedskontakten har vurdert og dokumentert arbeidsgivers rekrutteringsbehov før treffet publiseres. Dette sikrer ansvarliggjøring og etterprøvbarhet i prosessen. Markedskontakten skriver ned rekrutteringsbehovet i en etterregistrering/eget dokument. Det er arbeidsgiver eller markedskontakten (eier) som beskriver arbeidsgivers rekrutteringsbehov. I første omgang er det ikke et krav at dette er synlig for brukere i løsningene, men det må dokumenteres og lagres for å sikre etterprøvbarhet ift. behandlingsgrunnlaget. Testes/verifiseres manuelt i piloten. Finnes rutine for dette i Loop. |
+| Retningslinjer for vurdering av behov | - | 📝 Rutine | Etablere retningslinjer for hvordan markedskontakten kan vurdere arbeidsgivers rekrutteringsbehov. Dette sikrer ansvarliggjøring og etterprøvbarhet i prosessen. Fremgår av rutiner/prosessbeskrivelse. I pilot er det tilstrekkelig å ha det dokumentert i en rutine, men signeringsforbehold kan vurderes. |
+| Manuell innføring før pilottest | - | 📝 Rutine | Gi pilotbrukere manuell innføring/gjennomgang før pilottest. Rutine beskrevet i eget dokument (informasjonspakke i Loop). |
 
 **Merknad:** Dette er en operasjonell kontroll som ikke kan automatiseres. Bør dokumenteres i rutinebeskrivelse.
 
@@ -190,12 +191,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Innholdet blir unøyaktig eller mindre relevant fordi arrangør ikke kvalitetssikrer teksten på treff-siden. Bruker kontrollerer ikke innholdet, eller velger å se bort fra KI-vurderingen.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Manuell innføring/gjennomgang før pilottest | - | 📝 Rutine |
-| KI-sjekken ROB kvalitetssikrer treffet | 11.1-11.17 | ✅ Testet |
-| Retningslinjer tilpasset Rekrutteringstreff | - | 📝 Dokumentert |
-| Prosessbeskrivelse for KI-verktøy | - | 📝 Dokumentert |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Manuell innføring/gjennomgang før pilottest | - | 📝 Rutine | Gi pilotbrukere manuell innføring/gjennomgang før pilottest. Rutine beskrevet i eget dokument (informasjonspakke i Loop). |
+| KI-sjekken ROB kvalitetssikrer treffet | 11.1-11.17 | ✅ Testet | Funksjonalitetene til ROB som KI-verktøy er å analysere og kvalitetssikre. |
+| Retningslinjer tilpasset Rekrutteringstreff | - | 📝 Dokumentert | Informasjonspakke i Loop som skal deles og gjennomgås av eier før gjennomføring av et treff. |
+| Prosessbeskrivelse for KI-verktøy | - | 📝 Dokumentert | Utarbeide og implementere rutiner rettet mot brukere for bruk av KI-verktøyet. Finnes i eget Loop-dokument. Dette sikrer enhetlig praksis, reduserer feilrisiko og legger til rette for oppfølging. |
 
 **Relaterte tester:** [11.1-11.17](akseptansetester.md#11-ki-moderering)
 
@@ -206,12 +207,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** ROB manipuleres til å gi feilaktige eller utilsiktede vurderinger ved at brukere utnytter svakheter i systemets treningsdata, logikk eller prompt.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Robusthetstesting av KI | 11.31-11.35 | ✅ Testet |
-| Logging av svar for administrasjonskontroll | 11.18-11.23 | ✅ Testet |
-| Bruker kan overstyre KI-sjekken | 11.15-11.17 | ✅ Testet |
-| Retningslinjer om at ROB er et verktøy | - | 📝 Dokumentert |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Manipulasjonstesting/penetrasjonstesting av ROB | 11.31-11.35 | ✅ Testet | Målet er å finne svakheter som kan utnyttes av en angriper eller som kan føre til utilsiktet feiloppførsel. Tester hvordan systemet reagerer når data eller brukerhandlinger manipuleres på uventede måter. Gjennomføres manuelt. |
+| Logging av svar for administrasjonskontroll | 11.18-11.23 | ✅ Testet | Vi logger svarene som genereres for å avdekke eventuelle manipulasjoner gjennom administrasjonskontrollen i løsningen. Vi overvåker og kontrollerer hvordan KI-en reagerer kontinuerlig. Forenkler prosessen med å gjøre kontroll på vurderinger og sikrer sporbarhet i løsningen. (Kun tilgjengelig for adminbrukere/utviklertilgang) |
+| Bruker kan overstyre KI-sjekken | 11.15-11.17 | ✅ Testet | Vi lar bruker overstyre KI-sjekken for å ivareta menneskelig kontroll. Vi overstyrer ikke at noen skriver feil. Trenger ikke å manipulere ROB for å endre teksten, men vi kan overvåke når folk gjør feil gjennom logging. |
+| Retningslinjer om at ROB er et verktøy | - | 📝 Dokumentert | Formidle gjennom retningslinjer i løsningen at ROB kun er et verktøy som bruker må kontrollere. Tiltak for å sikre ansvarliggjøring av bruker - menneskelig kontroll. Utarbeide og implementere rutiner rettet mot brukere for bruk av KI-verktøyet. Dette sikrer enhetlig praksis, reduserer feilrisiko og legger til rette for oppfølging. |
 
 **Relaterte tester:** [11.31-11.35](akseptansetester.md#robusthetstesting-av-ki-ros-27546)
 
@@ -222,9 +223,9 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Det skjer feilregistrering ved deltakelsesvalg - jobbsøker svarer "ja", men det blir registrert som "nei".
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Verifisere hele løpet gjennom tester | 6.1-6.9 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Verifisere hele løpet gjennom tester | 6.1-6.9 | ✅ Testet | Gjennomfører manuelle tester. Fagressurs/domeneekspert verifiserer at det fungerer. |
 
 **Relaterte tester:** [6.1-6.9](akseptansetester.md#6-jobbsøker-svarer-på-invitasjon)
 
@@ -249,12 +250,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Ansatte i andre deler av Nav mangler nødvendig informasjon om at Rekrutteringstreff ikke skal påvirke andre ytelser jobbsøker mottar.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Dele informasjon med fagpersoner | - | 📝 Rutine |
-| Tydelig i løsningen at treff er frivillig | 5.14-5.15 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Dele informasjon med fagpersoner | - | 📝 Rutine | Dele informasjon med fagpersoner i seksjon for arbeidsgivertjenester. Sikre gode kommunikasjonskanaler slik at ansatte som trenger informasjon får det. |
+| Tydelig i løsningen at treff er frivillig | 5.14-5.15 | ✅ Testet | Det er tydelig i løsningen at treffene skal være frivillig å delta på. Vi har skrevet inn tydelig at deltagelse er frivillig når deltaker svarer på invitasjonen. Hele tiden mulig å endre svar i forkant av treff. Også dokumentert i manuell rutine (Loop). |
 
-**Relaterte tester:** [5.14-5.15](akseptansetester.md#frivillighetsinfo-i-varsel-ros-27485)
+**Relaterte tester:** [5.14-5.15](akseptansetester.md#invitasjonsspråk-og-frivillighet-ros-27485)
 
 ---
 
@@ -265,14 +266,15 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 > **Merk:** Treffsiden = rekrutteringstreff-bruker. SMS/e-post inneholder kun lenke til treffsiden og en oppsummering av endringer, men jobbsøker må åpne treffsiden for å se all oppdatert info.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Treffsiden viser oppdaterte detaljer etter endring | 7.11 | ✅ Testet |
-| Mulig for markedskontakt å redigere info | 7.1-7.6 | ✅ Testet |
-| Aktivitetskort oppdateres | 7.12-7.13 | ✅ Testet |
-| Rutiner for å informere ved feil | - | 📝 Rutine |
-| Manuell kontroll av info til jobbsøker | - | 📝 Rutine |
-| Begrense deltakere i pilot | - | 📝 Rutine |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Treffsiden viser oppdaterte detaljer etter endring | 7.11 | ✅ Testet | - |
+| Mulig for markedskontakt å redigere info | 7.1-7.6 | ✅ Testet | Legge inn mulighet for å endre treff i ettertid. Gjør det mulig å korrigere feil. |
+| Aktivitetskort oppdateres | 7.12-7.13 | ✅ Testet | - |
+| Rutiner for å informere ved feil | - | 📝 Rutine | Lage rutiner for å informere om hva/hvordan vi skal kommunisere hvis det skjer feil. Rutine som beskriver hva/hvordan vi skal kommunisere hvis det skjer feil, kommer an på hvilken feil. Feil kan være alt fra ubetydelig til svært alvorlig. Rutine for feil bruk av ROB implementeres inne i løsningen. Kommunikasjon som gjelder alvorlige feil (feks personvernbrudd) finnes allerede på generelt grunnlag. For mindre alvorlige feil kan kommunikasjonen ta utgangspunkt i sunn fornuft og best practice. Rutiner er i informasjonspakke i Loop. |
+| Manuell kontroll av info til jobbsøker | - | 📝 Rutine | Manuelt kontrollere informasjonen som blir sendt til jobbsøker. Testes manuelt. |
+| Forhåndsvisning av treffet | - | 🔧 Teknisk (se treff-side) | For å gjøre det mulig å dobbeltsjekke informasjonen. |
+| Sikre triangulering av felter (design) | - | 🔧 Design | Beskrivelse inneholder korrekt informasjon, men adressefeltet er feil. Korrekt informasjon ett sted kan rette feil et annet sted. Reduserer sannsynligheten for feil. |
 
 **Relaterte tester:** [7.11-7.13](akseptansetester.md#oppdatering-i-treffsiden-og-aktivitetskort-ros-27383)
 
@@ -283,9 +285,10 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** En deltaker mottar samme varsel gjentatte ganger som følge av teknisk eller menneskelig svikt (spam).
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Test for dobbel invitasjon | 5.12 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Test for dobbel invitasjon | 5.12 | ✅ Testet | Vi legger opp en logikk hvor bruker kun kan sende invitasjon i henhold til logikken. Noe må skje teknisk for å kunne sende SMS. Hvis jobbsøker har sagt nei, så får hen ikke flere varsler. |
+| Lytte til kandidatvarselet | - | 🔧 Teknisk implementasjon | Vi lytter til kandidatvarselet (Varsel API / Min side API). Kandidatvarsel er når vi sender SMS til personbrukere. |
 
 **Relaterte tester:** [5.12](akseptansetester.md#feilsituasjoner)
 
@@ -296,9 +299,9 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** En menneskelig feil fører til at innbyggere mottar en invitasjon som ikke er ment for dem. Nav-ansatt legger til feil person til treffet.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Manuell kontroll av treffene | - | 📝 Rutine |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Manuell kontroll av treffene | - | 📝 Rutine | Gi pilotbrukere manuell innføring/gjennomgang før pilottest. Rutine beskrevet i eget dokument (informasjonspakke i Loop). |
 
 **Merknad:** Menneskelig feil kan ikke forhindres teknisk, men begrenses ved rutiner og opplæring.
 
@@ -309,13 +312,13 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** En teknisk feil fører til at innbyggere mottar invitasjon som ikke er ment for dem, f.eks. feil i API, feilkoblinger av IDer.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Tester for å verifisere at systemet ikke feiler | 4.1-4.5 | ✅ Testet |
-| Håndtere endring av fnr (f.eks. kjønnsskifte) | 4.24 | ✅ Testet |
-| Verifisere hele løpet gjennom tester | 5.1-5.7 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Tester for å verifisere at systemet ikke feiler | 4.1-4.5 | ✅ Testet | Gjennomføre tester for å verifisere at systemet ikke feiler ved sending av data. For å sikre at Aktivitetsplanen fungerer som den skal. Vi får kun testet at de som skal ha informasjon får det, og de som er lagt til på listen, men ikke mottatt informasjon. |
+| Håndtere endring av fnr (f.eks. kjønnsskifte) | 4.24 | ✅ Testet | - |
+| Verifisere hele løpet gjennom tester | 5.1-5.7 | ✅ Testet | Gjennomfører manuelle tester. Fagressurs/domeneekspert verifiserer at det fungerer. |
 
-**Relaterte tester:** [4.1-4.5](akseptansetester.md#4-legge-til-jobbøker), [4.24](akseptansetester.md#endring-av-fødselsnummer), [5.1-5.7](akseptansetester.md#5-invitere-jobbøker)
+**Relaterte tester:** [4.1-4.5](akseptansetester.md#4-legge-til-jobbsøker), [4.24](akseptansetester.md#endring-av-fødselsnummer), [5.1-5.7](akseptansetester.md#5-invitere-jobbsøker)
 
 ---
 
@@ -324,9 +327,9 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Vi skjuler ikke CV-en til deltakere som skal være usynlige kandidater. Personen var synlig, men synlighetsregler slår inn og personen skal være "usynlig".
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Synlighetsregler skjuler CV | 4.5-4.29 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Synlighetsreglene skjuler CV | 4.5-4.29 | ✅ Testet | Ivaretatt gjennom kandidatindeksen. Det er dette som fjerner/filtrerer vekk usynlige kandidater. |
 
 **Relaterte tester:** [4.5-4.29](akseptansetester.md#synlighet)
 
@@ -337,16 +340,16 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Jobbsøker mottar feil eller mangelfull informasjon som følge av svakheter i løsningen. Kan føre til manglende oppmøte.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Manuell kontroll av treffene | - | 📝 Rutine |
-| Melding ved oppdatering av treff | 7.7-7.10 | ✅ Testet |
-| Mulighet for å endre treff i ettertid | 7.1-7.6 | ✅ Testet |
-| Forhåndsvisning av treffet | - | 🔧 Teknisk (se treff-side) |
-| Sikre triangulering av felter (design) | - | 🔧 Design |
-| Tydelig at deltakelse er frivillig | 5.14-5.15 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Manuell kontroll av treffene | - | 📝 Rutine | - |
+| Melding ved oppdatering av treff | 7.7-7.10 | ✅ Testet | Sende ut en melding til de som skal på treffet dersom treffet blir oppdatert, feks. dialogmelding i Modia. Oppdatering: Skal ikke gjennomføres i pilot. Det løses med varsler om endringer i treff. |
+| Mulighet for å endre treff i ettertid | 7.1-7.6 | ✅ Testet | Legge inn mulighet for å endre treff i ettertid. Gjør det mulig å korrigere feil. |
+| Forhåndsvisning av treffet | - | 🔧 Teknisk (se treff-side) | For å gjøre det mulig å dobbeltsjekke informasjonen. |
+| Sikre triangulering av felter (design) | - | 🔧 Design | Beskrivelse inneholder korrekt informasjon, men adressefeltet er feil. Korrekt informasjon ett sted kan rette feil et annet sted. Reduserer sannsynligheten for feil. |
+| Tydelig at deltakelse er frivillig | 5.14-5.15 | ✅ Testet | Det er tydelig i løsningen at treffene skal være frivillig å delta på. Vi har skrevet inn tydelig at deltagelse er frivillig når deltaker svarer på invitasjonen. |
 
-**Relaterte tester:** [7.1-7.18](akseptansetester.md#7-endre-publisert-treff), [5.14-5.15](akseptansetester.md#frivillighetsinfo-i-varsel-ros-27485)
+**Relaterte tester:** [7.1-7.18](akseptansetester.md#7-endre-publisert-treff), [5.14-5.15](akseptansetester.md#invitasjonsspråk-og-frivillighet-ros-27485)
 
 ---
 
@@ -355,10 +358,10 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Rekrutteringstreff behandler flere opplysninger enn nødvendig fordi jobbsøkere legges til via kandidatsøket.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Skiller mellom persontreffID og kandidatnummer | - | 🔧 Arkitekturbeslutning |
-| Forenlighetsvurdering gjennomført i Støtte til Etterlevelse | - | ✅ Gjennomført |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Skiller mellom persontreffID og kandidatnummer | - | 🔧 Arkitekturbeslutning | En arbeidssøker kan ha ulike IDer utifra om vedkommende har tilknytning til Rekrutteringsbistand eller Rekrutteringstreff. Ved at arbeidssøker får egne ID-nøkler i hvert system gjør det enklere å holde dataene atskilt. Vi slår opp i PDL med fødselsnummeret for å hente riktige data om arbeidssøker. Vi gjør også oppslag for å se om personen har CV, slik at vi kan vise dette. |
+| Forenlighetsvurdering gjennomført i Støtte til Etterlevelse | - | ✅ Gjennomført | Forenlighetsvurdering handler om å vurdere om en viderebehandling av personopplysninger er forenlig med det opprinnelige formålet. I Rekrutteringstreff behandles de samme personopplysninger som Rekrutteringsbistand. Det overordnede formålet er det samme, og har forankring i det samme behandlingsgrunnlaget. Forskjellen er selve gjennomføringen. Det er vurdert at koblingen mellom formålene er svært nær, konteksten opplysningene ble samlet inn for ligger innenfor registrertes rimelige forventninger - det er å komme i arbeid. Det er også færre personopplysninger som deles, blant annet fordi CV-opplysninger ikke blir delt med arbeidsgiver. Arbeidsgiver har heller ikke innsyn i deltakerlisten. |
 
 **Merknad:** Dekket gjennom arkitekturbeslutning og juridisk vurdering.
 
@@ -369,11 +372,11 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Ansatte med tjenestlig behov får ikke tilgang til løsningen pga. feil ved tildeling.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Manuell kontroll av treff | - | 📝 Rutine |
-| Tilgang til spesifikke kontorer | 15.26-15.32 | ✅ Testet |
-| Tilgang til spesifikke personer (NavID) | - | 📝 Avklares |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Manuell kontroll av treff | - | 📝 Rutine | - |
+| Tilgang til spesifikke kontorer | 15.26-15.32 | ✅ Testet | Tilgang gis til spesifikke kontorer. Vi vurderer at "alle" på kontoret har tjenestlig behov. Tiltaket gjør at flere kan få tilgang på ett kontor. Vi kan styre tilgangene som deles ut, dvs. at vi kan bestemme at tilgangene på ett kontor er begrenset til tilgangsstyringen som følger av rollene "jobbsøkerrettet", "arbeidsgiverrettet". |
+| Tilgang til spesifikke personer (NavID) | - | 📝 Avklares | Det er teamet som styrer hvem som har tjenestelig behov. Hvis vi får forespørsel om tilgang vurderer vi det konkret for den ansatte det gjelder. Ikke hardkode Nav-IDenter, kan medføre risiko for å eksponere IDer for utenforstående. |
 
 **Relaterte tester:** [15.26-15.32](akseptansetester.md#pilotkontor-tilgang)
 
@@ -384,11 +387,11 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Arrangør legger inn feil adresse eller misvisende informasjon i adressefeltet.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Begrensning på antall tegn | 1.14 | ✅ Testet |
-| Manuell kontroll av treff | - | 📝 Rutine |
-| Adressesøk med forslag | 1.15-1.16 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Begrensning på antall tegn | 1.14 | ✅ Testet | Vi legger inn en begrensning på antall tegn i adressefeltet. Gjelder felt for adresse og kontaktinformasjon. Vi legger begrensningen på frontend ettersom det er her den største risikoen ligger. Begrensningen som er lagt inn er 100 tegn. |
+| Manuell kontroll av treff | - | 📝 Rutine | - |
+| Adressesøk med forslag | 1.15-1.16 | ✅ Testet | Vi legger inn adressesøk slik at man må velge ett av alternativene som dukker opp. Bruker Postens API (adresser). Blir en avhengighet til Posten. Ikke aktuelt for pilottestingen, men vi vurderer tiltaket i endelig løsningen. |
 
 **Relaterte tester:** [1.14-1.16](akseptansetester.md#adressefelt-ros-27223)
 
@@ -399,11 +402,11 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Feil arbeidsgiver registreres pga. like navn, utdatert info i Brønnøysund, eller feil orgnummer.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Kan fjerne feil arbeidsgiver | 2.3, 2.6 | ✅ Testet |
-| Bekreftelse før invitasjon til arbeidsgiver | - | ✅ N/A (ingen invitasjon i pilot) |
-| Forhåndsvisning av arbeidsgiverinfo | 2.1-2.3 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Kan fjerne feil arbeidsgiver | 2.3, 2.6 | ✅ Testet | Vi kan fjerne arbeidsgivere dersom det legges til feil arbeidsgiver på treff. Tiltaket gjennomføres manuelt ved at teamet fjerner arbeidsgivere som ikke skulle vært lagt til på treffet. |
+| Bekreftelse før invitasjon til arbeidsgiver | - | ✅ N/A (ingen invitasjon i pilot) | Legge på bekreftelse på om man vil sende ut invitasjon til arbeidsgiver. Det er en dobbeltsjekk - ikke aktuelt i pilot. I pilot tar vi det for gitt at de arbeidsgiverne som blir valgt skal være med. |
+| Forhåndsvisning av arbeidsgiverinfo | 2.1-2.3 | ✅ Testet | Forhåndsvise informasjon om arbeidsgiver før de legges til (navn, orgnummer) av markedskontakter. For å unngå at man velger feil arbeidsgiver: 1) Søk opp arbeidsgiver i systemet, 2) Velg riktig arbeidsgiver fra søkeresultatet, 3) Lagre valget. |
 
 **Merknad:** Ligner på 27482. Dekket av samme tester.
 
@@ -416,10 +419,10 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Et kontor som ikke skal være med i piloten får likevel tilgang.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Manuell kontroll av treff | - | 📝 Rutine |
-| Tilgangsstyring i backend på bestemte kontorer | 15.26-15.32 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Manuell kontroll av treff | - | 📝 Rutine | - |
+| Tilgangsstyring i backend på bestemte kontorer | 15.26-15.32 | ✅ Testet | Implementere tilgangsstyring i backend på bestemte kontorer til treff. Tiltaket gjør det sikkert i løsningen. I praksis skjuler vi Rekrutteringstreff for alle andre, og åpner opp for andre - en form for feature flagging. |
 
 **Relaterte tester:** [15.26-15.32](akseptansetester.md#pilotkontor-tilgang)
 
@@ -430,12 +433,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Tittel eller beskrivelse inneholder personopplysninger av særlig kategori (GDPR art. 9) eller sensitiv informasjon om Nav-tiltak.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Manuell kontroll av pilotkontor | - | 📝 Rutine |
-| Ikke lagre personopplysninger i KI-logger | - | 🔧 Implementert |
-| Tall (4+ siffer) fjernes før Azure OpenAI | 11.36-11.42 | ✅ Testet (persondata-filter) |
-| E-postadresser fjernes før Azure OpenAI | 11.43 | ✅ Testet (persondata-filter) |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Manuell kontroll av pilotkontor | - | 📝 Rutine | - |
+| Ikke lagre personopplysninger i KI-logger | - | 🔧 Implementert | Ikke lagre personopplysninger i logger som genereres av KI-verktøyet. Må vurdere behovet for å lagre personopplysninger før filtrering. Kanskje ikke gjennomføre tiltaket i pilot, men når løsningen lanseres. |
+| Tall (4+ siffer) fjernes før Azure OpenAI | 11.36-11.42 | ✅ Testet (persondata-filter) | Enkel sjekk på fnr og epost før vi sender data til Azure OpenAI. Vi ønsker å sende minst mulig til Azure OpenAI, derfor gjør vi en enkel sjekk på fnr og epost før data sendes til Azure OpenAI. Se Loop-dokument: Bruk av OpenAI i Rekrutteringstreff. |
+| E-postadresser fjernes før Azure OpenAI | 11.43 | ✅ Testet (persondata-filter) | Se ovenfor. |
 
 **Merknad:** Systemet gir ikke feilmelding til bruker - tall og e-post fjernes automatisk før innsending. Verifiseres i KI-logg ved å sammenligne "originalTekst" og "sendtTekst".
 
@@ -448,11 +451,11 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Nav-ansatte får utilsiktet tilgang til treff i piloten.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Testscript for tilgang | 15.1-15.32 | ✅ Testet |
-| Tilgangskontroll for hvem som kan finne/se/legge til deltakere | 15.1-15.21 | ✅ Testet |
-| Tilgangskontroll for pilotkontor | 15.26-15.32 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Testscript for tilgang | 15.1-15.32 | ✅ Testet | Lage og implementere testscript for tilgang, slik at riktig funksjon knyttes til riktig tilgang. Gjennomføres manuelt. Testscript er laget og finnes i Loop (Team Toi), men må implementeres og testes spesifikt for Rekrutteringstreff. |
+| Tilgangskontroll for hvem som kan finne/se/legge til deltakere | 15.1-15.21 | ✅ Testet | Det skilles mellom tilgangene "jobbsøkerrettet", "arbeidsgiverrettet" og "utvikler". Jobbsøkertilgang = Populasjon begrenset til eget kontor, og begrenset funksjonalitet. Arbeidsgivertilgang = alle funksjonaliteter og populasjon i hele landet (skjule tilganger til andre kandidatlister - kun egne treff). Utviklertilgang = Full tilgang til alle (Jobbsøker + Arbeidsgivertilgang). Tiltak for tilgangsrollene er de samme som for Rekrutteringsbistand fordi rollene er tilsvarende. Se ROS for Tilgangsstyring for Rekrutteringsbistand ID: 1571. |
+| Tilgangskontroll for pilotkontor | 15.26-15.32 | ✅ Testet | Legge på tilgangskontroll for å forhindre at andre enn de kontorene som er med i piloten skal få tilgang. I piloten skal ikke alle ha tilgang til treffene. Kun pilotkontor. Vi tar sikte på at piloten blir begrenset til 2-3 kontorer med denne tilgangen. |
 
 **Relaterte tester:** [15.1-15.32](akseptansetester.md#15-tilgangsstyring-og-roller)
 
@@ -463,23 +466,23 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** KI-verktøyet (ROB) identifiserer ikke diskriminerende tekst eller personopplysninger i tittel/beskrivelse.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Test diskriminering på alder (tittel) | 11.2 | ✅ Testet |
-| Test diskriminering på kjønn (tittel) | 11.3 | ✅ Testet |
-| Test diskriminering på helse (tittel) | 11.4 | ✅ Testet |
-| Test diskriminering på etnisitet (tittel) | 11.5 | ✅ Testet |
-| Test diskriminering på alder (innlegg) | 11.9 | ✅ Testet |
-| Test diskriminering på kjønn (innlegg) | 11.10 | ✅ Testet |
-| Test diskriminering på helse (innlegg) | 11.11 | ✅ Testet |
-| Test diskriminering på etnisitet (innlegg) | 11.12 | ✅ Testet |
-| Test subtil diskriminering | 11.32 | ✅ Testet |
-| Test diskriminering på annet språk | 11.33 | ✅ Testet |
-| Modellkontroll gjennom KI-logg | 11.18-11.23 | ✅ Testet |
-| Retningslinjer for fritekstfelt | - | 📝 Dokumentert |
-| Rutiner for bruk av KI-verktøy | - | 📝 Rutine |
-| Feedback fra brukere | - | 📝 Brukertest |
-| Toggle for å overskride KI-vurdering | 11.15-11.17 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Test diskriminering på alder (tittel) | 11.2 | ✅ Testet | - |
+| Test diskriminering på kjønn (tittel) | 11.3 | ✅ Testet | - |
+| Test diskriminering på helse (tittel) | 11.4 | ✅ Testet | - |
+| Test diskriminering på etnisitet (tittel) | 11.5 | ✅ Testet | - |
+| Test diskriminering på alder (innlegg) | 11.9 | ✅ Testet | - |
+| Test diskriminering på kjønn (innlegg) | 11.10 | ✅ Testet | - |
+| Test diskriminering på helse (innlegg) | 11.11 | ✅ Testet | - |
+| Test diskriminering på etnisitet (innlegg) | 11.12 | ✅ Testet | - |
+| Test subtil diskriminering | 11.32 | ✅ Testet | - |
+| Test diskriminering på annet språk | 11.33 | ✅ Testet | - |
+| Modellkontroll gjennom KI-logg | 11.18-11.23 | ✅ Testet | Vi gjennomfører modellkontroll gjennom tester/stikkprøver av versjoner av Azure OpenAI. Gjennomføres manuelt og automatisk. |
+| Retningslinjer for fritekstfelt | - | 📝 Dokumentert | Vi viser retningslinjer for hva fritekstfeltet skal brukes til. Bruker får informasjon om hvilke opplysninger som ikke skal legges inn i fritekstfeltet, at brukeren selv er ansvarlig for innholdet som registreres, og at kunstig intelligens (KI) benyttes i løsningen. |
+| Rutiner for bruk av KI-verktøy | - | 📝 Rutine | Utarbeide og implementere rutiner rettet mot brukere for bruk av KI-verktøyet. Finnes i eget Loop-dokument. Dette sikrer enhetlig praksis, reduserer feilrisiko og legger til rette for oppfølging. |
+| Feedback fra brukere | - | 📝 Brukertest | - |
+| Toggle for å overskride KI-vurdering | 11.15-11.17 | ✅ Testet | Vi lar bruker overstyre KI-sjekken for å ivareta menneskelig kontroll. |
 
 **Relaterte tester:** [11.2-11.14](akseptansetester.md#ki-validering-av-tittel-ros-27216), [11.32-11.33](akseptansetester.md#robusthetstesting-av-ki-ros-27546)
 
@@ -490,10 +493,10 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Risiko:** Informasjon om personbrukere eller intern informasjon deles med uvedkommende pga. hacking, svindel eller illojale handlinger.
 
 **Tiltak:**
-| Tiltak | Test-ID | Status |
-|--------|---------|--------|
-| Tilgangskontroll for pilotkontor | 15.26-15.32 | ✅ Testet |
-| Tilgangskontroll for hvem som kan finne/se/legge til deltakere | 15.1-15.21 | ✅ Testet |
+| Tiltak | Test-ID | Status | Beskrivelse |
+|--------|---------|--------|-------------|
+| Tilgangskontroll for pilotkontor | 15.26-15.32 | ✅ Testet | Legge på tilgangskontroll for å forhindre at andre enn de kontorene som er med i piloten skal få tilgang. I piloten skal ikke alle ha tilgang til treffene. Kun pilotkontor. Vi tar sikte på at piloten blir begrenset til 2-3 kontorer med denne tilgangen. |
+| Tilgangskontroll for hvem som kan finne/se/legge til deltakere | 15.1-15.21 | ✅ Testet | Det skilles mellom tilgangene "jobbsøkerrettet", "arbeidsgiverrettet" og "utvikler". Jobbsøkertilgang = Populasjon begrenset til eget kontor, og begrenset funksjonalitet. Arbeidsgivertilgang = alle funksjonaliteter og populasjon i hele landet (skjule tilganger til andre kandidatlister - kun egne treff). Utviklertilgang = Full tilgang til alle. Se ROS for Tilgangsstyring for Rekrutteringsbistand ID: 1571. |
 
 **Relaterte tester:** [15.1-15.32](akseptansetester.md#15-tilgangsstyring-og-roller)
 
