@@ -253,6 +253,8 @@ Hvilken kanal som brukes avhenger av jobbsøkers registrering i Kontakt- og rese
 
 ### Invitasjonsspråk og frivillighet (ROS 27485)
 
+> **Juridisk avklaring påkrevd:** Tekstene i SMS, e-post og på treffsiden må godkjennes av jurist før pilot. Avklar at invitasjonsspråket og frivillighetsinformasjonen er tilstrekkelig for å ivareta krav til informasjonsplikt og frivillighet.
+
 | #    | Test                                              | Forventet resultat                                                              | ✅❌ | Notat |
 | ---- | ------------------------------------------------- | ------------------------------------------------------------------------------- | ---- | ----- |
 | 5.14 | Jobbsøker - Sjekk SMS-tekst                       | SMS bruker invitasjonsspråk (ikke påbudsspråk) og lenker til treffsiden         |      |       |
