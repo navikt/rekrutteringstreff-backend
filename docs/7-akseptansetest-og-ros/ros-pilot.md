@@ -28,7 +28,7 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | 27482  | Feil arbeidsgiver legges til                  | 🔄     | -                             | AT 2.1-2.7 (varsel etter pilot) |
 | 27433  | Arbeidsgiver uten reelt rekrutteringsbehov    | ⚠️     | Vurdering av behov            | -                               |
 | 27390  | Arrangør kvalitetssikrer ikke KI-tekst        | 🔄     | Opplæring, prosessbeskrivelse | AT 11.1-11.17                   |
-| 27389  | ROB manipuleres til feilaktige vurderinger    | ✅     | -                             | AT 11.9-11.17                   |
+| 27389  | ROB manipuleres til feilaktige vurderinger    | ✅     | -                             | AT 11.31-11.35                  |
 | 27388  | Feilregistrering ved deltakelsesvalg          | ✅     | -                             | AT 6.1-6.9                      |
 | 27386  | Aktivitetskort blir ikke opprettet            | ✅     | -                             | AT 5.5-5.7                      |
 | 27385  | Nav-ansatte mangler info om frivillighet      | 🔄     | Info til fagpersoner          | AT 5.14-5.15                    |
@@ -208,12 +208,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Test-ID | Status |
 |--------|---------|--------|
-| Manipulasjonstesting/penetrasjonstesting | - | 🔧 Teknisk test |
-| Logging av svar for administrasjonskontroll | 11.12-11.17 | ✅ Testet |
-| Bruker kan overstyre KI-sjekken | 11.9-11.11 | ✅ Testet |
+| Robusthetstesting av KI | 11.31-11.35 | ✅ Testet |
+| Logging av svar for administrasjonskontroll | 11.18-11.23 | ✅ Testet |
+| Bruker kan overstyre KI-sjekken | 11.15-11.17 | ✅ Testet |
 | Retningslinjer om at ROB er et verktøy | - | 📝 Dokumentert |
 
-**Relaterte tester:** [11.9-11.17](akseptansetester.md#11-ki-moderering)
+**Relaterte tester:** [11.31-11.35](akseptansetester.md#robusthetstesting-av-ki-ros-27546)
 
 ---
 
