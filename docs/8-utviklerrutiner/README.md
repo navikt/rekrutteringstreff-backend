@@ -4,10 +4,9 @@ Denne mappen inneholder rutiner som utviklere må følge ved vedlikehold og utvi
 
 ## Innhold
 
-| Dokument                                 | Beskrivelse                                       |
-| ---------------------------------------- | ------------------------------------------------- |
-| [ki-rutiner.md](ki-rutiner.md)           | Rutiner for vedlikehold av KI-sjekken (ROB)       |
-| [tilgangsrutiner.md](tilgangsrutiner.md) | Rutiner for tildeling og forvaltning av tilganger |
+| Dokument                       | Beskrivelse                                 |
+| ------------------------------ | ------------------------------------------- |
+| [ki-rutiner.md](ki-rutiner.md) | Rutiner for vedlikehold av KI-sjekken (ROB) |
 
 ## Formål
 

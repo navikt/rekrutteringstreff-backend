@@ -746,7 +746,7 @@ Verifiser at logger fra robusthetstesting er tilgjengelige for analyse.
 
 | #     | Test                                         | Forventet resultat                                              | ✅❌ | Notat |
 | ----- | -------------------------------------------- | --------------------------------------------------------------- | ---- | ----- |
-| 15.36 | Utvikler - Sjekk logg etter robusthetstester | Logger fra test 11.25-11.29 er synlige for analyse av svakheter |      |       |
+| 15.36 | Utvikler - Sjekk logg etter robusthetstester | Logger fra test 11.31-11.35 er synlige for analyse av svakheter |      |       |
 
 ### KI-infrastruktur (ROS 29025, 29023, 29263, 29330)
 

@@ -17,27 +17,27 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 
 ## Oversikt over risikoer
 
-| ROS-ID | Risiko                                                  | Tiltak | Manuell rutine           | Referanse                               |
-| ------ | ------------------------------------------------------- | ------ | ------------------------ | --------------------------------------- |
-| 29337  | Utviklertilgang til logger tildeles for bredt           | ✅     | Opplæring før tilgang    | AT 15.33-15.35, rutine: tilgangsrutiner |
-| 29330  | Logger lagres for lenge/for mye                         | ✅     | -                        | AT 15.39, rutine: ki-rutiner            |
-| 29263  | Abuse monitoring skrus av                               | ✅     | -                        | AT 15.38, rutine: ki-rutiner            |
-| 29262  | Ikke følger retningslinjer for Azure OpenAI             | ✅     | -                        | rutine: ki-rutiner                      |
-| 29025  | Feil deployment av modell                               | ✅     | -                        | AT 15.37, 15.40, rutine: ki-rutiner     |
-| 29023  | Modellversjon utgår                                     | ✅     | -                        | AT 15.40, rutine: ki-rutiner            |
-| 28415  | KI-sjekken treffer ikke bra nok på testcases            | ✅     | -                        | AT 11.1-11.17                           |
-| 27979  | KI-sjekken gir falsk trygghet                           | 🔄     | Retningslinjer for bruk  | AT 11.18-11.22                          |
-| 27868  | Mangelfull evaluering av språkmodell                    | ✅     | -                        | rutine: ki-rutiner                      |
-| 27867  | Mangelfull eller utilstrekkelig testing                 | ✅     | -                        | AT 11.1-11.17                           |
-| 27854  | Hallusinering av fakta                                  | ✅     | -                        | rutine: ki-rutiner                      |
-| 27853  | Kompleksitet i systemprompt (overtilpasning)            | ✅     | -                        | rutine: ki-rutiner                      |
-| 27852  | Feil ved oppdatering av prompten                        | ✅     | -                        | rutine: ki-rutiner                      |
-| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | 🔄     | Feedback fra brukere     | AT 11.12-11.17, 11.23-11.24             |
-| 27546  | KI-sjekken manipuleres                                  | ✅     | Logging for kontroll     | AT 11.25-11.29, 15.36                   |
-| 27545  | Arrangør gjør ikke selvstendig vurdering                | 🔄     | Opplæring ansvarlig bruk | AT 11.18-11.22                          |
-| 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | ✅     | -                        | rutine: ki-rutiner                      |
-| 27542  | Feil/dårlig veiledning pga manglende kontekstforståelse | ✅     | -                        | AT 11.25-11.29                          |
-| 27321  | Personopplysninger av særlig kategori i tekst           | ✅     | -                        | AT 11.23-11.24                          |
+| ROS-ID | Risiko                                                  | Tiltak | Manuell rutine           | Referanse                           |
+| ------ | ------------------------------------------------------- | ------ | ------------------------ | ----------------------------------- |
+| 29337  | Utviklertilgang til logger tildeles for bredt           | 🔄     | Manuell rutine           | AT 15.33-15.35                      |
+| 29330  | Logger lagres for lenge/for mye                         | ✅     | -                        | AT 15.39, rutine: ki-rutiner        |
+| 29263  | Abuse monitoring skrus av                               | ✅     | -                        | AT 15.38, rutine: ki-rutiner        |
+| 29262  | Ikke følger retningslinjer for Azure OpenAI             | ✅     | -                        | rutine: ki-rutiner                  |
+| 29025  | Feil deployment av modell                               | ✅     | -                        | AT 15.37, 15.40, rutine: ki-rutiner |
+| 29023  | Modellversjon utgår                                     | ✅     | -                        | AT 15.40, rutine: ki-rutiner        |
+| 28415  | KI-sjekken treffer ikke bra nok på testcases            | ✅     | -                        | AT 11.1-11.17                       |
+| 27979  | KI-sjekken gir falsk trygghet                           | 🔄     | Retningslinjer for bruk  | AT 11.24-11.28                      |
+| 27868  | Mangelfull evaluering av språkmodell                    | ✅     | -                        | rutine: ki-rutiner                  |
+| 27867  | Mangelfull eller utilstrekkelig testing                 | ✅     | -                        | AT 11.1-11.17                       |
+| 27854  | Hallusinering av fakta                                  | ✅     | -                        | rutine: ki-rutiner                  |
+| 27853  | Kompleksitet i systemprompt (overtilpasning)            | ✅     | -                        | rutine: ki-rutiner                  |
+| 27852  | Feil ved oppdatering av prompten                        | ✅     | -                        | rutine: ki-rutiner                  |
+| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | 🔄     | Feedback fra brukere     | AT 11.12-11.17, 11.22-11.23         |
+| 27546  | KI-sjekken manipuleres                                  | ✅     | Logging for kontroll     | AT 11.31-11.35, 15.36               |
+| 27545  | Arrangør gjør ikke selvstendig vurdering                | 🔄     | Opplæring ansvarlig bruk | AT 11.24-11.28                      |
+| 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | ✅     | -                        | rutine: ki-rutiner                  |
+| 27542  | Feil/dårlig veiledning pga manglende kontekstforståelse | ✅     | -                        | AT 11.31-11.35                      |
+| 27321  | Personopplysninger av særlig kategori i tekst           | ✅     | -                        | AT 11.29-11.30, 11.36-11.43         |
 
 ### Oppsummering manuelle rutiner
 
@@ -45,6 +45,7 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 
 | ROS-ID | Hva må dokumenteres                                     |
 | ------ | ------------------------------------------------------- |
+| 29337  | Tilgangsrutiner (opplæring, bruk av roller, fjerning)   |
 | 27979  | Retningslinjer for bruk av KI-sjekken (for Nav-ansatte) |
 | 27547  | Brukerrutiner, feedback-innhenting fra brukere          |
 | 27545  | Retningslinjer for ansvarlig bruk av KI-sjekken         |
@@ -59,10 +60,10 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
 | Legge inn banner i løsning at man er i prod | ✅ Implementert | AT 15.33-15.35 |
-| Opplæring i test før utviklertilgang tildeles | ✅ Rutine | rutine: tilgangsrutiner |
-| Lage rutine for bruk av rollene (hva er lov/ikke lov) | ✅ Rutine | rutine: tilgangsrutiner |
+| Opplæring i test før utviklertilgang tildeles | ⚠️ Mangler | Må dokumenteres |
+| Lage rutine for bruk av rollene (hva er lov/ikke lov) | ⚠️ Mangler | Må dokumenteres |
 | Lage egen administrasjonstilgang (Toi) som kun gir tilgang til løsningen | ✅ Implementert | Egen admin-rolle |
-| Fjerne tilgang når den ikke er nødvendig lenger | ✅ Rutine | rutine: tilgangsrutiner |
+| Fjerne tilgang når den ikke er nødvendig lenger | ⚠️ Mangler | Må dokumenteres |
 
 ---
 
@@ -118,7 +119,7 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 
 ### 29023 - Modellversjon utgår
 
-**Risiko:** En versjon av Azure OpenAI-modellen utgår og tilgjengelige versjoner oppfyller ikke Nav-kravene. F.eks. gpt-4o (standard deployment) utgår mars 2026, og ny versjon må vurderes før den tid.
+**Risiko:** En versjon av Azure OpenAI-modellen utgår og tilgjengelige versjoner oppfyller ikke Nav-kravene. F.eks. GPT-4.1 (standard deployment), og ny versjon må vurderes før den utgår.
 
 **Tiltak:**
 | Tiltak | Status | Kommentar |
@@ -152,10 +153,10 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| KI-sjekken viser ikke grønn "ok" tekst | ✅ Implementert | AT 11.20 |
+| KI-sjekken viser ikke grønn "ok" tekst | ✅ Implementert | AT 11.26 |
 | Gjennomføre tester fortløpende | ✅ Implementert | |
 | Lage retningslinjer for bruk av KI-sjekken i fritekst | ⚠️ N/A | Manuell rutine |
-| Legge inn tekst ved fritekstfelt som beskriver hva KI-sjekken gjør/ikke gjør | ✅ Implementert | AT 11.18-11.19 |
+| Legge inn tekst ved fritekstfelt som beskriver hva KI-sjekken gjør/ikke gjør | ✅ Implementert | AT 11.24-11.25 |
 
 ---
 
@@ -246,8 +247,8 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Retningslinjer i løsningen om at ROB kun er et verktøy | ✅ Implementert | AT 11.18-11.19 |
-| Robusthetstesting av KI-sjekken | ✅ Implementert | AT 11.25-11.29 |
+| Retningslinjer i løsningen om at ROB kun er et verktøy | ✅ Implementert | AT 11.24-11.25 |
+| Robusthetstesting av KI-sjekken | ✅ Implementert | AT 11.31-11.35 |
 | La bruker overstyre ROB (menneskelig kontroll) | ✅ Implementert | AT 11.9-11.11 |
 | Logging av svar for å avdekke forsøk på manipulasjon | ✅ Implementert | AT 15.36 |
 
@@ -260,8 +261,8 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Tydelig informasjonstekst om brukerens eget ansvar | ✅ Implementert | AT 11.18-11.19 |
-| Brukervennlig design/flyt som viser hvilke felt som analyseres | ✅ Implementert | AT 11.21-11.22 |
+| Tydelig informasjonstekst om brukerens eget ansvar | ✅ Implementert | AT 11.24-11.25 |
+| Brukervennlig design/flyt som viser hvilke felt som analyseres | ✅ Implementert | AT 11.27-11.28 |
 | Tydelige retningslinjer for ansvarlig bruk av KI-sjekken | ⚠️ Brukerrettet | Opplæringsmateriell |
 
 ---
@@ -297,11 +298,11 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Lenke til avvikshåndtering i løsningen | ✅ Implementert | AT 11.23-11.24 |
+| Lenke til avvikshåndtering i løsningen | ✅ Implementert | AT 11.29-11.30 |
 | Funksjonalitet som tvinger bruker til å validere teksten | ✅ Implementert | AT 11.9-11.11 |
 | Teste systemet før implementering | ✅ Implementert | |
 | Jevnlige tester for å sjekke og forbedre | ✅ Implementert | |
-| Synlig tekstlig beskrivelse om at KI kan feile | ✅ Implementert | AT 11.18-11.19 |
+| Synlig tekstlig beskrivelse om at KI kan feile | ✅ Implementert | AT 11.24-11.25 |
 
 ---
 
@@ -320,12 +321,12 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 | Systemprompt            | Versjonskontroll, reverserbar, tematisk oppdelt                     | -              |
 | Administrasjonskontroll | Registrere fornøydhet med ROB i produksjon                          | AT 11.16-11.17 |
 | Risikovurdering         | Kartlagt feilscenarier, dokumentert i ROS                           | -              |
-| UI-tekst                | Tekst om at KI kan feile, ansvar for innhold, ROB er et verktøy     | AT 11.18-11.22 |
-| UI-design               | Ingen grønn "ok", tydelig hvilke felt som analyseres                | AT 11.20-11.22 |
+| UI-tekst                | Tekst om at KI kan feile, ansvar for innhold, ROB er et verktøy     | AT 11.24-11.28 |
+| UI-design               | Ingen grønn "ok", tydelig hvilke felt som analyseres                | AT 11.26-11.28 |
 | UI-flyt                 | Funksjonalitet som tvinger validering av tekst                      | AT 11.9-11.11  |
 | Tilgangsstyring         | Egen admin-rolle, banner i prod                                     | AT 15.33-15.35 |
-| Robusthetstesting       | Testing av KI-sjekken med uvanlige tekster                          | AT 11.25-11.29 |
-| Avvikslenke             | Lenke til avvikshåndtering i løsningen                              | AT 11.23-11.24 |
+| Robusthetstesting       | Testing av KI-sjekken med uvanlige tekster                          | AT 11.31-11.35 |
+| Avvikslenke             | Lenke til avvikshåndtering i løsningen                              | AT 11.29-11.30 |
 
 ### ⚠️ Brukerrettet dokumentasjon (ikke i systemdok)
 
