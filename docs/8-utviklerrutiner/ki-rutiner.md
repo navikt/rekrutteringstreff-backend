@@ -5,6 +5,7 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 ## Innhold
 
 - [Oppgradering av modellversjon](#oppgradering-av-modellversjon)
+- [Deployment av ny modell i Azure OpenAI](#deployment-av-ny-modell-i-azure-openai)
 - [Endring av systemprompt](#endring-av-systemprompt)
 - [Overvåking av Azure OpenAI retningslinjer](#overvåking-av-azure-openai-retningslinjer)
 - [Oppdatering av kunnskapsgrunnlag](#oppdatering-av-kunnskapsgrunnlag)
@@ -30,6 +31,50 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 6. Dokumenter eventuelle endringer i oppførsel
 7. **Oppdater ROS-dokumentasjon** i tryggnok med ny modellversjon
 8. Deploy til prod med toggle klar for rask rollback
+
+---
+
+## Deployment av ny modell i Azure OpenAI
+
+**ROS-referanse:** 29023, 29025, 29263, 28415, 27868
+
+**Når:** Ved opprettelse av ny deployment eller bytte av modell i Azure OpenAI.
+
+**Før deployment – sjekk følgende:**
+
+1. **Logg inn i Azure Portal:** [https://oai.azure.com/resource/deployments](https://oai.azure.com/resource/deployments)
+2. **Bekreft riktig miljø:**
+   - Verifiser at du er i riktig ressurs (`arbeidsmarked-dev` eller `arbeidsmarked-prod`)
+   - Ha et bevisst forhold til om du jobber i **dev** eller **prod** – dobbeltsjekk før du gjør endringer
+3. **Verifiser region:**
+   - Ressursen må være lokalisert i **Norway East** eller **Sweden Central** (EU/EØS-krav)
+4. **Velg Standard deployment:**
+   - Velg **Standard** deployment type (ikke Global)
+5. **Navngi modellen korrekt:**
+   - Prefiks modellnavnet med `toi-` (f.eks. `toi-gpt-4.1`)
+   - Inkrementer versjonsnummer i kodebasen når modell byttes
+6. **Sjekk tokens per minutt (TPM):**
+   - Før du sletter gammel ressurs/deployment: noter hvor mange tokens per minutt (TPM) den bruker
+   - Sett ny deployment til samme eller høyere TPM-grense
+7. **Aktiver Content Filter:**
+   - Velg **DefaultV2** content filter eller sterkere (Abuse monitoring)
+
+**Benchmarking og testing (før produksjon):**
+
+1. Kjør full benchmark-suite mot eksisterende testcases (se [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md))
+2. Verifiser at ny modell scorer **minimum 90%** på testsuiten
+3. Sammenlign treffprosent med nåværende modell – ny modell bør score like bra eller bedre
+4. Undersøk og dokumenter eventuelle testcases som feiler
+5. Test manuelt med representative eksempler i dev
+
+**Etter deployment:**
+
+1. Kopier API-nøkkel (ved første gangs oppsett) og legg inn i NAIS secret
+2. Oppdater modellnavn/versjon i kodebasen (inkrementer versjon)
+3. Oppdater eventuelle miljøvariabler/konfigurasjon i appen
+4. Test at integrasjonen fungerer i dev før produksjon
+5. **Oppdater ROS-dokumentasjon** i tryggnok med ny modellversjon
+6. Dokumenter endringen i teamets changelog/backlog
 
 ---
 
