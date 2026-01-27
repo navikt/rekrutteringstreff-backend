@@ -27,8 +27,8 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 | 29023  | Modellversjon utgår                                     | ✅     | -                        | AT 15.40, rutine: ki-rutiner        |
 | 28415  | KI-sjekken treffer ikke bra nok på testcases            | ✅     | -                        | AT 11.1-11.17                       |
 | 27979  | KI-sjekken gir falsk trygghet                           | 🔄     | Retningslinjer for bruk  | AT 11.24-11.28                      |
-| 27868  | Mangelfull evaluering av språkmodell                    | ✅     | -                        | rutine: ki-rutiner                  |
-| 27867  | Mangelfull eller utilstrekkelig testing                 | ✅     | -                        | AT 11.1-11.17                       |
+| 27868  | Mangelfull evaluering av språkmodell                    | ✅     | -                        | AT 15.37, 15.40, rutine: ki-rutiner |
+| 27867  | Mangelfull eller utilstrekkelig testing                 | 🔄     | -                        | AT 11.1-11.28                       |
 | 27854  | Hallusinering av fakta                                  | ✅     | -                        | rutine: ki-rutiner                  |
 | 27853  | Kompleksitet i systemprompt (overtilpasning)            | ✅     | -                        | rutine: ki-rutiner                  |
 | 27852  | Feil ved oppdatering av prompten                        | ✅     | -                        | rutine: ki-rutiner                  |
@@ -162,12 +162,17 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 
 ### 27868 - Mangelfull evaluering av språkmodell
 
-**Risiko:** Ved valg eller oppgradering av KI-modell gjøres dette uten tilstrekkelig analyse, dokumentasjon og kontroll. Konsekvenser: svekket ytelse, nye feil, uforutsette responsmønstre.
+**Risiko:** Ved valg eller oppgradering av KI-modell gjøres dette uten tilstrekkelig analyse, dokumentasjon og kontroll. Risikoen er særlig relevant ved fremtidige oppdateringer eller justeringer av modellen. Konsekvenser: svekket ytelse, nye feil, uforutsette responsmønstre, tap av kompatibilitet eller økt risiko for misbruk.
 
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Evaluering ved valg/oppgradering av modell | ✅ Rutine | rutine: ki-rutiner |
+| Sikre at behandling av data er i henhold til databehandleravtale med Azure | ✅ Implementert | |
+| Følge veileder for generativ kunstig intelligens fra Nav | ✅ Rutine | rutine: ki-rutiner |
+| Manuell testing før bytte | ✅ Implementert | rutine: ki-rutiner |
+| Evaluering av Azure OpenAI til Rekrutteringstreff | ✅ Dokumentert | sysdok: ki-tekstvalideringstjeneste |
+| Gjøre undersøkelser for å sjekke om bytte/oppgradering gir bedre resultater | ✅ Rutine | rutine: ki-rutiner |
+| Kjøre automatiske tester før bytte | ✅ Implementert | rutine: ki-rutiner |
 
 ---
 
@@ -178,9 +183,9 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Logging for etterprøving i prod | ✅ Implementert | |
-| Manuell testing | ✅ Implementert | |
-| Ansvarliggjøre brukere med tydelig info i løsningen | 🔄 Planlagt | Teknisk - UI-tekst |
+| Logging for etterprøving i prod | ✅ Implementert | AT 11.18-11.23 |
+| Manuell testing | ✅ Implementert | AT 11.1-11.17 |
+| Ansvarliggjøre brukere med tydelig info i løsningen | 🔄 Planlagt | AT 11.24-11.28 |
 | Etablere automatiske tester basert på godkjente manuell-tester | ✅ Implementert | |
 
 ---
