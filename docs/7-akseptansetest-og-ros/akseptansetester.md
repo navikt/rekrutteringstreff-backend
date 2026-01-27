@@ -251,12 +251,13 @@ Hvilken kanal som brukes avhenger av jobbsøkers registrering i Kontakt- og rese
 | 5.12 | Trykk to ganger på inviter-knapp       | Kun én invitasjon registreres            |      |       |
 | 5.13 | Inviter jobbsøker som blir ikke-synlig | Jobbsøker forsvinner, varsel sendes ikke |      |       |
 
-### Frivillighetsinfo i varsel (ROS 27485)
+### Invitasjonsspråk og frivillighet (ROS 27485)
 
-| #    | Test                                         | Forventet resultat                                | ✅❌ | Notat |
-| ---- | -------------------------------------------- | ------------------------------------------------- | ---- | ----- |
-| 5.14 | Jobbsøker - Sjekk SMS-tekst for frivillighet | SMS inneholder info om at deltakelse er frivillig |      |       |
-| 5.15 | Jobbsøker - Sjekk e-post for frivillighet    | E-post inneholder info om frivillighet            |      |       |
+| #    | Test                                              | Forventet resultat                                                              | ✅❌ | Notat |
+| ---- | ------------------------------------------------- | ------------------------------------------------------------------------------- | ---- | ----- |
+| 5.14 | Jobbsøker - Sjekk SMS-tekst                       | SMS bruker invitasjonsspråk (ikke påbudsspråk) og lenker til treffsiden         |      |       |
+| 5.15 | Jobbsøker - Sjekk e-post                          | E-post bruker invitasjonsspråk (ikke påbudsspråk) og lenker til treffsiden      |      |       |
+| 5.16 | Jobbsøker - Sjekk frivillighetsinfo på treffsiden | Treffsiden viser tydelig at deltakelse er frivillig før jobbsøker svarer ja/nei |      |       |
 
 ---
 
