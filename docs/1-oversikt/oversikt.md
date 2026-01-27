@@ -39,13 +39,9 @@ graph TD
     end
 
     subgraph "Jobbsøker-flater"
-        AKTIVITET_FE[aktivitetsplan-frontend]
+        AKTIVITET[Aktivitetsplan]
         MINSIDE_FE[minside-frontend]
         RTB[rekrutteringstreff-bruker]
-    end
-
-    subgraph Eksterne_systemer
-        AKTIVITET[Aktivitetsplan]
     end
 
     %% Frontend til backend
@@ -66,7 +62,7 @@ graph TD
 
     %% Jobbsøker-innganger
     MINSIDE_FE -->|Lenke fra varsel| RTB
-    AKTIVITET_FE -->|Lenke fra aktivitetskort| RTB
+    AKTIVITET -->|Lenke fra aktivitetskort| RTB
 
     %% Kafka-flyt (Rapids & Rivers)
     API -.->|Events: Invitasjon| AK
