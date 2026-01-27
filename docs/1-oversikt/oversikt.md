@@ -45,33 +45,33 @@ graph TD
     end
 
     %% Frontend til backend
-    RBF -->|REST| API
+    RBF --> API
 
     %% Frontend til søketjenester
-    RBF -->|REST| KSOK
-    RBF -->|REST| PAM
-    KSOK -->|Søk| OS
+    RBF -->|Finn jobbsøkere| KSOK
+    RBF -->|Finn arbeidsgivere| PAM
+    KSOK --> OS
 
     %% Frontend til støttetjenester
-    RBF -->|REST| MODIA
+    RBF -->|Aktivt kontor| MODIA
 
     %% Jobbsøker-flyt
-    RTB -->|REST| MINSIDE_API
-    MINSIDE_API -->|REST| API
-    AK -->|REST| AKTIVITET
+    RTB -->|Se treff, svar| MINSIDE_API
+    MINSIDE_API --> API
+    AK -->|Opprett/oppdater kort| AKTIVITET
 
     %% Jobbsøker-innganger
     MINSIDE_FE -->|Lenke fra varsel| RTB
-    AKTIVITET -->|Lenke fra aktivitetskort| RTB
+    AKTIVITET -->|Lenke fra kort| RTB
 
     %% Kafka-flyt (Rapids & Rivers)
-    API -.->|Events: Invitasjon| AK
-    API -.->|Events: Invitasjon| VARSEL
-    API -.->|Behov: Synlighet| SYN
-    VARSEL -.->|Kafka: Bestiller varsel| MINSIDE_FE
+    API -.->|Invitasjon| AK
+    API -.->|Invitasjon| VARSEL
+    API -.->|Synlighetssjekk| SYN
+    VARSEL -.->|Bestill varsel| MINSIDE_FE
 
-    SYN -.->|Løsning: Synlighet| API
-    VARSEL -.->|Event: Varselstatus| API
+    SYN -.->|Synlighetssvar| API
+    VARSEL -.->|Varselstatus| API
 ```
 
 > **Tegnforklaring:**
