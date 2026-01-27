@@ -193,6 +193,12 @@ PDL har 4 graderinger: UGRADERT, FORTROLIG (kode 7), STRENGT_FORTROLIG (kode 6),
 | 4.22 | Person uten aktiv KVP          | Synlig ✅          |      |       |
 | 4.23 | Person med aktiv KVP (startet) | Ikke synlig ❌     |      |       |
 
+#### Endring av fødselsnummer
+
+| #    | Test                                          | Forventet resultat                         | ✅❌ | Notat |
+| ---- | --------------------------------------------- | ------------------------------------------ | ---- | ----- |
+| 4.24 | Person får nytt fnr (f.eks. ved kjønnsskifte) | Personen oppdateres korrekt, ikke duplikat |      |       |
+
 #### Andre ekskluderingskriterier
 
 | #    | Test                              | Forventet resultat         | ✅❌ | Notat |

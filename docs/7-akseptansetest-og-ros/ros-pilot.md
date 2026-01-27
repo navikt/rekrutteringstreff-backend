@@ -35,7 +35,7 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | 27383  | Jobbsøker får feil info i treffsiden          | ✅     | Manuell kontroll              | AT 7.11-7.13                    |
 | 27381  | Deltaker mottar samme varsel gjentatte ganger | ✅     | -                             | AT 5.12                         |
 | 27379  | Menneskelig feil - feil person får invitasjon | ⚠️     | Manuell kontroll              | -                               |
-| 27378  | Teknisk feil - feil person får invitasjon     | ✅     | -                             | AT 4.1-4.5, 5.1-5.7             |
+| 27378  | Teknisk feil - feil person får invitasjon     | ✅     | -                             | AT 4.1-4.5, 4.24, 5.1-5.7       |
 | 27275  | Usynlige kandidater ikke skjult               | ✅     | -                             | AT 4.5-4.29                     |
 | 27273  | Jobbsøker får feil/mangelfull info pga feil   | ✅     | Manuell kontroll              | AT 7.1-7.18, 5.14-5.15          |
 | 27227  | Behandler flere opplysninger enn nødvendig    | ✅     | -                             | sysdok: arkitektur              |
@@ -312,9 +312,10 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 | Tiltak | Test-ID | Status |
 |--------|---------|--------|
 | Tester for å verifisere at systemet ikke feiler | 4.1-4.5 | ✅ Testet |
+| Håndtere endring av fnr (f.eks. kjønnsskifte) | 4.24 | ✅ Testet |
 | Verifisere hele løpet gjennom tester | 5.1-5.7 | ✅ Testet |
 
-**Relaterte tester:** [4.1-4.5](akseptansetester.md#4-legge-til-jobbsøker), [5.1-5.7](akseptansetester.md#5-invitere-jobbsøker)
+**Relaterte tester:** [4.1-4.5](akseptansetester.md#4-legge-til-jobbøker), [4.24](akseptansetester.md#endring-av-fødselsnummer), [5.1-5.7](akseptansetester.md#5-invitere-jobbøker)
 
 ---
 
