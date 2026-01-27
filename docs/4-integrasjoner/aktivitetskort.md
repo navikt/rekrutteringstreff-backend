@@ -1,6 +1,12 @@
 # Aktivitetskort for Rekrutteringstreff
 
-Løsningen synker automatisk status for rekrutteringstreff med aktivitetskort i aktivitetsplanen. Når en jobbsøker inviteres til et treff, opprettes et aktivitetskort. Kortet oppdateres basert på jobbsøkerens svar og treffets status.
+## Formål
+
+Når en jobbsøker inviteres til et rekrutteringstreff, opprettes automatisk et **aktivitetskort** i jobbsøkerens aktivitetsplan. Dette sikrer at:
+
+- Jobbsøker ser invitasjonen i sin aktivitetsplan
+- Veileder kan følge opp deltakelse via aktivitetsplanen
+- Status holdes synkronisert mellom rekrutteringstreff og aktivitetsplan
 
 ---
 
@@ -91,5 +97,5 @@ graph TB
 
 ## Relatert dokumentasjon
 
-- [Varsling](varsling.md)
-- [Database-schema](../2-arkitektur/09-database-schema.md)
+- [Varsling](varsling.md) - SMS/e-post-varsling til jobbsøkere
+- [Database-schema](../2-arkitektur/database.md) - Databaseoversikt

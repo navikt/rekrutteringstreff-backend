@@ -32,9 +32,16 @@ graph TD
         AK[rekrutteringsbistand-<br/>aktivitetskort]
     end
 
+    subgraph "Søketjenester (direkte fra frontend)"
+        KSOK[rekrutteringsbistand-<br/>kandidatsok-api]
+        OS[(OpenSearch)]
+        PAM[pam-search<br/>arbeidsgiversøk]
+    end
+
     subgraph Støttetjenester
         SYN[toi-synlighetsmotor]
         VARSEL[rekrutteringsbistand-<br/>kandidatvarsel-api]
+        MODIA[modiacontextholder]
     end
 
     subgraph Eksterne_systemer
@@ -43,6 +50,10 @@ graph TD
 
     %% Kommunikasjon (REST)
     RBF -->|REST| API
+    RBF -->|REST: Finn jobbsøkere| KSOK
+    RBF -->|REST: Finn arbeidsgivere| PAM
+    RBF -->|REST: Aktivt kontor| MODIA
+    KSOK -->|Søk| OS
     RTB -->|REST| MINSIDE_API
     MINSIDE_API -->|REST| API
     AK -->|REST: Oppretter kort| AKTIVITET
@@ -65,6 +76,11 @@ graph TD
 >
 > - Hel linje (`-->`): Synkron REST-kommunikasjon
 > - Stiplet linje (`-.->`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
+
+> **Merk:** Kandidatsøk og arbeidsgiversøk kalles **direkte fra frontend**, ikke via rekrutteringstreff-api. Se:
+>
+> - [Kandidatsøk](../4-integrasjoner/kandidatsok.md)
+> - [Enhetsregisteret (Arbeidsgiversøk)](../4-integrasjoner/enhetsregisteret.md)
 
 ### Applikasjonsbeskrivelser
 

@@ -31,6 +31,8 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 - [Varsling](4-integrasjoner/varsling.md) - Varsling via SMS, e-post og MinSide
 - [Aktivitetskort](4-integrasjoner/aktivitetskort.md) - Synkronisering med aktivitetsplanen
 - [MinSide-flyt](4-integrasjoner/minside-flyt.md) - Jobbsøkers flyt for å se treff og svare
+- [Kandidatsøk](4-integrasjoner/kandidatsok.md) - Søk etter jobbsøkere via kandidatsøk-api
+- [Enhetsregisteret](4-integrasjoner/enhetsregisteret.md) - Arbeidsgiversøk via pam-search
 
 ### 5. [KI](5-ki/)
 
