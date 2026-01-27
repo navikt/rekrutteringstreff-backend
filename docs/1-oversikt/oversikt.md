@@ -20,22 +20,10 @@ graph TD
         RBF[rekrutteringsbistand-<br/>frontend]
     end
 
-    subgraph "Jobbsøker-flater"
-        RTB[rekrutteringstreff-bruker]
-        MINSIDE_FE[minside-frontend]
-        AKTIVITET_FE[aktivitetsplan-frontend]
-    end
-
     subgraph "rekrutteringstreff-backend"
         API[rekrutteringstreff-api]
         MINSIDE_API[rekrutteringstreff-<br/>minside-api]
         AK[rekrutteringsbistand-<br/>aktivitetskort]
-    end
-
-    subgraph "Søketjenester (direkte fra frontend)"
-        KSOK[rekrutteringsbistand-<br/>kandidatsok-api]
-        OS[(OpenSearch)]
-        PAM[pam-search<br/>arbeidsgiversøk]
     end
 
     subgraph Støttetjenester
@@ -44,19 +32,37 @@ graph TD
         MODIA[modiacontextholder]
     end
 
+    subgraph Søketjenester
+        KSOK[rekrutteringsbistand-<br/>kandidatsok-api]
+        OS[(OpenSearch)]
+        PAM[pam-search]
+    end
+
+    subgraph "Jobbsøker-flater"
+        AKTIVITET_FE[aktivitetsplan-frontend]
+        MINSIDE_FE[minside-frontend]
+        RTB[rekrutteringstreff-bruker]
+    end
+
     subgraph Eksterne_systemer
         AKTIVITET[Aktivitetsplan]
     end
 
-    %% Kommunikasjon (REST)
+    %% Frontend til backend
     RBF -->|REST| API
-    RBF -->|REST: Finn jobbsøkere| KSOK
-    RBF -->|REST: Finn arbeidsgivere| PAM
-    RBF -->|REST: Aktivt kontor| MODIA
+
+    %% Frontend til søketjenester
+    RBF -->|REST| KSOK
+    RBF -->|REST| PAM
     KSOK -->|Søk| OS
+
+    %% Frontend til støttetjenester
+    RBF -->|REST| MODIA
+
+    %% Jobbsøker-flyt
     RTB -->|REST| MINSIDE_API
     MINSIDE_API -->|REST| API
-    AK -->|REST: Oppretter kort| AKTIVITET
+    AK -->|REST| AKTIVITET
 
     %% Jobbsøker-innganger
     MINSIDE_FE -->|Lenke fra varsel| RTB
