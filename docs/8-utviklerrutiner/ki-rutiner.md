@@ -4,33 +4,16 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 
 ## Innhold
 
-- [Oppgradering av modellversjon](#oppgradering-av-modellversjon)
 - [Deployment av ny modell i Azure OpenAI](#deployment-av-ny-modell-i-azure-openai)
+- [Evaluering og oppgradering av språkmodell](#evaluering-og-oppgradering-av-språkmodell)
 - [Endring av systemprompt](#endring-av-systemprompt)
 - [Overvåking av Azure OpenAI retningslinjer](#overvåking-av-azure-openai-retningslinjer)
+- [Periodisk sjekk av oppsett](#periodisk-sjekk-av-oppsett)
 - [Oppdatering av kunnskapsgrunnlag](#oppdatering-av-kunnskapsgrunnlag)
-- [Evaluering av språkmodell](#evaluering-av-språkmodell)
 - [Verifisering av hallusinering](#verifisering-av-hallusinering)
 - [Feilhåndtering ved loggsletting](#feilhåndtering-ved-loggsletting)
 
 ---
-
-## Oppgradering av modellversjon
-
-**ROS-referanse:** 29023, 29025
-
-**Når:** Når Microsoft varsler om at modellversjon utgår, eller ved ønske om oppgradering.
-
-**Rutine:**
-
-1. Les Microsofts release notes for ny versjon
-2. Verifiser at modellen støtter **standard deployment i EU/EØS** (ikke Global)
-3. Oppdater modellversjon i dev/test først
-4. Kjør full testsuite inkl. benchmarks (se [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md))
-5. Verifiser at 90%-målet for testcases opprettholdes
-6. Dokumenter eventuelle endringer i oppførsel
-7. **Oppdater ROS-dokumentasjon** i tryggnok med ny modellversjon
-8. Deploy til prod med toggle klar for rask rollback
 
 ---
 
@@ -88,10 +71,13 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 
 1. Dokumenter formål med endring i PR-beskrivelse
 2. Følg klarspråk-prinsipper (se [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md))
-3. Kjør automatiske tester
-4. Verifiser mot benchmarks
-5. Test manuelt i dev med representative eksempler
-6. Merge via normal code review
+3. **Inkrementer versjonsnummer** i systemprompten manuelt
+4. **Oppdater tidspunkt** i systemprompten
+5. **Generer ny hash** ved å kjøre `main` i systemprompt-filen
+6. Kjør automatiske tester
+7. Verifiser mot benchmarks
+8. Test manuelt i dev med representative eksempler
+9. Merge via normal code review
 
 **Rollback:** Prompten er versjonskontrollert og kan enkelt reverteres via git.
 
@@ -99,16 +85,17 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 
 ## Overvåking av Azure OpenAI retningslinjer
 
-**ROS-referanse:** 29262
+**ROS-referanse:** 29262, 29023
 
 **Når:** Løpende, minimum kvartalsvis.
 
 **Rutine:**
 
 1. Sjekk [Azure OpenAI Service documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/) for oppdateringer
-2. Les gjennom eventuelle nye retningslinjer
-3. Vurder om vår bruk er i tråd med retningslinjene
-4. Dokumenter avvik og tiltak i teamets backlog
+2. Sjekk [Model retirements](https://learn.microsoft.com/en-gb/azure/ai-foundry/openai/concepts/model-retirements) for å se når modeller utgår
+3. Les gjennom eventuelle nye retningslinjer
+4. Vurder om vår bruk er i tråd med retningslinjene
+5. Dokumenter avvik og tiltak i teamets backlog
 
 ---
 
@@ -141,21 +128,34 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 
 ---
 
-## Evaluering av språkmodell
+## Evaluering og oppgradering av språkmodell
 
-**ROS-referanse:** 27868
+**ROS-referanse:** 27868, 29023, 29025
 
-**Når:** Ved valg av ny modell eller oppgradering av eksisterende.
+**Når:** Ved valg av ny modell, oppgradering av eksisterende, eller når Microsoft varsler at modellversjon utgår.
 
-**Rutine:**
+### Evaluering (før beslutning)
 
 1. Dokumenter hvilken modell som vurderes og hvorfor
-2. Verifiser at modellen støtter standard deployment i EU/EØS
-3. Kjør full benchmark-suite mot eksisterende testcases
-4. Sammenlign treffprosent med nåværende modell
+2. Verifiser at modellen støtter **standard deployment i EU/EØS** (ikke Global)
+3. Les Microsofts release notes for ny versjon
+4. Sjekk [Model retirements](https://learn.microsoft.com/en-gb/azure/ai-foundry/openai/concepts/model-retirements) for utløpsdatoer
+
+### Testing (før produksjonssetting)
+
+1. Oppdater modellversjon i dev/test først
+2. Kjør full benchmark-suite mot eksisterende testcases (se [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md))
+3. Sammenlign treffprosent med nåværende modell
+4. Verifiser at **90%-målet** for testcases opprettholdes
 5. Dokumenter eventuelle risikoer eller endringer i oppførsel
 6. Få godkjenning fra teamet før produksjonssetting
-7. Oppdater dokumentasjon med ny modellversjon
+
+### Gjennomføring
+
+1. Følg rutine for [Deployment av ny modell i Azure OpenAI](#deployment-av-ny-modell-i-azure-openai)
+2. **Oppdater ROS-dokumentasjon** i tryggnok med ny modellversjon
+3. Oppdater dokumentasjon med ny modellversjon
+4. Deploy til prod med toggle klar for rask rollback
 
 ---
 
