@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS ki_spørring_logg;
+DROP TABLE IF EXISTS innlegg;
+DROP TABLE IF EXISTS aktivitetskort_polling;
+DROP TABLE IF EXISTS jobbsoker_hendelse;
+DROP TABLE IF EXISTS jobbsoker;
+DROP TABLE IF EXISTS naringskode;
+DROP TABLE IF EXISTS arbeidsgiver_hendelse;
+DROP TABLE IF EXISTS arbeidsgiver;
+DROP TABLE IF EXISTS rekrutteringstreff_hendelse;
+DROP TABLE IF EXISTS rekrutteringstreff;

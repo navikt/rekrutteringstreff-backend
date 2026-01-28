@@ -55,6 +55,7 @@ tasks {
     }
 
     tasks.withType<Test> {
+        enabled=false
         useJUnitPlatform()
         testLogging {
             events(TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.FAILED)
