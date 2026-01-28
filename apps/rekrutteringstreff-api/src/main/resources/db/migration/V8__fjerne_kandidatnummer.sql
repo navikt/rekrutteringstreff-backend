@@ -1,3 +1,0 @@
--- V8: Fjerner kandidatnummer-kolonnen fra jobbsoker-tabellen.
--- Kandidatnummer hentes nå on-demand fra kandidatsøk-api basert på fødselsnummer.
-ALTER TABLE jobbsoker DROP COLUMN IF EXISTS kandidatnummer;
