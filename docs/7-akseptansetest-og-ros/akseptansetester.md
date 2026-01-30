@@ -492,7 +492,7 @@ Markedskontakt legger til et innlegg (introduksjonstekst) på treffet som jobbs�
 
 ## 11. KI-tekstvalideringstjenesten
 
-> **ROS:** 27216, 27219
+> **ROS:** 27216, 27219, 27321, 27547, 27546, 27867, 28415
 
 Når markedskontakt skriver tittel eller innlegg, valideres teksten automatisk av KI for å sjekke om den er diskriminerende eller bryter retningslinjer. Med utviklertilgang kan man se KI-loggen.
 
@@ -507,8 +507,9 @@ Når markedskontakt skriver tittel eller innlegg, valideres teksten automatisk a
 2. KI returnerer om teksten bryter retningslinjer + begrunnelse
 3. Resultatet logges i databasen
 4. Ved advarsel vises "Lagre likevel"-knapp som brukeren MÅ trykke for å fortsette
-5. "lagret"-feltet i logg avhenger av modus:
-   - **Før publisering (kladd):** Autolagring - lagret=true umiddelbart når felt endres
+5. Backend validerer at "Lagre likevel" er aktivt valgt før diskriminerende tekst kan lagres
+6. "lagret"-feltet i logg avhenger av modus:
+   - **Før publisering (kladd):** Autolagring - men ved advarsel venter autolagring på brukervalg
    - **Etter publisering:** lagret=true kun når markedskontakt åpner endringsdialog og trykker "Lagre"
 
 ### KI-validering av tittel (ROS 27216)
@@ -550,6 +551,8 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 | 11.17 | Markedskontakt - Prøv å publisere uten "Lagre likevel"     | Publisering blokkert inntil valg er tatt |      |       |
 
 ### KI-logg (krever utviklertilgang)
+
+> **Automatiske tester:** ROBs nøyaktighet måles av automatiske tester i `apps/rekrutteringstreff-api/src/test/kotlin/no/nav/toi/rekrutteringstreff/ki/KiTekstvalideringParameterisertTest.kt`. Nøyaktighet = (antall test-prompts - antall avvikende resultat) / antall test-prompts \* 100.
 
 | #     | Test                                          | Forventet resultat                                  | ✅❌ | Notat |
 | ----- | --------------------------------------------- | --------------------------------------------------- | ---- | ----- |
@@ -596,6 +599,26 @@ Test at KI-sjekken håndterer uvanlige tekster på en trygg måte.
 | 11.35 | Skriv veldig lang tekst                 | (Lim inn en hel artikkel eller 1000+ tegn)            | Systemet håndterer lang tekst, ev. med feilmelding | Nei           |      |       |
 
 > **Tips:** Hvis KI-sjekken IKKE gir advarsel på 11.32-11.33, noter dette som et avvik. Det betyr ikke at testen feilet - det betyr at vi har funnet en svakhet som bør undersøkes.
+
+### Backend-validering og bypass-sikkerhet (ROS 27547, 27321, 27867)
+
+> ⚠️ **Utviklertester:** Disse testene verifiserer at validering ikke kan omgås, og krever utviklertilgang og teknisk innsikt.
+
+Test at tittel og innlegg ikke kan lagres med diskriminerende innhold uten at KI-sjekken har kjørt og "Lagre likevel" er aktivt valgt. Backend skal returnere feilkode hvis validering forsøkes omgått.
+
+| #     | Test                                                                                                                         | Forventet resultat                                                                                             | Utviklerhjelp | ✅❌ | Notat |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------- | ---- | ----- |
+| 11.44 | **Autolagring med diskriminerende tekst** - Skriv diskriminerende tittel mens autolagring kjører                             | Autolagring venter på KI-validering før lagring. Advarsel vises. Feltet lagres IKKE automatisk uten brukervalg | Ja            |      |       |
+| 11.45 | **API-kall uten validering** - Send lagre-request direkte til backend uten å ha kjørt KI-sjekk                               | Backend returnerer feilkode (f.eks. 400/422). Feltet lagres IKKE                                               | Ja            |      |       |
+| 11.46 | **API-kall med diskriminerende tekst uten "Lagre likevel"** - Send lagre-request med flaggAdvarsel=true men uten bekreftelse | Backend returnerer feilkode. Diskriminerende felt lagres IKKE                                                  | Ja            |      |       |
+| 11.47 | **Verifiser at backend krever valideringsresultat** - Prøv å lagre tittel/innlegg uten tilhørende KI-valideringsresultat     | Backend avviser forespørselen. Logging viser forsøk på å omgå validering                                       | Ja            |      |       |
+| 11.48 | **Race condition ved rask redigering** - Endre tekst raskt flere ganger mens KI-sjekk pågår                                  | Kun siste tekst lagres. Tidligere valideringer kanselleres eller ignoreres. Ingen inkonsistent tilstand        | Ja            |      |       |
+
+> **Implementasjonsnotat:** Backend skal:
+>
+> 1. Returnere feilkode til frontend hvis diskriminerende tekst forsøkes lagret uten at "Lagre likevel" er trykket
+> 2. Sikre at autolagring ikke lagrer diskriminerende felt uten brukerbekreftet overstyring
+> 3. Logge forsøk på å omgå validering for sikkerhetsanalyse
 
 ### Persondata-filtrering (ROS 27219)
 
@@ -802,6 +825,8 @@ Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
 
 ## Relaterte dokumenter
 
+- [ROS-tiltak for KI-sjekken](ros-ki-pilot.md) - ROS-tiltak spesifikke for KI-sjekken (ROB)
+- [ROS-tiltak (generelt)](ros-pilot.md) - Generelle ROS-tiltak for Rekrutteringstreff
 - [Tilgangsstyring](../3-sikkerhet/tilgangsstyring.md) - Teknisk dokumentasjon roller og tilgang
 - [Synlighet](../3-sikkerhet/synlighet.md) - Teknisk dokumentasjon synlighetsfiltrering
 - [Invitasjon](../4-integrasjoner/invitasjon.md) - Teknisk flyt for invitasjon
@@ -809,3 +834,4 @@ Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
 - [Aktivitetskort](../4-integrasjoner/aktivitetskort.md) - Aktivitetskort-synkronisering
 - [MinSide-flyt](../4-integrasjoner/minside-flyt.md) - Jobbsøkerflyt og rekrutteringstreff-bruker
 - [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md) - Teknisk dokumentasjon KI-validering og logging
+- [KI-rutiner for utviklere](../8-utviklerrutiner/ki-rutiner.md) - Utviklerrutiner for KI-sjekken
