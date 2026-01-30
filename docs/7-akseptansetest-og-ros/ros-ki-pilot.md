@@ -17,27 +17,27 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 
 ## Oversikt over risikoer
 
-| ROS-ID | Risiko                                                  | S   | K   | Tiltak | Manuell rutine        | Referanse                                |
-| ------ | ------------------------------------------------------- | --- | --- | ------ | --------------------- | ---------------------------------------- |
-| 29337  | Utviklertilgang til logger tildeles for bredt           | 1   | 4   | ✅     | Rutine dokumentert    | AT 15.33-15.35, 15.37-15.39              |
-| 29330  | Logger lagres for lenge/for mye                         | 2   | 2   | ✅     | -                     | AT 15.39, 15.43, rutine: ki-rutiner      |
-| 29263  | Abuse monitoring skrus av                               | 2   | 2   | ✅     | -                     | AT 15.38, 15.42, rutine: ki-rutiner      |
-| 29262  | Ikke følger retningslinjer for Azure OpenAI             | -   | -   | ✅     | -                     | rutine: ki-rutiner                       |
-| 29025  | Feil deployment av modell                               | 4   | 2   | ✅     | -                     | AT 15.37, 15.41, rutine: ki-rutiner      |
-| 29023  | Modellversjon utgår (gpt-4o utgår mars 2026)            | 1   | 3   | ✅     | -                     | AT 15.44, rutine: ki-rutiner             |
-| 28415  | KI-sjekken treffer ikke bra nok på testcases            | 3   | 3   | ✅     | -                     | AT 11.1-11.17                            |
-| 27979  | KI-sjekken gir falsk trygghet                           | 3   | 3   | ✅     | Retningslinjer i loop | AT 11.24-11.28                           |
-| 27868  | Mangelfull evaluering av språkmodell                    | 2   | 3   | ✅     | -                     | AT 15.37, 15.41, rutine: ki-rutiner      |
-| 27867  | Mangelfull eller utilstrekkelig testing                 | 5   | 2   | ✅     | -                     | AT 11.1-11.28, 11.44-11.48               |
-| 27854  | Hallusinering av fakta                                  | 4   | 2   | ✅     | -                     | rutine: ki-rutiner                       |
-| 27853  | Kompleksitet i systemprompt (overtilpasning)            | 3   | 2   | ✅     | -                     | rutine: ki-rutiner                       |
-| 27852  | Feil ved oppdatering av prompten                        | 3   | 3   | ✅     | -                     | rutine: ki-rutiner                       |
-| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | 2   | 4   | ✅     | Feedback via Skyra    | AT 11.12-11.17, 11.22-11.23, 11.44-11.48 |
-| 27546  | KI-sjekken manipuleres                                  | 2   | 4   | ✅     | Logging for kontroll  | AT 11.31-11.35, 15.40                    |
-| 27545  | Arrangør gjør ikke selvstendig vurdering                | 1   | 3   | ✅     | Retningslinjer i loop | AT 11.24-11.28                           |
-| 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | 2   | 1   | ✅     | -                     | rutine: ki-rutiner                       |
-| 27542  | Feil/dårlig veiledning pga manglende kontekstforståelse | 3   | 2   | ✅     | -                     | AT 11.31-11.35                           |
-| 27321  | Personopplysninger av særlig kategori i tekst           | 2   | 4   | ✅     | -                     | AT 11.29-11.30, 11.36-11.43, 11.44-11.48 |
+| ROS-ID | Risiko                                                  | S   | K   | Tiltak | Manuell rutine        | Referanse                                      |
+| ------ | ------------------------------------------------------- | --- | --- | ------ | --------------------- | ---------------------------------------------- |
+| 29337  | Utviklertilgang til logger tildeles for bredt           | 1   | 4   | ✅     | Rutine dokumentert    | AT 15.6.1-15.6.4, 15.7.1-15.7.3                |
+| 29330  | Logger lagres for lenge/for mye                         | 2   | 2   | ✅     | -                     | AT 15.7.3, 15.9.3, rutine: ki-rutiner          |
+| 29263  | Abuse monitoring skrus av                               | 2   | 2   | ✅     | -                     | AT 15.7.2, 15.9.2, rutine: ki-rutiner          |
+| 29262  | Ikke følger retningslinjer for Azure OpenAI             | -   | -   | ✅     | -                     | rutine: ki-rutiner                             |
+| 29025  | Feil deployment av modell                               | 4   | 2   | ✅     | -                     | AT 15.7.1, 15.9.1, rutine: ki-rutiner          |
+| 29023  | Modellversjon utgår (gpt-4o utgår mars 2026)            | 1   | 3   | ✅     | -                     | AT 15.9.4, rutine: ki-rutiner                  |
+| 28415  | KI-sjekken treffer ikke bra nok på testcases            | 3   | 3   | ✅     | -                     | AT 11.1.1-11.3.3                               |
+| 27979  | KI-sjekken gir falsk trygghet                           | 3   | 3   | ✅     | Retningslinjer i loop | AT 11.5.1-11.5.5                               |
+| 27868  | Mangelfull evaluering av språkmodell                    | 2   | 3   | ✅     | -                     | AT 15.7.1, 15.9.1, rutine: ki-rutiner          |
+| 27867  | Mangelfull eller utilstrekkelig testing                 | 5   | 2   | ✅     | -                     | AT 11.1.1-11.5.5, 11.8.1-11.8.5                |
+| 27854  | Hallusinering av fakta                                  | 4   | 2   | ✅     | -                     | rutine: ki-rutiner                             |
+| 27853  | Kompleksitet i systemprompt (overtilpasning)            | 3   | 2   | ✅     | -                     | rutine: ki-rutiner                             |
+| 27852  | Feil ved oppdatering av prompten                        | 3   | 3   | ✅     | -                     | rutine: ki-rutiner                             |
+| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | 2   | 4   | ✅     | Feedback via Skyra    | AT 11.2.5-11.3.3, 11.4.5-11.4.6, 11.8.1-11.8.5 |
+| 27546  | KI-sjekken manipuleres                                  | 2   | 4   | ✅     | Logging for kontroll  | AT 11.7.1-11.7.5, 15.8.1                       |
+| 27545  | Arrangør gjør ikke selvstendig vurdering                | 1   | 3   | ✅     | Retningslinjer i loop | AT 11.5.1-11.5.5                               |
+| 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | 2   | 1   | ✅     | -                     | rutine: ki-rutiner                             |
+| 27542  | Feil/dårlig veiledning pga manglende kontekstforståelse | 3   | 2   | ✅     | -                     | AT 11.7.1-11.7.5                               |
+| 27321  | Personopplysninger av særlig kategori i tekst           | 2   | 4   | ✅     | -                     | AT 11.6.1-11.6.2, 11.9.1-11.9.8, 11.8.1-11.8.5 |
 
 ### Oppsummering manuelle rutiner
 
@@ -67,7 +67,7 @@ Følgende risikoer har manuelle rutiner eller dokumentasjon som ligger i Loop:
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Legge inn banner i løsning at man er i prod | ✅ Implementert | AT 15.37-15.39 |
+| Legge inn banner i løsning at man er i prod | ✅ Implementert | AT 15.7.1-15.7.3 |
 | Opplæring i test før utviklertilgang tildeles | ✅ Rutine | Beskrevet i teamets rutiner |
 | Lage rutine for bruk av rollene (hva er lov/ikke lov) | ✅ Rutine | Best practice (KI-rutine for utviklere) og rollebeskrivelse ligger i teamets loop-dokument |
 | Lage egen administrasjonstilgang (Toi) som kun gir tilgang til løsningen | 🔄 Vurderes | Behovet må undersøkes nærmere |
@@ -221,10 +221,10 @@ Vi har ingen roadmap for at det kommer en ny modell ihht. retningslinjer. Vi har
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| KI-sjekken viser ikke grønn "ok" tekst når den godtar resultatet | ✅ Implementert | Reduserer sjansen for falsk trygghet. AT 11.26 |
+| KI-sjekken viser ikke grønn "ok" tekst når den godtar resultatet | ✅ Implementert | Reduserer sjansen for falsk trygghet. AT 11.5.3 |
 | Gjennomføre tester fortløpende | ✅ Implementert | Tester ved endringer, manuelle stikkprøver, Marked involveres |
 | Lage retningslinjer for bruk av KI-sjekken i fritekst | ✅ Dokumentert | Beskrevet i eget loop-dokument |
-| Legge inn tekst ved fritekstfelt som beskriver hva KI-sjekken gjør/ikke gjør | ✅ Implementert | Tydelig beskrivelse med dropdown-funksjon. AT 11.24-11.25 |
+| Legge inn tekst ved fritekstfelt som beskriver hva KI-sjekken gjør/ikke gjør | ✅ Implementert | Tydelig beskrivelse med dropdown-funksjon. AT 11.5.1-11.5.2 |
 
 ---
 
@@ -270,9 +270,9 @@ Vi har ingen roadmap for at det kommer en ny modell ihht. retningslinjer. Vi har
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Logging for etterprøving i prod | ✅ Implementert | AT 11.18-11.23 |
-| Manuell testing | ✅ Implementert | AT 11.1-11.17 |
-| Ansvarliggjøre brukere med tydelig info i løsningen | ✅ Implementert | Står tydelig ved fritekstfeltet og i egen informasjonspakke. AT 11.24-11.28 |
+| Logging for etterprøving i prod | ✅ Implementert | AT 11.4.1-11.4.6 |
+| Manuell testing | ✅ Implementert | AT 11.1.1-11.3.3 |
+| Ansvarliggjøre brukere med tydelig info i løsningen | ✅ Implementert | Står tydelig ved fritekstfeltet og i egen informasjonspakke. AT 11.5.1-11.5.5 |
 | Etablere automatiske tester basert på godkjente manuell-tester | ✅ Implementert | KiTekstvalideringParameterisertTest.kt - ROBs nøyaktighet = (antall test-prompts - antall avvik) / antall test-prompts \* 100 |
 
 ---
@@ -390,10 +390,10 @@ KI-sjekken kan være sårbar for ulike former for manipulasjon gjennom input, en
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Formidle gjennom retningslinjer at ROB kun er et verktøy som bruker må kontrollere | ✅ Implementert | Sikrer ansvarliggjøring av bruker. AT 11.24-11.25 |
-| Manipulasjonstesting av ROB i Rekrutteringstreff | ✅ Implementert | Målet er å finne svakheter som kan utnyttes. Gjennomføres manuelt. AT 11.31-11.35 |
-| La bruker overstyre ROB (menneskelig kontroll) | ✅ Implementert | Kan overvåke når folk gjør feil gjennom logging. AT 11.9-11.11 |
-| Logging av svar for å avdekke forsøk på manipulasjon | ✅ Implementert | Administrasjonskontrollen i løsningen. Kun tilgjengelig for adminbrukere. AT 15.36 |
+| Formidle gjennom retningslinjer at ROB kun er et verktøy som bruker må kontrollere | ✅ Implementert | Sikrer ansvarliggjøring av bruker. AT 11.5.1-11.5.2 |
+| Manipulasjonstesting av ROB i Rekrutteringstreff | ✅ Implementert | Målet er å finne svakheter som kan utnyttes. Gjennomføres manuelt. AT 11.7.1-11.7.5 |
+| La bruker overstyre ROB (menneskelig kontroll) | ✅ Implementert | Kan overvåke når folk gjør feil gjennom logging. AT 11.3.1-11.3.3 |
+| Logging av svar for å avdekke forsøk på manipulasjon | ✅ Implementert | Administrasjonskontrollen i løsningen. Kun tilgjengelig for adminbrukere. AT 15.6.4 |
 
 ---
 
