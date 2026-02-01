@@ -47,8 +47,6 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 ### 7. [Akseptansetest og ROS](7-akseptansetest-og-ros/)
 
 - [Akseptansetester](7-akseptansetest-og-ros/akseptansetester.md) - Manuelle tester for domeneeksperter før pilot/prodsetting
-- [ROS-tiltak](7-akseptansetest-og-ros/ros-pilot.md) - Risikovurdering og tiltak
-- [ROS-tiltak for KI](7-akseptansetest-og-ros/ros-ki-pilot.md) - Risikovurdering for KI-sjekken (ROB)
 
 ## Applikasjoner i monorepoet
 

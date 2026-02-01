@@ -346,5 +346,4 @@ I tillegg til automatiske tester:
 
 - [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md) - Teknisk dokumentasjon av KI-tekstvalideringstjenesten
 - [tilgangsstyring.md](../3-sikkerhet/tilgangsstyring.md) - Tilgangskontroll og roller
-- [ros-ki-pilot.md](../7-akseptansetest-og-ros/ros-ki-pilot.md) - ROS-analyse for KI-sjekken
 - [akseptansetester.md](../7-akseptansetest-og-ros/akseptansetester.md) - Akseptansetester inkl. KI-tester
