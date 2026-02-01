@@ -237,8 +237,8 @@ class RekrutteringstreffServiceTest {
 
     @Test
     fun `skal committe transaksjon når fullfor fullføres uten feil`() {
-        // Arrange
-        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        // Arrange - opprett treff med UTKAST status så vi kan publisere via service
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(status = RekrutteringstreffStatus.UTKAST)
         val fnr = Fødselsnummer("12345678901")
         val navIdent = "Z123456"
 

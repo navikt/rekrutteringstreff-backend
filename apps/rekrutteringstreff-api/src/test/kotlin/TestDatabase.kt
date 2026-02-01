@@ -550,4 +550,13 @@ class TestDatabase {
             rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)
         }
     }
+
+    fun avlys(treffId: TreffId, navIdent: String) {
+        dataSource.connection.use { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.AVLYST, navIdent
+            )
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.AVLYST)
+        }
+    }
 }

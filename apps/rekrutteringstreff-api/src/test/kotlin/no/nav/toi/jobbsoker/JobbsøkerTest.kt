@@ -468,4 +468,54 @@ class JobbsøkerTest {
             }
         }
     }
+
+    @Test
+    fun `legg til samme jobbsøker to ganger gir idempotent respons - kun én jobbsøker opprettes`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val fnr = Fødselsnummer("55555555555")
+        val fornavn = Fornavn("Test")
+        val etternavn = Etternavn("Person")
+        val navkontor = Navkontor("Oslo")
+        val veilederNavn = VeilederNavn("Test Veileder")
+        val veilederNavIdent = VeilederNavIdent("NAV001")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+
+        val requestBody = """
+        [{
+          "fødselsnummer" : "${fnr.asString}",
+          "fornavn" : "${fornavn.asString}",
+          "etternavn" : "${etternavn.asString}",
+          "navkontor" : "${navkontor.asString}",
+          "veilederNavn" : "${veilederNavn.asString}",
+          "veilederNavIdent" : "${veilederNavIdent.asString}"
+        }]
+        """.trimIndent()
+
+        // Første kall
+        val (_, response1, result1) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_CREATED, response1, result1)
+
+        // Andre kall med samme jobbsøker
+        val (_, response2, result2) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        // Skal også returnere success (enten 200 eller 201)
+        assertThat(response2.statusCode).isIn(HTTP_OK, HTTP_CREATED)
+
+        // Verifiser at kun én jobbsøker ble opprettet
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        assertThat(jobbsøkere).hasSize(1)
+        assertThat(jobbsøkere.first().fødselsnummer).isEqualTo(fnr)
+
+        // Verifiser at det kun er én OPPRETTET-hendelse
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        val opprettetHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.OPPRETTET }
+        assertThat(opprettetHendelser).hasSize(1)
+    }
 }

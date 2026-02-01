@@ -624,6 +624,10 @@ class RekrutteringstreffTest {
             // For å kunne fullføre må treffet være publisert først
             db.endreTilTidTilPassert(treffId, navIdent)
             db.publiser(treffId, navIdent)
+        } else if (path == "gjenapn") {
+            // For å kunne gjenåpne må treffet være avlyst først
+            db.publiser(treffId, navIdent)
+            db.avlys(treffId, navIdent)
         }
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/$path")
@@ -634,6 +638,9 @@ class RekrutteringstreffTest {
 
         val hendelser = db.hentHendelser(treffId)
         if (path == "fullfor") {
+            assertThat(hendelser).hasSize(4)
+        } else if (path == "gjenapn") {
+            // OPPRETTET + PUBLISERT + AVLYST + GJENÅPNET
             assertThat(hendelser).hasSize(4)
         } else {
             assertThat(hendelser).hasSize(2)
