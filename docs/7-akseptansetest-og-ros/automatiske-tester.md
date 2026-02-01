@@ -1,8 +1,38 @@
-# Plan for automatiske backend-tester
+# Automatiske backend-tester
 
-Dette dokumentet beskriver hvilke automatiske tester som bør implementeres basert på akseptansetestene i [akseptansetester.md](akseptansetester.md).
+Dette dokumentet gir oversikt over teststatus og definerer Trello-oppgaver for manglende tester.
 
 > **Målgruppe:** Utviklere som skal implementere backend-tester for Rekrutteringstreff.
+
+---
+
+## Teststatus etter merge med main
+
+Etter merge med `main` er mange tester nå implementert. Her er oppdatert status:
+
+### ✅ Implementerte tester
+
+| Område                                | Testfil(er)                                                   | Dekning                                                                                        |
+| ------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Jobbsøker svar ja/nei**             | `JobbsøkerInnloggetBorgerTest.kt`                             | ✅ `svar ja til invitasjon`, `svar nei til invitasjon`                                         |
+| **Endre svar**                        | `JobbsøkerInnloggetBorgerTest.kt`                             | ✅ `kan endre svar fra ja til nei`, `kan endre svar fra nei til ja`                            |
+| **Avlysning med hendelser**           | `RekrutteringstreffTest.kt`                                   | ✅ `avlys oppretter hendelse for rekrutteringstreff og alle jobbsøkere med aktivt svar ja`     |
+| **Avlysning uten svar ja**            | `RekrutteringstreffTest.kt`                                   | ✅ `avlys oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere har aktivt svar ja`   |
+| **Fullføring**                        | `RekrutteringstreffTest.kt`                                   | ✅ `fullfor oppretter hendelse...` (flere varianter)                                           |
+| **Endringsvarsel til inviterte**      | `RekrutteringstreffTest.kt`                                   | ✅ `registrer endring oppretter hendelser for publisert treff med inviterte jobbsøkere`        |
+| **Endringsvarsel til svart ja**       | `RekrutteringstreffTest.kt`                                   | ✅ `registrer endring oppretter hendelser for publisert treff med jobbsøkere som har svart ja` |
+| **Endringsvarsel IKKE til svart nei** | `RekrutteringstreffTest.kt`                                   | ✅ `registrer endring varsler ikke jobbsøkere som har svart nei`                               |
+| **Sletting av treff**                 | `RekrutteringstreffTest.kt`                                   | ✅ `slettRekrutteringstreffMedUpublisertedata`, `slett rekrutteringstreff feiler (409)...`     |
+| **Svar-service logikk**               | `JobbsøkerServiceTest.kt`                                     | ✅ `svarJaTilInvitasjon...`, `svarNeiTilInvitasjon...`, `finnJobbsøkereMedAktivtSvarJa...`     |
+| **Minside-varsel lytter**             | `MinsideVarselSvarLytterTest.kt`                              | ✅ Omfattende                                                                                  |
+| **KI tekstvalidering**                | `KiTekstvalideringTest.kt`                                    | ✅ Mange testcases                                                                             |
+| **Persondata-filtrering**             | `PersondataFilterTest.kt`                                     | ✅ Dekket                                                                                      |
+| **Synlighet**                         | `SynlighetsKomponentTest.kt`, `SynlighetsLytterTest.kt` m.fl. | ✅ Omfattende                                                                                  |
+| **Autorisasjon**                      | `*AutorisasjonsTest.kt` (flere filer)                         | ✅ Omfattende                                                                                  |
+| **Pilotkontor**                       | `PilotkontorTest.kt`                                          | ✅ Dekket                                                                                      |
+| **Duplikat-håndtering**               | `EierRepositoryTest.kt`, `AktivitetskortTest.kt`              | ✅ `leggTil legger ikke til duplikater`, duplikat-meldinger                                    |
+
+---
 
 ## Testinfrastruktur
 
@@ -21,262 +51,132 @@ Dette dokumentet beskriver hvilke automatiske tester som bør implementeres base
 - **WireMock** - Mocking av eksterne HTTP-tjenester
 - **TestRapid** - Testing av Kafka/Rapids-meldinger
 
-### Testmønster
+---
 
-```kotlin
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@WireMockTest
-class EksempelTest {
-    private val authServer = MockOAuth2Server()
-    private val db = TestDatabase()
+## 📋 Trello-oppgaver
 
-    @BeforeAll
-    fun setUp() { authServer.start(); app.start() }
-
-    @AfterEach
-    fun reset() { db.slettAlt() }
-}
-```
+Kopier disse kortene til Trello. Hver oppgave er selvstendig og kan utføres av hvem som helst.
 
 ---
 
-## Prioritert testplan
+### 🔴 PRIORITET 1: Sikkerhetskritiske (ROS-tiltak)
 
-### 🔴 Prioritet 1: Sikkerhetskritiske tester
+#### TRELLO-1: KI bypass-sikkerhet tester
 
-Disse testene må implementeres først da de dekker sikkerhetskrav fra ROS-analysen.
+**Tittel:** Implementer KiBypassSikkerhetTest.kt
 
-#### 11.8 KI bypass-sikkerhet (ROS 27547, 27321, 27867)
+**Beskrivelse:**
+Opprett ny testfil i `rekrutteringstreff-api/.../ki/`-mappen som verifiserer at KI-valideringen ikke kan omgås.
 
-| AT-ref | Testcase                                                                                 | Testfil                    | Status     |
-| ------ | ---------------------------------------------------------------------------------------- | -------------------------- | ---------- |
-| 11.8.1 | Autolagring med diskriminerende tekst - verifiser at autolagring venter på KI-validering | `KiBypassSikkerhetTest.kt` | ❌ Mangler |
-| 11.8.2 | API-kall uten validering - send lagre-request uten KI-sjekk, forvent 400/422             | `KiBypassSikkerhetTest.kt` | ❌ Mangler |
-| 11.8.3 | API-kall med diskriminerende tekst uten "Lagre likevel" - forvent avvisning              | `KiBypassSikkerhetTest.kt` | ❌ Mangler |
-| 11.8.4 | Verifiser at backend krever valideringsresultat                                          | `KiBypassSikkerhetTest.kt` | ❌ Mangler |
-| 11.8.5 | Race condition ved rask redigering                                                       | `KiBypassSikkerhetTest.kt` | ❌ Mangler |
+**Tester å implementere:**
 
-**Implementasjonsnotat:**
+- [ ] **11.8.1** - Autolagring med diskriminerende tekst venter på KI-validering
+- [ ] **11.8.2** - API-kall uten KI-validering gir feilkode (400/422)
+- [ ] **11.8.3** - Diskriminerende tekst uten "Lagre likevel"-flagg avvises
+- [ ] **11.8.4** - Backend krever valideringsresultat før lagring tillates
+- [ ] **11.8.5** - Race condition ved rask redigering håndteres korrekt
 
-```kotlin
-// Eksempel på test for 11.8.2
-@Test
-fun `lagre tittel uten KI-validering skal gi 400`() {
-    val treffId = db.opprettRekrutteringstreffIDatabase()
+**ROS-referanse:** ROS 27547, 27321, 27867
 
-    val response = fuel.patch("/api/rekrutteringstreff/$treffId")
-        .header("Authorization", authServer.lagToken())
-        .body("""{"tittel": "Kun for unge under 30 år"}""")
-        .response()
-
-    assertThat(response.statusCode).isEqualTo(400)
-}
-```
-
-#### 5.4 Dobbel invitasjon
-
-| AT-ref | Testcase                                                      | Testfil                           | Status     |
-| ------ | ------------------------------------------------------------- | --------------------------------- | ---------- |
-| 5.4.1  | Trykk inviter to ganger raskt - kun én invitasjon registreres | `InvitasjonFeilhåndteringTest.kt` | ❌ Mangler |
-| 5.4.2  | Inviter jobbsøker som blir ikke-synlig                        | `InvitasjonFeilhåndteringTest.kt` | ❌ Mangler |
+**Labels:** `backend`, `sikkerhet`, `ros-tiltak`, `prioritet-1`
 
 ---
 
-### 🟠 Prioritet 2: Kjerneforretningslogikk
+#### TRELLO-2: Dobbel invitasjon-beskyttelse
 
-#### 3.1 Publisering av treff
+**Tittel:** Test for dobbel invitasjon (race condition)
 
-| AT-ref | Testcase                                       | Testfil                  | Status               |
-| ------ | ---------------------------------------------- | ------------------------ | -------------------- |
-| 3.1.1  | Publiser treff - status endres til "Publisert" | `TreffLivssyklusTest.kt` | ❌ Mangler           |
-| 3.1.2  | Søk etter publisert treff - treffet dukker opp | `TreffLivssyklusTest.kt` | ✅ Delvis (hentAlle) |
-| 3.1.3  | Åpne publisert treff - kan se detaljer         | `TreffLivssyklusTest.kt` | ✅ Eksisterer        |
+**Beskrivelse:**
+Legg til tester som verifiserer at systemet håndterer samtidige invitasjoner korrekt.
 
-#### 6.1 Jobbsøker svarer
+**Tester å implementere:**
 
-| AT-ref | Testcase                       | Testfil                | Status     |
-| ------ | ------------------------------ | ---------------------- | ---------- |
-| 6.1.1  | Svar "Ja" - status oppdateres  | `JobbsøkerSvarTest.kt` | ❌ Mangler |
-| 6.1.5  | Svar "Nei" - status oppdateres | `JobbsøkerSvarTest.kt` | ❌ Mangler |
-| 6.1.8  | Endre svar fra ja til nei      | `JobbsøkerSvarTest.kt` | ❌ Mangler |
-| 6.1.9  | Endre svar fra nei til ja      | `JobbsøkerSvarTest.kt` | ❌ Mangler |
+- [ ] **5.4.1** - To samtidige invitasjoner registrerer kun én invitasjon (idempotent)
+- [ ] **5.4.2** - Invitasjon av jobbsøker som nettopp ble ikke-synlig gir passende feilmelding
+- [ ] Legg til hjelpemetode `opprettPublisertTreff()` i `TestDatabase.kt` om den ikke finnes
 
-#### 8.1 Avlyse treff
+**Plassering:** Utvid `JobbsøkerTest.kt` eller opprett ny `InvitasjonFeilhåndteringTest.kt`
 
-| AT-ref | Testcase                                 | Testfil            | Status     |
-| ------ | ---------------------------------------- | ------------------ | ---------- |
-| 8.1.1  | Avlys treff - status endres til "Avlyst" | `AvlysningTest.kt` | ❌ Mangler |
-| 8.1.2  | Svart ja får avlysningsvarsel            | `AvlysningTest.kt` | ❌ Mangler |
-| 8.1.4  | Invitert (ikke svart) får IKKE varsel    | `AvlysningTest.kt` | ❌ Mangler |
-| 8.1.6  | Svart nei får IKKE varsel                | `AvlysningTest.kt` | ❌ Mangler |
-
-#### 7.2 Varselmottakere ved endring
-
-| AT-ref | Testcase                                    | Testfil                | Status     |
-| ------ | ------------------------------------------- | ---------------------- | ---------- |
-| 7.2.1  | Invitert (ikke svart) mottar endringsvarsel | `EndringVarselTest.kt` | ❌ Mangler |
-| 7.2.2  | Svart ja mottar endringsvarsel              | `EndringVarselTest.kt` | ❌ Mangler |
-| 7.2.3  | Svart nei skal IKKE motta varsel            | `EndringVarselTest.kt` | ❌ Mangler |
+**Labels:** `backend`, `sikkerhet`, `concurrency`, `prioritet-1`
 
 ---
 
-### 🟡 Prioritet 3: Validering og feilhåndtering
+### 🟡 PRIORITET 2: Validering og edge cases
 
-#### 1.1 Opprettelse med validering
+#### TRELLO-3: Svarfrist-validering
 
-| AT-ref | Testcase                        | Testfil                                  | Status        |
-| ------ | ------------------------------- | ---------------------------------------- | ------------- |
-| 1.1.1  | Opprett med påkrevde felter     | `RekrutteringstreffTest.kt`              | ✅ Eksisterer |
-| 1.1.2  | Opprett med alle felter         | `RekrutteringstreffTest.kt`              | ✅ Delvis     |
-| 1.1.3  | Ugyldig data - valideringsfeil  | `RekrutteringstreffValideringTest.kt`    | ❌ Mangler    |
-| 1.1.4  | Andre ser ikke upublisert treff | `RekrutteringstreffAutorisasjonsTest.kt` | ❌ Mangler    |
+**Tittel:** Test at svar etter svarfrist avvises
 
-#### 1.3 Sletting av kladd
+**Beskrivelse:**
+Verifiser at jobbsøkere ikke kan svare på invitasjoner etter at svarfristen har utløpt.
 
-| AT-ref | Testcase                           | Testfil                             | Status     |
-| ------ | ---------------------------------- | ----------------------------------- | ---------- |
-| 1.3.1  | Slett kladd-treff                  | `RekrutteringstreffSlettingTest.kt` | ❌ Mangler |
-| 1.3.2  | Bekreft sletting - treffet fjernes | `RekrutteringstreffSlettingTest.kt` | ❌ Mangler |
+**Tester å implementere:**
 
-#### 2.4 Feilhåndtering arbeidsgiver
+- [ ] **6.2.2** - Forsøk på å svare etter svarfrist gir feilkode (400/403)
+- [ ] Legg til hjelpemetode `settSvarfrist()` i `TestDatabase.kt`
 
-| AT-ref | Testcase                             | Testfil                         | Status     |
-| ------ | ------------------------------------ | ------------------------------- | ---------- |
-| 2.4.1  | Ugyldig orgnummer - feilmelding      | `ArbeidsgiverValideringTest.kt` | ❌ Mangler |
-| 2.4.2  | Nettverksfeil ved oppslag (WireMock) | `ArbeidsgiverValideringTest.kt` | ❌ Mangler |
+**Plassering:** `JobbsøkerInnloggetBorgerTest.kt`
 
-#### 6.2-6.3 Tilstander og feil
-
-| AT-ref | Testcase                                     | Testfil                | Status     |
-| ------ | -------------------------------------------- | ---------------------- | ---------- |
-| 6.2.2  | Åpne etter svarfrist utløpt - kan ikke svare | `JobbsøkerSvarTest.kt` | ❌ Mangler |
-| 6.3.1  | Ugyldig treff-ID - 404                       | `JobbsøkerSvarTest.kt` | ❌ Mangler |
-| 6.3.2  | Trykk svar to ganger - kun ett svar          | `JobbsøkerSvarTest.kt` | ❌ Mangler |
+**Labels:** `backend`, `validering`, `prioritet-2`
 
 ---
 
-### 🟢 Prioritet 4: Allerede dekket
+#### TRELLO-4: Ugyldig treff-ID håndtering
 
-Disse testene eksisterer allerede med god dekning:
+**Tittel:** Test 404 for ugyldig treff-ID
 
-| Område                        | Testfil(er)                              | Dekning          |
-| ----------------------------- | ---------------------------------------- | ---------------- |
-| 4.2-4.8 Synlighetsregler      | `SynlighetsmotorTest.kt`                 | ✅ 20+ testcases |
-| 15.1-15.3 Roller/autorisasjon | `*AutorisasjonsTest.kt`                  | ✅ Omfattende    |
-| 15.5-15.6 Pilotkontor         | `PilotkontorTest.kt`                     | ✅ Dekket        |
-| 11.1-11.2 KI diskriminering   | `KiTekstvalideringParameterisertTest.kt` | ✅ 40+ prompts   |
-| 11.9 Persondata-filtrering    | `PersondataFilterTest.kt`                | ✅ Dekket        |
-| 11.4 KI-logg                  | `KiLoggRepositoryTest.kt`                | ✅ Dekket        |
+**Beskrivelse:**
+Verifiser at API returnerer 404 for ikke-eksisterende treff-IDer.
 
----
+**Tester å implementere:**
 
-## Nye testfiler å opprette
+- [ ] **6.3.1** - GET/POST til ukjent treff-ID gir 404
 
-```
-rekrutteringstreff-api/src/test/kotlin/no/nav/toi/
-├── ki/
-│   └── KiBypassSikkerhetTest.kt          # Prioritet 1: 11.8.x
-├── jobbsoker/
-│   ├── JobbsøkerSvarTest.kt              # Prioritet 2: 6.1.x, 6.2.x, 6.3.x
-│   └── InvitasjonFeilhåndteringTest.kt   # Prioritet 1: 5.4.x
-├── rekrutteringstreff/
-│   ├── TreffLivssyklusTest.kt            # Prioritet 2: 3.1.x
-│   ├── AvlysningTest.kt                  # Prioritet 2: 8.1.x
-│   ├── RekrutteringstreffValideringTest.kt   # Prioritet 3: 1.1.3
-│   └── RekrutteringstreffSlettingTest.kt     # Prioritet 3: 1.3.x
-├── arbeidsgiver/
-│   └── ArbeidsgiverValideringTest.kt     # Prioritet 3: 2.4.x
-└── varsel/
-    └── EndringVarselTest.kt              # Prioritet 2: 7.2.x
-```
+**Labels:** `backend`, `feilhåndtering`, `prioritet-2`
 
 ---
 
-## Utvidelser til TestDatabase
+#### TRELLO-5: Dobbelt svar-håndtering
 
-For å forenkle testoppsett, legg til disse hjelpemetodene i `TestDatabase.kt`:
+**Tittel:** Test at dobbelt svar kun registreres én gang
 
-```kotlin
-fun opprettPublisertTreff(
-    eier: String = "A000001",
-    tittel: String = "Test-treff"
-): UUID {
-    val treffId = opprettRekrutteringstreffIDatabase(eier, tittel)
-    publiserTreff(treffId)
-    return treffId
-}
+**Beskrivelse:**
+Verifiser at systemet er idempotent ved gjentatte svar fra samme jobbsøker.
 
-fun opprettTreffMedInviterteJobbsøkere(
-    antall: Int = 3
-): Pair<UUID, List<UUID>> {
-    val treffId = opprettPublisertTreff()
-    val personTreffIds = leggTilJobbsøkereMedHendelse(treffId, antall)
-    inviterJobbsøkere(personTreffIds)
-    return treffId to personTreffIds
-}
+**Tester å implementere:**
 
-fun settSvarfrist(treffId: UUID, svarfrist: LocalDateTime) {
-    dataSource.connection.use { conn ->
-        conn.prepareStatement(
-            "UPDATE rekrutteringstreff SET svarfrist = ? WHERE id = ?"
-        ).use { stmt ->
-            stmt.setObject(1, svarfrist)
-            stmt.setObject(2, treffId)
-            stmt.executeUpdate()
-        }
-    }
-}
+- [ ] **6.3.2** - To raske "Svar ja"-kall registrerer kun én hendelse
 
-fun simulerJobbsøkerSvar(personTreffId: UUID, svar: Svar) {
-    // Oppdater status basert på svar
-}
-```
+**Plassering:** `JobbsøkerInnloggetBorgerTest.kt`
+
+**Labels:** `backend`, `idempotens`, `prioritet-2`
 
 ---
 
-## Integrasjonstester mot Rapids
+#### TRELLO-6: Arbeidsgiver validering
 
-For varsler og aktivitetskort-synkronisering, bruk `TestRapid`:
+**Tittel:** Test feilhåndtering ved oppslag av arbeidsgiver
 
-```kotlin
-class VarselRapidsTest {
-    private val rapid = TestRapid()
+**Beskrivelse:**
+Verifiser at systemet håndterer ugyldige orgnumre og nettverksfeil ved BRREG-oppslag.
 
-    @Test
-    fun `avlysning sender varsel kun til svart ja`() {
-        // Setup: Treff med 3 jobbsøkere (invitert, svart ja, svart nei)
-        val treffId = setupTreffMedJobbsøkere()
+**Tester å implementere:**
 
-        // Action: Avlys treffet
-        avlysTreff(treffId)
+- [ ] **2.4.1** - Ugyldig orgnummer (feil format) gir valideringsfeil
+- [ ] **2.4.2** - Nettverksfeil ved BRREG-oppslag håndteres gracefully (bruk WireMock)
 
-        // Assert: Kun én melding sendt (til svart ja)
-        val meldinger = rapid.inspektør.size
-        assertThat(meldinger).isEqualTo(1)
+**Plassering:** Utvid `ArbeidsgiverTest.kt` eller opprett `ArbeidsgiverValideringTest.kt`
 
-        val melding = rapid.inspektør.message(0)
-        assertThat(melding["@event_name"].asText()).isEqualTo("varsel.sendt")
-    }
-}
-```
+**Labels:** `backend`, `validering`, `integrasjon`, `prioritet-2`
 
 ---
 
 ## Oppsummering
 
-| Prioritet                  | Antall tester | Status               |
-| -------------------------- | ------------- | -------------------- |
-| 🔴 Kritisk (sikkerhet)     | 7             | ❌ 0/7 implementert  |
-| 🟠 Høy (forretningslogikk) | 13            | ❌ 1/13 implementert |
-| 🟡 Medium (validering)     | 10            | ❌ 2/10 implementert |
-| 🟢 Lav (allerede dekket)   | ~80           | ✅ Eksisterer        |
-
-**Neste steg:**
-
-1. Implementer `KiBypassSikkerhetTest.kt` (kritisk for ROS-tiltak)
-2. Utvid `TestDatabase.kt` med nye fixtures
-3. Implementer livssyklus-tester (publisering, avlysning)
-4. Legg til jobbsøker svar-flyt tester
+| Prioritet              | Oppgaver              | Estimat   |
+| ---------------------- | --------------------- | --------- |
+| 🔴 Kritisk (sikkerhet) | TRELLO-1, TRELLO-2    | 1-2 dager |
+| 🟡 Medium (validering) | TRELLO-3 til TRELLO-6 | 1 dag     |
 
 ---
 
