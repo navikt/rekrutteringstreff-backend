@@ -78,6 +78,8 @@ Opprett ny testfil i `rekrutteringstreff-api/.../ki/`-mappen som verifiserer at 
 
 **ROS-referanse:** ROS 27547, 27321, 27867
 
+**Kobling:** Kan kobles til eksisterende Trello-oppgave for KI bypass-sikkerhet.
+
 **Labels:** `backend`, `sikkerhet`, `ros-tiltak`, `prioritet-1`
 
 ---
@@ -153,30 +155,22 @@ Verifiser at systemet er idempotent ved gjentatte svar fra samme jobbsøker.
 
 ---
 
-#### TRELLO-6: Arbeidsgiver validering
-
-**Tittel:** Test feilhåndtering ved oppslag av arbeidsgiver
-
-**Beskrivelse:**
-Verifiser at systemet håndterer ugyldige orgnumre og nettverksfeil ved BRREG-oppslag.
-
-**Tester å implementere:**
-
-- [ ] **2.4.1** - Ugyldig orgnummer (feil format) gir valideringsfeil
-- [ ] **2.4.2** - Nettverksfeil ved BRREG-oppslag håndteres gracefully (bruk WireMock)
-
-**Plassering:** Utvid `ArbeidsgiverTest.kt` eller opprett `ArbeidsgiverValideringTest.kt`
-
-**Labels:** `backend`, `validering`, `integrasjon`, `prioritet-2`
-
----
-
 ## Oppsummering
 
 | Prioritet              | Oppgaver              | Estimat   |
 | ---------------------- | --------------------- | --------- |
 | 🔴 Kritisk (sikkerhet) | TRELLO-1, TRELLO-2    | 1-2 dager |
-| 🟡 Medium (validering) | TRELLO-3 til TRELLO-6 | 1 dag     |
+| 🟡 Medium (validering) | TRELLO-3 til TRELLO-5 | 1 dag     |
+
+---
+
+## Utenfor scope for rekrutteringstreff-backend
+
+Følgende fra akseptansetestene dekkes **ikke** av backend-tester her:
+
+| AT-ref      | Område                  | Grunn                                                                                                                                                                                             |
+| ----------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.4.1-2.4.2 | Arbeidsgiver validering | Arbeidsgiversøk går via **pam-search** (ekstern tjeneste). Frontend kaller pam-search direkte, ikke via rekrutteringstreff-api. Se [enhetsregisteret.md](../4-integrasjoner/enhetsregisteret.md). |
 
 ---
 
