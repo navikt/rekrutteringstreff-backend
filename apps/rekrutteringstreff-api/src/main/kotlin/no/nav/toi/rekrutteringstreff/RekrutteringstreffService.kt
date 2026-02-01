@@ -32,6 +32,19 @@ class RekrutteringstreffService(
     private val logger: Logger = log
 
     fun avlys(treffId: TreffId, avlystAv: String) {
+        val treff = rekrutteringstreffRepository.hent(treffId)
+            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
+
+        if (treff.status == RekrutteringstreffStatus.FULLFØRT) {
+            logger.warn("Forsøk på å avlyse fullført rekrutteringstreff. treffId: $treffId")
+            throw UlovligOppdateringException("Kan ikke avlyse rekrutteringstreff som allerede er fullført")
+        }
+
+        if (treff.status == RekrutteringstreffStatus.AVLYST) {
+            logger.warn("Forsøk på å avlyse allerede avlyst rekrutteringstreff. treffId: $treffId")
+            throw UlovligOppdateringException("Rekrutteringstreff er allerede avlyst")
+        }
+
         leggTilHendelseForTreffMedJobbsøkerhendelserOgEndreStatusPåTreff(
             treffId,
             avlystAv,
@@ -43,8 +56,13 @@ class RekrutteringstreffService(
     }
 
     fun publiser(treffId: TreffId, navIdent: String) {
-        rekrutteringstreffRepository.hent(treffId)
+        val treff = rekrutteringstreffRepository.hent(treffId)
             ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
+
+        if (treff.status != RekrutteringstreffStatus.UTKAST) {
+            logger.warn("Forsøk på å publisere rekrutteringstreff som ikke er utkast. treffId: $treffId status: ${treff.status}")
+            throw UlovligOppdateringException("Kan kun publisere rekrutteringstreff som er i UTKAST status")
+        }
 
         dataSource.executeInTransaction { connection ->
             rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.PUBLISERT, navIdent)
@@ -268,6 +286,14 @@ class RekrutteringstreffService(
     }
 
     fun gjenåpne(treffId: TreffId, navIdent: String) {
+        val treff = rekrutteringstreffRepository.hent(treffId)
+            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
+
+        if (treff.status != RekrutteringstreffStatus.AVLYST) {
+            logger.warn("Forsøk på å gjenåpne rekrutteringstreff som ikke er avlyst. treffId: $treffId status: ${treff.status}")
+            throw UlovligOppdateringException("Kan kun gjenåpne rekrutteringstreff som er i AVLYST status")
+        }
+
         dataSource.executeInTransaction { connection ->
             rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.GJENÅPNET, navIdent)
             rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)

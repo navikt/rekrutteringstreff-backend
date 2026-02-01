@@ -1,14 +1,6 @@
 # Automatiske backend-tester
 
-Dette dokumentet gir oversikt over teststatus og definerer Trello-oppgaver for manglende tester.
-
-> **Målgruppe:** Utviklere som skal implementere backend-tester for Rekrutteringstreff.
-
----
-
-## Teststatus etter merge med main
-
-Etter merge med `main` er mange tester nå implementert. Her er oppdatert status:
+Dette dokumentet gir oversikt over teststatus og definerer oppgaver for manglende tester.
 
 ### ✅ Implementerte tester
 
@@ -43,3 +35,62 @@ Etter merge med `main` er mange tester nå implementert. Her er oppdatert status
 | **Opprett treff validering**           | `RekrutteringstreffTest.kt`                                          | ✅ AT 1.1.3 - Ugyldig data/JSON gir 400 feilkode                                               |
 | **Jobbsøker uten tilgang til treff**   | `JobbsøkerInnloggetBorgerTest.kt`                                    | ✅ AT 6.2.3 - Jobbsøker som ikke er lagt til får 404                                           |
 | **Publiser treff**                     | `RekrutteringstreffTest.kt`                                          | ✅ AT 3.1.1 - Publisering endrer status fra UTKAST til PUBLISERT                               |
+
+---
+
+## ❌ Manglende tester – anbefalt å implementere
+
+Følgende akseptansetester har backend-logikk som bør testes automatisk, men som ikke er dekket i dag:
+
+### 1. Tilstandsoverganger (høy prioritet)
+
+| AT-ref | Beskrivelse                                        | Anbefalt testfil            | Kompleksitet |
+| ------ | -------------------------------------------------- | --------------------------- | ------------ |
+| 9.1.x  | `fullfor` skal feile hvis `tilTid` ikke er passert | `RekrutteringstreffTest.kt` | Lav          |
+| -      | `fullfor` skal feile for AVLYST treff              | `RekrutteringstreffTest.kt` | Lav          |
+| -      | `avlys` skal feile for FULLFØRT treff              | `RekrutteringstreffTest.kt` | Lav          |
+| -      | `gjenapn` skal kun fungere for AVLYST treff        | `RekrutteringstreffTest.kt` | Lav          |
+
+### 2. Arbeidsgiver-validering (middels prioritet)
+
+| AT-ref | Beskrivelse                                     | Anbefalt testfil      | Kompleksitet |
+| ------ | ----------------------------------------------- | --------------------- | ------------ |
+| 2.4.1  | Legg til ugyldig orgnummer → 400 Bad Request    | `ArbeidsgiverTest.kt` | Lav          |
+| 2.4.1  | Legg til orgnummer med feil format gir feilkode | `ArbeidsgiverTest.kt` | Lav          |
+
+### 3. Jobbsøker API-idempotens (middels prioritet)
+
+| AT-ref | Beskrivelse                                                     | Anbefalt testfil   | Kompleksitet |
+| ------ | --------------------------------------------------------------- | ------------------ | ------------ |
+| 4.1.3  | Legg til samme jobbsøker to ganger via API → idempotent respons | `JobbsøkerTest.kt` | Lav          |
+
+### 4. Hendelseslogg-autorisasjon (middels prioritet)
+
+| AT-ref | Beskrivelse                                             | Anbefalt testfil       | Kompleksitet |
+| ------ | ------------------------------------------------------- | ---------------------- | ------------ |
+| 14.1.8 | Veileder kan IKKE hente hendelseslogg for andres treff  | `AutorisasjonsTest.kt` | Lav          |
+| 14.1.8 | Markedskontakt (ikke eier) kan IKKE hente hendelseslogg | `AutorisasjonsTest.kt` | Lav          |
+
+### 5. KI bypass-sikkerhet (høy prioritet – ROS 27547)
+
+| AT-ref | Beskrivelse                                                             | Anbefalt testfil         | Kompleksitet |
+| ------ | ----------------------------------------------------------------------- | ------------------------ | ------------ |
+| 11.8.2 | API-kall uten KI-validering avvises                                     | `KiAutorisasjonsTest.kt` | Middels      |
+| 11.8.3 | Lagring med `flaggAdvarsel=true` uten `lagreLikevel` gir feil           | `KiAutorisasjonsTest.kt` | Middels      |
+| 11.8.4 | Backend krever gyldig KI-valideringsresultat for å lagre tittel/innlegg | `KiAutorisasjonsTest.kt` | Høy          |
+
+### 6. Pilotkontor-bytte (lav prioritet)
+
+| AT-ref | Beskrivelse                                                 | Anbefalt testfil     | Kompleksitet |
+| ------ | ----------------------------------------------------------- | -------------------- | ------------ |
+| 15.6.1 | Bytte fra pilotkontor til ikke-pilotkontor → mister tilgang | `PilotkontorTest.kt` | Middels      |
+| 15.6.2 | Bytte fra ikke-pilotkontor til pilotkontor → får tilgang    | `PilotkontorTest.kt` | Middels      |
+
+---
+
+## Anbefalte neste steg
+
+1. **Start med tilstandsoverganger** – enkle tester med høy verdi for å sikre at ugyldige operasjoner blokkeres
+2. **KI bypass-sikkerhet** – kritisk for ROS, bør prioriteres
+3. **Hendelseslogg-autorisasjon** – viktig for tilgangsstyring
+4. **Arbeidsgiver-validering** – lav innsats, god dekning

@@ -165,6 +165,10 @@ class App(
             ctx.status(409).json(mapOf("feil" to (e.message ?: "Konflikt ved oppdatering")))
         }
 
+        javalin.exception(IllegalArgumentException::class.java) { e, ctx ->
+            ctx.status(400).json(mapOf("feil" to (e.message ?: "Ugyldig input")))
+        }
+
         javalin.exception(SvarfristUtløptException::class.java) { e, ctx ->
             ctx.status(400).json(mapOf("feil" to (e.message ?: "Svarfristen har utløpt")))
         }

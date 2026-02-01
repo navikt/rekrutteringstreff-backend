@@ -396,4 +396,118 @@ class ArbeidsgiverTest {
             is Success -> assertThat(hendRes.value.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET.name }).isTrue()
         }
     }
+
+    // --- VALIDERING AV ORGNUMMER ---
+
+    @Test
+    fun `legg til arbeidsgiver med ugyldig orgnummer gir 400`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        // Orgnummer med feil antall siffer (8 i stedet for 9)
+        val requestBody = """
+            {
+              "organisasjonsnummer": "12345678",
+              "navn": "Ugyldig Firma AS"
+            }
+        """.trimIndent()
+
+        val (_, response, _) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(400)
+        assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+    }
+
+    @Test
+    fun `legg til arbeidsgiver med orgnummer med bokstaver gir 400`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        // Orgnummer med bokstaver
+        val requestBody = """
+            {
+              "organisasjonsnummer": "12345678A",
+              "navn": "Ugyldig Firma AS"
+            }
+        """.trimIndent()
+
+        val (_, response, _) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(400)
+        assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+    }
+
+    @Test
+    fun `legg til arbeidsgiver uten orgnummer gir 400`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        // Mangler organisasjonsnummer
+        val requestBody = """
+            {
+              "navn": "Firma Uten Orgnummer AS"
+            }
+        """.trimIndent()
+
+        val (_, response, _) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(400)
+        assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+    }
+
+    @Test
+    fun `legg til arbeidsgiver uten navn gir 400`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        // Mangler navn
+        val requestBody = """
+            {
+              "organisasjonsnummer": "999888777"
+            }
+        """.trimIndent()
+
+        val (_, response, _) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(400)
+        assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+    }
+
+    @Test
+    fun `legg til arbeidsgiver med tomt orgnummer gir 400`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        val requestBody = """
+            {
+              "organisasjonsnummer": "",
+              "navn": "Tomt Orgnummer AS"
+            }
+        """.trimIndent()
+
+        val (_, response, _) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver")
+            .body(requestBody)
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(400)
+        assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+    }
 }
