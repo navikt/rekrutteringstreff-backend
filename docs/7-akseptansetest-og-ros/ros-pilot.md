@@ -36,7 +36,7 @@ Dette dokumentet viser hvilke risikoer fra ROS-analysen som er dekket av aksepta
 | 27381  | Deltaker mottar samme varsel gjentatte ganger | ✅     | -                             | AT 5.4.1                            |
 | 27379  | Menneskelig feil - feil person får invitasjon | ⚠️     | Manuell kontroll              | -                                   |
 | 27378  | Teknisk feil - feil person får invitasjon     | ✅     | -                             | AT 4.1.1-4.1.5, 4.7.1, 5.1.1-5.1.8  |
-| 27275  | Usynlige kandidater ikke skjult               | ✅     | -                             | AT 4.2.1-4.8.5                      |
+| 27275  | Usynlige kandidater ikke skjult               | ✅     | -                             | AT 4.2.1-4.8.4                      |
 | 27273  | Jobbøker får feil/mangelfull info pga feil    | ✅     | Manuell kontroll              | AT 7.1.1-7.4.3, 5.5.1-5.5.3         |
 | 27227  | Behandler flere opplysninger enn nødvendig    | ✅     | -                             | sysdok: arkitektur                  |
 | 27225  | Ansatte får ikke tilgang                      | ✅     | -                             | AT 15.5.1-15.6.4                    |
@@ -212,7 +212,7 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 | Tiltak | Test-ID | Status | Beskrivelse |
 |--------|---------|--------|-------------|
 | Manipulasjonstesting/penetrasjonstesting av ROB | 11.7.1-11.7.5 | ✅ Testet | Målet er å finne svakheter som kan utnyttes av en angriper eller som kan føre til utilsiktet feilopppørsel. Tester hvordan systemet reagerer når data eller brukerhandlinger manipuleres på uventede måter. Gjennomføres manuelt. |
-| Logging av svar for administrasjonskontroll | 11.4.1-11.4.6 | ✅ Testet | Vi logger svarene som genereres for å avdekke eventuelle manipulasjoner gjennom administrasjonskontrollen i løsningen. Vi overvåker og kontrollerer hvordan KI-en reagerer kontinuerlig. Forenkler prosessen med å gjøre kontroll på vurderinger og sikrer sporbarhet i løsningen. (Kun tilgjengelig for adminbrukere/utviklertilgang) |
+| Logging av svar for administrasjonskontroll | 11.4.1-11.4.8 | ✅ Testet | Vi logger svarene som genereres for å avdekke eventuelle manipulasjoner gjennom administrasjonskontrollen i løsningen. Vi overvåker og kontrollerer hvordan KI-en reagerer kontinuerlig. Forenkler prosessen med å gjøre kontroll på vurderinger og sikrer sporbarhet i løsningen. (Kun tilgjengelig for adminbrukere/utviklertilgang) |
 | Bruker kan overstyre KI-sjekken | 11.3.1-11.3.3 | ✅ Testet | Vi lar bruker overstyre KI-sjekken for å ivareta menneskelig kontroll. Vi overstyrer ikke at noen skriver feil. Trenger ikke å manipulere ROB for å endre teksten, men vi kan overvåke når folk gjør feil gjennom logging. |
 | Retningslinjer om at ROB er et verktøy | - | 📝 Dokumentert | Formidle gjennom retningslinjer i løsningen at ROB kun er et verktøy som bruker må kontrollere. Tiltak for å sikre ansvarliggjøring av bruker - menneskelig kontroll. Utarbeide og implementere rutiner rettet mot brukere for bruk av KI-verktøyet. Dette sikrer enhetlig praksis, reduserer feilrisiko og legger til rette for oppfølging. |
 
@@ -331,9 +331,9 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 **Tiltak:**
 | Tiltak | Test-ID | Status | Beskrivelse |
 |--------|---------|--------|-------------|
-| Synlighetsreglene skjuler CV | 4.2.1-4.8.5 | ✅ Testet | Ivaretatt gjennom kandidatindeksen. Det er dette som fjerner/filtrerer vekk usynlige kandidater. |
+| Synlighetsreglene skjuler CV | 4.2.1-4.8.4 | ✅ Testet | Ivaretatt gjennom kandidatindeksen. Det er dette som fjerner/filtrerer vekk usynlige kandidater. |
 
-**Relaterte tester:** [4.2.1-4.8.5](akseptansetester.md#synlighet)
+**Relaterte tester:** [4.2.1-4.8.4](akseptansetester.md#synlighet)
 
 ---
 
@@ -483,7 +483,7 @@ Følgende risikoer krever manuelle rutiner eller dokumentasjon som ikke er i sys
 | Test diskriminering på etnisitet (innlegg) | 11.2.5 | ✅ Testet | - |
 | Test subtil diskriminering | 11.7.2 | ✅ Testet | - |
 | Test diskriminering på annet språk | 11.7.3 | ✅ Testet | - |
-| Modellkontroll gjennom KI-logg | 11.4.1-11.4.6 | ✅ Testet | Vi gjennomfører modellkontroll gjennom tester/stikkprøver av versjoner av Azure OpenAI. Gjennomføres manuelt og automatisk. |
+| Modellkontroll gjennom KI-logg | 11.4.1-11.4.8 | ✅ Testet | Vi gjennomfører modellkontroll gjennom tester/stikkprøver av versjoner av Azure OpenAI. Gjennomføres manuelt og automatisk. |
 | Retningslinjer for fritekstfelt | - | 📝 Dokumentert | Vi viser retningslinjer for hva fritekstfeltet skal brukes til. Bruker får informasjon om hvilke opplysninger som ikke skal legges inn i fritekstfeltet, at brukeren selv er ansvarlig for innholdet som registreres, og at kunstig intelligens (KI) benyttes i løsningen. |
 | Rutiner for bruk av KI-verktøy | - | 📝 Rutine | Utarbeide og implementere rutiner rettet mot brukere for bruk av KI-verktøyet. Finnes i eget Loop-dokument. Dette sikrer enhetlig praksis, reduserer feilrisiko og legger til rette for oppfølging. |
 | Feedback fra brukere | - | 📝 Brukertest | - |

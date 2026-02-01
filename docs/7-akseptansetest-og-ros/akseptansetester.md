@@ -82,11 +82,11 @@ Markedskontakt legger til arbeidsgivere på treffet. Dette kan gjøres både fø
 
 ### I kladd-modus (før publisering)
 
-| #     | Test                                           | Forventet resultat                     | ✅❌ | Notat |
-| ----- | ---------------------------------------------- | -------------------------------------- | ---- | ----- |
-| 2.1.1 | Markedskontakt - Legg til arbeidsgiver via søk | Arbeidsgiver vises i listen på treffet |      |       |
-| 2.1.2 | Markedskontakt - Legg til flere arbeidsgivere  | Alle vises i listen                    |      |       |
-| 2.1.3 | Markedskontakt - Fjern arbeidsgiver            | Arbeidsgiver fjernes fra listen        |      |       |
+| #     | Test                                          | Forventet resultat                     | ✅❌ | Notat |
+| ----- | --------------------------------------------- | -------------------------------------- | ---- | ----- |
+| 2.1.1 | Markedskontakt - Legg til arbeidsgiver        | Arbeidsgiver vises i listen på treffet |      |       |
+| 2.1.2 | Markedskontakt - Legg til flere arbeidsgivere | Alle vises i listen                    |      |       |
+| 2.1.3 | Markedskontakt - Fjern arbeidsgiver           | Arbeidsgiver fjernes fra listen        |      |       |
 
 ### Arbeidsgiversøk (pam-search)
 
@@ -111,10 +111,10 @@ Søket henter data fra Enhetsregisteret via pam-search API.
 
 ### Feilhåndtering (ROS 27483)
 
-| #     | Test                                        | Forventet resultat                              | ✅❌ | Notat |
-| ----- | ------------------------------------------- | ----------------------------------------------- | ---- | ----- |
-| 2.4.1 | Markedskontakt - Legg til ugyldig orgnummer | Feilmelding vises, arbeidsgiver legges ikke til |      |       |
-| 2.4.2 | Markedskontakt - Nettverksfeil ved oppslag  | Feilmelding vises, kan prøve på nytt            |      |       |
+| #     | Test                                        | Forventet resultat                              | ✅❌ | Notat                                      |
+| ----- | ------------------------------------------- | ----------------------------------------------- | ---- | ------------------------------------------ |
+| 2.4.1 | Markedskontakt - Legg til ugyldig orgnummer | Feilmelding vises, arbeidsgiver legges ikke til |      |                                            |
+| 2.4.2 | Markedskontakt - Nettverksfeil ved oppslag  | Feilmelding vises, kan prøve på nytt            |      | Utvikler: Testes via mocking av nettverket |
 
 ---
 
@@ -166,13 +166,12 @@ Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å 
 
 #### CV og jobbprofil
 
-| #     | Test                                       | Forventet resultat | ✅❌ | Notat |
-| ----- | ------------------------------------------ | ------------------ | ---- | ----- |
-| 4.2.1 | Person med aktiv CV                        | Synlig ✅          |      |       |
-| 4.2.2 | Person uten CV                             | Ikke synlig ❌     |      |       |
-| 4.2.3 | Person med slettet CV (meldingstype SLETT) | Ikke synlig ❌     |      |       |
-| 4.2.4 | Person med CV men uten jobbprofil          | Ikke synlig ❌     |      |       |
-| 4.2.5 | Person med jobbprofil                      | Synlig ✅          |      |       |
+| #     | Test                                | Forventet resultat | ✅❌ | Notat |
+| ----- | ----------------------------------- | ------------------ | ---- | ----- |
+| 4.2.1 | Person med aktiv CV                 | Synlig ✅          |      |       |
+| 4.2.2 | Person uten CV eller med slettet CV | Ikke synlig ❌     |      |       |
+| 4.2.3 | Person med CV men uten jobbprofil   | Ikke synlig ❌     |      |       |
+| 4.2.4 | Person med jobbprofil               | Synlig ✅          |      |       |
 
 #### Arbeidssøkerregister (ny regel)
 
@@ -184,11 +183,10 @@ Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å 
 
 #### Oppfølging
 
-| #     | Test                                                        | Forventet resultat | ✅❌ | Notat |
-| ----- | ----------------------------------------------------------- | ------------------ | ---- | ----- |
-| 4.4.1 | Person under aktiv oppfølging                               | Synlig ✅          |      |       |
-| 4.4.2 | Person med avsluttet oppfølgingsperiode                     | Ikke synlig ❌     |      |       |
-| 4.4.3 | Person uten oppfølgingsperiode eller oppfølgingsinformasjon | Ikke synlig ❌     |      |       |
+| #     | Test                                    | Forventet resultat | ✅❌ | Notat |
+| ----- | --------------------------------------- | ------------------ | ---- | ----- |
+| 4.4.1 | Person under aktiv oppfølging           | Synlig ✅          |      |       |
+| 4.4.2 | Person med avsluttet oppfølgingsperiode | Ikke synlig ❌     |      |       |
 
 #### Adressebeskyttelse
 
@@ -562,14 +560,16 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 
 > **Automatiske tester:** ROBs nøyaktighet måles av automatiske tester i `apps/rekrutteringstreff-api/src/test/kotlin/no/nav/toi/rekrutteringstreff/ki/KiTekstvalideringParameterisertTest.kt`. Nøyaktighet = (antall test-prompts - antall avvikende resultat) / antall test-prompts \* 100.
 
-| #      | Test                                          | Forventet resultat                                  | ✅❌ | Notat |
-| ------ | --------------------------------------------- | --------------------------------------------------- | ---- | ----- |
-| 11.4.1 | Utvikler - Åpne KI-logg                       | Ser liste over alle KI-valideringer                 |      |       |
-| 11.4.2 | Utvikler - Sjekk logg for kladd-treff         | lagret=true for tekst som ble autolagret            |      |       |
-| 11.4.3 | Utvikler - Sjekk logg etter publisert endring | lagret=true kun når bruker trykket "Lagre" i dialog |      |       |
-| 11.4.4 | Utvikler - Sjekk tekst som ble forkastet      | lagret=false for tekst som ble endret før lagring   |      |       |
-| 11.4.5 | Utvikler - Legg inn manuell vurdering         | Kan registrere egen vurdering for kvalitetskontroll |      |       |
-| 11.4.6 | Utvikler - Filtrer på avvik                   | Kan finne tilfeller der KI vurderte feil            |      |       |
+| #      | Test                                                         | Forventet resultat                                               | ✅❌ | Notat |
+| ------ | ------------------------------------------------------------ | ---------------------------------------------------------------- | ---- | ----- |
+| 11.4.1 | Utvikler - Åpne KI-logg                                      | Ser liste over alle KI-valideringer                              |      |       |
+| 11.4.2 | Utvikler - Sjekk logg for kladd-treff                        | lagret=true for tekst som ble autolagret                         |      |       |
+| 11.4.3 | Utvikler - Sjekk logg etter publisert endring                | lagret=true kun når bruker trykket "Lagre" i dialog              |      |       |
+| 11.4.4 | Utvikler - Sjekk tekst som ble forkastet                     | lagret=false for tekst som ble endret før lagring                |      |       |
+| 11.4.5 | Utvikler - Sjekk lagret-felt før publisering (autolagring)   | lagret=true settes når autolagring kjører i kladd-modus          |      |       |
+| 11.4.6 | Utvikler - Sjekk lagret-felt etter publisering (bekreftelse) | lagret=true settes kun etter submit-knapp i bekreftelsesdialogen |      |       |
+| 11.4.7 | Utvikler - Legg inn manuell vurdering                        | Kan registrere egen vurdering for kvalitetskontroll              |      |       |
+| 11.4.8 | Utvikler - Filtrer på avvik                                  | Kan finne tilfeller der KI vurderte feil                         |      |       |
 
 ### UI-tekst og brukeransvar (ROS 27979, 27545, 27321)
 
@@ -821,6 +821,8 @@ Verifiser at logger fra robusthetstesting er tilgjengelige for analyse.
 ### KI-infrastruktur (ROS 29025, 29023, 29263, 29330)
 
 Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
+
+> ⚠️ **Produksjonsmiljø:** Disse testene må utføres i produksjonsmiljøet for å verifisere at konfigurasjonen er korrekt der.
 
 | #      | Test                                              | Forventet resultat                              | ✅❌ | Notat |
 | ------ | ------------------------------------------------- | ----------------------------------------------- | ---- | ----- |

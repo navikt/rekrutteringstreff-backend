@@ -32,7 +32,7 @@ Dette dokumentet gir oversikt over risikoer fra ROS-analysen som er spesifikke f
 | 27854  | Hallusinering av fakta                                  | 4   | 2   | ✅     | -                     | rutine: ki-rutiner                             |
 | 27853  | Kompleksitet i systemprompt (overtilpasning)            | 3   | 2   | ✅     | -                     | rutine: ki-rutiner                             |
 | 27852  | Feil ved oppdatering av prompten                        | 3   | 3   | ✅     | -                     | rutine: ki-rutiner                             |
-| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | 2   | 4   | ✅     | Feedback via Skyra    | AT 11.2.5-11.3.3, 11.4.5-11.4.6, 11.8.1-11.8.5 |
+| 27547  | KI identifiserer ikke diskriminerende/personopplysning  | 2   | 4   | ✅     | Feedback via Skyra    | AT 11.2.5-11.3.3, 11.4.7-11.4.8, 11.8.1-11.8.5 |
 | 27546  | KI-sjekken manipuleres                                  | 2   | 4   | ✅     | Logging for kontroll  | AT 11.7.1-11.7.5, 15.8.1                       |
 | 27545  | Arrangør gjør ikke selvstendig vurdering                | 1   | 3   | ✅     | Retningslinjer i loop | AT 11.5.1-11.5.5                               |
 | 27544  | Mangelfull oppdatering av kunnskapsgrunnlag             | 2   | 1   | ✅     | -                     | rutine: ki-rutiner                             |
@@ -270,7 +270,7 @@ Vi har ingen roadmap for at det kommer en ny modell ihht. retningslinjer. Vi har
 **Tiltak:**
 | Tiltak | Status | Kommentar |
 |--------|--------|-----------|
-| Logging for etterprøving i prod | ✅ Implementert | AT 11.4.1-11.4.6 |
+| Logging for etterprøving i prod | ✅ Implementert | AT 11.4.1-11.4.8 |
 | Manuell testing | ✅ Implementert | AT 11.1.1-11.3.3 |
 | Ansvarliggjøre brukere med tydelig info i løsningen | ✅ Implementert | Står tydelig ved fritekstfeltet og i egen informasjonspakke. AT 11.5.1-11.5.5 |
 | Etablere automatiske tester basert på godkjente manuell-tester | ✅ Implementert | KiTekstvalideringParameterisertTest.kt - ROBs nøyaktighet = (antall test-prompts - antall avvik) / antall test-prompts \* 100 |
