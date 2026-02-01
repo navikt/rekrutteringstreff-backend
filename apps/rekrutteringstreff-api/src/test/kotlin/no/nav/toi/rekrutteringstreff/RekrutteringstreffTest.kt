@@ -154,6 +154,33 @@ class RekrutteringstreffTest {
     }
 
     @Test
+    fun `opprett rekrutteringstreff med manglende påkrevd felt gir 400`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        
+        // Mangler opprettetAvNavkontorEnhetId som er påkrevd
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
+            .body("""{}""")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        
+        assertThat(response.statusCode).isEqualTo(400)
+    }
+
+    @Test
+    fun `opprett rekrutteringstreff med ugyldig JSON gir 400`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
+            .body("""{opprettetAvNavkontorEnhetId: "mangler quotes på nøkkel"}""")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        
+        assertThat(response.statusCode).isEqualTo(400)
+    }
+
+    @Test
     fun hentAlleRekrutteringstreff() {
         val tittel1 = "Tittel1111111"
         val tittel2 = "Tittel2222222"

@@ -343,6 +343,20 @@ class JobbsøkerInnloggetBorgerTest {
     }
 
     @Test
+    fun `jobbsøker som ikke er lagt til på treffet får 404`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("55555555555")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        // Jobbsøker er IKKE lagt til på treffet i det hele tatt
+        val (_, response, _) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
+        
+        // Backend returnerer 404 når jobbsøker ikke finnes på treffet
+        // Dette er korrekt oppførsel - frontend viser da info om "begrenset plass, kontakt veileder"
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
     fun `hentJobbsøkerInnloggetBorger håndterer harSvart når bruker har svart ja`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("11111111111")
