@@ -3,9 +3,11 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLog
+import no.nav.toi.exception.SvarfristUtløptException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
+import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Instant
 import org.slf4j.Logger
@@ -35,6 +37,13 @@ class JobbsøkerService(
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
             personTreffIds.forEach { personTreffId ->
+                // Idempotens: Sjekk om jobbsøker allerede har en annen status enn LAGT_TIL
+                val currentStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+                if (currentStatus != null && currentStatus != JobbsøkerStatus.LAGT_TIL) {
+                    logger.info("Jobbsøker $personTreffId har allerede status $currentStatus, hopper over invitasjon")
+                    return@forEach
+                }
+
                 jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                     connection,
                     JobbsøkerHendelsestype.INVITERT,
@@ -47,6 +56,12 @@ class JobbsøkerService(
     }
 
     fun svarJaTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
+        // Sjekk om svarfrist har utløpt
+        val svarfrist = jobbsøkerRepository.hentSvarfrist(treffId)
+        if (svarfrist != null && svarfrist.isBefore(nowOslo())) {
+            throw SvarfristUtløptException("Svarfristen for dette treffet har utløpt")
+        }
+
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
@@ -56,6 +71,12 @@ class JobbsøkerService(
     }
 
     fun svarNeiTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
+        // Sjekk om svarfrist har utløpt
+        val svarfrist = jobbsøkerRepository.hentSvarfrist(treffId)
+        if (svarfrist != null && svarfrist.isBefore(nowOslo())) {
+            throw SvarfristUtløptException("Svarfristen for dette treffet har utløpt")
+        }
+
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")

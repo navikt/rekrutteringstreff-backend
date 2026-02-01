@@ -112,16 +112,12 @@ class InvitasjonFeilhåndteringTest {
     }
 
     /**
-     * TRELLO-2: Test 5.4.1 - To samtidige invitasjoner registrerer kun én invitasjon (idempotent)
+     * To samtidige invitasjoner registrerer kun én invitasjon (idempotent)
      * 
      * Verifiserer at systemet håndterer race conditions ved samtidige invitasjoner.
      * Kun én INVITERT-hendelse skal registreres selv om to kall kommer samtidig.
-     * 
-     * MERK: Denne testen er @Disabled fordi idempotens for invitasjon ikke er implementert.
-     * Fjern @Disabled når funksjonaliteten er på plass.
      */
     @Test
-    @Disabled("Idempotens for invitasjon er ikke implementert ennå - fjern når funksjonalitet er på plass")
     fun `samtidige invitasjoner registrerer kun én INVITERT-hendelse`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
@@ -235,12 +231,8 @@ class InvitasjonFeilhåndteringTest {
 
     /**
      * Test at re-invitasjon av allerede invitert jobbsøker håndteres idempotent.
-     * 
-     * MERK: Denne testen er @Disabled fordi idempotens for invitasjon ikke er implementert.
-     * Fjern @Disabled når funksjonaliteten er på plass.
      */
     @Test
-    @Disabled("Idempotens for re-invitasjon er ikke implementert ennå - fjern når funksjonalitet er på plass")
     fun `re-invitasjon av allerede invitert jobbsøker håndteres idempotent`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()

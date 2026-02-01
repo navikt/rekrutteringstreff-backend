@@ -506,22 +506,13 @@ class JobbsøkerInnloggetBorgerTest {
             assertThat(it.statuser.harSvart).isTrue()
         }
     }
-
-    // =========================================================================
-    // TRELLO-3: Svarfrist-validering (AT 6.2.2)
-    // =========================================================================
-
     /**
-     * TRELLO-3: Test 6.2.2 - Forsøk på å svare etter svarfrist gir feilkode
+     * Forsøk på å svare etter svarfrist gir feilkode
      * 
      * Verifiserer at jobbsøkere ikke kan svare på invitasjoner etter at 
      * svarfristen har utløpt.
-     * 
-     * MERK: Denne testen er @Disabled fordi svarfrist-validering ikke er implementert.
-     * Fjern @Disabled når funksjonaliteten er på plass.
      */
     @Test
-    @Disabled("Svarfrist-validering er ikke implementert ennå - fjern når funksjonalitet er på plass")
     fun `svar ja etter svarfrist avvises`() {
         // Opprett treff med svarfrist som har utløpt
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(
@@ -550,12 +541,8 @@ class JobbsøkerInnloggetBorgerTest {
 
     /**
      * TRELLO-3: Test 6.2.2 - Forsøk på å svare nei etter svarfrist gir feilkode
-     * 
-     * MERK: Denne testen er @Disabled fordi svarfrist-validering ikke er implementert.
-     * Fjern @Disabled når funksjonaliteten er på plass.
      */
     @Test
-    @Disabled("Svarfrist-validering er ikke implementert ennå - fjern når funksjonalitet er på plass")
     fun `svar nei etter svarfrist avvises`() {
         // Opprett treff med svarfrist som har utløpt
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(

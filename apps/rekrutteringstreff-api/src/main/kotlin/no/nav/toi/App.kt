@@ -13,6 +13,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
+import no.nav.toi.exception.SvarfristUtløptException
 import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.exception.UlovligSlettingException
 import no.nav.toi.jobbsoker.JobbsøkerController
@@ -162,6 +163,10 @@ class App(
 
         javalin.exception(UlovligOppdateringException::class.java) { e, ctx ->
             ctx.status(409).json(mapOf("feil" to (e.message ?: "Konflikt ved oppdatering")))
+        }
+
+        javalin.exception(SvarfristUtløptException::class.java) { e, ctx ->
+            ctx.status(400).json(mapOf("feil" to (e.message ?: "Svarfristen har utløpt")))
         }
 
         javalin.exception(RekrutteringstreffIkkeFunnetException::class.java) { e, ctx ->
