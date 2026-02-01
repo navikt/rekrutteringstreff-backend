@@ -20,10 +20,6 @@ graph TD
         RBF[rekrutteringsbistand-<br/>frontend]
     end
 
-    subgraph "Minside (Jobbsøker)"
-        MINSIDE_FE[minside-frontend]
-    end
-
     subgraph "rekrutteringstreff-backend"
         API[rekrutteringstreff-api]
         MINSIDE_API[rekrutteringstreff-<br/>minside-api]
@@ -33,33 +29,60 @@ graph TD
     subgraph Støttetjenester
         SYN[toi-synlighetsmotor]
         VARSEL[rekrutteringsbistand-<br/>kandidatvarsel-api]
+        MODIA[modiacontextholder]
     end
 
-    subgraph Eksterne_systemer
+    subgraph Søketjenester
+        KSOK[rekrutteringsbistand-<br/>kandidatsok-api]
+        OS[(OpenSearch)]
+        PAM[pam-search]
+    end
+
+    subgraph "Jobbsøker-flater"
         AKTIVITET[Aktivitetsplan]
+        MINSIDE_FE[minside-frontend]
+        RTB[rekrutteringstreff-bruker]
     end
 
-    %% Kommunikasjon (REST)
-    RBF -->|REST| API
-    MINSIDE_FE -->|REST| MINSIDE_API
-    MINSIDE_API -->|REST| API
-    AK -->|REST: Oppretter kort| AKTIVITET
+    %% Frontend til backend
+    RBF --> API
+
+    %% Frontend til søketjenester
+    RBF -->|Finn jobbsøkere| KSOK
+    RBF -->|Finn arbeidsgivere| PAM
+    KSOK --> OS
+
+    %% Frontend til støttetjenester
+    RBF -->|Aktivt kontor| MODIA
+
+    %% Jobbsøker-flyt
+    RTB -->|Se treff, svar| MINSIDE_API
+    MINSIDE_API --> API
+    AK -->|Opprett/oppdater kort| AKTIVITET
+
+    %% Jobbsøker-innganger
+    MINSIDE_FE -->|Lenke fra varsel| RTB
+    AKTIVITET -->|Lenke fra kort| RTB
 
     %% Kafka-flyt (Rapids & Rivers)
-    %% Stiplet linje indikerer asynkron kommunikasjon via Kafka
-    API -.->|Events: Invitasjon| AK
-    API -.->|Events: Invitasjon| VARSEL
-    API -.->|Behov: Synlighet| SYN
-    VARSEL -.->|Kafka: Bestiller varsel| MINSIDE_FE
+    API -.->|Invitasjon| AK
+    API -.->|Invitasjon| VARSEL
+    API -.->|Synlighetssjekk| SYN
+    VARSEL -.->|Bestill varsel| MINSIDE_FE
 
-    SYN -.->|Løsning: Synlighet| API
-    VARSEL -.->|Event: Varselstatus| API
+    SYN -.->|Synlighetssvar| API
+    VARSEL -.->|Varselstatus| API
 ```
 
 > **Tegnforklaring:**
 >
 > - Hel linje (`-->`): Synkron REST-kommunikasjon
 > - Stiplet linje (`-.->`): Asynkron kommunikasjon via Kafka (Rapids & Rivers)
+
+> **Merk:** Kandidatsøk og arbeidsgiversøk kalles **direkte fra frontend**, ikke via rekrutteringstreff-api. Se:
+>
+> - [Kandidatsøk](../4-integrasjoner/kandidatsok.md)
+> - [Enhetsregisteret (Arbeidsgiversøk)](../4-integrasjoner/enhetsregisteret.md)
 
 ### Applikasjonsbeskrivelser
 
@@ -72,6 +95,18 @@ Brukergrensesnitt der veiledere og markedskontakter:
 - Inviterer jobbsøkere til treff
 - Følger opp svar og deltakerstatus
 
+#### rekrutteringstreff-bruker
+
+Jobbsøkerens frontend for rekrutteringstreff:
+
+- Viser treffdetaljer, arbeidsgivere og innlegg
+- Lar jobbsøker svare ja/nei på invitasjon
+- Viser status basert på treffets tilstand (kommende, pågår, passert, avlyst)
+- Tilgjengelig via lenke fra aktivitetskort i aktivitetsplanen
+- Tilgjengelig via lenke fra varsel på MinSide
+
+> **Repo:** [navikt/rekrutteringstreff-bruker](https://github.com/navikt/rekrutteringstreff-bruker)
+
 #### rekrutteringstreff-api
 
 Hovedapplikasjon som:
@@ -81,7 +116,7 @@ Hovedapplikasjon som:
 - Publiserer events når jobbsøkere inviteres eller treff oppdateres
 - Mottar synlighetsevalueringer fra toi-synlighetsmotor
 - Mottar varselstatus fra kandidatvarsel-api
-- Validerer innhold med KI-moderering
+- Validerer innhold med KI-tekstvalideringstjenesten
 
 #### rekrutteringstreff-minside-api
 
@@ -120,10 +155,11 @@ Evalueringstjeneste som:
 
 ### REST-kommunikasjon
 
-| Fra                            | Til                    | Beskrivelse                                       |
-| ------------------------------ | ---------------------- | ------------------------------------------------- |
-| rekrutteringsbistand-frontend  | rekrutteringstreff-api | Veiledere og markedskontakter administrerer treff |
-| rekrutteringstreff-minside-api | rekrutteringstreff-api | Jobbsøkere ser og svarer på invitasjoner          |
+| Fra                            | Til                            | Beskrivelse                                       |
+| ------------------------------ | ------------------------------ | ------------------------------------------------- |
+| rekrutteringsbistand-frontend  | rekrutteringstreff-api         | Veiledere og markedskontakter administrerer treff |
+| rekrutteringstreff-bruker      | rekrutteringstreff-minside-api | Jobbsøkere ser treff og svarer på invitasjoner    |
+| rekrutteringstreff-minside-api | rekrutteringstreff-api         | Videresender jobbsøkerforespørsler med TokenX     |
 
 ### Rapids & Rivers (Kafka)
 
