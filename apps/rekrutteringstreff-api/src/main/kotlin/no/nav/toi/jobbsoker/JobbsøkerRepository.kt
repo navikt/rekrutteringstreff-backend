@@ -524,6 +524,22 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
 
     /**
+     * Sjekker om en jobbsøker er synlig.
+     * Returnerer true hvis synlig, false hvis ikke synlig, null hvis jobbsøkeren ikke finnes.
+     */
+    fun erSynlig(connection: Connection, personTreffId: PersonTreffId): Boolean? =
+        connection.prepareStatement(
+            """
+            SELECT er_synlig FROM jobbsoker WHERE id = ?
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.getBoolean("er_synlig") else null
+            }
+        }
+
+    /**
      * Henter svarfrist for et rekrutteringstreff.
      * Returnerer null hvis treffet ikke finnes eller ikke har svarfrist.
      */

@@ -37,6 +37,13 @@ class JobbsøkerService(
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
             personTreffIds.forEach { personTreffId ->
+                // Sjekk om jobbsøker er synlig - hopp over usynlige jobbsøkere
+                val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
+                if (erSynlig == false) {
+                    secureLogger.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig for arbeidsgiver - hopper over")
+                    return@forEach
+                }
+
                 // Idempotens: Sjekk om jobbsøker allerede har en annen status enn LAGT_TIL
                 val currentStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
                 if (currentStatus != null && currentStatus != JobbsøkerStatus.LAGT_TIL) {

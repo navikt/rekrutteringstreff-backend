@@ -25,13 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Tester for feilhåndtering ved invitasjon av jobbsøkere.
- * 
- * Dekker:
- * - TRELLO-2: Dobbel invitasjon-beskyttelse (race condition)
- * - Invitasjon av jobbsøker som nettopp ble ikke-synlig
- * 
- * MERK: Noen tester er markert som @Disabled fordi de tester funksjonalitet som 
- * ennå ikke er implementert. Disse testene dokumenterer forventet oppførsel.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -180,23 +173,37 @@ class InvitasjonFeilhåndteringTest {
     /**
      * TRELLO-2: Test 5.4.2 - Invitasjon av jobbsøker som nettopp ble ikke-synlig
      * 
-     * Verifiserer at systemet håndterer forsøk på å invitere en jobbsøker som 
-     * har blitt ikke-synlig (CV ikke lenger delt).
+     * Verifiserer at systemet hopper over usynlige jobbsøkere ved invitasjon,
+     * logger en warning, og fortsetter med de synlige. Dette sikrer at 
+     * batch-operasjoner ikke feiler helt pga. én usynlig jobbsøker.
      */
     @Test
-    fun `invitasjon av ikke-synlig jobbsøker håndteres korrekt`() {
+    fun `invitasjon av ikke-synlig jobbsøker hoppes over mens synlige inviteres`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("12345678901")
-        val personTreffId = PersonTreffId(UUID.randomUUID())
+        
+        val fnrUsynlig = Fødselsnummer("12345678901")
+        val personTreffIdUsynlig = PersonTreffId(UUID.randomUUID())
+        
+        val fnrSynlig = Fødselsnummer("12345678902")
+        val personTreffIdSynlig = PersonTreffId(UUID.randomUUID())
 
         db.leggTilJobbsøkere(
             listOf(
                 Jobbsøker(
-                    personTreffId,
+                    personTreffIdUsynlig,
                     treffId,
-                    fnr,
-                    Fornavn("Test"),
+                    fnrUsynlig,
+                    Fornavn("Usynlig"),
+                    Etternavn("Person"),
+                    null, null, null,
+                    JobbsøkerStatus.LAGT_TIL
+                ),
+                Jobbsøker(
+                    personTreffIdSynlig,
+                    treffId,
+                    fnrSynlig,
+                    Fornavn("Synlig"),
                     Etternavn("Person"),
                     null, null, null,
                     JobbsøkerStatus.LAGT_TIL
@@ -204,29 +211,29 @@ class InvitasjonFeilhåndteringTest {
             )
         )
 
-        // Sett jobbsøker til ikke-synlig (simulerer at CV ikke lenger er delt)
-        db.settSynlighet(personTreffId, erSynlig = false)
+        // Sett én jobbsøker til ikke-synlig (simulerer at CV ikke lenger er delt)
+        db.settSynlighet(personTreffIdUsynlig, erSynlig = false)
 
         eierRepository.leggTil(treffId, listOf("A123456"))
 
-        val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
+        // Forsøk å invitere begge jobbsøkere
+        val requestBody = """{ "personTreffIder": ["$personTreffIdUsynlig", "$personTreffIdSynlig"] }"""
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
             .body(requestBody)
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        // Systemet skal enten:
-        // 1. Returnere feilmelding (400/409) hvis invitasjon av ikke-synlig jobbsøker ikke tillates
-        // 2. Tillate invitasjon men logge warning
-        // Begge er gyldige implementasjoner
+        // Kallet skal lykkes (200 OK) - usynlig jobbsøker hoppes over
+        assertThat(response.statusCode).isEqualTo(HTTP_OK)
         
-        // For nå verifiserer vi at kallet ikke feiler med 500
-        assertThat(response.statusCode).isNotEqualTo(HTTP_INTERNAL_ERROR)
+        // Verifiser at kun synlig jobbsøker ble invitert
+        val usynligStatus = db.hentJobbsøkerStatus(personTreffIdUsynlig)
+        val synligStatus = db.hentJobbsøkerStatus(personTreffIdSynlig)
         
-        // Sjekk at vi har en passende respons
-        assertThat(response.statusCode).isIn(HTTP_OK, HTTP_BAD_REQUEST, HTTP_CONFLICT)
+        assertThat(usynligStatus).isEqualTo(JobbsøkerStatus.LAGT_TIL) // Uendret
+        assertThat(synligStatus).isEqualTo(JobbsøkerStatus.INVITERT) // Invitert
     }
 
     /**
