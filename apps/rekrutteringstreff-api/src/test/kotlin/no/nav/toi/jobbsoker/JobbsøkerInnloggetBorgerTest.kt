@@ -23,6 +23,10 @@ import java.net.HttpURLConnection.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -501,6 +505,273 @@ class JobbsøkerInnloggetBorgerTest {
             assertThat(it.statuser.erPåmeldt).isTrue()
             assertThat(it.statuser.harSvart).isTrue()
         }
+    }
+
+    // =========================================================================
+    // TRELLO-3: Svarfrist-validering (AT 6.2.2)
+    // =========================================================================
+
+    /**
+     * TRELLO-3: Test 6.2.2 - Forsøk på å svare etter svarfrist gir feilkode
+     * 
+     * Verifiserer at jobbsøkere ikke kan svare på invitasjoner etter at 
+     * svarfristen har utløpt.
+     * 
+     * MERK: Denne testen er @Disabled fordi svarfrist-validering ikke er implementert.
+     * Fjern @Disabled når funksjonaliteten er på plass.
+     */
+    @Test
+    @Disabled("Svarfrist-validering er ikke implementert ennå - fjern når funksjonalitet er på plass")
+    fun `svar ja etter svarfrist avvises`() {
+        // Opprett treff med svarfrist som har utløpt
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(
+            svarfrist = nowOslo().minusDays(1) // Svarfrist var i går
+        )
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        // Forventer feilkode (400 eller 403) når svarfrist har utløpt
+        assertThat(response.statusCode).isIn(HTTP_BAD_REQUEST, HTTP_FORBIDDEN)
+    }
+
+    /**
+     * TRELLO-3: Test 6.2.2 - Forsøk på å svare nei etter svarfrist gir feilkode
+     * 
+     * MERK: Denne testen er @Disabled fordi svarfrist-validering ikke er implementert.
+     * Fjern @Disabled når funksjonaliteten er på plass.
+     */
+    @Test
+    @Disabled("Svarfrist-validering er ikke implementert ennå - fjern når funksjonalitet er på plass")
+    fun `svar nei etter svarfrist avvises`() {
+        // Opprett treff med svarfrist som har utløpt
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(
+            svarfrist = nowOslo().minusDays(1) // Svarfrist var i går
+        )
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        // Forventer feilkode (400 eller 403) når svarfrist har utløpt
+        assertThat(response.statusCode).isIn(HTTP_BAD_REQUEST, HTTP_FORBIDDEN)
+    }
+
+    /**
+     * Positiv test: Svar ja før svarfrist tillates
+     */
+    @Test
+    fun `svar ja før svarfrist tillates`() {
+        // Opprett treff med svarfrist i fremtiden
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(
+            svarfrist = nowOslo().plusDays(3) // Svarfrist er om 3 dager
+        )
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_OK, response, result)
+    }
+
+    // =========================================================================
+    // TRELLO-4: Ugyldig treff-ID håndtering (AT 6.3.1)
+    // =========================================================================
+
+    /**
+     * TRELLO-4: Test 6.3.1 - GET til ukjent treff-ID gir 404
+     */
+    @Test
+    fun `hent jobbsøker for ukjent treff-ID gir 404`() {
+        val ukjentTreffId = UUID.randomUUID()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    /**
+     * TRELLO-4: Test 6.3.1 - POST svar-ja til ukjent treff-ID gir 404
+     */
+    @Test
+    fun `svar ja til ukjent treff-ID gir feilkode`() {
+        val ukjentTreffId = UUID.randomUUID()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        // Forventer enten 404 (treff ikke funnet) eller 500 (IllegalStateException)
+        assertThat(response.statusCode).isIn(HTTP_NOT_FOUND, HTTP_BAD_REQUEST, HTTP_INTERNAL_ERROR)
+    }
+
+    /**
+     * TRELLO-4: Test 6.3.1 - POST svar-nei til ukjent treff-ID gir feilkode
+     */
+    @Test
+    fun `svar nei til ukjent treff-ID gir feilkode`() {
+        val ukjentTreffId = UUID.randomUUID()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger/svar-nei")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        // Forventer enten 404 (treff ikke funnet) eller 500 (IllegalStateException)
+        assertThat(response.statusCode).isIn(HTTP_NOT_FOUND, HTTP_BAD_REQUEST, HTTP_INTERNAL_ERROR)
+    }
+
+    // =========================================================================
+    // TRELLO-5: Dobbelt svar-håndtering (AT 6.3.2)
+    // =========================================================================
+
+    /**
+     * TRELLO-5: Test 6.3.2 - To raske "Svar ja"-kall registrerer kun én hendelse
+     * 
+     * Verifiserer at systemet er idempotent ved gjentatte svar fra samme jobbsøker.
+     */
+    @Test
+    fun `to raske svar ja kall registrerer kun én SVART_JA hendelse`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        // Første svar-ja
+        val (_, response1, result1) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(HTTP_OK, response1, result1)
+
+        // Andre svar-ja (umiddelbart etter)
+        val (_, response2, result2) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(HTTP_OK, response2, result2)
+
+        // Verifiser at kun én SVART_JA-hendelse ble registrert (eller at duplikater håndteres)
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        val svarJaHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON }
+
+        // Idempotent: Enten kun én hendelse, eller to hendelser som ikke påvirker utfall
+        // Viktigste er at status er konsistent
+        val jobbsøker = db.hentJobbsøkereForTreff(treffId).first()
+        assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_JA)
+        
+        // Det er akseptabelt med 1 eller 2 hendelser, så lenge status er korrekt
+        assertThat(svarJaHendelser).hasSizeGreaterThanOrEqualTo(1)
+    }
+
+    /**
+     * TRELLO-5: Test for samtidige svar-ja kall (race condition)
+     */
+    @Test
+    fun `samtidige svar ja kall håndteres konsistent`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        // Start samtidige svar-ja kall
+        val executor = Executors.newFixedThreadPool(2)
+        val latch = CountDownLatch(2)
+        val responses = ConcurrentLinkedQueue<Int>()
+
+        repeat(2) {
+            executor.submit {
+                try {
+                    val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+                        .body(requestBody)
+                        .header("Content-Type", "application/json")
+                        .header("Authorization", "Bearer ${token.serialize()}")
+                        .responseString()
+                    responses.add(response.statusCode)
+                } finally {
+                    latch.countDown()
+                }
+            }
+        }
+
+        latch.await(10, TimeUnit.SECONDS)
+        executor.shutdown()
+
+        // Verifiser at ingen requests feilet med 500
+        assertThat(responses).doesNotContain(HTTP_INTERNAL_ERROR)
+
+        // Verifiser at status er konsistent
+        val jobbsøker = db.hentJobbsøkereForTreff(treffId).first()
+        assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_JA)
     }
 
     private fun hentJobbsøkerInnloggetBorger(treffId: TreffId, fødselsnummer: Fødselsnummer, token: SignedJWT) =

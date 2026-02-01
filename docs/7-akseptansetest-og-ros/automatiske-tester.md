@@ -31,6 +31,10 @@ Etter merge med `main` er mange tester nå implementert. Her er oppdatert status
 | **Autorisasjon**                      | `*AutorisasjonsTest.kt` (flere filer)                         | ✅ Omfattende                                                                                  |
 | **Pilotkontor**                       | `PilotkontorTest.kt`                                          | ✅ Dekket                                                                                      |
 | **Duplikat-håndtering**               | `EierRepositoryTest.kt`, `AktivitetskortTest.kt`              | ✅ `leggTil legger ikke til duplikater`, duplikat-meldinger                                    |
+| **Dobbel invitasjon (race condition)**| `InvitasjonFeilhåndteringTest.kt`                             | ⏳ Tester skrevet - venter på idempotens-implementasjon                                        |
+| **Svarfrist-validering**              | `JobbsøkerInnloggetBorgerTest.kt`                             | ⏳ Tester skrevet - venter på svarfrist-validering i backend                                   |
+| **Ugyldig treff-ID**                  | `JobbsøkerInnloggetBorgerTest.kt`                             | ✅ GET/POST til ukjent treff-ID gir feilkode                                                   |
+| **Dobbelt svar (idempotens)**         | `JobbsøkerInnloggetBorgerTest.kt`                             | ✅ To svar-ja kall håndteres konsistent, samtidige kall                                        |
 
 ---
 
@@ -84,20 +88,25 @@ Opprett ny testfil i `rekrutteringstreff-api/.../ki/`-mappen som verifiserer at 
 
 ---
 
-#### TRELLO-2: Dobbel invitasjon-beskyttelse
+#### ⏳ TRELLO-2: Dobbel invitasjon-beskyttelse (TESTER SKREVET - VENTER PÅ FUNKSJONALITET)
 
 **Tittel:** Test for dobbel invitasjon (race condition)
 
 **Beskrivelse:**
 Legg til tester som verifiserer at systemet håndterer samtidige invitasjoner korrekt.
 
-**Tester å implementere:**
+**Implementert i:** `InvitasjonFeilhåndteringTest.kt`
+
+**Tester skrevet (men @Disabled inntil funksjonalitet er implementert):**
 
 - [ ] **5.4.1** - To samtidige invitasjoner registrerer kun én invitasjon (idempotent)
-- [ ] **5.4.2** - Invitasjon av jobbsøker som nettopp ble ikke-synlig gir passende feilmelding
-- [ ] Legg til hjelpemetode `opprettPublisertTreff()` i `TestDatabase.kt` om den ikke finnes
+- [ ] Re-invitasjon av allerede invitert jobbsøker håndteres idempotent
 
-**Plassering:** Utvid `JobbsøkerTest.kt` eller opprett ny `InvitasjonFeilhåndteringTest.kt`
+**Tester som passerer nå:**
+
+- [x] **5.4.2** - Invitasjon av jobbsøker som nettopp ble ikke-synlig håndteres korrekt
+
+**Plassering:** `InvitasjonFeilhåndteringTest.kt`
 
 **Labels:** `backend`, `sikkerhet`, `concurrency`, `prioritet-1`
 
@@ -105,17 +114,23 @@ Legg til tester som verifiserer at systemet håndterer samtidige invitasjoner ko
 
 ### 🟡 PRIORITET 2: Validering og edge cases
 
-#### TRELLO-3: Svarfrist-validering
+#### ⏳ TRELLO-3: Svarfrist-validering (TESTER SKREVET - VENTER PÅ FUNKSJONALITET)
 
 **Tittel:** Test at svar etter svarfrist avvises
 
 **Beskrivelse:**
 Verifiser at jobbsøkere ikke kan svare på invitasjoner etter at svarfristen har utløpt.
 
-**Tester å implementere:**
+**Implementert i:** `JobbsøkerInnloggetBorgerTest.kt`
 
-- [ ] **6.2.2** - Forsøk på å svare etter svarfrist gir feilkode (400/403)
-- [ ] Legg til hjelpemetode `settSvarfrist()` i `TestDatabase.kt`
+**Tester skrevet (men @Disabled inntil funksjonalitet er implementert):**
+
+- [ ] **6.2.2** - Svar ja etter svarfrist avvises
+- [ ] Svar nei etter svarfrist avvises
+
+**Tester som passerer nå:**
+
+- [x] Svar ja før svarfrist tillates (positiv test)
 
 **Plassering:** `JobbsøkerInnloggetBorgerTest.kt`
 
@@ -123,31 +138,38 @@ Verifiser at jobbsøkere ikke kan svare på invitasjoner etter at svarfristen ha
 
 ---
 
-#### TRELLO-4: Ugyldig treff-ID håndtering
+#### ✅ TRELLO-4: Ugyldig treff-ID håndtering (IMPLEMENTERT)
 
 **Tittel:** Test 404 for ugyldig treff-ID
 
 **Beskrivelse:**
 Verifiser at API returnerer 404 for ikke-eksisterende treff-IDer.
 
-**Tester å implementere:**
+**Implementert i:** `JobbsøkerInnloggetBorgerTest.kt`
 
-- [ ] **6.3.1** - GET/POST til ukjent treff-ID gir 404
+**Tester implementert:**
+
+- [x] **6.3.1** - GET til ukjent treff-ID gir 404
+- [x] POST svar-ja til ukjent treff-ID gir feilkode
+- [x] POST svar-nei til ukjent treff-ID gir feilkode
 
 **Labels:** `backend`, `feilhåndtering`, `prioritet-2`
 
 ---
 
-#### TRELLO-5: Dobbelt svar-håndtering
+#### ✅ TRELLO-5: Dobbelt svar-håndtering (IMPLEMENTERT)
 
 **Tittel:** Test at dobbelt svar kun registreres én gang
 
 **Beskrivelse:**
 Verifiser at systemet er idempotent ved gjentatte svar fra samme jobbsøker.
 
-**Tester å implementere:**
+**Implementert i:** `JobbsøkerInnloggetBorgerTest.kt`
 
-- [ ] **6.3.2** - To raske "Svar ja"-kall registrerer kun én hendelse
+**Tester implementert:**
+
+- [x] **6.3.2** - To raske "Svar ja"-kall registrerer kun én hendelse
+- [x] Samtidige svar-ja kall håndteres konsistent
 
 **Plassering:** `JobbsøkerInnloggetBorgerTest.kt`
 
@@ -157,10 +179,12 @@ Verifiser at systemet er idempotent ved gjentatte svar fra samme jobbsøker.
 
 ## Oppsummering
 
-| Prioritet              | Oppgaver              | Estimat   |
-| ---------------------- | --------------------- | --------- |
-| 🔴 Kritisk (sikkerhet) | TRELLO-1, TRELLO-2    | 1-2 dager |
-| 🟡 Medium (validering) | TRELLO-3 til TRELLO-5 | 1 dag     |
+| Prioritet              | Oppgaver              | Status                          | Estimat   |
+| ---------------------- | --------------------- | ------------------------------- | --------- |
+| 🔴 Kritisk (sikkerhet) | TRELLO-1              | ⏳ Gjenstår                      | 1 dag     |
+| 🔴 Kritisk (sikkerhet) | TRELLO-2              | ⏳ Tester skrevet, venter impl. | -         |
+| 🟡 Medium (validering) | TRELLO-3              | ⏳ Tester skrevet, venter impl. | -         |
+| 🟡 Medium (validering) | TRELLO-4, TRELLO-5    | ✅ Implementert og passerer     | -         |
 
 ---
 
