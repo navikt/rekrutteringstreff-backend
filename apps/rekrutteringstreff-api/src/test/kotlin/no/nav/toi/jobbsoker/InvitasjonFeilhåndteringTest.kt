@@ -170,13 +170,6 @@ class InvitasjonFeilhåndteringTest {
         assertThat(invitasjonsHendelser.first().aktørIdentifikasjon).isEqualTo("A123456")
     }
 
-    /**
-     * TRELLO-2: Test 5.4.2 - Invitasjon av jobbsøker som nettopp ble ikke-synlig
-     * 
-     * Verifiserer at systemet hopper over usynlige jobbsøkere ved invitasjon,
-     * logger en warning, og fortsetter med de synlige. Dette sikrer at 
-     * batch-operasjoner ikke feiler helt pga. én usynlig jobbsøker.
-     */
     @Test
     fun `invitasjon av ikke-synlig jobbsøker hoppes over mens synlige inviteres`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")

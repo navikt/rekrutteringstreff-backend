@@ -665,7 +665,7 @@ class JobbsøkerServiceTest {
     }
 
     @Test
-    fun `re-adding av slettet jobbsøker oppretter ny rad og jobbsøker vises i listen`() {
+    fun `legg tilbake slettet jobbsøker oppretter ny rad og jobbsøker vises i listen`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr = Fødselsnummer("12345678901")
         val jobbsøkerData = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
