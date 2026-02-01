@@ -835,8 +835,8 @@ Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
 
 ## Relaterte dokumenter
 
-- [ROS-tiltak for KI-sjekken](ros-ki-pilot.md) - ROS-tiltak spesifikke for KI-sjekken (ROB)
-- [ROS-tiltak (generelt)](ros-pilot.md) - Generelle ROS-tiltak for Rekrutteringstreff
+- ROS-tiltak for KI-sjekken - se _Tryggnok: ROS Rekrutteringstreff-KI_
+- ROS-tiltak for Rekrutteringstreff - se _Tryggnok: ROS Rekrutteringstreff_
 - [Tilgangsstyring](../3-sikkerhet/tilgangsstyring.md) - Teknisk dokumentasjon roller og tilgang
 - [Synlighet](../3-sikkerhet/synlighet.md) - Teknisk dokumentasjon synlighetsfiltrering
 - [Invitasjon](../4-integrasjoner/invitasjon.md) - Teknisk flyt for invitasjon

@@ -283,6 +283,6 @@ class VarselRapidsTest {
 ## Relaterte dokumenter
 
 - [akseptansetester.md](akseptansetester.md) - Manuelle akseptansetester
-- [ros-pilot.md](ros-pilot.md) - ROS-tiltak og testdekning
-- [ros-ki-pilot.md](ros-ki-pilot.md) - ROS-tiltak for KI-sjekken
+- ROS-tiltak for Rekrutteringstreff - se _Tryggnok: ROS Rekrutteringstreff_
+- ROS-tiltak for KI-sjekken - se _Tryggnok: ROS Rekrutteringstreff-KI_
 - [../8-utviklerrutiner/ki-rutiner.md](../8-utviklerrutiner/ki-rutiner.md) - KI-rutiner for utviklere
