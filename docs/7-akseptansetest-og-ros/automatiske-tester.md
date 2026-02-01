@@ -31,10 +31,15 @@ Etter merge med `main` er mange tester nå implementert. Her er oppdatert status
 | **Autorisasjon**                       | `*AutorisasjonsTest.kt` (flere filer)                         | ✅ Omfattende                                                                                  |
 | **Pilotkontor**                        | `PilotkontorTest.kt`                                          | ✅ Dekket                                                                                      |
 | **Duplikat-håndtering**                | `EierRepositoryTest.kt`, `AktivitetskortTest.kt`              | ✅ `leggTil legger ikke til duplikater`, duplikat-meldinger                                    |
-| **Dobbel invitasjon (race condition)** | `InvitasjonFeilhåndteringTest.kt`                             | ⏳ Tester skrevet - venter på idempotens-implementasjon                                        |
-| **Svarfrist-validering**               | `JobbsøkerInnloggetBorgerTest.kt`                             | ⏳ Tester skrevet - venter på svarfrist-validering i backend                                   |
+| **Dobbel invitasjon (race condition)** | `InvitasjonFeilhåndteringTest.kt`                             | ✅ Idempotens implementert med radlås (SELECT FOR UPDATE)                                      |
+| **Svarfrist-validering**               | `JobbsøkerInnloggetBorgerTest.kt`                             | ✅ `svar ja etter svarfrist avvises`, `svar nei etter svarfrist avvises`                       |
 | **Ugyldig treff-ID**                   | `JobbsøkerInnloggetBorgerTest.kt`                             | ✅ GET/POST til ukjent treff-ID gir feilkode                                                   |
 | **Dobbelt svar (idempotens)**          | `JobbsøkerInnloggetBorgerTest.kt`                             | ✅ To svar-ja kall håndteres konsistent, samtidige kall                                        |
+| **Veileder kan ikke invitere**         | `JobbsokerControllerAutorisasjonsTest.kt`                     | ✅ AT 5.1.8 - Jobbsøkerrettet får HTTP_FORBIDDEN på inviter-endepunkt                          |
+| **Jobbsøker-synlighet per rolle**      | `JobbsokerControllerAutorisasjonsTest.kt`                     | ✅ AT 15.1.3, 15.2.3 - Kun eier/utvikler kan hente jobbsøkerliste                              |
+| **Slett jobbsøker**                    | `JobbsokerControllerAutorisasjonsTest.kt`, `JobbsøkerServiceTest.kt` | ✅ AT 4.1.4 - markerSlettet med autorisasjon                                              |
+| **Re-aktivering av slettet jobbsøker** | `JobbsøkerServiceTest.kt`                                     | ✅ AT 4.1.5 - Slettet jobbsøker kan legges til igjen                                           |
+| **Avlysning: kun svart ja varsles**    | `RekrutteringstreffTest.kt`                                   | ✅ AT 8.1.4-8.1.7 - Kun SVART_JA får SVART_JA_TREFF_AVLYST hendelse                            |
 
 ---
 
@@ -88,23 +93,24 @@ Opprett ny testfil i `rekrutteringstreff-api/.../ki/`-mappen som verifiserer at 
 
 ---
 
-#### ⏳ TRELLO-2: Dobbel invitasjon-beskyttelse (TESTER SKREVET - VENTER PÅ FUNKSJONALITET)
+#### ✅ TRELLO-2: Dobbel invitasjon-beskyttelse (IMPLEMENTERT)
 
 **Tittel:** Test for dobbel invitasjon (race condition)
 
 **Beskrivelse:**
-Legg til tester som verifiserer at systemet håndterer samtidige invitasjoner korrekt.
+Tester som verifiserer at systemet håndterer samtidige invitasjoner korrekt.
 
 **Implementert i:** `InvitasjonFeilhåndteringTest.kt`
 
-**Tester skrevet (men @Disabled inntil funksjonalitet er implementert):**
+**Tester implementert:**
 
-- [ ] **5.4.1** - To samtidige invitasjoner registrerer kun én invitasjon (idempotent)
-- [ ] Re-invitasjon av allerede invitert jobbsøker håndteres idempotent
-
-**Tester som passerer nå:**
-
+- [x] **5.4.1** - To samtidige invitasjoner registrerer kun én invitasjon (idempotent)
+- [x] Re-invitasjon av allerede invitert jobbsøker håndteres idempotent
 - [x] **5.4.2** - Invitasjon av jobbsøker som nettopp ble ikke-synlig håndteres korrekt
+
+**Implementasjonsdetaljer:**
+- Idempotens implementert med `SELECT FOR UPDATE` radlås i `hentStatus()`
+- `inviter()` hopper over jobbsøkere med status != LAGT_TIL
 
 **Plassering:** `InvitasjonFeilhåndteringTest.kt`
 
@@ -114,7 +120,7 @@ Legg til tester som verifiserer at systemet håndterer samtidige invitasjoner ko
 
 ### 🟡 PRIORITET 2: Validering og edge cases
 
-#### ⏳ TRELLO-3: Svarfrist-validering (TESTER SKREVET - VENTER PÅ FUNKSJONALITET)
+#### ✅ TRELLO-3: Svarfrist-validering (IMPLEMENTERT)
 
 **Tittel:** Test at svar etter svarfrist avvises
 
@@ -123,14 +129,15 @@ Verifiser at jobbsøkere ikke kan svare på invitasjoner etter at svarfristen ha
 
 **Implementert i:** `JobbsøkerInnloggetBorgerTest.kt`
 
-**Tester skrevet (men @Disabled inntil funksjonalitet er implementert):**
+**Tester implementert:**
 
-- [ ] **6.2.2** - Svar ja etter svarfrist avvises
-- [ ] Svar nei etter svarfrist avvises
-
-**Tester som passerer nå:**
-
+- [x] **6.2.2** - Svar ja etter svarfrist avvises
+- [x] Svar nei etter svarfrist avvises
 - [x] Svar ja før svarfrist tillates (positiv test)
+
+**Implementasjonsdetaljer:**
+- `SvarfristUtløptException` kastes når svarfrist har passert
+- Exception-handler mapper til HTTP 400
 
 **Plassering:** `JobbsøkerInnloggetBorgerTest.kt`
 
@@ -179,12 +186,12 @@ Verifiser at systemet er idempotent ved gjentatte svar fra samme jobbsøker.
 
 ## Oppsummering
 
-| Prioritet              | Oppgaver           | Status                          | Estimat |
-| ---------------------- | ------------------ | ------------------------------- | ------- |
-| 🔴 Kritisk (sikkerhet) | TRELLO-1           | ⏳ Gjenstår                     | 1 dag   |
-| 🔴 Kritisk (sikkerhet) | TRELLO-2           | ⏳ Tester skrevet, venter impl. | -       |
-| 🟡 Medium (validering) | TRELLO-3           | ⏳ Tester skrevet, venter impl. | -       |
-| 🟡 Medium (validering) | TRELLO-4, TRELLO-5 | ✅ Implementert og passerer     | -       |
+| Prioritet              | Oppgaver           | Status                      | Estimat |
+| ---------------------- | ------------------ | --------------------------- | ------- |
+| 🔴 Kritisk (sikkerhet) | TRELLO-1           | ⏳ Gjenstår                 | 1 dag   |
+| 🔴 Kritisk (sikkerhet) | TRELLO-2           | ✅ Implementert og passerer | -       |
+| 🟡 Medium (validering) | TRELLO-3           | ✅ Implementert og passerer | -       |
+| 🟡 Medium (validering) | TRELLO-4, TRELLO-5 | ✅ Implementert og passerer | -       |
 
 ---
 
