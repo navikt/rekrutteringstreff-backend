@@ -553,9 +553,6 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(response.statusCode).isIn(HTTP_BAD_REQUEST, HTTP_FORBIDDEN)
     }
 
-    /**
-     * TRELLO-3: Test 6.2.2 - Forsøk på å svare nei etter svarfrist gir feilkode
-     */
     @Test
     fun `svar nei etter svarfrist avvises`() {
         // Opprett treff med svarfrist som har utløpt
@@ -612,13 +609,6 @@ class JobbsøkerInnloggetBorgerTest {
         assertStatuscodeEquals(HTTP_OK, response, result)
     }
 
-    // =========================================================================
-    // TRELLO-4: Ugyldig treff-ID håndtering (AT 6.3.1)
-    // =========================================================================
-
-    /**
-     * TRELLO-4: Test 6.3.1 - GET til ukjent treff-ID gir 404
-     */
     @Test
     fun `hent jobbsøker for ukjent treff-ID gir 404`() {
         val ukjentTreffId = UUID.randomUUID()
@@ -633,9 +623,6 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
     }
 
-    /**
-     * TRELLO-4: Test 6.3.1 - POST svar-ja til ukjent treff-ID gir 404
-     */
     @Test
     fun `svar ja til ukjent treff-ID gir feilkode`() {
         val ukjentTreffId = UUID.randomUUID()
@@ -654,9 +641,6 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(response.statusCode).isIn(HTTP_NOT_FOUND, HTTP_BAD_REQUEST, HTTP_INTERNAL_ERROR)
     }
 
-    /**
-     * TRELLO-4: Test 6.3.1 - POST svar-nei til ukjent treff-ID gir feilkode
-     */
     @Test
     fun `svar nei til ukjent treff-ID gir feilkode`() {
         val ukjentTreffId = UUID.randomUUID()
@@ -675,15 +659,6 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(response.statusCode).isIn(HTTP_NOT_FOUND, HTTP_BAD_REQUEST, HTTP_INTERNAL_ERROR)
     }
 
-    // =========================================================================
-    // TRELLO-5: Dobbelt svar-håndtering (AT 6.3.2)
-    // =========================================================================
-
-    /**
-     * TRELLO-5: Test 6.3.2 - To raske "Svar ja"-kall registrerer kun én hendelse
-     * 
-     * Verifiserer at systemet er idempotent ved gjentatte svar fra samme jobbsøker.
-     */
     @Test
     fun `to raske svar ja kall registrerer kun én SVART_JA hendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
@@ -727,9 +702,6 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(svarJaHendelser).hasSizeGreaterThanOrEqualTo(1)
     }
 
-    /**
-     * TRELLO-5: Test for samtidige svar-ja kall (race condition)
-     */
     @Test
     fun `samtidige svar ja kall håndteres konsistent`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
