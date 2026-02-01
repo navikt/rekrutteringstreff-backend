@@ -47,6 +47,7 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 ### 7. [Akseptansetest og ROS](7-akseptansetest-og-ros/)
 
 - [Akseptansetester](7-akseptansetest-og-ros/akseptansetester.md) - Manuelle tester for domeneeksperter før pilot/prodsetting
+- [Automatiske backend-tester](7-akseptansetest-og-ros/automatiske-tester.md) - Plan for automatisering av akseptansetester i backend
 
 ## Applikasjoner i monorepoet
 

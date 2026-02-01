@@ -406,5 +406,6 @@ flowchart LR
 
 ## Relaterte dokumenter
 
+- [Plan for automatiske backend-tester](../7-akseptansetest-og-ros/automatiske-tester.md) - Sikkerhetstester for KI (bypass/validering)
 - [Database](../2-arkitektur/database.md) - Beskrivelse av `ki_spørring_logg`-tabellen
 - [Arkitekturprinsipper](../2-arkitektur/prinsipper.md) - Overordnet arkitektur
