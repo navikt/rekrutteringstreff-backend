@@ -356,6 +356,43 @@ class RekrutteringstreffTest {
     }
 
     @Test
+    fun `publiser rekrutteringstreff endrer status fra UTKAST til PUBLISERT`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        
+        // Opprett treff - opprettes automatisk med UTKAST-status
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        
+        // Verifiser at status er UTKAST før publisering
+        val (_, getResBeforePublish, getResultBeforePublish) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(200, getResBeforePublish, getResultBeforePublish)
+        val treffFørPublisering = mapper.readValue(getResultBeforePublish.get(), RekrutteringstreffDto::class.java)
+        assertThat(treffFørPublisering.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
+        
+        // Publiser treffet
+        val (_, pubRes, pubResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(200, pubRes, pubResult)
+        
+        // Verifiser at status er PUBLISERT etter publisering
+        val (_, getResAfterPublish, getResultAfterPublish) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(200, getResAfterPublish, getResultAfterPublish)
+        val treffEtterPublisering = mapper.readValue(getResultAfterPublish.get(), RekrutteringstreffDto::class.java)
+        assertThat(treffEtterPublisering.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        
+        // Verifiser at PUBLISERT-hendelse ble registrert
+        val hendelser = db.hentHendelser(treffId)
+        assertThat(hendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.PUBLISERT)
+        assertThat(hendelser.first { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT }.aktørIdentifikasjon)
+            .isEqualTo(navIdent)
+    }
+
+    @Test
     fun `slett rekrutteringstreff feiler (409) etter publisering uansett hvilke data den har`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
