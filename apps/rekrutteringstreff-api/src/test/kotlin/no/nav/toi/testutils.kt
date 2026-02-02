@@ -35,6 +35,7 @@ fun MockOAuth2Server.lagToken(
 
 val httpClient: HttpClient = HttpClient.newBuilder()
     .followRedirects(HttpClient.Redirect.ALWAYS)
+    .connectTimeout(java.time.Duration.ofSeconds(5))
     .build()
 
 fun MockOAuth2Server.lagTokenBorger(
