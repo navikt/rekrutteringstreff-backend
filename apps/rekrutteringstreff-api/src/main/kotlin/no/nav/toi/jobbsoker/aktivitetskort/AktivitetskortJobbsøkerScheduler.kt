@@ -3,11 +3,12 @@ package no.nav.toi.jobbsoker.aktivitetskort
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.executeInTransaction
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
-import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Duration
 import java.time.LocalDateTime
@@ -23,7 +24,8 @@ class AktivitetskortJobbsøkerScheduler(
     private val aktivitetskortRepository: AktivitetskortRepository,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val rapidsConnection: RapidsConnection,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
+    private val leaderElection: LeaderElectionInterface,
 ) {
 
     private val scheduler = Executors.newScheduledThreadPool(1)
@@ -53,6 +55,11 @@ class AktivitetskortJobbsøkerScheduler(
     fun behandleJobbsøkerHendelser() {
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av AktivitetskortJobbsøkerScheduler er ikke ferdig, skipper denne kjøringen.")
+            return
+        }
+
+        if (leaderElection.isLeader().not()) {
+            log.info("Denne instansen er ikke leader, AktivitetskortJobbsøkerScheduler startes ikke.")
             return
         }
 

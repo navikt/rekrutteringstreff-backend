@@ -9,10 +9,12 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 
+interface LeaderElectionInterface {
+    fun isLeader(): Boolean
+}
 
-class LeaderElection() {
+class LeaderElection(): LeaderElectionInterface {
     private val hostname = InetAddress.getLocalHost().hostName
-    private var leader = ""
     private val electorUrl = getenv("ELECTOR_GET_URL")
     private val httpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
@@ -20,25 +22,20 @@ class LeaderElection() {
     private val objectMapper = jacksonObjectMapper()
 
     init {
-        log.info("Leader election initialized, hostname is $hostname")
-        log.info("electorUrl? $electorUrl")
-        log.info("isLeader? ${isLeader()}")
+        log.info("Leader election, hostname: $hostname, leader: ${getLeader()}, isLeader? ${isLeader()}")
     }
 
-    fun isLeader(): Boolean = hostname == getLeader()
+    override fun isLeader(): Boolean = hostname == getLeader()
 
     private fun getLeader(): String {
-        leader = try {
+        return try {
             val request = HttpRequest.newBuilder().uri(URI.create(electorUrl)).GET().build()
             val json = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
-            log.info("json: $json")
             objectMapper.readValue(json, Elector::class.java).name
         } catch (e: Exception) {
             log.error("Feil under leader election", e)
             ""
         }
-        log.info("Running leader election, leader is $leader, hostname is $hostname")
-        return leader
     }
 }
 

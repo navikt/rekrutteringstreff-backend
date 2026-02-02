@@ -255,13 +255,15 @@ class App(
             aktivitetskortRepository = aktivitetskortRepository,
             rekrutteringstreffRepository = rekrutteringstreffRepository,
             rapidsConnection = rapidsConnection,
-            objectMapper = JacksonConfig.mapper
+            objectMapper = JacksonConfig.mapper,
+            leaderElection = leaderElection,
         )
         aktivitetskortJobbsøkerScheduler.start()
 
         synlighetsBehovScheduler = SynlighetsBehovScheduler(
             jobbsøkerService = jobbsøkerService,
-            rapidsConnection = rapidsConnection
+            rapidsConnection = rapidsConnection,
+            leaderElection = leaderElection,
         )
         synlighetsBehovScheduler.start()
     }

@@ -7,6 +7,7 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.no.nav.toi.LeaderElectionMock
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeAll
@@ -47,7 +48,14 @@ class AktivitetskortTransaksjonTest {
     @Test
     fun `skal rulle tilbake databaseendringer dersom kafka feiler ved invitasjon`() {
         val failingRapid = FailingRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, failingRapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            failingRapid,
+            mapper,
+            LeaderElectionMock(),
+        )
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -76,7 +84,14 @@ class AktivitetskortTransaksjonTest {
     @Test
     fun `skal rulle tilbake databaseendringer dersom kafka feiler ved treff endret`() {
         val failingRapid = FailingRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, failingRapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            failingRapid,
+            mapper,
+            LeaderElectionMock(),
+        )
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
