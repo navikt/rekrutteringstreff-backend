@@ -42,7 +42,7 @@ class JobbsøkerService(
                 // Sjekk om jobbsøker er synlig - hopp over usynlige jobbsøkere
                 val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
                 if (erSynlig == false) {
-                    secureLogger.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig for arbeidsgiver - hopper over")
+                    secureLogger.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig i rekrutteringstreff - hopper over")
                     return@forEach
                 }
 
