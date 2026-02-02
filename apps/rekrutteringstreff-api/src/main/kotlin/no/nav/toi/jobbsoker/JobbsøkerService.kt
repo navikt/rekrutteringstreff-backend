@@ -46,9 +46,9 @@ class JobbsøkerService(
                     return@forEach
                 }
 
-                val currentStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
-                if (currentStatus != null && currentStatus != JobbsøkerStatus.LAGT_TIL) {
-                    logger.info("Jobbsøker $personTreffId har allerede status $currentStatus, hopper over invitasjon")
+                val `jobbsøkerstatus` = jobbsøkerRepository.hentStatus(connection, personTreffId)
+                if (`jobbsøkerstatus` != null && `jobbsøkerstatus` != JobbsøkerStatus.LAGT_TIL) {
+                    logger.info("Jobbsøker $personTreffId har allerede status $`jobbsøkerstatus`, hopper over invitasjon")
                     return@forEach
                 }
 
