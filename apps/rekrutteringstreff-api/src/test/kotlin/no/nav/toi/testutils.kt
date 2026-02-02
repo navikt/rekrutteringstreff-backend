@@ -2,7 +2,6 @@ package no.nav.toi
 
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.provider.Arguments
 import java.net.URI
 import java.net.http.HttpClient
@@ -37,8 +36,6 @@ fun MockOAuth2Server.lagToken(
 val httpClient: HttpClient = HttpClient.newBuilder()
     .followRedirects(HttpClient.Redirect.ALWAYS)
     .build()
-
-private const val minSideAudience = "rekrutteringstreff-minside-audience"
 
 fun MockOAuth2Server.lagTokenBorger(
     authPort: Int,
@@ -113,6 +110,36 @@ enum class UautentifiserendeTestCase(val leggPåToken: HttpRequest.Builder.(Mock
             "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJub25lIn0.${authServer.lagToken(authPort).serialize().split(".")[1]}."
         )
     });
+
+    fun utførGet(url: String, authServer: MockOAuth2Server, authPort: Int): HttpResponse<String> {
+        val builder = HttpRequest.newBuilder().uri(URI.create(url)).GET()
+        this.leggPåToken(builder, authServer, authPort)
+        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+    }
+
+    fun utførPost(url: String, body: String = "", authServer: MockOAuth2Server, authPort: Int, contentType: String = "application/json"): HttpResponse<String> {
+        val builder = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Content-Type", contentType)
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+        this.leggPåToken(builder, authServer, authPort)
+        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+    }
+
+    fun utførPut(url: String, body: String = "", authServer: MockOAuth2Server, authPort: Int, contentType: String = "application/json"): HttpResponse<String> {
+        val builder = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Content-Type", contentType)
+            .PUT(HttpRequest.BodyPublishers.ofString(body))
+        this.leggPåToken(builder, authServer, authPort)
+        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+    }
+
+    fun utførDelete(url: String, authServer: MockOAuth2Server, authPort: Int): HttpResponse<String> {
+        val builder = HttpRequest.newBuilder().uri(URI.create(url)).DELETE()
+        this.leggPåToken(builder, authServer, authPort)
+        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+    }
 
     companion object {
         fun somStrømAvArgumenter() = entries.map { Arguments.of(it) }.stream()

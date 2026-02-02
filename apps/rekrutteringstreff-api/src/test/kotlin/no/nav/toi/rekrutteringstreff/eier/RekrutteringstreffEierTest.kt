@@ -310,44 +310,25 @@ class RekrutteringstreffEierTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentEiere(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
-        val request = java.net.http.HttpRequest.newBuilder()
-            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere"))
-            .GET()
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførGet("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringLeggTilEiere(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
-        val request = java.net.http.HttpRequest.newBuilder()
-            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere"))
-            .header("Content-Type", "application/json")
-            .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(listOf("A123456"))))
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførPut("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", mapper.writeValueAsString(listOf("A123456")), authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringSlettEier(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val navIdent = "A123456"
-        val request = java.net.http.HttpRequest.newBuilder()
-            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent"))
-            .DELETE()
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførDelete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 }

@@ -20,9 +20,6 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.HttpURLConnection.*
-import java.net.URI
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -116,13 +113,7 @@ class JobbsøkerTest {
     @MethodSource("tokenVarianter")
     fun autentiseringLeggTilJobbsøker(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
-        val leggPåToken = autentiseringstest.leggPåToken
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker"))
-            .POST(HttpRequest.BodyPublishers.noBody())
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker", "", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
@@ -130,13 +121,7 @@ class JobbsøkerTest {
     @MethodSource("tokenVarianter")
     fun autentiseringHentJobbsøker(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
-        val leggPåToken = autentiseringstest.leggPåToken
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker"))
-            .GET()
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 

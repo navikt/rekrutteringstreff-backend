@@ -122,28 +122,16 @@ class ArbeidsgiverTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringLeggTilArbeidsgiver(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val anyTreffId = "anyTreffID"
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver"))
-            .POST(HttpRequest.BodyPublishers.noBody())
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver", "", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentArbeidsgivere(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val anyTreffId = "anyTreffID"
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver"))
-            .GET()
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
@@ -312,13 +300,9 @@ class ArbeidsgiverTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringSlettArbeidsgiver(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:${appPort}/api/rekrutteringstreff/${UUID.randomUUID()}/arbeidsgiver/${UUID.randomUUID()}"))
-            .DELETE()
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val anyTreffId = "anyTreffID"
+        val anyArbeidsgiverId = UUID.randomUUID()
+        val response = autentiseringstest.utførDelete("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver/$anyArbeidsgiverId", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 

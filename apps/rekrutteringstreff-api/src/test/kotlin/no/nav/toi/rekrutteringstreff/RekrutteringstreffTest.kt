@@ -23,9 +23,6 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.net.URI
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -502,90 +499,38 @@ class RekrutteringstreffTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringOpprett(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff"))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(
-                """
-                {
-                    "opprettetAvNavkontorEnhetId": "Test"
-                }
-                """.trimIndent()
-            ))
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff", "", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentAlle(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff"))
-            .GET()
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentEnkelt(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val dummyId = UUID.randomUUID().toString()
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/$dummyId"))
-            .GET()
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val anyId = UUID.randomUUID()
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringOppdater(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val dummyId = UUID.randomUUID().toString()
-        val updateDto = OppdaterRekrutteringstreffDto(
-            tittel = "Updated",
-            beskrivelse = "Oppdatert beskrivelse",
-            fraTid = nowOslo(),
-            tilTid = nowOslo(),
-            svarfrist = nowOslo(),
-            gateadresse = "Updated Gateadresse",
-            postnummer = "5678",
-            poststed = "Bergen",
-            kommune = "Updated Kommune",
-            kommunenummer = "1201",
-            fylke = "Updated fylke",
-            fylkesnummer = "12",
-        )
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/$dummyId"))
-            .header("Content-Type", "application/json")
-            .PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(updateDto)))
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val anyId = UUID.randomUUID()
+        val response = autentiseringstest.utførPut("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", "", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringSlett(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val dummyId = UUID.randomUUID().toString()
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/$dummyId"))
-            .DELETE()
-            .leggPåToken(authServer, authPort)
-            .build()
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val anyId = UUID.randomUUID()
+        val response = autentiseringstest.utførDelete("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 

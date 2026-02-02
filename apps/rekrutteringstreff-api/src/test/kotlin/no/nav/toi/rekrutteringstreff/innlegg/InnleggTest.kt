@@ -100,51 +100,26 @@ class InnleggTest {
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token GET alle`(tc: UautentifiserendeTestCase) {
-        val leggPåToken = tc.leggPåToken
-        val request = java.net.http.HttpRequest.newBuilder()
-            .uri(java.net.URI.create("http://localhost:${appPort}/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg"))
-            .GET()
-            .leggPåToken(auth, authPort)
-            .build()
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = tc.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg", auth, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token GET ett`(tc: UautentifiserendeTestCase) {
-        val leggPåToken = tc.leggPåToken
-        val request = java.net.http.HttpRequest.newBuilder()
-            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}"))
-            .GET()
-            .leggPåToken(auth, authPort)
-            .build()
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = tc.utførGet("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", auth, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token PUT`(tc: UautentifiserendeTestCase) {
-        val leggPåToken = tc.leggPåToken
         val body = OppdaterInnleggRequestDto("T", "", "", null, "")
-        val request = java.net.http.HttpRequest.newBuilder()
-            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}"))
-            .header("Content-Type", "application/json")
-            .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(JacksonConfig.mapper.writeValueAsString(body)))
-            .leggPåToken(auth, authPort)
-            .build()
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = tc.utførPut("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", JacksonConfig.mapper.writeValueAsString(body), auth, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token DELETE`(tc: UautentifiserendeTestCase) {
-        val leggPåToken = tc.leggPåToken
-        val request = java.net.http.HttpRequest.newBuilder()
-            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}"))
-            .DELETE()
-            .leggPåToken(auth, authPort)
-            .build()
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = tc.utførDelete("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", auth, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
@@ -262,9 +237,6 @@ class InnleggTest {
         sendesTilJobbsokerTidspunkt = ZonedDateTime.now().plusHours(1),
         htmlContent = "<p>x</p>"
     )
-
-    private val UautentifiserendeTestCase.leggPåToken
-        get() = this.leggPåToken
 }
 
 object TestUtils {
