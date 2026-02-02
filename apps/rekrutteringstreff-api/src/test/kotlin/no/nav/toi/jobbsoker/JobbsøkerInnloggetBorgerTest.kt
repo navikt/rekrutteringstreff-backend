@@ -23,6 +23,10 @@ import java.net.HttpURLConnection.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -339,6 +343,19 @@ class JobbsøkerInnloggetBorgerTest {
     }
 
     @Test
+    fun `jobbsøker som ikke er lagt til på treffet får 404`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("55555555555")
+        val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
+
+        // Jobbsøker er IKKE lagt til på treffet i det hele tatt
+        val (_, response, _) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
+        
+        // Backend returnerer 404 når jobbsøker ikke finnes på treffet
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
     fun `hentJobbsøkerInnloggetBorger håndterer harSvart når bruker har svart ja`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("11111111111")
@@ -501,6 +518,221 @@ class JobbsøkerInnloggetBorgerTest {
             assertThat(it.statuser.erPåmeldt).isTrue()
             assertThat(it.statuser.harSvart).isTrue()
         }
+    }
+
+    @Test
+    fun `svar ja etter svarfrist avvises`() {
+        // Opprett treff med svarfrist som har utløpt
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(
+            svarfrist = nowOslo().minusDays(1) // Svarfrist var i går
+        )
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(HTTP_BAD_REQUEST)
+    }
+
+    @Test
+    fun `svar nei etter svarfrist avvises`() {
+        // Opprett treff med svarfrist som har utløpt
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(
+            svarfrist = nowOslo().minusDays(1) // Svarfrist var i går
+        )
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(HTTP_BAD_REQUEST)
+    }
+
+    /**
+     * Positiv test: Svar ja før svarfrist tillates
+     */
+    @Test
+    fun `svar ja før svarfrist tillates`() {
+        // Opprett treff med svarfrist i fremtiden
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(
+            svarfrist = nowOslo().plusDays(3) // Svarfrist er om 3 dager
+        )
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertStatuscodeEquals(HTTP_OK, response, result)
+    }
+
+    @Test
+    fun `hent jobbsøker for ukjent treff-ID gir 404`() {
+        val ukjentTreffId = UUID.randomUUID()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
+    fun `svar ja til ukjent treff-ID gir feilkode`() {
+        val ukjentTreffId = UUID.randomUUID()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
+    fun `svar nei til ukjent treff-ID gir feilkode`() {
+        val ukjentTreffId = UUID.randomUUID()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger/svar-nei")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
+    fun `to raske svar ja kall registrerer kun én SVART_JA hendelse`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        // Første svar-ja
+        val (_, response1, result1) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(HTTP_OK, response1, result1)
+
+        // Andre svar-ja (umiddelbart etter)
+        val (_, response2, result2) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+            .body(requestBody)
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(HTTP_OK, response2, result2)
+
+        // Verifiser at kun én SVART_JA-hendelse ble registrert
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        val svarJaHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON }
+
+        val jobbsøker = db.hentJobbsøkereForTreff(treffId).first()
+        assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_JA)
+        
+        // Duplikat svar-ja skal ignoreres, så det skal kun være én hendelse
+        assertThat(svarJaHendelser).hasSize(1)
+    }
+
+    @Test
+    fun `samtidige svar ja kall håndteres konsistent`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12345678901")
+        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fnr, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)
+            )
+        )
+
+        val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
+
+        // Start samtidige svar-ja kall
+        val executor = Executors.newFixedThreadPool(2)
+        val latch = CountDownLatch(2)
+        val responses = ConcurrentLinkedQueue<Int>()
+
+        repeat(2) {
+            executor.submit {
+                try {
+                    val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
+                        .body(requestBody)
+                        .header("Content-Type", "application/json")
+                        .header("Authorization", "Bearer ${token.serialize()}")
+                        .responseString()
+                    responses.add(response.statusCode)
+                } finally {
+                    latch.countDown()
+                }
+            }
+        }
+
+        latch.await(10, TimeUnit.SECONDS)
+        executor.shutdown()
+
+        // Verifiser at ingen requests feilet med 500
+        assertThat(responses).doesNotContain(HTTP_INTERNAL_ERROR)
+
+        // Verifiser at status er konsistent
+        val jobbsøker = db.hentJobbsøkereForTreff(treffId).first()
+        assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_JA)
     }
 
     private fun hentJobbsøkerInnloggetBorger(treffId: TreffId, fødselsnummer: Fødselsnummer, token: SignedJWT) =

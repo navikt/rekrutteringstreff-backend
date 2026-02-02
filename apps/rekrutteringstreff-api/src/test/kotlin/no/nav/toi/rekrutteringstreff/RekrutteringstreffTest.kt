@@ -154,6 +154,33 @@ class RekrutteringstreffTest {
     }
 
     @Test
+    fun `opprett rekrutteringstreff med manglende påkrevd felt gir 400`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        
+        // Mangler opprettetAvNavkontorEnhetId som er påkrevd
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
+            .body("""{}""")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        
+        assertThat(response.statusCode).isEqualTo(400)
+    }
+
+    @Test
+    fun `opprett rekrutteringstreff med ugyldig JSON gir 400`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        
+        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
+            .body("""{opprettetAvNavkontorEnhetId: "mangler quotes på nøkkel"}""")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        
+        assertThat(response.statusCode).isEqualTo(400)
+    }
+
+    @Test
     fun hentAlleRekrutteringstreff() {
         val tittel1 = "Tittel1111111"
         val tittel2 = "Tittel2222222"
@@ -326,6 +353,43 @@ class RekrutteringstreffTest {
         assertThat(db.hentAlleRekrutteringstreff()).isNotEmpty
         assertThat(db.hentAlleJobbsøkere()).isNotEmpty
         assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
+    }
+
+    @Test
+    fun `publiser rekrutteringstreff endrer status fra UTKAST til PUBLISERT`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        
+        // Opprett treff - opprettes automatisk med UTKAST-status
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        
+        // Verifiser at status er UTKAST før publisering
+        val (_, getResBeforePublish, getResultBeforePublish) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(200, getResBeforePublish, getResultBeforePublish)
+        val treffFørPublisering = mapper.readValue(getResultBeforePublish.get(), RekrutteringstreffDto::class.java)
+        assertThat(treffFørPublisering.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
+        
+        // Publiser treffet
+        val (_, pubRes, pubResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(200, pubRes, pubResult)
+        
+        // Verifiser at status er PUBLISERT etter publisering
+        val (_, getResAfterPublish, getResultAfterPublish) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .responseString()
+        assertStatuscodeEquals(200, getResAfterPublish, getResultAfterPublish)
+        val treffEtterPublisering = mapper.readValue(getResultAfterPublish.get(), RekrutteringstreffDto::class.java)
+        assertThat(treffEtterPublisering.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        
+        // Verifiser at PUBLISERT-hendelse ble registrert
+        val hendelser = db.hentHendelser(treffId)
+        assertThat(hendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.PUBLISERT)
+        assertThat(hendelser.first { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT }.aktørIdentifikasjon)
+            .isEqualTo(navIdent)
     }
 
     @Test
@@ -560,6 +624,10 @@ class RekrutteringstreffTest {
             // For å kunne fullføre må treffet være publisert først
             db.endreTilTidTilPassert(treffId, navIdent)
             db.publiser(treffId, navIdent)
+        } else if (path == "gjenapn") {
+            // For å kunne gjenåpne må treffet være avlyst først
+            db.publiser(treffId, navIdent)
+            db.avlys(treffId, navIdent)
         }
 
         val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/$path")
@@ -570,6 +638,9 @@ class RekrutteringstreffTest {
 
         val hendelser = db.hentHendelser(treffId)
         if (path == "fullfor") {
+            assertThat(hendelser).hasSize(4)
+        } else if (path == "gjenapn") {
+            // OPPRETTET + PUBLISERT + AVLYST + GJENÅPNET
             assertThat(hendelser).hasSize(4)
         } else {
             assertThat(hendelser).hasSize(2)
@@ -1164,5 +1235,156 @@ class RekrutteringstreffTest {
 
         val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(alleJobbsøkerHendelser).isEmpty()
+    }
+
+    // --- TILSTANDSOVERGANGER ---
+
+    @Test
+    fun `fullfor feiler når treffet ikke er passert i tid`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser treffet (men ikke sett tilTid til passert)
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Forsøk å fullføre uten at tilTid er passert
+        val (_, response, _) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Skal returnere 409 Conflict fordi treffet ikke er passert i tid
+        assertThat(response.statusCode).isEqualTo(409)
+    }
+
+    @Test
+    fun `fullfor feiler for AVLYST treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        db.endreTilTidTilPassert(treffId, navIdent)
+
+        // Publiser og avlys treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Forsøk å fullføre et avlyst treff
+        val (_, response, _) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Skal returnere 409 Conflict fordi treffet allerede er avlyst
+        assertThat(response.statusCode).isEqualTo(409)
+    }
+
+    @Test
+    fun `avlys feiler for FULLFØRT treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        db.endreTilTidTilPassert(treffId, navIdent)
+
+        // Publiser og fullfør treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Forsøk å avlyse et fullført treff
+        val (_, response, _) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Skal returnere 409 Conflict fordi treffet allerede er fullført
+        assertThat(response.statusCode).isEqualTo(409)
+    }
+
+    @Test
+    fun `gjenapn feiler for UTKAST treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Forsøk å gjenåpne et utkast-treff (som aldri har vært avlyst)
+        val (_, response, _) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/gjenapn")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Skal returnere 409 Conflict fordi treffet ikke er avlyst
+        assertThat(response.statusCode).isEqualTo(409)
+    }
+
+    @Test
+    fun `gjenapn feiler for PUBLISERT treff som ikke er avlyst`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Forsøk å gjenåpne et publisert treff som ikke er avlyst
+        val (_, response, _) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/gjenapn")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Skal returnere 409 Conflict fordi treffet ikke er avlyst
+        assertThat(response.statusCode).isEqualTo(409)
+    }
+
+    @Test
+    fun `gjenapn fungerer for AVLYST treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser og avlys treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Gjenåpne treffet
+        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/gjenapn")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        assertStatuscodeEquals(200, response, result)
+
+        // Verifiser at GJENÅPNET-hendelse ble registrert
+        val hendelser = db.hentHendelser(treffId)
+        assertThat(hendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.GJENÅPNET)
+    }
+
+    @Test
+    fun `publiser feiler for allerede PUBLISERT treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser treffet
+        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Forsøk å publisere igjen
+        val (_, response, _) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .response()
+
+        // Skal returnere 409 Conflict fordi treffet allerede er publisert
+        assertThat(response.statusCode).isEqualTo(409)
     }
 }

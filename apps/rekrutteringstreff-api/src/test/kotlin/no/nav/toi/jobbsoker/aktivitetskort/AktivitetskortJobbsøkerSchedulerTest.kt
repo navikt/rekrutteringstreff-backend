@@ -635,7 +635,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         scheduler.behandleJobbsøkerHendelser()
 
         db.endreTilTidTilPassert(treffId, expectedFnr.asString)
-        rekrutteringstreffService.publiser(treffId, expectedFnr.asString)
+        // Treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         rekrutteringstreffService.fullfør(treffId, expectedFnr.asString)
         scheduler.behandleJobbsøkerHendelser()
 
@@ -690,7 +690,7 @@ class AktivitetskortJobbsøkerSchedulerTest {
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)  // Hendelse 3: TREFF_ENDRET
 
         db.endreTilTidTilPassert(treffId, fødselsnummer.asString)
-        rekrutteringstreffService.publiser(treffId, fødselsnummer.asString)
+        // Treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         rekrutteringstreffService.fullfør(treffId, fødselsnummer.asString)  // Hendelse 4: SVART_JA_TREFF_FULLFØRT
 
         // Kjør scheduler én gang - skal behandle alle i riktig rekkefølge
@@ -732,9 +732,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()  // Send invitasjoner og svar
 
-        // Fullfør treffet
+        // Fullfør treffet - treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         db.endreTilTidTilPassert(treffId, fnrSvartJa.asString)
-        rekrutteringstreffService.publiser(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
         scheduler.behandleJobbsøkerHendelser()
 
@@ -831,9 +830,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        // Fullfør treffet - skal ikke sende noen ekstra hendelse for person som svarte nei
+        // Fullfør treffet - treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         db.endreTilTidTilPassert(treffId, fnrSvartNei.asString)
-        rekrutteringstreffService.publiser(treffId, fnrSvartNei.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartNei.asString)
         scheduler.behandleJobbsøkerHendelser()
 
@@ -864,9 +862,8 @@ class AktivitetskortJobbsøkerSchedulerTest {
 
         scheduler.behandleJobbsøkerHendelser()
 
-        // Fullfør treffet
+        // Fullfør treffet - treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         db.endreTilTidTilPassert(treffId, fnrSvartJa.asString)
-        rekrutteringstreffService.publiser(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
         scheduler.behandleJobbsøkerHendelser()
 

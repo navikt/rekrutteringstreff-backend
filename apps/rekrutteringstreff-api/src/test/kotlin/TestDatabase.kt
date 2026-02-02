@@ -225,6 +225,14 @@ class TestDatabase {
         }.executeUpdate()
     }
 
+    fun hentJobbsøkerStatus(personTreffId: PersonTreffId): JobbsøkerStatus? = dataSource.connection.use { conn ->
+        conn.prepareStatement("SELECT status FROM jobbsoker WHERE id = ?").apply {
+            setObject(1, personTreffId.somUuid)
+        }.executeQuery().use { rs ->
+            if (rs.next()) JobbsøkerStatus.valueOf(rs.getString("status")) else null
+        }
+    }
+
     fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) = dataSource.connection.use {
         it.prepareStatement("UPDATE rekrutteringstreff SET eiere = ? WHERE id = ?").apply {
             setArray(1, connection.createArrayOf("text", eiere.toTypedArray()))
@@ -548,6 +556,15 @@ class TestDatabase {
                 connection, treffId, RekrutteringstreffHendelsestype.PUBLISERT, navIdent
             )
             rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)
+        }
+    }
+
+    fun avlys(treffId: TreffId, navIdent: String) {
+        dataSource.connection.use { connection ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.AVLYST, navIdent
+            )
+            rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.AVLYST)
         }
     }
 }

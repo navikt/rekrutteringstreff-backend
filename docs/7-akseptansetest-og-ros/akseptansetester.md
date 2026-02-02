@@ -364,8 +364,8 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 3. Hvis ja: Switch-knapper for hvert endret felt (tidspunkt, sted, svarfrist, etc.)
 4. Valgte felter nevnes i SMS/e-post-teksten til jobbsøker
 5. Mottakere:
-   - **Invitert (ikke svart):** Får varsel
    - **Svart ja:** Får varsel
+   - **Invitert (ikke svart):** Får IKKE varsel
    - **Svart nei:** Får IKKE varsel
 6. **Treffsiden oppdateres umiddelbart** - jobbsøker ser alltid siste versjon når de åpner treffsiden
 
@@ -384,7 +384,7 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 
 | #     | Test                                                    | Forventet resultat                       | ✅❌ | Notat |
 | ----- | ------------------------------------------------------- | ---------------------------------------- | ---- | ----- |
-| 7.2.1 | Jobbsøker (invitert, ikke svart) - Motta endringsvarsel | SMS/e-post med info om valgte felt       |      |       |
+| 7.2.1 | Jobbsøker (invitert, ikke svart) - Sjekk varsel         | Skal IKKE motta varsel                   |      |       |
 | 7.2.2 | Jobbsøker (svart ja) - Motta endringsvarsel             | SMS/e-post med info om valgte felt       |      |       |
 | 7.2.3 | Jobbsøker (svart nei) - Sjekk varsel                    | Skal IKKE motta varsel                   |      |       |
 | 7.2.4 | Jobbsøker - Sjekk SMS-tekst                             | Teksten inneholder de valgte feltnavnene |      |       |
@@ -408,7 +408,7 @@ Helhetlig test av endringsflyt: varseldialog, feltvalg, mottakere, MinSide og ak
 | 7.4.1 | **Endre alle felt:** Endre tittel, tidspunkt, sted og svarfrist. Velg alle switch-knapper.                  | Varsel (SMS/e-post) nevner alle felt. Aktivitetskort oppdateres med ny tittel, tidspunkt, sted og svarfrist. Jobbsøker uten KRR-kontakt får varsel på MinSide. |      |       |
 | 7.4.2 | **Endre ingen felt:** Gjør endring, men velg "Ikke send varsel" i dialogen.                                 | Endring lagres. Aktivitetskort oppdateres. Ingen varsel sendes (SMS, e-post, MinSide).                                                                         |      |       |
 | 7.4.3 | **Endre noen felt:** Endre kun tidspunkt og sted. Velg kun disse i dialogen.                                | Varsel nevner kun tidspunkt og sted. Aktivitetskort oppdateres med nye verdier. Tittel og svarfrist er uendret i aktivitetskort.                               |      |       |
-| 7.4.4 | **Mottakere:** Endring med varsel. Sjekk at jobbsøker (invitert + svart ja) får varsel, svart nei får IKKE. | Invitert og svart ja: Mottar varsel. Svart nei: Mottar IKKE varsel. Alle aktivitetskort oppdateres uavhengig av svar.                                          |      |       |
+| 7.4.4 | **Mottakere:** Endring med varsel. Sjekk at jobbsøker (svart ja) får varsel, invitert og svart nei får IKKE. | Svart ja: Mottar varsel. Invitert (ikke svart) og svart nei: Mottar IKKE varsel. Alle aktivitetskort oppdateres uavhengig av svar.                                          |      |       |
 | 7.4.5 | **MinSide-varsel:** Jobbsøker uten kontaktinfo i KRR. Endre felt og send varsel.                            | Jobbsøker ser varsel på MinSide med info om endring. Aktivitetskort oppdateres.                                                                                |      |       |
 
 ---
