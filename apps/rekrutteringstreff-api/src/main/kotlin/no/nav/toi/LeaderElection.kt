@@ -1,5 +1,6 @@
 package no.nav.toi
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.lang.System.getenv
 import java.net.InetAddress
 import java.net.URI
@@ -15,6 +16,7 @@ class LeaderElection() {
     private val httpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
         .build()
+    private val objectMapper = jacksonObjectMapper()
 
     init {
         log.info("Leader election initialized, hostname is $hostname")
@@ -27,12 +29,16 @@ class LeaderElection() {
     private fun getLeader(): String {
         leader = try {
             val request = HttpRequest.newBuilder().uri(URI.create(electorUrl)).GET().build()
-            httpClient.send(request, HttpResponse.BodyHandlers.ofString()).toString()
+            val json = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).toString()
+            log.info("json: $json")
+            objectMapper.readValue(json, Elector::class.java).name
         } catch (e: Exception) {
             log.error("Feil under leader election", e)
             ""
         }
-        log.info("Running leader election, leader is $leader")
+        log.info("Running leader election, leader is $leader, hostname is $hostname")
         return leader
     }
 }
+
+private data class Elector(val name: String)
