@@ -1,5 +1,6 @@
 package no.nav.toi
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.lang.System.getenv
 import java.net.InetAddress
@@ -41,4 +42,5 @@ class LeaderElection() {
     }
 }
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 private data class Elector(val name: String)
