@@ -679,17 +679,15 @@ class JobbsøkerInnloggetBorgerTest {
             .responseString()
         assertStatuscodeEquals(HTTP_OK, response2, result2)
 
-        // Verifiser at kun én SVART_JA-hendelse ble registrert (eller at duplikater håndteres)
+        // Verifiser at kun én SVART_JA-hendelse ble registrert
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         val svarJaHendelser = hendelser.filter { it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON }
 
-        // Idempotent: Enten kun én hendelse, eller to hendelser som ikke påvirker utfall
-        // Viktigste er at status er konsistent
         val jobbsøker = db.hentJobbsøkereForTreff(treffId).first()
         assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_JA)
         
-        // Det er akseptabelt med 1 eller 2 hendelser, så lenge status er korrekt
-        assertThat(svarJaHendelser).hasSizeGreaterThanOrEqualTo(1)
+        // Duplikat svar-ja skal ignoreres, så det skal kun være én hendelse
+        assertThat(svarJaHendelser).hasSize(1)
     }
 
     @Test

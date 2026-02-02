@@ -72,6 +72,13 @@ class JobbsøkerService(
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
+
+            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+            if (nåværendeStatus == JobbsøkerStatus.SVART_JA) {
+                logger.info("Jobbsøker har allerede svart JA, ignorerer duplikat kall")
+                return@executeInTransaction
+            }
+
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
         }
@@ -87,6 +94,13 @@ class JobbsøkerService(
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
+
+            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+            if (nåværendeStatus == JobbsøkerStatus.SVART_NEI) {
+                logger.info("Jobbsøker har allerede svart NEI, ignorerer duplikat kall")
+                return@executeInTransaction
+            }
+
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_NEI)
         }
