@@ -352,7 +352,6 @@ class JobbsøkerInnloggetBorgerTest {
         val (_, response, _) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
         
         // Backend returnerer 404 når jobbsøker ikke finnes på treffet
-        // Dette er korrekt oppførsel - frontend viser da info om "begrenset plass, kontakt veileder"
         assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
     }
 
@@ -520,12 +519,7 @@ class JobbsøkerInnloggetBorgerTest {
             assertThat(it.statuser.harSvart).isTrue()
         }
     }
-    /**
-     * Forsøk på å svare etter svarfrist gir feilkode
-     * 
-     * Verifiserer at jobbsøkere ikke kan svare på invitasjoner etter at 
-     * svarfristen har utløpt.
-     */
+
     @Test
     fun `svar ja etter svarfrist avvises`() {
         // Opprett treff med svarfrist som har utløpt
@@ -549,8 +543,7 @@ class JobbsøkerInnloggetBorgerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        // Forventer feilkode (400 eller 403) når svarfrist har utløpt
-        assertThat(response.statusCode).isIn(HTTP_BAD_REQUEST, HTTP_FORBIDDEN)
+        assertThat(response.statusCode).isEqualTo(HTTP_BAD_REQUEST)
     }
 
     @Test
@@ -576,8 +569,7 @@ class JobbsøkerInnloggetBorgerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        // Forventer feilkode (400 eller 403) når svarfrist har utløpt
-        assertThat(response.statusCode).isIn(HTTP_BAD_REQUEST, HTTP_FORBIDDEN)
+        assertThat(response.statusCode).isEqualTo(HTTP_BAD_REQUEST)
     }
 
     /**
@@ -637,8 +629,7 @@ class JobbsøkerInnloggetBorgerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        // Forventer enten 404 (treff ikke funnet) eller 500 (IllegalStateException)
-        assertThat(response.statusCode).isIn(HTTP_NOT_FOUND, HTTP_BAD_REQUEST, HTTP_INTERNAL_ERROR)
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
     }
 
     @Test
@@ -655,8 +646,7 @@ class JobbsøkerInnloggetBorgerTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .responseString()
 
-        // Forventer enten 404 (treff ikke funnet) eller 500 (IllegalStateException)
-        assertThat(response.statusCode).isIn(HTTP_NOT_FOUND, HTTP_BAD_REQUEST, HTTP_INTERNAL_ERROR)
+        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
     }
 
     @Test

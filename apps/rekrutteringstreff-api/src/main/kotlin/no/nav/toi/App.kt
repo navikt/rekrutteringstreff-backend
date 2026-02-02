@@ -12,6 +12,7 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
+import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.SvarfristUtløptException
 import no.nav.toi.exception.UlovligOppdateringException
@@ -175,6 +176,10 @@ class App(
 
         javalin.exception(RekrutteringstreffIkkeFunnetException::class.java) { e, ctx ->
             ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke rekrutteringstreffet")))
+        }
+
+        javalin.exception(JobbsøkerIkkeFunnetException::class.java) { e, ctx ->
+            ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke jobbsøkeren")))
         }
 
         javalin.exception(Exception::class.java) { e, ctx ->

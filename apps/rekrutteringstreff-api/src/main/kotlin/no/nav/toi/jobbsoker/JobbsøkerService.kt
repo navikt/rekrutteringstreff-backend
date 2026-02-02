@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLog
+import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.SvarfristUtløptException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
@@ -44,7 +45,6 @@ class JobbsøkerService(
                     return@forEach
                 }
 
-                // Idempotens: Sjekk om jobbsøker allerede har en annen status enn LAGT_TIL
                 val currentStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
                 if (currentStatus != null && currentStatus != JobbsøkerStatus.LAGT_TIL) {
                     logger.info("Jobbsøker $personTreffId har allerede status $currentStatus, hopper over invitasjon")
@@ -71,7 +71,7 @@ class JobbsøkerService(
 
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
-                ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+                ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
         }
@@ -86,7 +86,7 @@ class JobbsøkerService(
 
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
-                ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+                ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_NEI)
         }
