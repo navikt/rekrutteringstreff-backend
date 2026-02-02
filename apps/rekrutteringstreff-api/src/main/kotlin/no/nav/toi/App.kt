@@ -13,6 +13,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
+import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.SvarfristUtløptException
 import no.nav.toi.exception.UlovligOppdateringException
@@ -180,6 +181,10 @@ class App(
 
         javalin.exception(JobbsøkerIkkeFunnetException::class.java) { e, ctx ->
             ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke jobbsøkeren")))
+        }
+
+        javalin.exception(JobbsøkerIkkeSynligException::class.java) { e, ctx ->
+            ctx.status(403).json(mapOf("feil" to (e.message ?: "Jobbsøker er ikke synlig")))
         }
 
         javalin.exception(Exception::class.java) { e, ctx ->

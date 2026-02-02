@@ -4,6 +4,7 @@ import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLog
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
+import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.exception.SvarfristUtløptException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
@@ -73,6 +74,12 @@ class JobbsøkerService(
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
 
+            // Sjekk om jobbsøker er synlig
+            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
+            if (erSynlig == false) {
+                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+            }
+
             val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
             if (nåværendeStatus == JobbsøkerStatus.SVART_JA) {
                 logger.info("Jobbsøker har allerede svart JA, ignorerer duplikat kall")
@@ -94,6 +101,12 @@ class JobbsøkerService(
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
+
+            // Sjekk om jobbsøker er synlig
+            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
+            if (erSynlig == false) {
+                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+            }
 
             val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
             if (nåværendeStatus == JobbsøkerStatus.SVART_NEI) {
