@@ -11,8 +11,7 @@ import java.net.http.HttpResponse
 class LeaderElection() {
     private val hostname = InetAddress.getLocalHost().hostName
     private var leader = ""
-    private val electorPath = getenv("ELECTOR_GET_URL")
-    private val electorUrl = "http://$electorPath"
+    private val electorUrl = getenv("ELECTOR_GET_URL")
     private val httpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.ALWAYS)
         .build()
@@ -33,7 +32,7 @@ class LeaderElection() {
             log.error("Feil under leader election", e)
             ""
         }
-        log.debug("Running leader election, leader is $leader")
+        log.info("Running leader election, leader is $leader")
         return leader
     }
 }
