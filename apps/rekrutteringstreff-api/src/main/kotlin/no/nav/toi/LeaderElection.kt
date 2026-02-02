@@ -29,7 +29,7 @@ class LeaderElection() {
     private fun getLeader(): String {
         leader = try {
             val request = HttpRequest.newBuilder().uri(URI.create(electorUrl)).GET().build()
-            val json = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).toString()
+            val json = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
             log.info("json: $json")
             objectMapper.readValue(json, Elector::class.java).name
         } catch (e: Exception) {
