@@ -245,6 +245,8 @@ class App(
     private fun startSchedulere(jobbsøkerService: JobbsøkerService) {
         log.info("Starting schedulers")
 
+        val leaderElection = LeaderElection()
+
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
 
