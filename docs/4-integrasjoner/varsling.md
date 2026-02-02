@@ -73,7 +73,7 @@ sequenceDiagram
 | **Rapids-event**  | `rekrutteringstreffinvitasjon` | `rekrutteringstreffoppdatering`               | `rekrutteringstreffSvarOgStatus`\*  |
 | **Lytter**        | `KandidatInvitertLytter`       | `KandidatInvitertTreffEndretLytter`           | `KandidatTreffAvlystLytter`         |
 | **Mal**           | `KANDIDAT_INVITERT_TREFF`      | `KANDIDAT_INVITERT_TREFF_ENDRET`              | `KANDIDAT_INVITERT_TREFF_AVLYST`    |
-| **Mottakere**     | Den inviterte jobbsøkeren      | Inviterte + svart ja                          | Kun svart ja                        |
+| **Mottakere**     | Den inviterte jobbsøkeren      | Kun svart ja                                  | Kun svart ja                        |
 | **Flettedata**    | Nei                            | Ja (valgte endrede felter)                    | Nei                                 |
 
 \* Avlysning gjenbruker `rekrutteringstreffSvarOgStatus`-eventen med `svar=true` og `treffstatus=avlyst`. Samme event brukes også av aktivitetskort-appen for å oppdatere aktivitetskortstatus.
@@ -113,12 +113,9 @@ Markedskontakt velger:
 
 ### Hvem får meldingen?
 
-Kun jobbsøkere som:
+Kun jobbsøkere som har **svart ja** til invitasjonen.
 
-- Er invitert, eller
-- Har svart ja til invitasjonen
-
-Jobbsøkere som har svart nei får **ikke** melding om endringer.
+Jobbsøkere som kun er invitert (ikke svart) eller har svart nei, får **ikke** melding om endringer.
 
 ### Mal og meldingsinnhold
 

@@ -235,7 +235,8 @@ class JobbsøkerService(
 
     /**
      * Avgjør om en jobbsøker skal varsles om endringer basert på hendelseshistorikk.
-     * Varsler kun hvis siste relevante hendelse er INVITERT eller SVART_JA_TIL_INVITASJON.
+     * Varsler kun hvis siste relevante hendelse er SVART_JA_TIL_INVITASJON.
+     * Jobbsøkere som kun er invitert (ikke svart) eller har svart nei, får ikke varsel.
      */
     fun skalVarslesOmEndringer(hendelser: List<JobbsøkerHendelse>): Boolean {
         if (hendelser.isEmpty()) return false
