@@ -1,9 +1,5 @@
 package no.nav.toi.rekrutteringstreff.innlegg
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.ResponseDeserializable
-import com.github.kittinunf.result.Result.Failure
-import com.github.kittinunf.result.Result.Success
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
@@ -22,18 +18,6 @@ import java.net.ServerSocket
 import java.time.ZonedDateTime
 import java.util.*
 
-
-private object InnleggDeserializer : ResponseDeserializable<InnleggResponseDto> {
-    override fun deserialize(content: String): InnleggResponseDto =
-        JacksonConfig.mapper.readValue(content, InnleggResponseDto::class.java)
-}
-private object InnleggListeDeserializer : ResponseDeserializable<List<InnleggResponseDto>> {
-    override fun deserialize(content: String): List<InnleggResponseDto> =
-        JacksonConfig.mapper.readValue(
-            content,
-            JacksonConfig.mapper.typeFactory.constructCollectionType(List::class.java, InnleggResponseDto::class.java)
-        )
-}
 
 @WireMockTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -117,39 +101,51 @@ class InnleggTest {
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token GET alle`(tc: UautentifiserendeTestCase) {
         val leggPåToken = tc.leggPåToken
-        val (_, resp, res) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg")
+        val request = java.net.http.HttpRequest.newBuilder()
+            .uri(java.net.URI.create("http://localhost:${appPort}/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg"))
+            .GET()
             .leggPåToken(auth, authPort)
-            .responseString()
-        assertStatuscodeEquals(HTTP_UNAUTHORIZED, resp, res)
+            .build()
+        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token GET ett`(tc: UautentifiserendeTestCase) {
         val leggPåToken = tc.leggPåToken
-        val (_, r, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}")
+        val request = java.net.http.HttpRequest.newBuilder()
+            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}"))
+            .GET()
             .leggPåToken(auth, authPort)
-            .responseString()
-        assertStatuscodeEquals(HTTP_UNAUTHORIZED, r, res)
+            .build()
+        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token PUT`(tc: UautentifiserendeTestCase) {
         val leggPåToken = tc.leggPåToken
         val body = OppdaterInnleggRequestDto("T", "", "", null, "")
-        val (_, r, res) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}")
-            .body(JacksonConfig.mapper.writeValueAsString(body))
+        val request = java.net.http.HttpRequest.newBuilder()
+            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}"))
+            .header("Content-Type", "application/json")
+            .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(JacksonConfig.mapper.writeValueAsString(body)))
             .leggPåToken(auth, authPort)
-            .responseString()
-        assertStatuscodeEquals(HTTP_UNAUTHORIZED, r, res)
+            .build()
+        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token DELETE`(tc: UautentifiserendeTestCase) {
         val leggPåToken = tc.leggPåToken
-        val (_, r, res) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}")
+        val request = java.net.http.HttpRequest.newBuilder()
+            .uri(java.net.URI.create("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}"))
+            .DELETE()
             .leggPåToken(auth, authPort)
-            .responseString()
-        assertStatuscodeEquals(HTTP_UNAUTHORIZED, r, res)
+            .build()
+        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @Test
@@ -167,21 +163,17 @@ class InnleggTest {
             htmlContent = "<p>Nytt innhold</p>"
         )
 
-        val (_, resp, res) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg/$id")
-            .body(JacksonConfig.mapper.writeValueAsString(body))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(InnleggDeserializer)
+        val resp = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg/$id",
+            JacksonConfig.mapper.writeValueAsString(body),
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_OK, resp, res)
-        when (res) {
-            is Failure -> fail(res.error.message)
-            is Success -> {
-                val dto = res.value
-                assertThat(dto.tittel).isEqualTo(body.tittel)
-                assertThat(dto.opprettetAvPersonNavn).isEqualTo(body.opprettetAvPersonNavn)
-                assertThat(repo.hentById(id)!!.tittel).isEqualTo(body.tittel)
-            }
-        }
+        assertThat(resp.statusCode()).isEqualTo(HTTP_OK)
+        val dto = JacksonConfig.mapper.readValue(resp.body(), InnleggResponseDto::class.java)
+        assertThat(dto.tittel).isEqualTo(body.tittel)
+        assertThat(dto.opprettetAvPersonNavn).isEqualTo(body.opprettetAvPersonNavn)
+        assertThat(repo.hentById(id)!!.tittel).isEqualTo(body.tittel)
     }
 
     @Test
@@ -191,15 +183,15 @@ class InnleggTest {
         val repo = InnleggRepository(db.dataSource)
         val id = repo.opprett(treff, sampleOpprett(), "C123456").id
 
-        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(InnleggListeDeserializer)
+        val resp = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_OK, resp, res)
-        when (res) {
-            is Failure -> fail(res.error.message)
-            is Success -> assertThat(res.value).anySatisfy { it.id == id }
-        }
+        assertThat(resp.statusCode()).isEqualTo(HTTP_OK)
+        val type = JacksonConfig.mapper.typeFactory.constructCollectionType(List::class.java, InnleggResponseDto::class.java)
+        val liste: List<InnleggResponseDto> = JacksonConfig.mapper.readValue(resp.body(), type)
+        assertThat(liste).anySatisfy { it.id == id }
     }
 
     @Test
@@ -209,15 +201,14 @@ class InnleggTest {
         val repo = InnleggRepository(db.dataSource)
         val id = repo.opprett(treff, sampleOpprett(), "C123456").id
 
-        val (_, resp, res) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg/$id")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(InnleggDeserializer)
+        val resp = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg/$id",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_OK, resp, res)
-        when (res) {
-            is Failure -> fail(res.error.message)
-            is Success -> assertThat(res.value.id).isEqualTo(id)
-        }
+        assertThat(resp.statusCode()).isEqualTo(HTTP_OK)
+        val dto = JacksonConfig.mapper.readValue(resp.body(), InnleggResponseDto::class.java)
+        assertThat(dto.id).isEqualTo(id)
     }
 
     @Test
@@ -226,16 +217,15 @@ class InnleggTest {
         val treff = db.opprettRekrutteringstreffIDatabase()
         val body = sampleOpprett()
 
-        val (_, resp, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg")
-            .body(JacksonConfig.mapper.writeValueAsString(body))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(InnleggDeserializer)
+        val resp = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg",
+            JacksonConfig.mapper.writeValueAsString(body),
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_CREATED, resp, res)
-        when (res) {
-            is Failure -> fail(res.error.message)
-            is Success -> assertThat(res.value.tittel).isEqualTo(body.tittel)
-        }
+        assertThat(resp.statusCode()).isEqualTo(HTTP_CREATED)
+        val dto = JacksonConfig.mapper.readValue(resp.body(), InnleggResponseDto::class.java)
+        assertThat(dto.tittel).isEqualTo(body.tittel)
     }
 
     @Test
@@ -245,22 +235,24 @@ class InnleggTest {
         val repo = InnleggRepository(db.dataSource)
         val id = repo.opprett(treff, sampleOpprett(), "C123456").id
 
-        val (_, resp, res) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg/$id")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val resp = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg/$id",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_NO_CONTENT, resp, res)
+        assertThat(resp.statusCode()).isEqualTo(HTTP_NO_CONTENT)
         assertThat(repo.hentById(id)).isNull()
     }
 
     @Test
     fun `PUT mot ukjent treff gir 404`() {
         val token = auth.lagToken(authPort, navIdent = "C123456") // Use a valid navIdent
-        val (_, r, res) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}")
-            .body(JacksonConfig.mapper.writeValueAsString(OppdaterInnleggRequestDto("t", "", "", null, "")))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        assertStatuscodeEquals(HTTP_NOT_FOUND, r, res)
+        val resp = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}",
+            JacksonConfig.mapper.writeValueAsString(OppdaterInnleggRequestDto("t", "", "", null, "")),
+            token.serialize()
+        )
+        assertThat(resp.statusCode()).isEqualTo(HTTP_NOT_FOUND)
     }
 
     private fun sampleOpprett() = OpprettInnleggRequestDto(

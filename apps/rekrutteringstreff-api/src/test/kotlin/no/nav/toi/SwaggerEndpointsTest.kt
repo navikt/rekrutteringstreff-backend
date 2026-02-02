@@ -1,7 +1,5 @@
 package no.nav.toi
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.result.Result
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
@@ -60,10 +58,7 @@ class SwaggerEndpointsTest {
     @ValueSource(strings = ["/swagger", "/openapi"])
     fun `swagger endpoints respond ok`(endpoint: String) {
         val baseUrl = "http://localhost:$appPort"
-        val (_, response, result) = Fuel.get("$baseUrl$endpoint").responseString()
-        when (result) {
-            is Result.Failure -> throw result.error
-            is Result.Success -> assertThat(response.statusCode).isEqualTo(200)
-        }
+        val response = httpGet("$baseUrl$endpoint")
+        assertThat(response.statusCode()).isEqualTo(200)
     }
 }

@@ -1,11 +1,5 @@
 package no.nav.toi
 
-
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.FuelError
-import com.github.kittinunf.fuel.core.Response
-import com.github.kittinunf.fuel.core.responseUnit
-import com.github.kittinunf.result.Result
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
@@ -65,21 +59,13 @@ class KubernetesHealthTest {
 
     @Test
     fun isAlive() {
-        val (_, response: Response, result: Result<Unit, FuelError>) = Fuel.get("http://localhost:$appPort/isalive")
-            .responseUnit()
-        when (result) {
-            is Result.Success -> assertThat(response.statusCode).isEqualTo(200)
-            is Result.Failure -> throw result.error
-        }
+        val response = httpGet("http://localhost:$appPort/isalive")
+        assertThat(response.statusCode()).isEqualTo(200)
     }
 
     @Test
     fun isReady() {
-        val (_, response: Response, result: Result<Unit, FuelError>) = Fuel.get("http://localhost:$appPort/isready")
-            .responseUnit()
-        when (result) {
-            is Result.Success -> assertThat(response.statusCode).isEqualTo(200)
-            is Result.Failure -> throw result.error
-        }
+        val response = httpGet("http://localhost:$appPort/isready")
+        assertThat(response.statusCode()).isEqualTo(200)
     }
 }

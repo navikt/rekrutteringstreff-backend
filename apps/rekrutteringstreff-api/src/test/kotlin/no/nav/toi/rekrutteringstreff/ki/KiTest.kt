@@ -1,8 +1,5 @@
 package no.nav.toi.rekrutteringstreff.ki
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.ResponseDeserializable
-import com.github.kittinunf.result.Result
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
@@ -25,6 +22,7 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.net.HttpURLConnection.HTTP_OK
 import java.sql.Types
 import java.time.ZonedDateTime
 import java.util.*
@@ -134,16 +132,10 @@ class KiTest {
               "tekst": "Dette er en uskyldig tittel"
             }
         """.trimIndent()
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
-            .body(requestBody)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
-                override fun deserialize(content: String): ValiderMedLoggResponseDto =
-                    mapper.readValue(content, ValiderMedLoggResponseDto::class.java)
-            })
-        assertThat(response.statusCode).isEqualTo(200)
-        result as Result.Success
-        assertThat(result.value.loggId).isNotBlank()
+        val response = httpPost("http://localhost:$appPort$base/valider", requestBody, token.serialize())
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val dto = mapper.readValue(response.body(), ValiderMedLoggResponseDto::class.java)
+        assertThat(dto.loggId).isNotBlank()
     }
 
     @Test
@@ -194,17 +186,10 @@ class KiTest {
         }
         """.trimIndent()
 
-        val (_, postRes, postResult) = Fuel.post("http://localhost:$appPort$base/valider")
-            .body(requestBody)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
-                override fun deserialize(content: String): ValiderMedLoggResponseDto =
-                    mapper.readValue(content, ValiderMedLoggResponseDto::class.java)
-            })
+        val postRes = httpPost("http://localhost:$appPort$base/valider", requestBody, token.serialize())
 
-        assertThat(postRes.statusCode).isEqualTo(200)
-        postResult as Result.Success
-        val dto = postResult.value
+        assertThat(postRes.statusCode()).isEqualTo(HTTP_OK)
+        val dto = mapper.readValue(postRes.body(), ValiderMedLoggResponseDto::class.java)
         assertThat(dto.loggId).isNotBlank()
         assertThat(dto.bryterRetningslinjer).isTrue()
         assertThat(dto.begrunnelse).isEqualTo(begrunnelseFraOpenAi)
@@ -219,16 +204,10 @@ class KiTest {
         """.trimIndent()
         oppdaterEkstra(UUID.fromString(dto.loggId), oldMeta)
 
-        val (_, getRes, getResult) = Fuel.get("http://localhost:$appPort$base/logg/${dto.loggId}")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<KiLoggOutboundDto> {
-                override fun deserialize(content: String): KiLoggOutboundDto =
-                    mapper.readValue(content, KiLoggOutboundDto::class.java)
-            })
+        val getRes = httpGet("http://localhost:$appPort$base/logg/${dto.loggId}", token.serialize())
 
-        assertThat(getRes.statusCode).isEqualTo(200)
-        getResult as Result.Success
-        val logg = getResult.value
+        assertThat(getRes.statusCode()).isEqualTo(HTTP_OK)
+        val logg = mapper.readValue(getRes.body(), KiLoggOutboundDto::class.java)
 
         val sentToOpenAi: String = try {
             wireMockServer.serveEvents.serveEvents
@@ -278,15 +257,9 @@ class KiTest {
         """.trimIndent()
         oppdaterEkstra(UUID.fromString(loggId), fake)
 
-        val (_, getRes, getResult) = Fuel.get("http://localhost:$appPort$base/logg/$loggId")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<KiLoggOutboundDto> {
-                override fun deserialize(content: String): KiLoggOutboundDto =
-                    mapper.readValue(content, KiLoggOutboundDto::class.java)
-            })
-        assertThat(getRes.statusCode).isEqualTo(200)
-        getResult as Result.Success
-        val logg = getResult.value
+        val getRes = httpGet("http://localhost:$appPort$base/logg/$loggId", token.serialize())
+        assertThat(getRes.statusCode()).isEqualTo(HTTP_OK)
+        val logg = mapper.readValue(getRes.body(), KiLoggOutboundDto::class.java)
 
         assertThat(logg.id).isEqualTo(loggId)
         assertThat(logg.treffId).isEqualTo(treffId.toString())
@@ -306,11 +279,8 @@ class KiTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val base = baseTemplate.format(treffId)
         val loggId = opprettLogg(treffId, token)
-        val (_, putRes, _) = Fuel.put("http://localhost:$appPort$base/logg/$loggId/lagret")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .body("""{"lagret": true}""")
-            .response()
-        assertThat(putRes.statusCode).isEqualTo(200)
+        val putRes = httpPut("http://localhost:$appPort$base/logg/$loggId/lagret", """{"lagret": true}""", token.serialize())
+        assertThat(putRes.statusCode()).isEqualTo(HTTP_OK)
         assertThat(hentLagret(UUID.fromString(loggId))).isTrue()
     }
 
@@ -322,11 +292,8 @@ class KiTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val base = baseTemplate.format(treffId)
         val loggId = opprettLogg(treffId, token)
-        val (_, putRes, _) = Fuel.put("http://localhost:$appPort$base/logg/$loggId/manuell")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .body("""{"bryterRetningslinjer": true}""")
-            .response()
-        assertThat(putRes.statusCode).isEqualTo(200)
+        val putRes = httpPut("http://localhost:$appPort$base/logg/$loggId/manuell", """{"bryterRetningslinjer": true}""", token.serialize())
+        assertThat(putRes.statusCode()).isEqualTo(HTTP_OK)
         val manuell = hentManuell(UUID.fromString(loggId))
         assertThat(manuell.bryter).isTrue()
         assertThat(manuell.utfortAv).isEqualTo(navIdent)
@@ -344,20 +311,10 @@ class KiTest {
 
         oppdaterEkstra(UUID.fromString(loggId), null) // fjerne ekstra
 
-        val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg?treffId=$treffId")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
-                override fun deserialize(content: String): List<KiLoggOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(
-                        List::class.java,
-                        KiLoggOutboundDto::class.java
-                    )
-                    return mapper.readValue(content, type)
-                }
-            })
-        assertThat(listRes.statusCode).isEqualTo(200)
-        listResult as Result.Success
-        val items = listResult.value
+        val listRes = httpGet("http://localhost:$appPort$base/logg?treffId=$treffId", token.serialize())
+        val type = mapper.typeFactory.constructCollectionType(List::class.java, KiLoggOutboundDto::class.java)
+        assertThat(listRes.statusCode()).isEqualTo(HTTP_OK)
+        val items: List<KiLoggOutboundDto> = mapper.readValue(listRes.body(), type)
         val row = items.first { it.id == loggId }
 
         assertThat(row.promptVersjonsnummer).isNull()
@@ -379,13 +336,13 @@ class KiTest {
         val token = authServer.lagToken(authPort, navIdent = "A123456", groups = listOf(arbeidsgiverrettet))
         val url = "http://localhost:$appPort$base$path"
 
-        val (_, res, _) = when (method) {
-            "GET" -> Fuel.get(url)
-            "POST" -> Fuel.post(url)
-            "PUT" -> Fuel.put(url)
+        val res = when (method) {
+            "GET" -> httpGet(url, token.serialize())
+            "POST" -> httpPost(url, "", token.serialize())
+            "PUT" -> httpPut(url, "", token.serialize())
             else -> error("Unsupported method: $method")
-        }.header("Authorization", "Bearer ${token.serialize()}").response()
-        assertThat(res.statusCode).isEqualTo(403)
+        }
+        assertThat(res.statusCode()).isEqualTo(403)
     }
 
     @Test
@@ -401,16 +358,10 @@ class KiTest {
                 }
             """.trimIndent()
             val baseNew = baseTemplate.format(treffId)
-            val (_, response, result) = Fuel.post("http://localhost:$appPort$baseNew/valider")
-                .body(requestBody)
-                .header("Authorization", "Bearer ${token.serialize()}")
-                .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
-                    override fun deserialize(content: String): ValiderMedLoggResponseDto =
-                        mapper.readValue(content, ValiderMedLoggResponseDto::class.java)
-                })
-            assertThat(response.statusCode).isEqualTo(200)
-            result as Result.Success
-            assertThat(result.value.loggId).isNotBlank()
+            val response = httpPost("http://localhost:$appPort$baseNew/valider", requestBody, token.serialize())
+            assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+            val dto = mapper.readValue(response.body(), ValiderMedLoggResponseDto::class.java)
+            assertThat(dto.loggId).isNotBlank()
         }
 
         @Test
@@ -421,20 +372,11 @@ class KiTest {
             val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
             val loggId = opprettLogg(treffId, token)
             val base = baseTemplate.format(treffId)
-            val (_, listRes, listResult) = Fuel.get("http://localhost:$appPort$base/logg")
-                .header("Authorization", "Bearer ${token.serialize()}")
-                .responseObject(object : ResponseDeserializable<List<KiLoggOutboundDto>> {
-                    override fun deserialize(content: String): List<KiLoggOutboundDto> {
-                        val type = mapper.typeFactory.constructCollectionType(
-                            List::class.java,
-                            KiLoggOutboundDto::class.java
-                        )
-                        return mapper.readValue(content, type)
-                    }
-                })
-            assertThat(listRes.statusCode).isEqualTo(200)
-            listResult as Result.Success
-            assertThat(listResult.value.any { it.id == loggId }).isTrue()
+            val listRes = httpGet("http://localhost:$appPort$base/logg", token.serialize())
+            val type = mapper.typeFactory.constructCollectionType(List::class.java, KiLoggOutboundDto::class.java)
+            assertThat(listRes.statusCode()).isEqualTo(HTTP_OK)
+            val items: List<KiLoggOutboundDto> = mapper.readValue(listRes.body(), type)
+            assertThat(items.any { it.id == loggId }).isTrue()
         }
 
         private fun stubOpenAi(bryter: Boolean = false, begrunnelse: String = "OK") {
@@ -476,17 +418,11 @@ class KiTest {
         """.trimIndent()
         val base = baseTemplate.format(treffId)
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$base/valider")
-            .body(requestBody)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<ValiderMedLoggResponseDto> {
-                override fun deserialize(content: String): ValiderMedLoggResponseDto =
-                    mapper.readValue(content, ValiderMedLoggResponseDto::class.java)
-            })
+        val response = httpPost("http://localhost:$appPort$base/valider", requestBody, token.serialize())
 
-        require(response.statusCode == 200) { "Opprett logg feilet med ${response.statusCode}" }
-        result as Result.Success
-        return result.value.loggId
+        require(response.statusCode() == HTTP_OK) { "Opprett logg feilet med ${response.statusCode()}" }
+        val dto = mapper.readValue(response.body(), ValiderMedLoggResponseDto::class.java)
+        return dto.loggId
     }
 
     private fun oppdaterEkstra(id: UUID, nyJson: String?) {

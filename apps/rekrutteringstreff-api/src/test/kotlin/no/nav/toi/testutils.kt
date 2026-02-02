@@ -1,36 +1,15 @@
 package no.nav.toi
 
-import com.github.kittinunf.fuel.core.FuelError
-import com.github.kittinunf.fuel.core.Request
-import com.github.kittinunf.fuel.core.Response
-import com.github.kittinunf.result.Result
-import com.github.kittinunf.result.Result.Failure
-import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.params.provider.Arguments
+import java.net.URI
 import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
-
-/**
- * Denne funksjonens eksistensberettigelse er å få kastet den underliggende exception når et HTTP kall har feilet uten
- * at vi har fått noen responsstatuskode, f.eks. java.net.SocketException: Unexpected end of file from server */
-fun assertStatuscodeEquals(
-    expectedStatuscode: Int,
-    actualResponse: Response,
-    actualResult: Result<*, FuelError>
-) {
-    when (actualResult) {
-        is Success -> assertThat(actualResponse.statusCode).isEqualTo(expectedStatuscode)
-        is Failure -> if (actualResponse.statusCode == -1) {
-            throw actualResult.error
-        } else {
-            assertThat(actualResponse.statusCode).isEqualTo(expectedStatuscode)
-        }
-    }
-}
 
 object AzureAdRoller {
     val modiaGenerell: UUID = UUID.randomUUID()
@@ -76,10 +55,40 @@ fun MockOAuth2Server.lagTokenBorger(
     audience = audience
 )
 
+/** Hjelpefunksjon for å sende HTTP-forespørsler i tester */
+fun httpGet(url: String, token: String? = null): HttpResponse<String> {
+    val builder = HttpRequest.newBuilder().uri(URI.create(url)).GET()
+    token?.let { builder.header("Authorization", "Bearer $it") }
+    return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+}
 
-enum class UautentifiserendeTestCase(val leggPåToken: Request.(MockOAuth2Server, Int) -> Request) {
-    UgyldigToken({ authServer, authPort -> this.header("Authorization", "Bearer ugyldigtoken") }),
-    IngenToken({ authServer, authPort -> this }),
+fun httpPost(url: String, body: String = "", token: String? = null, contentType: String = "application/json"): HttpResponse<String> {
+    val builder = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .header("Content-Type", contentType)
+        .POST(HttpRequest.BodyPublishers.ofString(body))
+    token?.let { builder.header("Authorization", "Bearer $it") }
+    return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+}
+
+fun httpPut(url: String, body: String = "", token: String? = null, contentType: String = "application/json"): HttpResponse<String> {
+    val builder = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .header("Content-Type", contentType)
+        .PUT(HttpRequest.BodyPublishers.ofString(body))
+    token?.let { builder.header("Authorization", "Bearer $it") }
+    return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+}
+
+fun httpDelete(url: String, token: String? = null): HttpResponse<String> {
+    val builder = HttpRequest.newBuilder().uri(URI.create(url)).DELETE()
+    token?.let { builder.header("Authorization", "Bearer $it") }
+    return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+}
+
+enum class UautentifiserendeTestCase(val leggPåToken: HttpRequest.Builder.(MockOAuth2Server, Int) -> HttpRequest.Builder) {
+    UgyldigToken({ _, _ -> this.header("Authorization", "Bearer ugyldigtoken") }),
+    IngenToken({ _, _ -> this }),
     UgyldigIssuer({ authServer, authPort ->
         this.header(
             "Authorization",

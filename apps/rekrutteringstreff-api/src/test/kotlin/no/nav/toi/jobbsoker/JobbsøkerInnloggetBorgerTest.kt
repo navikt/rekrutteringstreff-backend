@@ -1,7 +1,5 @@
 package no.nav.toi.jobbsoker
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -20,6 +18,7 @@ import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
 import java.net.HttpURLConnection.*
+import java.net.http.HttpResponse
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -132,13 +131,13 @@ class JobbsøkerInnloggetBorgerTest {
         { "fødselsnummer": "${fnr.asString}" }
     """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            requestBody,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_OK, response, result)
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
 
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(2)
@@ -177,13 +176,13 @@ class JobbsøkerInnloggetBorgerTest {
         { "fødselsnummer": "${fnr.asString}" }
     """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei",
+            requestBody,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_OK, response, result)
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
 
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(2)
@@ -222,16 +221,16 @@ class JobbsøkerInnloggetBorgerTest {
 
         inviter(jobbsøkere, treffId, token)
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${borgerToken.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            """{ "fødselsnummer": "${fødselsnummer.asString}" }""",
+            borgerToken.serialize()
+        )
 
 
-        val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
+        val (response, jobbsøkerResult) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        val jobbsøker = jobbsøkerResult!!
 
-        val jobbsøker = result.get()
         assertThatCode { UUID.fromString(jobbsøker.personTreffId) }.doesNotThrowAnyException()
         assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer.asString)
         assertThat(jobbsøker.fornavn).isEqualTo("Test")
@@ -255,15 +254,16 @@ class JobbsøkerInnloggetBorgerTest {
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${borgerToken.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            """{ "fødselsnummer": "${fødselsnummer.asString}" }""",
+            borgerToken.serialize()
+        )
 
-        val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().statuser.erPåmeldt).isTrue()
-        assertThat(result.get().statuser.erInvitert).isTrue()
+        val (_, jobbsøkerResult1) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        val jobbsøker = jobbsøkerResult1!!
+        assertThat(jobbsøker.statuser.erPåmeldt).isTrue()
+        assertThat(jobbsøker.statuser.erInvitert).isTrue()
     }
 
     private fun inviter(
@@ -279,11 +279,11 @@ class JobbsøkerInnloggetBorgerTest {
         """.trimIndent()
 
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            requestBody,
+            token.serialize()
+        )
     }
 
 
@@ -300,15 +300,15 @@ class JobbsøkerInnloggetBorgerTest {
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
-            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${borgerToken.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei",
+            """{ "fødselsnummer": "${fødselsnummer.asString}" }""",
+            borgerToken.serialize()
+        )
 
-        val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().statuser.erPåmeldt).isFalse()
-        assertThat(result.get().statuser.erInvitert).isTrue()
+        val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        assertThat(jobbsøker!!.statuser.erPåmeldt).isFalse()
+        assertThat(jobbsøker.statuser.erInvitert).isTrue()
     }
 
     @Test
@@ -324,9 +324,9 @@ class JobbsøkerInnloggetBorgerTest {
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
 
-        val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().statuser.erPåmeldt).isFalse()
-        assertThat(result.get().statuser.erInvitert).isTrue()
+        val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        assertThat(jobbsøker!!.statuser.erPåmeldt).isFalse()
+        assertThat(jobbsøker.statuser.erInvitert).isTrue()
     }
 
     @Test
@@ -337,9 +337,9 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
-        val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().statuser.erPåmeldt).isFalse()
-        assertThat(result.get().statuser.erInvitert).isFalse()
+        val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        assertThat(jobbsøker!!.statuser.erPåmeldt).isFalse()
+        assertThat(jobbsøker.statuser.erInvitert).isFalse()
     }
 
     @Test
@@ -349,10 +349,10 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
         // Jobbsøker er IKKE lagt til på treffet i det hele tatt
-        val (_, response, _) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
+        val (response, _) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
         
         // Backend returnerer 404 når jobbsøker ikke finnes på treffet
-        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
     }
 
     @Test
@@ -364,20 +364,20 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            """{ "fødselsnumre": ["${fødselsnummer.asString}"] }""",
+            token.serialize()
+        )
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${borgerToken.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            """{ "fødselsnummer": "${fødselsnummer.asString}" }""",
+            borgerToken.serialize()
+        )
 
-        val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().statuser.harSvart).isTrue()
+        val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        assertThat(jobbsøker!!.statuser.harSvart).isTrue()
     }
 
     @Test
@@ -389,20 +389,20 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            """{ "fødselsnumre": ["${fødselsnummer.asString}"] }""",
+            token.serialize()
+        )
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
-            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${borgerToken.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei",
+            """{ "fødselsnummer": "${fødselsnummer.asString}" }""",
+            borgerToken.serialize()
+        )
 
-        val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().statuser.harSvart).isTrue()
+        val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        assertThat(jobbsøker!!.statuser.harSvart).isTrue()
     }
 
     @Test
@@ -414,24 +414,25 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.INVITERT)))
 
-        Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body("""{ "fødselsnumre": ["${fødselsnummer.asString}"] }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        httpPost(
+            "http://localhost:${appPort}/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            """{ "fødselsnumre": ["${fødselsnummer.asString}"] }""",
+            token.serialize()
+        )
 
-        val (_, _, result) = hentJobbsøkerInnloggetBorger(treffId, fødselsnummer, borgerToken)
-        assertThat(result.get().statuser.harSvart).isFalse()
+        val (_, jobbsøker) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
+        assertThat(jobbsøker!!.statuser.harSvart).isFalse()
     }
 
     @Test
     fun `hentJobbsøkerInnloggetBorger returnerer 404 for ukjent jobbsøker`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val fnr = Fødselsnummer("44444444444")
-        val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
+        // Lager token for en jobbsøker som IKKE er lagt til på treffet
+        val ukjentFnr = Fødselsnummer("99999999999")
+        val token = authServer.lagTokenBorger(authPort, pid = ukjentFnr.asString)
 
-        val (_, response, _) = hentJobbsøkerInnloggetBorger(treffId, Fødselsnummer("99999999999"), token)
-        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+        val (response, _) = hentJobbsøkerInnloggetBorger(treffId, token)
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
     }
 
     @Test
@@ -448,30 +449,28 @@ class JobbsøkerInnloggetBorgerTest {
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
 
-        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-            .also { (_, response, _) -> assertThat(response.statusCode).isEqualTo(HTTP_OK) }
+        httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            requestBody,
+            token.serialize()
+        ).also { response -> assertThat(response.statusCode()).isEqualTo(HTTP_OK) }
 
-        hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
+        hentJobbsøkerInnloggetBorger(treffId, token).second!!.also {
             assertThat(it.statuser.erPåmeldt).isTrue()
             assertThat(it.statuser.harSvart).isTrue()
         }
 
-        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-            .also { (_, response, _) -> assertThat(response.statusCode).isEqualTo(HTTP_OK) }
+        httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei",
+            requestBody,
+            token.serialize()
+        ).also { response -> assertThat(response.statusCode()).isEqualTo(HTTP_OK) }
 
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(3)
         assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
 
-        hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
+        hentJobbsøkerInnloggetBorger(treffId, token).second!!.also {
             assertThat(it.statuser.erPåmeldt).isFalse()
             assertThat(it.statuser.harSvart).isTrue()
         }
@@ -491,30 +490,28 @@ class JobbsøkerInnloggetBorgerTest {
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
 
-        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-            .also { (_, response, _) -> assertThat(response.statusCode).isEqualTo(HTTP_OK) }
+        httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei",
+            requestBody,
+            token.serialize()
+        ).also { response -> assertThat(response.statusCode()).isEqualTo(HTTP_OK) }
 
-        hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
+        hentJobbsøkerInnloggetBorger(treffId, token).second!!.also {
             assertThat(it.statuser.erPåmeldt).isFalse()
             assertThat(it.statuser.harSvart).isTrue()
         }
 
-        Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-            .also { (_, response, _) -> assertThat(response.statusCode).isEqualTo(HTTP_OK) }
+        httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            requestBody,
+            token.serialize()
+        ).also { response -> assertThat(response.statusCode()).isEqualTo(HTTP_OK) }
 
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(3)
         assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
 
-        hentJobbsøkerInnloggetBorger(treffId, fnr, token).third.get().also {
+        hentJobbsøkerInnloggetBorger(treffId, token).second!!.also {
             assertThat(it.statuser.erPåmeldt).isTrue()
             assertThat(it.statuser.harSvart).isTrue()
         }
@@ -537,13 +534,13 @@ class JobbsøkerInnloggetBorgerTest {
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
 
-        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            requestBody,
+            token.serialize()
+        )
 
-        assertThat(response.statusCode).isEqualTo(HTTP_BAD_REQUEST)
+        assertThat(response.statusCode()).isEqualTo(HTTP_BAD_REQUEST)
     }
 
     @Test
@@ -563,13 +560,13 @@ class JobbsøkerInnloggetBorgerTest {
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
 
-        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-nei",
+            requestBody,
+            token.serialize()
+        )
 
-        assertThat(response.statusCode).isEqualTo(HTTP_BAD_REQUEST)
+        assertThat(response.statusCode()).isEqualTo(HTTP_BAD_REQUEST)
     }
 
     /**
@@ -592,13 +589,13 @@ class JobbsøkerInnloggetBorgerTest {
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            requestBody,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_OK, response, result)
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
     }
 
     @Test
@@ -607,12 +604,12 @@ class JobbsøkerInnloggetBorgerTest {
         val fnr = Fødselsnummer("12345678901")
         val token = authServer.lagTokenBorger(authPort, pid = fnr.asString)
 
-        val (_, response, _) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger",
+            token.serialize()
+        )
 
-        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
     }
 
     @Test
@@ -623,13 +620,13 @@ class JobbsøkerInnloggetBorgerTest {
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
 
-        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger/svar-ja")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger/svar-ja",
+            requestBody,
+            token.serialize()
+        )
 
-        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
     }
 
     @Test
@@ -640,13 +637,13 @@ class JobbsøkerInnloggetBorgerTest {
 
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
 
-        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger/svar-nei")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$ukjentTreffId/jobbsoker/borger/svar-nei",
+            requestBody,
+            token.serialize()
+        )
 
-        assertThat(response.statusCode).isEqualTo(HTTP_NOT_FOUND)
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
     }
 
     @Test
@@ -664,20 +661,20 @@ class JobbsøkerInnloggetBorgerTest {
         val requestBody = """{ "fødselsnummer": "${fnr.asString}" }"""
 
         // Første svar-ja
-        val (_, response1, result1) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        assertStatuscodeEquals(HTTP_OK, response1, result1)
+        val response1 = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            requestBody,
+            token.serialize()
+        )
+        assertThat(response1.statusCode()).isEqualTo(HTTP_OK)
 
         // Andre svar-ja (umiddelbart etter)
-        val (_, response2, result2) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        assertStatuscodeEquals(HTTP_OK, response2, result2)
+        val response2 = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+            requestBody,
+            token.serialize()
+        )
+        assertThat(response2.statusCode()).isEqualTo(HTTP_OK)
 
         // Verifiser at kun én SVART_JA-hendelse ble registrert
         val hendelser = db.hentJobbsøkerHendelser(treffId)
@@ -712,12 +709,12 @@ class JobbsøkerInnloggetBorgerTest {
         repeat(2) {
             executor.submit {
                 try {
-                    val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja")
-                        .body(requestBody)
-                        .header("Content-Type", "application/json")
-                        .header("Authorization", "Bearer ${token.serialize()}")
-                        .responseString()
-                    responses.add(response.statusCode)
+                    val response = httpPost(
+                        "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/borger/svar-ja",
+                        requestBody,
+                        token.serialize()
+                    )
+                    responses.add(response.statusCode())
                 } finally {
                     latch.countDown()
                 }
@@ -735,15 +732,14 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_JA)
     }
 
-    private fun hentJobbsøkerInnloggetBorger(treffId: TreffId, fødselsnummer: Fødselsnummer, token: SignedJWT) =
-        Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/borger")
-            .body("""{ "fødselsnummer": "${fødselsnummer.asString}" }""")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<JobbsøkerMedStatuserOutboundDto> {
-                override fun deserialize(content: String) =
-                    mapper.readValue(content, JobbsøkerMedStatuserOutboundDto::class.java)
-            })
+    private fun hentJobbsøkerInnloggetBorger(treffId: TreffId, token: SignedJWT): Pair<HttpResponse<String>, JobbsøkerMedStatuserOutboundDto?> {
+        val response = httpGet(
+            "http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/borger",
+            token.serialize()
+        )
+        val jobbsøker: JobbsøkerMedStatuserOutboundDto? = if (response.statusCode() == HTTP_OK) mapper.readValue(response.body(), JobbsøkerMedStatuserOutboundDto::class.java) else null
+        return Pair(response, jobbsøker)
+    }
 
 
 }

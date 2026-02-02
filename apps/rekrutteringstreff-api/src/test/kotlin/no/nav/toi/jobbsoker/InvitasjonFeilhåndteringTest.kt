@@ -1,6 +1,5 @@
 package no.nav.toi.jobbsoker
 
-import com.github.kittinunf.fuel.Fuel
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -144,13 +143,13 @@ class InvitasjonFeilhåndteringTest {
         repeat(2) {
             executor.submit {
                 try {
-                    val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-                        .body(requestBody)
-                        .header("Content-Type", "application/json")
-                        .header("Authorization", "Bearer ${token.serialize()}")
-                        .responseString()
+                    val response = httpPost(
+                        "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+                        requestBody,
+                        token.serialize()
+                    )
 
-                    if (response.statusCode == HTTP_OK) {
+                    if (response.statusCode() == HTTP_OK) {
                         successfulResponses.incrementAndGet()
                     }
                 } finally {
@@ -212,14 +211,14 @@ class InvitasjonFeilhåndteringTest {
         // Forsøk å invitere begge jobbsøkere
         val requestBody = """{ "personTreffIder": ["$personTreffIdUsynlig", "$personTreffIdSynlig"] }"""
 
-        val (_, response, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            requestBody,
+            token.serialize()
+        )
 
         // Kallet skal lykkes (200 OK) - usynlig jobbsøker hoppes over
-        assertThat(response.statusCode).isEqualTo(HTTP_OK)
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
         
         // Verifiser at kun synlig jobbsøker ble invitert
         val usynligStatus = db.hentJobbsøkerStatus(personTreffIdUsynlig)
@@ -258,12 +257,12 @@ class InvitasjonFeilhåndteringTest {
         val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
 
         // Første invitasjon
-        val (_, response1, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        assertThat(response1.statusCode).isEqualTo(HTTP_OK)
+        val response1 = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            requestBody,
+            token.serialize()
+        )
+        assertThat(response1.statusCode()).isEqualTo(HTTP_OK)
 
         // Verifiser at det finnes én INVITERT-hendelse
         val hendelserEtterFørste = db.hentJobbsøkerHendelser(treffId)
@@ -271,14 +270,14 @@ class InvitasjonFeilhåndteringTest {
         assertThat(invitasjonsHendelserFørste).hasSize(1)
 
         // Andre invitasjon (re-invitasjon)
-        val (_, response2, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response2 = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            requestBody,
+            token.serialize()
+        )
 
         // Re-invitasjon bør ikke feile
-        assertThat(response2.statusCode).isNotEqualTo(HTTP_INTERNAL_ERROR)
+        assertThat(response2.statusCode()).isNotEqualTo(HTTP_INTERNAL_ERROR)
 
         // Verifiser at antall INVITERT-hendelser ikke økte (idempotent)
         val hendelserEtterAndre = db.hentJobbsøkerHendelser(treffId)
