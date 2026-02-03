@@ -56,3 +56,9 @@ spec:
       value: {{ dab_aktivitetskort_topic }}
     - name: DAB_AKTIVITETSKORT_FEIL_TOPIC
       value: {{ dab_aktivitetskort_feil_topic }}
+  observability:
+    logging:
+      destinations:
+        - id: loki
+        - id: elastic
+      enabled: true
