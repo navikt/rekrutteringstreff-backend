@@ -83,7 +83,8 @@ class ArbeidsgiverTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            httpClient = httpClient
         ).also { it.start() }
     }
 
@@ -281,13 +282,13 @@ class ArbeidsgiverTest {
               "navn": "HendelsesFirma"
             }
         """.trimIndent()
-        val postResponse = httpPost("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver", requestBody, token.serialize())
-        assertThat(postResponse.statusCode()).isEqualTo(HTTP_CREATED)
+        val opprettArbeidsgiverResponse = httpPost("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver", requestBody, token.serialize())
+        assertThat(opprettArbeidsgiverResponse.statusCode()).isEqualTo(HTTP_CREATED)
 
-        val response = httpGet("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser", token.serialize())
-        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val hentHendelserResponse = httpGet("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser", token.serialize())
+        assertThat(hentHendelserResponse.statusCode()).isEqualTo(HTTP_OK)
         val type = JacksonConfig.mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto::class.java)
-        val hendelser: List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto> = JacksonConfig.mapper.readValue(response.body(), type)
+        val hendelser: List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto> = JacksonConfig.mapper.readValue(hentHendelserResponse.body(), type)
         assertThat(hendelser).hasSize(1)
         val hendelse = hendelser.first()
         assertThat(hendelse.hendelsestype).isEqualTo(ArbeidsgiverHendelsestype.OPPRETTET.name)
@@ -318,30 +319,30 @@ class ArbeidsgiverTest {
             }
         """.trimIndent()
 
-        val postResponse = httpPost("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver", requestBody, token.serialize())
-        assertThat(postResponse.statusCode()).isEqualTo(HTTP_CREATED)
+        val opprettArbeidsgiverResponse = httpPost("http://localhost:${appPort}/api/rekrutteringstreff/$treffId/arbeidsgiver", requestBody, token.serialize())
+        assertThat(opprettArbeidsgiverResponse.statusCode()).isEqualTo(HTTP_CREATED)
 
         val id = db.hentAlleArbeidsgivere().first().arbeidsgiverTreffId.somUuid
 
-        val delResponse = httpDelete("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/$id", token.serialize())
-        assertThat(delResponse.statusCode()).isEqualTo(HTTP_NO_CONTENT)
+        val slettArbeidsgiverResponse = httpDelete("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/$id", token.serialize())
+        assertThat(slettArbeidsgiverResponse.statusCode()).isEqualTo(HTTP_NO_CONTENT)
 
         // Rad i arbeidsgiver-tabellen skal fortsatt finnes (soft delete)
         assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
 
         // Skal ikke returneres av GET arbeidsgivere etter soft delete
-        val getResp = httpGet("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver", token.serialize())
-        assertThat(getResp.statusCode()).isEqualTo(HTTP_OK)
+        val hentArbeidsgivereResponse = httpGet("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver", token.serialize())
+        assertThat(hentArbeidsgivereResponse.statusCode()).isEqualTo(HTTP_OK)
         val mapper = JacksonConfig.mapper
         val type = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverOutboundDto::class.java)
-        val arbeidsgivereEtterSlett: List<ArbeidsgiverOutboundDto> = mapper.readValue(getResp.body(), type)
+        val arbeidsgivereEtterSlett: List<ArbeidsgiverOutboundDto> = mapper.readValue(hentArbeidsgivereResponse.body(), type)
         assertThat(arbeidsgivereEtterSlett).isEmpty()
 
         // Hendelser skal inneholde SLETTET
-        val hendResp = httpGet("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser", token.serialize())
-        assertThat(hendResp.statusCode()).isEqualTo(HTTP_OK)
+        val hentHendelserResponse = httpGet("http://localhost:${appPort}/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser", token.serialize())
+        assertThat(hentHendelserResponse.statusCode()).isEqualTo(HTTP_OK)
         val hendelseType = JacksonConfig.mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto::class.java)
-        val hendelser: List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto> = JacksonConfig.mapper.readValue(hendResp.body(), hendelseType)
+        val hendelser: List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto> = JacksonConfig.mapper.readValue(hentHendelserResponse.body(), hendelseType)
         assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET.name }).isTrue()
     }
 

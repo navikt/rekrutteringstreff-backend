@@ -43,8 +43,8 @@ class KubernetesHealthTest {
             accessTokenClient = accessTokenClient,
             httpClient = httpClient
         ),
-        pilotkontorer = emptyList<String>()
-
+        pilotkontorer = emptyList<String>(),
+        httpClient = httpClient
     )
 
     @BeforeAll
