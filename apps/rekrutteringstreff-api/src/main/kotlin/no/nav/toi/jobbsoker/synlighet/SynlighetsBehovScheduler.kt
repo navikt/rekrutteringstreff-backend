@@ -66,8 +66,6 @@ class SynlighetsBehovScheduler(
             log.info("Denne instansen er ikke leader, SynlighetsBehovScheduler startes ikke.")
             isRunning.set(false)
             return
-        } else {
-            log.info("Denne instansen er leader, starter SynlighetsBehovScheduler.")
         }
 
         try {
