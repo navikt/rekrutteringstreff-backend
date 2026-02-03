@@ -60,6 +60,7 @@ class AktivitetskortJobbsøkerScheduler(
 
         if (leaderElection.isLeader().not()) {
             log.info("Denne instansen er ikke leader, AktivitetskortJobbsøkerScheduler startes ikke.")
+            isRunning.set(false)
             return
         }
 
