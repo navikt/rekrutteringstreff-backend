@@ -32,12 +32,11 @@ Markedskontakt oppretter et nytt rekrutteringstreff. Dette er første steg, og t
 
 ### Grunnleggende opprettelse
 
-| #     | Test                                                      | Forventet resultat                          | ✅❌ | Notat |
-| ----- | --------------------------------------------------------- | ------------------------------------------- | ---- | ----- |
-| 1.1.1 | Markedskontakt - Opprett treff med påkrevde felter        | Treff opprettes, vises i "Mine treff"       |      |       |
-| 1.1.2 | Markedskontakt - Opprett treff, fyll ut alle felter       | Alle felter lagres og vises korrekt         |      |       |
-| 1.1.3 | Markedskontakt - Opprett treff med ugyldig data           | Valideringsfeil vises, treff opprettes ikke |      |       |
-| 1.1.4 | Markedskontakt - Sjekk at andre ikke ser upublisert treff | Treffet vises kun for oppretter             |      |       |
+| #     | Test                                                | Forventet resultat                             | ✅❌ | Notat |
+| ----- | --------------------------------------------------- | ---------------------------------------------- | ---- | ----- |
+| 1.1.1 | Markedskontakt - Opprett treff med påkrevde felter  | Treff opprettes, vises i oversikten over treff |      |       |
+| 1.1.2 | Markedskontakt - Opprett treff, fyll ut alle felter | Alle felter lagres og vises korrekt            |      |       |
+| 1.1.3 | Markedskontakt - Opprett treff med ugyldig data     | Valideringsfeil vises, treff opprettes ikke    |      |       |
 
 ### Autolagring (kladd-modus)
 
@@ -54,19 +53,17 @@ I kladd-modus lagres endringer automatisk. Felter som er lagret vises med avhukn
 
 ### Sletting av kladd (ROS 27486)
 
-| #     | Test                               | Forventet resultat                           | ✅❌ | Notat |
-| ----- | ---------------------------------- | -------------------------------------------- | ---- | ----- |
-| 1.3.1 | Markedskontakt - Slett kladd-treff | Bekreftelsesdialog vises før sletting        |      |       |
-| 1.3.2 | Markedskontakt - Bekreft sletting  | Treffet slettes, forsvinner fra "Mine treff" |      |       |
-| 1.3.3 | Markedskontakt - Avbryt sletting   | Treffet beholdes, ingen endring              |      |       |
+| #     | Test                               | Forventet resultat                         | ✅❌ | Notat |
+| ----- | ---------------------------------- | ------------------------------------------ | ---- | ----- |
+| 1.3.1 | Markedskontakt - Slett kladd-treff | Bekreftelsesdialog vises før sletting      |      |       |
+| 1.3.2 | Markedskontakt - Bekreft sletting  | Treffet slettes, forsvinner fra oversikten |      |       |
+| 1.3.3 | Markedskontakt - Avbryt sletting   | Treffet beholdes, ingen endring            |      |       |
 
 ### Adressefelt (ROS 27223)
 
-| #     | Test                                      | Forventet resultat                 | ✅❌ | Notat |
-| ----- | ----------------------------------------- | ---------------------------------- | ---- | ----- |
-| 1.4.1 | Markedskontakt - Skriv for lang adresse   | Tegnbegrensning hindrer flere tegn |      |       |
-| 1.4.2 | Markedskontakt - Søk etter adresse        | Adresseforslag vises fra kartdata  |      |       |
-| 1.4.3 | Markedskontakt - Velg adresse fra forslag | Adresse fylles ut automatisk       |      |       |
+| #     | Test                                    | Forventet resultat                 | ✅❌ | Notat |
+| ----- | --------------------------------------- | ---------------------------------- | ---- | ----- |
+| 1.4.1 | Markedskontakt - Skriv for lang adresse | Tegnbegrensning hindrer flere tegn |      |       |
 
 ---
 
@@ -111,10 +108,10 @@ Søket henter data fra Enhetsregisteret via pam-search API.
 
 ### Feilhåndtering (ROS 27483)
 
-| #     | Test                                        | Forventet resultat                              | ✅❌ | Notat                                      |
-| ----- | ------------------------------------------- | ----------------------------------------------- | ---- | ------------------------------------------ |
-| 2.4.1 | Markedskontakt - Legg til ugyldig orgnummer | Feilmelding vises, arbeidsgiver legges ikke til |      |                                            |
-| 2.4.2 | Markedskontakt - Nettverksfeil ved oppslag  | Feilmelding vises, kan prøve på nytt            |      | Utvikler: Testes via mocking av nettverket |
+| #     | Test                                        | Forventet resultat                   | ✅❌ | Notat                                      |
+| ----- | ------------------------------------------- | ------------------------------------ | ---- | ------------------------------------------ |
+| 2.4.1 | Markedskontakt - Legg til ugyldig orgnummer | Ingen treff                          |      |                                            |
+| 2.4.2 | Markedskontakt - Nettverksfeil ved oppslag  | Feilmelding vises, kan prøve på nytt |      | Utvikler: Testes via mocking av nettverket |
 
 ---
 
@@ -130,11 +127,11 @@ Markedskontakt publiserer treffet. Dette gjør at:
 
 **Hva skjer:** Treffet blir synlig for alle i rekrutteringsbistand. Fortsatt ingen varsler eller aktivitetskort - det skjer først ved invitasjon.
 
-| #     | Test                                 | Forventet resultat                     | ✅❌ | Notat |
-| ----- | ------------------------------------ | -------------------------------------- | ---- | ----- |
-| 3.1.1 | Markedskontakt - Publiser treff      | Status endres til "Publisert"          |      |       |
-| 3.1.2 | Veileder - Søk etter publisert treff | Treffet dukker opp i søkeresultater    |      |       |
-| 3.1.3 | Veileder - Åpne publisert treff      | Kan se treffdetaljer og jobbsøkerliste |      |       |
+| #     | Test                                 | Forventet resultat                           | ✅❌ | Notat |
+| ----- | ------------------------------------ | -------------------------------------------- | ---- | ----- |
+| 3.1.1 | Markedskontakt - Publiser treff      | Status endres til "Publisert"                |      |       |
+| 3.1.2 | Veileder - Søk etter publisert treff | Treffet dukker opp i søkeresultater          |      |       |
+| 3.1.3 | Veileder - Åpne publisert treff      | Kan se treffdetaljer men ikke jobbsøkerliste |      |       |
 
 ---
 
@@ -170,8 +167,6 @@ Synlighetsregler evalueres asynkront via toi-synlighetsmotor. Test disse ved å 
 | ----- | ----------------------------------- | ------------------ | ---- | ----- |
 | 4.2.1 | Person med aktiv CV                 | Synlig ✅          |      |       |
 | 4.2.2 | Person uten CV eller med slettet CV | Ikke synlig ❌     |      |       |
-| 4.2.3 | Person med CV men uten jobbprofil   | Ikke synlig ❌     |      |       |
-| 4.2.4 | Person med jobbprofil               | Synlig ✅          |      |       |
 
 #### Arbeidssøkerregister (ny regel)
 
@@ -209,19 +204,18 @@ PDL har 4 graderinger: UGRADERT, FORTROLIG (kode 7), STRENGT_FORTROLIG (kode 6),
 
 #### Endring av fødselsnummer
 
-| #     | Test                                          | Forventet resultat                         | ✅❌ | Notat |
-| ----- | --------------------------------------------- | ------------------------------------------ | ---- | ----- |
-| 4.7.1 | Person får nytt fnr (f.eks. ved kjønnsskifte) | Personen oppdateres korrekt, ikke duplikat |      |       |
+| #     | Test                | Forventet resultat                         | ✅❌ | Notat |
+| ----- | ------------------- | ------------------------------------------ | ---- | ----- |
+| 4.7.1 | Person får nytt fnr | Personen oppdateres korrekt, ikke duplikat |      |       |
 
 #### Andre ekskluderingskriterier
 
-| #     | Test                              | Forventet resultat         | ✅❌ | Notat |
-| ----- | --------------------------------- | -------------------------- | ---- | ----- |
-| 4.8.1 | Person som ikke er død            | Synlig ✅                  |      |       |
-| 4.8.2 | Person markert som død            | Ikke synlig ❌             |      |       |
-| 4.8.3 | Fjern dødmarkering                | Person dukker opp igjen ✅ |      |       |
-| 4.8.4 | Person som ikke er sperret ansatt | Synlig ✅                  |      |       |
-| 4.8.5 | Person markert som sperret ansatt | Ikke synlig ❌             |      |       |
+| #     | Test                              | Forventet resultat | ✅❌ | Notat |
+| ----- | --------------------------------- | ------------------ | ---- | ----- |
+| 4.8.1 | Person som ikke er død            | Synlig ✅          |      |       |
+| 4.8.2 | Person markert som død            | Ikke synlig ❌     |      |       |
+| 4.8.3 | Person som ikke er sperret ansatt | Synlig ✅          |      |       |
+| 4.8.4 | Person markert som sperret ansatt | Ikke synlig ❌     |      |       |
 
 ---
 
@@ -382,12 +376,12 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 
 ### Mottakere og varselinnhold
 
-| #     | Test                                                    | Forventet resultat                       | ✅❌ | Notat |
-| ----- | ------------------------------------------------------- | ---------------------------------------- | ---- | ----- |
-| 7.2.1 | Jobbsøker (invitert, ikke svart) - Sjekk varsel         | Skal IKKE motta varsel                   |      |       |
-| 7.2.2 | Jobbsøker (svart ja) - Motta endringsvarsel             | SMS/e-post med info om valgte felt       |      |       |
-| 7.2.3 | Jobbsøker (svart nei) - Sjekk varsel                    | Skal IKKE motta varsel                   |      |       |
-| 7.2.4 | Jobbsøker - Sjekk SMS-tekst                             | Teksten inneholder de valgte feltnavnene |      |       |
+| #     | Test                                            | Forventet resultat                       | ✅❌ | Notat                                    |
+| ----- | ----------------------------------------------- | ---------------------------------------- | ---- | ---------------------------------------- |
+| 7.2.1 | Jobbsøker (invitert, ikke svart) - Sjekk varsel | Skal IKKE motta varsel                   |      | Denne må diskuteres, skal de ha varsler? |
+| 7.2.2 | Jobbsøker (svart ja) - Motta endringsvarsel     | SMS/e-post med info om valgte felt       |      |                                          |
+| 7.2.3 | Jobbsøker (svart nei) - Sjekk varsel            | Skal IKKE motta varsel                   |      |                                          |
+| 7.2.4 | Jobbsøker - Sjekk SMS-tekst                     | Teksten inneholder de valgte feltnavnene |      |                                          |
 
 ### Oppdatering i treffsiden og aktivitetskort (ROS 27383)
 
@@ -403,13 +397,13 @@ Test at jobbsøker ser korrekt og oppdatert info på treffsiden (rekrutteringstr
 
 Helhetlig test av endringsflyt: varseldialog, feltvalg, mottakere, MinSide og aktivitetskortsynkronisering.
 
-| #     | Test                                                                                                        | Forventet resultat                                                                                                                                             | ✅❌ | Notat |
-| ----- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----- |
-| 7.4.1 | **Endre alle felt:** Endre tittel, tidspunkt, sted og svarfrist. Velg alle switch-knapper.                  | Varsel (SMS/e-post) nevner alle felt. Aktivitetskort oppdateres med ny tittel, tidspunkt, sted og svarfrist. Jobbsøker uten KRR-kontakt får varsel på MinSide. |      |       |
-| 7.4.2 | **Endre ingen felt:** Gjør endring, men velg "Ikke send varsel" i dialogen.                                 | Endring lagres. Aktivitetskort oppdateres. Ingen varsel sendes (SMS, e-post, MinSide).                                                                         |      |       |
-| 7.4.3 | **Endre noen felt:** Endre kun tidspunkt og sted. Velg kun disse i dialogen.                                | Varsel nevner kun tidspunkt og sted. Aktivitetskort oppdateres med nye verdier. Tittel og svarfrist er uendret i aktivitetskort.                               |      |       |
-| 7.4.4 | **Mottakere:** Endring med varsel. Sjekk at jobbsøker (svart ja) får varsel, invitert og svart nei får IKKE. | Svart ja: Mottar varsel. Invitert (ikke svart) og svart nei: Mottar IKKE varsel. Alle aktivitetskort oppdateres uavhengig av svar.                                          |      |       |
-| 7.4.5 | **MinSide-varsel:** Jobbsøker uten kontaktinfo i KRR. Endre felt og send varsel.                            | Jobbsøker ser varsel på MinSide med info om endring. Aktivitetskort oppdateres.                                                                                |      |       |
+| #     | Test                                                                                                         | Forventet resultat                                                                                                                                             | ✅❌ | Notat |
+| ----- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----- |
+| 7.4.1 | **Endre alle felt:** Endre tittel, tidspunkt, sted og svarfrist. Velg alle switch-knapper.                   | Varsel (SMS/e-post) nevner alle felt. Aktivitetskort oppdateres med ny tittel, tidspunkt, sted og svarfrist. Jobbsøker uten KRR-kontakt får varsel på MinSide. |      |       |
+| 7.4.2 | **Endre ingen felt:** Gjør endring, men velg "Ikke send varsel" i dialogen.                                  | Endring lagres. Aktivitetskort oppdateres. Ingen varsel sendes (SMS, e-post, MinSide).                                                                         |      |       |
+| 7.4.3 | **Endre noen felt:** Endre kun tidspunkt og sted. Velg kun disse i dialogen.                                 | Varsel nevner kun tidspunkt og sted. Aktivitetskort oppdateres med nye verdier. Tittel og svarfrist er uendret i aktivitetskort.                               |      |       |
+| 7.4.4 | **Mottakere:** Endring med varsel. Sjekk at jobbsøker (svart ja) får varsel, invitert og svart nei får IKKE. | Svart ja: Mottar varsel. Invitert (ikke svart) og svart nei: Mottar IKKE varsel. Alle aktivitetskort oppdateres uavhengig av svar.                             |      |       |
+| 7.4.5 | **MinSide-varsel:** Jobbsøker uten kontaktinfo i KRR. Endre felt og send varsel.                             | Jobbsøker ser varsel på MinSide med info om endring. Aktivitetskort oppdateres.                                                                                |      |       |
 
 ---
 
