@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.no.nav.toi
+package no.nav.toi
 
 import no.nav.toi.LeaderElectionInterface
 

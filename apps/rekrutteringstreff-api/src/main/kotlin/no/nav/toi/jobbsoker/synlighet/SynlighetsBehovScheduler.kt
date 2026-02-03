@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * så event-strømmen (som setter synlighet_sist_oppdatert) har alltid prioritet.
  */
 class SynlighetsBehovScheduler(
-    private val `jobbsøkerService`: JobbsøkerService,
+    private val jobbsøkerService: JobbsøkerService,
     private val rapidsConnection: RapidsConnection,
     private val leaderElection: LeaderElectionInterface,
 ) {
@@ -63,7 +63,7 @@ class SynlighetsBehovScheduler(
         }
 
         if (leaderElection.isLeader().not()) {
-            log.info("Denne instansen er ikke leader, SynlighetsBehovScheduler startes ikke.")
+            log.info("Kjøring av SynlighetsBehovScheduler skippes, instansen er ikke leader.")
             isRunning.set(false)
             return
         }
