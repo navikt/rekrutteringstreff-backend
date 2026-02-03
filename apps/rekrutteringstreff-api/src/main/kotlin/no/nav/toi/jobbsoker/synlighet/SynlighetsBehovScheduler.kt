@@ -65,6 +65,8 @@ class SynlighetsBehovScheduler(
         if (leaderElection.isLeader().not()) {
             log.info("Denne instansen er ikke leader, SynlighetsBehovScheduler startes ikke.")
             return
+        } else {
+            log.info("Denne instansen er leader, starter SynlighetsBehovScheduler.")
         }
 
         try {
