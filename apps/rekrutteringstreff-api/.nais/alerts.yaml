@@ -1,0 +1,40 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rekrutteringstreff-api
+  namespace: toi
+  labels:
+    team: toi
+spec:
+  groups:
+    - name: rekrutteringstreff-api
+      rules:
+        - alert: rekrutteringstreff-api
+          expr: kube_deployment_status_replicas_available{deployment="rekrutteringstreff-api"} == 0
+          for: 2m
+          annotations:
+            summary: Appen er nede
+            action: "https://logs.az.nav.no/goto/4de636cb988f2bfd73ad11db124ff8e8?security_tenant=navlogs"
+          labels:
+            namespace: toi
+            severity: critical
+
+        - alert: rekrutteringstreff-api
+          expr: sum(increase(log_messages_errors{app="rekrutteringstreff-api", level="Error"}[10m])) > 0
+          for: 1s
+          annotations:
+            summary: Appen har logget en error
+            action: "https://logs.az.nav.no/goto/4de636cb988f2bfd73ad11db124ff8e8?security_tenant=navlogs"
+          labels:
+            namespace: toi
+            severity: critical
+
+        - alert: rekrutteringstreff-api
+          expr: sum(increase(log_messages_errors{app="rekrutteringstreff-api", level="Warning"}[10m])) > 3
+          for: 1s
+          annotations:
+            summary: Økning i warnings
+            action: "https://logs.az.nav.no/goto/4de636cb988f2bfd73ad11db124ff8e8?security_tenant=navlogs"
+          labels:
+            namespace: toi
+            severity: warning

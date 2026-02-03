@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.*
 
-class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String) {
+class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String, private val dabAktivitetskortTopic: String) {
     private val dataSource = databaseConfig.lagDatasource()
     private val secureLog = SecureLog(log)
 
@@ -81,7 +81,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                                 AktivitetskortHandling(
                                     "Sjekk ut treffet",
                                     "Sjekk ut treffet og svar",
-                                    "$minsideUrl/rekrutteringstreff/$rekrutteringstreffId",
+                                    "$minsideUrl/$rekrutteringstreffId",
                                     LenkeType.FELLES
                                 )
                             ).joinToJson(AktivitetskortHandling::tilAkaasJson)
@@ -113,6 +113,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
             generateSequence {
                 if (resultSet.next()) {
                     Aktivitetskort(
+                        dabAktivitetskortTopic = dabAktivitetskortTopic,
                         repository = this,
                         messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
                         aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString(),
@@ -183,6 +184,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                     if (resultSet.next()) {
                         Aktivitetskort.AktivitetskortFeil(
                             Aktivitetskort(
+                                dabAktivitetskortTopic = dabAktivitetskortTopic,
                                 repository = this,
                                 messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
                                 aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java)
