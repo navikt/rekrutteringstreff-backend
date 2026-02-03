@@ -214,8 +214,8 @@ PDL har 4 graderinger: UGRADERT, FORTROLIG (kode 7), STRENGT_FORTROLIG (kode 6),
 | ----- | --------------------------------- | ------------------ | ---- | ----- |
 | 4.8.1 | Person som ikke er død            | Synlig ✅          |      |       |
 | 4.8.2 | Person markert som død            | Ikke synlig ❌     |      |       |
-| 4.8.4 | Person som ikke er sperret ansatt | Synlig ✅          |      |       |
-| 4.8.5 | Person markert som sperret ansatt | Ikke synlig ❌     |      |       |
+| 4.8.3 | Person som ikke er sperret ansatt | Synlig ✅          |      |       |
+| 4.8.4 | Person markert som sperret ansatt | Ikke synlig ❌     |      |       |
 
 ---
 
