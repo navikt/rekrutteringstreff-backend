@@ -127,11 +127,19 @@ Markedskontakt publiserer treffet. Dette gjør at:
 
 **Hva skjer:** Treffet blir synlig for alle i rekrutteringsbistand. Fortsatt ingen varsler eller aktivitetskort - det skjer først ved invitasjon.
 
+<<<<<<< Updated upstream
 | #     | Test                                 | Forventet resultat                           | ✅❌ | Notat |
 | ----- | ------------------------------------ | -------------------------------------------- | ---- | ----- |
 | 3.1.1 | Markedskontakt - Publiser treff      | Status endres til "Publisert"                |      |       |
 | 3.1.2 | Veileder - Søk etter publisert treff | Treffet dukker opp i søkeresultater          |      |       |
 | 3.1.3 | Veileder - Åpne publisert treff      | Kan se treffdetaljer men ikke jobbsøkerliste |      |       |
+=======
+| #     | Test                            | Forventet resultat            | ✅❌ | Notat |
+| ----- | ------------------------------- | ----------------------------- | ---- | ----- |
+| 3.1.1 | Markedskontakt - Publiser treff | Status endres til "Publisert" |      |       |
+
+> **Se også:** Tester for at veileder/markedskontakt finner og åpner publiserte treff er i [seksjon 12 – Søke etter rekrutteringstreff](#12-søke-etter-rekrutteringstreff).
+>>>>>>> Stashed changes
 
 ---
 
@@ -376,12 +384,21 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 
 ### Mottakere og varselinnhold
 
+<<<<<<< Updated upstream
 | #     | Test                                            | Forventet resultat                       | ✅❌ | Notat                                    |
 | ----- | ----------------------------------------------- | ---------------------------------------- | ---- | ---------------------------------------- |
 | 7.2.1 | Jobbsøker (invitert, ikke svart) - Sjekk varsel | Skal IKKE motta varsel                   |      | Denne må diskuteres, skal de ha varsler? |
 | 7.2.2 | Jobbsøker (svart ja) - Motta endringsvarsel     | SMS/e-post med info om valgte felt       |      |                                          |
 | 7.2.3 | Jobbsøker (svart nei) - Sjekk varsel            | Skal IKKE motta varsel                   |      |                                          |
 | 7.2.4 | Jobbsøker - Sjekk SMS-tekst                     | Teksten inneholder de valgte feltnavnene |      |                                          |
+=======
+| #     | Test                                            | Forventet resultat                       | ✅❌ | Notat |
+| ----- | ----------------------------------------------- | ---------------------------------------- | ---- | ----- |
+| 7.2.1 | Jobbsøker (invitert, ikke svart) - Sjekk varsel | Skal IKKE motta varsel                   |      |       |
+| 7.2.2 | Jobbsøker (svart ja) - Motta endringsvarsel     | SMS/e-post med info om valgte felt       |      |       |
+| 7.2.3 | Jobbsøker (svart nei) - Sjekk varsel            | Skal IKKE motta varsel                   |      |       |
+| 7.2.4 | Jobbsøker - Sjekk SMS-tekst                     | Teksten inneholder de valgte feltnavnene |      |       |
+>>>>>>> Stashed changes
 
 ### Oppdatering i treffsiden og aktivitetskort (ROS 27383)
 
@@ -670,14 +687,15 @@ Markedskontakt eller veileder kan søke etter kandidater i CV-databasen for å l
 
 **Hva skjer:** Åpner kandidatsøk med filter. Brukeren kan søke, filtrere og legge til kandidater på treffet.
 
-| #      | Test                                            | Forventet resultat             | ✅❌ | Notat |
-| ------ | ----------------------------------------------- | ------------------------------ | ---- | ----- |
-| 13.1.1 | Markedskontakt (eier) - Klikk "Finn jobbsøkere" | Åpner kandidatsøk med filter   |      |       |
-| 13.1.2 | Markedskontakt - Søk med kompetansefilter       | Kandidater som matcher vises   |      |       |
-| 13.1.3 | Markedskontakt - Legg til kandidat fra søk      | Kandidat legges til på treffet |      |       |
-| 13.1.4 | Markedskontakt - Legg til flere kandidater      | Alle legges til på treffet     |      |       |
-| 13.1.5 | Veileder (ikke eier) - Klikk "Finn jobbsøkere"  | Åpner kandidatsøk              |      |       |
-| 13.1.6 | Veileder - Legg til kandidat                    | Kandidat legges til på treffet |      |       |
+| #      | Test                                            | Forventet resultat                                                       | ✅❌ | Notat |
+| ------ | ----------------------------------------------- | ------------------------------------------------------------------------ | ---- | ----- |
+| 13.1.1 | Markedskontakt (eier) - Klikk "Finn jobbsøkere" | Åpner kandidatsøk med filter                                             |      |       |
+| 13.1.2 | Markedskontakt - Søk med kompetansefilter       | Kandidater som matcher vises                                             |      |       |
+| 13.1.3 | Markedskontakt - Legg til kandidat fra søk      | Kandidat legges til på treffet                                           |      |       |
+| 13.1.4 | Markedskontakt - Legg til flere kandidater      | Alle legges til på treffet                                               |      |       |
+| 13.1.5 | Veileder (ikke eier) - Klikk "Finn jobbsøkere"  | Åpner kandidatsøk                                                        |      |       |
+| 13.1.6 | Veileder - Sjekk kandidatsøk                    | Ser kun "Mine kandidater" og "Mitt kontor" – IKKE andre kontor/nasjonalt |      |       |
+| 13.1.7 | Veileder - Legg til kandidat                    | Kandidat legges til på treffet                                           |      |       |
 
 ---
 
@@ -720,16 +738,17 @@ Løsningen har tre roller med ulike tilganger. Test at hver rolle kun kan gjøre
 
 Veileder skal kunne se publiserte treff og legge til egne jobbsøkere, men IKKE se andre jobbsøkere, invitere eller redigere treffet.
 
-| #      | Test                                     | Forventet resultat                        | ✅❌ | Notat |
-| ------ | ---------------------------------------- | ----------------------------------------- | ---- | ----- |
-| 15.1.1 | Veileder - Åpne publisert treff          | Ser treffdetaljer i lesemodus             |      |       |
-| 15.1.2 | Veileder - Prøv å redigere treffdetaljer | Ingen redigeringsknapper synlige          |      |       |
-| 15.1.3 | Veileder - Se jobbsøkerlisten            | Ser IKKE andre veilederes jobbsøkere      |      |       |
-| 15.1.4 | Veileder - Legg til jobbsøker            | Kan legge til jobbsøker på treffet        |      |       |
-| 15.1.5 | Veileder - Se egen jobbsøker             | Ser jobbsøkeren man selv la til           |      |       |
-| 15.1.6 | Veileder - Prøv å invitere jobbsøker     | Inviter-knapp er IKKE synlig for veileder |      |       |
-| 15.1.7 | Veileder - Prøv å se Hendelser-fanen     | Fanen er ikke synlig/tilgjengelig         |      |       |
-| 15.1.8 | Veileder - Prøv å opprette nytt treff    | Knapp for opprett treff ikke synlig       |      |       |
+| #      | Test                                     | Forventet resultat                                                       | ✅❌ | Notat |
+| ------ | ---------------------------------------- | ------------------------------------------------------------------------ | ---- | ----- |
+| 15.1.1 | Veileder - Åpne publisert treff          | Ser treffdetaljer i lesemodus                                            |      |       |
+| 15.1.2 | Veileder - Prøv å redigere treffdetaljer | Ingen redigeringsknapper synlige                                         |      |       |
+| 15.1.3 | Veileder - Se jobbsøkerlisten            | Ser IKKE andre veilederes jobbsøkere                                     |      |       |
+| 15.1.4 | Veileder - Legg til jobbsøker            | Kan legge til jobbsøker på treffet                                       |      |       |
+| 15.1.5 | Veileder - Se egen jobbsøker             | Ser jobbsøkeren man selv la til                                          |      |       |
+| 15.1.6 | Veileder - Prøv å invitere jobbsøker     | Inviter-knapp er IKKE synlig for veileder                                |      |       |
+| 15.1.7 | Veileder - Prøv å se Hendelser-fanen     | Fanen er ikke synlig/tilgjengelig                                        |      |       |
+| 15.1.8 | Veileder - Prøv å opprette nytt treff    | Knapp for opprett treff ikke synlig                                      |      |       |
+| 15.1.9 | Veileder - Sjekk synlige faner på treff  | Ser kun "Om treffet", "Jobbsøkere" og "Arbeidsgivere" – IKKE "Hendelser" |      |       |
 
 ### Markedskontakt (arbeidsgiverrettet) - ikke eier
 
