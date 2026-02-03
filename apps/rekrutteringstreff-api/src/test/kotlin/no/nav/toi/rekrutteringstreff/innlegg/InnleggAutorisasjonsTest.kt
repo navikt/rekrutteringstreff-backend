@@ -110,7 +110,8 @@ class InnleggAutorisasjonsTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            httpClient = httpClient
         ).also { it.start() }
     }
 

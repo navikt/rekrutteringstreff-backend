@@ -1,7 +1,5 @@
 package no.nav.toi
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.extensions.jsonBody
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
@@ -60,7 +58,8 @@ class AppExceptionHandlingTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            httpClient = httpClient
         ).also { it.start() }
 
         authServer.start(port = authPort)
@@ -68,12 +67,13 @@ class AppExceptionHandlingTest {
 
         setupStubs()
         val token = authServer.lagToken(authPort).serialize()
-        val (_, response, _) = Fuel.post("http://localhost:$port/api/rekrutteringstreff")
-            .header("Authorization", "Bearer $token")
-            .jsonBody("""{"opprettetAvNavkontorEnhetId":"0313"}""")
-            .response()
-        assertThat(response.statusCode).isEqualTo(201)
-        val body = String(response.data)
+        val response = httpPost(
+            "http://localhost:$port/api/rekrutteringstreff",
+            """{"opprettetAvNavkontorEnhetId":"0313"}""",
+            token
+        )
+        assertThat(response.statusCode()).isEqualTo(201)
+        val body = response.body()
         // body expected like: {"id":"uuid"}
         val idRegex = Regex(""""id"\s*:\s*"([a-f0-9\-]+)"""")
         val match = idRegex.find(body) ?: error("Fikk ikke id fra opprett-respons: $body")

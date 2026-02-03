@@ -80,7 +80,8 @@ class PilotkontorTest {
                 httpClient = httpClient
             ),
             modiaKlient = modiaKlient,
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            httpClient = httpClient
         ).also { it.start() }
     }
 

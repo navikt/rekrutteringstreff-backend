@@ -1,9 +1,5 @@
 package no.nav.toi.jobbsoker
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.ResponseDeserializable
-import com.github.kittinunf.result.Result.Failure
-import com.github.kittinunf.result.Result.Success
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -76,7 +72,8 @@ class JobbsøkerTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            httpClient = httpClient
         ).also { it.start() }
         authServer.start(port = authPort)
     }
@@ -117,22 +114,16 @@ class JobbsøkerTest {
     @MethodSource("tokenVarianter")
     fun autentiseringLeggTilJobbsøker(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
-        val leggPåToken = autentiseringstest.leggPåToken
-        val (_, response, result) = Fuel.post("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker")
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(HTTP_UNAUTHORIZED, response, result)
+        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker", "", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentJobbsøker(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
-        val leggPåToken = autentiseringstest.leggPåToken
-        val (_, response, result) = Fuel.get("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker")
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(HTTP_UNAUTHORIZED, response, result)
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @Test
@@ -157,12 +148,13 @@ class JobbsøkerTest {
         """.trimIndent()
         assertThat(db.hentAlleJobbsøkere()).isEmpty()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
-            .body(requestBody)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker",
+            requestBody,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_CREATED, response, result)
+        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
         val actualJobbsøkere = db.hentAlleJobbsøkere()
         assertThat(actualJobbsøkere.size).isEqualTo(1)
         actualJobbsøkere.first().also { actual ->
@@ -226,33 +218,26 @@ class JobbsøkerTest {
         assertThat(db.hentAlleRekrutteringstreff().size).isEqualTo(3)
         assertThat(db.hentAlleJobbsøkere().size).isEqualTo(4)
         eierRepository.leggTil(treffId2, listOf("A123456"))
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<JobbsøkereOutboundDto> {
-                override fun deserialize(content: String): JobbsøkereOutboundDto {
-                    return mapper.readValue(content, JobbsøkereOutboundDto::class.java)
-                }
-            })
-        assertStatuscodeEquals(HTTP_OK, response, result)
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                val actualJobbsøkere = result.value.jobbsøkere
-                assertThat(actualJobbsøkere.size).isEqualTo(2)
-                actualJobbsøkere.forEach { jobbsøker ->
-                    assertThatCode { UUID.fromString(jobbsøker.personTreffId) }.doesNotThrowAnyException()
-                    assertThat(jobbsøker.hendelser.size).isEqualTo(1)
-                    val hendelse = jobbsøker.hendelser.first()
-                    assertThatCode { UUID.fromString(hendelse.id) }
-                        .doesNotThrowAnyException()
-                    assertThat(hendelse.tidspunkt).isNotNull()
-                    assertThat(hendelse.tidspunkt.toInstant())
-                        .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-                    assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
-                    assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
-                    assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
-                }
-            }
+        val response = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker",
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val result = mapper.readValue(response.body(), JobbsøkereOutboundDto::class.java)
+        val actualJobbsøkere = result.jobbsøkere
+        assertThat(actualJobbsøkere.size).isEqualTo(2)
+        actualJobbsøkere.forEach { jobbsøker ->
+            assertThatCode { UUID.fromString(jobbsøker.personTreffId) }.doesNotThrowAnyException()
+            assertThat(jobbsøker.hendelser.size).isEqualTo(1)
+            val hendelse = jobbsøker.hendelser.first()
+            assertThatCode { UUID.fromString(hendelse.id) }
+                .doesNotThrowAnyException()
+            assertThat(hendelse.tidspunkt).isNotNull()
+            assertThat(hendelse.tidspunkt.toInstant())
+                .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+            assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
+            assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
+            assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
         }
     }
 
@@ -272,37 +257,32 @@ class JobbsøkerTest {
 """.trimIndent()
         eierRepository.leggTil(treffId, listOf("testperson"))
 
-        val (_, postResponse, postResult) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
-            .body(requestBody)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        assertStatuscodeEquals(HTTP_CREATED, postResponse, postResult)
-        val (_, getResponse, getResult) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<JobbsøkereOutboundDto> {
-                override fun deserialize(content: String): JobbsøkereOutboundDto {
-                    return mapper.readValue(content, JobbsøkereOutboundDto::class.java)
-                }
-            })
-        assertStatuscodeEquals(HTTP_OK, getResponse, getResult)
-        when (getResult) {
-            is Failure -> throw getResult.error
-            is Success -> {
-                val actualJobbsøkere = getResult.value.jobbsøkere
-                assertThat(actualJobbsøkere.size).isEqualTo(1)
-                val jobbsoeker = actualJobbsøkere.first()
-                assertThatCode { UUID.fromString(jobbsoeker.personTreffId) }.doesNotThrowAnyException()
-                assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
-                val hendelse = jobbsoeker.hendelser.first()
-                assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
-                assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
-                assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
-                assertThatCode { UUID.fromString(hendelse.id) }
-                    .doesNotThrowAnyException()
-                assertThat(hendelse.tidspunkt.toInstant())
-                    .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-            }
-        }
+        val postResponse = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
+            requestBody,
+            token.serialize()
+        )
+        assertThat(postResponse.statusCode()).isEqualTo(HTTP_CREATED)
+        
+        val getResponse = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
+            token.serialize()
+        )
+        assertThat(getResponse.statusCode()).isEqualTo(HTTP_OK)
+        val result = mapper.readValue(getResponse.body(), JobbsøkereOutboundDto::class.java)
+        val actualJobbsøkere = result.jobbsøkere
+        assertThat(actualJobbsøkere.size).isEqualTo(1)
+        val jobbsoeker = actualJobbsøkere.first()
+        assertThatCode { UUID.fromString(jobbsoeker.personTreffId) }.doesNotThrowAnyException()
+        assertThat(jobbsoeker.hendelser.size).isEqualTo(1)
+        val hendelse = jobbsoeker.hendelser.first()
+        assertThat(hendelse.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
+        assertThat(hendelse.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
+        assertThat(hendelse.aktørIdentifikasjon).isEqualTo("testperson")
+        assertThatCode { UUID.fromString(hendelse.id) }
+            .doesNotThrowAnyException()
+        assertThat(hendelse.tidspunkt.toInstant())
+            .isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
     }
 
     @Test
@@ -337,32 +317,27 @@ class JobbsøkerTest {
         )
         eierRepository.leggTil(treffId, listOf("A123456"))
 
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>> {
-                override fun deserialize(content: String): List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto> {
-                    return mapper.readValue(content, mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerHendelseMedJobbsøkerDataOutboundDto::class.java))
-                }
-            })
-        assertThat(response.statusCode).isEqualTo(200)
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                val hendelser = result.value
-                assertThat(hendelser).hasSize(2)
-                assertThat(hendelser[0].tidspunkt.toInstant()).isAfterOrEqualTo(hendelser[1].tidspunkt.toInstant())
-                hendelser.forEach { h ->
-                    assertThatCode { UUID.fromString(h.id) }.doesNotThrowAnyException()
-                    assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
-                    assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
-                    assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
-                    assertThat(h.fødselsnummer).isIn("11111111111", "22222222222")
-                    assertThat(h.fornavn).isIn("Ola", "Kari")
-                    assertThat(h.etternavn).isEqualTo("Nordmann")
-                    assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
-                    assertThat(h.personTreffId).isNotNull()
-                }
-            }
+        val response = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser",
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val hendelser = mapper.readValue(
+            response.body(),
+            mapper.typeFactory.constructCollectionType(List::class.java, JobbsøkerHendelseMedJobbsøkerDataOutboundDto::class.java)
+        ) as List<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>
+        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser[0].tidspunkt.toInstant()).isAfterOrEqualTo(hendelser[1].tidspunkt.toInstant())
+        hendelser.forEach { h ->
+            assertThatCode { UUID.fromString(h.id) }.doesNotThrowAnyException()
+            assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET.name)
+            assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR.name)
+            assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
+            assertThat(h.fødselsnummer).isIn("11111111111", "22222222222")
+            assertThat(h.fornavn).isIn("Ola", "Kari")
+            assertThat(h.etternavn).isEqualTo("Nordmann")
+            assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+            assertThat(h.personTreffId).isNotNull()
         }
     }
 
@@ -392,13 +367,13 @@ class JobbsøkerTest {
 
         eierRepository.leggTil(treffId, listOf("A123456"))
 
-        val (_, r, res) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter")
-            .body(requestBody)
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
+            requestBody,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_OK, r, res)
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
 
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(4)
@@ -443,30 +418,22 @@ class JobbsøkerTest {
         service.registrerMinsideVarselSvar(fødselsnummer, treffId, "SYSTEM", hendelseDataJson)
 
         // Hent jobbsøkere via API
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<JobbsøkereOutboundDto> {
-                override fun deserialize(content: String): JobbsøkereOutboundDto {
-                    return mapper.readValue(content, JobbsøkereOutboundDto::class.java)
-                }
-            })
+        val response = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
+            token.serialize()
+        )
 
-        assertThat(response.statusCode).isEqualTo(HTTP_OK)
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val result = mapper.readValue(response.body(), JobbsøkereOutboundDto::class.java)
+        val jobbsøkere = result.jobbsøkere
+        assertThat(jobbsøkere).hasSize(1)
+        val js = jobbsøkere.first()
 
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                val jobbsøkere = result.value.jobbsøkere
-                assertThat(jobbsøkere).hasSize(1)
-                val js = jobbsøkere.first()
-
-                val hendelse = js.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE.name }
-                assertThat(hendelse).isNotNull
-                assertThat(hendelse!!.hendelseData).isNotNull
-                assertThat(hendelse.hendelseData!!.get("fnr").asText()).isEqualTo("12345678901")
-                assertThat(hendelse.hendelseData!!.get("svar").asText()).isEqualTo("JA")
-            }
-        }
+        val hendelse = js.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE.name }
+        assertThat(hendelse).isNotNull
+        assertThat(hendelse!!.hendelseData).isNotNull
+        assertThat(hendelse.hendelseData!!.get("fnr").asText()).isEqualTo("12345678901")
+        assertThat(hendelse.hendelseData!!.get("svar").asText()).isEqualTo("JA")
     }
 
     @Test
@@ -492,21 +459,23 @@ class JobbsøkerTest {
         """.trimIndent()
 
         // Første kall
-        val (_, response1, result1) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
-            .body(requestBody)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response1 = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker",
+            requestBody,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(HTTP_CREATED, response1, result1)
+        assertThat(response1.statusCode()).isEqualTo(HTTP_CREATED)
 
         // Andre kall med samme jobbsøker
-        val (_, response2, result2) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker")
-            .body(requestBody)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response2 = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker",
+            requestBody,
+            token.serialize()
+        )
 
         // Skal også returnere success (enten 200 eller 201)
-        assertThat(response2.statusCode).isIn(HTTP_OK, HTTP_CREATED)
+        assertThat(response2.statusCode()).isIn(HTTP_OK, HTTP_CREATED)
 
         // Verifiser at kun én jobbsøker ble opprettet
         val jobbsøkere = db.hentAlleJobbsøkere()

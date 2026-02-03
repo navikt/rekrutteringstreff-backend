@@ -18,7 +18,6 @@ import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI
-import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Instant
@@ -45,7 +44,6 @@ class SynlighetsKomponentTest {
         private lateinit var jobbsøkerService: JobbsøkerService
     }
 
-    private val httpClient = HttpClient.newBuilder().build()
     private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
@@ -79,7 +77,8 @@ class SynlighetsKomponentTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            httpClient = httpClient
         ).also { it.start() }
         authServer.start(port = authPort)
         
