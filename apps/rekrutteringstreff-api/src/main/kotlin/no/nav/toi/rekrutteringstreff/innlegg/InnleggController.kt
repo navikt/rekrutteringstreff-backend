@@ -8,12 +8,14 @@ import io.javalin.http.bodyAsClass
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
 import java.net.HttpURLConnection.*
 import java.util.UUID
 
 
 class InnleggController(
     private val innleggRepository: InnleggRepository,
+    private val kiValideringsService: KiValideringsService,
     javalin: Javalin
 ) {
     companion object {
@@ -200,6 +202,17 @@ class InnleggController(
         val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
         val innleggId = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
         val dto = ctx.bodyAsClass<OppdaterInnleggRequestDto>()
+
+        val eksisterendeInnlegg = innleggRepository.hentById(innleggId)
+        if (eksisterendeInnlegg != null && kiValideringsService.erTekstEndret(eksisterendeInnlegg.htmlContent, dto.htmlContent)) {
+            kiValideringsService.verifiserKiValidering(
+                tekst = dto.htmlContent,
+                kiLoggId = dto.innleggKiLoggId,
+                lagreLikevel = dto.lagreLikevel,
+                feltType = "innlegg"
+            )
+        }
+
         try {
             ctx.status(HTTP_OK).json(innleggRepository.oppdater(innleggId, treffId, dto).toResponseDto())
         } catch (e: IllegalStateException) {

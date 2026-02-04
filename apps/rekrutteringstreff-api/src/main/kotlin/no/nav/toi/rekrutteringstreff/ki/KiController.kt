@@ -66,13 +66,14 @@ class KiController (
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val req = ctx.bodyAsClass<ValiderMedLoggRequestUtenTreffIdDto>()
         val treffId = UUID.fromString(ctx.pathParam(pathParamTreffId))
-        val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =
+        val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?, validertTekst: String) =
             openAiClient.validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
         ctx.status(200).json(
             ValiderMedLoggResponseDto(
                 loggId = loggId?.toString() ?: "",
                 bryterRetningslinjer = result.bryterRetningslinjer,
-                begrunnelse = result.begrunnelse
+                begrunnelse = result.begrunnelse,
+                validertTekst = validertTekst
             )
         )
     }
@@ -345,7 +346,8 @@ data class OppdaterLagretRequestDto(val lagret: Boolean)
 data class ValiderMedLoggResponseDto(
     val loggId: String,
     val bryterRetningslinjer: Boolean,
-    val begrunnelse: String
+    val begrunnelse: String,
+    val validertTekst: String
 )
 
 data class ValiderMedLoggRequestUtenTreffIdDto(

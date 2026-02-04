@@ -31,6 +31,7 @@ import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
+import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
 import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.flywaydb.core.Flyway
@@ -208,6 +209,7 @@ class App(
         val innleggRepository = InnleggRepository(dataSource)
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val kiLoggRepository = KiLoggRepository(dataSource)
+        val kiValideringsService = KiValideringsService(kiLoggRepository)
 
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
@@ -223,10 +225,12 @@ class App(
         RekrutteringstreffController(
             rekrutteringstreffService = rekrutteringstreffService,
             eierService = eierService,
+            kiValideringsService = kiValideringsService,
             javalin = javalin
         )
         InnleggController(
             innleggRepository = innleggRepository,
+            kiValideringsService = kiValideringsService,
             javalin = javalin
         )
         EierController(

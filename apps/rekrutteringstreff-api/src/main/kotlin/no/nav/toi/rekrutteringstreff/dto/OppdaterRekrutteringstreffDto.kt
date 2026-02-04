@@ -15,6 +15,8 @@ data class OppdaterRekrutteringstreffDto(
     val kommunenummer: String?,
     val fylke: String?,
     val fylkesnummer: String?,
+    val tittelKiLoggId: String? = null,
+    val lagreLikevel: Boolean = false
 ) {
     companion object {
         fun opprettFra(rekrutteringstreff: RekrutteringstreffDto): OppdaterRekrutteringstreffDto {
