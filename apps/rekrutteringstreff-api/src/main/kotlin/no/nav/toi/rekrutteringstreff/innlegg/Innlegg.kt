@@ -21,7 +21,9 @@ data class OpprettInnleggRequestDto(
     val opprettetAvPersonNavn: String,
     val opprettetAvPersonBeskrivelse: String,
     val sendesTilJobbsokerTidspunkt: ZonedDateTime?,
-    val htmlContent: String
+    val htmlContent: String,
+    val innleggKiLoggId: String? = null,
+    val lagreLikevel: Boolean = false
 )
 
 data class OppdaterInnleggRequestDto(

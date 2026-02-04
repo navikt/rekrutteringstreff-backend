@@ -96,6 +96,7 @@ Azure OpenAI fanger opp hatefulle ytringer, voldelig/seksuelt innhold og selvska
 ### Persondata-filtrering
 
 Før tekst sendes til KI, filtreres personsensitive data ut:
+
 - Fødselsnummer
 - Telefonnummer
 - E-postadresser
@@ -106,6 +107,7 @@ Før tekst sendes til KI, filtreres personsensitive data ut:
 Systemprompten definerer valideringsreglene. Se [`SystemPrompt.kt`](../apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/rekrutteringstreff/ki/SystemPrompt.kt).
 
 **Hovedprinsipper:**
+
 1. Identifisere diskriminering basert på kjønn, alder, etnisitet, religion, funksjonsevne, tiltak/ytelser eller bosted
 2. Sikre taushetsplikt (ikke avsløre NAV-tiltak som KVP, AAP, IPS)
 3. Godta satsningsområder: flyktninger og ungdom (18-30) med eksplisitt aldersspenn
@@ -174,12 +176,12 @@ Backend sammenligner mot `spørringFraFrontend` (originalteksten), **ikke** `sp�
 
 ### Feilkoder (HTTP 422)
 
-| Feilkode                | Årsak                         | Frontend-håndtering            |
-| ----------------------- | ----------------------------- | ------------------------------ |
-| `KI_VALIDERING_MANGLER` | Ingen loggId oppgitt          | Vent på validering             |
-| `KI_LOGG_ID_UGYLDIG`    | LoggId finnes ikke            | Trigger ny validering          |
-| `KI_TEKST_ENDRET`       | Tekst endret etter validering | Vent på ny validering          |
-| `KI_KREVER_BEKREFTELSE` | Bruker må bekrefte advarsel   | Vis "Lagre likevel"-dialog     |
+| Feilkode                | Årsak                         | Frontend-håndtering        |
+| ----------------------- | ----------------------------- | -------------------------- |
+| `KI_VALIDERING_MANGLER` | Ingen loggId oppgitt          | Vent på validering         |
+| `KI_LOGG_ID_UGYLDIG`    | LoggId finnes ikke            | Trigger ny validering      |
+| `KI_TEKST_ENDRET`       | Tekst endret etter validering | Vent på ny validering      |
+| `KI_KREVER_BEKREFTELSE` | Bruker må bekrefte advarsel   | Vis "Lagre likevel"-dialog |
 
 ### Request-format
 
@@ -193,10 +195,10 @@ Backend sammenligner mot `spørringFraFrontend` (originalteksten), **ikke** `sp�
 
 ### Felter som valideres
 
-| Felt    | Controller                   | DTO-felt         |
-| ------- | ---------------------------- | ---------------- |
-| Tittel  | RekrutteringstreffController | `tittelKiLoggId` |
-| Innlegg | InnleggController            | `innleggKiLoggId` |
+| Felt    | Controller                   | Operasjon   | DTO-felt          |
+| ------- | ---------------------------- | ----------- | ----------------- |
+| Tittel  | RekrutteringstreffController | PUT         | `tittelKiLoggId`  |
+| Innlegg | InnleggController            | POST og PUT | `innleggKiLoggId` |
 
 ---
 

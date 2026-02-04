@@ -148,6 +148,14 @@ class InnleggController(
         val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
         val dto = ctx.bodyAsClass<OpprettInnleggRequestDto>()
         val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        kiValideringsService.verifiserKiValidering(
+            tekst = dto.htmlContent,
+            kiLoggId = dto.innleggKiLoggId,
+            lagreLikevel = dto.lagreLikevel,
+            feltType = "innlegg"
+        )
+
         try {
             ctx.status(HTTP_CREATED).json(innleggRepository.opprett(treffId, dto, navIdent).toResponseDto())
         } catch (e: IllegalStateException) {
