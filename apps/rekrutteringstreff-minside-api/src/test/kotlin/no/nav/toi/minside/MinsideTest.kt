@@ -83,6 +83,7 @@ class MinsideTest {
                 httpClient = httpClient
             ),
             pilotkontorer = emptyList<String>(),
+            httpClient = httpClient,
             leaderElection = LeaderElectionMock(),
         )
 

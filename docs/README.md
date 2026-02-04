@@ -31,16 +31,23 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 - [Varsling](4-integrasjoner/varsling.md) - Varsling via SMS, e-post og MinSide
 - [Aktivitetskort](4-integrasjoner/aktivitetskort.md) - Synkronisering med aktivitetsplanen
 - [MinSide-flyt](4-integrasjoner/minside-flyt.md) - Jobbsøkers flyt for å se treff og svare
+- [Kandidatsøk](4-integrasjoner/kandidatsok.md) - Søk etter jobbsøkere via kandidatsøk-api
+- [Enhetsregisteret](4-integrasjoner/enhetsregisteret.md) - Arbeidsgiversøk via pam-search
 
 ### 5. [KI](5-ki/)
 
-- [KI-moderering](5-ki/ki-moderering.md) - Validering av rekrutteringstreff-innhold med KI
+- [KI-tekstvalideringstjenesten](5-ki/ki-tekstvalideringstjeneste.md) - Validering av rekrutteringstreff-innhold med KI
 
 ### 6. [Kvalitet](6-kvalitet/)
 
 - [Testing](6-kvalitet/testing.md) - Teststrategi og testnivåer
 - [Utvidbarhet](6-kvalitet/utvidbarhet.md) - Planlagte utvidelser og arkitekturprinsipper
 - [Vedlikeholdbarhet](6-kvalitet/vedlikeholdbarhet.md) - Design for vedlikehold
+
+### 7. [Akseptansetest og ROS](7-akseptansetest-og-ros/)
+
+- [Akseptansetester](7-akseptansetest-og-ros/akseptansetester.md) - Manuelle tester for domeneeksperter før pilot/prodsetting
+- [Automatiske backend-tester](7-akseptansetest-og-ros/automatiske-tester.md) - Plan for automatisering av akseptansetester i backend
 
 ## Applikasjoner i monorepoet
 

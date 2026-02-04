@@ -17,6 +17,7 @@ import java.util.*
 
 class KiController (
     private val kiLoggRepository: KiLoggRepository,
+    private val openAiClient: OpenAiClient,
     javalin: Javalin
 ) {
     companion object {
@@ -66,7 +67,7 @@ class KiController (
         val req = ctx.bodyAsClass<ValiderMedLoggRequestUtenTreffIdDto>()
         val treffId = UUID.fromString(ctx.pathParam(pathParamTreffId))
         val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =
-            OpenAiClient(repo = kiLoggRepository).validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
+            openAiClient.validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
         ctx.status(200).json(
             ValiderMedLoggResponseDto(
                 loggId = loggId?.toString() ?: "",

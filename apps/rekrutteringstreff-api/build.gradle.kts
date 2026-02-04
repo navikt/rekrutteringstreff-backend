@@ -4,7 +4,6 @@ plugins {
 }
 
 val javalinVersion = "6.4.0"
-val fuelVersion = "2.3.1"
 val mockOAuth2ServerVersion = "2.1.0"
 val flywayVersion = "11.3.0"
 val postgresVersion = "42.7.5"
@@ -22,8 +21,6 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
-    implementation("com.github.kittinunf.fuel:fuel:$fuelVersion")
-    implementation("com.github.kittinunf.fuel:fuel-jackson:$fuelVersion")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonDatatypeJsr310Version")
     implementation("io.javalin:javalin:$javalinVersion")
 

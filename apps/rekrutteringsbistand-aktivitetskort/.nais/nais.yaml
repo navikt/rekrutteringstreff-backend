@@ -52,3 +52,13 @@ spec:
       value: {{ kafka_consumer_group_id }}
     - name: MIN_SIDE_URL
       value: {{ min_side_url }}
+    - name: DAB_AKTIVITETSKORT_TOPIC
+      value: {{ dab_aktivitetskort_topic }}
+    - name: DAB_AKTIVITETSKORT_FEIL_TOPIC
+      value: {{ dab_aktivitetskort_feil_topic }}
+  observability:
+    logging:
+      destinations:
+        - id: loki
+        - id: elastic
+      enabled: true

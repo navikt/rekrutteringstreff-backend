@@ -12,18 +12,11 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
-import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
-import no.nav.toi.exception.UlovligOppdateringException
-import no.nav.toi.exception.UlovligSlettingException
-import no.nav.toi.jobbsoker.JobbsøkerController
-import no.nav.toi.jobbsoker.JobbsøkerInnloggetBorgerController
-import no.nav.toi.jobbsoker.JobbsøkerOutboundController
-import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
+import no.nav.toi.exception.*
+import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
@@ -31,13 +24,14 @@ import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.eier.EierController
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
+import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.flywaydb.core.Flyway
 import java.net.http.HttpClient
@@ -74,6 +68,7 @@ class App(
         accessTokenClient: AccessTokenClient,
         modiaKlient: ModiaKlient,
         pilotkontorer: List<String>,
+        httpClient: HttpClient,
         leaderElection: LeaderElectionInterface,
     ) : this(
         port = port,
@@ -85,7 +80,8 @@ class App(
         kandidatsokKlient = KandidatsøkKlient(
             kandidatsokApiUrl = kandidatsokApiUrl,
             kandidatsokScope = kandidatsokScope,
-            accessTokenClient = accessTokenClient
+            accessTokenClient = accessTokenClient,
+            httpClient = httpClient
         ),
         rapidsConnection = rapidsConnection,
         modiaKlient = modiaKlient,
@@ -151,9 +147,11 @@ class App(
 
         javalin.exception(java.sql.SQLException::class.java) { e, ctx ->
             if (e.sqlState == "23503") {
-                ctx.status(409).json(mapOf(
-                    "feil" to "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes. Slett barn først."
-                ))
+                ctx.status(409).json(
+                    mapOf(
+                        "feil" to "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes. Slett barn først."
+                    )
+                )
             } else {
                 secureLog.error("SQL-feil", e)
                 ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod på serveren."))
@@ -167,8 +165,24 @@ class App(
             ctx.status(409).json(mapOf("feil" to (e.message ?: "Konflikt ved oppdatering")))
         }
 
+        javalin.exception(IllegalArgumentException::class.java) { e, ctx ->
+            ctx.status(400).json(mapOf("feil" to (e.message ?: "Ugyldig input")))
+        }
+
+        javalin.exception(SvarfristUtløptException::class.java) { e, ctx ->
+            ctx.status(400).json(mapOf("feil" to (e.message ?: "Svarfristen har utløpt")))
+        }
+
         javalin.exception(RekrutteringstreffIkkeFunnetException::class.java) { e, ctx ->
             ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke rekrutteringstreffet")))
+        }
+
+        javalin.exception(JobbsøkerIkkeFunnetException::class.java) { e, ctx ->
+            ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke jobbsøkeren")))
+        }
+
+        javalin.exception(JobbsøkerIkkeSynligException::class.java) { e, ctx ->
+            ctx.status(403).json(mapOf("feil" to (e.message ?: "Jobbsøker er ikke synlig")))
         }
 
         javalin.exception(Exception::class.java) { e, ctx ->
@@ -200,7 +214,13 @@ class App(
 
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
-        val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
+        val rekrutteringstreffService = RekrutteringstreffService(
+            dataSource,
+            rekrutteringstreffRepository,
+            jobbsøkerRepository,
+            arbeidsgiverRepository,
+            jobbsøkerService
+        )
         val eierService = EierService(eierRepository)
 
         RekrutteringstreffController(
@@ -239,7 +259,8 @@ class App(
         )
         KiController(
             kiLoggRepository = kiLoggRepository,
-            javalin
+            openAiClient = OpenAiClient(repo = kiLoggRepository),
+            javalin = javalin
         )
 
         javalin.start(port)
@@ -353,6 +374,7 @@ fun main() {
         accessTokenClient = accessTokenClient,
         modiaKlient = modiaKlient,
         pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() },
+        httpClient = httpClient,
         leaderElection = LeaderElection(),
     ).start()
 }

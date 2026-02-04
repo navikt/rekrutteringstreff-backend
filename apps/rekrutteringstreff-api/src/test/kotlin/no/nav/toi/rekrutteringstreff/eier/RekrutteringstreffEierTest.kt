@@ -1,9 +1,6 @@
 package no.nav.toi.rekrutteringstreff.eier
 
 import com.fasterxml.jackson.core.type.TypeReference
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.result.Result.Failure
-import com.github.kittinunf.result.Result.Success
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -88,6 +85,7 @@ class RekrutteringstreffEierTest {
                 httpClient = httpClient
             ),
             pilotkontorer = listOf("1234"),
+            httpClient = httpClient,
             leaderElection = LeaderElectionMock(),
         )
 
@@ -135,17 +133,13 @@ class RekrutteringstreffEierTest {
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         database.oppdaterRekrutteringstreff(eiere, opprettetRekrutteringstreff.id)
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readValue(result.get(), object : TypeReference<List<String>>() {})
-                assertThat(dto).containsExactlyInAnyOrder(*eiere.toTypedArray())
-            }
-        }
+        val response = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+        val dto = mapper.readValue(response.body(), object : TypeReference<List<String>>() {})
+        assertThat(dto).containsExactlyInAnyOrder(*eiere.toTypedArray())
     }
 
     @Test
@@ -155,22 +149,18 @@ class RekrutteringstreffEierTest {
         val token = authServer.lagToken(authPort, navIdent = bruker)
         opprettRekrutteringstreffIDatabase(bruker)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiere).doesNotContain(nyEier)
+        val eiereForTest = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiereForTest).doesNotContain(nyEier)
 
-        val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
-            .body(mapper.writeValueAsString(listOf(nyEier)))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val updateResponse = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
+            mapper.writeValueAsString(listOf(nyEier)),
+            token.serialize()
+        )
 
-        when (updateResult) {
-            is Failure -> throw updateResult.error
-            is Success -> {
-                assertThat(updateResponse.statusCode).isEqualTo(HTTP_CREATED)
-                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-                assertThat(eiere).contains(nyEier)
-            }
-        }
+        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
+        val eiereEtterOppdatering = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiereEtterOppdatering).contains(nyEier)
     }
 
     @Test
@@ -183,19 +173,15 @@ class RekrutteringstreffEierTest {
         val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
         assertThat(eiere).doesNotContainAnyElementsOf(nyeEiere)
 
-        val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
-            .body(mapper.writeValueAsString(nyeEiere))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val updateResponse = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
+            mapper.writeValueAsString(nyeEiere),
+            token.serialize()
+        )
 
-        when (updateResult) {
-            is Failure -> throw updateResult.error
-            is Success -> {
-                assertThat(updateResponse.statusCode).isEqualTo(HTTP_CREATED)
-                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-                assertThat(eiere).containsAll(nyeEiere)
-            }
-        }
+        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
+        val eiereEtterLeggTil = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiereEtterLeggTil).containsAll(nyeEiere)
     }
 
     @Test
@@ -208,19 +194,15 @@ class RekrutteringstreffEierTest {
         val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
         assertThat(eiere).contains(bruker)
 
-        val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
-            .body(mapper.writeValueAsString(nyeEiere))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val updateResponse = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
+            mapper.writeValueAsString(nyeEiere),
+            token.serialize()
+        )
 
-        when (updateResult) {
-            is Failure -> throw updateResult.error
-            is Success -> {
-                assertThat(updateResponse.statusCode).isEqualTo(HTTP_CREATED)
-                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-                assertThat(eiere).contains(bruker)
-            }
-        }
+        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
+        val eiereEtterOppdatering = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiereEtterOppdatering).contains(bruker)
     }
 
     @Test
@@ -231,19 +213,15 @@ class RekrutteringstreffEierTest {
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         assertThat(database.hentEiere(opprettetRekrutteringstreff.id)).contains(bruker)
 
-        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere")
-            .body(mapper.writeValueAsString(listOf(bruker)))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
+            mapper.writeValueAsString(listOf(bruker)),
+            token.serialize()
+        )
 
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(HTTP_CREATED)
-                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-                assertThat(eiere).contains(bruker).hasSize(1)
-            }
-        }
+        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).contains(bruker).hasSize(1)
     }
 
     @Test
@@ -254,17 +232,13 @@ class RekrutteringstreffEierTest {
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"))
 
-        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-                assertThat(eiere).doesNotContain(navIdent)
-            }
-        }
+        val response = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).doesNotContain(navIdent)
     }
 
     @Test
@@ -273,11 +247,12 @@ class RekrutteringstreffEierTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(400, response, result)
+        assertThat(response.statusCode()).isEqualTo(400)
         val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
         assertThat(eiere).contains(navIdent)
     }
@@ -290,17 +265,13 @@ class RekrutteringstreffEierTest {
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
-        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-                assertThat(eiere).contains(beholdIdent)
-            }
-        }
+        val response = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
+        assertThat(eiere).contains(beholdIdent)
     }
 
     private fun opprettRekrutteringstreffIDatabase(
@@ -323,11 +294,8 @@ class RekrutteringstreffEierTest {
 
         while (attempts < maxAttempts) {
             try {
-                val (_, response, _) = Fuel.get("http://localhost:$appPort/isready")
-                    .timeout(5000)
-                    .timeoutRead(5000)
-                    .responseString()
-                if (response.statusCode == 200) {
+                val response = httpGet("http://localhost:$appPort/isready")
+                if (response.statusCode() == 200) {
                     return
                 }
             } catch (e: Exception) {
@@ -344,36 +312,25 @@ class RekrutteringstreffEierTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentEiere(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(401, response, result)
+        val response = autentiseringstest.utførGet("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringLeggTilEiere(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
-        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere")
-            .header("Content-Type", "application/json")
-            .body(mapper.writeValueAsString(listOf("A123456")))
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(401, response, result)
+        val response = autentiseringstest.utførPut("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", mapper.writeValueAsString(listOf("A123456")), authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringSlettEier(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
         val dummyId = UUID.randomUUID().toString()
         val navIdent = "A123456"
-        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent")
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(401, response, result)
+        val response = autentiseringstest.utførDelete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 }

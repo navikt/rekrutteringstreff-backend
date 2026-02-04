@@ -1,0 +1,40 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rekrutteringsbistand-aktivitetskort
+  namespace: toi
+  labels:
+    team: toi
+spec:
+  groups:
+    - name: rekrutteringsbistand-aktivitetskort
+      rules:
+        - alert: rekrutteringsbistand-aktivitetskort
+          expr: kube_deployment_status_replicas_available{deployment="rekrutteringsbistand-aktivitetskort"} == 0
+          for: 2m
+          annotations:
+            summary: Appen er nede
+            action: "https://logs.az.nav.no/goto/db1b7751b19265379e2a6daacc59456a?security_tenant=navlogs"
+          labels:
+            namespace: toi
+            severity: critical
+
+        - alert: rekrutteringsbistand-aktivitetskort
+          expr: sum(increase(log_messages_errors{app="rekrutteringsbistand-aktivitetskort", level="Error"}[10m])) > 0
+          for: 1s
+          annotations:
+            summary: Appen har logget en error
+            action: "https://logs.az.nav.no/goto/db1b7751b19265379e2a6daacc59456a?security_tenant=navlogs"
+          labels:
+            namespace: toi
+            severity: critical
+
+        - alert: rekrutteringsbistand-aktivitetskort
+          expr: sum(increase(log_messages_errors{app="rekrutteringsbistand-aktivitetskort", level="Warning"}[10m])) > 3
+          for: 1s
+          annotations:
+            summary: Økning i warnings
+            action: "https://logs.az.nav.no/goto/db1b7751b19265379e2a6daacc59456a?security_tenant=navlogs"
+          labels:
+            namespace: toi
+            severity: warning

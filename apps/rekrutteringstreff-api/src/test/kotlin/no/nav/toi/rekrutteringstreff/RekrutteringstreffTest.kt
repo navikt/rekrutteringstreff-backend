@@ -1,9 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.ResponseDeserializable
-import com.github.kittinunf.result.Result.Failure
-import com.github.kittinunf.result.Result.Success
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -77,6 +73,7 @@ class RekrutteringstreffTest {
                 httpClient = httpClient
             ),
             pilotkontorer = listOf("1234"),
+            httpClient = httpClient,
             leaderElection = LeaderElectionMock(),
         ).also { it.start() }
 
@@ -118,40 +115,63 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val gyldigKontorfelt = "Gyldig NAV Kontor"
         val gyldigStatus = RekrutteringstreffStatus.UTKAST
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
-            .body(
-                """
-                {
-                    "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt"
-                }
-                """.trimIndent()
-            )
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(201)
-                val json = mapper.readTree(result.get())
-                val postId = json.get("id").asText()
-                assertThat(postId).isNotEmpty()
-
-                val rekrutteringstreff = db.hentAlleRekrutteringstreff().first()
-                assertThat(rekrutteringstreff.tittel).isEqualTo("Nytt rekrutteringstreff")
-                assertThat(rekrutteringstreff.beskrivelse).isNull()
-                assertThat(rekrutteringstreff.fraTid).isNull()
-                assertThat(rekrutteringstreff.tilTid).isNull()
-                assertThat(rekrutteringstreff.svarfrist).isNull()
-                assertThat(rekrutteringstreff.gateadresse).isNull()
-                assertThat(rekrutteringstreff.postnummer).isNull()
-                assertThat(rekrutteringstreff.poststed).isNull()
-                assertThat(rekrutteringstreff.status.name).isEqualTo(gyldigStatus.name)
-                assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
-                assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
-                assertThat(rekrutteringstreff.id.somString).isEqualTo(postId)
-                assertThat(rekrutteringstreff.sistEndretAv).isEqualTo(navIdent)
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff",
+            """
+            {
+                "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt"
             }
-        }
+            """.trimIndent(),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(201)
+        val json = mapper.readTree(response.body())
+        val postId = json.get("id").asText()
+        assertThat(postId).isNotEmpty()
+
+        val rekrutteringstreff = db.hentAlleRekrutteringstreff().first()
+        assertThat(rekrutteringstreff.tittel).isEqualTo("Nytt rekrutteringstreff")
+        assertThat(rekrutteringstreff.beskrivelse).isNull()
+        assertThat(rekrutteringstreff.fraTid).isNull()
+        assertThat(rekrutteringstreff.tilTid).isNull()
+        assertThat(rekrutteringstreff.svarfrist).isNull()
+        assertThat(rekrutteringstreff.gateadresse).isNull()
+        assertThat(rekrutteringstreff.postnummer).isNull()
+        assertThat(rekrutteringstreff.poststed).isNull()
+        assertThat(rekrutteringstreff.status.name).isEqualTo(gyldigStatus.name)
+        assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
+        assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
+        assertThat(rekrutteringstreff.id.somString).isEqualTo(postId)
+        assertThat(rekrutteringstreff.sistEndretAv).isEqualTo(navIdent)
+    }
+
+    @Test
+    fun `opprett rekrutteringstreff med manglende påkrevd felt gir 400`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+
+        // Mangler opprettetAvNavkontorEnhetId som er påkrevd
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff",
+            """{}""",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `opprett rekrutteringstreff med ugyldig JSON gir 400`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff",
+            """{opprettetAvNavkontorEnhetId: "mangler quotes på nøkkel"}""",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(400)
     }
 
     @Test
@@ -170,25 +190,13 @@ class RekrutteringstreffTest {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
 
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffDto>> {
-                override fun deserialize(content: String): List<RekrutteringstreffDto> {
-                    val type =
-                        mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDto::class.java)
-                    return mapper.readValue(content, type)
-                }
-            })
+        val response = httpGet("http://localhost:$appPort/api/rekrutteringstreff", token.serialize())
 
-        when (result) {
-            is Failure<*> -> throw result.error
-            is Success<List<RekrutteringstreffDto>> -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val liste = result.get()
-                assertThat(liste).hasSize(2)
-                assertThat(liste.map { it.tittel }).contains(tittel1, tittel2)
-            }
-        }
+        assertThat(response.statusCode()).isEqualTo(200)
+        val type = mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDto::class.java)
+        val liste: List<RekrutteringstreffDto> = mapper.readValue(response.body(), type)
+        assertThat(liste).hasSize(2)
+        assertThat(liste.map { it.tittel }).contains(tittel1, tittel2)
     }
 
     @Test
@@ -202,17 +210,13 @@ class RekrutteringstreffTest {
             tittel = originalTittel,
         )
         val opprettetRekrutteringstreff = db.hentAlleRekrutteringstreff().first()
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val rekrutteringstreff = mapper.readValue(result.get(), RekrutteringstreffDto::class.java)
-                assertThat(rekrutteringstreff.tittel).isEqualTo(originalTittel)
-            }
-        }
+        val response = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}",
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+        val rekrutteringstreff = mapper.readValue(response.body(), RekrutteringstreffDto::class.java)
+        assertThat(rekrutteringstreff.tittel).isEqualTo(originalTittel)
     }
 
     @Test
@@ -235,27 +239,23 @@ class RekrutteringstreffTest {
             fylke = "Oppdatert fylke",
             fylkesnummer = "03",
         )
-        val (_, updateResponse, updateResult) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${created.id}")
-            .body(mapper.writeValueAsString(updateDto))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (updateResult) {
-            is Failure -> throw updateResult.error
-            is Success -> {
-                assertThat(updateResponse.statusCode).isEqualTo(200)
-                val updatedDto = mapper.readValue(updateResult.get(), RekrutteringstreffDto::class.java)
-                assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
-                assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
-                assertThat(updatedDto.fraTid).isEqualTo(updateDto.fraTid)
-                assertThat(updatedDto.tilTid).isEqualTo(updateDto.tilTid)
-                assertThat(updatedDto.svarfrist).isEqualTo(updateDto.svarfrist)
-                assertThat(updatedDto.gateadresse).isEqualTo(updateDto.gateadresse)
-                assertThat(updatedDto.postnummer).isEqualTo(updateDto.postnummer)
-                assertThat(updatedDto.poststed).isEqualTo(updateDto.poststed)
-                assertThat(updatedDto.sistEndretAv).isEqualTo(navIdent)
-                assertThat(created.sistEndret).isBefore(updatedDto.sistEndret)
-            }
-        }
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+        val updatedDto = mapper.readValue(response.body(), RekrutteringstreffDto::class.java)
+        assertThat(updatedDto.tittel).isEqualTo(updateDto.tittel)
+        assertThat(updatedDto.beskrivelse).isEqualTo(updateDto.beskrivelse)
+        assertThat(updatedDto.fraTid).isEqualTo(updateDto.fraTid)
+        assertThat(updatedDto.tilTid).isEqualTo(updateDto.tilTid)
+        assertThat(updatedDto.svarfrist).isEqualTo(updateDto.svarfrist)
+        assertThat(updatedDto.gateadresse).isEqualTo(updateDto.gateadresse)
+        assertThat(updatedDto.postnummer).isEqualTo(updateDto.postnummer)
+        assertThat(updatedDto.poststed).isEqualTo(updateDto.poststed)
+        assertThat(updatedDto.sistEndretAv).isEqualTo(navIdent)
+        assertThat(created.sistEndret).isBefore(updatedDto.sistEndret)
     }
 
     @Test
@@ -264,17 +264,13 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = db.hentAlleRekrutteringstreff().first()
-        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val remaining = db.hentAlleRekrutteringstreffSomIkkeErSlettet()
-                assertThat(remaining).isEmpty()
-            }
-        }
+        val response = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}",
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+        val remaining = db.hentAlleRekrutteringstreffSomIkkeErSlettet()
+        assertThat(remaining).isEmpty()
     }
 
     @Test
@@ -318,15 +314,57 @@ class RekrutteringstreffTest {
         assertThat(db.hentAlleJobbsøkere()).isNotEmpty
         assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
 
-        val (_, response, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
+        val response = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}",
+            token.serialize()
+        )
 
-        assertThat(response.statusCode).isEqualTo(409)
+        assertThat(response.statusCode()).isEqualTo(409)
         // Verifiser at data står igjen når sletting avvises
         assertThat(db.hentAlleRekrutteringstreff()).isNotEmpty
         assertThat(db.hentAlleJobbsøkere()).isNotEmpty
         assertThat(db.hentAlleArbeidsgivere()).isNotEmpty
+    }
+
+    @Test
+    fun `publiser rekrutteringstreff endrer status fra UTKAST til PUBLISERT`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+
+        // Opprett treff - opprettes automatisk med UTKAST-status
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Verifiser at status er UTKAST før publisering
+        val getResBeforePublish = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}",
+            token.serialize()
+        )
+        assertThat(getResBeforePublish.statusCode()).isEqualTo(200)
+        val treffFørPublisering = mapper.readValue(getResBeforePublish.body(), RekrutteringstreffDto::class.java)
+        assertThat(treffFørPublisering.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
+
+        // Publiser treffet
+        val pubRes = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+        assertThat(pubRes.statusCode()).isEqualTo(200)
+
+        // Verifiser at status er PUBLISERT etter publisering
+        val getResAfterPublish = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}",
+            token.serialize()
+        )
+        assertThat(getResAfterPublish.statusCode()).isEqualTo(200)
+        val treffEtterPublisering = mapper.readValue(getResAfterPublish.body(), RekrutteringstreffDto::class.java)
+        assertThat(treffEtterPublisering.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+
+        // Verifiser at PUBLISERT-hendelse ble registrert
+        val hendelser = db.hentHendelser(treffId)
+        assertThat(hendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.PUBLISERT)
+        assertThat(hendelser.first { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT }.aktørIdentifikasjon)
+            .isEqualTo(navIdent)
     }
 
     @Test
@@ -337,16 +375,19 @@ class RekrutteringstreffTest {
         val treff = db.hentAlleRekrutteringstreff().first()
 
         // Publiser treffet
-        val (_, pubRes, _) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/publiser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        assertThat(pubRes.statusCode).isEqualTo(200)
+        val pubRes = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/publiser",
+            "",
+            token.serialize()
+        )
+        assertThat(pubRes.statusCode()).isEqualTo(200)
 
         // Forsøk å slette
-        val (_, delRes, _) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/${treff.id}")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseString()
-        assertThat(delRes.statusCode).isEqualTo(409)
+        val delRes = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}",
+            token.serialize()
+        )
+        assertThat(delRes.statusCode()).isEqualTo(409)
 
         // Treffet skal fortsatt eksistere
         assertThat(db.hentAlleRekrutteringstreffSomIkkeErSlettet()).isNotEmpty
@@ -358,27 +399,25 @@ class RekrutteringstreffTest {
     fun `GET hendelser gir 200 og sortert liste`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val id = db.opprettRekrutteringstreffIDatabase("A123456")
-        Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}")
-            .body(
-                """{"tittel":"x","beskrivelse":null,"fraTid":"${nowOslo()}",
-                 "tilTid":"${nowOslo()}","svarfrist":"${nowOslo().minusDays(1)}","gateadresse":"y","postnummer":"1234"},"poststed":"Bergen"} """
-            )
-            .header("Authorization", "Bearer ${token.serialize()}").response()
+        httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}",
+            """{
+                "tittel":"x","beskrivelse":null,"fraTid":"${nowOslo()}",
+                "tilTid":"${nowOslo()}","svarfrist":"${nowOslo().minusDays(1)}","gateadresse":"y","postnummer":"1234","poststed":"Bergen"
+            }""",
+            token.serialize()
+        )
 
-        val (_, res, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}/hendelser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<RekrutteringstreffHendelseOutboundDto>> {
-                override fun deserialize(content: String): List<RekrutteringstreffHendelseOutboundDto> {
-                    val type = mapper.typeFactory.constructCollectionType(
-                        List::class.java, RekrutteringstreffHendelseOutboundDto::class.java
-                    )
-                    return mapper.readValue(content, type)
-                }
-            })
+        val res = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}/hendelser",
+            token.serialize()
+        )
 
-        assertThat(res.statusCode).isEqualTo(200)
-        result as Success
-        val list = result.value
+        assertThat(res.statusCode()).isEqualTo(200)
+        val type = mapper.typeFactory.constructCollectionType(
+            List::class.java, RekrutteringstreffHendelseOutboundDto::class.java
+        )
+        val list: List<RekrutteringstreffHendelseOutboundDto> = mapper.readValue(res.body(), type)
         assertThat(list.map { it.hendelsestype }).containsExactly("OPPDATERT", "OPPRETTET")
     }
 
@@ -420,22 +459,17 @@ class RekrutteringstreffTest {
 
         db.leggTilRekrutteringstreffHendelse(treff, RekrutteringstreffHendelsestype.OPPDATERT, "A123456")
 
-        val (_, res, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/allehendelser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .responseObject(object : ResponseDeserializable<List<FellesHendelseOutboundDto>> {
-                override fun deserialize(content: String): List<FellesHendelseOutboundDto> =
-                    mapper.readValue(
-                        content,
-                        mapper.typeFactory.constructCollectionType(
-                            List::class.java,
-                            FellesHendelseOutboundDto::class.java
-                        )
-                    )
-            })
+        val res = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/allehendelser",
+            token.serialize()
+        )
 
-        assertThat(res.statusCode).isEqualTo(200)
-        result as Success
-        val list = result.value
+        assertThat(res.statusCode()).isEqualTo(200)
+        val type = mapper.typeFactory.constructCollectionType(
+            List::class.java,
+            FellesHendelseOutboundDto::class.java
+        )
+        val list: List<FellesHendelseOutboundDto> = mapper.readValue(res.body(), type)
         assertThat(list).hasSize(4)
         assertThat(list).isSortedAccordingTo(compareByDescending<FellesHendelseOutboundDto> { it.tidspunkt })
         assertThat(list.map { it.ressurs }).containsExactlyInAnyOrder(
@@ -467,76 +501,39 @@ class RekrutteringstreffTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringOpprett(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val (_, response, result) = Fuel.post("http://localhost:$appPort/api/rekrutteringstreff")
-            .body(
-                """
-                {
-                    "opprettetAvNavkontorEnhetId": "Test",
-                }
-                """.trimIndent()
-            )
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(401, response, result)
+        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff", "", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentAlle(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff")
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(401, response, result)
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringHentEnkelt(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val dummyId = UUID.randomUUID().toString()
-        val (_, response, result) = Fuel.get("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(401, response, result)
+        val anyId = UUID.randomUUID()
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringOppdater(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val dummyId = UUID.randomUUID().toString()
-        val updateDto = OppdaterRekrutteringstreffDto(
-            tittel = "Updated",
-            beskrivelse = "Oppdatert beskrivelse",
-            fraTid = nowOslo(),
-            tilTid = nowOslo(),
-            svarfrist = nowOslo(),
-            gateadresse = "Updated Gateadresse",
-            postnummer = "5678",
-            poststed = "Bergen",
-            kommune = "Updated Kommune",
-            kommunenummer = "1201",
-            fylke = "Updated fylke",
-            fylkesnummer = "12",
-        )
-        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
-            .body(mapper.writeValueAsString(updateDto))
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(401, response, result)
+        val anyId = UUID.randomUUID()
+        val response = autentiseringstest.utførPut("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", "", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringSlett(autentiseringstest: UautentifiserendeTestCase) {
-        val leggPåToken = autentiseringstest.leggPåToken
-        val dummyId = UUID.randomUUID().toString()
-        val (_, response, result) = Fuel.delete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId")
-            .leggPåToken(authServer, authPort)
-            .responseString()
-        assertStatuscodeEquals(401, response, result)
+        val anyId = UUID.randomUUID()
+        val response = autentiseringstest.utførDelete("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", authServer, authPort)
+        assertThat(response.statusCode()).isEqualTo(401)
     }
 
     private fun hendelseEndepunktVarianter() = listOf(
@@ -561,16 +558,25 @@ class RekrutteringstreffTest {
             // For å kunne fullføre må treffet være publisert først
             db.endreTilTidTilPassert(treffId, navIdent)
             db.publiser(treffId, navIdent)
+        } else if (path == "gjenapn") {
+            // For å kunne gjenåpne må treffet være avlyst først
+            db.publiser(treffId, navIdent)
+            db.avlys(treffId, navIdent)
         }
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/$path")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/$path",
+            "",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(200, response, result)
+        assertThat(response.statusCode()).isEqualTo(200)
 
         val hendelser = db.hentHendelser(treffId)
         if (path == "fullfor") {
+            assertThat(hendelser).hasSize(4)
+        } else if (path == "gjenapn") {
+            // OPPRETTET + PUBLISERT + AVLYST + GJENÅPNET
             assertThat(hendelser).hasSize(4)
         } else {
             assertThat(hendelser).hasSize(2)
@@ -633,11 +639,13 @@ class RekrutteringstreffTest {
         jobbsøkerService.svarNeiTilInvitasjon(jobbsøker3.fødselsnummer, treffId, jobbsøker3.fødselsnummer.asString)
 
         // Avlys treffet via endpoint
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys",
+            "",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(200, response, result)
+        assertThat(response.statusCode()).isEqualTo(200)
 
         // Verifiser at rekrutteringstreff har AVLYST hendelse
         val treffHendelser = db.hentHendelser(treffId)
@@ -702,11 +710,13 @@ class RekrutteringstreffTest {
         db.endreTilTidTilPassert(treffId, "navIdent")
 
         // Fullfør treffet via endpoint
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor",
+            "",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(200, response, result)
+        assertThat(response.statusCode()).isEqualTo(200)
 
         // Verifiser at rekrutteringstreff har FULLFØRT hendelse
         val treffHendelser = db.hentHendelser(treffId)
@@ -746,11 +756,13 @@ class RekrutteringstreffTest {
         db.leggTilJobbsøkere(listOf(jobbsøker1))
 
         // Avlys treffet via endpoint
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys",
+            "",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(200, response, result)
+        assertThat(response.statusCode()).isEqualTo(200)
 
         // Verifiser at rekrutteringstreff har AVLYST hendelse
         val treffHendelser = db.hentHendelser(treffId)
@@ -775,11 +787,13 @@ class RekrutteringstreffTest {
         db.publiser(treffId, navIdent)
 
         // Fullfør treffet uten jobbsøkere via endpoint
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor",
+            "",
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(200, response, result)
+        assertThat(response.statusCode()).isEqualTo(200)
 
         // Verifiser at rekrutteringstreff har FULLFØRT hendelse
         val treffHendelser = db.hentHendelser(treffId)
@@ -824,9 +838,11 @@ class RekrutteringstreffTest {
         jobbsøkerService.inviter(listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId), treffId, navIdent)
 
         // Publiser treffet
-        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
 
         // Registrer endringer
         val endringer = """
@@ -837,13 +853,13 @@ class RekrutteringstreffTest {
             }
         """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringer)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .header("Content-Type", "application/json")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
+            endringer,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(201, response, result)
+        assertThat(response.statusCode()).isEqualTo(201)
 
         // Verifiser at rekrutteringstreff har TREFF_ENDRET_ETTER_PUBLISERING hendelse
         val treffHendelser = db.hentHendelser(treffId)
@@ -901,9 +917,11 @@ class RekrutteringstreffTest {
         jobbsøkerService.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
 
         // Publiser treffet
-        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
 
         // Registrer endringer
         val endringer = """
@@ -913,13 +931,13 @@ class RekrutteringstreffTest {
             }
         """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringer)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .header("Content-Type", "application/json")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
+            endringer,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(201, response, result)
+        assertThat(response.statusCode()).isEqualTo(201)
 
         // Verifiser at rekrutteringstreff har TREFF_ENDRET_ETTER_PUBLISERING hendelse
         val treffHendelser = db.hentHendelser(treffId)
@@ -997,9 +1015,11 @@ class RekrutteringstreffTest {
         jobbsøkerService.svarNeiTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
 
         // Publiser treffet
-        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
 
         // Registrer endringer
         val endringer = """
@@ -1008,13 +1028,13 @@ class RekrutteringstreffTest {
             }
         """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringer)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .header("Content-Type", "application/json")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
+            endringer,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(201, response, result)
+        assertThat(response.statusCode()).isEqualTo(201)
 
         // Verifiser at kun jobbsøker1 og jobbsøker3 (invitert) får notifikasjon
         val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
@@ -1063,14 +1083,14 @@ class RekrutteringstreffTest {
             }
         """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringer)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .header("Content-Type", "application/json")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
+            endringer,
+            token.serialize()
+        )
 
         // Skal returnere 400 Bad Request fordi treffet ikke er publisert
-        assertStatuscodeEquals(400, response, result)
+        assertThat(response.statusCode()).isEqualTo(400)
     }
 
     @Test
@@ -1081,12 +1101,16 @@ class RekrutteringstreffTest {
         db.endreTilTidTilPassert(treffId, navIdent)
 
         // Publiser og fullfør treffet
-        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
-        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor",
+            "",
+            token.serialize()
+        )
 
         // Prøv å registrere endringer på fullført treff (skal avvises)
         val endringer = """
@@ -1095,14 +1119,14 @@ class RekrutteringstreffTest {
             }
         """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringer)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .header("Content-Type", "application/json")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
+            endringer,
+            token.serialize()
+        )
 
         // Skal returnere 400 Bad Request fordi treffet er fullført
-        assertStatuscodeEquals(400, response, result)
+        assertThat(response.statusCode()).isEqualTo(400)
     }
 
     @Test
@@ -1112,12 +1136,16 @@ class RekrutteringstreffTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Publiser og avlys treffet
-        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
-        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys",
+            "",
+            token.serialize()
+        )
 
         // Prøv å registrere endringer på avlyst treff (skal avvises)
         val endringer = """
@@ -1126,14 +1154,14 @@ class RekrutteringstreffTest {
             }
         """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringer)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .header("Content-Type", "application/json")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
+            endringer,
+            token.serialize()
+        )
 
         // Skal returnere 400 Bad Request fordi treffet er avlyst
-        assertStatuscodeEquals(400, response, result)
+        assertThat(response.statusCode()).isEqualTo(400)
     }
 
     @Test
@@ -1142,9 +1170,11 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
-        Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .response()
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
 
         val endringer = """
             {
@@ -1152,18 +1182,201 @@ class RekrutteringstreffTest {
             }
         """.trimIndent()
 
-        val (_, response, result) = Fuel.post("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer")
-            .body(endringer)
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .header("Content-Type", "application/json")
-            .response()
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
+            endringer,
+            token.serialize()
+        )
 
-        assertStatuscodeEquals(201, response, result)
+        assertThat(response.statusCode()).isEqualTo(201)
 
         val treffHendelser = db.hentHendelser(treffId)
         assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
 
         val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(alleJobbsøkerHendelser).isEmpty()
+    }
+
+    // --- TILSTANDSOVERGANGER ---
+
+    @Test
+    fun `fullfor feiler når treffet ikke er passert i tid`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser treffet (men ikke sett tilTid til passert)
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+
+        // Forsøk å fullføre uten at tilTid er passert
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor",
+            "",
+            token.serialize()
+        )
+
+        // Skal returnere 409 Conflict fordi treffet ikke er passert i tid
+        assertThat(response.statusCode()).isEqualTo(409)
+    }
+
+    @Test
+    fun `fullfor feiler for AVLYST treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        db.endreTilTidTilPassert(treffId, navIdent)
+
+        // Publiser og avlys treffet
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys",
+            "",
+            token.serialize()
+        )
+
+        // Forsøk å fullføre et avlyst treff
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor",
+            "",
+            token.serialize()
+        )
+
+        // Skal returnere 409 Conflict fordi treffet allerede er avlyst
+        assertThat(response.statusCode()).isEqualTo(409)
+    }
+
+    @Test
+    fun `avlys feiler for FULLFØRT treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        db.endreTilTidTilPassert(treffId, navIdent)
+
+        // Publiser og fullfør treffet
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/fullfor",
+            "",
+            token.serialize()
+        )
+
+        // Forsøk å avlyse et fullført treff
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys",
+            "",
+            token.serialize()
+        )
+
+        // Skal returnere 409 Conflict fordi treffet allerede er fullført
+        assertThat(response.statusCode()).isEqualTo(409)
+    }
+
+    @Test
+    fun `gjenapn feiler for UTKAST treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Forsøk å gjenåpne et utkast-treff (som aldri har vært avlyst)
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/gjenapn",
+            "",
+            token.serialize()
+        )
+
+        // Skal returnere 409 Conflict fordi treffet ikke er avlyst
+        assertThat(response.statusCode()).isEqualTo(409)
+    }
+
+    @Test
+    fun `gjenapn feiler for PUBLISERT treff som ikke er avlyst`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser treffet
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+
+        // Forsøk å gjenåpne et publisert treff som ikke er avlyst
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/gjenapn",
+            "",
+            token.serialize()
+        )
+
+        // Skal returnere 409 Conflict fordi treffet ikke er avlyst
+        assertThat(response.statusCode()).isEqualTo(409)
+    }
+
+    @Test
+    fun `gjenapn fungerer for AVLYST treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser og avlys treffet
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/avlys",
+            "",
+            token.serialize()
+        )
+
+        // Gjenåpne treffet
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/gjenapn",
+            "",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        // Verifiser at GJENÅPNET-hendelse ble registrert
+        val hendelser = db.hentHendelser(treffId)
+        assertThat(hendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.GJENÅPNET)
+    }
+
+    @Test
+    fun `publiser feiler for allerede PUBLISERT treff`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+
+        // Publiser treffet
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+
+        // Forsøk å publisere igjen
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+
+        // Skal returnere 409 Conflict fordi treffet allerede er publisert
+        assertThat(response.statusCode()).isEqualTo(409)
     }
 }

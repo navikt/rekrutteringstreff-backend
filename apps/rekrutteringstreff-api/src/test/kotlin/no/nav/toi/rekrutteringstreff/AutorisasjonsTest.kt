@@ -86,6 +86,7 @@ private class AutorisasjonsTest {
                 httpClient = httpClient
             ),
             pilotkontorer = listOf("1234"),
+            httpClient = httpClient,
             leaderElection = LeaderElectionMock(),
         ).also { it.start() }
     }

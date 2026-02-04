@@ -3,9 +3,13 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLog
+import no.nav.toi.exception.JobbsøkerIkkeFunnetException
+import no.nav.toi.exception.JobbsøkerIkkeSynligException
+import no.nav.toi.exception.SvarfristUtløptException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
+import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Instant
 import org.slf4j.Logger
@@ -35,6 +39,19 @@ class JobbsøkerService(
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
             personTreffIds.forEach { personTreffId ->
+                // Sjekk om jobbsøker er synlig - hopp over usynlige jobbsøkere
+                val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
+                if (erSynlig == false) {
+                    secureLogger.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig i rekrutteringstreff - hopper over")
+                    return@forEach
+                }
+
+                val `jobbsøkerstatus` = jobbsøkerRepository.hentStatus(connection, personTreffId)
+                if (`jobbsøkerstatus` != null && `jobbsøkerstatus` != JobbsøkerStatus.LAGT_TIL) {
+                    logger.info("Jobbsøker $personTreffId har allerede status $`jobbsøkerstatus`, hopper over invitasjon")
+                    return@forEach
+                }
+
                 jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                     connection,
                     JobbsøkerHendelsestype.INVITERT,
@@ -47,18 +64,56 @@ class JobbsøkerService(
     }
 
     fun svarJaTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
+        // Sjekk om svarfrist har utløpt
+        val svarfrist = jobbsøkerRepository.hentSvarfrist(treffId)
+        if (svarfrist != null && svarfrist.isBefore(nowOslo())) {
+            throw SvarfristUtløptException("Svarfristen for dette treffet har utløpt")
+        }
+
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
-                ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+                ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
+
+            // Sjekk om jobbsøker er synlig
+            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
+            if (erSynlig == false) {
+                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+            }
+
+            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+            if (nåværendeStatus == JobbsøkerStatus.SVART_JA) {
+                logger.info("Jobbsøker har allerede svart JA, ignorerer duplikat kall")
+                return@executeInTransaction
+            }
+
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
         }
     }
 
     fun svarNeiTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
+        // Sjekk om svarfrist har utløpt
+        val svarfrist = jobbsøkerRepository.hentSvarfrist(treffId)
+        if (svarfrist != null && svarfrist.isBefore(nowOslo())) {
+            throw SvarfristUtløptException("Svarfristen for dette treffet har utløpt")
+        }
+
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
-                ?: throw IllegalStateException("Jobbsøker finnes ikke for dette treffet.")
+                ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
+
+            // Sjekk om jobbsøker er synlig
+            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
+            if (erSynlig == false) {
+                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+            }
+
+            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+            if (nåværendeStatus == JobbsøkerStatus.SVART_NEI) {
+                logger.info("Jobbsøker har allerede svart NEI, ignorerer duplikat kall")
+                return@executeInTransaction
+            }
+
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_NEI)
         }
@@ -193,7 +248,8 @@ class JobbsøkerService(
 
     /**
      * Avgjør om en jobbsøker skal varsles om endringer basert på hendelseshistorikk.
-     * Varsler kun hvis siste relevante hendelse er INVITERT eller SVART_JA_TIL_INVITASJON.
+     * Varsler kun hvis siste relevante hendelse er SVART_JA_TIL_INVITASJON.
+     * Jobbsøkere som kun er invitert (ikke svart) eller har svart nei, får ikke varsel.
      */
     fun skalVarslesOmEndringer(hendelser: List<JobbsøkerHendelse>): Boolean {
         if (hendelser.isEmpty()) return false

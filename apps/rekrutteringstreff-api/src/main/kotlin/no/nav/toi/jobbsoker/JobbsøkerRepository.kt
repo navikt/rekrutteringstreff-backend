@@ -505,4 +505,56 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.executeUpdate()
         }
     }
+
+    /**
+     * Henter status for en jobbsøker basert på personTreffId med radlås.
+     * Bruker SELECT FOR UPDATE for å forhindre race conditions ved samtidige operasjoner.
+     * Returnerer null hvis jobbsøkeren ikke finnes.
+     */
+    fun hentStatus(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus? =
+        connection.prepareStatement(
+            """
+            SELECT status FROM jobbsoker WHERE id = ? FOR UPDATE
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) JobbsøkerStatus.valueOf(rs.getString("status")) else null
+            }
+        }
+
+    /**
+     * Sjekker om en jobbsøker er synlig.
+     * Returnerer true hvis synlig, false hvis ikke synlig, null hvis jobbsøkeren ikke finnes.
+     */
+    fun erSynlig(connection: Connection, personTreffId: PersonTreffId): Boolean? =
+        connection.prepareStatement(
+            """
+            SELECT er_synlig FROM jobbsoker WHERE id = ?
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.getBoolean("er_synlig") else null
+            }
+        }
+
+    /**
+     * Henter svarfrist for et rekrutteringstreff.
+     * Returnerer null hvis treffet ikke finnes eller ikke har svarfrist.
+     */
+    fun hentSvarfrist(treffId: TreffId): ZonedDateTime? = dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+            SELECT svarfrist FROM rekrutteringstreff WHERE id = ?
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) {
+                    rs.getTimestamp("svarfrist")?.toInstant()?.atZone(java.time.ZoneId.of("Europe/Oslo"))
+                } else null
+            }
+        }
+    }
 }

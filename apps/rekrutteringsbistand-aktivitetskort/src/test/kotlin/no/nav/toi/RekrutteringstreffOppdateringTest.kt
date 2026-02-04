@@ -35,7 +35,7 @@ class RekrutteringstreffOppdateringTest {
     private val rapid = TestRapid()
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val app = App(rapid, Repository(databaseConfig, "http://url"), MockProducer(), MockConsumer(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST))
+    private val app = App(rapid, Repository(databaseConfig, "http://url", "topic"), MockProducer(), MockConsumer(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST), "topic")
 
     @BeforeEach
     fun setup() {
