@@ -33,6 +33,7 @@ spec:
       memory: 512Mi
   kafka:
     pool: {{ kafka_pool }}
+  leaderElection: true
   gcp:
     sqlInstances:
       - type: {{ postgres_versjon }}

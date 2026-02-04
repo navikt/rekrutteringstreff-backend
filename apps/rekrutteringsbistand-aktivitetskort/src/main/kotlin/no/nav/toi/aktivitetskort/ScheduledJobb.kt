@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import kotlinx.coroutines.runBlocking
+import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.Repository
 import no.nav.toi.SecureLog
 import no.nav.toi.log
@@ -25,13 +26,14 @@ fun scheduler(
     producer: Producer<String, String>,
     consumer: Consumer<String, String>,
     rapidsConnection: RapidsConnection,
-    dabAktivitetskortFeilTopic: String
+    dabAktivitetskortFeilTopic: String,
+    leaderElection: LeaderElectionInterface,
 ) = runBlocking {
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
-    val myJob = AktivitetskortJobb(repository, producer)
+    val myJob = AktivitetskortJobb(repository, producer, leaderElection)
     consumer.subscribe(listOf(dabAktivitetskortFeilTopic))
-    val myErrorJob = AktivitetskortFeilJobb(repository, consumer) { key, message ->
+    val myErrorJob = AktivitetskortFeilJobb(repository, consumer, leaderElection) { key, message ->
         rapidsConnection.publish(key, message)
     }
 
@@ -44,9 +46,13 @@ fun scheduler(
     scheduledFeilExecutor.scheduleAtFixedRate(myErrorJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
 }
 
-class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>): Runnable {
+class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>, private val leaderElection: LeaderElectionInterface): Runnable {
    private val secureLog = SecureLog(log)
     override fun run() {
+        if(!leaderElection.isLeader()) {
+            log.info("Kjøring av AktivitetskortJobb skippes, instansen er ikke leader.")
+            return
+        }
         log.info("Kjører AktivitetsJobb")
         repository.hentUsendteAktivitetskortHendelser().forEach { usendtHendelse ->
             try {
@@ -61,11 +67,16 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
 class AktivitetskortFeilJobb(
     private val repository: Repository,
     private val consumer: Consumer<String, String>,
+    private val leaderElection: LeaderElectionInterface,
     private val rapidPublish: (String, String) -> Unit
 ): Runnable {
     private val secureLog = SecureLog(log)
 
     override fun run() {
+        if(!leaderElection.isLeader()) {
+            log.info("Kjøring av AktivitetskortFeilJobb skippes, instansen er ikke leader.")
+            return
+        }
         log.info("Kjører AktivitetskortFeilJobb")
         lagreFeilKøHendelser()
         sendFeilKøHendelserPåRapid()

@@ -42,7 +42,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
     private val testRepository = TestRepository(databaseConfig)
     private val repository = Repository(databaseConfig, "http://url", "topic")
     private val app = App(rapid, Repository(databaseConfig, "http://url", "topic"), MockProducer(), MockConsumer(
-        OffsetResetStrategy.EARLIEST), "topic")
+        OffsetResetStrategy.EARLIEST), "topic", LeaderElectionMock())
 
     @BeforeEach
     fun setup() {
