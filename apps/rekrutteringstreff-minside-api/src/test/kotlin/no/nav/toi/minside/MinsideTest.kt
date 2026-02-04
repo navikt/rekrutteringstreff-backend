@@ -1,6 +1,5 @@
 package no.nav.toi.minside
 
-import LeaderElectionMock
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success

@@ -1,8 +1,6 @@
-import no.nav.toi.LeaderElectionInterface
+package no.nav.toi.minside
 
-interface LeaderElectionInterface {
-    fun isLeader(): Boolean
-}
+import no.nav.toi.LeaderElectionInterface
 
 class LeaderElectionMock : LeaderElectionInterface {
     override fun isLeader(): Boolean = true
