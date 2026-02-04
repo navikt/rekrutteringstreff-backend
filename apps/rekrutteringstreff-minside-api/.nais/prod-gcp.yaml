@@ -1,6 +1,8 @@
 kafka_pool: nav-prod
 "ingress": [
-  "https://rekrutteringstreff-minside-api.nav.no/api"
+  "https://rekrutteringstreff-minside-api.nav.no/api",
+  "https://rekrutteringstreff-minside-api.nav.no/isalive",
+  "https://rekrutteringstreff-minside-api.nav.no/isready",
 ]
 cluster: prod-gcp
 min_replicas: 2

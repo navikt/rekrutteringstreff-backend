@@ -44,7 +44,8 @@ class KubernetesHealthTest {
             httpClient = httpClient
         ),
         pilotkontorer = emptyList<String>(),
-        httpClient = httpClient
+        httpClient = httpClient,
+        leaderElection = LeaderElectionMock(),
     )
 
     @BeforeAll

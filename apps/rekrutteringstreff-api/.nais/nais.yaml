@@ -63,6 +63,7 @@ spec:
           - id: {{ adGruppeJobbsokerrettet }}
   kafka:
     pool: {{ kafka_pool }}
+  leaderElection: true
   gcp:
     sqlInstances:
       - type: {{ postgres }}

@@ -79,7 +79,8 @@ class JobbsøkerInnloggetBorgerTest {
                 httpClient = httpClient
             ),
             pilotkontorer = listOf("1234"),
-            httpClient = httpClient
+            httpClient = httpClient,
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
         authServer.start(port = authPort)
     }
@@ -351,7 +352,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         // Jobbsøker er IKKE lagt til på treffet i det hele tatt
         val (response, _) = hentJobbsøkerInnloggetBorger(treffId, borgerToken)
-        
+
         // Backend returnerer 404 når jobbsøker ikke finnes på treffet
         assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
     }
@@ -683,7 +684,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         val jobbsøker = db.hentJobbsøkereForTreff(treffId).first()
         assertThat(jobbsøker.status).isEqualTo(JobbsøkerStatus.SVART_JA)
-        
+
         // Duplikat svar-ja skal ignoreres, så det skal kun være én hendelse
         assertThat(svarJaHendelser).hasSize(1)
     }

@@ -24,12 +24,13 @@ fun scheduler(
     repository: Repository,
     producer: Producer<String, String>,
     consumer: Consumer<String, String>,
-    rapidsConnection: RapidsConnection
+    rapidsConnection: RapidsConnection,
+    dabAktivitetskortFeilTopic: String
 ) = runBlocking {
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
     val myJob = AktivitetskortJobb(repository, producer)
-    consumer.subscribe(listOf("dab.aktivitetskort-feil-v1"))
+    consumer.subscribe(listOf(dabAktivitetskortFeilTopic))
     val myErrorJob = AktivitetskortFeilJobb(repository, consumer) { key, message ->
         rapidsConnection.publish(key, message)
     }
