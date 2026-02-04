@@ -226,7 +226,7 @@ class RekrutteringstreffTest {
         db.opprettRekrutteringstreffIDatabase(navIdent)
         val created = db.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
-            tittel = "Oppdatert Tittel",
+            tittel = "Original Tittel",
             beskrivelse = "Oppdatert beskrivelse",
             fraTid = nowOslo().minusHours(2),
             tilTid = nowOslo().plusHours(3),
@@ -402,7 +402,7 @@ class RekrutteringstreffTest {
         httpPut(
             "http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}",
             """{
-                "tittel":"x","beskrivelse":null,"fraTid":"${nowOslo()}",
+                "tittel":"Original Tittel","beskrivelse":null,"fraTid":"${nowOslo()}",
                 "tilTid":"${nowOslo()}","svarfrist":"${nowOslo().minusDays(1)}","gateadresse":"y","postnummer":"1234","poststed":"Bergen"
             }""",
             token.serialize()

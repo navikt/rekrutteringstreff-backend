@@ -137,7 +137,7 @@ class InnleggTest {
             opprettetAvPersonNavn = "Kari Oppdatert",
             opprettetAvPersonBeskrivelse = "Oppdatert Rådgiver",
             sendesTilJobbsokerTidspunkt = null,
-            htmlContent = "<p>Nytt innhold</p>"
+            htmlContent = "<p>x</p>"
         )
 
         val resp = httpPut(
