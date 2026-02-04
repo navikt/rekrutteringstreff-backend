@@ -13,7 +13,7 @@ interface LeaderElectionInterface {
     fun isLeader(): Boolean
 }
 
-class LeaderElection(): LeaderElectionInterface {
+class LeaderElection() : LeaderElectionInterface {
     private val hostname = InetAddress.getLocalHost().hostName
     private val electorUrl = getenv("ELECTOR_GET_URL")
     private val httpClient = HttpClient.newBuilder()
@@ -28,14 +28,9 @@ class LeaderElection(): LeaderElectionInterface {
     override fun isLeader(): Boolean = hostname == getLeader()
 
     private fun getLeader(): String {
-        return try {
-            val request = HttpRequest.newBuilder().uri(URI.create(electorUrl)).GET().build()
-            val json = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
-            objectMapper.readValue(json, Elector::class.java).name
-        } catch (e: Exception) {
-            log.error("Feil under leader election", e)
-            ""
-        }
+        val request = HttpRequest.newBuilder().uri(URI.create(electorUrl)).GET().build()
+        val json = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+        return objectMapper.readValue(json, Elector::class.java).name
     }
 }
 
