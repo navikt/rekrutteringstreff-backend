@@ -14,7 +14,11 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
+<<<<<<< Updated upstream
       deploy_dev_branch: refs/heads/leaderElection
+=======
+      deploy_dev_branch: refs/heads/ki-verifisering-backend
+>>>>>>> Stashed changes
     secrets: inherit
     permissions:
       contents: read
