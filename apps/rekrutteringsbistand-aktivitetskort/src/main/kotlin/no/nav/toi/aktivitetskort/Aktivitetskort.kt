@@ -9,6 +9,7 @@ import java.time.LocalDate
 import java.time.ZonedDateTime
 
 class Aktivitetskort (
+    private val dabAktivitetskortTopic: String,
     private val repository: Repository,
     private val aktivitetskortId: String,
     private val messageId: String,
@@ -32,7 +33,7 @@ class Aktivitetskort (
 
     fun send(producer: Producer<String, String>) {
         val record = ProducerRecord(
-            "dab.aktivitetskort-v1.1",
+            dabAktivitetskortTopic,
             aktivitetskortId,
             tilAkaasJson(),
         )
