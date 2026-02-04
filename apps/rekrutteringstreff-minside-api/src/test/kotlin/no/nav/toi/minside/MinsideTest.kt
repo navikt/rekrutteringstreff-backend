@@ -1,9 +1,9 @@
 package no.nav.toi.minside
 
+import LeaderElectionMock
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
-import java.util.concurrent.atomic.AtomicInteger
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.AuthenticationConfiguration
@@ -13,9 +13,17 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
-import no.nav.toi.jobbsoker.*
-import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.jobbsoker.Etternavn
+import no.nav.toi.jobbsoker.Fornavn
+import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.Jobbsøker
+import no.nav.toi.jobbsoker.JobbsøkerStatus
+import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.jobbsoker.VeilederNavIdent
+import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.minside.ubruktPortnrFra9000.ubruktPortnr
+import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -27,7 +35,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.net.http.HttpClient
-import java.util.*
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 private const val rekrutteringsTreffAudience = "rekrutteringstreff-audience"
 private const val minSideAudience = "rekrutteringstreff-minside-audience"
@@ -74,7 +83,8 @@ class MinsideTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = emptyList<String>()
+            pilotkontorer = emptyList<String>(),
+            leaderElection = LeaderElectionMock(),
         )
 
         private val appPort = ubruktPortnr()

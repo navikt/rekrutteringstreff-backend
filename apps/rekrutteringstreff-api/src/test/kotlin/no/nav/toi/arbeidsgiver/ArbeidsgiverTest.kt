@@ -84,7 +84,8 @@ class ArbeidsgiverTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
     }
 

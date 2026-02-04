@@ -12,6 +12,7 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
+import no.nav.toi.LeaderElectionMock
 import no.nav.toi.TestRapid
 import no.nav.toi.httpClient
 import no.nav.toi.lagToken
@@ -80,7 +81,8 @@ class PilotkontorTest {
                 httpClient = httpClient
             ),
             modiaKlient = modiaKlient,
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
     }
 

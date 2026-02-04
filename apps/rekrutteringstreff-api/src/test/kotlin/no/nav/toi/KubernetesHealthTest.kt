@@ -49,8 +49,8 @@ class KubernetesHealthTest {
             accessTokenClient = accessTokenClient,
             httpClient = httpClient
         ),
-        pilotkontorer = emptyList<String>()
-
+        pilotkontorer = emptyList<String>(),
+        leaderElection = LeaderElectionMock(),
     )
 
     @BeforeAll

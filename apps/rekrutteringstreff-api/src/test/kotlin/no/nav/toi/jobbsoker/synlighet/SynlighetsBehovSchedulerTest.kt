@@ -1,6 +1,7 @@
 package no.nav.toi.jobbsoker.synlighet
 
 import no.nav.toi.JacksonConfig
+import no.nav.toi.LeaderElectionMock
 import no.nav.toi.TestRapid
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
@@ -9,7 +10,6 @@ import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.no.nav.toi.LeaderElectionMock
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeAll
