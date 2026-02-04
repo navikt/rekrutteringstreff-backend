@@ -15,6 +15,7 @@ import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
+import no.nav.toi.LeaderElectionMock
 import no.nav.toi.TestRapid
 import no.nav.toi.httpClient
 import no.nav.toi.jobbsoker.Etternavn
@@ -112,7 +113,8 @@ class JobbsokerControllerAutorisasjonsTest {
                 httpClient = httpClient
             ),
             pilotkontorer = listOf("1234"),
-            httpClient = httpClient
+            httpClient = httpClient,
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
     }
 

@@ -42,7 +42,8 @@ class SwaggerEndpointsTest {
             httpClient = httpClient
         ),
         pilotkontorer = emptyList(),
-        httpClient = httpClient
+        httpClient = httpClient,
+        leaderElection = LeaderElectionMock(),
     )
 
     @BeforeAll

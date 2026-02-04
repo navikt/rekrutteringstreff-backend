@@ -73,7 +73,8 @@ class RekrutteringstreffTest {
                 httpClient = httpClient
             ),
             pilotkontorer = listOf("1234"),
-            httpClient = httpClient
+            httpClient = httpClient,
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
 
     }
@@ -148,14 +149,14 @@ class RekrutteringstreffTest {
     fun `opprett rekrutteringstreff med manglende påkrevd felt gir 400`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        
+
         // Mangler opprettetAvNavkontorEnhetId som er påkrevd
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
             """{}""",
             token.serialize()
         )
-        
+
         assertThat(response.statusCode()).isEqualTo(400)
     }
 
@@ -163,13 +164,13 @@ class RekrutteringstreffTest {
     fun `opprett rekrutteringstreff med ugyldig JSON gir 400`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        
+
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
             """{opprettetAvNavkontorEnhetId: "mangler quotes på nøkkel"}""",
             token.serialize()
         )
-        
+
         assertThat(response.statusCode()).isEqualTo(400)
     }
 
@@ -329,10 +330,10 @@ class RekrutteringstreffTest {
     fun `publiser rekrutteringstreff endrer status fra UTKAST til PUBLISERT`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        
+
         // Opprett treff - opprettes automatisk med UTKAST-status
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
-        
+
         // Verifiser at status er UTKAST før publisering
         val getResBeforePublish = httpGet(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}",
@@ -341,7 +342,7 @@ class RekrutteringstreffTest {
         assertThat(getResBeforePublish.statusCode()).isEqualTo(200)
         val treffFørPublisering = mapper.readValue(getResBeforePublish.body(), RekrutteringstreffDto::class.java)
         assertThat(treffFørPublisering.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
-        
+
         // Publiser treffet
         val pubRes = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/publiser",
@@ -349,7 +350,7 @@ class RekrutteringstreffTest {
             token.serialize()
         )
         assertThat(pubRes.statusCode()).isEqualTo(200)
-        
+
         // Verifiser at status er PUBLISERT etter publisering
         val getResAfterPublish = httpGet(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}",
@@ -358,7 +359,7 @@ class RekrutteringstreffTest {
         assertThat(getResAfterPublish.statusCode()).isEqualTo(200)
         val treffEtterPublisering = mapper.readValue(getResAfterPublish.body(), RekrutteringstreffDto::class.java)
         assertThat(treffEtterPublisering.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
-        
+
         // Verifiser at PUBLISERT-hendelse ble registrert
         val hendelser = db.hentHendelser(treffId)
         assertThat(hendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.PUBLISERT)

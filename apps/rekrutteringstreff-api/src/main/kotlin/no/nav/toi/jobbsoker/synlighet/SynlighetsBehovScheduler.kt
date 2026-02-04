@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker.synlighet
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.SecureLog
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.log
@@ -25,7 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class SynlighetsBehovScheduler(
     private val jobbsøkerService: JobbsøkerService,
-    private val rapidsConnection: RapidsConnection
+    private val rapidsConnection: RapidsConnection,
+    private val leaderElection: LeaderElectionInterface,
 ) {
     private val scheduler = Executors.newScheduledThreadPool(1)
     private val isRunning = AtomicBoolean(false)
@@ -57,6 +59,12 @@ class SynlighetsBehovScheduler(
         log.info("Kjører SynlighetsBehovScheduler for å finne jobbsøkere uten evaluert synlighet")
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av SynlighetsBehovScheduler er ikke ferdig, skipper denne kjøringen.")
+            return
+        }
+
+        if (leaderElection.isLeader().not()) {
+            log.info("Kjøring av SynlighetsBehovScheduler skippes, instansen er ikke leader.")
+            isRunning.set(false)
             return
         }
 

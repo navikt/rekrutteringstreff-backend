@@ -106,7 +106,8 @@ class KiAutorisasjonsTest {
                 httpClient = httpClient
             ),
             pilotkontorer = listOf("1234"),
-            httpClient = httpClient
+            httpClient = httpClient,
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
     }
 

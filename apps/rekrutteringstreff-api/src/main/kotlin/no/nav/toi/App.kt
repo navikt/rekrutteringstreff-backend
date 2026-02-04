@@ -52,7 +52,8 @@ class App(
     private val kandidatsokKlient: KandidatsøkKlient,
     private val rapidsConnection: RapidsConnection,
     private val modiaKlient: ModiaKlient,
-    private val pilotkontorer: List<String>
+    private val pilotkontorer: List<String>,
+    private val leaderElection: LeaderElectionInterface,
 ) {
     constructor(
         port: Int,
@@ -68,6 +69,7 @@ class App(
         modiaKlient: ModiaKlient,
         pilotkontorer: List<String>,
         httpClient: HttpClient,
+        leaderElection: LeaderElectionInterface,
     ) : this(
         port = port,
         authConfigs = authConfigs,
@@ -83,7 +85,8 @@ class App(
         ),
         rapidsConnection = rapidsConnection,
         modiaKlient = modiaKlient,
-        pilotkontorer = pilotkontorer
+        pilotkontorer = pilotkontorer,
+        leaderElection = leaderElection,
     )
 
     private lateinit var javalin: Javalin
@@ -95,7 +98,7 @@ class App(
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         startJavalin(jobbsøkerRepository)
-        startSchedulere(jobbsøkerService)
+        startSchedulere(jobbsøkerService, leaderElection)
         startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
@@ -263,7 +266,7 @@ class App(
         javalin.start(port)
     }
 
-    private fun startSchedulere(jobbsøkerService: JobbsøkerService) {
+    private fun startSchedulere(jobbsøkerService: JobbsøkerService, leaderElection: LeaderElectionInterface) {
         log.info("Starting schedulers")
 
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
@@ -274,13 +277,15 @@ class App(
             aktivitetskortRepository = aktivitetskortRepository,
             rekrutteringstreffRepository = rekrutteringstreffRepository,
             rapidsConnection = rapidsConnection,
-            objectMapper = JacksonConfig.mapper
+            objectMapper = JacksonConfig.mapper,
+            leaderElection = leaderElection,
         )
         aktivitetskortJobbsøkerScheduler.start()
 
         synlighetsBehovScheduler = SynlighetsBehovScheduler(
             jobbsøkerService = jobbsøkerService,
-            rapidsConnection = rapidsConnection
+            rapidsConnection = rapidsConnection,
+            leaderElection = leaderElection,
         )
         synlighetsBehovScheduler.start()
     }
@@ -369,7 +374,8 @@ fun main() {
         accessTokenClient = accessTokenClient,
         modiaKlient = modiaKlient,
         pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() },
-        httpClient = httpClient
+        httpClient = httpClient,
+        leaderElection = LeaderElection(),
     ).start()
 }
 

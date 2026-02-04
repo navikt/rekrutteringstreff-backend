@@ -73,7 +73,8 @@ class JobbsøkerTest {
                 httpClient = httpClient
             ),
             pilotkontorer = listOf("1234"),
-            httpClient = httpClient
+            httpClient = httpClient,
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
         authServer.start(port = authPort)
     }
@@ -263,7 +264,7 @@ class JobbsøkerTest {
             token.serialize()
         )
         assertThat(postResponse.statusCode()).isEqualTo(HTTP_CREATED)
-        
+
         val getResponse = httpGet(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
             token.serialize()
