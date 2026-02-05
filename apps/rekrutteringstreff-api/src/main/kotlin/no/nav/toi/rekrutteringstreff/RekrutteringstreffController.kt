@@ -283,7 +283,8 @@ class RekrutteringstreffController(
                     tekst = dto.tittel,
                     kiLoggId = dto.tittelKiLoggId,
                     lagreLikevel = dto.lagreLikevel,
-                    feltType = "tittel"
+                    feltType = "tittel",
+                    forventetTreffId = id.somUuid
                 )
             }
 

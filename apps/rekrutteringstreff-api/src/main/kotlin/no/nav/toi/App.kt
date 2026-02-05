@@ -186,6 +186,10 @@ class App(
             ctx.status(403).json(mapOf("feil" to (e.message ?: "Jobbsøker er ikke synlig")))
         }
 
+        javalin.exception(KiValideringsException::class.java) { e, ctx ->
+            ctx.status(422).json(mapOf("feilkode" to e.feilkode, "melding" to e.melding))
+        }
+
         javalin.exception(Exception::class.java) { e, ctx ->
             log.error("Uventet feil", e)
             ctx.status(500).json(

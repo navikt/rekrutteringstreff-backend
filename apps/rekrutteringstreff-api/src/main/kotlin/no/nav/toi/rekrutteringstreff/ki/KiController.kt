@@ -55,7 +55,8 @@ class KiController (
                 example = """{
               "loggId": "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d",
               "bryterRetningslinjer": false,
-              "begrunnelse": "Ingen sensitive opplysninger eller diskriminerende formuleringer."
+              "begrunnelse": "Ingen sensitive opplysninger eller diskriminerende formuleringer.",
+              "validertTekst": "Vi søker etter en blid og motivert medarbeider."
             }"""
             )]
         )],

@@ -153,7 +153,8 @@ class InnleggController(
             tekst = dto.htmlContent,
             kiLoggId = dto.innleggKiLoggId,
             lagreLikevel = dto.lagreLikevel,
-            feltType = "innlegg"
+            feltType = "innlegg",
+            forventetTreffId = treffId.somUuid
         )
 
         try {
@@ -217,7 +218,8 @@ class InnleggController(
                 tekst = dto.htmlContent,
                 kiLoggId = dto.innleggKiLoggId,
                 lagreLikevel = dto.lagreLikevel,
-                feltType = "innlegg"
+                feltType = "innlegg",
+                forventetTreffId = treffId.somUuid
             )
         }
 

@@ -104,7 +104,7 @@ Før tekst sendes til KI, filtreres personsensitive data ut:
 
 ### Systemprompt
 
-Systemprompten definerer valideringsreglene. Se [`SystemPrompt.kt`](../apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/rekrutteringstreff/ki/SystemPrompt.kt).
+Systemprompten definerer valideringsreglene. Se [`SystemPrompt.kt`](../../apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/rekrutteringstreff/ki/SystemPrompt.kt).
 
 **Hovedprinsipper:**
 

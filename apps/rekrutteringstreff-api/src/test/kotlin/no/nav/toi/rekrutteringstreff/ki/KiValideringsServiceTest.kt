@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.ki
 
-import io.javalin.http.UnprocessableContentResponse
+import no.nav.toi.exception.KiValideringsException
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -55,7 +55,7 @@ class KiValideringsServiceTest {
                 feltType = "tittel"
             )
         }
-            .isInstanceOf(UnprocessableContentResponse::class.java)
+            .isInstanceOf(KiValideringsException::class.java)
             .hasMessageContaining("KI_VALIDERING_MANGLER")
     }
 
@@ -69,7 +69,7 @@ class KiValideringsServiceTest {
                 feltType = "tittel"
             )
         }
-            .isInstanceOf(UnprocessableContentResponse::class.java)
+            .isInstanceOf(KiValideringsException::class.java)
             .hasMessageContaining("KI_VALIDERING_MANGLER")
     }
 
@@ -83,7 +83,7 @@ class KiValideringsServiceTest {
                 feltType = "tittel"
             )
         }
-            .isInstanceOf(UnprocessableContentResponse::class.java)
+            .isInstanceOf(KiValideringsException::class.java)
             .hasMessageContaining("KI_LOGG_ID_UGYLDIG")
     }
 
@@ -97,7 +97,7 @@ class KiValideringsServiceTest {
                 feltType = "tittel"
             )
         }
-            .isInstanceOf(UnprocessableContentResponse::class.java)
+            .isInstanceOf(KiValideringsException::class.java)
             .hasMessageContaining("KI_LOGG_ID_UGYLDIG")
     }
 
@@ -128,7 +128,7 @@ class KiValideringsServiceTest {
                 feltType = "tittel"
             )
         }
-            .isInstanceOf(UnprocessableContentResponse::class.java)
+            .isInstanceOf(KiValideringsException::class.java)
             .hasMessageContaining("KI_TEKST_ENDRET")
     }
 
@@ -159,7 +159,7 @@ class KiValideringsServiceTest {
                 feltType = "tittel"
             )
         }
-            .isInstanceOf(UnprocessableContentResponse::class.java)
+            .isInstanceOf(KiValideringsException::class.java)
             .hasMessageContaining("KI_KREVER_BEKREFTELSE")
     }
 
@@ -298,5 +298,127 @@ class KiValideringsServiceTest {
         assertThat(service.erTekstEndret("", null)).isFalse()
         assertThat(service.erTekstEndret(null, "Tekst")).isTrue()
         assertThat(service.erTekstEndret("Tekst", null)).isTrue()
+    }
+
+    @Test
+    fun `feil feltType gir KI_FEIL_FELT_TYPE`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+
+        assertThatThrownBy {
+            service.verifiserKiValidering(
+                tekst = "Tekst",
+                kiLoggId = loggId.toString(),
+                lagreLikevel = false,
+                feltType = "tittel" // Forventet tittel, men loggen er for innlegg
+            )
+        }
+            .isInstanceOf(KiValideringsException::class.java)
+            .hasMessageContaining("KI_FEIL_FELT_TYPE")
+    }
+
+    @Test
+    fun `feil treffId gir KI_FEIL_TREFF`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val annetTreffId = db.opprettRekrutteringstreffIDatabase("B654321").somUuid
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "tittel",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+
+        assertThatThrownBy {
+            service.verifiserKiValidering(
+                tekst = "Tekst",
+                kiLoggId = loggId.toString(),
+                lagreLikevel = false,
+                feltType = "tittel",
+                forventetTreffId = annetTreffId // Forventet annet treff
+            )
+        }
+            .isInstanceOf(KiValideringsException::class.java)
+            .hasMessageContaining("KI_FEIL_TREFF")
+    }
+
+    @Test
+    fun `riktig treffId valideres ok`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "tittel",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+
+        // Skal ikke kaste exception
+        service.verifiserKiValidering(
+            tekst = "Tekst",
+            kiLoggId = loggId.toString(),
+            lagreLikevel = false,
+            feltType = "tittel",
+            forventetTreffId = treffId
+        )
+    }
+
+    @Test
+    fun `null forventetTreffId hopper over treffId-validering`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "tittel",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+
+        // Skal ikke kaste exception - forventetTreffId er null
+        service.verifiserKiValidering(
+            tekst = "Tekst",
+            kiLoggId = loggId.toString(),
+            lagreLikevel = false,
+            feltType = "tittel",
+            forventetTreffId = null
+        )
     }
 }

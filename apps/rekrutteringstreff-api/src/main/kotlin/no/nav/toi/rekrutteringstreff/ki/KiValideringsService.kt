@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.ki
 
-import io.javalin.http.UnprocessableContentResponse
+import no.nav.toi.exception.KiValideringsException
 import no.nav.toi.log
 import java.util.UUID
 
@@ -12,49 +12,75 @@ class KiValideringsService(
         private const val FEIL_UGYLDIG_LOGG_ID = "KI_LOGG_ID_UGYLDIG"
         private const val FEIL_TEKST_ENDRET = "KI_TEKST_ENDRET"
         private const val FEIL_KREVER_BEKREFTELSE = "KI_KREVER_BEKREFTELSE"
+        private const val FEIL_FEIL_FELT_TYPE = "KI_FEIL_FELT_TYPE"
+        private const val FEIL_FEIL_TREFF = "KI_FEIL_TREFF"
     }
 
     fun verifiserKiValidering(
         tekst: String,
         kiLoggId: String?,
         lagreLikevel: Boolean,
-        feltType: String
+        feltType: String,
+        forventetTreffId: UUID? = null
     ) {
         val normalisertTekst = normaliserTekst(tekst)
         if (normalisertTekst.isBlank()) return
 
         if (kiLoggId.isNullOrBlank()) {
             log.warn("Lagring avvist: Mangler KI-loggId for $feltType")
-            throw UnprocessableContentResponse(
-                """{"feilkode": "$FEIL_MANGLER_VALIDERING", "melding": "Teksten må KI-valideres før lagring."}"""
+            throw KiValideringsException(
+                feilkode = FEIL_MANGLER_VALIDERING,
+                melding = "Teksten må KI-valideres før lagring."
             )
         }
 
         val loggId = try {
             UUID.fromString(kiLoggId)
         } catch (e: IllegalArgumentException) {
-            throw UnprocessableContentResponse(
-                """{"feilkode": "$FEIL_UGYLDIG_LOGG_ID", "melding": "Ugyldig KI-validerings-ID."}"""
+            throw KiValideringsException(
+                feilkode = FEIL_UGYLDIG_LOGG_ID,
+                melding = "Ugyldig KI-validerings-ID."
             )
         }
 
         val kiLogg = kiLoggRepository.findById(loggId)
-            ?: throw UnprocessableContentResponse(
-                """{"feilkode": "$FEIL_UGYLDIG_LOGG_ID", "melding": "Fant ikke KI-validering med oppgitt ID."}"""
+            ?: throw KiValideringsException(
+                feilkode = FEIL_UGYLDIG_LOGG_ID,
+                melding = "Fant ikke KI-validering med oppgitt ID."
             )
+
+        // Verifiser at KI-loggen tilhører riktig feltType
+        if (kiLogg.feltType != feltType) {
+            log.warn("Lagring avvist: KI-logg har feltType ${kiLogg.feltType}, forventet $feltType")
+            throw KiValideringsException(
+                feilkode = FEIL_FEIL_FELT_TYPE,
+                melding = "KI-valideringen tilhører feil felttype."
+            )
+        }
+
+        // Verifiser at KI-loggen tilhører riktig treff (hvis forventetTreffId er oppgitt)
+        if (forventetTreffId != null && kiLogg.treffId != forventetTreffId) {
+            log.warn("Lagring avvist: KI-logg tilhører treff ${kiLogg.treffId}, forventet $forventetTreffId")
+            throw KiValideringsException(
+                feilkode = FEIL_FEIL_TREFF,
+                melding = "KI-valideringen tilhører et annet rekrutteringstreff."
+            )
+        }
 
         val normalisertLoggetTekst = normaliserTekst(kiLogg.spørringFraFrontend)
         if (normalisertTekst != normalisertLoggetTekst) {
             log.warn("Lagring avvist: Tekst endret etter KI-validering for $feltType")
-            throw UnprocessableContentResponse(
-                """{"feilkode": "$FEIL_TEKST_ENDRET", "melding": "Teksten har blitt endret etter KI-valideringen."}"""
+            throw KiValideringsException(
+                feilkode = FEIL_TEKST_ENDRET,
+                melding = "Teksten har blitt endret etter KI-valideringen."
             )
         }
 
         if (kiLogg.bryterRetningslinjer && !lagreLikevel) {
             log.warn("Lagring avvist: KI rapporterte brudd og bruker har ikke bekreftet ($feltType)")
-            throw UnprocessableContentResponse(
-                """{"feilkode": "$FEIL_KREVER_BEKREFTELSE", "melding": "Teksten bryter retningslinjer. Bruker må bekrefte for å fortsette."}"""
+            throw KiValideringsException(
+                feilkode = FEIL_KREVER_BEKREFTELSE,
+                melding = "Teksten bryter retningslinjer. Bruker må bekrefte for å fortsette."
             )
         }
     }
