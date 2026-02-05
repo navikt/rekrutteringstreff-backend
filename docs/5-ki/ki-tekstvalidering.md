@@ -121,9 +121,17 @@ Systemprompten definerer valideringsreglene. Se [`SystemPrompt.kt`](../../apps/r
 {
   "loggId": "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d",
   "bryterRetningslinjer": false,
-  "begrunnelse": "Teksten beskriver et åpent rekrutteringstreff uten diskriminerende elementer."
+  "begrunnelse": "Teksten beskriver et åpent rekrutteringstreff uten diskriminerende elementer.",
+  "validertTekst": "Vi søker etter en blid og motivert medarbeider."
 }
 ```
+
+| Felt                   | Beskrivelse                                                   |
+| ---------------------- | ------------------------------------------------------------- |
+| `loggId`               | Referanse til KI-logg, sendes tilbake ved lagring             |
+| `bryterRetningslinjer` | Om KI mener teksten bryter retningslinjene                    |
+| `begrunnelse`          | KIs forklaring på vurderingen                                 |
+| `validertTekst`        | Den validerte teksten (etter eventuell persondata-filtrering) |
 
 ---
 
@@ -147,7 +155,13 @@ flowchart TD
 
     OPPSLAG --> FINNES{Finnes?}
     FINNES -->|Nei| AVVIS2[✗ KI_LOGG_ID_UGYLDIG]
-    FINNES -->|Ja| MATCH{Tekst matcher<br/>spørringFraFrontend?}
+    FINNES -->|Ja| FELT_TYPE{feltType matcher?}
+
+    FELT_TYPE -->|Nei| AVVIS5[✗ KI_FEIL_FELT_TYPE]
+    FELT_TYPE -->|Ja| TREFF_ID{treffId matcher?}
+
+    TREFF_ID -->|Nei| AVVIS6[✗ KI_FEIL_TREFF]
+    TREFF_ID -->|Ja| MATCH{Tekst matcher<br/>spørringFraFrontend?}
 
     MATCH -->|Nei| AVVIS3[✗ KI_TEKST_ENDRET]
     MATCH -->|Ja| BRYTER{bryterRetningslinjer?}
@@ -162,6 +176,8 @@ flowchart TD
     style AVVIS2 fill:#ffcdd2,color:#000,stroke:#c62828
     style AVVIS3 fill:#ffcdd2,color:#000,stroke:#c62828
     style AVVIS4 fill:#ffcdd2,color:#000,stroke:#c62828
+    style AVVIS5 fill:#ffcdd2,color:#000,stroke:#c62828
+    style AVVIS6 fill:#ffcdd2,color:#000,stroke:#c62828
     style OK1 fill:#c8e6c9,color:#000,stroke:#2e7d32
     style OK2 fill:#c8e6c9,color:#000,stroke:#2e7d32
     style OK3 fill:#c8e6c9,color:#000,stroke:#2e7d32
@@ -176,12 +192,14 @@ Backend sammenligner mot `spørringFraFrontend` (originalteksten), **ikke** `sp�
 
 ### Feilkoder (HTTP 422)
 
-| Feilkode                | Årsak                         | Frontend-håndtering        |
-| ----------------------- | ----------------------------- | -------------------------- |
-| `KI_VALIDERING_MANGLER` | Ingen loggId oppgitt          | Vent på validering         |
-| `KI_LOGG_ID_UGYLDIG`    | LoggId finnes ikke            | Trigger ny validering      |
-| `KI_TEKST_ENDRET`       | Tekst endret etter validering | Vent på ny validering      |
-| `KI_KREVER_BEKREFTELSE` | Bruker må bekrefte advarsel   | Vis "Lagre likevel"-dialog |
+| Feilkode                | Årsak                                       | Frontend-håndtering        |
+| ----------------------- | ------------------------------------------- | -------------------------- |
+| `KI_VALIDERING_MANGLER` | Ingen loggId oppgitt                        | Vent på validering         |
+| `KI_LOGG_ID_UGYLDIG`    | LoggId finnes ikke                          | Trigger ny validering      |
+| `KI_FEIL_FELT_TYPE`     | LoggId tilhører feil felttype               | Trigger ny validering      |
+| `KI_FEIL_TREFF`         | LoggId tilhører et annet rekrutteringstreff | Trigger ny validering      |
+| `KI_TEKST_ENDRET`       | Tekst endret etter validering               | Vent på ny validering      |
+| `KI_KREVER_BEKREFTELSE` | Bruker må bekrefte advarsel                 | Vis "Lagre likevel"-dialog |
 
 ### Request-format
 
@@ -202,6 +220,70 @@ Backend sammenligner mot `spørringFraFrontend` (originalteksten), **ikke** `sp�
 
 ---
 
+## Frontend: Autolagring med KI-validering
+
+Frontend integrerer KI-validering med autolagring via `useFormFeltMedKiValidering`-hooken.
+
+### Flyt for kladdemodus (utkast)
+
+```mermaid
+sequenceDiagram
+    participant Bruker
+    participant Frontend
+    participant KI_API as KI-validering API
+    participant Lagre_API as Lagre API
+    participant KI_Logg as KI-logg API
+
+    Bruker->>Frontend: Redigerer tittel/innlegg
+    Bruker->>Frontend: onBlur (forlater felt)
+
+    Frontend->>Frontend: Sjekk om tekst er endret
+    alt Tekst uendret
+        Frontend->>Frontend: Ingen handling
+    else Tekst endret
+        Frontend->>KI_API: POST /ki/valider
+        KI_API-->>Frontend: {loggId, bryterRetningslinjer, begrunnelse}
+
+        alt bryterRetningslinjer = false
+            Frontend->>Lagre_API: PUT (med loggId)
+            Lagre_API-->>Frontend: OK
+            Frontend->>KI_Logg: PUT /logg/{id}/lagret
+        else bryterRetningslinjer = true
+            Frontend->>Frontend: Vis KI-analyse panel
+            Bruker->>Frontend: Klikk "Lagre likevel"
+            Frontend->>Lagre_API: PUT (med loggId + lagreLikevel=true)
+            Lagre_API-->>Frontend: OK
+            Frontend->>KI_Logg: PUT /logg/{id}/lagret
+        end
+    end
+```
+
+### Flyt for redigering av publisert treff
+
+Ved redigering av publisert treff er autolagring deaktivert. KI-validering skjer fortsatt på onBlur, men lagring skjer først ved eksplisitt "Lagre"-klikk.
+
+### Blokkering av autolagring
+
+Autolagring blokkeres når:
+
+- KI-validering pågår (`validating = true`)
+- KI har rapportert brudd som ikke er godkjent (`harKiFeil = true && !harGodkjentKiFeil`)
+- Felt ikke er KI-sjekket etter endring (`kiSjekket = false`)
+
+### Form-state for KI
+
+For hvert felt som valideres lagres ekstra state i skjemaet:
+
+| Felt              | Beskrivelse                                    |
+| ----------------- | ---------------------------------------------- |
+| `{felt}KiLoggId`  | Siste gyldige loggId fra KI-validering         |
+| `{felt}KiSjekket` | Om feltet er KI-sjekket etter siste endring    |
+| `{felt}KiFeil`    | Om KI rapporterte brudd (før evt. godkjenning) |
+
+Eksempel: For tittel-feltet brukes `tittelKiLoggId`, `tittelKiSjekket`, `tittelKiFeil`.
+
+---
+
 ## Logging og sporbarhet
 
 ### Hva vi logger
@@ -211,7 +293,7 @@ Alle KI-spørringer logges i `ki_spørring_logg`:
 | Felt                    | Beskrivelse                               |
 | ----------------------- | ----------------------------------------- |
 | `treff_id`              | Referanse til rekrutteringstreffet        |
-| `felt_type`             | TITTEL eller BESKRIVELSE                  |
+| `felt_type`             | `tittel` eller `innlegg`                  |
 | `spørring_fra_frontend` | Original tekst fra bruker                 |
 | `spørring_filtrert`     | Tekst etter persondata-filtrering         |
 | `systemprompt`          | Systemprompt brukt i kallet               |
@@ -263,11 +345,13 @@ flowchart LR
 
 ### Testklasser
 
-| Testklasse             | Beskrivelse                                 |
-| ---------------------- | ------------------------------------------- |
-| `KiAutorisasjonsTest`  | Tester tilgangskontroll til KI-endepunktene |
-| `KiLoggRepositoryTest` | Tester logging av KI-spørringer             |
-| `OpenAiTestClient`     | Hjelpeklasse for testing mot Azure OpenAI   |
+| Testklasse                 | Beskrivelse                                              |
+| -------------------------- | -------------------------------------------------------- |
+| `KiAutorisasjonsTest`      | Tester tilgangskontroll til KI-endepunktene              |
+| `KiLoggRepositoryTest`     | Tester logging av KI-spørringer                          |
+| `KiValideringsServiceTest` | Tester verifiseringslogikken (feilkoder, normalisering)  |
+| `KiTest`                   | Integrasjonstest for KI-validering med Azure OpenAI mock |
+| `OpenAiTestClient`         | Hjelpeklasse for testing mot Azure OpenAI                |
 
 ---
 
