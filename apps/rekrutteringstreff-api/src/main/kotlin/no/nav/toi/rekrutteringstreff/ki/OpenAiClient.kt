@@ -3,7 +3,7 @@ package no.nav.toi.rekrutteringstreff.ki
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
-import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.SecureLog
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
@@ -45,13 +45,21 @@ data class EkstraMetaDbJson(
 class OpenAiClient(
     private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val repo: KiLoggRepository,
-    private val apiUrl: String =
-        System.getenv("OPENAI_API_URL")
-            ?: "http://localhost:9955/openai/deployments/toi-gpt-4o/chat/completions?api-version=2024-12-01-preview",
-    private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key"
+    private val apiUrl: String = System.getenv("OPENAI_API_URL") ?: "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
+    private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key",
+    private val kiVersjon: String = System.getenv("OPENAI_DEPLOYMENT") ?: "toi-gpt-4.1"
 ) {
     private val mapper = JacksonConfig.mapper
     private val zdtFormatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
+    private val secureLogger = SecureLog(log)
+
+    companion object {
+        private const val kiNavn = "azure-openai"
+        private const val temperature = 0.0
+        private const val maxTokens = 400
+        private const val topP = 1.0
+        private val responseFormat = ResponseFormat()
+    }
 
     fun validateRekrutteringstreffOgLogg(
         treffId: UUID,
@@ -63,7 +71,7 @@ class OpenAiClient(
 
         val elapsedMs = measureTimeMillis {
             val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(tekst)
-            secure(log).info("melding før filter: $tekst etter filter: $userMessageFiltered")
+            secureLogger.info("melding før filter: $tekst etter filter: $userMessageFiltered")
 
             val body = mapper.writeValueAsString(
                 OpenAiRequest(
@@ -87,13 +95,13 @@ class OpenAiClient(
 
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
-            secure(log).info("kimelding input: $userMessageFiltered  response: $response")
+            secureLogger.info("kimelding input: $userMessageFiltered  response: $response")
 
             if (response.statusCode() == 429) {
-                secure(log).warn("For mange requester mot OpenAI.")
+                secureLogger.warn("For mange requester mot OpenAI.")
                 throw RuntimeException("For mange requester mot OpenAI: ${response.statusCode()} - ${response.body()}")
             } else if (response.statusCode() == 400) {
-                secure(log).warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
+                secureLogger.warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
                 val error = mapper.readValue<OpenAiBadRequestDto>(response.body())
                 val contentFilterResult = error.error?.innererror?.content_filter_result
 
@@ -108,7 +116,7 @@ class OpenAiClient(
                     )
                     filtered = userMessageFiltered
                 } else {
-                    secure(log).error("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
+                    secureLogger.error("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
                 }
 
             } else if (response.statusCode() == 200) {
@@ -118,11 +126,9 @@ class OpenAiClient(
                 filtered = userMessageFiltered
 
             } else {
-                secure(log).error("Feil ved kall mot OpenAI: ${response.statusCode()}")
+                secureLogger.error("Feil ved kall mot OpenAI: ${response.statusCode()}")
                 throw RuntimeException("Feil ved kall mot OpenAI: ${response.statusCode()} - ${response.body()}")
             }
-            
-
         }
 
         val ekstra = EkstraMetaDbJson(
@@ -168,15 +174,6 @@ class OpenAiClient(
             tekstResultat.add("voldelig innhold")
         }
         return tekstResultat.joinToString(", ")
-    }
-
-    companion object {
-        private const val kiNavn = "azure-openai"
-        private const val kiVersjon = "toi-gpt-4o"
-        private const val temperature = 0.0
-        private const val maxTokens = 400
-        private const val topP = 1.0
-        private val responseFormat = ResponseFormat()
     }
 
     // Dto-er basert på response body-en fra OpenAi ved 400 Bad Request

@@ -3,18 +3,24 @@ package no.nav.toi.rekrutteringstreff
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
+import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.exception.UlovligOppdateringException
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.Kandidatnummer
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.nowOslo
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -24,6 +30,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffServiceTest {
@@ -33,6 +41,7 @@ class RekrutteringstreffServiceTest {
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private lateinit var jobbsøkerRepository: JobbsøkerRepository
         private lateinit var arbeidsgiverRepository: ArbeidsgiverRepository
+        private lateinit var jobbsøkerService: JobbsøkerService
         private lateinit var rekrutteringstreffService: RekrutteringstreffService
 
         @BeforeAll
@@ -46,11 +55,13 @@ class RekrutteringstreffServiceTest {
             rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
             jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
             arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
+            jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
             rekrutteringstreffService = RekrutteringstreffService(
                 db.dataSource,
                 rekrutteringstreffRepository,
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
+                jobbsøkerService
             )
         }
     }
@@ -85,9 +96,9 @@ class RekrutteringstreffServiceTest {
             opprettetAvNavkontorEnhetId = "0605",
             opprettetAvTidspunkt = nowOslo(),
         )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
-        val treffId2 = rekrutteringstreffRepository.opprett(rekrutteringstreff2)
-        val treffId3 = rekrutteringstreffRepository.opprett(rekrutteringstreff3)
+        val treffId1 = rekrutteringstreffService.opprett(rekrutteringstreff1)
+        val treffId2 = rekrutteringstreffService.opprett(rekrutteringstreff2)
+        val treffId3 = rekrutteringstreffService.opprett(rekrutteringstreff3)
 
         val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreff()
 
@@ -97,46 +108,70 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `Skal kunne hente et rekrutteringstreff`() {
+    fun `Skal kunne hente alle rekrutteringstreff for ett kontor`() {
         val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
             tittel = "Treff 1",
             opprettetAvPersonNavident = "NAV1234",
             opprettetAvNavkontorEnhetId = "0605",
             opprettetAvTidspunkt = nowOslo(),
         )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
+        val rekrutteringstreff2 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 2",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0605",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+        val rekrutteringstreff3 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 3",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0600",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+        val treffId1 = rekrutteringstreffService.opprett(rekrutteringstreff1)
+        val treffId2 = rekrutteringstreffService.opprett(rekrutteringstreff2)
+        val treffId3 = rekrutteringstreffService.opprett(rekrutteringstreff3)
+
+        val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor("0605")
+
+        assertThat(rekrutteringstreff.any { it.id == treffId1.somUuid }).isTrue
+        assertThat(rekrutteringstreff.any { it.id == treffId2.somUuid }).isTrue
+        assertThat(rekrutteringstreff.any { it.id == treffId3.somUuid }).isFalse
+    }
+
+    @Test
+    fun `Skal kunne hente et rekrutteringstreff`() {
+        val treffId1 = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
         assertThat(rekrutteringstreff.id == treffId1.somUuid).isTrue
     }
 
     @Test
-    fun `Skal kunne hente et rekrutteringstreff med hendelser`() {
-        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
-            tittel = "Treff 1",
-            opprettetAvPersonNavident = "NAV1234",
-            opprettetAvNavkontorEnhetId = "0605",
-            opprettetAvTidspunkt = nowOslo(),
-        )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
+    fun `Skal kunne publisere et treff`() {
+        val treffId = opprettTreff()
+        rekrutteringstreffService.publiser(treffId, "NAV1234")
 
-        rekrutteringstreffService.fullfør(treffId1, "NAV1234")
+        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId)
+        assertThat(!rekrutteringstreff.hendelser.isEmpty())
+        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
+        assertThat(rekrutteringstreff.rekrutteringstreff.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+    }
+
+    @Test
+    fun `Skal kunne hente et rekrutteringstreff med hendelser`() {
+        val treffId1 = opprettTreff()
+
+        rekrutteringstreffService.publiser(treffId1, "NAV1234")
 
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId1)
 
         assertThat(!rekrutteringstreff.hendelser.isEmpty())
-        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == "FULLFØRT" }).isTrue
+        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
     }
 
     @Test
     fun `Skal kunne avlyse et rekrutteringstreff`() {
-        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
-            tittel = "Treff 1",
-            opprettetAvPersonNavident = "NAV1234",
-            opprettetAvNavkontorEnhetId = "0605",
-            opprettetAvTidspunkt = nowOslo(),
-        )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
+        val treffId1 = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
         assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
@@ -150,24 +185,34 @@ class RekrutteringstreffServiceTest {
 
     @Test
     fun `Skal kunne fullføre et rekrutteringstreff`() {
-        val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
-            tittel = "Treff 1",
-            opprettetAvPersonNavident = "NAV1234",
-            opprettetAvNavkontorEnhetId = "0605",
-            opprettetAvTidspunkt = nowOslo(),
-        )
-        val treffId1 = rekrutteringstreffRepository.opprett(rekrutteringstreff1)
-        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
-
+        val treffId = opprettTreff()
+        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
         assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
 
-        rekrutteringstreffService.fullfør(treffId1, "NAV1234")
+        db.endreTilTidTilPassert(treffId, "NAV1234")
 
-        val rekrutteringstreffEtterFullfør = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
+        rekrutteringstreffService.publiser(treffId, "NAV1234")
+        rekrutteringstreffService.fullfør(treffId, "NAV1234")
+
+        val rekrutteringstreffEtterFullfør = rekrutteringstreffService.hentRekrutteringstreff(treffId)
 
         assertThat(rekrutteringstreffEtterFullfør.status == RekrutteringstreffStatus.FULLFØRT).isTrue
     }
 
+    @Test
+    fun `Skal ikke kunne fullføre et treff hvor tilTid ikke er passert`() {
+        val treffId = opprettTreff()
+        val treff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
+        rekrutteringstreffService.publiser(treffId, "NAV1234")
+        rekrutteringstreffService.oppdater(
+            treffId = treffId,
+            dto = OppdaterRekrutteringstreffDto.opprettFra(treff).copy(tilTid = nowOslo().plusDays(1)),
+            navIdent = "NAV1234"
+        )
+        assertThrows<UlovligOppdateringException> {
+            rekrutteringstreffService.fullfør(treffId, "NAV1234")
+        }
+    }
 
     @Test
     fun `skal committe transaksjon når avlys fullføres uten feil`() {
@@ -177,7 +222,7 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Act
         rekrutteringstreffService.avlys(treffId, navIdent)
@@ -192,15 +237,17 @@ class RekrutteringstreffServiceTest {
 
     @Test
     fun `skal committe transaksjon når fullfor fullføres uten feil`() {
-        // Arrange
-        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        // Arrange - opprett treff med UTKAST status så vi kan publisere via service
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(status = RekrutteringstreffStatus.UTKAST)
         val fnr = Fødselsnummer("12345678901")
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Act
+        db.endreTilTidTilPassert(treffId, navIdent)
+        rekrutteringstreffService.publiser(treffId, navIdent)
         rekrutteringstreffService.fullfør(treffId, navIdent)
 
         // Assert - verifiser at BÅDE rekrutteringstreff-hendelse OG jobbsøker-hendelse er lagret
@@ -219,7 +266,7 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
@@ -262,13 +309,13 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
         val endringer =
-            """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}, "beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse"}}"""
+            """{"navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}, "sted": {"gammelVerdi": "Gammel sted", "nyVerdi": "Ny sted"}}"""
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -280,12 +327,12 @@ class RekrutteringstreffServiceTest {
         )
         assertThat(hendelseData).isNotNull()
 
-        // Deserialiser EndringerDto
-        val deserializedDto = mapper.readValue(hendelseData, EndringerDto::class.java)
-        assertThat(deserializedDto.tittel).isNotNull()
-        assertThat(deserializedDto.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedDto.tittel!!.nyVerdi).isEqualTo("Ny tittel")
-        assertThat(deserializedDto.fraTid).isNull() // Ikke endret
+        // Deserialiser Rekrutteringstreffendringer
+        val deserializedDto = mapper.readValue(hendelseData, Rekrutteringstreffendringer::class.java)
+        assertThat(deserializedDto.navn).isNotNull()
+        assertThat(deserializedDto.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserializedDto.navn!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserializedDto.tidspunkt).isNull() // Ikke endret
 
         val jobbsøkerHendelseData = hentJobbsøkerHendelseData(
             treffId,
@@ -294,9 +341,9 @@ class RekrutteringstreffServiceTest {
         )
         assertThat(jobbsøkerHendelseData).isNotNull()
 
-        val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, EndringerDto::class.java)
-        assertThat(deserializedJobbsøker.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedJobbsøker.tittel!!.nyVerdi).isEqualTo("Ny tittel")
+        val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, Rekrutteringstreffendringer::class.java)
+        assertThat(deserializedJobbsøker.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserializedJobbsøker.navn!!.nyVerdi).isEqualTo("Ny tittel")
     }
 
     @Test
@@ -304,19 +351,19 @@ class RekrutteringstreffServiceTest {
         // Test at vi kan håndtere JSON fra databasen hvor kun noen felt er satt
         // Dette sikrer bakoverkompatibilitet
 
-        val jsonMedNoenFelt = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
+        val jsonMedNoenFelt = """{"navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
 
         // Act
-        val deserialized = mapper.readValue(jsonMedNoenFelt, EndringerDto::class.java)
+        val deserialized = mapper.readValue(jsonMedNoenFelt, Rekrutteringstreffendringer::class.java)
 
         // Assert - verifiser at eksisterende felt fungerer
-        assertThat(deserialized.tittel).isNotNull()
-        assertThat(deserialized.tittel!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserialized.tittel!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserialized.navn).isNotNull()
+        assertThat(deserialized.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(deserialized.navn!!.nyVerdi).isEqualTo("Ny tittel")
 
         // Verifiser at manglende felt er null
-        assertThat(deserialized.fraTid).isNull()
-        assertThat(deserialized.innlegg).isNull()
+        assertThat(deserialized.tidspunkt).isNull()
+        assertThat(deserialized.introduksjon).isNull()
     }
 
     @Test
@@ -325,16 +372,16 @@ class RekrutteringstreffServiceTest {
         // Dette sikrer bakoverkompatibilitet hvis vi fjerner felt i framtiden
 
         val jsonMedEkstraFelt = """{
-            "tittel": {"gammelVerdi": "Test", "nyVerdi": "Ny Test"},
+            "navn": {"gammelVerdi": "Test", "nyVerdi": "Ny Test"},
             "ukjentFelt": {"gammelVerdi": "Dette skal ignoreres", "nyVerdi": "Også ignoreres"}
         }"""
 
         // Act - deserialiserer JSON med ukjent felt (skal ikke kaste exception)
-        val deserialized = mapper.readValue(jsonMedEkstraFelt, EndringerDto::class.java)
+        val deserialized = mapper.readValue(jsonMedEkstraFelt, Rekrutteringstreffendringer::class.java)
 
         // Assert - verifiser at kjente felt fungerer
-        assertThat(deserialized.tittel).isNotNull()
-        assertThat(deserialized.tittel!!.gammelVerdi).isEqualTo("Test")
+        assertThat(deserialized.navn).isNotNull()
+        assertThat(deserialized.navn!!.gammelVerdi).isEqualTo("Test")
     }
 
     @Test
@@ -359,7 +406,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `skal varsle jobbsøker med INVITERT som siste hendelse om endring`() {
+    fun `skal ikke varsle jobbsøker med INVITERT som siste hendelse om endring`() {
         // Arrange
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fnr = Fødselsnummer("12345678901")
@@ -375,9 +422,9 @@ class RekrutteringstreffServiceTest {
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
 
-        // Assert - jobbsøker med INVITERT skal varsles
+        // Assert - jobbsøker med INVITERT skal ikke varsles
         val jobbsøkerHendelser = hentJobbsøkerHendelser(treffId, fnr)
-        assertThat(jobbsøkerHendelser).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøkerHendelser).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
     @Test
@@ -388,7 +435,7 @@ class RekrutteringstreffServiceTest {
         val navIdent = "Z123456"
 
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Publiser før avlysning
         publiserTreff(treffId, navIdent)
@@ -418,12 +465,12 @@ class RekrutteringstreffServiceTest {
 
         // Jobbsøker 1: Invitert og svart ja
         leggTilOgInviterJobbsøker(treffId, fnr1, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr1, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr1, treffId, navIdent)
 
         // Jobbsøker 2: Invitert, svart ja, ombestemt seg til nei
         leggTilOgInviterJobbsøker(treffId, fnr2, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr2, treffId, navIdent)
-        jobbsøkerRepository.svarNeiTilInvitasjon(fnr2, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr2, treffId, navIdent)
+        jobbsøkerService.svarNeiTilInvitasjon(fnr2, treffId, navIdent)
 
         // Jobbsøker 3: Kun invitert
         leggTilOgInviterJobbsøker(treffId, fnr3, navIdent)
@@ -444,7 +491,7 @@ class RekrutteringstreffServiceTest {
         assertThat(hendelser2).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
 
         val hendelser3 = hentJobbsøkerHendelser(treffId, fnr3)
-        assertThat(hendelser3).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(hendelser3).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
     @Test
@@ -462,11 +509,11 @@ class RekrutteringstreffServiceTest {
 
         // Jobbsøker 2: Svart ja
         leggTilOgInviterJobbsøker(treffId, fnr2, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr2, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr2, treffId, navIdent)
 
         // Jobbsøker 3: Svart nei
         leggTilOgInviterJobbsøker(treffId, fnr3, navIdent)
-        jobbsøkerRepository.svarNeiTilInvitasjon(fnr3, treffId, navIdent)
+        jobbsøkerService.svarNeiTilInvitasjon(fnr3, treffId, navIdent)
 
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
@@ -478,7 +525,7 @@ class RekrutteringstreffServiceTest {
 
         // Assert
         val hendelser1 = hentJobbsøkerHendelser(treffId, fnr1)
-        assertThat(hendelser1).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(hendelser1).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
 
         val hendelser2 = hentJobbsøkerHendelser(treffId, fnr2)
         assertThat(hendelser2).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
@@ -496,7 +543,7 @@ class RekrutteringstreffServiceTest {
 
         // Legg til og inviter jobbsøker
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-        jobbsøkerRepository.svarJaTilInvitasjon(fnr, treffId, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
@@ -525,13 +572,57 @@ class RekrutteringstreffServiceTest {
         assertThat(andreNotifikasjoner).hasSize(2)
     }
 
+    @Test
+    fun `skal ikke kunne slette treff som har jobbsøkere`() {
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val navIdent = "Z123456"
+        val fnr = Fødselsnummer("11111111111")
+
+        leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
+
+        assertThrows<UlovligOppdateringException> {
+            rekrutteringstreffService.markerSlettet(treffId, navIdent)
+        }
+    }
+
+    @Test
+    fun `slett treff skal sette riktig status på treffet og arbeidsgivere`() {
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(status = RekrutteringstreffStatus.UTKAST)
+
+        val navIdent = "Z123456"
+
+        db.leggTilArbeidsgivere(
+            listOf(
+                Arbeidsgiver(
+                    arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
+                    treffId = treffId,
+                    orgnr = Orgnr("999888777"),
+                    orgnavn = Orgnavn("Testbedrift AS"),
+                    status = ArbeidsgiverStatus.AKTIV,
+                    gateadresse = "Fyrstikkalleen 1",
+                    postnummer = "0661",
+                    poststed = "Oslo",
+                )
+            )
+        )
+
+        assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.UTKAST)
+        assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.AKTIV }).isTrue()
+
+        rekrutteringstreffService.markerSlettet(treffId, navIdent)
+
+        assertThat(rekrutteringstreffRepository.hent(treffId)!!.status).isEqualTo(RekrutteringstreffStatus.SLETTET)
+        assertThat(arbeidsgiverRepository.hentArbeidsgivere(treffId).all { it.status == ArbeidsgiverStatus.SLETTET }).isTrue()
+
+        // Sjekk at treffet ikke returneres i hentAlleSomIkkeErSlettet
+        assertThat(rekrutteringstreffRepository.hentAlleSomIkkeErSlettet().any { it.id == treffId }).isFalse()
+    }
 
     private fun leggTilOgInviterJobbsøker(treffId: TreffId, fnr: Fødselsnummer, navIdent: String) {
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fnr,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -541,7 +632,7 @@ class RekrutteringstreffServiceTest {
             ), treffId, navIdent
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fnr)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, navIdent)
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, navIdent)
     }
 
     private fun hentRekrutteringstreffHendelser(treffId: TreffId): List<RekrutteringstreffHendelsestype> {
@@ -642,6 +733,16 @@ class RekrutteringstreffServiceTest {
                 }
             }
         }
+    }
+
+    private fun opprettTreff(): TreffId {
+        val rekrutteringstreff = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0605",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+        return rekrutteringstreffService.opprett(rekrutteringstreff)
     }
 
     private fun publiserTreff(treffId: TreffId, navIdent: String) {

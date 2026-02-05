@@ -1,2 +1,0 @@
-ALTER TABLE jobbsoker
-    ADD COLUMN status text NOT NULL DEFAULT 'LAGT_TIL';

@@ -3,15 +3,12 @@ package no.nav.toi.jobbsoker
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
-import com.github.navikt.tbd_libs.rapids_and_rivers.asLocalDateTime
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
-import no.nav.toi.AktørType
-import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.SecureLogLogger.Companion.secure
+import no.nav.toi.SecureLog
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 
@@ -21,7 +18,7 @@ import no.nav.toi.rekrutteringstreff.TreffId
  */
 class MinsideVarselSvarLytter(
     rapidsConnection: RapidsConnection,
-    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val jobbsøkerService: JobbsøkerService,
     private val objectMapper: ObjectMapper
 ) : River.PacketListener {
 
@@ -34,10 +31,12 @@ class MinsideVarselSvarLytter(
             }
             validate {
                 it.requireKey("varselId", "avsenderReferanseId", "fnr")
-                it.interestedIn("eksternStatus", "minsideStatus", "opprettet", "avsenderNavident", "eksternFeilmelding", "eksternKanal", "mal")
+                it.interestedIn("eksternStatus", "minsideStatus", "opprettet", "avsenderNavident", "eksternFeilmelding", "eksternKanal", "mal", "flettedata")
             }
         }.register(this)
     }
+
+    private val secureLogger = SecureLog(log)
 
     override fun onPacket(
         packet: JsonMessage,
@@ -45,10 +44,9 @@ class MinsideVarselSvarLytter(
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        log.info("Mottok minsideVarselSvar men skipper foreløpig");
+        log.info("Mottok minsideVarselSvar men skipper foreløpig")
         val avsenderReferanseId = packet["avsenderReferanseId"].asText()
         val fnr = packet["fnr"].asText()
-        val avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asText()
 
         log.info("Mottok minsideVarselSvar for rekrutteringstreffId: $avsenderReferanseId")
 
@@ -62,25 +60,26 @@ class MinsideVarselSvarLytter(
             eksternStatus = packet["eksternStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             minsideStatus = packet["minsideStatus"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             opprettet = packet["opprettet"].takeIf { !it.isNull && !it.isMissingNode }?.asText()?.let { java.time.ZonedDateTime.parse(it) },
-            avsenderNavident = avsenderNavident,
+            avsenderNavident = packet["avsenderNavident"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             eksternFeilmelding = packet["eksternFeilmelding"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
             eksternKanal = packet["eksternKanal"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
-            mal = packet["mal"].takeIf { !it.isNull && !it.isMissingNode }?.asText()
+            mal = packet["mal"].takeIf { !it.isNull && !it.isMissingNode }?.asText(),
+            flettedata = packet["flettedata"].takeIf { !it.isNull && !it.isMissingNode && it.isArray }?.map { it.asText() }
         )
 
         val hendelseDataJson = objectMapper.writeValueAsString(minsideVarselSvarData)
 
         try {
-            jobbsøkerRepository.registrerMinsideVarselSvar(
-                fødselsnummer = fødselsnummer,
-                treff = treffId,
+            jobbsøkerService.registrerMinsideVarselSvar(
+                fnr = fødselsnummer,
+                treffId = treffId,
                 opprettetAv = "MIN_SIDE",
                 hendelseData = hendelseDataJson
             )
             log.info("Registrerte MOTTATT_SVAR_FRA_MINSIDE-hendelse for rekrutteringstreffId: $avsenderReferanseId")
         } catch (e: Exception) {
             log.error("Klarte ikke å registrere MOTTATT_SVAR_FRA_MINSIDE-hendelse for rekrutteringstreffId: $avsenderReferanseId", e)
-            secure(log).error("Feil ved registrering av minside varsel svar for fnr: $fnr, treffId: $avsenderReferanseId", e)
+            secureLogger.error("Feil ved registrering av minside varsel svar for fnr: $fnr, treffId: $avsenderReferanseId", e)
             throw e
         }
     }
@@ -91,7 +90,7 @@ class MinsideVarselSvarLytter(
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av minsideVarselSvar: $problems")
-        secure(log).error("Feil ved behandling av minsideVarselSvar: ${problems.toExtendedReport()}")
+        secureLogger.error("Feil ved behandling av minsideVarselSvar: ${problems.toExtendedReport()}")
     }
 
     override fun onSevere(
@@ -99,6 +98,6 @@ class MinsideVarselSvarLytter(
         context: MessageContext
     ) {
         log.error("Alvorlig feil ved behandling av minsideVarselSvar", error)
-        secure(log).error("Alvorlig feil ved behandling av minsideVarselSvar: ${error.problems.toExtendedReport()}", error)
+        secureLogger.error("Alvorlig feil ved behandling av minsideVarselSvar: ${error.problems.toExtendedReport()}", error)
     }
 }

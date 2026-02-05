@@ -6,6 +6,7 @@ import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
+import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
@@ -21,18 +22,34 @@ import javax.sql.DataSource
 
 class TestDatabase {
 
+    private val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
+    private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
+    private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
+
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
-    ): TreffId =
-        RekrutteringstreffRepository(dataSource).opprett(
-            OpprettRekrutteringstreffInternalDto(
-                tittel = tittel,
-                opprettetAvNavkontorEnhetId = "Original Kontor",
-                opprettetAvPersonNavident = navIdent,
-                opprettetAvTidspunkt = nowOslo().minusDays(10),
+    ): TreffId {
+        return dataSource.connection.use { connection ->
+            val (treffId, treffDbId) = rekrutteringstreffRepository.opprett(
+                connection,
+                OpprettRekrutteringstreffInternalDto(
+                    tittel = tittel,
+                    opprettetAvNavkontorEnhetId = "Original Kontor",
+                    opprettetAvPersonNavident = navIdent,
+                    opprettetAvTidspunkt = nowOslo().minusDays(10),
+                )
             )
-        )
+            rekrutteringstreffRepository.leggTilHendelse(
+                connection,
+                treffDbId,
+                RekrutteringstreffHendelsestype.OPPRETTET,
+                AktørType.ARRANGØR,
+                navIdent
+            )
+            treffId
+        }
+    }
 
     fun slettAlt() = dataSource.connection.use {c ->
         listOf(
@@ -140,7 +157,6 @@ class TestDatabase {
     fun hentAlleJobbsøkere(): List<Jobbsøker> = dataSource.connection.use {
         val sql = """
             SELECT js.fodselsnummer,
-                   js.kandidatnummer,
                    js.fornavn,
                    js.etternavn,
                    js.navkontor,
@@ -156,24 +172,26 @@ class TestDatabase {
     }
 
     private fun konverterTilRekrutteringstreff(rs: ResultSet) = Rekrutteringstreff(
-        id                       = TreffId(rs.getObject("id", UUID::class.java)),
-        tittel                   = rs.getString("tittel"),
-        beskrivelse             = rs.getString("beskrivelse"),
-        fraTid                   = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
-        tilTid                   = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
-        svarfrist                   = rs.getTimestamp("svarfrist")?.toInstant()?.atOslo(),
-        gateadresse               = rs.getString("gateadresse"),
-        postnummer                = rs.getString("postnummer"),
-        poststed                  = rs.getString("poststed"),
+        id = TreffId(rs.getObject("id", UUID::class.java)),
+        tittel = rs.getString("tittel"),
+        beskrivelse = rs.getString("beskrivelse"),
+        fraTid = rs.getTimestamp("fratid")?.toInstant()?.atOslo(),
+        tilTid = rs.getTimestamp("tiltid")?.toInstant()?.atOslo(),
+        svarfrist = rs.getTimestamp("svarfrist")?.toInstant()?.atOslo(),
+        gateadresse = rs.getString("gateadresse"),
+        postnummer = rs.getString("postnummer"),
+        poststed = rs.getString("poststed"),
         kommune = rs.getString("kommune"),
         kommunenummer = rs.getString("kommunenummer"),
         fylke = rs.getString("fylke"),
         fylkesnummer = rs.getString("fylkesnummer"),
-        status                   = RekrutteringstreffStatus.valueOf(rs.getString("status")),
-        opprettetAvPersonNavident= rs.getString("opprettet_av_person_navident"),
+        status = RekrutteringstreffStatus.valueOf(rs.getString("status")),
+        opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
         opprettetAvTidspunkt     = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
-        eiere = (rs.getArray("eiere").array as Array<String>).toList()
+        eiere = (rs.getArray("eiere").array as Array<String>).toList(),
+        sistEndret = rs.getTimestamp("sist_endret").toInstant().atOslo(),
+        sistEndretAv = rs.getString("sist_endret_av") ?: "Ukjent"
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
@@ -182,13 +200,15 @@ class TestDatabase {
         orgnr   = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn")),
         status = ArbeidsgiverStatus.valueOf(rs.getString("status")),
+        gateadresse = rs.getString("gateadresse"),
+        postnummer  = rs.getString("postnummer"),
+        poststed    = rs.getString("poststed"),
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
         personTreffId             = PersonTreffId(UUID.fromString(rs.getString("fodselsnummer"))),
         treffId        = TreffId(rs.getString("treff_id")),
         fødselsnummer  = Fødselsnummer(rs.getString("fodselsnummer")),
-        kandidatnummer = rs.getString("kandidatnummer")?.let(::Kandidatnummer),
         fornavn        = Fornavn(rs.getString("fornavn")),
         etternavn      = Etternavn(rs.getString("etternavn")),
         navkontor      = rs.getString("navkontor")?.let(::Navkontor),
@@ -198,32 +218,42 @@ class TestDatabase {
     )
 
     fun leggTilArbeidsgivere(arbeidsgivere: List<Arbeidsgiver>) {
-        val repo = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
-        arbeidsgivere.forEach {
-            repo.leggTil(LeggTilArbeidsgiver(it.orgnr, it.orgnavn), it.treffId, "testperson")
+        arbeidsgivere.forEach { ag ->
+            dataSource.connection.use { connection ->
+                val arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(
+                    connection,
+                    LeggTilArbeidsgiver(ag.orgnr, ag.orgnavn, emptyList(), ag.gateadresse, ag.postnummer, ag.poststed),
+                    ag.treffId
+                )
+                arbeidsgiverRepository.leggTilHendelse(
+                    connection,
+                    arbeidsgiverTreffId,
+                    ArbeidsgiverHendelsestype.OPPRETTET,
+                    AktørType.ARRANGØR,
+                    "testperson"
+                )
+            }
         }
     }
 
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
-        val repo = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         jobbsøkere
             .groupBy { it.treffId }
-            .forEach { (treffId, jsListe) ->
-                repo.leggTil(
-                    jsListe.map {
+            .forEach { (treffId, jobbsøkereListe) ->
+                dataSource.connection.use { connection ->
+                    val leggTilJobbsøkere = jobbsøkereListe.map { js ->
                         LeggTilJobbsøker(
-                            it.fødselsnummer,
-                            it.kandidatnummer,
-                            it.fornavn,
-                            it.etternavn,
-                            it.navkontor,
-                            it.veilederNavn,
-                            it.veilederNavIdent
+                            fødselsnummer = js.fødselsnummer,
+                            fornavn = js.fornavn,
+                            etternavn = js.etternavn,
+                            navkontor = js.navkontor,
+                            veilederNavn = js.veilederNavn,
+                            veilederNavIdent = js.veilederNavIdent
                         )
-                    },
-                    treffId,
-                    "testperson"
-                )
+                    }
+                    val personTreffIder = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
+                    jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, "testperson")
+                }
             }
     }
 

@@ -1,4 +1,4 @@
-package no.nav.toi.jobbsoker;
+package no.nav.toi.jobbsoker
 
 import io.javalin.Javalin
 import io.javalin.http.Context
@@ -8,7 +8,6 @@ import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiParam
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
-import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
@@ -16,10 +15,9 @@ import no.nav.toi.jobbsoker.dto.StatuserOutboundDto
 import no.nav.toi.jobbsoker.dto.toOutboundDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.util.UUID
-import kotlin.collections.findLast
 
 class JobbsøkerInnloggetBorgerController(
-    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val jobbsøkerService: JobbsøkerService,
     javalin: Javalin
 ) {
     companion object {
@@ -54,10 +52,9 @@ class JobbsøkerInnloggetBorgerController(
             if (pid.isEmpty()) {
                 throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
             }
-            jobbsøkerRepository.svarJaTilInvitasjon(Fødselsnummer(pid), treffId, pid)
+            jobbsøkerService.svarJaTilInvitasjon(Fødselsnummer(pid), treffId, pid)
             ctx.status(200)
         }
-
     }
 
     @OpenApi(
@@ -76,7 +73,7 @@ class JobbsøkerInnloggetBorgerController(
             if (pid.isEmpty()) {
                 throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
             }
-            jobbsøkerRepository.svarNeiTilInvitasjon(Fødselsnummer(pid), treffId, pid)
+            jobbsøkerService.svarNeiTilInvitasjon(Fødselsnummer(pid), treffId, pid)
             ctx.status(200)
         }
     }
@@ -93,7 +90,6 @@ class JobbsøkerInnloggetBorgerController(
             {
               "treffId": "c1b2c3d4-e5f6-7890-1234-567890abcdef",
               "fødselsnummer": "12345678901",
-              "kandidatnummer": "PA123456",
               "fornavn": "Ola",
               "etternavn": "Nordmann",
               "navkontor": "NAV Grünerløkka",
@@ -142,7 +138,7 @@ class JobbsøkerInnloggetBorgerController(
             if (pid.isEmpty()) {
                 throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
             }
-            val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, Fødselsnummer(pid))
+            val jobbsøker = jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(pid))
             if (jobbsøker == null) {
                 ctx.status(404)
             } else {
@@ -152,24 +148,19 @@ class JobbsøkerInnloggetBorgerController(
     }
 
     private fun Jobbsøker.toOutboundDtoMedStatuser(): JobbsøkerMedStatuserOutboundDto {
-        val sisteSvar = hendelser.findLast {
-            it.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON || it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
-        }
-
         return JobbsøkerMedStatuserOutboundDto(
             personTreffId = personTreffId.toString(),
             treffId = treffId.somString,
             fødselsnummer = fødselsnummer.asString,
-            kandidatnummer = kandidatnummer?.asString,
             fornavn = fornavn.asString,
             etternavn = etternavn.asString,
             navkontor = navkontor?.asString,
             veilederNavn = veilederNavn?.asString,
             veilederNavIdent = veilederNavIdent?.asString,
             statuser = StatuserOutboundDto(
-                erPåmeldt = sisteSvar?.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-                erInvitert = hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT },
-                harSvart = sisteSvar != null
+                erPåmeldt = harAktivtSvarJa(),
+                erInvitert = erInvitert(),
+                harSvart = harSvart()
             ),
             hendelser = hendelser.map { it.toOutboundDto() }
         )

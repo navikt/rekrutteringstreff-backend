@@ -24,8 +24,6 @@ spec:
   replicas:
     min: {{ min_replicas }}
     max: {{ max_replicas }}
-  secureLogs:
-    enabled: true
   resources:
     limits:
       cpu: 3000m
@@ -43,6 +41,8 @@ spec:
         - application: rekrutteringsbistand-kandidatsok-api
         - application: modiacontextholder
           namespace: personoversikt
+        - application: logging
+          namespace: nais-system
       external:
         - host: fakedings.intern.dev.nav.no
         - host: {{ openai_azure_host }}
@@ -60,8 +60,10 @@ spec:
         groups:
           - id: {{ adGruppeUtvikler }}
           - id: {{ adGruppeArbeidsgiverrettet }}
+          - id: {{ adGruppeJobbsokerrettet }}
   kafka:
     pool: {{ kafka_pool }}
+  leaderElection: true
   gcp:
     sqlInstances:
       - type: {{ postgres }}
@@ -70,12 +72,14 @@ spec:
         tier: {{ gcp_db_tier }}
         diskAutoresize: {{ gcp_disk_autoresize }}
   envFrom:
-    - secret: openai-toi-rekrutteringsbistand-stilling
+    - secret: openai-toi-rekrutteringstreff
   env:
     - name: REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET
       value: {{adGruppeArbeidsgiverrettet}}
     - name: REKRUTTERINGSBISTAND_UTVIKLER
       value: {{adGruppeUtvikler}}
+    - name: REKRUTTERINGSBISTAND_JOBBSOKERRETTET
+      value: {{adGruppeJobbsokerrettet}}
     - name: KANDIDATSOK_API_URL
       value: {{kandidatsok_api_url}}
     - name: KANDIDATSOK_API_SCOPE
@@ -90,6 +94,10 @@ spec:
       value: {{kafka_consumer_group_id}}
     - name: PILOTKONTORER
       value: {{pilotkontorer}}
+    - name: OPENAI_API_URL
+      value: "https://{{openai_azure_host}}/openai/deployments/{{openai_deployment}}/chat/completions?api-version={{openai_api_version}}"
+    - name: OPENAI_DEPLOYMENT
+      value: {{openai_deployment}}
   observability:
     logging:
       destinations:

@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker
 
+import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.util.UUID
@@ -11,14 +12,6 @@ data class Fødselsnummer(private val fødselsnummer: String) {
         }
     }
     val asString: String = fødselsnummer
-    override fun toString(): String = asString
-}
-
-data class Kandidatnummer(private val kandidatnummer: String) {
-    init {
-        if (kandidatnummer.isEmpty()) throw IllegalArgumentException("Kandidatnummer må være ikke-tomt.")
-    }
-    val asString: String = kandidatnummer
     override fun toString(): String = asString
 }
 
@@ -68,9 +61,17 @@ data class VeilederNavIdent(private val ident: String) {
     override fun toString(): String = asString
 }
 
+/**
+ * Kandidatnummer brukes kun for on-demand henting fra ekstern API (kandidatsøk-api).
+ * Det lagres ikke lenger i databasen, men brukes som type-sikker wrapper for API-respons.
+ */
+data class Kandidatnummer(private val kandidatnummer: String) {
+    val asString: String = kandidatnummer
+    override fun toString(): String = asString
+}
+
 data class LeggTilJobbsøker(
     val fødselsnummer: Fødselsnummer,
-    val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
     val navkontor: Navkontor?,
@@ -86,7 +87,6 @@ data class Jobbsøker(
     val personTreffId: PersonTreffId,
     val treffId: TreffId,
     val fødselsnummer: Fødselsnummer,
-    val kandidatnummer: Kandidatnummer?,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
     val navkontor: Navkontor?,
@@ -94,7 +94,21 @@ data class Jobbsøker(
     val veilederNavIdent: VeilederNavIdent?,
     val status: JobbsøkerStatus,
     val hendelser: List<JobbsøkerHendelse> = emptyList()
-)
+) {
+
+    fun sisteSvarPåInvitasjon(): JobbsøkerHendelse? =
+        hendelser
+            .filter { it.hendelsestype.erSvarPåInvitasjon() }
+            .maxByOrNull { it.tidspunkt }
+
+    fun harAktivtSvarJa(): Boolean =
+        sisteSvarPåInvitasjon()?.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
+
+    fun erInvitert(): Boolean =
+        hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
+
+    fun harSvart(): Boolean = sisteSvarPåInvitasjon() != null
+}
 
 data class PersonTreffId(private val id: UUID) {
     constructor(uuid: String) : this(UUID.fromString(uuid))

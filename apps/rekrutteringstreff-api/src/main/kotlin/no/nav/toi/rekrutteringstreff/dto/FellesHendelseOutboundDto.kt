@@ -9,5 +9,9 @@ data class FellesHendelseOutboundDto(
     val tidspunkt: ZonedDateTime,
     val hendelsestype: String,
     val opprettetAvAktørType: String,
-    val aktørIdentifikasjon: String?
+    val aktørIdentifikasjon: String?,
+    // For jobbsøker: fødselsnummer, for arbeidsgiver: orgnr, for treff: null
+    val subjektId: String? = null,
+    // For jobbsøker: "fornavn etternavn", for arbeidsgiver: orgnavn, for treff: null
+    val subjektNavn: String? = null
 )

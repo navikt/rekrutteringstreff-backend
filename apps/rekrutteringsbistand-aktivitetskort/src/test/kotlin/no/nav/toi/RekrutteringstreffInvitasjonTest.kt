@@ -5,7 +5,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
-import no.nav.toi.aktivitetskort.EndretAvType
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.producer.MockProducer
 import org.assertj.core.api.Assertions.assertThat
@@ -14,8 +13,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
-import org.postgresql.util.PSQLException
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
@@ -23,13 +20,6 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
-import kotlin.also
-import kotlin.apply
-import kotlin.collections.get
-import kotlin.collections.set
-import kotlin.text.get
-import kotlin.text.trimIndent
-import kotlin.to
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffInvitasjonTest {
@@ -50,7 +40,7 @@ class RekrutteringstreffInvitasjonTest {
     private val rapid = TestRapid()
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val app = App(rapid, Repository(databaseConfig, "http://url"), MockProducer(), MockConsumer(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST))
+    private val app = App(rapid, Repository(databaseConfig, "http://url", "topic"), MockProducer(), MockConsumer(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST), "topic", LeaderElectionMock())
 
     @BeforeEach
     fun setup() {

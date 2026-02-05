@@ -1,6 +1,5 @@
 package no.nav.toi.rekrutteringstreff
 
-import com.fasterxml.jackson.core.type.TypeReference
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -64,139 +63,60 @@ class RekrutteringstreffRepository(
         private const val kommunenummer = "kommunenummer"
         private const val fylke = "fylke"
         private const val fylkesnummer = "fylkesnummer"
+        private const val sistEndret = "sist_endret"
+        private const val sistEndretAv = "sist_endret_av"
     }
 
-    fun opprett(dto: OpprettRekrutteringstreffInternalDto): TreffId {
+    fun opprett(connection: Connection, dto: OpprettRekrutteringstreffInternalDto): Pair<TreffId, Long> {
         val nyTreffId = TreffId(UUID.randomUUID())
-        dataSource.executeInTransaction { connection ->
-            val dbId = connection.prepareStatement(
-                """
-                INSERT INTO $tabellnavn($id,$tittel,$status,$opprettetAvPersonNavident,
-                                         $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere)
-                VALUES (?,?,?,?,?,?,?)
-                RETURNING rekrutteringstreff_id
-                """
-            ).apply {
-                var i = 0
-                setObject(++i, nyTreffId.somUuid)
-                setString(++i, dto.tittel)
-                setString(++i, RekrutteringstreffStatus.UTKAST.name)
-                setString(++i, dto.opprettetAvPersonNavident)
-                setString(++i, dto.opprettetAvNavkontorEnhetId)
-                setTimestamp(++i, Timestamp.from(Instant.now()))
-                setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
-            }.executeQuery().run { next(); getLong(1) }
+        val dbId = connection.prepareStatement(
+            """
+            INSERT INTO $tabellnavn($id,$tittel,$status,$opprettetAvPersonNavident,
+                                     $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere, $sistEndret, $sistEndretAv)
+            VALUES (?,?,?,?,?,?,?,?,?)
+            RETURNING rekrutteringstreff_id
+            """
+        ).apply {
+            var i = 0
+            setObject(++i, nyTreffId.somUuid)
+            setString(++i, dto.tittel)
+            setString(++i, RekrutteringstreffStatus.UTKAST.name)
+            setString(++i, dto.opprettetAvPersonNavident)
+            setString(++i, dto.opprettetAvNavkontorEnhetId)
+            setTimestamp(++i, Timestamp.from(Instant.now()))
+            setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
+            setTimestamp(++i, Timestamp.from(Instant.now()))
+            setString(++i, dto.opprettetAvPersonNavident)
+        }.executeQuery().run { next(); getLong(1) }
 
-            leggTilHendelse(connection, dbId, RekrutteringstreffHendelsestype.OPPRETTET, AktørType.ARRANGØR, dto.opprettetAvPersonNavident)
-        }
-        return nyTreffId
+        return Pair(nyTreffId, dbId)
     }
 
-    fun oppdater(treff: TreffId, dto: OppdaterRekrutteringstreffDto, oppdatertAv: String) {
-        dataSource.connection.use { connection ->
-            val dbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
-                .apply { setObject(1, treff.somUuid) }
-                .executeQuery()
-                .run { next(); getLong(1) }
-
-            connection.prepareStatement(
-                """
+    fun oppdater(connection: Connection, treff: TreffId, dto: OppdaterRekrutteringstreffDto, oppdatertAv: String) {
+        connection.prepareStatement(
+            """
                 UPDATE $tabellnavn
-                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, $poststed=?, $kommune=?, $kommunenummer=?, $fylke=?, $fylkesnummer=?
+                SET $tittel=?, $beskrivelse=?, $fratid=?, $tiltid=?, $svarfrist=?, $gateadresse=?, $postnummer=?, $poststed=?, $kommune=?, $kommunenummer=?, $fylke=?, $fylkesnummer=?, $sistEndret=?, $sistEndretAv=?
                 WHERE $id=?
                 """
-            ).apply {
-                var i = 0
-                setString(++i, dto.tittel)
-                setString(++i, dto.beskrivelse)
-                setTimestamp(++i, if(dto.fraTid != null)  Timestamp.from(dto.fraTid.toInstant()) else null)
-                setTimestamp(++i, if(dto.tilTid != null) Timestamp.from(dto.tilTid.toInstant()) else null)
-                setTimestamp(++i, if(dto.svarfrist != null) Timestamp.from(dto.svarfrist.toInstant()) else null)
-                setString(++i, dto.gateadresse)
-                setString(++i, dto.postnummer)
-                setString(++i, dto.poststed)
-                setString(++i, dto.kommune)
-                setString(++i, dto.kommunenummer)
-                setString(++i, dto.fylke)
-                setString(++i, dto.fylkesnummer)
-                setObject(++i, treff.somUuid)
-            }.executeUpdate()
-
-            leggTilHendelse(connection, dbId, RekrutteringstreffHendelsestype.OPPDATERT, AktørType.ARRANGØR, oppdatertAv)
-        }
-    }
-
-    fun slett(treff: TreffId) {
-        // TODO: Skal vi faktisk slette alt, eller kun endre til status DELETED?
-        dataSource.executeInTransaction { connection ->
-            val dbIdRs = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id = ?").apply {
-                setObject(1, treff.somUuid)
-            }.executeQuery()
-            if (!dbIdRs.next()) throw NotFoundResponse("Rekrutteringstreff ikke funnet")
-            val treffDbId = dbIdRs.getLong("rekrutteringstreff_id")
-
-            // Ikke lov å slette etter publisering
-            connection.prepareStatement(
-                """
-                SELECT 1
-                FROM rekrutteringstreff_hendelse h
-                WHERE h.rekrutteringstreff_id = ? AND h.hendelsestype = 'PUBLISERT'
-                LIMIT 1
-                """.trimIndent()
-            ).use { s ->
-                s.setLong(1, treffDbId)
-                val rs = s.executeQuery()
-                if (rs.next()) throw UlovligSlettingException("Kan ikke slette etter publisering.")
-            }
-
-            // Slett i riktig rekkefølge - FK constraints vil feile dersom det finnes blokkerende data
-            // arbeidsgiver_hendelse
-            connection.prepareStatement(
-                """
-                DELETE FROM arbeidsgiver_hendelse ah
-                USING arbeidsgiver ag
-                WHERE ah.arbeidsgiver_id = ag.arbeidsgiver_id AND ag.rekrutteringstreff_id = ?
-                """.trimIndent()
-            ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
-
-            connection.prepareStatement(
-                """
-                DELETE FROM rekrutteringstreff_hendelse WHERE rekrutteringstreff_id = ?
-                """.trimIndent()
-            ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
-
-            connection.prepareStatement(
-                """
-                DELETE FROM naringskode nk
-                USING arbeidsgiver ag
-                WHERE nk.arbeidsgiver_id = ag.arbeidsgiver_id AND ag.rekrutteringstreff_id = ?
-                """.trimIndent()
-            ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
-
-            connection.prepareStatement(
-                """
-                DELETE FROM innlegg WHERE rekrutteringstreff_id = ?
-                """.trimIndent()
-            ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
-
-            connection.prepareStatement(
-                """
-                DELETE FROM arbeidsgiver WHERE rekrutteringstreff_id = ?
-                """.trimIndent()
-            ).use { s -> s.setLong(1, treffDbId); s.executeUpdate() }
-
-            connection.prepareStatement(
-                """
-                DELETE FROM ki_spørring_logg WHERE treff_id = ?
-                """.trimIndent()
-            ).use { s -> s.setObject(1, treff.somUuid); s.executeUpdate() }
-
-            // rekrutteringstreff - vil feile med FK constraint dersom jobbsoker finnes
-            connection.prepareStatement("DELETE FROM $tabellnavn WHERE $id = ?").use {
-                it.setObject(1, treff.somUuid)
-                it.executeUpdate()
-            }
-        }
+        ).apply {
+            var i = 0
+            setString(++i, dto.tittel)
+            setString(++i, dto.beskrivelse)
+            setTimestamp(++i, if(dto.fraTid != null)  Timestamp.from(dto.fraTid.toInstant()) else null)
+            setTimestamp(++i, if(dto.tilTid != null) Timestamp.from(dto.tilTid.toInstant()) else null)
+            setTimestamp(++i, if(dto.svarfrist != null) Timestamp.from(dto.svarfrist.toInstant()) else null)
+            setString(++i, dto.gateadresse)
+            setString(++i, dto.postnummer)
+            setString(++i, dto.poststed)
+            setString(++i, dto.kommune)
+            setString(++i, dto.kommunenummer)
+            setString(++i, dto.fylke)
+            setString(++i, dto.fylkesnummer)
+            setTimestamp(++i, Timestamp.from(Instant.now()))
+            setString(++i, oppdatertAv)
+            setObject(++i, treff.somUuid)
+        }.executeUpdate()
     }
 
     fun hentAlle(): List<Rekrutteringstreff> =
@@ -210,73 +130,36 @@ class RekrutteringstreffRepository(
             }
         }
 
+    fun hentAlleSomIkkeErSlettet(): List<Rekrutteringstreff> =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT * FROM $tabellnavn where status != ?").use { s ->
+                s.setString(1, RekrutteringstreffStatus.SLETTET.name)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+
+    fun hentAlleForEttKontorSomIkkeErSlettet(kontorId: String): List<Rekrutteringstreff> =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT * FROM $tabellnavn where status != ? and $opprettetAvKontorEnhetid = ?").use { s ->
+                s.setString(1, RekrutteringstreffStatus.SLETTET.name)
+                s.setObject(2, kontorId)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+
     fun hent(treff: TreffId): Rekrutteringstreff? =
         dataSource.connection.use { c ->
             c.prepareStatement("SELECT * FROM $tabellnavn WHERE $id = ?").use { s ->
                 s.setObject(1, treff.somUuid)
                 s.executeQuery().let { rs -> if (rs.next()) rs.tilRekrutteringstreff() else null }
-            }
-        }
-
-// Fjerne og heller håndtere i Service?
-    fun hentMedHendelser(treff: TreffId): RekrutteringstreffDetaljOutboundDto? =
-        dataSource.connection.use { c ->
-            c.prepareStatement(
-                """
-                SELECT r.*,
-                       COALESCE(
-                           json_agg(
-                               json_build_object(
-                                   'id', h.id,
-                                   'tidspunkt', to_char(h.tidspunkt,'YYYY-MM-DD"T"HH24:MI:SSOF'),
-                                   'hendelsestype', h.hendelsestype,
-                                   'opprettetAvAktørType', h.opprettet_av_aktortype,
-                                   'aktørIdentifikasjon', h.aktøridentifikasjon
-                               )
-                           ) FILTER (WHERE h.id IS NOT NULL),
-                           '[]'
-                       ) AS hendelser
-                FROM   rekrutteringstreff r
-                LEFT JOIN rekrutteringstreff_hendelse h
-                   ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
-                WHERE  r.id = ?
-                GROUP BY r.rekrutteringstreff_id
-                """
-            ).use { s ->
-                s.setObject(1, treff.somUuid)
-                s.executeQuery().let { rs ->
-                    if (!rs.next()) return null
-                    val hendelserJson = rs.getString("hendelser")
-                    val hendelser = JacksonConfig.mapper.readValue(
-                        hendelserJson,
-                        object : TypeReference<List<RekrutteringstreffHendelseOutboundDto>>() {}
-                    )
-                    RekrutteringstreffDetaljOutboundDto(
-                        rekrutteringstreff = RekrutteringstreffDto(
-                            id = rs.getObject(id, UUID::class.java),
-                            tittel = rs.getString(tittel),
-                            beskrivelse = rs.getString(beskrivelse),
-                            fraTid = rs.getTimestamp(fratid)?.toInstant()?.atOslo(),
-                            tilTid = rs.getTimestamp(tiltid)?.toInstant()?.atOslo(),
-                            svarfrist = rs.getTimestamp(svarfrist)?.toInstant()?.atOslo(),
-                            gateadresse = rs.getString(gateadresse),
-                            postnummer = rs.getString(postnummer),
-                            poststed = rs.getString(poststed),
-                            kommune = rs.getString(kommune),
-                            kommunenummer = rs.getString(kommunenummer),
-                            fylke = rs.getString(fylke),
-                            fylkesnummer = rs.getString(fylkesnummer),
-                            status = RekrutteringstreffStatus.valueOf(rs.getString(status)),
-                            opprettetAvPersonNavident = rs.getString(opprettetAvPersonNavident),
-                            opprettetAvNavkontorEnhetId = rs.getString(opprettetAvKontorEnhetid),
-                            opprettetAvTidspunkt = rs.getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
-                            antallArbeidsgivere = null,
-                            antallJobbsøkere = null,
-                            eiere = (rs.getArray(eiere).array as Array<String>).toList()
-                        ),
-                        hendelser = hendelser
-                    )
-                }
             }
         }
 
@@ -317,14 +200,16 @@ class RekrutteringstreffRepository(
         dataSource.connection.use { c ->
             c.prepareStatement(
                 """
-            SELECT id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, ressurs
+            SELECT id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, ressurs, subjekt_id, subjekt_navn
             FROM (
                 SELECT h.id,
                        '${HendelseRessurs.REKRUTTERINGSTREFF.name}' AS ressurs,
                        h.tidspunkt,
                        h.hendelsestype,
                        h.opprettet_av_aktortype,
-                       h.aktøridentifikasjon
+                       h.aktøridentifikasjon,
+                       NULL AS subjekt_id,
+                       NULL AS subjekt_navn
                 FROM   rekrutteringstreff_hendelse h
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
                 WHERE  r.id = ?
@@ -336,11 +221,13 @@ class RekrutteringstreffRepository(
                        jh.tidspunkt,
                        jh.hendelsestype,
                        jh.opprettet_av_aktortype,
-                       jh.aktøridentifikasjon
+                       jh.aktøridentifikasjon,
+                       js.fodselsnummer AS subjekt_id,
+                       js.fornavn || ' ' || js.etternavn AS subjekt_navn
                 FROM   jobbsoker_hendelse jh
                 JOIN   jobbsoker js        ON js.jobbsoker_id = jh.jobbsoker_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = js.rekrutteringstreff_id
-                WHERE  r.id = ?
+                WHERE  r.id = ? AND js.er_synlig = TRUE
 
                 UNION ALL
 
@@ -349,7 +236,9 @@ class RekrutteringstreffRepository(
                        ah.tidspunkt,
                        ah.hendelsestype,
                        ah.opprettet_av_aktortype,
-                       ah.aktøridentifikasjon
+                       ah.aktøridentifikasjon,
+                       ag.orgnr AS subjekt_id,
+                       ag.orgnavn AS subjekt_navn
                 FROM   arbeidsgiver_hendelse ah
                 JOIN   arbeidsgiver ag      ON ag.arbeidsgiver_id = ah.arbeidsgiver_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = ag.rekrutteringstreff_id
@@ -367,35 +256,17 @@ class RekrutteringstreffRepository(
                             hendelsestype = rs.getString("hendelsestype"),
                             opprettetAvAktørType = rs.getString("opprettet_av_aktortype"),
                             aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
-                            ressurs = HendelseRessurs.valueOf(rs.getString("ressurs"))
+                            ressurs = HendelseRessurs.valueOf(rs.getString("ressurs")),
+                            subjektId = rs.getString("subjekt_id"),
+                            subjektNavn = rs.getString("subjekt_navn")
                         ) else null
                     }.toList()
                 }
             }
         }
 
-    fun publiser(treff: TreffId, publisertAv: String) {
-        dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.PUBLISERT, publisertAv)
-            endreStatus(connection, treff, RekrutteringstreffStatus.PUBLISERT)
-        }
-    }
 
-    fun gjenåpne(treff: TreffId, gjenapnetAv: String) {
-        dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.GJENÅPNET, gjenapnetAv)
-            endreStatus(connection, treff, RekrutteringstreffStatus.PUBLISERT) // TODO: sjekk om status skal være UTKAST eller PUBLISERT
-        }
-    }
-
-    fun avpubliser(treff: TreffId, avpublisertAv: String) {
-        dataSource.executeInTransaction { connection ->
-            leggTilHendelseForTreff(connection, treff, RekrutteringstreffHendelsestype.AVPUBLISERT, avpublisertAv)
-            endreStatus(connection, treff, RekrutteringstreffStatus.UTKAST)
-        }
-    }
-
-    private fun leggTilHendelseForTreff(connection: Connection, treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
+    fun leggTilHendelseForTreff(connection: Connection, treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
         val dbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
             .apply { setObject(1, treff.somUuid) }
             .executeQuery()
@@ -413,7 +284,6 @@ class RekrutteringstreffRepository(
                 else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke")
             }
     }
-
 
     fun leggTilHendelse(
         c: Connection,
@@ -479,6 +349,8 @@ class RekrutteringstreffRepository(
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
         opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
-        eiere = (getArray(eiere).array as Array<String>).toList()
+        eiere = (getArray(eiere).array as Array<String>).toList(),
+        sistEndret = getTimestamp(sistEndret).toInstant().atOslo(),
+        sistEndretAv = getString(sistEndretAv) ?: "Ukjent",
     )
 }

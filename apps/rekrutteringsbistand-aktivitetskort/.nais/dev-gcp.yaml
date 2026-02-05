@@ -1,9 +1,11 @@
 kafka_pool: nav-dev
 cluster: dev-gcp
-min_replicas: 1
-max_replicas: 1
+min_replicas: 2
+max_replicas: 2
 gcp_db_tier: db-f1-micro
 gcp_disk_autoresize: false
 postgres_versjon: POSTGRES_17
 kafka_consumer_group_id: rekrutteringsbistand-aktivitetskort-rapid-1
-min_side_url: https://rekrutteringstreff-bruker.intern.dev.nav.no
+min_side_url: https://rekrutteringstreff-bruker.intern.dev.nav.no/rekrutteringstreff
+dab_aktivitetskort_topic: dab.aktivitetskort-v1.1
+dab_aktivitetskort_feil_topic: dab.aktivitetskort-feil-v1

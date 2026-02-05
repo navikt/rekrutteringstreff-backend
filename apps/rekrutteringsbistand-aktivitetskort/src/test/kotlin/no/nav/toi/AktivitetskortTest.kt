@@ -9,7 +9,6 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
 import no.nav.toi.aktivitetskort.AktivitetskortJobb
-import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.aktivitetskort.ErrorType
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
@@ -23,13 +22,11 @@ import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
-import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -49,7 +46,7 @@ class AktivitetskortTest {
     private val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val repository = Repository(databaseConfig, "http://url")
+    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "topic")
     private val objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
 
     @BeforeEach
@@ -62,7 +59,7 @@ class AktivitetskortTest {
         localPostgres.close()
     }
 
-    /*@Test  // TODO legg inn igjen denne testen etter duplikatfeiltesten er gjennomført
+    @Test
     fun `bestill aktivitetskort`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         val expectedFnr = "12345678910"
@@ -72,7 +69,6 @@ class AktivitetskortTest {
         val expectedStartDato = LocalDate.now().plusDays(1)
         val expectedSluttDato = LocalDate.now().plusDays(2)
         val expectedEndretAv = "testuser"
-        val expectedEndretTidspunkt = ZonedDateTime.now()
         val expectedGateAdresse = "Test Sted"
         val expectedPostnummer = "1234"
         val expectedPoststed = "Test Poststed"
@@ -86,13 +82,12 @@ class AktivitetskortTest {
             sluttDato = expectedSluttDato,
             tid = expectedTid,
             endretAv = expectedEndretAv,
-            endretTidspunkt = expectedEndretTidspunkt,
             gateAdresse = expectedGateAdresse,
             postnummer = expectedPostnummer,
             poststed = expectedPoststed
         )
 
-        AktivitetskortJobb(repository, producer, {_,_->}).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
         assertThat(producer.history()).hasSize(1)
         val record = producer.history().first()
         record.value().let (objectMapper::readTree).apply {
@@ -108,8 +103,6 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["sluttDato"].asText()).isEqualTo(expectedSluttDato.toString())
             assertThat(this["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(expectedBeskrivelse)
             assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedEndretAv)
-            assertThat(this["aktivitetskort"]["endretTidspunkt"].asText().let(ZonedDateTime::parse))
-                .isCloseTo(expectedEndretTidspunkt, within (1, ChronoUnit.SECONDS))
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
             val expectedDetaljer = objectMapper.readTree("""[{"label":"Sted","verdi":"$expectedGateAdresse, $expectedPostnummer $expectedPoststed"},{"label":"Tid","verdi":"$expectedTid"}]""")
@@ -139,22 +132,21 @@ class AktivitetskortTest {
             sluttDato = LocalDate.now().plusDays(2),
             tid = "Whatever",
             endretAv = "testuser",
-            endretTidspunkt = ZonedDateTime.now(),
             gateAdresse = "Test Sted",
             postnummer = "1234",
             poststed = "Test Poststed"
         )
 
-        AktivitetskortJobb(repository, producer,{_,_->}).run()
-        AktivitetskortJobb(repository, producer,{_,_->}).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
 
         assertThat(producer.history()).hasSize(1)
-    }*/
+    }
 
     @Test
     fun `AktivitetsJobb skal ikke feile ved tom database`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
-        AktivitetskortJobb(repository, producer).run()
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
         assertThat(producer.history()).isEmpty()
     }
 
@@ -175,7 +167,7 @@ class AktivitetskortTest {
         val messageId = invitasjon.messageId
         val rekrutteringstreffId = invitasjon.rekrutteringstreffId
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer, {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), {_,_->})
         val value = """
             {
               "key": "${UUID.randomUUID()}",
@@ -209,7 +201,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer, {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), {_,_->})
         val value = """
             {
               "key": "$messageId",
@@ -240,7 +232,7 @@ class AktivitetskortTest {
         val errorMessage = "DuplikatMeldingFeil Melding allerede handtert, ignorer"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer) { _, _ -> }
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock()) { _, _ -> }
         val value = """
         {
           "key": "${UUID.randomUUID()}",
@@ -273,7 +265,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(repository,consumer, {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository,consumer, LeaderElectionMock(), {_,_->})
         val value = """
             {
               "key": "$messageId",
@@ -301,7 +293,7 @@ class AktivitetskortTest {
 
         val rapid = TestRapid()
         val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
-        AktivitetskortFeilJobb(repository, consumer, rapid::publish).run()
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), rapid::publish).run()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
@@ -326,7 +318,7 @@ class AktivitetskortTest {
 
         val rapid = TestRapid()
         val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
-        AktivitetskortFeilJobb(repository, consumer, rapid::publish).apply {
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), rapid::publish).apply {
             run()
             run()
         }

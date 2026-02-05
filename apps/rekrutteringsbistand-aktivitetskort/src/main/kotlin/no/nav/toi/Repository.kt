@@ -1,6 +1,5 @@
 package no.nav.toi
 
-import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.aktivitetskort.*
 import org.flywaydb.core.Flyway
 import java.sql.Timestamp
@@ -10,8 +9,10 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.*
 
-class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String) {
+class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String, private val dabAktivitetskortTopic: String) {
     private val dataSource = databaseConfig.lagDatasource()
+    private val secureLog = SecureLog(log)
+
     fun opprettRekrutteringstreffInvitasjon(
         fnr: String,
         rekrutteringstreffId: UUID,
@@ -80,7 +81,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                                 AktivitetskortHandling(
                                     "Sjekk ut treffet",
                                     "Sjekk ut treffet og svar",
-                                    "$minsideUrl/rekrutteringstreff/$rekrutteringstreffId",
+                                    "$minsideUrl/$rekrutteringstreffId",
                                     LenkeType.FELLES
                                 )
                             ).joinToJson(AktivitetskortHandling::tilAkaasJson)
@@ -112,6 +113,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
             generateSequence {
                 if (resultSet.next()) {
                     Aktivitetskort(
+                        dabAktivitetskortTopic = dabAktivitetskortTopic,
                         repository = this,
                         messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
                         aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString(),
@@ -182,6 +184,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
                     if (resultSet.next()) {
                         Aktivitetskort.AktivitetskortFeil(
                             Aktivitetskort(
+                                dabAktivitetskortTopic = dabAktivitetskortTopic,
                                 repository = this,
                                 messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
                                 aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java)
@@ -296,9 +299,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
             }.executeUpdate()
         }.let { rowsUpdated ->
             if (rowsUpdated != 1) {
-                secure(log).error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
+                secureLog.error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
             } else {
-                secure(log).info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
+                secureLog.info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
             }
         }
     }
@@ -365,9 +368,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String)
             }.executeUpdate()
         }.let { rowsUpdated ->
             if (rowsUpdated != 1) {
-                secure(log).error("$rowsUpdated rader oppdatert i aktivitetskort for rekrutteringstreff $rekrutteringstreffId, forventet 1 rad oppdatert")
+                secureLog.error("$rowsUpdated rader oppdatert i aktivitetskort for rekrutteringstreff $rekrutteringstreffId, forventet 1 rad oppdatert")
             } else {
-                secure(log).info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
+                secureLog.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
             }
         }
     }

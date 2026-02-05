@@ -16,5 +16,6 @@ data class MinsideVarselSvarData(
     val avsenderNavident: String?,
     val eksternFeilmelding: String?,
     val eksternKanal: String?,
-    val mal: String?
+    val mal: String?,
+    val flettedata: List<String>? = null
 )

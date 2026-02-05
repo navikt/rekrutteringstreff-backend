@@ -1,13 +1,11 @@
 package no.nav.toi.jobbsoker
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.jackson.responseObject
-import com.github.kittinunf.result.Result
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -54,6 +52,7 @@ class JobbsøkerOutboundTest {
                 )
             ),
             dataSource = db.dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
             utvikler = AzureAdRoller.utvikler,
             kandidatsokApiUrl = wmInfo.httpBaseUrl,
@@ -68,7 +67,9 @@ class JobbsøkerOutboundTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            httpClient = httpClient,
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
     }
 
@@ -118,7 +119,6 @@ class JobbsøkerOutboundTest {
                     personTreffId = PersonTreffId(UUID.randomUUID()),
                     treffId = treffId,
                     fødselsnummer = fnr,
-                    kandidatnummer = null,
                     fornavn = Fornavn("Test"),
                     etternavn = Etternavn("Bruker"),
                     navkontor = null,
@@ -149,14 +149,14 @@ class JobbsøkerOutboundTest {
             )
             .serialize()
 
-        val (_, response, result) = Fuel
-            .get("http://localhost:$appPort$endepunktRekrutteringstreff/$treffId/jobbsoker/$personTreffId/kandidatnummer")
-            .header("Authorization", "Bearer $token")
-            .responseObject<KandidatnummerDto>()
+        val response = httpGet(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/$treffId/jobbsoker/$personTreffId/kandidatnummer",
+            token
+        )
 
-        assertStatuscodeEquals(HttpURLConnection.HTTP_OK, response, result)
-        assertThat((result as Result.Success).get().kandidatnummer)
-            .isEqualTo(forventetKandidatnummer)
+        assertThat(response.statusCode()).isEqualTo(HttpURLConnection.HTTP_OK)
+        val kandidatnummerDto = JacksonConfig.mapper.readValue(response.body(), KandidatnummerDto::class.java)
+        assertThat(kandidatnummerDto.kandidatnummer).isEqualTo(forventetKandidatnummer)
 
         verify(1, postRequestedFor(urlEqualTo("/api/arena-kandidatnr")))
     }

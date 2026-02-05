@@ -22,14 +22,14 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import java.util.Properties
 
-class App(private val rapidsConnection: RapidsConnection, private val repository: Repository, private val producer: Producer<String, String>, private val consumer: Consumer<String, String>) {
+class App(private val rapidsConnection: RapidsConnection, private val repository: Repository, private val producer: Producer<String, String>, private val consumer: Consumer<String, String>, private val dabAktivitetskortFeilTopic: String, private val leaderElection: LeaderElectionInterface) {
     init {
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
     }
     fun start() {
-        scheduler(0, 0, repository, producer, consumer, rapidsConnection)
+        scheduler(0, 0, repository, producer, consumer, rapidsConnection, dabAktivitetskortFeilTopic, leaderElection)
         rapidsConnection.start()
     }
 
@@ -50,10 +50,13 @@ fun main() {
         ),
         repository = Repository(
             DatabaseConfig(env, meterRegistry),
-            env.variable("MIN_SIDE_URL")
+            env.variable("MIN_SIDE_URL"),
+            env.variable("DAB_AKTIVITETSKORT_TOPIC")
         ),
         producer = KafkaProducer(producerConfig(env)),
         consumer = KafkaConsumer(consumerConfig(env)),
+        env.variable("DAB_AKTIVITETSKORT_FEIL_TOPIC"),
+        LeaderElection(),
     )
     app.start()
 }

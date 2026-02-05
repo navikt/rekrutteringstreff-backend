@@ -44,15 +44,21 @@ class ArbeidsgiverRepositoryTest {
         val input = LeggTilArbeidsgiver(
             Orgnr("123456789"),
             Orgnavn("Example Company"),
-            listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
+            listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff")),
+            "Fyrstikkalleen 1",
+            "0661",
+            "Oslo",
         )
-        repository.leggTil(input, treffId, "testperson")
+        db.leggTilArbeidsgiverMedHendelse(input, treffId, "testperson")
         val arbeidsgivere = repository.hentArbeidsgivere(treffId)
         assertThat(arbeidsgivere).hasSize(1)
         val ag = arbeidsgivere.first()
         assertThatCode { UUID.fromString(ag.arbeidsgiverTreffId.toString()) }.doesNotThrowAnyException()
         assertThat(ag.orgnr.asString).isEqualTo("123456789")
         assertThat(ag.orgnavn.asString).isEqualTo("Example Company")
+        assertThat(ag.gateadresse).isEqualTo("Fyrstikkalleen 1")
+        assertThat(ag.postnummer).isEqualTo("0661")
+        assertThat(ag.poststed).isEqualTo("Oslo")
 
         val arbeidsgiverHendelser = repository.hentArbeidsgiverHendelser(treffId)
         val h = arbeidsgiverHendelser.first()
@@ -67,9 +73,9 @@ class ArbeidsgiverRepositoryTest {
     fun hentArbeidsgivereTest() {
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
-        val ag1 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, Orgnr("111111111"), Orgnavn("Company A"), ArbeidsgiverStatus.AKTIV)
-        val ag2 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("222222222"), Orgnavn("Company B"), ArbeidsgiverStatus.AKTIV)
-        val ag3 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("333333333"), Orgnavn("Company C"), ArbeidsgiverStatus.AKTIV)
+        val ag1 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId1, Orgnr("111111111"), Orgnavn("Company A"), ArbeidsgiverStatus.AKTIV, "Fyrstikkalleen 1", "0661", "Oslo")
+        val ag2 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("222222222"), Orgnavn("Company B"), ArbeidsgiverStatus.AKTIV, "Fyrstikkalleen 1", "0661", "Oslo")
+        val ag3 = Arbeidsgiver(ArbeidsgiverTreffId(UUID.randomUUID()), treffId2, Orgnr("333333333"), Orgnavn("Company C"), ArbeidsgiverStatus.AKTIV, "Fyrstikkalleen 1", "0661", "Oslo")
         db.leggTilArbeidsgivere(listOf(ag1))
         db.leggTilArbeidsgivere(listOf(ag2, ag3))
         val hentet = repository.hentArbeidsgivere(treffId2)
@@ -86,9 +92,12 @@ class ArbeidsgiverRepositoryTest {
         val input = LeggTilArbeidsgiver(
             Orgnr("444444444"),
             Orgnavn("Company D"),
-            listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
+            listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff")),
+            "Fyrstikkalleen 1",
+            "0661",
+            "Oslo",
         )
-        repository.leggTil(input, treffId, "testperson")
+        db.leggTilArbeidsgiverMedHendelse(input, treffId, "testperson")
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
         assertThat(hendelser).hasSize(1)
         val h = hendelser.first()
@@ -103,11 +112,11 @@ class ArbeidsgiverRepositoryTest {
     @Test
     fun slettArbeidsgiver_returnerer_true_og_sletter_rad() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val input = LeggTilArbeidsgiver(Orgnr("987654321"), Orgnavn("Slettbar Bedrift"))
-        repository.leggTil(input, treffId, "testperson")
+        val input = LeggTilArbeidsgiver(Orgnr("987654321"), Orgnavn("Slettbar Bedrift"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
+        db.leggTilArbeidsgiverMedHendelse(input, treffId, "testperson")
         val id = repository.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId
 
-        val resultat = repository.slett(id.somUuid, "testperson")
+        val resultat = db.markerArbeidsgiverSlettet(id.somUuid, treffId, "testperson")
         assertThat(resultat).isTrue()
         assertThat(repository.hentArbeidsgivere(treffId)).isEmpty()
         val hendelser = repository.hentArbeidsgiverHendelser(treffId)
@@ -120,24 +129,25 @@ class ArbeidsgiverRepositoryTest {
 
     @Test
     fun slettArbeidsgiver_returnerer_false_når_den_ikke_finnes() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
         val tilfeldigId = UUID.randomUUID()
-        assertThat(repository.slett(tilfeldigId, "testperson")).isFalse()
+        assertThat(db.markerArbeidsgiverSlettet(tilfeldigId, treffId, "testperson")).isFalse()
     }
 
     @Test
     fun hentArbeidsgivere_filterer_bort_slettet_arbeidsgiver() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Synlig Bedrift"))
-        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Skal SLETTES"))
-        repository.leggTil(ag1, treffId, "testperson")
-        repository.leggTil(ag2, treffId, "testperson")
+        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Synlig Bedrift"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
+        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Skal SLETTES"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
+        db.leggTilArbeidsgiverMedHendelse(ag1, treffId, "testperson")
+        db.leggTilArbeidsgiverMedHendelse(ag2, treffId, "testperson")
 
         val alleFør = repository.hentArbeidsgivere(treffId)
         assertThat(alleFør).hasSize(2)
 
-        // Act: Soft-delete den ene arbeidsgiveren via SLETTET-hendelse
+        // Act: Soft-delete den ene arbeidsgiveren via TestDatabase
         val slettesId = alleFør.first { it.orgnr.asString == "222222222" }.arbeidsgiverTreffId.somUuid
-        val result = repository.slett(slettesId, "testperson")
+        val result = db.markerArbeidsgiverSlettet(slettesId, treffId, "testperson")
         assertThat(result).isTrue()
 
         // Assert: hentArbeidsgivere returnerer kun ikke-slettet arbeidsgiver
@@ -153,10 +163,10 @@ class ArbeidsgiverRepositoryTest {
     @Test
     fun `Hent antall arbeidsgivere`() {
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Bedrift En"))
-        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Bedrift To"))
-        repository.leggTil(ag1, treffId, "testperson")
-        repository.leggTil(ag2, treffId, "testperson")
+        val ag1 = LeggTilArbeidsgiver(Orgnr("111111111"), Orgnavn("Bedrift En"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
+        val ag2 = LeggTilArbeidsgiver(Orgnr("222222222"), Orgnavn("Bedrift To"), emptyList(), "Fyrstikkalleen 1", "0661", "Oslo")
+        db.leggTilArbeidsgiverMedHendelse(ag1, treffId, "testperson")
+        db.leggTilArbeidsgiverMedHendelse(ag2, treffId, "testperson")
 
         val antallArbeidsgivere = repository.hentAntallArbeidsgivere(treffId)
 

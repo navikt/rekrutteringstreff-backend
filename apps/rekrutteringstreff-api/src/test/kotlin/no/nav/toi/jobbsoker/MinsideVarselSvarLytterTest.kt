@@ -6,7 +6,6 @@ import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
-import org.junit.Ignore
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -18,6 +17,7 @@ import java.time.temporal.ChronoUnit
 class MinsideVarselSvarLytterTest {
 
     private lateinit var jobbsøkerRepository: JobbsøkerRepository
+    private lateinit var jobbsøkerService: JobbsøkerService
     private val db = TestDatabase()
     private val objectMapper = JacksonConfig.mapper
     
@@ -29,6 +29,7 @@ class MinsideVarselSvarLytterTest {
     fun beforeAll() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, objectMapper)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
     }
 
     @BeforeEach
@@ -39,17 +40,16 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal lagre MOTTATT_SVAR_FRA_MINSIDE-hendelse med alle felter`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -109,17 +109,16 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal lagre hendelse med kun påkrevde felter - håndterer manglende valgfrie felter`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -158,22 +157,22 @@ class MinsideVarselSvarLytterTest {
         assertThat(hendelseDataMap.eksternFeilmelding).isNull()
         assertThat(hendelseDataMap.eksternKanal).isNull()
         assertThat(hendelseDataMap.mal).isNull()
+        assertThat(hendelseDataMap.flettedata).isNull()
     }
 
     @Test
     fun `skal ignorere melding med aktørId felt - feil type melding`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -206,17 +205,16 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal ignorere melding med feil event_name`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -248,7 +246,7 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal ikke lagre hendelse når jobbsøker ikke finnes for treffet`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
@@ -273,17 +271,16 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal lagre hendelse med ekstern feilmelding`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -322,17 +319,16 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal håndtere flere meldinger for samme jobbsøker`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -381,17 +377,16 @@ class MinsideVarselSvarLytterTest {
     @Test
     fun `skal håndtere opprettet-dato med tidssone`() {
         val rapid = TestRapid()
-        MinsideVarselSvarLytter(rapid, jobbsøkerRepository, objectMapper)
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
 
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fødselsnummer = Fødselsnummer("12345678901")
         val endretAvIdent = "Z123456"
 
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -422,5 +417,98 @@ class MinsideVarselSvarLytterTest {
         assertThat(hendelseDataMap.opprettet).isNotNull
         val expected = java.time.ZonedDateTime.parse("2025-12-01T14:53:29.201417+01:00")
         assertThat(hendelseDataMap.opprettet!!.toInstant()).isEqualTo(expected.toInstant())
+    }
+
+    @Test
+    fun `skal lagre hendelse med flettedata for endringer`() {
+        val rapid = TestRapid()
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
+
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val endretAvIdent = "Z123456"
+
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer = fødselsnummer,
+                    fornavn = Fornavn("Ola"),
+                    etternavn = Etternavn("Nordmann"),
+                    navkontor = Navkontor("Oslo"),
+                    veilederNavn = VeilederNavn("Kari Veileder"),
+                    veilederNavIdent = VeilederNavIdent(endretAvIdent),
+                )
+            ), treffId, endretAvIdent
+        )
+
+        rapid.sendTestMessage(
+            """
+            {
+                "@event_name": "minsideVarselSvar",
+                "varselId": "varsel-endring",
+                "avsenderReferanseId": "$treffId",
+                "fnr": "${fødselsnummer.asString}",
+                "eksternStatus": "FERDIGSTILT",
+                "minsideStatus": "OPPRETTET",
+                "eksternKanal": "SMS",
+                "mal": "KANDIDAT_INVITERT_TREFF_ENDRET",
+                "flettedata": ["tidspunkt", "sted"]
+            }
+            """.trimIndent()
+        )
+
+        val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker).isNotNull
+        val minsideSvarHendelse = jobbsøker!!.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
+        assertThat(minsideSvarHendelse).isNotNull
+
+        val hendelseDataMap = minsideSvarHendelse!!.hendelseData.toMinsideVarselSvarData()
+        assertThat(hendelseDataMap.mal).isEqualTo("KANDIDAT_INVITERT_TREFF_ENDRET")
+        assertThat(hendelseDataMap.flettedata).isNotNull
+        assertThat(hendelseDataMap.flettedata).containsExactly("tidspunkt", "sted")
+    }
+
+    @Test
+    fun `skal håndtere tom flettedata-liste for endret treff malen`() {
+        val rapid = TestRapid()
+        MinsideVarselSvarLytter(rapid, jobbsøkerService, objectMapper)
+
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val endretAvIdent = "Z123456"
+
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    fødselsnummer = fødselsnummer,
+                    fornavn = Fornavn("Ola"),
+                    etternavn = Etternavn("Nordmann"),
+                    navkontor = Navkontor("Oslo"),
+                    veilederNavn = VeilederNavn("Kari Veileder"),
+                    veilederNavIdent = VeilederNavIdent(endretAvIdent),
+                )
+            ), treffId, endretAvIdent
+        )
+
+        rapid.sendTestMessage(
+            """
+            {
+                "@event_name": "minsideVarselSvar",
+                "varselId": "varsel-tom",
+                "avsenderReferanseId": "$treffId",
+                "fnr": "${fødselsnummer.asString}",
+                "mal": "KANDIDAT_INVITERT_TREFF_ENDRET",
+                "flettedata": []
+            }
+            """.trimIndent()
+        )
+
+        val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
+        assertThat(jobbsøker).isNotNull
+        val minsideSvarHendelse = jobbsøker!!.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
+        assertThat(minsideSvarHendelse).isNotNull
+
+        val hendelseDataMap = minsideSvarHendelse!!.hendelseData.toMinsideVarselSvarData()
+        assertThat(hendelseDataMap.flettedata).isEmpty()
     }
 }

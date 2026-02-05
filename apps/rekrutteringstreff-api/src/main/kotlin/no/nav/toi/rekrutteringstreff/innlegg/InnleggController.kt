@@ -63,7 +63,7 @@ class InnleggController(
         methods = [HttpMethod.GET]
     )
     private fun hentAlleInnleggForTreff(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET, Rolle.BORGER)
         val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
         ctx.json(innleggRepository.hentForTreff(treffId).map(Innlegg::toResponseDto))
     }
@@ -98,7 +98,7 @@ class InnleggController(
         methods = [HttpMethod.GET]
     )
     private fun hentEttInnlegg(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET, Rolle.BORGER)
         val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
         ctx.json(innleggRepository.hentById(id)?.toResponseDto() ?: throw NotFoundResponse())
     }
@@ -142,7 +142,7 @@ class InnleggController(
         methods = [HttpMethod.POST]
     )
     private fun opprettInnlegg(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
         val dto = ctx.bodyAsClass<OpprettInnleggRequestDto>()
         val navIdent = ctx.authenticatedUser().extractNavIdent()
@@ -196,7 +196,7 @@ class InnleggController(
         methods = [HttpMethod.PUT]
     )
     private fun oppdaterEttInnlegg(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
         val innleggId = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
         val dto = ctx.bodyAsClass<OppdaterInnleggRequestDto>()
@@ -224,7 +224,7 @@ class InnleggController(
         methods = [HttpMethod.DELETE]
     )
     private fun slettEttInnlegg(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
         if (innleggRepository.slett(id)) ctx.status(HTTP_NO_CONTENT) else throw NotFoundResponse()
     }

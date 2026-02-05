@@ -1,12 +1,11 @@
 package no.nav.toi
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.extensions.jsonBody
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -46,6 +45,7 @@ class AppExceptionHandlingTest {
                 )
             ),
             dataSource = TestDatabase().dataSource,
+            jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = arbeidsgiverrettet,
             utvikler = utvikler,
             kandidatsokApiUrl = "",
@@ -60,7 +60,9 @@ class AppExceptionHandlingTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234")
+            pilotkontorer = listOf("1234"),
+            httpClient = httpClient,
+            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
 
         authServer.start(port = authPort)
@@ -68,12 +70,13 @@ class AppExceptionHandlingTest {
 
         setupStubs()
         val token = authServer.lagToken(authPort).serialize()
-        val (_, response, _) = Fuel.post("http://localhost:$port/api/rekrutteringstreff")
-            .header("Authorization", "Bearer $token")
-            .jsonBody("""{"opprettetAvNavkontorEnhetId":"0313"}""")
-            .response()
-        assertThat(response.statusCode).isEqualTo(201)
-        val body = String(response.data)
+        val response = httpPost(
+            "http://localhost:$port/api/rekrutteringstreff",
+            """{"opprettetAvNavkontorEnhetId":"0313"}""",
+            token
+        )
+        assertThat(response.statusCode()).isEqualTo(201)
+        val body = response.body()
         // body expected like: {"id":"uuid"}
         val idRegex = Regex(""""id"\s*:\s*"([a-f0-9\-]+)"""")
         val match = idRegex.find(body) ?: error("Fikk ikke id fra opprett-respons: $body")
@@ -147,7 +150,7 @@ class AppExceptionHandlingTest {
     }
 
     @Test
-    fun `Oppdatering av treff som ikke finnes gir 404 (NotFoundException)`() {
+    fun `Oppdatering av treff som ikke finnes og dermed ingen eiere gir 500`() {
         val ikkeEksisterendeId = UUID.randomUUID()
         val json = """{
             "tittel":"Test",
@@ -167,8 +170,8 @@ class AppExceptionHandlingTest {
             .PUT(HttpRequest.BodyPublishers.ofString(json))
             .build()
 
-        val response = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
-        assertThat(response.statusCode()).isEqualTo(404)
+        assertThat(response.statusCode()).isEqualTo(500)
     }
 }

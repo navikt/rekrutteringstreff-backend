@@ -1,9 +1,7 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.executeInTransaction
 import java.sql.Connection
-import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.ZonedDateTime
 import java.util.UUID
@@ -18,7 +16,7 @@ class AktivitetskortRepository(private val dataSource: DataSource) {
             left join aktivitetskort_polling p on jh.jobbsoker_hendelse_id = p.jobbsoker_hendelse_id
             left join jobbsoker j on jh.jobbsoker_id = j.jobbsoker_id
             left join rekrutteringstreff rt on j.rekrutteringstreff_id = rt.rekrutteringstreff_id
-            where p.aktivitetskort_polling_id is null and jh.hendelsestype = ?
+            where p.aktivitetskort_polling_id is null and jh.hendelsestype = ? and j.er_synlig = TRUE
             order by jh.tidspunkt
             """
         )

@@ -14,16 +14,16 @@ spec:
   {{/each}}
   liveness:
     path: /isalive
+    initialDelay: 40
   readiness:
     path: /isready
+    initialDelay: 40
   prometheus:
     enabled: true
     path: /metrics
   replicas:
     min: {{ min_replicas }}
     max: {{ max_replicas }}
-  secureLogs:
-    enabled: true
   resources:
     limits:
       cpu: 3000m
@@ -33,6 +33,7 @@ spec:
       memory: 512Mi
   kafka:
     pool: {{ kafka_pool }}
+  leaderElection: true
   gcp:
     sqlInstances:
       - type: {{ postgres_versjon }}
@@ -40,6 +41,11 @@ spec:
         diskAutoresize: {{ gcp_disk_autoresize }}
         databases:
           - name: aktivitetskort-db
+  accessPolicy:
+    outbound:
+      rules:
+        - application: logging
+          namespace: nais-system
   env:
     - name: KAFKA_RAPID_TOPIC
       value: toi.rapid-1
@@ -47,3 +53,13 @@ spec:
       value: {{ kafka_consumer_group_id }}
     - name: MIN_SIDE_URL
       value: {{ min_side_url }}
+    - name: DAB_AKTIVITETSKORT_TOPIC
+      value: {{ dab_aktivitetskort_topic }}
+    - name: DAB_AKTIVITETSKORT_FEIL_TOPIC
+      value: {{ dab_aktivitetskort_feil_topic }}
+  observability:
+    logging:
+      destinations:
+        - id: loki
+        - id: elastic
+      enabled: true

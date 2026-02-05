@@ -3,10 +3,8 @@ package no.nav.toi.rekrutteringstreff
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdatering
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffSvarOgStatus
-import no.nav.toi.rekrutteringstreff.dto.EndringerDto
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
 import java.util.*
 
 class Rekrutteringstreff(
@@ -28,6 +26,8 @@ class Rekrutteringstreff(
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
     val eiere: List<String>,
+    val sistEndret: ZonedDateTime,
+    val sistEndretAv: String,
 ) {
     fun tilRekrutteringstreffDto(antallArbeidsgivere: Int, antallJobsøkere: Int) = RekrutteringstreffDto(
         tittel = tittel,
@@ -49,7 +49,9 @@ class Rekrutteringstreff(
         id = id.somUuid,
         antallArbeidsgivere = antallArbeidsgivere,
         antallJobbsøkere = antallJobsøkere,
-        eiere = eiere
+        eiere = eiere,
+        sistEndret = sistEndret,
+        sistEndretAv = sistEndretAv
     )
     fun aktivitetskortInvitasjonFor(fnr: String, hendelseId: UUID, avsenderNavident: String?) = Aktivitetskortinvitasjon.opprett(
         fnr = fnr,
@@ -67,20 +69,27 @@ class Rekrutteringstreff(
     )
     fun aktivitetskortSvarOgStatusFor(
         fnr: String,
+        hendelseId: UUID,
+        endretAvPersonbruker: Boolean,
         svar: Boolean? = null,
         treffstatus: String? = null,
-        endretAvPersonbruker: Boolean,
-        endretAv: String? = null
+        endretAv: String? = null,
     ) = RekrutteringstreffSvarOgStatus(
         fnr = fnr,
         rekrutteringstreffId = id,
         endretAv = endretAv ?: if (endretAvPersonbruker) fnr else opprettetAvPersonNavident,
         endretAvPersonbruker = endretAvPersonbruker,
+        hendelseId = hendelseId,
         svar = svar,
-        treffstatus = treffstatus
+        treffstatus = treffstatus,
     )
 
-    fun aktivitetskortOppdateringFor(fnr: String, hendelseId: UUID, avsenderNavident: String?) = AktivitetskortOppdatering(
+    fun aktivitetskortOppdateringFor(
+        fnr: String,
+        hendelseId: UUID,
+        avsenderNavident: String?,
+        endredeFelter: List<Endringsfelttype>? = null
+    ) = AktivitetskortOppdatering(
         fnr = fnr,
         rekrutteringstreffId = id,
         hendelseId = hendelseId,
@@ -90,77 +99,8 @@ class Rekrutteringstreff(
         gateadresse = gateadresse!!,
         postnummer = postnummer!!,
         poststed = poststed!!,
-        endretAv = avsenderNavident
-    )
-
-    fun harRelevanteEndringerForAktivitetskort(endringer: EndringerDto): Boolean {
-        return endringer.tittel != null ||
-               endringer.fraTid != null ||
-               endringer.tilTid != null ||
-               endringer.postnummer != null ||
-               endringer.poststed != null ||
-               endringer.gateadresse != null
-    }
-
-    fun verifiserEndringerMotDatabase(endringer: EndringerDto): VerificationResult {
-        val feil = mutableListOf<String>()
-
-        endringer.tittel?.let {
-            if (it.nyVerdi != tittel) {
-                feil.add("tittel: forventet '${it.nyVerdi}', faktisk '$tittel'")
-            }
-        }
-
-        endringer.fraTid?.let {
-            val nyVerdiParsed = it.nyVerdi?.let { v -> ZonedDateTime.parse(v) }
-            if (nyVerdiParsed != null && fraTid != null) {
-                // Sammenlign med trunkering til millisekunder for å unngå database presisjonsproblemer
-                if (nyVerdiParsed.truncatedTo(ChronoUnit.MILLIS) !=
-                    fraTid.truncatedTo(ChronoUnit.MILLIS)) {
-                    feil.add("fraTid: forventet '${it.nyVerdi}', faktisk '$fraTid'")
-                }
-            }
-        }
-
-        endringer.tilTid?.let {
-            val nyVerdiParsed = it.nyVerdi?.let { v -> ZonedDateTime.parse(v) }
-            if (nyVerdiParsed != null && tilTid != null) {
-                // Sammenlign med trunkering til millisekunder for å unngå database presisjonsproblemer
-                if (nyVerdiParsed.truncatedTo(ChronoUnit.MILLIS) !=
-                    tilTid.truncatedTo(ChronoUnit.MILLIS)) {
-                    feil.add("tilTid: forventet '${it.nyVerdi}', faktisk '$tilTid'")
-                }
-            }
-        }
-
-        endringer.postnummer?.let {
-            if (it.nyVerdi != postnummer) {
-                feil.add("postnummer: forventet '${it.nyVerdi}', faktisk '$postnummer'")
-            }
-        }
-
-        endringer.poststed?.let {
-            if (it.nyVerdi != poststed) {
-                feil.add("poststed: forventet '${it.nyVerdi}', faktisk '$poststed'")
-            }
-        }
-
-        endringer.gateadresse?.let {
-            if (it.nyVerdi != gateadresse) {
-                feil.add("gateadresse: forventet '${it.nyVerdi}', faktisk '$gateadresse'")
-            }
-        }
-
-        return if (feil.isEmpty()) {
-            VerificationResult(erGyldig = true)
-        } else {
-            VerificationResult(erGyldig = false, feilmelding = feil.joinToString(", "))
-        }
-    }
-
-    data class VerificationResult(
-        val erGyldig: Boolean,
-        val feilmelding: String? = null
+        endretAv = avsenderNavident,
+        endredeFelter = endredeFelter
     )
 }
 

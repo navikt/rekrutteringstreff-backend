@@ -40,9 +40,9 @@ class RekrutteringstreffSvarOgStatusLytterTest {
     private val rapid = TestRapid()
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val repository = Repository(databaseConfig, "http://url")
-    private val app = App(rapid, Repository(databaseConfig, "http://url"), MockProducer(), MockConsumer(
-        OffsetResetStrategy.EARLIEST))
+    private val repository = Repository(databaseConfig, "http://url", "topic")
+    private val app = App(rapid, Repository(databaseConfig, "http://url", "topic"), MockProducer(), MockConsumer(
+        OffsetResetStrategy.EARLIEST), "topic", LeaderElectionMock())
 
     @BeforeEach
     fun setup() {

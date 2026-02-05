@@ -4,7 +4,6 @@ plugins {
 }
 
 val javalinVersion = "6.4.0"
-val fuelVersion = "2.3.1"
 val mockOAuth2ServerVersion = "2.1.0"
 val flywayVersion = "11.3.0"
 val postgresVersion = "42.7.5"
@@ -15,15 +14,13 @@ val nimbusVersion = "10.0.1"
 val wiremockVersion = "3.12.0"
 val jacksonDatatypeJsr310Version = "2.18.2" // JavaTimeModule, se https://github.com/FasterXML/jackson-modules-java8
 val resilience4jVersion = "2.2.0"
-
+val navCommonVersion = "3.2024.11.26_16.35-432a29107830"
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
-    implementation("com.github.kittinunf.fuel:fuel:$fuelVersion")
-    implementation("com.github.kittinunf.fuel:fuel-jackson:$fuelVersion")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonDatatypeJsr310Version")
     implementation("io.javalin:javalin:$javalinVersion")
 
@@ -37,6 +34,7 @@ dependencies {
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
     implementation("org.ehcache:ehcache:3.10.8")
     implementation("io.github.resilience4j:resilience4j-retry:$resilience4jVersion")
+    implementation("no.nav.common:audit-log:$navCommonVersion")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")

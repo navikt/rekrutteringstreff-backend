@@ -24,6 +24,7 @@ class AktivitetskortTransaksjonTest {
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private lateinit var rekrutteringstreffService: RekrutteringstreffService
         private lateinit var arbeidsgiverRepository: ArbeidsgiverRepository
+        private lateinit var jobbsøkerService: JobbsøkerService
         private val mapper = JacksonConfig.mapper
     }
 
@@ -34,7 +35,8 @@ class AktivitetskortTransaksjonTest {
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
         arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
     }
 
     @BeforeEach
@@ -45,15 +47,21 @@ class AktivitetskortTransaksjonTest {
     @Test
     fun `skal rulle tilbake databaseendringer dersom kafka feiler ved invitasjon`() {
         val failingRapid = FailingRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, failingRapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            failingRapid,
+            mapper,
+            LeaderElectionMock(),
+        )
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -63,7 +71,7 @@ class AktivitetskortTransaksjonTest {
             ), treffId, "Z123456"
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, "Z123456")
 
         scheduler.behandleJobbsøkerHendelser()
 
@@ -75,15 +83,21 @@ class AktivitetskortTransaksjonTest {
     @Test
     fun `skal rulle tilbake databaseendringer dersom kafka feiler ved treff endret`() {
         val failingRapid = FailingRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(db.dataSource, aktivitetskortRepository, rekrutteringstreffRepository, failingRapid, mapper)
+        val scheduler = AktivitetskortJobbsøkerScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            failingRapid,
+            mapper,
+            LeaderElectionMock(),
+        )
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
 
         val fødselsnummer = Fødselsnummer("12345678901")
-        jobbsøkerRepository.leggTil(
+        db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
                     fødselsnummer = fødselsnummer,
-                    kandidatnummer = Kandidatnummer("ABC123"),
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
                     navkontor = Navkontor("Oslo"),
@@ -93,14 +107,14 @@ class AktivitetskortTransaksjonTest {
             ), treffId, "Z123456"
         )
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
-        jobbsøkerRepository.inviter(listOf(personTreffId), treffId, "Z123456")
+        jobbsøkerService.inviter(listOf(personTreffId), treffId, "Z123456")
 
         // Mark invitation as handled so we don't fail on that
         val invitasjoner = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         invitasjoner.forEach { aktivitetskortRepository.lagrePollingstatus(it.jobbsokerHendelseDbId) }
 
-        val endringer = no.nav.toi.rekrutteringstreff.dto.EndringerDto(
-            tittel = no.nav.toi.rekrutteringstreff.dto.Endringsfelt(gammelVerdi = "Gammel", nyVerdi = "Ny")
+        val endringer = no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer(
+            navn = no.nav.toi.rekrutteringstreff.Endringsfelt(gammelVerdi = "Gammel", nyVerdi = "Ny")
         )
         db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
 

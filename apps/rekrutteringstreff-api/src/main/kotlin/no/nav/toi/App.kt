@@ -12,27 +12,29 @@ import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import no.nav.toi.SecureLogLogger.Companion.secure
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
-import no.nav.toi.jobbsoker.AktivitetskortFeilLytter
-import no.nav.toi.jobbsoker.JobbsøkerController
-import no.nav.toi.jobbsoker.JobbsøkerInnloggetBorgerController
-import no.nav.toi.jobbsoker.JobbsøkerOutboundController
-import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
+import no.nav.toi.arbeidsgiver.ArbeidsgiverService
+import no.nav.toi.exception.*
+import no.nav.toi.jobbsoker.*
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
+import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.eier.EierController
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
+import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.flywaydb.core.Flyway
 import java.net.http.HttpClient
@@ -47,6 +49,7 @@ class App(
     private val port: Int,
     private val authConfigs: List<AuthenticationConfiguration>,
     private val dataSource: DataSource,
+    private val jobbsøkerrettet: UUID,
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
     private val kandidatsokKlient: KandidatsøkKlient,
@@ -54,12 +57,14 @@ class App(
     private val isRunning: () -> Boolean,
     private val isReady: () -> Boolean,
     private val modiaKlient: ModiaKlient,
-    private val pilotkontorer: List<String>
+    private val pilotkontorer: List<String>,
+    private val leaderElection: LeaderElectionInterface,
 ) {
     constructor(
         port: Int,
         authConfigs: List<AuthenticationConfiguration>,
         dataSource: DataSource,
+        jobbsøkerrettet: UUID,
         arbeidsgiverrettet: UUID,
         utvikler: UUID,
         kandidatsokApiUrl: String,
@@ -70,31 +75,40 @@ class App(
         accessTokenClient: AccessTokenClient,
         modiaKlient: ModiaKlient,
         pilotkontorer: List<String>,
+        httpClient: HttpClient,
+        leaderElection: LeaderElectionInterface,
     ) : this(
         port = port,
         authConfigs = authConfigs,
         dataSource = dataSource,
+        jobbsøkerrettet = jobbsøkerrettet,
         arbeidsgiverrettet = arbeidsgiverrettet,
         utvikler = utvikler,
         kandidatsokKlient = KandidatsøkKlient(
             kandidatsokApiUrl = kandidatsokApiUrl,
             kandidatsokScope = kandidatsokScope,
-            accessTokenClient = accessTokenClient
+            accessTokenClient = accessTokenClient,
+            httpClient = httpClient
         ),
         rapidsConnection = rapidsConnection,
         isRunning = isRunning,
         isReady = isReady,
         modiaKlient = modiaKlient,
-        pilotkontorer = pilotkontorer
+        pilotkontorer = pilotkontorer,
+        leaderElection = leaderElection,
     )
 
     private lateinit var javalin: Javalin
     private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
+    private lateinit var synlighetsBehovScheduler: SynlighetsBehovScheduler
+    private val secureLog = SecureLog(log)
+
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         startJavalin(jobbsøkerRepository)
-        startSchedulere(jobbsøkerRepository)
-        startRR(jobbsøkerRepository)
+        startSchedulere(jobbsøkerService, leaderElection)
+        startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
 
@@ -142,16 +156,42 @@ class App(
 
         javalin.exception(java.sql.SQLException::class.java) { e, ctx ->
             if (e.sqlState == "23503") {
-                ctx.status(409).json(mapOf(
-                    "feil" to "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes. Slett barn først."
-                ))
+                ctx.status(409).json(
+                    mapOf(
+                        "feil" to "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes. Slett barn først."
+                    )
+                )
             } else {
-                secure(log).error("SQL-feil", e)
+                secureLog.error("SQL-feil", e)
                 ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod på serveren."))
             }
         }
-        javalin.exception(no.nav.toi.rekrutteringstreff.UlovligSlettingException::class.java) { e, ctx ->
+        javalin.exception(UlovligSlettingException::class.java) { e, ctx ->
             ctx.status(409).json(mapOf("feil" to (e.message ?: "Ulovlig sletting")))
+        }
+
+        javalin.exception(UlovligOppdateringException::class.java) { e, ctx ->
+            ctx.status(409).json(mapOf("feil" to (e.message ?: "Konflikt ved oppdatering")))
+        }
+
+        javalin.exception(IllegalArgumentException::class.java) { e, ctx ->
+            ctx.status(400).json(mapOf("feil" to (e.message ?: "Ugyldig input")))
+        }
+
+        javalin.exception(SvarfristUtløptException::class.java) { e, ctx ->
+            ctx.status(400).json(mapOf("feil" to (e.message ?: "Svarfristen har utløpt")))
+        }
+
+        javalin.exception(RekrutteringstreffIkkeFunnetException::class.java) { e, ctx ->
+            ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke rekrutteringstreffet")))
+        }
+
+        javalin.exception(JobbsøkerIkkeFunnetException::class.java) { e, ctx ->
+            ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke jobbsøkeren")))
+        }
+
+        javalin.exception(JobbsøkerIkkeSynligException::class.java) { e, ctx ->
+            ctx.status(403).json(mapOf("feil" to (e.message ?: "Jobbsøker er ikke synlig")))
         }
 
         javalin.exception(Exception::class.java) { e, ctx ->
@@ -166,7 +206,11 @@ class App(
         javalin.handleHealth(isRunning, isReady)
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             authConfigs = authConfigs,
-            rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(arbeidsgiverrettet, utvikler),
+            rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
+                jobbsøkerrettet = jobbsøkerrettet,
+                arbeidsgiverrettet = arbeidsgiverrettet,
+                utvikler = utvikler
+            ),
             modiaKlient = modiaKlient,
             pilotkontorer = pilotkontorer
         )
@@ -177,11 +221,20 @@ class App(
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val kiLoggRepository = KiLoggRepository(dataSource)
 
-        val rekrutteringstreffService = RekrutteringstreffService(dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
+        val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
+        val rekrutteringstreffService = RekrutteringstreffService(
+            dataSource,
+            rekrutteringstreffRepository,
+            jobbsøkerRepository,
+            arbeidsgiverRepository,
+            jobbsøkerService
+        )
+        val eierService = EierService(eierRepository)
 
         RekrutteringstreffController(
-            rekrutteringstreffRepository = rekrutteringstreffRepository,
             rekrutteringstreffService = rekrutteringstreffService,
+            eierService = eierService,
             javalin = javalin
         )
         InnleggController(
@@ -190,38 +243,40 @@ class App(
         )
         EierController(
             eierRepository = eierRepository,
+            eierService = eierService,
             javalin = javalin
         )
         ArbeidsgiverController(
-            arbeidsgiverRepository = arbeidsgiverRepository,
-            eierRepository = eierRepository,
+            arbeidsgiverService = arbeidsgiverService,
+            eierService = eierService,
             javalin = javalin
         )
         JobbsøkerController(
-            jobbsøkerRepository = jobbsøkerRepository,
-            eierRepository = eierRepository,
+            jobbsøkerService = jobbsøkerService,
+            eierService = eierService,
             javalin = javalin
         )
         JobbsøkerInnloggetBorgerController(
-            jobbsøkerRepository = jobbsøkerRepository,
+            jobbsøkerService = jobbsøkerService,
             javalin = javalin
         )
         JobbsøkerOutboundController(
             jobbsøkerRepository = jobbsøkerRepository,
             kandidatsøkKlient = kandidatsokKlient,
-            eierRepository = eierRepository,
+            eierService = eierService,
             javalin = javalin
         )
         KiController(
             kiLoggRepository = kiLoggRepository,
-            javalin
+            openAiClient = OpenAiClient(repo = kiLoggRepository),
+            javalin = javalin
         )
 
         javalin.start(port)
     }
 
-    private fun startSchedulere(jobbsøkerRepository: JobbsøkerRepository) {
-        log.info("Starting scheduler")
+    private fun startSchedulere(jobbsøkerService: JobbsøkerService, leaderElection: LeaderElectionInterface) {
+        log.info("Starting schedulers")
 
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
@@ -231,15 +286,25 @@ class App(
             aktivitetskortRepository = aktivitetskortRepository,
             rekrutteringstreffRepository = rekrutteringstreffRepository,
             rapidsConnection = rapidsConnection,
-            objectMapper = JacksonConfig.mapper
+            objectMapper = JacksonConfig.mapper,
+            leaderElection = leaderElection,
         )
         aktivitetskortJobbsøkerScheduler.start()
+
+        synlighetsBehovScheduler = SynlighetsBehovScheduler(
+            jobbsøkerService = jobbsøkerService,
+            rapidsConnection = rapidsConnection,
+            leaderElection = leaderElection,
+        )
+        synlighetsBehovScheduler.start()
     }
 
-    fun startRR(jobbsøkerRepository: JobbsøkerRepository) {
+    fun startRR(jobbsøkerService: JobbsøkerService) {
         log.info("Starting RapidsConnection")
-        AktivitetskortFeilLytter(rapidsConnection, jobbsøkerRepository)
-        MinsideVarselSvarLytter(rapidsConnection, jobbsøkerRepository, JacksonConfig.mapper)
+        AktivitetskortFeilLytter(rapidsConnection, jobbsøkerService)
+        MinsideVarselSvarLytter(rapidsConnection, jobbsøkerService, JacksonConfig.mapper)
+        SynlighetsLytter(rapidsConnection, jobbsøkerService)
+        SynlighetsBehovLytter(rapidsConnection, jobbsøkerService)
         Thread {
             try {
                 rapidsConnection.start()
@@ -253,6 +318,7 @@ class App(
     fun close() {
         log.info("Shutting down application")
         if (::aktivitetskortJobbsøkerScheduler.isInitialized) aktivitetskortJobbsøkerScheduler.stop()
+        if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")
@@ -313,6 +379,7 @@ fun main() {
                 ) else null
         ),
         dataSource = dataSource,
+        jobbsøkerrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_JOBBSOKERRETTET")),
         arbeidsgiverrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET")),
         utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER")),
         kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
@@ -322,7 +389,9 @@ fun main() {
         isReady = rapidsConnection::isReady,
         accessTokenClient = accessTokenClient,
         modiaKlient = modiaKlient,
-        pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() }
+        pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() },
+        httpClient = httpClient,
+        leaderElection = LeaderElection(),
     ).start()
 }
 

@@ -28,7 +28,10 @@ data class Næringskode(
 data class LeggTilArbeidsgiver(
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
-    val næringskoder: List<Næringskode> = emptyList()
+    val næringskoder: List<Næringskode> = emptyList(),
+    val gateadresse: String?,
+    val postnummer: String?,
+    val poststed: String?,
 )
 
 data class ArbeidsgiverTreffId(private val id: UUID) {
@@ -49,4 +52,7 @@ data class Arbeidsgiver(
     val orgnr: Orgnr,
     val orgnavn: Orgnavn,
     val status: ArbeidsgiverStatus,
+    val gateadresse: String?,
+    val postnummer: String?,
+    val poststed: String?,
 )
