@@ -105,7 +105,7 @@ Dette dokumentet beskriver rutiner utviklere må følge ved vedlikehold og utvik
 ### Rutine
 
 1. Dokumenter formål med endring i PR-beskrivelse
-2. Følg klarspråk-prinsipper (se [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md))
+2. Følg klarspråk-prinsipper (se [ki-tekstvalidering.md](../5-ki/ki-tekstvalidering.md))
 3. **Inkrementer versjonsnummer** i systemprompten manuelt
 4. **Oppdater tidspunkt** i systemprompten
 5. **Generer ny hash** ved å kjøre `main` i systemprompt-filen
@@ -197,7 +197,7 @@ Prompten er versjonskontrollert og kan enkelt reverteres via git. Ved akutt beho
 ### Testing (før produksjonssetting)
 
 1. Oppdater modellversjon i dev/test først
-2. Kjør full benchmark-suite mot eksisterende testcases (se [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md))
+2. Kjør full benchmark-suite mot eksisterende testcases (se [ki-tekstvalidering.md](../5-ki/ki-tekstvalidering.md))
 3. Sammenlign treffprosent med nåværende modell
 4. Verifiser at **90%-målet** for testcases opprettholdes
 5. Dokumenter eventuelle risikoer eller endringer i oppførsel
@@ -344,6 +344,6 @@ I tillegg til automatiske tester:
 
 ## Se også
 
-- [ki-tekstvalideringstjeneste.md](../5-ki/ki-tekstvalideringstjeneste.md) - Teknisk dokumentasjon av KI-tekstvalideringstjenesten
+- [ki-tekstvalidering.md](../5-ki/ki-tekstvalidering.md) - Teknisk dokumentasjon av KI-tekstvalidering
 - [tilgangsstyring.md](../3-sikkerhet/tilgangsstyring.md) - Tilgangskontroll og roller
 - [akseptansetester.md](../7-akseptansetest-og-ros/akseptansetester.md) - Akseptansetester inkl. KI-tester

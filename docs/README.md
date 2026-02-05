@@ -36,7 +36,7 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 
 ### 5. [KI](5-ki/)
 
-- [KI-tekstvalideringstjenesten](5-ki/ki-tekstvalideringstjeneste.md) - Validering av rekrutteringstreff-innhold med KI
+- [KI-tekstvalidering](5-ki/ki-tekstvalidering.md) - Validering av rekrutteringstreff-innhold med KI
 
 ### 6. [Kvalitet](6-kvalitet/)
 

@@ -151,7 +151,7 @@ private class AutorisasjonsTest {
                     HttpRequest.BodyPublishers.ofString(
                         JacksonConfig.mapper.writeValueAsString(
                             OppdaterRekrutteringstreffDto(
-                                tittel = "Oppdatert Tittel",
+                                tittel = "Tittel",
                                 beskrivelse = "Oppdatert beskrivelse",
                                 fraTid = nowOslo().minusHours(2),
                                 tilTid = nowOslo().plusHours(3),

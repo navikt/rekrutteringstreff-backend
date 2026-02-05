@@ -31,6 +31,7 @@ import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
+import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
 import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.flywaydb.core.Flyway
@@ -185,6 +186,10 @@ class App(
             ctx.status(403).json(mapOf("feil" to (e.message ?: "Jobbsøker er ikke synlig")))
         }
 
+        javalin.exception(KiValideringsException::class.java) { e, ctx ->
+            ctx.status(422).json(mapOf("feilkode" to e.feilkode, "melding" to e.melding))
+        }
+
         javalin.exception(Exception::class.java) { e, ctx ->
             log.error("Uventet feil", e)
             ctx.status(500).json(
@@ -211,6 +216,7 @@ class App(
         val innleggRepository = InnleggRepository(dataSource)
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val kiLoggRepository = KiLoggRepository(dataSource)
+        val kiValideringsService = KiValideringsService(kiLoggRepository)
 
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
@@ -226,10 +232,12 @@ class App(
         RekrutteringstreffController(
             rekrutteringstreffService = rekrutteringstreffService,
             eierService = eierService,
+            kiValideringsService = kiValideringsService,
             javalin = javalin
         )
         InnleggController(
             innleggRepository = innleggRepository,
+            kiValideringsService = kiValideringsService,
             javalin = javalin
         )
         EierController(

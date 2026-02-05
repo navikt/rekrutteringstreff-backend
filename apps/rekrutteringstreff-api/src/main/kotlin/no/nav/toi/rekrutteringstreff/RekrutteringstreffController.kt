@@ -12,6 +12,7 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.*
 import no.nav.toi.rekrutteringstreff.eier.EierService
+import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.ZonedDateTime
@@ -20,6 +21,7 @@ import java.util.*
 class RekrutteringstreffController(
     private val rekrutteringstreffService: RekrutteringstreffService,
     private val eierService: EierService,
+    private val kiValideringsService: KiValideringsService,
     javalin: Javalin
 ) {
     companion object {
@@ -275,6 +277,17 @@ class RekrutteringstreffController(
         val navIdent = ctx.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
+            val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id)
+            if (kiValideringsService.erTekstEndret(eksisterendeTreff.tittel, dto.tittel)) {
+                kiValideringsService.verifiserKiValidering(
+                    tekst = dto.tittel,
+                    kiLoggId = dto.tittelKiLoggId,
+                    lagreLikevel = dto.lagreLikevel,
+                    feltType = "tittel",
+                    forventetTreffId = id.somUuid
+                )
+            }
+
             rekrutteringstreffService.oppdater(id, dto, navIdent)
             val updated = rekrutteringstreffService.hentRekrutteringstreff(id)
             ctx.status(200).json(updated)

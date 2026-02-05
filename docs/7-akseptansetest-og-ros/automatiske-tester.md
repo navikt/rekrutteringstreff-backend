@@ -74,25 +74,42 @@ Dette dokumentet gir oversikt over teststatus og definerer oppgaver for manglend
 | **KI-logg repository**                 | `KiLoggRepositoryTest.kt`                                                                   | ✅ AT 11.4 - Lagring og henting av KI-valideringslogg                                                                                                                                                                    |
 | **KI-autorisasjon**                    | `KiAutorisasjonsTest.kt`                                                                    | ✅ AT 15.4.1 - Kun utviklere kan se KI-logg                                                                                                                                                                              |
 | **KI-integrasjon**                     | `KiTest.kt`                                                                                 | ✅ AT 11 - KI-validering av tekst                                                                                                                                                                                        |
+| **KI-valideringsservice**              | `KiValideringsServiceTest.kt`                                                               | ✅ AT 11.8 - Backend-sikring ved lagring (feilkoder, normalisering, lagreLikevel)                                                                                                                                        |
 
 ---
 
-## ❌ Manglende tester – anbefalt å implementere
+## ✅ Implementerte KI-sikkerhetstester
 
-Følgende akseptansetester har backend-logikk som bør testes automatisk, men som ikke er dekket i dag:
+KI bypass-sikkerhet er nå implementert i backend. Følgende funksjonalitet er på plass:
 
-### 1. KI bypass-sikkerhet (høy prioritet – ROS 27547)
+### Backend-validering ved lagring
 
-| AT-ref | Beskrivelse                                                             | Anbefalt testfil         | Kompleksitet |
-| ------ | ----------------------------------------------------------------------- | ------------------------ | ------------ |
-| 11.8.2 | API-kall uten KI-validering avvises                                     | `KiAutorisasjonsTest.kt` | Middels      |
-| 11.8.3 | Lagring med `flaggAdvarsel=true` uten `lagreLikevel` gir feil           | `KiAutorisasjonsTest.kt` | Middels      |
-| 11.8.4 | Backend krever gyldig KI-valideringsresultat for å lagre tittel/innlegg | `KiAutorisasjonsTest.kt` | Høy          |
+| AT-ref | Beskrivelse                                                             | Implementert i                                            | Status |
+| ------ | ----------------------------------------------------------------------- | --------------------------------------------------------- | ------ |
+| 11.8.2 | API-kall uten KI-validering avvises                                     | `KiValideringsService.kt`                                 | ✅     |
+| 11.8.3 | Lagring med `bryterRetningslinjer=true` uten `lagreLikevel` gir feil    | `KiValideringsService.kt`                                 | ✅     |
+| 11.8.4 | Backend krever gyldig KI-valideringsresultat for å lagre tittel/innlegg | `RekrutteringstreffController.kt`, `InnleggController.kt` | ✅     |
 
-> ⚠️ **Merk:** Disse testene krever arkitekturendring. Per i dag er KI bypass-beskyttelse kun implementert i frontend. Backend har ingen `lagreLikevel`-parameter eller krav om gyldig KI-valideringsresultat. Se [ROS 27547](../ros-pilot.md) for detaljer.
+**Feilkoder (HTTP 422):**
 
----
+- `KI_VALIDERING_MANGLER` - Ingen loggId oppgitt
+- `KI_LOGG_ID_UGYLDIG` - LoggId finnes ikke i databasen
+- `KI_TEKST_ENDRET` - Tekst endret etter KI-validering
+- `KI_KREVER_BEKREFTELSE` - Bruker må bekrefte advarsel med `lagreLikevel=true`
 
-## Anbefalte neste steg
+Se [ki-tekstvalidering.md](../5-ki/ki-tekstvalidering.md) for fullstendig dokumentasjon.
 
-1. **KI bypass-sikkerhet** – kritisk for ROS, men krever arkitekturendring først (backend har ingen `lagreLikevel`-parameter)
+### Enhetstester for KiValideringsService
+
+Alle scenariene i verifiseringsflyten er dekket av `KiValideringsServiceTest.kt`:
+
+| Test                                                    | Status |
+| ------------------------------------------------------- | ------ |
+| Tom tekst hopper over validering                        | ✅     |
+| Manglende loggId gir `KI_VALIDERING_MANGLER`            | ✅     |
+| Ugyldig loggId gir `KI_LOGG_ID_UGYLDIG`                 | ✅     |
+| Endret tekst gir `KI_TEKST_ENDRET`                      | ✅     |
+| `bryterRetningslinjer` uten `lagreLikevel` gir feil     | ✅     |
+| `bryterRetningslinjer` med `lagreLikevel=true` tillates | ✅     |
+| HTML-tagger normaliseres ved sammenligning              | ✅     |
+| Whitespace normaliseres ved sammenligning               | ✅     |

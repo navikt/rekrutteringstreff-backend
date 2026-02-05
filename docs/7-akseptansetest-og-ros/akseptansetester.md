@@ -856,5 +856,5 @@ Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
 - [Varsling](../4-integrasjoner/varsling.md) - Varslingsmekanismer og maler
 - [Aktivitetskort](../4-integrasjoner/aktivitetskort.md) - Aktivitetskort-synkronisering
 - [MinSide-flyt](../4-integrasjoner/minside-flyt.md) - Jobbsøkerflyt og rekrutteringstreff-bruker
-- [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md) - Teknisk dokumentasjon KI-validering og logging
+- [KI-tekstvalidering](../5-ki/ki-tekstvalidering.md) - Teknisk dokumentasjon KI-validering og logging
 - [KI-rutiner for utviklere](../8-utviklerrutiner/ki-rutiner.md) - Utviklerrutiner for KI-sjekken
