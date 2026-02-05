@@ -23,19 +23,22 @@ flowchart TD
         LAGRE_BTN[Bruker klikker lagre]
     end
 
-    subgraph "Backend: KI-validering"
-        KI_CTRL[KiController<br/>/api/.../ki/valider]
+    subgraph Backend_KI[Backend: KI-validering]
+        KI_CTRL["KiController
+        /api/.../ki/valider"]
         PF[PersondataFilter]
         OAC[OpenAiClient]
         SP[SystemPrompt]
     end
 
-    subgraph "Azure OpenAI"
-        AOAI[GPT-4.1<br/>+ Content Filter]
+    subgraph Azure_OpenAI[Azure OpenAI]
+        AOAI["GPT-4.1
+        + Content Filter"]
     end
 
-    subgraph "Backend: Lagring"
-        LAGRE_CTRL[Controller<br/>PUT /api/...]
+    subgraph Backend_Lagring[Backend: Lagring]
+        LAGRE_CTRL["Controller
+        PUT /api/..."]
         KI_SVC[KiValideringsService]
     end
 
