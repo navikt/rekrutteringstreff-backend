@@ -39,7 +39,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        log.info("Mottok rekrutteringstreffinvitasjon");
+        log.info("Mottok rekrutteringstreffinvitasjon")
         val fnr = packet["fnr"].asText()
 
         val startDato = packet["fraTid"].asZonedDateTime()

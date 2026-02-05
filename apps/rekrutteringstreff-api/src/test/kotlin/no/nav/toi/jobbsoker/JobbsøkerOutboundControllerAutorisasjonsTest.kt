@@ -120,6 +120,8 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
             pilotkontorer = listOf("1234"),
             httpClient = httpClient,
             leaderElection = LeaderElectionMock(),
+            isRunning = {true},
+            isReady = {true},
         ).also { it.start() }
     }
 

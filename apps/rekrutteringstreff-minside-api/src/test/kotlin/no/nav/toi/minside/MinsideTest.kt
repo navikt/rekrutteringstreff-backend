@@ -85,6 +85,8 @@ class MinsideTest {
             pilotkontorer = emptyList<String>(),
             httpClient = httpClient,
             leaderElection = LeaderElectionMock(),
+            isRunning = {true},
+            isReady = {true},
         )
 
         private val appPort = ubruktPortnr()

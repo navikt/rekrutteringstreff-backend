@@ -1,5 +1,5 @@
 plugins {
-    id("toi.rapids-and-rivers")
+    id("toi.common")
     kotlin("kapt")
 }
 
@@ -44,5 +44,13 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("org.flywaydb:flyway-core:${flywayVersion}")
     testImplementation("org.flywaydb:flyway-database-postgresql:${flywayVersion}")
+
+
+    // Rapids and rivers fra tbd-libs (uten Ktor)
+    val tbdLibsVersion = "2024.11.25-10.59-6f263a10"
+    testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers:$tbdLibsVersion")
+    testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers-api:$tbdLibsVersion")
+    testImplementation("com.github.navikt.tbd-libs:kafka:$tbdLibsVersion")
+    testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers-test:$tbdLibsVersion")
     testImplementation(project(":technical-libs:testrapid"))
 }

@@ -21,8 +21,12 @@ private const val endepunktAlive = "/isalive"
     path = endepunktReady,
     methods = [HttpMethod.GET]
 )
-private fun isReadyHandler(ctx: Context) {
-    ctx.result("isready")
+private fun isReadyHandler(ctx: Context, isReady: () -> Boolean) {
+    if (isReady()) {
+        ctx.result("isready")
+    } else {
+        ctx.status(500)
+    }
 }
 
 @OpenApi(
@@ -36,11 +40,15 @@ private fun isReadyHandler(ctx: Context) {
     path = endepunktAlive,
     methods = [HttpMethod.GET]
 )
-private fun isAliveHandler(ctx: Context) {
-    ctx.result("isalive")
+private fun isAliveHandler(ctx: Context, isRunning: ()-> Boolean) {
+    if (isRunning()) {
+        ctx.result("isalive")
+    } else {
+        ctx.status(500)
+    }
 }
 
-fun Javalin.handleHealth() {
-    get(endepunktReady, ::isReadyHandler)
-    get(endepunktAlive, ::isAliveHandler)
+fun Javalin.handleHealth(isRunning: ()-> Boolean, isReady: ()-> Boolean) {
+    get(endepunktReady) { isReadyHandler(it, isReady) }
+    get(endepunktAlive) { isAliveHandler(it, isRunning) }
 }

@@ -31,9 +31,6 @@ import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.HttpURLConnection.HTTP_OK
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import java.net.HttpURLConnection.HTTP_NO_CONTENT
-import java.net.URI
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -76,6 +73,8 @@ class ArbeidsgiverTest {
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
             rapidsConnection =  TestRapid(),
+            isRunning = {true},
+            isReady = {true},
             accessTokenClient = accessTokenClient,
             modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,

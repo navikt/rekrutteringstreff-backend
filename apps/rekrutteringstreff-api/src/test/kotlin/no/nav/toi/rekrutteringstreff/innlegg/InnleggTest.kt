@@ -9,7 +9,6 @@ import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -54,6 +53,8 @@ class InnleggTest {
             kandidatsokApiUrl = "",
             kandidatsokScope = "",
             rapidsConnection = TestRapid(),
+            isRunning = {true},
+            isReady = {true},
             accessTokenClient = accessTokenClient,
             modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,

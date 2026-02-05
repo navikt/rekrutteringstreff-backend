@@ -10,7 +10,6 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
@@ -77,6 +76,8 @@ class InvitasjonFeilhåndteringTest {
             pilotkontorer = listOf("1234"),
             httpClient = httpClient,
             leaderElection = LeaderElectionMock(),
+            isRunning = {true},
+            isReady = {true},
         ).also { it.start() }
         authServer.start(port = authPort)
     }

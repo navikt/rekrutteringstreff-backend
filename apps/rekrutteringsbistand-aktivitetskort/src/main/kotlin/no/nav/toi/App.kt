@@ -1,7 +1,11 @@
 package no.nav.toi
 
+import com.github.navikt.tbd_libs.kafka.AivenConfig
+import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
+import com.github.navikt.tbd_libs.rapids_and_rivers.KafkaRapid
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
-import no.nav.helse.rapids_rivers.RapidApplication
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.scheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
@@ -36,9 +40,21 @@ class App(private val rapidsConnection: RapidsConnection, private val repository
 
 fun main() {
     val env = System.getenv()
-    val app = App(RapidApplication.create(env), Repository(DatabaseConfig(env), env.variable("MIN_SIDE_URL"), env.variable("DAB_AKTIVITETSKORT_TOPIC")),
-        KafkaProducer(producerConfig(env)),
-        KafkaConsumer(consumerConfig(env)),
+    val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+    val app = App(
+        rapidsConnection = KafkaRapid(
+            factory = ConsumerProducerFactory(AivenConfig.default),
+            groupId = env.variable("KAFKA_CONSUMER_GROUP_ID"),
+            rapidTopic = env.variable("KAFKA_RAPID_TOPIC"),
+            meterRegistry = meterRegistry
+        ),
+        repository = Repository(
+            DatabaseConfig(env, meterRegistry),
+            env.variable("MIN_SIDE_URL"),
+            env.variable("DAB_AKTIVITETSKORT_TOPIC")
+        ),
+        producer = KafkaProducer(producerConfig(env)),
+        consumer = KafkaConsumer(consumerConfig(env)),
         env.variable("DAB_AKTIVITETSKORT_FEIL_TOPIC"),
         LeaderElection(),
     )
