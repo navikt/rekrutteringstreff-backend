@@ -8,12 +8,12 @@ class KiValideringsService(
     private val kiLoggRepository: KiLoggRepository
 ) {
     companion object {
-        private const val FEIL_MANGLER_VALIDERING = "KI_VALIDERING_MANGLER"
-        private const val FEIL_UGYLDIG_LOGG_ID = "KI_LOGG_ID_UGYLDIG"
-        private const val FEIL_TEKST_ENDRET = "KI_TEKST_ENDRET"
-        private const val FEIL_KREVER_BEKREFTELSE = "KI_KREVER_BEKREFTELSE"
-        private const val FEIL_FEIL_FELT_TYPE = "KI_FEIL_FELT_TYPE"
-        private const val FEIL_FEIL_TREFF = "KI_FEIL_TREFF"
+        private const val MANGLER_VALIDERING = "KI_VALIDERING_MANGLER"
+        private const val UGYLDIG_LOGG_ID = "KI_LOGG_ID_UGYLDIG"
+        private const val TEKST_ENDRET = "KI_TEKST_ENDRET"
+        private const val KREVER_BEKREFTELSE = "KI_KREVER_BEKREFTELSE"
+        private const val FEIL_FELT_TYPE = "KI_FEIL_FELT_TYPE"
+        private const val FEIL_TREFF = "KI_FEIL_TREFF"
     }
 
     fun verifiserKiValidering(
@@ -29,7 +29,7 @@ class KiValideringsService(
         if (kiLoggId.isNullOrBlank()) {
             log.warn("Lagring avvist: Mangler KI-loggId for $feltType")
             throw KiValideringsException(
-                feilkode = FEIL_MANGLER_VALIDERING,
+                feilkode = MANGLER_VALIDERING,
                 melding = "Teksten må KI-valideres før lagring."
             )
         }
@@ -38,14 +38,14 @@ class KiValideringsService(
             UUID.fromString(kiLoggId)
         } catch (e: IllegalArgumentException) {
             throw KiValideringsException(
-                feilkode = FEIL_UGYLDIG_LOGG_ID,
+                feilkode = UGYLDIG_LOGG_ID,
                 melding = "Ugyldig KI-validerings-ID."
             )
         }
 
         val kiLogg = kiLoggRepository.findById(loggId)
             ?: throw KiValideringsException(
-                feilkode = FEIL_UGYLDIG_LOGG_ID,
+                feilkode = UGYLDIG_LOGG_ID,
                 melding = "Fant ikke KI-validering med oppgitt ID."
             )
 
@@ -53,7 +53,7 @@ class KiValideringsService(
         if (kiLogg.feltType != feltType) {
             log.warn("Lagring avvist: KI-logg har feltType ${kiLogg.feltType}, forventet $feltType")
             throw KiValideringsException(
-                feilkode = FEIL_FEIL_FELT_TYPE,
+                feilkode = FEIL_FELT_TYPE,
                 melding = "KI-valideringen tilhører feil felttype."
             )
         }
@@ -62,7 +62,7 @@ class KiValideringsService(
         if (forventetTreffId != null && kiLogg.treffId != forventetTreffId) {
             log.warn("Lagring avvist: KI-logg tilhører treff ${kiLogg.treffId}, forventet $forventetTreffId")
             throw KiValideringsException(
-                feilkode = FEIL_FEIL_TREFF,
+                feilkode = FEIL_TREFF,
                 melding = "KI-valideringen tilhører et annet rekrutteringstreff."
             )
         }
@@ -71,7 +71,7 @@ class KiValideringsService(
         if (normalisertTekst != normalisertLoggetTekst) {
             log.warn("Lagring avvist: Tekst endret etter KI-validering for $feltType")
             throw KiValideringsException(
-                feilkode = FEIL_TEKST_ENDRET,
+                feilkode = TEKST_ENDRET,
                 melding = "Teksten har blitt endret etter KI-valideringen."
             )
         }
@@ -79,7 +79,7 @@ class KiValideringsService(
         if (kiLogg.bryterRetningslinjer && !lagreLikevel) {
             log.warn("Lagring avvist: KI rapporterte brudd og bruker har ikke bekreftet ($feltType)")
             throw KiValideringsException(
-                feilkode = FEIL_KREVER_BEKREFTELSE,
+                feilkode = KREVER_BEKREFTELSE,
                 melding = "Teksten bryter retningslinjer. Bruker må bekrefte for å fortsette."
             )
         }
