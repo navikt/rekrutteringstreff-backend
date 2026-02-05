@@ -327,7 +327,7 @@ flowchart LR
     KC --> DB[(ki_spørring_logg)]
 
     ADMIN --> VURD[Manuell vurdering]
-    VURD -->|PUT /api/ki/logg/{id}/manuell| KC
+    VURD -->|"PUT /api/ki/logg/{id}/manuell"| KC
 ```
 
 ---
