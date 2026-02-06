@@ -235,16 +235,7 @@ Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/mig
 
 | Versjon | Fil                                                 | Beskrivelse                                                                      |
 | ------- | --------------------------------------------------- | -------------------------------------------------------------------------------- |
-| V1      | `V1__initiell_last.sql`                             | Initiell opprettelse av alle tabeller                                            |
-| V2      | `V2__hendelse_data.sql`                             | Legger til `hendelse_data` JSONB-kolonne på alle hendelse-tabeller               |
-| V3      | `V3__arbeidsgiver_status.sql`                       | Legger til `status`-kolonne på arbeidsgiver                                      |
-| V4      | `V4__jobbsoker_status.sql`                          | Legger til `status`-kolonne på jobbsøker                                         |
-| V5      | `V5__rekrutteringstreff_kommune_og_fylke.sql`       | Legger til `fylke` og `kommune` på rekrutteringstreff                            |
-| V6      | `V6__legg_til_endret_felter_rekrutteringstreff.sql` | Legger til `sist_endret_av_person_navident` og `sist_endret_av_tidspunkt`        |
-| V7      | `V7__arbeidsgiver_adresse.sql`                      | Legger til adressefelt på arbeidsgiver (`gateadresse`, `postnummer`, `poststed`) |
-| V8      | `V8__fjerne_kandidatnummer.sql`                     | Fjerner `kandidatnummer`-kolonnen fra jobbsoker (hentes nå on-demand)            |
-| V9      | `V9__synlighet_jobbsoker.sql`                       | Legger til synlighet-felt (`er_synlig`, `synlighet_sist_oppdatert`) og indekser  |
-| V10     | `V10__synlighet_kilde.sql`                          | Legger til `synlighet_kilde` for å skille event fra need-svar                    |
+| V1      | `V1__init.sql`                             | Initiell opprettelse av alle tabeller                                            |
 
 ## Indekser
 
