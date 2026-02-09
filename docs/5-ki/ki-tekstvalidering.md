@@ -19,8 +19,8 @@ Backend garanterer at tekst ikke kan lagres uten gyldig KI-validering.
 flowchart TD
     subgraph Frontend
         EDIT[Bruker redigerer tekst]
-        BLUR[onBlur trigger]
-        LAGRE_BTN[Bruker klikker lagre]
+        SJEKK_BTN["Bruker klikker<br/>Sjekk og lagre"]
+        LIKEVEL_BTN["Bruker klikker<br/>Lagre likevel"]
     end
 
     subgraph Backend_KI[Backend: KI-validering]
@@ -48,8 +48,8 @@ flowchart TD
     end
 
     %% Valideringsflyten
-    EDIT --> BLUR
-    BLUR -->|1. Valider tekst| KI_CTRL
+    EDIT --> SJEKK_BTN
+    SJEKK_BTN -->|1. Valider tekst| KI_CTRL
     KI_CTRL --> PF
     PF -->|Filtrert tekst| OAC
     OAC --> SP
@@ -58,12 +58,15 @@ flowchart TD
     OAC -->|Logg| LOGG_DB
     KI_CTRL -->|loggId + bryterRetningslinjer| Frontend
 
-    %% Lagringsflyten
-    LAGRE_BTN -->|2. Lagre med loggId| LAGRE_CTRL
+    %% Lagringsflyten (OK)
+    SJEKK_BTN -->|"2a. OK → lagre med loggId"| LAGRE_CTRL
     LAGRE_CTRL --> KI_SVC
     KI_SVC -->|Verifiser loggId| LOGG_DB
     KI_SVC -->|OK| LAGRE_CTRL
     LAGRE_CTRL --> DATA_DB
+
+    %% Lagringsflyten (brudd)
+    LIKEVEL_BTN -->|"2b. Lagre med loggId<br/>+ lagreLikevel=true"| LAGRE_CTRL
 
     style AOAI fill:#e8f5e9,color:#000,stroke:#333
     style LOGG_DB fill:#e1f5ff,color:#000,stroke:#333
@@ -223,11 +226,15 @@ Backend sammenligner mot `spørringFraFrontend` (originalteksten), **ikke** `sp�
 
 ---
 
-## Frontend: Autolagring med KI-validering
+## Frontend: Eksplisitt lagring med KI-validering
 
-Frontend integrerer KI-validering med autolagring via `useFormFeltMedKiValidering`-hooken.
+Tittel og innlegg lagres ikke automatisk. Bruker må eksplisitt klikke
+«Sjekk og lagre»-knappen for å trigge KI-validering og lagring.
+Andre felt (datoer, sted, osv.) autolagres fortsatt som før.
 
-### Flyt for kladdemodus (utkast)
+Hooken `useFormFeltMedKiValidering` styrer flyten.
+
+### Flyt ved «Sjekk og lagre»
 
 ```mermaid
 sequenceDiagram
@@ -238,7 +245,7 @@ sequenceDiagram
     participant KI_Logg as KI-logg API
 
     Bruker->>Frontend: Redigerer tittel/innlegg
-    Bruker->>Frontend: onBlur (forlater felt)
+    Bruker->>Frontend: Klikker «Sjekk og lagre»
 
     Frontend->>Frontend: Sjekk om tekst er endret
     alt Tekst uendret
@@ -253,7 +260,7 @@ sequenceDiagram
             Frontend->>KI_Logg: PUT /logg/{id}/lagret
         else bryterRetningslinjer = true
             Frontend->>Frontend: Vis KI-analyse panel
-            Bruker->>Frontend: Klikk "Lagre likevel"
+            Bruker->>Frontend: Klikk «Lagre likevel»
             Frontend->>Lagre_API: PUT (med loggId + lagreLikevel=true)
             Lagre_API-->>Frontend: OK
             Frontend->>KI_Logg: PUT /logg/{id}/lagret
@@ -261,17 +268,18 @@ sequenceDiagram
     end
 ```
 
-### Flyt for redigering av publisert treff
+### Bevaring av tekst ved navigering
 
-Ved redigering av publisert treff er autolagring deaktivert. KI-validering skjer fortsatt på onBlur, men lagring skjer først ved eksplisitt "Lagre"-klikk.
+Tekst i tittel og innlegg lever i react-hook-form-state og overlever
+navigering mellom redigering og forhåndsvisning. KI-validerings-state
+(analyse, loggId, «Lagre likevel»-status) nullstilles ved remount,
+men brukeren kan klikke «Sjekk og lagre» på nytt.
 
-### Blokkering av autolagring
+### Autolagring
 
-Autolagring blokkeres når:
-
-- KI-validering pågår (`validating = true`)
-- KI har rapportert brudd som ikke er godkjent (`harKiFeil = true && !harGodkjentKiFeil`)
-- Felt ikke er KI-sjekket etter endring (`kiSjekket = false`)
+Autolagring gjelder kun for ikke-KI-felt (datoer, sted, osv.).
+Tittel og innlegg er ekskludert — `kiSjekket` settes til `true` som
+default slik at autolagring av andre felt ikke blokkeres.
 
 ### Form-state for KI
 
