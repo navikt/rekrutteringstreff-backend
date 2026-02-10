@@ -2,7 +2,6 @@ package no.nav.toi.minside.rekrutteringstreff
 
 import io.javalin.Javalin
 import io.javalin.http.Context
-import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
@@ -12,6 +11,7 @@ import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto
 import no.nav.toi.minside.authenticatedUser
 import no.nav.toi.minside.innlegg.InnleggOutboundDto
+import no.nav.toi.minside.svar.BorgerKlient.Companion.log
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -47,10 +47,15 @@ private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathP
 )
 private fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
     val id = ctx.pathParam(pathParamTreffId)
-    val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker() ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
-    val arbeidsgivere = treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
-    val innlegg = treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
-    ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())
+    val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
+    if (treff == null) {
+        log.info("Fant ikke treff med id: $id")
+        ctx.status(404)
+    } else {
+        val arbeidsgivere = treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
+        val innlegg = treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
+        ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())
+    }
 }
 
 fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, hentRekrutteringstreffHandler(treffKlient))
