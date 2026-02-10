@@ -50,7 +50,7 @@ private fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient)
     val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
     if (treff == null) {
         log.info("Fant ikke treff med id: $id")
-        ctx.status(404)
+        ctx.status(404).json("{ message: \"Fant ikke treff med id: $id\" }")
     } else {
         val arbeidsgivere = treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
         val innlegg = treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
