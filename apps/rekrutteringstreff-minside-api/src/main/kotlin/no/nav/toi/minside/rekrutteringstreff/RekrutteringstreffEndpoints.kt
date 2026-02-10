@@ -54,6 +54,7 @@ private fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient)
     } else {
         val arbeidsgivere = treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
         val innlegg = treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
+        log.info("Hentet rekrutteringstrefff med id: $id")
         ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())
     }
 }

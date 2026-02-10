@@ -144,15 +144,23 @@ class RekrutteringstreffService(
         return rekrutteringstreffDto
     }
 
-    fun hentRekrutteringstreff(treffId: TreffId): RekrutteringstreffDto {
+    fun hentRekrutteringstreff(treffId: TreffId): RekrutteringstreffDto? {
         val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
+        if (rekrutteringstreff == null) {
+            logger.info("Fant ikke rekrutteringstreff med id: $treffId")
+            return null
+        }
         val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(treffId)
         val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(treffId)
         return rekrutteringstreff?.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere) ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff ikke funnet")
     }
 
-    fun hentRekrutteringstreffMedHendelser(treffId: TreffId): RekrutteringstreffDetaljOutboundDto {
+    fun hentRekrutteringstreffMedHendelser(treffId: TreffId): RekrutteringstreffDetaljOutboundDto? {
         val rekrutteringstreff = hentRekrutteringstreff(treffId)
+        if (rekrutteringstreff == null) {
+            logger.info("Fant ikke rekrutteringstreff med id: $treffId")
+            return null
+        }
         val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treffId)
         return RekrutteringstreffDetaljOutboundDto(
             rekrutteringstreff,

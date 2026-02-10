@@ -143,7 +143,7 @@ class RekrutteringstreffServiceTest {
         val treffId1 = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
-        assertThat(rekrutteringstreff.id == treffId1.somUuid).isTrue
+        assertThat(rekrutteringstreff?.id == treffId1.somUuid).isTrue
     }
 
     @Test
@@ -152,9 +152,10 @@ class RekrutteringstreffServiceTest {
         rekrutteringstreffService.publiser(treffId, "NAV1234")
 
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId)
-        assertThat(!rekrutteringstreff.hendelser.isEmpty())
-        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
-        assertThat(rekrutteringstreff.rekrutteringstreff.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        assertThat(rekrutteringstreff).isNotNull()
+        assertThat(rekrutteringstreff?.hendelser?.isNotEmpty())
+        assertThat(rekrutteringstreff?.hendelser?.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
+        assertThat(rekrutteringstreff?.rekrutteringstreff?.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
     }
 
     @Test
@@ -164,9 +165,9 @@ class RekrutteringstreffServiceTest {
         rekrutteringstreffService.publiser(treffId1, "NAV1234")
 
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId1)
-
-        assertThat(!rekrutteringstreff.hendelser.isEmpty())
-        assertThat(rekrutteringstreff.hendelser.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
+        assertThat(rekrutteringstreff).isNotNull()
+        assertThat(rekrutteringstreff?.hendelser?.isNotEmpty())
+        assertThat(rekrutteringstreff?.hendelser?.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
     }
 
     @Test
@@ -174,20 +175,20 @@ class RekrutteringstreffServiceTest {
         val treffId1 = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
-        assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
+        assertThat(rekrutteringstreff?.status == RekrutteringstreffStatus.UTKAST).isTrue
 
         rekrutteringstreffService.avlys(treffId1, "NAV1234")
 
         val rekrutteringstreffEtterAvlys = rekrutteringstreffService.hentRekrutteringstreff(treffId1)
 
-        assertThat(rekrutteringstreffEtterAvlys.status == RekrutteringstreffStatus.AVLYST).isTrue
+        assertThat(rekrutteringstreffEtterAvlys?.status == RekrutteringstreffStatus.AVLYST).isTrue
     }
 
     @Test
     fun `Skal kunne fullføre et rekrutteringstreff`() {
         val treffId = opprettTreff()
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
-        assertThat(rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST).isTrue
+        assertThat(rekrutteringstreff?.status == RekrutteringstreffStatus.UTKAST).isTrue
 
         db.endreTilTidTilPassert(treffId, "NAV1234")
 
@@ -196,7 +197,7 @@ class RekrutteringstreffServiceTest {
 
         val rekrutteringstreffEtterFullfør = rekrutteringstreffService.hentRekrutteringstreff(treffId)
 
-        assertThat(rekrutteringstreffEtterFullfør.status == RekrutteringstreffStatus.FULLFØRT).isTrue
+        assertThat(rekrutteringstreffEtterFullfør?.status == RekrutteringstreffStatus.FULLFØRT).isTrue
     }
 
     @Test
@@ -206,7 +207,7 @@ class RekrutteringstreffServiceTest {
         rekrutteringstreffService.publiser(treffId, "NAV1234")
         rekrutteringstreffService.oppdater(
             treffId = treffId,
-            dto = OppdaterRekrutteringstreffDto.opprettFra(treff).copy(tilTid = nowOslo().plusDays(1)),
+            dto = OppdaterRekrutteringstreffDto.opprettFra(treff!!).copy(tilTid = nowOslo().plusDays(1)),
             navIdent = "NAV1234"
         )
         assertThrows<UlovligOppdateringException> {

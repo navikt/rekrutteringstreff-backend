@@ -215,7 +215,14 @@ class RekrutteringstreffController(
     private fun hentRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER, Rolle.JOBBSØKER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-        rekrutteringstreffService.hentRekrutteringstreff(treffId).let { ctx.status(200).json(it) }
+        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
+        if (rekrutteringstreff == null) {
+            log.info("Fant ikke rekrutteringstreff med id $treffId")
+            ctx.status(404)
+        } else {
+            log.info("Hentet rekrutteringstreff med id $treffId")
+            ctx.status(200).json(rekrutteringstreff)
+        }
     }
 
     @OpenApi(
@@ -277,8 +284,8 @@ class RekrutteringstreffController(
         val navIdent = ctx.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
-            val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id)
-            if (kiValideringsService.erTekstEndret(eksisterendeTreff.tittel, dto.tittel)) {
+            val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering")
+            if (kiValideringsService.erTekstEndret(eksisterendeTreff?.tittel, dto.tittel)) {
                 kiValideringsService.verifiserKiValidering(
                     tekst = dto.tittel,
                     kiLoggId = dto.tittelKiLoggId,
@@ -289,7 +296,7 @@ class RekrutteringstreffController(
             }
 
             rekrutteringstreffService.oppdater(id, dto, navIdent)
-            val updated = rekrutteringstreffService.hentRekrutteringstreff(id)
+            val updated = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering")
             ctx.status(200).json(updated)
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke oppdatere det")
@@ -551,7 +558,7 @@ class RekrutteringstreffController(
             val navIdent = ctx.extractNavIdent()
 
             if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-                val treff = service.hentRekrutteringstreff(treffId)
+                val treff = service.hentRekrutteringstreff(treffId) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med id ${treffId.somString} ved registrering av endring")
                 if (treff.status != RekrutteringstreffStatus.PUBLISERT) {
                     throw BadRequestResponse("Kan kun registrere endringer for treff som har publisert status")
                 }
