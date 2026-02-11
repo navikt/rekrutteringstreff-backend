@@ -291,7 +291,7 @@ class RekrutteringstreffController(
         val navIdent = ctx.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
-            val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw RekrutteringstreffIkkeFunnetException(
+            val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException(
                 "Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering"
             )
             if (kiValideringsService.erTekstEndret(eksisterendeTreff?.tittel, dto.tittel)) {
@@ -305,7 +305,7 @@ class RekrutteringstreffController(
             }
 
             rekrutteringstreffService.oppdater(id, dto, navIdent)
-            val updated = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw RekrutteringstreffIkkeFunnetException("Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering")
+            val updated = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering")
             ctx.status(200).json(updated)
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke oppdatere det")
