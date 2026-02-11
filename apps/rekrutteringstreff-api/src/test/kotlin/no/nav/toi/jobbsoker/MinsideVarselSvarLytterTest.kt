@@ -1,7 +1,7 @@
 package no.nav.toi.jobbsoker
 
-import com.fasterxml.jackson.databind.JsonNode
 import no.nav.toi.*
+import no.nav.toi.jobbsoker.dto.MinsideVarselSvarDataDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
@@ -20,10 +20,6 @@ class MinsideVarselSvarLytterTest {
     private lateinit var jobbsøkerService: JobbsøkerService
     private val db = TestDatabase()
     private val objectMapper = JacksonConfig.mapper
-    
-    private fun JsonNode?.toMinsideVarselSvarData(): MinsideVarselSvarData {
-        return objectMapper.treeToValue(this, MinsideVarselSvarData::class.java)
-    }
 
     @BeforeAll
     fun beforeAll() {
@@ -95,7 +91,7 @@ class MinsideVarselSvarLytterTest {
         }
 
         // Verifiser at hendelse_data inneholder riktig informasjon
-        val hendelseDataMap = minsideSvarHendelse.hendelseData.toMinsideVarselSvarData()
+        val hendelseDataMap = minsideSvarHendelse.hendelseData as MinsideVarselSvarDataDto
         assertThat(hendelseDataMap.varselId).isEqualTo("varsel-123")
         assertThat(hendelseDataMap.avsenderReferanseId).isEqualTo(treffId.somString)
         assertThat(hendelseDataMap.fnr).isEqualTo(fødselsnummer.asString)
@@ -148,7 +144,7 @@ class MinsideVarselSvarLytterTest {
         assertThat(minsideSvarHendelse).isNotNull
 
         // Verifiser at valgfrie felter er null
-        val hendelseDataMap = minsideSvarHendelse!!.hendelseData.toMinsideVarselSvarData()
+        val hendelseDataMap = minsideSvarHendelse!!.hendelseData as MinsideVarselSvarDataDto
         assertThat(hendelseDataMap.varselId).isEqualTo("varsel-456")
         assertThat(hendelseDataMap.eksternStatus).isNull()
         assertThat(hendelseDataMap.minsideStatus).isNull()
@@ -310,7 +306,7 @@ class MinsideVarselSvarLytterTest {
         val minsideSvarHendelse = jobbsøker!!.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
         assertThat(minsideSvarHendelse).isNotNull
 
-        val hendelseDataMap = minsideSvarHendelse!!.hendelseData.toMinsideVarselSvarData()
+        val hendelseDataMap = minsideSvarHendelse!!.hendelseData as MinsideVarselSvarDataDto
         assertThat(hendelseDataMap.eksternStatus).isEqualTo("feilet")
         assertThat(hendelseDataMap.minsideStatus).isEqualTo("feilet")
         assertThat(hendelseDataMap.eksternFeilmelding).isEqualTo("Kunne ikke levere varsel: ugyldig telefonnummer")
@@ -413,10 +409,10 @@ class MinsideVarselSvarLytterTest {
         val minsideSvarHendelse = jobbsøker!!.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
         assertThat(minsideSvarHendelse).isNotNull
 
-        val hendelseDataMap = minsideSvarHendelse!!.hendelseData.toMinsideVarselSvarData()
+        val hendelseDataMap = minsideSvarHendelse!!.hendelseData as MinsideVarselSvarDataDto
         assertThat(hendelseDataMap.opprettet).isNotNull
         val expected = java.time.ZonedDateTime.parse("2025-12-01T14:53:29.201417+01:00")
-        assertThat(hendelseDataMap.opprettet!!.toInstant()).isEqualTo(expected.toInstant())
+        assertThat(java.time.ZonedDateTime.parse(hendelseDataMap.opprettet).toInstant()).isEqualTo(expected.toInstant())
     }
 
     @Test
@@ -462,7 +458,7 @@ class MinsideVarselSvarLytterTest {
         val minsideSvarHendelse = jobbsøker!!.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
         assertThat(minsideSvarHendelse).isNotNull
 
-        val hendelseDataMap = minsideSvarHendelse!!.hendelseData.toMinsideVarselSvarData()
+        val hendelseDataMap = minsideSvarHendelse!!.hendelseData as MinsideVarselSvarDataDto
         assertThat(hendelseDataMap.mal).isEqualTo("KANDIDAT_INVITERT_TREFF_ENDRET")
         assertThat(hendelseDataMap.flettedata).isNotNull
         assertThat(hendelseDataMap.flettedata).containsExactly("tidspunkt", "sted")
@@ -508,7 +504,7 @@ class MinsideVarselSvarLytterTest {
         val minsideSvarHendelse = jobbsøker!!.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE }
         assertThat(minsideSvarHendelse).isNotNull
 
-        val hendelseDataMap = minsideSvarHendelse!!.hendelseData.toMinsideVarselSvarData()
+        val hendelseDataMap = minsideSvarHendelse!!.hendelseData as MinsideVarselSvarDataDto
         assertThat(hendelseDataMap.flettedata).isEmpty()
     }
 }
