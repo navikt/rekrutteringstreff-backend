@@ -49,21 +49,25 @@ class SvarEndpoints {
         val rekrutteringstreffId = ctx.pathParam(PATH_PARAM_TREFFID)
 
         // Sjekker om treffet finnes
-        treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
-            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+        val rekrutteringstreff = treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
+        if (rekrutteringstreff == null) {
+            log.info("Rekrutteringstreff med id: $rekrutteringstreffId finnes ikke, så kan ikke hente svar")
+            ctx.status(404)
+        } else {
+            log.info("Hentet rekrutteringstreff med id: $rekrutteringstreffId for å hente svar, treffet finnes")
+            // hent påmeldingsstatus for treffet
+            val jobbsøkerMedStatuser = borgerKlient.hentJobbsøkerMedStatuser(rekrutteringstreffId, ctx.authenticatedUser().jwt)
+            val statuser = jobbsøkerMedStatuser.statuser
 
-        // hent påmeldingsstatus for treffet
-        val jobbsøkerMedStatuser = borgerKlient.hentJobbsøkerMedStatuser(rekrutteringstreffId, ctx.authenticatedUser().jwt)
-        val statuser = jobbsøkerMedStatuser.statuser
+            val svar = RekrutteringstreffSvarOutboundDto(
+                erInvitert = statuser.erInvitert,
+                erPåmeldt = statuser.erPåmeldt,
+                harSvart = statuser.harSvart,
+            )
 
-        val svar = RekrutteringstreffSvarOutboundDto(
-            erInvitert = statuser.erInvitert,
-            erPåmeldt = statuser.erPåmeldt,
-            harSvart = statuser.harSvart,
-        )
-
-        log.info("Jobbsøker har svart følgende på rekkrutterinstreffet med id: $rekrutteringstreffId, svar: ${svar.json()}")
-        ctx.status(200).json(svar.json())
+            log.info("Jobbsøker har svart følgende på rekkrutterinstreffet med id: $rekrutteringstreffId, svar: ${svar.json()}")
+            ctx.status(200).json(svar.json())
+        }
     }
 
     @OpenApi(
