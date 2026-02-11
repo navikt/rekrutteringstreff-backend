@@ -179,7 +179,7 @@ class AktivitetskortJobbsøkerScheduler(
 
     private fun behandleSvartJaTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: String) {
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
-            ?: throw RekrutteringstreffIkkeFunnetException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
+            ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
         treff.aktivitetskortSvarOgStatusFor(
             fnr = hendelse.fnr,
@@ -195,7 +195,7 @@ class AktivitetskortJobbsøkerScheduler(
 
     private fun behandleIkkeSvartTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: String) {
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
-            ?: throw RekrutteringstreffIkkeFunnetException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
+            ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
         treff.aktivitetskortSvarOgStatusFor(
             fnr = hendelse.fnr,
