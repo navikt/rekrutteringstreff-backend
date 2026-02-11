@@ -10,6 +10,7 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
+import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.rekrutteringstreff.dto.*
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
@@ -290,7 +291,9 @@ class RekrutteringstreffController(
         val navIdent = ctx.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
-            val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering")
+            val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw RekrutteringstreffIkkeFunnetException(
+                "Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering"
+            )
             if (kiValideringsService.erTekstEndret(eksisterendeTreff?.tittel, dto.tittel)) {
                 kiValideringsService.verifiserKiValidering(
                     tekst = dto.tittel,
@@ -302,7 +305,7 @@ class RekrutteringstreffController(
             }
 
             rekrutteringstreffService.oppdater(id, dto, navIdent)
-            val updated = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException("Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering")
+            val updated = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw RekrutteringstreffIkkeFunnetException("Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering")
             ctx.status(200).json(updated)
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreffet og kan ikke oppdatere det")
