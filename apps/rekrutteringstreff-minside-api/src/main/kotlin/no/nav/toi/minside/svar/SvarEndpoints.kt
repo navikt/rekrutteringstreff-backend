@@ -65,7 +65,7 @@ class SvarEndpoints {
                 harSvart = statuser.harSvart,
             )
 
-            log.info("Jobbsøker har svart følgende på rekkrutterinstreffet med id: $rekrutteringstreffId, svar: ${svar.json()}")
+            log.info("Jobbsøker har svart følgende på rekkrutteringstreffet med id: $rekrutteringstreffId, svar: ${svar.json()}")
             ctx.status(200).json(svar.json())
         }
     }

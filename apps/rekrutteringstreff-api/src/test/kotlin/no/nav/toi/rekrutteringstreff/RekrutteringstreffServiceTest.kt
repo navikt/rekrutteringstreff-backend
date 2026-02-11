@@ -153,7 +153,7 @@ class RekrutteringstreffServiceTest {
 
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId)
         assertThat(rekrutteringstreff).isNotNull()
-        assertThat(rekrutteringstreff?.hendelser?.isNotEmpty())
+        assertThat(rekrutteringstreff?.hendelser).isNotEmpty()
         assertThat(rekrutteringstreff?.hendelser?.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
         assertThat(rekrutteringstreff?.rekrutteringstreff?.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
     }
@@ -166,7 +166,7 @@ class RekrutteringstreffServiceTest {
 
         val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreffMedHendelser(treffId1)
         assertThat(rekrutteringstreff).isNotNull()
-        assertThat(rekrutteringstreff?.hendelser?.isNotEmpty())
+        assertThat(rekrutteringstreff?.hendelser).isNotEmpty()
         assertThat(rekrutteringstreff?.hendelser?.any { it.hendelsestype == RekrutteringstreffHendelsestype.PUBLISERT.name }).isTrue
     }
 
