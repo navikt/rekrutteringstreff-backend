@@ -20,7 +20,7 @@ private const val pathParamTreffId = "id"
 private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathParamTreffId}"
 
 @OpenApi(
-    summary = "Hent ett rekrutteringstreff",
+    summary = "Hent et rekrutteringstreff",
     operationId = "hentRekrutteringstreff",
     security = [OpenApiSecurity("BearerAuth")],
     pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],

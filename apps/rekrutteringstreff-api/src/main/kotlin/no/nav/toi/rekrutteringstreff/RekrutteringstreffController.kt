@@ -181,7 +181,7 @@ class RekrutteringstreffController(
     }
 
     @OpenApi(
-        summary = "Hent ett rekrutteringstreff",
+        summary = "Hent et rekrutteringstreff",
         operationId = "hentRekrutteringstreff",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
@@ -214,14 +214,20 @@ class RekrutteringstreffController(
     )
     private fun hentRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.BORGER, Rolle.JOBBSØKER_RETTET)
-        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-        val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
-        if (rekrutteringstreff == null) {
-            log.info("Fant ikke rekrutteringstreff med id $treffId")
+        val uuidSomStreng = ctx.pathParam(pathParamTreffId)
+        if (!TreffId.erGyldigId(uuidSomStreng)) {
+            log.info("Ugyldig rekrutteringstreff-id: $uuidSomStreng")
             ctx.status(404)
         } else {
-            log.info("Hentet rekrutteringstreff med id $treffId")
-            ctx.status(200).json(rekrutteringstreff)
+            val treffId = TreffId(UUID.fromString(uuidSomStreng))
+            val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
+            if (rekrutteringstreff == null) {
+                log.info("Fant ikke rekrutteringstreff med id $treffId")
+                ctx.status(404)
+            } else {
+                log.info("Hentet rekrutteringstreff med id $treffId")
+                ctx.status(200).json(rekrutteringstreff)
+            }
         }
     }
 
