@@ -64,7 +64,7 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
                 when (result) {
                     is Failure -> {
                         log.info("Feil ved svar på rekrutteringstreff id $rekrutterinstreffId med svar ${result.error.message}")
-                        throw result.error
+                        throw IllegalStateException(result.error)
                     }
                     is Success -> {
                         log.info("Jobbsøker har svart ${påmeldtSomStreng} på rekrutteringstreff med id: $rekrutterinstreffId")
