@@ -67,6 +67,7 @@ class JobbsøkerService(
         // Sjekk om svarfrist har utløpt
         val svarfrist = jobbsøkerRepository.hentSvarfrist(treffId)
         if (svarfrist != null && svarfrist.isBefore(nowOslo())) {
+            logger.info("Svarfristen for treff med id $treffId er utløpt")
             throw SvarfristUtløptException("Svarfristen for dette treffet har utløpt")
         }
 
@@ -95,6 +96,7 @@ class JobbsøkerService(
         // Sjekk om svarfrist har utløpt
         val svarfrist = jobbsøkerRepository.hentSvarfrist(treffId)
         if (svarfrist != null && svarfrist.isBefore(nowOslo())) {
+            logger.info("Svarfristen for treff med id $treffId er utløpt")
             throw SvarfristUtløptException("Svarfristen for dette treffet har utløpt")
         }
 
