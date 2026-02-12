@@ -60,9 +60,12 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
                 "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}"
             )
             .responseString { _, response, result ->
-                log.info("Svarte ${påmeldtSomStreng} på jobbtreff: $rekrutterinstreffId, status: ${response.statusCode}")
+                log.info("Svarte ${påmeldtSomStreng} på jobbtreff: $rekrutterinstreffId, status: ${response.statusCode}, result: ${result.fold({ "success" }, { "failure" })}")
                 when (result) {
-                    is Failure -> throw result.error
+                    is Failure -> {
+                        log.info("Feil ved svar på rekrutteringstreff id $rekrutterinstreffId med svar ${result.error.message}")
+                        throw result.error
+                    }
                     is Success -> {
                         log.info("Jobbsøker har svart ${påmeldtSomStreng} på rekrutteringstreff med id: $rekrutterinstreffId")
                     }
