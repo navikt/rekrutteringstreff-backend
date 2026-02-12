@@ -35,6 +35,7 @@ spec:
     inbound:
       rules:
         - application: rekrutteringsbistand-frontend
+        - application: rekrutteringsbistand-frontend2
         - application: rekrutteringstreff-minside-api
     outbound:
       rules:
