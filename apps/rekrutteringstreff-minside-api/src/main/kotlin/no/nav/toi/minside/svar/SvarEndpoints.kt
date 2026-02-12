@@ -11,6 +11,7 @@ import io.javalin.openapi.OpenApiParam
 import io.javalin.openapi.OpenApiRequestBody
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
+import io.ktor.server.plugins.NotFoundException
 import no.nav.toi.minside.authenticatedUser
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
 import no.nav.toi.minside.svar.SvarEndpoints.Companion.REKRUTTERINGSTREFF_SVAR_URL
@@ -108,12 +109,18 @@ class SvarEndpoints {
         treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
-        borgerKlient.svarPåTreff(rekrutteringstreffId, ctx.authenticatedUser().jwt, inputDto.erPåmeldt)
+        try {
+            borgerKlient.svarPåTreff(rekrutteringstreffId, ctx.authenticatedUser().jwt, inputDto.erPåmeldt)
+            log.info("Svarer 200 OK på svar for rekrutteringstreff med id: ${rekrutteringstreffId} erPåmeldt: ${inputDto.erPåmeldt}")
 
-        ctx.status(200).json(AvgiSvarOutputDto(
-            rekrutteringstreffId = rekrutteringstreffId,
-            erPåmeldt = inputDto.erPåmeldt
-        ))
+            ctx.status(200).json(AvgiSvarOutputDto(
+                rekrutteringstreffId = rekrutteringstreffId,
+                erPåmeldt = inputDto.erPåmeldt
+             ))
+        } catch (e: Exception) {
+            log.info("Fikk føldenfe exception ved svar på treff ${rekrutteringstreffId}", e)
+            ctx.status(500)
+        }
     }
 }
 
