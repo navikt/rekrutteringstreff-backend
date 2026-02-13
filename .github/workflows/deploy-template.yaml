@@ -18,24 +18,17 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.docker-build-push.outputs.image }}
-    services:
-      docker:
-        image: docker:dind
-        options: --privileged
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Java v21.x
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21.x'
+          distribution: "temurin"
+          java-version: "21.x"
       - name: Gradle test and build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCKER_HOST: unix:///var/run/docker.sock
         run: |
           chmod +x ./gradlew
           ./gradlew :apps:${{ inputs.app_name }}:test :apps:${{ inputs.app_name }}:build
@@ -67,7 +60,7 @@ jobs:
 
   deploy-to-prod-gcp:
     name: Deploy to prod-gcp
-    needs: [ build-and-publish, deploy-to-dev-gcp ]
+    needs: [build-and-publish, deploy-to-dev-gcp]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
