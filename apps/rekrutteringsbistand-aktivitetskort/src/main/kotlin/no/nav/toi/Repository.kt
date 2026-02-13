@@ -13,6 +13,14 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
     private val dataSource = databaseConfig.lagDatasource()
     private val secureLog = SecureLog(log)
 
+    init {
+        Flyway.configure()
+            .loggers("slf4j")
+            .dataSource(databaseConfig.lagDatasource())
+            .load()
+            .migrate()
+    }
+
     fun opprettRekrutteringstreffInvitasjon(
         fnr: String,
         rekrutteringstreffId: UUID,
@@ -373,13 +381,5 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 secureLog.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
             }
         }
-    }
-
-    init {
-        Flyway.configure()
-            .loggers("slf4j")
-            .dataSource(databaseConfig.lagDatasource())
-            .load()
-            .migrate()
     }
 }

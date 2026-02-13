@@ -3,9 +3,12 @@ package no.nav.toi
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import org.apache.kafka.clients.consumer.MockConsumer
+import org.apache.kafka.clients.consumer.OffsetResetStrategy
+import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy
 import org.apache.kafka.clients.producer.MockProducer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -35,13 +38,28 @@ class RekrutteringstreffOppdateringTest {
     private val rapid = TestRapid()
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val app = App(rapid, Repository(databaseConfig, "http://url", "topic"), MockProducer(), MockConsumer(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST), "topic", LeaderElectionMock())
+    private val app = App(
+        port = 8080,
+        rapidsConnection = rapid,
+        repository = Repository(databaseConfig, "http://url", "topic"),
+        producer = MockProducer(),
+        consumer = MockConsumer(AutoOffsetResetStrategy.StrategyType.EARLIEST.toString()),
+        dabAktivitetskortFeilTopic = "topic",
+        leaderElection = LeaderElectionMock(),
+        meterRegistry = meterRegistry,
+        isRunning = { true },
+        isReady = { true }
+    )
+
+    @BeforeAll
+    fun oppstart() {
+        app.start()
+    }
 
     @BeforeEach
     fun setup() {
         rapid.reset()
         testRepository.slettAlt()
-        app.start()
     }
 
     @AfterAll

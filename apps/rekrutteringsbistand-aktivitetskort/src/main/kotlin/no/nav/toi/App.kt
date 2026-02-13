@@ -1,7 +1,15 @@
 package no.nav.toi
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.github.navikt.tbd_libs.kafka.AivenConfig
+import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
+import com.github.navikt.tbd_libs.rapids_and_rivers.KafkaRapid
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
-import no.nav.helse.rapids_rivers.RapidApplication
+import io.javalin.Javalin
+import io.javalin.json.JavalinJackson
+import io.javalin.micrometer.MicrometerPlugin
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.scheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
@@ -18,29 +26,92 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import java.util.Properties
 
-class App(private val rapidsConnection: RapidsConnection, private val repository: Repository, private val producer: Producer<String, String>, private val consumer: Consumer<String, String>, private val dabAktivitetskortFeilTopic: String, private val leaderElection: LeaderElectionInterface) {
-    init {
+class App(
+    private val port: Int,
+    private val rapidsConnection: RapidsConnection,
+    private val repository: Repository,
+    private val producer: Producer<String, String>,
+    private val consumer: Consumer<String, String>,
+    private val dabAktivitetskortFeilTopic: String,
+    private val leaderElection: LeaderElectionInterface,
+    private val meterRegistry: PrometheusMeterRegistry,
+    private val isRunning: () -> Boolean,
+    private val isReady: () -> Boolean,
+) {
+    private lateinit var javalin: Javalin
+    private val secureLog = SecureLog(log)
+
+    fun start() {
+        startJavalin()
+        scheduler(0, 0, repository, producer, consumer, rapidsConnection, dabAktivitetskortFeilTopic, leaderElection)
+        startRapidsAndRivers()
+    }
+
+    private fun startJavalin() {
+        log.info("Starter app")
+        secureLog.info("Starter app. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
+
+        val micrometerPlugin = MicrometerPlugin { micrometerConfig ->
+            micrometerConfig.registry = meterRegistry
+        }
+
+        javalin = Javalin.create { config ->
+            config.jsonMapper(JavalinJackson(jacksonObjectMapper()))
+            config.registerPlugin(micrometerPlugin)
+        }
+
+        HelsesjekkController(prometheusMeterRegistry = meterRegistry, javalin = javalin, isReady = isReady, isRunning = isRunning)
+
+        javalin.start(port)
+    }
+
+    private fun startRapidsAndRivers() {
+        log.info("Starter RapidsConnection")
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
-    }
-    fun start() {
-        scheduler(0, 0, repository, producer, consumer, rapidsConnection, dabAktivitetskortFeilTopic, leaderElection)
-        rapidsConnection.start()
+        Thread {
+            try {
+                rapidsConnection.start()
+            } catch (e: Exception) {
+                log.error("RapidsConnection feilet, avslutter applikasjonen", e)
+                System.exit(1)
+            }
+        }.start()
+
     }
 
     fun stop() {
         rapidsConnection.stop()
+        if (::javalin.isInitialized) javalin.stop()
     }
 }
 
 fun main() {
     val env = System.getenv()
-    val app = App(RapidApplication.create(env), Repository(DatabaseConfig(env), env.variable("MIN_SIDE_URL"), env.variable("DAB_AKTIVITETSKORT_TOPIC")),
-        KafkaProducer(producerConfig(env)),
-        KafkaConsumer(consumerConfig(env)),
-        env.variable("DAB_AKTIVITETSKORT_FEIL_TOPIC"),
-        LeaderElection(),
+    val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+
+    val rapidsConnection = KafkaRapid(
+        factory = ConsumerProducerFactory(AivenConfig.default),
+        groupId = env.variable("KAFKA_CONSUMER_GROUP_ID"),
+        rapidTopic = env.variable("KAFKA_RAPID_TOPIC"),
+        meterRegistry = meterRegistry
+    )
+    val app = App(
+        port = 8080,
+        rapidsConnection = rapidsConnection,
+        repository = Repository(
+            DatabaseConfig(env),
+            env.variable("MIN_SIDE_URL"),
+            env.variable("DAB_AKTIVITETSKORT_TOPIC")
+        ),
+        producer = KafkaProducer(producerConfig(env)),
+        consumer = KafkaConsumer(consumerConfig(env)),
+        dabAktivitetskortFeilTopic = env.variable("DAB_AKTIVITETSKORT_FEIL_TOPIC"),
+        leaderElection = LeaderElection(),
+        meterRegistry = meterRegistry,
+        isRunning = rapidsConnection::isRunning,
+        isReady = rapidsConnection::isReady
     )
     app.start()
 }
