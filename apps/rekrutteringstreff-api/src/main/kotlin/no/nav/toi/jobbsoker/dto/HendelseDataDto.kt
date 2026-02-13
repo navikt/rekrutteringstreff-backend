@@ -1,14 +1,22 @@
 package no.nav.toi.jobbsoker.dto
 
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.javalin.openapi.OneOf
 import io.javalin.openapi.OpenApiName
 import no.nav.toi.JobbsøkerHendelsestype
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
+@JsonSubTypes(
+    JsonSubTypes.Type(MinsideVarselSvarDataDto::class),
+    JsonSubTypes.Type(RekrutteringstreffendringerDto::class),
+)
 @OneOf(MinsideVarselSvarDataDto::class, RekrutteringstreffendringerDto::class)
 sealed interface HendelseDataDto
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 @OpenApiName("MinsideVarselSvarData")
 data class MinsideVarselSvarDataDto(
     val varselId: String? = null,
@@ -25,6 +33,7 @@ data class MinsideVarselSvarDataDto(
     val svar: String? = null,
 ) : HendelseDataDto
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 @OpenApiName("Rekrutteringstreffendringer")
 data class RekrutteringstreffendringerDto(
     val navn: Endringsfelt? = null,
