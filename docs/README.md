@@ -16,6 +16,7 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 ### 2. [Arkitektur](2-arkitektur/)
 
 - [Prinsipper](2-arkitektur/prinsipper.md) - Rammeverk, lagdeling og arkitekturprinsipper
+- [Arkitekturbeslutninger](2-arkitektur/arkitekturbeslutninger.md) - FAQ: Hvorfor egen MinSide-backend, appoppdeling, synkron vs. asynkron, hendelse_data-struktur
 - [Database](2-arkitektur/database.md) - Databaseskjema, ER-diagram og Flyway-migrasjoner
 
 ### 3. [Sikkerhet](3-sikkerhet/)

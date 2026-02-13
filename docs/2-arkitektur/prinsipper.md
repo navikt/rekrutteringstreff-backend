@@ -101,3 +101,28 @@ Vi bruker to hovedmønstre for integrasjon mellom systemer:
 2. **Rapids and Rivers (Kafka)** - For asynkron, event-drevet kommunikasjon
 
 Se [rapids-and-rivers.md](../4-integrasjoner/rapids-and-rivers.md) for detaljer.
+
+### Asynkron fan-out: én hendelse, flere lyttere
+
+Et sentralt prinsipp i løsningen er at API-et publiserer **én hendelse til Kafka**, og **flere uavhengige lyttere** reagerer på den parallelt. Dette gjelder f.eks. invitasjonsflyten, der én `rekrutteringstreffinvitasjon`-event konsumeres av både aktivitetskort-appen og kandidatvarsel-api.
+
+```
+API → DB (lagre hendelse) → 200 OK
+         ↓
+    Scheduler → Kafka (én melding)
+                  ↙        ↘
+     Aktivitetskort    Kandidatvarsel
+```
+
+**Fordeler sammenlignet med synkrone kall med retries:**
+
+- **Ingen distribuert transaksjon**: Hvert nedstrømssystem håndterer sin egen persistering. Hvis aktivitetskort feiler hindrer det ikke varselet, og omvendt.
+- **Ingen retry-logikk i API-et**: Hver lytter håndterer egne retries og idempotens (via `hendelseId` som dedup-nøkkel).
+- **Utvidbarhet uten kodeendring**: Nye konsumenter kan legges til som nye lyttere uten å endre API-koden.
+- **Umiddelbar brukerrespons**: Brukeren får 200 OK så snart hendelsen er lagret i databasen. Nedstrømsprosessering skjer asynkront.
+
+**Prisen** er **eventual consistency** – varselet og aktivitetskortet dukker opp noen sekunder etter at invitasjonen er lagret. I praksis er dette akseptabelt for alle dagens bruksscenarier.
+
+**Når bruker vi synkrone kall i stedet?** Når klienten trenger umiddelbar respons fra nedstrømssystemet (f.eks. MinSide-API → rekrutteringstreff-api for å vise treffdetaljer til jobbsøker).
+
+Se [Arkitekturbeslutninger – Hvorfor asynkron meldingsflyt?](arkitekturbeslutninger.md#hvorfor-asynkron-meldingsflyt-fremfor-synkrone-kall-med-retries) for detaljert sammenligning med synkron tilnærming.

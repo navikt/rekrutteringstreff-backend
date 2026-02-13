@@ -11,6 +11,7 @@ import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
+import no.nav.toi.jobbsoker.dto.MinsideVarselSvarDataDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -433,8 +434,9 @@ class JobbsøkerTest {
         val hendelse = js.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE.name }
         assertThat(hendelse).isNotNull
         assertThat(hendelse!!.hendelseData).isNotNull
-        assertThat(hendelse.hendelseData!!.get("fnr").asText()).isEqualTo("12345678901")
-        assertThat(hendelse.hendelseData!!.get("svar").asText()).isEqualTo("JA")
+        val data = mapper.convertValue(hendelse.hendelseData, MinsideVarselSvarDataDto::class.java)
+        assertThat(data.fnr).isEqualTo("12345678901")
+        assertThat(data.svar).isEqualTo("JA")
     }
 
     @Test

@@ -5,6 +5,7 @@ import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
+import no.nav.toi.jobbsoker.dto.parseHendelseData
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.*
 import java.time.Instant
@@ -294,13 +295,14 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     private fun parseHendelser(json: String): List<JobbsøkerHendelse> {
         val hendelserRaw = mapper.readTree(json)
         return hendelserRaw.map { h ->
+            val hendelsestype = JobbsøkerHendelsestype.valueOf(h["hendelsestype"].asText())
             JobbsøkerHendelse(
                 id = UUID.fromString(h["id"].asText()),
                 tidspunkt = ZonedDateTime.parse(h["tidspunkt"].asText()),
-                hendelsestype = JobbsøkerHendelsestype.valueOf(h["hendelsestype"].asText()),
+                hendelsestype = hendelsestype,
                 opprettetAvAktørType = AktørType.valueOf(h["opprettetAvAktortype"].asText()),
                 aktørIdentifikasjon = h["aktøridentifikasjon"]?.takeIf { !it.isNull }?.asText(),
-                hendelseData = h["hendelseData"]?.takeIf { !it.isNull }
+                hendelseData = parseHendelseData(mapper, hendelsestype, h["hendelseData"]?.takeIf { !it.isNull })
             )
         }
     }
@@ -344,12 +346,13 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 stmt.executeQuery().use { rs ->
                     val result = mutableListOf<JobbsøkerHendelseMedJobbsøkerData>()
                     while (rs.next()) {
+                        val hendelsestype = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype"))
                         result.add(
                             JobbsøkerHendelseMedJobbsøkerData(
                                 id = UUID.fromString(rs.getString("hendelse_id")),
                                 tidspunkt = rs.getTimestamp("tidspunkt").toInstant()
                                     .atZone(java.time.ZoneId.of("Europe/Oslo")),
-                                hendelsestype = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
+                                hendelsestype = hendelsestype,
                                 opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
                                 aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
                                 fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
@@ -358,9 +361,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                                 personTreffId = PersonTreffId(
                                     UUID.fromString(rs.getString("person_treff_id"))
                                 ),
-                                hendelseData = rs.getString("hendelse_data")?.let {
-                                    mapper.readTree(it)
-                                }
+                                hendelseData = parseHendelseData(mapper, hendelsestype, rs.getString("hendelse_data"))
                             )
                         )
                     }
