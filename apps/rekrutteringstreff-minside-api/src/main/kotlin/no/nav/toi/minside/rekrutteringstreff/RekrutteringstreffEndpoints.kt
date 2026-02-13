@@ -2,7 +2,6 @@ package no.nav.toi.minside.rekrutteringstreff
 
 import io.javalin.Javalin
 import io.javalin.http.Context
-import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
@@ -12,6 +11,8 @@ import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto
 import no.nav.toi.minside.authenticatedUser
 import no.nav.toi.minside.innlegg.InnleggOutboundDto
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -19,41 +20,56 @@ const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 private const val pathParamTreffId = "id"
 private const val hentRekrutteringsTreff = "$endepunktRekrutteringstreff/{$pathParamTreffId}"
 
-@OpenApi(
-    summary = "Hent ett rekrutteringstreff",
-    operationId = "hentRekrutteringstreff",
-    security = [OpenApiSecurity("BearerAuth")],
-    pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
-    responses = [OpenApiResponse(
-        status = "200",
-        content = [OpenApiContent(
-            from = RekrutteringstreffOutboundDto::class,
-            example = """{
-               "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
-               "tittel":"Sommerjobbtreff",
-               "beskrivelse":null,
-               "fraTid":null,
-               "tilTid":null,
-               "svarfrist":null,
-               "gateadresse":null,
-               "postnummer":null,
-               "poststed":null,
-               "status":null
-            }"""
-        )]
-    )],
-    path = hentRekrutteringsTreff,
-    methods = [HttpMethod.GET]
-)
-private fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
-    val id = ctx.pathParam(pathParamTreffId)
-    val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker() ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
-    val arbeidsgivere = treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
-    val innlegg = treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
-    ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())
+class RekrutteringstreffEndpoints {
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(this::class.java)
+    }
+
+    @OpenApi(
+        summary = "Hent et rekrutteringstreff",
+        operationId = "hentRekrutteringstreff",
+        security = [OpenApiSecurity("BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        responses = [OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(
+                from = RekrutteringstreffOutboundDto::class,
+                example = """{
+                   "id":"d6a587cd-8797-4b9a-a68b-575373f16d65",
+                   "tittel":"Sommerjobbtreff",
+                   "beskrivelse":null,
+                   "fraTid":null,
+                   "tilTid":null,
+                   "svarfrist":null,
+                   "gateadresse":null,
+                   "postnummer":null,
+                   "poststed":null,
+                   "status":null
+                }"""
+            )]
+        )],
+        path = hentRekrutteringsTreff,
+        methods = [HttpMethod.GET]
+    )
+    fun hentRekrutteringstreffHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
+        val id = ctx.pathParam(pathParamTreffId)
+        val treff = treffKlient.hent(id, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
+        if (treff == null) {
+            log.info("Fant ikke treff med id: $id")
+            ctx.status(404).json("{ message: \"Fant ikke treff med id: $id\" }")
+        } else {
+            val arbeidsgivere =
+                treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() }
+                    ?: emptyList()
+            val innlegg =
+                treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
+            log.info("Hentet rekrutteringstrefff med id: $id")
+            ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())
+        }
+    }
 }
 
-fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, hentRekrutteringstreffHandler(treffKlient))
+fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, RekrutteringstreffEndpoints().hentRekrutteringstreffHandler(treffKlient))
 
 data class RekrutteringstreffOutboundDto(
     private val id: UUID,

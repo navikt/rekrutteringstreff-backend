@@ -71,7 +71,7 @@ class InnleggController(
     }
 
     @OpenApi(
-        summary = "Hent ett innlegg",
+        summary = "Hent et innlegg",
         operationId = "hentEttInnlegg",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [

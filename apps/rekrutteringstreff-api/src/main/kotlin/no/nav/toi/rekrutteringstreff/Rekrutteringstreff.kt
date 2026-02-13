@@ -105,9 +105,21 @@ class Rekrutteringstreff(
 }
 
 data class TreffId(private val id: UUID) {
+    companion object {
+        fun erGyldigId(uuid: String): Boolean {
+            return try {
+                UUID.fromString(uuid)
+                true
+            } catch (_: IllegalArgumentException) {
+                false
+            }
+        }
+    }
+
     constructor(uuid: String) : this(UUID.fromString(uuid))
 
     val somUuid = id
     val somString = id.toString()
     override fun toString() = somString
+
 }
