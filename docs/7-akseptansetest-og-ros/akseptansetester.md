@@ -577,17 +577,6 @@ Test at løsningen tydeliggjør at KI-sjekken kun er et verktøy og at brukeren 
 | 11.5.4 | Markedskontakt - Sjekk at advarsel viser om det gjelder tittel eller innlegg | Tydelig om advarselen gjelder tittel eller innlegg                   |      |       |
 | 11.5.5 | Markedskontakt - Sjekk at det er tydelig hvilken tekst som sendes            | Bruker kan se hvilken tekst som blir analysert før den sendes til KI |      |       |
 
-### KI-valideringsknapp (ROS 27545)
-
-Test at tekst i KI-felt ikke sendes til OpenAI uten at arrangør aktivt trykker "Sjekk og lagre" / "Sjekk og bruk".
-
-| #       | Test                                                                     | Forventet resultat                                               | ✅❌ | Notat |
-| ------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- | ---- | ----- |
-| 11.10.1 | Markedskontakt - Skriv tittel i kladd uten å trykke "Sjekk og lagre"     | Tekst sendes IKKE til OpenAI, feltet lagres IKKE                 |      |       |
-| 11.10.2 | Markedskontakt - Skriv tittel og trykk "Sjekk og lagre"                  | Tekst valideres av KI og lagres ved godkjenning                  |      |       |
-| 11.10.3 | Markedskontakt - Forlat KI-felt uten å trykke knappen                    | Påminnelse vises: "Teksten må sjekkes før du kan gå videre"      |      |       |
-| 11.10.4 | Markedskontakt - Endre publisert treff, trykk "Sjekk og bruk" på innlegg | Tekst valideres av KI, endring kan brukes i bekreftelsesdialogen |      |       |
-
 ### Avvikshåndtering (ROS 27321)
 
 Test at brukere kan rapportere feil og avvik i KI-sjekken.
@@ -651,6 +640,17 @@ Test at tall med 4 siffer eller mer fjernes før tekst sendes til Azure OpenAI. 
 | 11.9.8 | Skriv tekst med e-postadresse                       | `Send til ola.nordmann@nav.no`    | "sendtTekst" inneholder ikke e-postadressen  |      |       |
 
 > **Verifisering:** Åpne KI-logg (11.4.1), finn valideringen, og sammenlign feltene for å bekrefte at filtrering skjedde.
+
+### KI-valideringsknapp (ROS 27545)
+
+Test at tekst i KI-felt ikke sendes til OpenAI uten at arrangør aktivt trykker "Sjekk og lagre" / "Sjekk og bruk".
+
+| #       | Test                                                                     | Forventet resultat                                               | ✅❌ | Notat |
+| ------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- | ---- | ----- |
+| 11.10.1 | Markedskontakt - Skriv tittel i kladd uten å trykke "Sjekk og lagre"     | Tekst sendes IKKE til OpenAI, feltet lagres IKKE                 |      |       |
+| 11.10.2 | Markedskontakt - Skriv tittel og trykk "Sjekk og lagre"                  | Tekst valideres av KI og lagres ved godkjenning                  |      |       |
+| 11.10.3 | Markedskontakt - Forlat KI-felt uten å trykke knappen                    | Påminnelse vises: "Teksten må sjekkes før du kan gå videre"      |      |       |
+| 11.10.4 | Markedskontakt - Endre publisert treff, trykk "Sjekk og bruk" på innlegg | Tekst valideres av KI, endring kan brukes i bekreftelsesdialogen |      |       |
 
 ---
 
