@@ -1,7 +1,6 @@
 package no.nav.toi.jobbsoker.dto
 
 import io.javalin.openapi.OpenApiNullable
-import io.javalin.openapi.OneOf
 import java.time.ZonedDateTime
 
 data class JobbsøkerHendelseOutboundDto(
@@ -11,6 +10,5 @@ data class JobbsøkerHendelseOutboundDto(
     val opprettetAvAktørType: String,
     val aktørIdentifikasjon: String?,
     @get:OpenApiNullable
-    @get:OneOf(MinsideVarselSvarDataDto::class, RekrutteringstreffendringerDto::class)
-    val hendelseData: Any? = null
+    val hendelseData: HendelseDataDto? = null
 )
