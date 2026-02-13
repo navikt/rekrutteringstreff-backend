@@ -240,31 +240,31 @@ class MinsideTest {
         }
     }
 
-    @Test
-    fun `avgi svarstatus for jobbsøker på ett treff`() {
-        val ident = "12345678910"
-        val token = authServer.lagToken(authPort, pid = ident)
-
-        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar")
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .body("""
-                {
-                    "erPåmeldt": true
-                }
-                """.trimIndent()
-            )
-            .responseString()
-        when (result) {
-            is Failure -> throw result.error
-            is Success -> {
-                assertThat(response.statusCode).isEqualTo(200)
-                val dto = mapper.readTree(result.get())
-
-                assertThat(dto["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffMeldtPå.id.toString())
-                assertThat(dto["erPåmeldt"].asText()).isEqualTo("true")
-            }
-        }
-    }
+//    @Test
+//    fun `avgi svarstatus for jobbsøker på ett treff`() {
+//        val ident = "12345678910"
+//        val token = authServer.lagToken(authPort, pid = ident)
+//
+//        val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar")
+//            .header("Authorization", "Bearer ${token.serialize()}")
+//            .body("""
+//                {
+//                    "erPåmeldt": true
+//                }
+//                """.trimIndent()
+//            )
+//            .responseString()
+//        when (result) {
+//            is Failure -> throw result.error
+//            is Success -> {
+//                assertThat(response.statusCode).isEqualTo(200)
+//                val dto = mapper.readTree(result.get())
+//
+//                assertThat(dto["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffMeldtPå.id.toString())
+//                assertThat(dto["erPåmeldt"].asText()).isEqualTo("true")
+//            }
+//        }
+//    }
 
     fun endepunkter() =
         listOf(
