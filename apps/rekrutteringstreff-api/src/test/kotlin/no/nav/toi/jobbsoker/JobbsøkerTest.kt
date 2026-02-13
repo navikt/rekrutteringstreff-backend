@@ -12,6 +12,8 @@ import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.jobbsoker.dto.MinsideVarselSvarDataDto
+import no.nav.toi.jobbsoker.dto.RekrutteringstreffendringerDto
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -437,6 +439,52 @@ class JobbsøkerTest {
         val data = mapper.convertValue(hendelse.hendelseData, MinsideVarselSvarDataDto::class.java)
         assertThat(data.fnr).isEqualTo("12345678901")
         assertThat(data.svar).isEqualTo("JA")
+    }
+
+    @Test
+    fun `hentJobbsøker skal inkludere RekrutteringstreffendringerDto som hendelseData i responsen`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
+        val fødselsnummer = Fødselsnummer("12345678901")
+
+        val jobbsøker = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()),
+            treffId,
+            fødselsnummer,
+            Fornavn("Ola"),
+            Etternavn("Nordmann"),
+            null, null, null,
+            JobbsøkerStatus.LAGT_TIL
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker))
+
+        val endringer = Rekrutteringstreffendringer(
+            navn = no.nav.toi.rekrutteringstreff.Endringsfelt("Gammel tittel", "Ny tittel", true),
+            sted = no.nav.toi.rekrutteringstreff.Endringsfelt("Gammel sted", "Nytt sted", false),
+        )
+        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+
+        val response = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val result = mapper.readValue(response.body(), JobbsøkereOutboundDto::class.java)
+        val js = result.jobbsøkere.first()
+
+        val hendelse = js.hendelser.find { it.hendelsestype == JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON.name }
+        assertThat(hendelse).isNotNull
+        assertThat(hendelse!!.hendelseData).isNotNull
+        val data = mapper.convertValue(hendelse.hendelseData, RekrutteringstreffendringerDto::class.java)
+        assertThat(data.navn?.gammelVerdi).isEqualTo("Gammel tittel")
+        assertThat(data.navn?.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(data.navn?.skalVarsle).isTrue()
+        assertThat(data.sted?.gammelVerdi).isEqualTo("Gammel sted")
+        assertThat(data.sted?.nyVerdi).isEqualTo("Nytt sted")
+        assertThat(data.sted?.skalVarsle).isFalse()
+        assertThat(data.tidspunkt).isNull()
     }
 
     @Test
