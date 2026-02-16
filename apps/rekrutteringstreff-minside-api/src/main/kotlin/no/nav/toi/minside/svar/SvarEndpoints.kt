@@ -121,7 +121,7 @@ class SvarEndpoints {
                 erPåmeldt = inputDto.erPåmeldt
              ))
         } catch (e: Exception) {
-            log.info("Fikk følgende exception ved svar på treff ${rekrutteringstreffId}", e)
+            log.info("Svarer med statuskode 500 - Fikk følgende exception ved svar på treff ${rekrutteringstreffId}", e)
             ctx.status(500)
         }
     }
