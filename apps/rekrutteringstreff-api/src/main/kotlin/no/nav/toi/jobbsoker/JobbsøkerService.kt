@@ -64,13 +64,6 @@ class JobbsøkerService(
     }
 
     fun svarJaTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
-        // Sjekk om svarfrist har utløpt
-        val svarfrist = jobbsøkerRepository.hentSvarfrist(treffId)
-        if (svarfrist != null && svarfrist.isBefore(nowOslo())) {
-            logger.info("Svarfristen for treff med id $treffId er utløpt")
-            throw SvarfristUtløptException("Svarfristen for dette treffet har utløpt")
-        }
-
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
@@ -93,13 +86,6 @@ class JobbsøkerService(
     }
 
     fun svarNeiTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, navIdent: String) {
-        // Sjekk om svarfrist har utløpt
-        val svarfrist = jobbsøkerRepository.hentSvarfrist(treffId)
-        if (svarfrist != null && svarfrist.isBefore(nowOslo())) {
-            logger.info("Svarfristen for treff med id $treffId er utløpt")
-            throw SvarfristUtløptException("Svarfristen for dette treffet har utløpt")
-        }
-
         dataSource.executeInTransaction { connection ->
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")

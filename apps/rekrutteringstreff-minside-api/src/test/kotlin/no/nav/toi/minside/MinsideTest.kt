@@ -42,7 +42,6 @@ private const val rekrutteringsTreffAudience = "rekrutteringstreff-audience"
 private const val minSideAudience = "rekrutteringstreff-minside-audience"
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Disabled("Midlertidig skrudd av da testen feiler av ukjent grunn")
 class MinsideTest {
     private val mapper = JacksonConfig.mapper
 
