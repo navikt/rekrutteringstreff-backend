@@ -62,7 +62,7 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
             .response()
 
         if (response.statusCode !in 200..299) {
-            log.info("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode}")
+            log.error("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode}")
             throw RuntimeException("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode}")
         } else {
             log.info("Jobbsøker har svart ${påmeldtSomStreng} på rekrutteringstreff med id: $rekrutterinstreffId")
