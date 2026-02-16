@@ -520,7 +520,7 @@ class JobbsøkerInnloggetBorgerTest {
     }
 
     @Test
-    fun `svar ja etter svarfrist avvises`() {
+    fun `svar ja etter svarfrist tillates`() {
         // Opprett treff med svarfrist som har utløpt
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(
             svarfrist = nowOslo().minusDays(1) // Svarfrist var i går
@@ -542,11 +542,11 @@ class JobbsøkerInnloggetBorgerTest {
             token.serialize()
         )
 
-        assertThat(response.statusCode()).isEqualTo(HTTP_BAD_REQUEST)
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
     }
 
     @Test
-    fun `svar nei etter svarfrist avvises`() {
+    fun `svar nei etter svarfrist tillates`() {
         // Opprett treff med svarfrist som har utløpt
         val treffId = db.opprettRekrutteringstreffMedAlleFelter(
             svarfrist = nowOslo().minusDays(1) // Svarfrist var i går
@@ -568,7 +568,7 @@ class JobbsøkerInnloggetBorgerTest {
             token.serialize()
         )
 
-        assertThat(response.statusCode()).isEqualTo(HTTP_BAD_REQUEST)
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
     }
 
     /**

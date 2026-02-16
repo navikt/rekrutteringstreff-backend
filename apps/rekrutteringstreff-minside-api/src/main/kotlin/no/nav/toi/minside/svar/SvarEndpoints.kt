@@ -108,12 +108,21 @@ class SvarEndpoints {
         treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
-        borgerKlient.svarPåTreff(rekrutteringstreffId, ctx.authenticatedUser().jwt, inputDto.erPåmeldt)
 
-        ctx.status(200).json(AvgiSvarOutputDto(
-            rekrutteringstreffId = rekrutteringstreffId,
-            erPåmeldt = inputDto.erPåmeldt
-        ))
+        log.info("rekrutteringstreff funnet for id: ${rekrutteringstreffId}, skal nå lagre svar for treffet")
+
+        try {
+            borgerKlient.svarPåTreff(rekrutteringstreffId, ctx.authenticatedUser().jwt, inputDto.erPåmeldt)
+            log.info("Svarer 200 OK på svar for rekrutteringstreff med id: ${rekrutteringstreffId} erPåmeldt: ${inputDto.erPåmeldt}")
+
+            ctx.status(200).json(AvgiSvarOutputDto(
+                rekrutteringstreffId = rekrutteringstreffId,
+                erPåmeldt = inputDto.erPåmeldt
+             ))
+        } catch (e: Exception) {
+            log.error("Svarer med statuskode 500 - Fikk følgende exception ved svar på treff ${rekrutteringstreffId}", e)
+            ctx.status(500)
+        }
     }
 }
 
