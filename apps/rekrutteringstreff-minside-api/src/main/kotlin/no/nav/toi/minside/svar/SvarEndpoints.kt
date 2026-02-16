@@ -109,7 +109,7 @@ class SvarEndpoints {
            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
 
-         log.info("rekrutteringstreff funnet for id: ${rekrutteringstreffId}, skal nå lagre svar for treffet")
+        log.info("rekrutteringstreff funnet for id: ${rekrutteringstreffId}, skal nå lagre svar for treffet")
 
         try {
             borgerKlient.svarPåTreff(rekrutteringstreffId, ctx.authenticatedUser().jwt, inputDto.erPåmeldt)
@@ -120,7 +120,7 @@ class SvarEndpoints {
                 erPåmeldt = inputDto.erPåmeldt
              ))
         } catch (e: Exception) {
-            log.info("Svarer med statuskode 500 - Fikk følgende exception ved svar på treff ${rekrutteringstreffId}", e)
+            log.error("Svarer med statuskode 500 - Fikk følgende exception ved svar på treff ${rekrutteringstreffId}", e)
             ctx.status(500)
         }
     }
