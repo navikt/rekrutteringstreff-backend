@@ -109,6 +109,9 @@ class SvarEndpoints {
         treffKlient.hent(rekrutteringstreffId, ctx.authenticatedUser().jwt)?.tilDTOForBruker()
            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 
+
+         log.info("rekrutteringstreff funnet for id: ${rekrutteringstreffId}, skal nå lagre svar for treffet")
+
         try {
             borgerKlient.svarPåTreff(rekrutteringstreffId, ctx.authenticatedUser().jwt, inputDto.erPåmeldt)
             log.info("Svarer 200 OK på svar for rekrutteringstreff med id: ${rekrutteringstreffId} erPåmeldt: ${inputDto.erPåmeldt}")
