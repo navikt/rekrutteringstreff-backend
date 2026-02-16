@@ -206,6 +206,7 @@ class JobbsøkerController(
         )],
         responses = [OpenApiResponse(
             status = "200",
+            description = "Liste over jobbsøkerhendelser. Feltet hendelseData er polymorft basert på hendelsestype (oneOf i schema). For de fleste hendelsestyper er hendelseData null.",
             content = [OpenApiContent(
                 from = Array<JobbsøkerHendelseMedJobbsøkerDataOutboundDto>::class,
                 example = """[
@@ -232,10 +233,43 @@ class JobbsøkerController(
                     "etternavn": "Nordmann",
                     "personTreffId": "any-uuid",
                     "hendelseData": {
-                        "varselId": "A400",
+                        "varselId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "avsenderReferanseId": "c1e80bbc-fe0e-4cfb-b291-23317fc48729",
+                        "fnr": "12345678901",
+                        "eksternStatus": "SENDT",
+                        "minsideStatus": "AKTIV",
+                        "opprettet": "2025-04-14T10:59:00+02:00",
+                        "avsenderNavident": "Z123456",
+                        "eksternFeilmelding": null,
                         "eksternKanal": "SMS",
-                        "eksternStatus": "FERDIGSTILT",
-                        "minsideStatus": "OPPRETTET"
+                        "mal": "KANDIDAT_INVITERT_TREFF",
+                        "flettedata": null
+                    }
+                },
+                {
+                    "id": "any-uuid-3",
+                    "tidspunkt": "2025-04-14T12:00:00Z",
+                    "hendelsestype": "TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON",
+                    "opprettetAvAktørType": "ARRANGØR",
+                    "aktørIdentifikasjon": "Z123456",
+                    "fødselsnummer": "12345678901",
+                    "fornavn": "Ola",
+                    "etternavn": "Nordmann",
+                    "personTreffId": "any-uuid",
+                    "hendelseData": {
+                        "navn": null,
+                        "sted": {
+                            "gammelVerdi": "Storgata 1, 0182 Oslo",
+                            "nyVerdi": "Kirkegata 15, 0153 Oslo",
+                            "skalVarsle": true
+                        },
+                        "tidspunkt": {
+                            "gammelVerdi": "2025-04-20T10:00:00+02:00",
+                            "nyVerdi": "2025-04-21T10:00:00+02:00",
+                            "skalVarsle": true
+                        },
+                        "svarfrist": null,
+                        "introduksjon": null
                     }
                 }
             ]"""

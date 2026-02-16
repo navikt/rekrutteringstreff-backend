@@ -216,13 +216,18 @@ erDiagram
 
 #### hendelse_data kolonne
 
-Alle hendelse-tabeller har en `hendelse_data jsonb` kolonne som kan inneholde ekstra strukturert data knyttet til hendelsen:
+Alle hendelse-tabeller har en `hendelse_data jsonb`-kolonne som inneholder ekstra strukturert data knyttet til hendelsen. **De fleste hendelsestyper har null** – kun to scenarioer bruker den:
 
-- **rekrutteringstreff_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING` hendelser
-- **jobbsoker_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` hendelser
-- **arbeidsgiver_hendelse.hendelse_data**: Reservert for fremtidig bruk
+| Hendelsestype                                 | Tabell                        | JSON-struktur                                                          | Kotlin-klasse                    |
+| --------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------- | -------------------------------- |
+| `TREFF_ENDRET_ETTER_PUBLISERING`              | `rekrutteringstreff_hendelse` | Endringsfelt per felt (navn, sted, tidspunkt, svarfrist, introduksjon) | `Rekrutteringstreffendringer.kt` |
+| `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` | `jobbsoker_hendelse`          | Samme som over                                                         | `Rekrutteringstreffendringer.kt` |
+| `MOTTATT_SVAR_FRA_MINSIDE`                    | `jobbsoker_hendelse`          | Varselstatus, kanal, mal, flettedata                                   | `MinsideVarselSvarData.kt`       |
+| Alle andre                                    | Alle                          | `null`                                                                 | –                                |
 
-Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
+Se [Arkitekturbeslutninger – hendelse_data](arkitekturbeslutninger.md#hendelse_data-polymorfe-json-objekter-i-hendelsestabellene) for detaljert dokumentasjon av JSON-strukturene, serialisering, og bruk i frontend.
+
+Data kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
 
 ### Støttetabeller
 
@@ -233,9 +238,9 @@ Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>
 
 Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/migration/`.
 
-| Versjon | Fil                                                 | Beskrivelse                                                                      |
-| ------- | --------------------------------------------------- | -------------------------------------------------------------------------------- |
-| V1      | `V1__init.sql`                             | Initiell opprettelse av alle tabeller                                            |
+| Versjon | Fil            | Beskrivelse                           |
+| ------- | -------------- | ------------------------------------- |
+| V1      | `V1__init.sql` | Initiell opprettelse av alle tabeller |
 
 ## Indekser
 
