@@ -7,6 +7,8 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.ki.KiLoggInsert
+import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.fail
@@ -137,7 +139,7 @@ class InnleggTest {
             opprettetAvPersonNavn = "Kari Oppdatert",
             opprettetAvPersonBeskrivelse = "Oppdatert Rådgiver",
             sendesTilJobbsokerTidspunkt = null,
-            htmlContent = "<p>Nytt innhold</p>"
+            htmlContent = "<p>x</p>"
         )
 
         val resp = httpPut(
@@ -192,7 +194,31 @@ class InnleggTest {
     fun `POST oppretter innlegg`() {
         val token = auth.lagToken(authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase()
-        val body = sampleOpprett()
+        val kiLoggRepository = KiLoggRepository(db.dataSource)
+        val htmlContent = "<p>x</p>"
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treff.somUuid,
+                feltType = "innlegg",
+                spørringFraFrontend = htmlContent,
+                spørringFiltrert = htmlContent,
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+        val body = OpprettInnleggRequestDto(
+            tittel = "Tittel",
+            opprettetAvPersonNavn = "Ola",
+            opprettetAvPersonBeskrivelse = "Veileder",
+            sendesTilJobbsokerTidspunkt = ZonedDateTime.now().plusHours(1),
+            htmlContent = htmlContent,
+            innleggKiLoggId = loggId.toString()
+        )
 
         val resp = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg",
@@ -230,6 +256,29 @@ class InnleggTest {
             token.serialize()
         )
         assertThat(resp.statusCode()).isEqualTo(HTTP_NOT_FOUND)
+    }
+
+    @Test
+    fun `POST uten KI-validering gir 422`() {
+        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val treff = db.opprettRekrutteringstreffIDatabase()
+        val body = OpprettInnleggRequestDto(
+            tittel = "Tittel",
+            opprettetAvPersonNavn = "Ola",
+            opprettetAvPersonBeskrivelse = "Veileder",
+            sendesTilJobbsokerTidspunkt = ZonedDateTime.now().plusHours(1),
+            htmlContent = "<p>Noe innhold som krever validering</p>"
+            // Ingen innleggKiLoggId
+        )
+
+        val resp = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg",
+            JacksonConfig.mapper.writeValueAsString(body),
+            token.serialize()
+        )
+
+        assertThat(resp.statusCode()).isEqualTo(422)
+        assertThat(resp.body()).contains("KI_VALIDERING_MANGLER")
     }
 
     private fun sampleOpprett() = OpprettInnleggRequestDto(

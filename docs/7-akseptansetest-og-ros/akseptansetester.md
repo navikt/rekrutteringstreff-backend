@@ -127,19 +127,11 @@ Markedskontakt publiserer treffet. Dette gjør at:
 
 **Hva skjer:** Treffet blir synlig for alle i rekrutteringsbistand. Fortsatt ingen varsler eller aktivitetskort - det skjer først ved invitasjon.
 
-<<<<<<< Updated upstream
-| #     | Test                                 | Forventet resultat                           | ✅❌ | Notat |
-| ----- | ------------------------------------ | -------------------------------------------- | ---- | ----- |
-| 3.1.1 | Markedskontakt - Publiser treff      | Status endres til "Publisert"                |      |       |
-| 3.1.2 | Veileder - Søk etter publisert treff | Treffet dukker opp i søkeresultater          |      |       |
-| 3.1.3 | Veileder - Åpne publisert treff      | Kan se treffdetaljer men ikke jobbsøkerliste |      |       |
-=======
 | #     | Test                            | Forventet resultat            | ✅❌ | Notat |
 | ----- | ------------------------------- | ----------------------------- | ---- | ----- |
 | 3.1.1 | Markedskontakt - Publiser treff | Status endres til "Publisert" |      |       |
 
 > **Se også:** Tester for at veileder/markedskontakt finner og åpner publiserte treff er i [seksjon 12 – Søke etter rekrutteringstreff](#12-søke-etter-rekrutteringstreff).
->>>>>>> Stashed changes
 
 ---
 
@@ -384,21 +376,12 @@ Markedskontakt endrer et publisert treff som allerede har inviterte jobbsøkere.
 
 ### Mottakere og varselinnhold
 
-<<<<<<< Updated upstream
-| #     | Test                                            | Forventet resultat                       | ✅❌ | Notat                                    |
-| ----- | ----------------------------------------------- | ---------------------------------------- | ---- | ---------------------------------------- |
-| 7.2.1 | Jobbsøker (invitert, ikke svart) - Sjekk varsel | Skal IKKE motta varsel                   |      | Denne må diskuteres, skal de ha varsler? |
-| 7.2.2 | Jobbsøker (svart ja) - Motta endringsvarsel     | SMS/e-post med info om valgte felt       |      |                                          |
-| 7.2.3 | Jobbsøker (svart nei) - Sjekk varsel            | Skal IKKE motta varsel                   |      |                                          |
-| 7.2.4 | Jobbsøker - Sjekk SMS-tekst                     | Teksten inneholder de valgte feltnavnene |      |                                          |
-=======
 | #     | Test                                            | Forventet resultat                       | ✅❌ | Notat |
 | ----- | ----------------------------------------------- | ---------------------------------------- | ---- | ----- |
 | 7.2.1 | Jobbsøker (invitert, ikke svart) - Sjekk varsel | Skal IKKE motta varsel                   |      |       |
 | 7.2.2 | Jobbsøker (svart ja) - Motta endringsvarsel     | SMS/e-post med info om valgte felt       |      |       |
 | 7.2.3 | Jobbsøker (svart nei) - Sjekk varsel            | Skal IKKE motta varsel                   |      |       |
 | 7.2.4 | Jobbsøker - Sjekk SMS-tekst                     | Teksten inneholder de valgte feltnavnene |      |       |
->>>>>>> Stashed changes
 
 ### Oppdatering i treffsiden og aktivitetskort (ROS 27383)
 
@@ -658,6 +641,17 @@ Test at tall med 4 siffer eller mer fjernes før tekst sendes til Azure OpenAI. 
 
 > **Verifisering:** Åpne KI-logg (11.4.1), finn valideringen, og sammenlign feltene for å bekrefte at filtrering skjedde.
 
+### KI-valideringsknapp (ROS 27545)
+
+Test at tekst i KI-felt ikke sendes til OpenAI uten at arrangør aktivt trykker "Sjekk og lagre" / "Sjekk og bruk".
+
+| #       | Test                                                                     | Forventet resultat                                               | ✅❌ | Notat |
+| ------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- | ---- | ----- |
+| 11.10.1 | Markedskontakt - Skriv tittel i kladd uten å trykke "Sjekk og lagre"     | Tekst sendes IKKE til OpenAI, feltet lagres IKKE                 |      |       |
+| 11.10.2 | Markedskontakt - Skriv tittel og trykk "Sjekk og lagre"                  | Tekst valideres av KI og lagres ved godkjenning                  |      |       |
+| 11.10.3 | Markedskontakt - Forlat KI-felt uten å trykke knappen                    | Påminnelse vises: "Teksten må sjekkes før du kan gå videre"      |      |       |
+| 11.10.4 | Markedskontakt - Endre publisert treff, trykk "Sjekk og bruk" på innlegg | Tekst valideres av KI, endring kan brukes i bekreftelsesdialogen |      |       |
+
 ---
 
 ## 12. Søke etter rekrutteringstreff
@@ -856,5 +850,5 @@ Verifiser at Azure OpenAI-konfigurasjonen følger kravene.
 - [Varsling](../4-integrasjoner/varsling.md) - Varslingsmekanismer og maler
 - [Aktivitetskort](../4-integrasjoner/aktivitetskort.md) - Aktivitetskort-synkronisering
 - [MinSide-flyt](../4-integrasjoner/minside-flyt.md) - Jobbsøkerflyt og rekrutteringstreff-bruker
-- [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md) - Teknisk dokumentasjon KI-validering og logging
+- [KI-tekstvalidering](../5-ki/ki-tekstvalidering.md) - Teknisk dokumentasjon KI-validering og logging
 - [KI-rutiner for utviklere](../8-utviklerrutiner/ki-rutiner.md) - Utviklerrutiner for KI-sjekken

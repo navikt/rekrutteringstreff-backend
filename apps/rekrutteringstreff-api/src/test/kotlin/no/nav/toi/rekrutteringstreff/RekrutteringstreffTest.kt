@@ -226,7 +226,7 @@ class RekrutteringstreffTest {
         db.opprettRekrutteringstreffIDatabase(navIdent)
         val created = db.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
-            tittel = "Oppdatert Tittel",
+            tittel = "Original Tittel",
             beskrivelse = "Oppdatert beskrivelse",
             fraTid = nowOslo().minusHours(2),
             tilTid = nowOslo().plusHours(3),
@@ -256,6 +256,135 @@ class RekrutteringstreffTest {
         assertThat(updatedDto.poststed).isEqualTo(updateDto.poststed)
         assertThat(updatedDto.sistEndretAv).isEqualTo(navIdent)
         assertThat(created.sistEndret).isBefore(updatedDto.sistEndret)
+    }
+
+    @Test
+    fun `oppdater rekrutteringstreff med endret tittel uten kiLoggId gir 422`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val created = db.hentAlleRekrutteringstreff().first()
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Ny tittel", // Endrer tittel uten å oppgi kiLoggId
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("KI_VALIDERING_MANGLER")
+    }
+
+    @Test
+    fun `oppdater rekrutteringstreff med endret tittel og gyldig kiLoggId gir 200`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val created = db.hentAlleRekrutteringstreff().first()
+
+        // Opprett KI-logg for den nye tittelen
+        val kiLoggRepository = no.nav.toi.rekrutteringstreff.ki.KiLoggRepository(db.dataSource)
+        val loggId = kiLoggRepository.insert(
+            no.nav.toi.rekrutteringstreff.ki.KiLoggInsert(
+                treffId = treffId.somUuid,
+                feltType = "tittel",
+                spørringFraFrontend = "Ny tittel",
+                spørringFiltrert = "Ny tittel",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "test",
+                svartidMs = 100
+            )
+        )
+
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Ny tittel",
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+            tittelKiLoggId = loggId.toString()
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+        val updatedDto = mapper.readValue(response.body(), RekrutteringstreffDto::class.java)
+        assertThat(updatedDto.tittel).isEqualTo("Ny tittel")
+    }
+
+    @Test
+    fun `oppdater rekrutteringstreff med kiLoggId for feil treff gir 422`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val annetTreffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Annet treff")
+        val created = db.hentAlleRekrutteringstreff().first { it.tittel == "Gammel tittel" }
+
+        // Opprett KI-logg for et ANNET treff
+        val kiLoggRepository = no.nav.toi.rekrutteringstreff.ki.KiLoggRepository(db.dataSource)
+        val loggId = kiLoggRepository.insert(
+            no.nav.toi.rekrutteringstreff.ki.KiLoggInsert(
+                treffId = annetTreffId.somUuid,
+                feltType = "tittel",
+                spørringFraFrontend = "Ny tittel",
+                spørringFiltrert = "Ny tittel",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "test",
+                svartidMs = 100
+            )
+        )
+
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Ny tittel",
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+            tittelKiLoggId = loggId.toString()
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("KI_FEIL_TREFF")
     }
 
     @Test
@@ -402,7 +531,7 @@ class RekrutteringstreffTest {
         httpPut(
             "http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}",
             """{
-                "tittel":"x","beskrivelse":null,"fraTid":"${nowOslo()}",
+                "tittel":"Original Tittel","beskrivelse":null,"fraTid":"${nowOslo()}",
                 "tilTid":"${nowOslo()}","svarfrist":"${nowOslo().minusDays(1)}","gateadresse":"y","postnummer":"1234","poststed":"Bergen"
             }""",
             token.serialize()

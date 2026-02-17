@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionInterface
+import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
@@ -169,7 +170,7 @@ class AktivitetskortJobbsøkerScheduler(
 
     private fun hentTreff(rekrutteringstreffUuid: String): Rekrutteringstreff =
         rekrutteringstreffRepository.hent(TreffId(rekrutteringstreffUuid))
-            ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID $rekrutteringstreffUuid")
+            ?: throw RekrutteringstreffIkkeFunnetException("Fant ikke rekrutteringstreff med UUID $rekrutteringstreffUuid")
 
     private fun sendAktivitetskortInvitasjon(treff: Rekrutteringstreff, fnr: String, hendelseId: UUID, avsenderNavident: String?) {
         treff.aktivitetskortInvitasjonFor(fnr, hendelseId, avsenderNavident)

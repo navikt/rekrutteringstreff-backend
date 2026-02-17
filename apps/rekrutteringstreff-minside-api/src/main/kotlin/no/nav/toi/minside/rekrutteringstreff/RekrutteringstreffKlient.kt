@@ -5,6 +5,8 @@ import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.minside.TokenXKlient
 import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto
 import no.nav.toi.minside.innlegg.InnleggOutboundDto
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -18,7 +20,13 @@ class RekrutteringstreffKlient(
     private val rekrutteringstreffAudience: String,
     private val httpClient: HttpClient
 ) {
+
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(this::class.java)
+    }
+
     fun hent(id: String, innkommendeToken: String): Rekrutteringstreff? {
+        log.info("url : $url/api/rekrutteringstreff/$id")
         val request = HttpRequest.newBuilder()
             .uri(URI("$url/api/rekrutteringstreff/$id"))
             .header(

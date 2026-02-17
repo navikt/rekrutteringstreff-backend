@@ -216,35 +216,31 @@ erDiagram
 
 #### hendelse_data kolonne
 
-Alle hendelse-tabeller har en `hendelse_data jsonb` kolonne som kan inneholde ekstra strukturert data knyttet til hendelsen:
+Alle hendelse-tabeller har en `hendelse_data jsonb`-kolonne som inneholder ekstra strukturert data knyttet til hendelsen. **De fleste hendelsestyper har null** – kun to scenarioer bruker den:
 
-- **rekrutteringstreff_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING` hendelser
-- **jobbsoker_hendelse.hendelse_data**: Brukes f.eks. for å lagre endringsdata ved `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` hendelser
-- **arbeidsgiver_hendelse.hendelse_data**: Reservert for fremtidig bruk
+| Hendelsestype                                 | Tabell                        | JSON-struktur                                                          | Kotlin-klasse                    |
+| --------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------- | -------------------------------- |
+| `TREFF_ENDRET_ETTER_PUBLISERING`              | `rekrutteringstreff_hendelse` | Endringsfelt per felt (navn, sted, tidspunkt, svarfrist, introduksjon) | `Rekrutteringstreffendringer.kt` |
+| `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` | `jobbsoker_hendelse`          | Samme som over                                                         | `Rekrutteringstreffendringer.kt` |
+| `MOTTATT_SVAR_FRA_MINSIDE`                    | `jobbsoker_hendelse`          | Varselstatus, kanal, mal, flettedata                                   | `MinsideVarselSvarData.kt`       |
+| Alle andre                                    | Alle                          | `null`                                                                 | –                                |
 
-Data lagres som JSON og kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
+Se [Arkitekturbeslutninger – hendelse_data](arkitekturbeslutninger.md#hendelse_data-polymorfe-json-objekter-i-hendelsestabellene) for detaljert dokumentasjon av JSON-strukturene, serialisering, og bruk i frontend.
+
+Data kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
 
 ### Støttetabeller
 
 - **naringskode**: Næringskoder for arbeidsgivere (kan ha flere per arbeidsgiver)
-- **ki_spørring_logg**: Logger AI/KI-spørringer med metadata og modereringsinfo - se [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md)
+- **ki_spørring_logg**: Logger AI/KI-spørringer med metadata og modereringsinfo - se [KI-tekstvalidering](../5-ki/ki-tekstvalidering.md)
 
 ## Flyway-migrasjoner
 
 Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/migration/`.
 
-| Versjon | Fil                                                 | Beskrivelse                                                                      |
-| ------- | --------------------------------------------------- | -------------------------------------------------------------------------------- |
-| V1      | `V1__initiell_last.sql`                             | Initiell opprettelse av alle tabeller                                            |
-| V2      | `V2__hendelse_data.sql`                             | Legger til `hendelse_data` JSONB-kolonne på alle hendelse-tabeller               |
-| V3      | `V3__arbeidsgiver_status.sql`                       | Legger til `status`-kolonne på arbeidsgiver                                      |
-| V4      | `V4__jobbsoker_status.sql`                          | Legger til `status`-kolonne på jobbsøker                                         |
-| V5      | `V5__rekrutteringstreff_kommune_og_fylke.sql`       | Legger til `fylke` og `kommune` på rekrutteringstreff                            |
-| V6      | `V6__legg_til_endret_felter_rekrutteringstreff.sql` | Legger til `sist_endret_av_person_navident` og `sist_endret_av_tidspunkt`        |
-| V7      | `V7__arbeidsgiver_adresse.sql`                      | Legger til adressefelt på arbeidsgiver (`gateadresse`, `postnummer`, `poststed`) |
-| V8      | `V8__fjerne_kandidatnummer.sql`                     | Fjerner `kandidatnummer`-kolonnen fra jobbsoker (hentes nå on-demand)            |
-| V9      | `V9__synlighet_jobbsoker.sql`                       | Legger til synlighet-felt (`er_synlig`, `synlighet_sist_oppdatert`) og indekser  |
-| V10     | `V10__synlighet_kilde.sql`                          | Legger til `synlighet_kilde` for å skille event fra need-svar                    |
+| Versjon | Fil            | Beskrivelse                           |
+| ------- | -------------- | ------------------------------------- |
+| V1      | `V1__init.sql` | Initiell opprettelse av alle tabeller |
 
 ## Indekser
 
@@ -279,4 +275,4 @@ Dette diagrammet kan vises i:
 ## Relaterte dokumenter
 
 - [Synlighet](../3-sikkerhet/synlighet.md) - Detaljert beskrivelse av synlighetsintegrasjonen
-- [KI-tekstvalideringstjenesten](../5-ki/ki-tekstvalideringstjeneste.md) - Beskrivelse av KI-loggingen
+- [KI-tekstvalidering](../5-ki/ki-tekstvalidering.md) - Beskrivelse av KI-loggingen

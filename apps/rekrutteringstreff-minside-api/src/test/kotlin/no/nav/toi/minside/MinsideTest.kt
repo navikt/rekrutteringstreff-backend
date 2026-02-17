@@ -157,14 +157,6 @@ class MinsideTest {
                 ))
             }.hentAlleRekrutteringstreff().first { tittel == it.tittel }
         }
-        private val rekrutteringstreffIkkeMeldtPå = "Rekrutteringstreff ikke meldt på".let { tittel ->
-            db.apply {
-                opprettRekrutteringstreffIDatabase(
-                    navIdent = "navIdent",
-                    tittel = tittel
-                )
-            }.hentAlleRekrutteringstreff().first { tittel == it.tittel }
-        }
     }
 
     @BeforeAll
@@ -242,7 +234,7 @@ class MinsideTest {
 
     @Test
     fun `avgi svarstatus for jobbsøker på ett treff`() {
-        val ident = "12345678910"
+        val ident = jobbsøkerFnr
         val token = authServer.lagToken(authPort, pid = ident)
 
         val (_, response, result) = Fuel.put("http://localhost:$appPort/api/rekrutteringstreff/${rekrutteringstreffMeldtPå.id}/svar")

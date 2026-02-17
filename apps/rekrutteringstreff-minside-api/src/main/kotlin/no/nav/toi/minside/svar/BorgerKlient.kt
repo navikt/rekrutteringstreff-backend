@@ -54,20 +54,19 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
     fun svarPåTreff(rekrutterinstreffId: String, innkommendeToken: String, erPåmeldt: Boolean) {
         val påmeldtSomStreng = if (erPåmeldt) "ja" else "nei"
 
-        "${jobbsøkerPath(rekrutterinstreffId)}/borger/svar-${påmeldtSomStreng}".httpPost()
+        val (_, response, _) = "${jobbsøkerPath(rekrutterinstreffId)}/borger/svar-${påmeldtSomStreng}".httpPost()
             .header(
                 Header.AUTHORIZATION,
                 "Bearer ${tokenXKlient.onBehalfOfTokenX(innkommendeToken, rekrutteringstreffAudience)}"
             )
-            .responseString { _, response, result ->
-                log.info("Svarte ${påmeldtSomStreng} på jobbtreff: $rekrutterinstreffId, status: ${response.statusCode}")
-                when (result) {
-                    is Failure -> throw result.error
-                    is Success -> {
-                        log.info("Jobbsøker har svart ${påmeldtSomStreng} på rekrutteringstreff med id: $rekrutterinstreffId")
-                    }
-                }
-            }
+            .response()
+
+        if (response.statusCode !in 200..299) {
+            log.error("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode}")
+            throw RuntimeException("Svar på treff $rekrutterinstreffId feilet med status ${response.statusCode}")
+        } else {
+            log.info("Jobbsøker har svart ${påmeldtSomStreng} på rekrutteringstreff med id: $rekrutterinstreffId")
+        }
     }
 }
 

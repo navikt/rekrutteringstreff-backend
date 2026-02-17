@@ -1,6 +1,5 @@
 package no.nav.toi.jobbsoker.dto
 
-import com.fasterxml.jackson.databind.JsonNode
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.Etternavn
@@ -20,5 +19,5 @@ data class JobbsøkerHendelseMedJobbsøkerData(
     val fornavn: Fornavn,
     val etternavn: Etternavn,
     val personTreffId: PersonTreffId,
-    val hendelseData: JsonNode? = null
+    val hendelseData: HendelseDataDto? = null
 )

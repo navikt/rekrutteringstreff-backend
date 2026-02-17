@@ -55,7 +55,8 @@ class KiController (
                 example = """{
               "loggId": "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d",
               "bryterRetningslinjer": false,
-              "begrunnelse": "Ingen sensitive opplysninger eller diskriminerende formuleringer."
+              "begrunnelse": "Ingen sensitive opplysninger eller diskriminerende formuleringer.",
+              "validertTekst": "Vi søker etter en blid og motivert medarbeider."
             }"""
             )]
         )],
@@ -66,13 +67,14 @@ class KiController (
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val req = ctx.bodyAsClass<ValiderMedLoggRequestUtenTreffIdDto>()
         val treffId = UUID.fromString(ctx.pathParam(pathParamTreffId))
-        val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?) =
+        val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?, validertTekst: String) =
             openAiClient.validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
         ctx.status(200).json(
             ValiderMedLoggResponseDto(
                 loggId = loggId?.toString() ?: "",
                 bryterRetningslinjer = result.bryterRetningslinjer,
-                begrunnelse = result.begrunnelse
+                begrunnelse = result.begrunnelse,
+                validertTekst = validertTekst
             )
         )
     }
@@ -80,10 +82,10 @@ class KiController (
     @OpenApi(
         summary = "Oppdater 'lagret' for en logglinje.",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(
-            name = "id", type = UUID::class, required = true,
-            example = "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d"
-        )],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, example = "550e8400-e29b-41d4-a716-446655440000"),
+            OpenApiParam(name = "loggId", type = UUID::class, required = true, example = "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d")
+        ],
         requestBody = OpenApiRequestBody(
             required = true,
             content = [OpenApiContent(
@@ -110,10 +112,10 @@ class KiController (
     @OpenApi(
         summary = "Registrer resultat av manuell kontroll.",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(
-            name = "id", type = UUID::class, required = true,
-            example = "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d"
-        )],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, example = "550e8400-e29b-41d4-a716-446655440000"),
+            OpenApiParam(name = "loggId", type = UUID::class, required = true, example = "7f1f5a2c-6d2a-4a7b-9c2b-1f0d2a3b4c5d")
+        ],
         requestBody = OpenApiRequestBody(
             required = true,
             content = [OpenApiContent(
@@ -154,6 +156,7 @@ class KiController (
     @OpenApi(
         summary = "List logglinjer (filtrerbar på TreffId og feltType).",
         security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, example = "550e8400-e29b-41d4-a716-446655440000")],
         queryParams = [
             OpenApiParam(name = "treffId", type = String::class, required = false, example = "550e8400-e29b-41d4-a716-446655440000"),
             OpenApiParam(name = "feltType", type = String::class, required = false, example = "innlegg"),
@@ -260,10 +263,10 @@ class KiController (
     @OpenApi(
         summary = "Hent én logglinje.",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(
-            name = "id", type = UUID::class, required = true,
-            example = "3f9e8f0a-12ab-4c3d-9f45-2b34c6d7e890"
-        )],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, example = "550e8400-e29b-41d4-a716-446655440000"),
+            OpenApiParam(name = "loggId", type = UUID::class, required = true, example = "3f9e8f0a-12ab-4c3d-9f45-2b34c6d7e890")
+        ],
         responses = [OpenApiResponse(
             status = "200",
             description = "Returnerer logglinje. prompt*-feltene er de lagrede verdiene (kan være null for eldre rader).",
@@ -293,7 +296,7 @@ class KiController (
             }"""
             )]
         )],
-        path = "$baseUrl/logg/{id}",
+        path = "$baseUrl/logg/{loggId}",
         methods = [HttpMethod.GET]
     )
     private fun getHandler(): (Context) -> Unit = { ctx ->
@@ -345,7 +348,8 @@ data class OppdaterLagretRequestDto(val lagret: Boolean)
 data class ValiderMedLoggResponseDto(
     val loggId: String,
     val bryterRetningslinjer: Boolean,
-    val begrunnelse: String
+    val begrunnelse: String,
+    val validertTekst: String
 )
 
 data class ValiderMedLoggRequestUtenTreffIdDto(

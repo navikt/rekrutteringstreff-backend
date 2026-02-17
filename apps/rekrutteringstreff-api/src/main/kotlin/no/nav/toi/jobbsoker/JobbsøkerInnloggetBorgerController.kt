@@ -14,6 +14,8 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
 import no.nav.toi.jobbsoker.dto.StatuserOutboundDto
 import no.nav.toi.jobbsoker.dto.toOutboundDto
 import no.nav.toi.rekrutteringstreff.TreffId
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 class JobbsøkerInnloggetBorgerController(
@@ -27,6 +29,7 @@ class JobbsøkerInnloggetBorgerController(
         private const val borgerJobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker/borger"
         private const val svarJaPath = "$borgerJobbsøkerPath/svar-ja"
         private const val svarNeiPath = "$borgerJobbsøkerPath/svar-nei"
+        private val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
     init {
@@ -53,6 +56,7 @@ class JobbsøkerInnloggetBorgerController(
                 throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
             }
             jobbsøkerService.svarJaTilInvitasjon(Fødselsnummer(pid), treffId, pid)
+            log.info("svarJaHandler returnerer 200 OK for treffid $treffId ")
             ctx.status(200)
         }
     }
@@ -74,6 +78,7 @@ class JobbsøkerInnloggetBorgerController(
                 throw IllegalArgumentException("PID må oppgis for å hente jobbsøker")
             }
             jobbsøkerService.svarNeiTilInvitasjon(Fødselsnummer(pid), treffId, pid)
+            log.info("svarNeiHandler returnerer 200 OK for treffid $treffId ")
             ctx.status(200)
         }
     }

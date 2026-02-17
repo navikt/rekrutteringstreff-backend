@@ -65,7 +65,7 @@ class OpenAiClient(
         treffId: UUID,
         feltType: String,
         tekst: String
-    ): Pair<ValiderRekrutteringstreffResponsDto, UUID?> {
+    ): Triple<ValiderRekrutteringstreffResponsDto, UUID?, String> {
         lateinit var result: ValiderRekrutteringstreffResponsDto
         lateinit var filtered: String
 
@@ -153,7 +153,7 @@ class OpenAiClient(
             )
         )
 
-        return result to id
+        return Triple(result, id, filtered)
     }
 
     private fun sorterContentFilterResult(contentFilterResult: ContentFilterResultDto): String {
