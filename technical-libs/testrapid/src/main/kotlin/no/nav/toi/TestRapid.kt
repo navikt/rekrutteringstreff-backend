@@ -2,7 +2,10 @@ package no.nav.toi
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.FailedMessage
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 
 class TestRapid(private val meterRegistry: io.micrometer.core.instrument.MeterRegistry = io.micrometer.core.instrument.simple.SimpleMeterRegistry(), private val maxTriggedeMeldinger: Int = 10) :
     RapidsConnection() {
@@ -86,6 +89,14 @@ class TestRapid(private val meterRegistry: io.micrometer.core.instrument.MeterRe
 
     override fun publish(key: String, message: String) {
         messages.add(key to message)
+    }
+
+    override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
+       val sendteMeldinger = emptyList<SentMessage>()
+        messages.forEach { message ->
+            this.messages.add(message.key to message.body)
+        }
+        return Pair(sendteMeldinger, emptyList())
     }
 
     override fun rapidName(): String {
