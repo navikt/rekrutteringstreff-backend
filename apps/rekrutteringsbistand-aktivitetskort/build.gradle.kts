@@ -6,7 +6,7 @@ plugins {
 val flywayVersion = "11.3.0"
 val postgresVersion = "42.7.5"
 val hikariVersion = "6.2.1"
-val testContainerVersion = "1.20.4"
+val testContainerVersion = "1.21.4"
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
