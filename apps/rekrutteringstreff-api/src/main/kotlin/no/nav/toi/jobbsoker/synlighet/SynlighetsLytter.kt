@@ -33,12 +33,12 @@ class SynlighetsLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireKey("synlighet.erSynlig")
+                it.requireKey("fodselsnummer")
                 it.requireValue("synlighet.ferdigBeregnet", true)
                 // Lytt kun på siste melding i hendelseskjeden for å unngå duplikate oppdateringer
                 it.requireValue("@slutt_av_hendelseskjede", true)
             }
             validate {
-                it.requireKey("fodselsnummer")
                 it.requireKey("@opprettet")
                 it.interestedIn("synlighet")
             }
