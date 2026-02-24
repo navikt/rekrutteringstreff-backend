@@ -249,6 +249,7 @@ class RekrutteringstreffService(
                 .filter { jobbsøkerService.skalVarslesOmEndringer(it.hendelser) }
                 .map { it.personTreffId }
             val jobbsøkereFåOppdateringUtenVarsel = alleJobbsøkere
+                .filter { jobbsøker -> jobbsøker.hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT } }
                 .filterNot { it.personTreffId in jobbsøkereFåOppdateringMedVarsel }
                 .map { it.personTreffId }
 
