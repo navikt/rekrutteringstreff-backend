@@ -7,10 +7,8 @@ import io.javalin.http.ForbiddenResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
-import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.rekrutteringstreff.dto.*
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
@@ -294,7 +292,7 @@ class RekrutteringstreffController(
             val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException(
                 "Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering"
             )
-            if (kiValideringsService.erTekstEndret(eksisterendeTreff?.tittel, dto.tittel)) {
+            if (kiValideringsService.erTekstEndret(eksisterendeTreff.tittel, dto.tittel)) {
                 kiValideringsService.verifiserKiValidering(
                     tekst = dto.tittel,
                     kiLoggId = dto.tittelKiLoggId,
@@ -573,9 +571,9 @@ class RekrutteringstreffController(
                 }
 
                 val endringer = ctx.bodyAsClass<Rekrutteringstreffendringer>()
-                val endringerJson = JacksonConfig.mapper.writeValueAsString(endringer)
 
-                service.registrerEndring(treffId, endringerJson, navIdent)
+
+                service.registrerEndring(treffId, endringer, navIdent)
                 ctx.status(201)
             } else {
                 throw ForbiddenResponse("Personen har ikke tilgang til å registrere endringer for treffet ${treffId.somString}")

@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
+import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
@@ -219,9 +220,20 @@ class RekrutteringstreffService(
         }
     }
 
-    fun registrerEndring(treffId: TreffId, endringer: String, endretAv: String) {
+    fun registrerEndring(treffId: TreffId, endringer: Rekrutteringstreffendringer, endretAv: String) {
         dataSource.executeInTransaction { connection ->
             val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
+
+            val endringerUtenVarsel = endringer.copy(
+                navn = endringer.navn?.copy(skalVarsle = false),
+                sted = endringer.sted?.copy(skalVarsle = false),
+                tidspunkt = endringer.tidspunkt?.copy(skalVarsle = false),
+                svarfrist = endringer.svarfrist?.copy(skalVarsle = false),
+                introduksjon = endringer.introduksjon?.copy(skalVarsle = false)
+            )
+
+            val endringerJsonMedVarsel = JacksonConfig.mapper.writeValueAsString(endringer)
+            val endringerJsonUtenVarsel = JacksonConfig.mapper.writeValueAsString(endringerUtenVarsel)
 
             rekrutteringstreffRepository.leggTilHendelse(
                 connection,
@@ -229,23 +241,36 @@ class RekrutteringstreffService(
                 RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
                 AktørType.ARRANGØR,
                 endretAv,
-                endringer
+                endringerJsonMedVarsel
             )
 
             val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
-            val jobbsøkereSomSkalVarsles = alleJobbsøkere
+            val jobbsøkereFåOppdateringMedVarsel = alleJobbsøkere
                 .filter { jobbsøkerService.skalVarslesOmEndringer(it.hendelser) }
                 .map { it.personTreffId }
+            val jobbsøkereFåOppdateringUtenVarsel = alleJobbsøkere
+                .filterNot { it.personTreffId in jobbsøkereFåOppdateringMedVarsel }
+                .map { it.personTreffId }
 
-            if (jobbsøkereSomSkalVarsles.isNotEmpty()) {
+            if (jobbsøkereFåOppdateringMedVarsel.isNotEmpty()) {
                 jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                     connection,
                     JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
-                    jobbsøkereSomSkalVarsles,
+                    jobbsøkereFåOppdateringMedVarsel,
                     endretAv,
-                    hendelseData = endringer
+                    hendelseData = endringerJsonMedVarsel
                 )
-                logger.info("Registrert endring for rekrutteringstreff  ${treffId.somString} med ${jobbsøkereSomSkalVarsles.size} jobbsøkere som skal varsles")
+                logger.info("Registrert endring for rekrutteringstreff  ${treffId.somString} med ${jobbsøkereFåOppdateringMedVarsel.size} jobbsøkere som skal varsles")
+            }
+            if (jobbsøkereFåOppdateringUtenVarsel.isNotEmpty()) {
+                jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                    connection,
+                    JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
+                    jobbsøkereFåOppdateringUtenVarsel,
+                    endretAv,
+                    hendelseData = endringerJsonUtenVarsel
+                )
+                logger.info("Registrert endring for rekrutteringstreff  ${treffId.somString} med ${jobbsøkereFåOppdateringUtenVarsel.size} jobbsøkere som ikke skal varsles")
             }
         }
     }
