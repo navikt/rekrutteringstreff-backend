@@ -318,7 +318,12 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         poststed: String
     ) {
         val aktivitetskortId = hentAktivitetskortId(fnr, rekrutteringstreffId)
-            ?: throw IllegalStateException("Fant ikke aktivitetskort for rekrutteringstreff $rekrutteringstreffId og fnr")
+            ?: if (rekrutteringstreffId.toString() == "a118f78b-7615-449f-8271-5c38a8b15ee2") {
+                log.info("Skip melding for rekrutteringstreff $rekrutteringstreffId")
+                return
+            } else {
+                throw IllegalStateException("Fant ikke aktivitetskort for rekrutteringstreff $rekrutteringstreffId og fnr")
+            }
 
         dataSource.connection.use { connection ->
             connection.prepareStatement(
