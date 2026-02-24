@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/tillat-endring-etter-svarfrist
+      deploy_dev_branch: refs/heads/synlighetslytter
     secrets: inherit
     permissions:
       contents: read
