@@ -313,7 +313,7 @@ class KiTest {
 
         oppdaterEkstra(UUID.fromString(loggId), null) // fjerne ekstra
 
-        val listRes = httpGet("http://localhost:$appPort$base/logg?treffId=$treffId", token.serialize())
+        val listRes = httpGet("http://localhost:$appPort$base/logg", token.serialize())
         val type = mapper.typeFactory.constructCollectionType(List::class.java, KiLoggOutboundDto::class.java)
         assertThat(listRes.statusCode()).isEqualTo(HTTP_OK)
         val items: List<KiLoggOutboundDto> = mapper.readValue(listRes.body(), type)
@@ -322,6 +322,28 @@ class KiTest {
         assertThat(row.promptVersjonsnummer).isNull()
         assertThat(row.promptHash).isNull()
         assertThat(row.promptEndretTidspunkt).isNull()
+    }
+
+    @Test
+    fun lister_kun_logglinjer_for_det_angitte_treffet__ikke_fra_andre_treff() {
+        stubOpenAi()
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+
+        val treffA = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+        val treffB = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
+
+        val loggIdA = opprettLogg(treffA, token)
+        val loggIdB = opprettLogg(treffB, token)
+
+        val baseA = baseTemplate.format(treffA)
+        val listRes = httpGet("http://localhost:$appPort$baseA/logg", token.serialize())
+        val type = mapper.typeFactory.constructCollectionType(List::class.java, KiLoggOutboundDto::class.java)
+        assertThat(listRes.statusCode()).isEqualTo(HTTP_OK)
+        val items: List<KiLoggOutboundDto> = mapper.readValue(listRes.body(), type)
+
+        assertThat(items.any { it.id == loggIdA }).isTrue()
+        assertThat(items.none { it.id == loggIdB }).isTrue()
     }
 
     fun forbudteKiEndepunkt(): Stream<Arguments> = Stream.of(

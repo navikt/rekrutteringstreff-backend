@@ -103,7 +103,7 @@ class KiController (
     )
     private fun oppdaterLagretHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER, Rolle.ARBEIDSGIVER_RETTET)
-        val id = UUID.fromString(runCatching { ctx.pathParam("loggId") }.getOrElse { ctx.pathParam("id") })
+        val id = UUID.fromString(ctx.pathParam("loggId"))
         val req = ctx.bodyAsClass<OppdaterLagretRequestDto>()
         if (kiLoggRepository.setLagret(id, req.lagret) == 0) throw NotFoundResponse("Logg ikke funnet")
         ctx.status(200).json(emptyMap<String, String>())
@@ -133,7 +133,7 @@ class KiController (
     )
     private fun oppdaterManuellHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
-        val id = UUID.fromString(runCatching { ctx.pathParam("loggId") }.getOrElse { ctx.pathParam("id") })
+        val id = UUID.fromString(ctx.pathParam("loggId"))
         val req = ctx.bodyAsClass<OppdaterManuellRequestDto>()
 
         val ident: String?
@@ -221,7 +221,7 @@ class KiController (
     )
     private fun listHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
-        val treffId = ctx.queryParam("treffId")?.let(UUID::fromString)
+        val treffId = UUID.fromString(ctx.pathParam(pathParamTreffId))
         val feltType = ctx.queryParam("feltType")
         val limit = ctx.queryParam("limit")?.toInt() ?: 50
         val offset = ctx.queryParam("offset")?.toInt() ?: 0
@@ -301,7 +301,7 @@ class KiController (
     )
     private fun getHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.UTVIKLER)
-        val id = UUID.fromString(runCatching { ctx.pathParam("loggId") }.getOrElse { ctx.pathParam("id") })
+        val id = UUID.fromString(ctx.pathParam("loggId"))
         val row = kiLoggRepository.findById(id) ?: throw NotFoundResponse("Logg ikke funnet")
 
         val mapper = JacksonConfig.mapper
