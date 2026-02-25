@@ -281,6 +281,103 @@ class InnleggTest {
         assertThat(resp.body()).contains("KI_VALIDERING_MANGLER")
     }
 
+    @Test
+    fun `POST med bryterRetningslinjer og uten lagreLikevel gir 422 KI_KREVER_BEKREFTELSE`() {
+        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val treff = db.opprettRekrutteringstreffIDatabase()
+        val kiLoggRepository = KiLoggRepository(db.dataSource)
+        val htmlContent = "<p>Diskriminerende innhold</p>"
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treff.somUuid,
+                feltType = "innlegg",
+                spørringFraFrontend = htmlContent,
+                spørringFiltrert = htmlContent,
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = true,
+                begrunnelse = "Diskriminerende innhold",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+        val body = OpprettInnleggRequestDto(
+            tittel = "Tittel",
+            opprettetAvPersonNavn = "Ola",
+            opprettetAvPersonBeskrivelse = "Veileder",
+            sendesTilJobbsokerTidspunkt = ZonedDateTime.now().plusHours(1),
+            htmlContent = htmlContent,
+            innleggKiLoggId = loggId.toString(),
+            lagreLikevel = false
+        )
+        val resp = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg",
+            JacksonConfig.mapper.writeValueAsString(body),
+            token.serialize()
+        )
+        assertThat(resp.statusCode()).isEqualTo(422)
+        assertThat(resp.body()).contains("KI_KREVER_BEKREFTELSE")
+    }
+
+    @Test
+    fun `POST med ukjent innleggKiLoggId gir 422 KI_LOGG_ID_UGYLDIG`() {
+        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val treff = db.opprettRekrutteringstreffIDatabase()
+        val body = OpprettInnleggRequestDto(
+            tittel = "Tittel",
+            opprettetAvPersonNavn = "Ola",
+            opprettetAvPersonBeskrivelse = "Veileder",
+            sendesTilJobbsokerTidspunkt = ZonedDateTime.now().plusHours(1),
+            htmlContent = "<p>Noe innhold</p>",
+            innleggKiLoggId = UUID.randomUUID().toString()
+        )
+        val resp = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg",
+            JacksonConfig.mapper.writeValueAsString(body),
+            token.serialize()
+        )
+        assertThat(resp.statusCode()).isEqualTo(422)
+        assertThat(resp.body()).contains("KI_LOGG_ID_UGYLDIG")
+    }
+
+    @Test
+    fun `POST med endret tekst etter validering gir 422 KI_TEKST_ENDRET`() {
+        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val treff = db.opprettRekrutteringstreffIDatabase()
+        val kiLoggRepository = KiLoggRepository(db.dataSource)
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treff.somUuid,
+                feltType = "innlegg",
+                spørringFraFrontend = "<p>Validert innhold</p>",
+                spørringFiltrert = "<p>Validert innhold</p>",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+        val body = OpprettInnleggRequestDto(
+            tittel = "Tittel",
+            opprettetAvPersonNavn = "Ola",
+            opprettetAvPersonBeskrivelse = "Veileder",
+            sendesTilJobbsokerTidspunkt = ZonedDateTime.now().plusHours(1),
+            htmlContent = "<p>Endret innhold etter validering</p>",
+            innleggKiLoggId = loggId.toString()
+        )
+        val resp = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/innlegg",
+            JacksonConfig.mapper.writeValueAsString(body),
+            token.serialize()
+        )
+        assertThat(resp.statusCode()).isEqualTo(422)
+        assertThat(resp.body()).contains("KI_TEKST_ENDRET")
+    }
+
     private fun sampleOpprett() = OpprettInnleggRequestDto(
         tittel = "Tittel",
         opprettetAvPersonNavn = "Ola",

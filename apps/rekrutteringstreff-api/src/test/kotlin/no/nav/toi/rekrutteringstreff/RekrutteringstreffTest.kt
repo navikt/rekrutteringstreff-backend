@@ -388,6 +388,129 @@ class RekrutteringstreffTest {
     }
 
     @Test
+    fun `oppdater rekrutteringstreff med bryterRetningslinjer og uten lagreLikevel gir 422 KI_KREVER_BEKREFTELSE`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val created = db.hentAlleRekrutteringstreff().first()
+        val kiLoggRepository = no.nav.toi.rekrutteringstreff.ki.KiLoggRepository(db.dataSource)
+        val loggId = kiLoggRepository.insert(
+            no.nav.toi.rekrutteringstreff.ki.KiLoggInsert(
+                treffId = treffId.somUuid,
+                feltType = "tittel",
+                spørringFraFrontend = "Diskriminerende tittel",
+                spørringFiltrert = "Diskriminerende tittel",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = true,
+                begrunnelse = "Diskriminerende innhold",
+                kiNavn = "azure-openai",
+                kiVersjon = "test",
+                svartidMs = 100
+            )
+        )
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Diskriminerende tittel",
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+            tittelKiLoggId = loggId.toString(),
+            lagreLikevel = false
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("KI_KREVER_BEKREFTELSE")
+    }
+
+    @Test
+    fun `oppdater rekrutteringstreff med ukjent kiLoggId gir 422 KI_LOGG_ID_UGYLDIG`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val created = db.hentAlleRekrutteringstreff().first()
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Ny tittel",
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+            tittelKiLoggId = UUID.randomUUID().toString()
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("KI_LOGG_ID_UGYLDIG")
+    }
+
+    @Test
+    fun `oppdater rekrutteringstreff med endret tekst etter validering gir 422 KI_TEKST_ENDRET`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val created = db.hentAlleRekrutteringstreff().first()
+        val kiLoggRepository = no.nav.toi.rekrutteringstreff.ki.KiLoggRepository(db.dataSource)
+        val loggId = kiLoggRepository.insert(
+            no.nav.toi.rekrutteringstreff.ki.KiLoggInsert(
+                treffId = treffId.somUuid,
+                feltType = "tittel",
+                spørringFraFrontend = "Validert tittel",
+                spørringFiltrert = "Validert tittel",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "test",
+                svartidMs = 100
+            )
+        )
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Endret tittel etter validering",
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+            tittelKiLoggId = loggId.toString()
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("KI_TEKST_ENDRET")
+    }
+
+    @Test
     fun slettRekrutteringstreffMedUpublisertedata() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
