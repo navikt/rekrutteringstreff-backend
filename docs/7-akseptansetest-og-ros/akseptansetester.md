@@ -554,16 +554,15 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 
 > **Automatiske tester:** ROBs nøyaktighet måles av automatiske tester i `apps/rekrutteringstreff-api/src/test/kotlin/no/nav/toi/rekrutteringstreff/ki/KiTekstvalideringParameterisertTest.kt`. Nøyaktighet = (antall test-prompts - antall avvikende resultat) / antall test-prompts \* 100.
 
-| #      | Test                                                         | Forventet resultat                                               | ✅❌ | Notat |
-| ------ | ------------------------------------------------------------ |------------------------------------------------------------------| ---- | ----- |
-| 11.4.1 | Utvikler - Åpne KI-logg                                      | Ser liste over KI-valideringer for kun dette treffet             |      |       |
-| 11.4.2 | Utvikler - Sjekk logg for kladd-treff                        | lagret=true for tekst som ble autolagret                         |      |       |
-| 11.4.3 | Utvikler - Sjekk logg etter publisert endring                | lagret=true kun når bruker trykket "Lagre" i dialog              |      |       |
-| 11.4.4 | Utvikler - Sjekk tekst som ble forkastet                     | lagret=false for tekst som ble endret før lagring                |      |       |
-| 11.4.5 | Utvikler - Sjekk lagret-felt før publisering (autolagring)   | lagret=true settes når autolagring kjører i kladd-modus          |      |       |
-| 11.4.6 | Utvikler - Sjekk lagret-felt etter publisering (bekreftelse) | lagret=true settes kun etter submit-knapp i bekreftelsesdialogen |      |       |
-| 11.4.7 | Utvikler - Legg inn manuell vurdering                        | Kan registrere egen vurdering for kvalitetskontroll              |      |       |
-| 11.4.8 | Utvikler - Filtrer på avvik                                  | Kan finne tilfeller der KI vurderte feil                         |      |       |
+| #      | Test                                                                                                      | Forventet resultat                                                                     | ✅❌ | Notat |
+| ------ | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---- | ----- |
+| 11.4.1 | Utvikler - Åpne KI-logg                                                                                   | Ser liste over KI-valideringer for kun dette treffet                                   |      |       |
+| 11.4.2 | Utvikler - Valideringsknapp trykket i kladd → sjekk logg                                                  | Loggoppføring finnes; lagret=true etter at autolagring fullfører i kladd-modus         |      |       |
+| 11.4.3 | Utvikler - Valideringsknapp trykket etter publisering, "Lagre" i dialog trykket → sjekk logg              | Loggoppføring finnes; lagret=true                                                      |      |       |
+| 11.4.4 | Utvikler - Valideringsknapp trykket etter publisering, dialog avbrutt (IKKE trykket "Lagre") → sjekk logg | Loggoppføring finnes; lagret=false – teksten ble validert men ikke lagret              |      |       |
+| 11.4.5 | Utvikler - Valideringsknapp IKKE trykket, tekst skrevet i felt → sjekk logg                               | Ingen loggoppføring for den teksten – tekst sendes ikke til KI uten at knappen trykkes |      |       |
+| 11.4.6 | Utvikler - Legg inn manuell vurdering                                                                     | Kan registrere egen vurdering for kvalitetskontroll                                    |      |       |
+| 11.4.7 | Utvikler - Filtrer på avvik                                                                               | Kan finne tilfeller der KI vurderte feil                                               |      |       |
 
 ### UI-tekst og brukeransvar (ROS 27979, 27545, 27321)
 
