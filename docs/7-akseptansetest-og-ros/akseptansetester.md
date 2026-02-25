@@ -555,8 +555,8 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 > **Automatiske tester:** ROBs nøyaktighet måles av automatiske tester i `apps/rekrutteringstreff-api/src/test/kotlin/no/nav/toi/rekrutteringstreff/ki/KiTekstvalideringParameterisertTest.kt`. Nøyaktighet = (antall test-prompts - antall avvikende resultat) / antall test-prompts \* 100.
 
 | #      | Test                                                         | Forventet resultat                                               | ✅❌ | Notat |
-| ------ | ------------------------------------------------------------ | ---------------------------------------------------------------- | ---- | ----- |
-| 11.4.1 | Utvikler - Åpne KI-logg                                      | Ser liste over alle KI-valideringer                              |      |       |
+| ------ | ------------------------------------------------------------ |------------------------------------------------------------------| ---- | ----- |
+| 11.4.1 | Utvikler - Åpne KI-logg                                      | Ser liste over KI-valideringer for kun dette treffet             |      |       |
 | 11.4.2 | Utvikler - Sjekk logg for kladd-treff                        | lagret=true for tekst som ble autolagret                         |      |       |
 | 11.4.3 | Utvikler - Sjekk logg etter publisert endring                | lagret=true kun når bruker trykket "Lagre" i dialog              |      |       |
 | 11.4.4 | Utvikler - Sjekk tekst som ble forkastet                     | lagret=false for tekst som ble endret før lagring                |      |       |
