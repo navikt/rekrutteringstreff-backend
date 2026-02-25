@@ -561,8 +561,10 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 | 11.4.3 | Utvikler - Valideringsknapp trykket etter publisering, "Lagre" i dialog trykket → sjekk logg              | Loggoppføring finnes; lagret=true                                                      |      |       |
 | 11.4.4 | Utvikler - Valideringsknapp trykket etter publisering, dialog avbrutt (IKKE trykket "Lagre") → sjekk logg | Loggoppføring finnes; lagret=false – teksten ble validert men ikke lagret              |      |       |
 | 11.4.5 | Utvikler - Valideringsknapp IKKE trykket, tekst skrevet i felt → sjekk logg                               | Ingen loggoppføring for den teksten – tekst sendes ikke til KI uten at knappen trykkes |      |       |
-| 11.4.6 | Utvikler - Legg inn manuell vurdering                                                                     | Kan registrere egen vurdering for kvalitetskontroll                                    |      |       |
-| 11.4.7 | Utvikler - Filtrer på avvik                                                                               | Kan finne tilfeller der KI vurderte feil                                               |      |       |
+| 11.4.6 | Utvikler - Sjekk logglinje uten manuell vurdering                                                         | Feltet for manuell vurdering viser strek/dash                                          |      |       |
+| 11.4.7 | Utvikler - Legg inn manuell vurdering som stemmer med KI: tekst er ok (KI: ok, manuell: enig)             | Feltet viser grønn ok – manuell og KI er enige om at teksten er akseptabel             |      |       |
+| 11.4.8 | Utvikler - Legg inn manuell vurdering som stemmer med KI: tekst er ikke ok (KI: advarsel, manuell: enig)  | Feltet viser grønn ok – manuell og KI er enige, selv om teksten avvises                |      |       |
+| 11.4.9 | Utvikler - Legg inn manuell vurdering som er uenig med KI (f.eks. KI: advarsel, manuell: teksten er grei) | Feltet viser rødt kryss – avvik mellom manuell vurdering og KI-sjekk                  |      |       |
 
 ### UI-tekst og brukeransvar (ROS 27979, 27545, 27321)
 
