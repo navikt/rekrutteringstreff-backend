@@ -43,6 +43,22 @@ Denne tilnærmingen sikrer at vi aldri mister hendelser, og at all prosessering 
 - **Flyway** for migrasjoner
 - **HikariCP** for connection pooling
 
+### SQL-mønstre i repository-laget
+
+#### Inline-aggregering med `json_agg` / `json_build_object`
+
+For å hente entiteter med tilhørende subtabelldata (f.eks. jobbsøker med hendelser) bruker vi PostgreSQLs `json_agg(json_build_object(...))` direkte i SELECT-spørringen. Dette gir én enkelt spørring som returnerer hovedraden med en JSON-array av relaterte rader:
+
+#### Alternativer vi vurderte
+
+| Tilnærming                                 | Ytelse                             | Lesbarhet                                                  | Gjenbrukbarhet                                 |
+| ------------------------------------------ | ---------------------------------- | ---------------------------------------------------------- | ---------------------------------------------- |
+| **`json_agg` i én spørring** ✅            | Best – én roundtrip til databasen  | Middels – SQL blir kompleks, men godt isolert i repository | Lav – spørringen er skreddersydd per use case  |
+| **Separate spørringer, kobling i service** | Dårligere – N+1 eller 2 roundtrips | Høy – enkle, lesbare SQL-spørringer                        | Høy – repository-metodene kan gjenbrukes fritt |
+| **Subselect med `array_agg`**              | Tilsvarende `json_agg`             | Noe lavere – krever custom array-parsing                   | Lav                                            |
+
+Vi valgte `json_agg`-tilnærmingen fordi den gir best ytelse for våre leseoperasjoner, og kompleksiteten er isolert til repository-laget. Dersom vi får behov for mer fleksibel sammensetning av data (f.eks. at ulike endepunkter trenger ulike kombinasjoner av subtabeller), kan det være verdt å vurdere separate spørringer koblet i service-laget.
+
 ---
 
 ## Entity Relationship Diagram
