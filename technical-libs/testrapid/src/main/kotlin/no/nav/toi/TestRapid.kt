@@ -92,9 +92,10 @@ class TestRapid(private val meterRegistry: io.micrometer.core.instrument.MeterRe
     }
 
     override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
-       val sendteMeldinger = emptyList<SentMessage>()
-        messages.forEach { message ->
+       val sendteMeldinger = mutableListOf<SentMessage>()
+        messages.forEachIndexed { index, message ->
             this.messages.add(message.key to message.body)
+            sendteMeldinger.add(SentMessage(index = index, message = message, partition = 1, offset = index.toLong()))
         }
         return Pair(sendteMeldinger, emptyList())
     }
