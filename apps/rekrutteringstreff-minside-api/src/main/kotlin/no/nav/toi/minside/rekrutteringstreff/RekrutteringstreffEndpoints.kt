@@ -64,7 +64,9 @@ class RekrutteringstreffEndpoints {
             val innlegg =
                 treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
             log.info("Hentet rekrutteringstrefff med id: $id")
-            ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())
+            val svarSomJson = treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json()
+            log.info("Hentet rekrutteringstrefff med id: $id json: $svarSomJson")
+            ctx.status(200).json(svarSomJson)
         }
     }
 }
