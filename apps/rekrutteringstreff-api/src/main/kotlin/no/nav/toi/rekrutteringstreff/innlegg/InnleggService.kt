@@ -26,8 +26,9 @@ class InnleggService(
             if (innleggForTreff.isNotEmpty()) {
                 log.warn("Innlegg finnes allerede for treff $treffId - overskriver eksisterende innlegg")
                 val eksisterendeInnlegg = innleggForTreff.first()
-                innleggRepository.oppdater(eksisterendeInnlegg.id, treffId, dto.tilOppdaterInnleggRequestDto())
+                val innlegg = innleggRepository.oppdater(eksisterendeInnlegg.id, treffId, dto.tilOppdaterInnleggRequestDto())
                 logger.info("Oppdaterte innlegg med id ${eksisterendeInnlegg.id} for rekrutteringstreff med id $treffId")
+                return innlegg
             }
         }
 
