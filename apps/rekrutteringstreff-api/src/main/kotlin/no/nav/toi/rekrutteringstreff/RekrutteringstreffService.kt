@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
+import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
@@ -219,33 +220,49 @@ class RekrutteringstreffService(
         }
     }
 
-    fun registrerEndring(treffId: TreffId, endringer: String, endretAv: String) {
+    fun registrerEndring(treffId: TreffId, endringer: Rekrutteringstreffendringer, endretAv: String) {
         dataSource.executeInTransaction { connection ->
             val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
+
+            val endringerJson = JacksonConfig.mapper.writeValueAsString(endringer)
 
             rekrutteringstreffRepository.leggTilHendelse(
                 connection,
                 dbId,
                 RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
                 AktørType.ARRANGØR,
-                endretAv,
-                endringer
+                endretAv
             )
 
             val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
-            val jobbsøkereSomSkalVarsles = alleJobbsøkere
+
+            val jobbsøkereFåOppdatering = alleJobbsøkere
+                .filter { jobbsøker -> jobbsøker.hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT } }
+                .map { it.personTreffId }
+
+            if (jobbsøkereFåOppdatering.isNotEmpty()) {
+                jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                    connection,
+                    JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
+                    jobbsøkereFåOppdatering,
+                    endretAv
+                )
+                logger.info("Registrert endring på rekrutteringstreff ${treffId.somString} for ${jobbsøkereFåOppdatering.size} jobbsøkere")
+            }
+
+            val jobbsøkereFåOppdateringMedVarsel = alleJobbsøkere
                 .filter { jobbsøkerService.skalVarslesOmEndringer(it.hendelser) }
                 .map { it.personTreffId }
 
-            if (jobbsøkereSomSkalVarsles.isNotEmpty()) {
+            if (jobbsøkereFåOppdateringMedVarsel.isNotEmpty()) {
                 jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                     connection,
                     JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
-                    jobbsøkereSomSkalVarsles,
+                    jobbsøkereFåOppdateringMedVarsel,
                     endretAv,
-                    hendelseData = endringer
+                    hendelseData = endringerJson
                 )
-                logger.info("Registrert endring for rekrutteringstreff  ${treffId.somString} med ${jobbsøkereSomSkalVarsles.size} jobbsøkere som skal varsles")
+                logger.info("Registrert at varsel om oppdatert treff ${treffId.somString} skal sendes til ${jobbsøkereFåOppdateringMedVarsel.size} jobbsøkere")
             }
         }
     }

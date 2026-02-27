@@ -10,7 +10,6 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.rekrutteringstreff.dto.*
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
@@ -294,7 +293,7 @@ class RekrutteringstreffController(
             val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException(
                 "Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering"
             )
-            if (kiValideringsService.erTekstEndret(eksisterendeTreff?.tittel, dto.tittel)) {
+            if (kiValideringsService.erTekstEndret(eksisterendeTreff.tittel, dto.tittel)) {
                 kiValideringsService.verifiserKiValidering(
                     tekst = dto.tittel,
                     kiLoggId = dto.tittelKiLoggId,
@@ -544,11 +543,7 @@ class RekrutteringstreffController(
             content = [OpenApiContent(
                 from = Rekrutteringstreffendringer::class,
                 example = """{
-                    "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
-                    "tidspunkt": {"gammelVerdi": "2025-06-15T09:00:00+02:00 til 2025-06-15T11:00:00+02:00", "nyVerdi": "2025-06-15T10:00:00+02:00 til 2025-06-15T12:00:00+02:00", "skalVarsle": true},
-                    "svarfrist": {"gammelVerdi": "2025-06-10T23:59:00+02:00", "nyVerdi": "2025-06-12T23:59:00+02:00", "skalVarsle": true},
-                    "sted": {"gammelVerdi": "Gammel gate 123, 0566 Oslo", "nyVerdi": "Ny gate 123, 0567 Oslo", "skalVarsle": true},
-                    "introduksjon": {"gammelVerdi": "Gammel introduksjon", "nyVerdi": "Ny introduksjon", "skalVarsle": true}
+                    "endredeFelter": ["NAVN", "TIDSPUNKT", "SVARFRIST", "STED", "INTRODUKSJON"]
             }"""
             )]
         ),
@@ -572,10 +567,11 @@ class RekrutteringstreffController(
                     throw BadRequestResponse("Kan kun registrere endringer for treff som har publisert status")
                 }
 
-                val endringer = ctx.bodyAsClass<Rekrutteringstreffendringer>()
-                val endringerJson = JacksonConfig.mapper.writeValueAsString(endringer)
+                val endringer = Rekrutteringstreffendringer(
+                    JacksonConfig.mapper.readValue(ctx.body(), Rekrutteringstreffendringer::class.java).endredeFelter.filterNotNull() // endredeFelter kan inneholde null dersom man får ukjent enum fra frontend
+                        .toSet())
 
-                service.registrerEndring(treffId, endringerJson, navIdent)
+                service.registrerEndring(treffId, endringer, navIdent)
                 ctx.status(201)
             } else {
                 throw ForbiddenResponse("Personen har ikke tilgang til å registrere endringer for treffet ${treffId.somString}")

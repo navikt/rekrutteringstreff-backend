@@ -1099,9 +1099,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
-                "tidspunkt": {"gammelVerdi": "2025-10-30T10:00:00+01:00", "nyVerdi": "2025-10-30T14:00:00+01:00", "skalVarsle": true},
-                "introduksjon": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse", "skalVarsle": false}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}", "${Endringsfelttype.STED.tekst}"]
             }
         """.trimIndent()
 
@@ -1178,8 +1176,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
-                "sted": {"gammelVerdi": "Gammel gate 1, 0566 Oslo", "nyVerdi": "Ny gate 2, 0567 Oslo", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}", "${Endringsfelttype.STED.tekst}"]
             }
         """.trimIndent()
 
@@ -1276,7 +1273,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringer = """
             {
-                "tidspunkt": {"gammelVerdi": "2025-10-30T10:00:00+01:00 - 2025-10-30T12:00:00+01:00", "nyVerdi": "2025-10-30T10:00:00+01:00 - 2025-10-30T14:00:00+01:00", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.TIDSPUNKT.tekst}"]
             }
         """.trimIndent()
 
@@ -1331,7 +1328,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på upublisert treff (skal avvises)
         val endringer = """
             {
-                "introduksjon": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.INTRODUKSJON.tekst}"]
             }
         """.trimIndent()
 
@@ -1367,7 +1364,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på fullført treff (skal avvises)
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 
@@ -1402,7 +1399,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på avlyst treff (skal avvises)
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 
@@ -1430,7 +1427,7 @@ class RekrutteringstreffTest {
 
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 
