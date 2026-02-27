@@ -24,7 +24,17 @@ data class OpprettInnleggRequestDto(
     val htmlContent: String,
     val innleggKiLoggId: String? = null,
     val lagreLikevel: Boolean = false
-)
+) {
+    fun tilOppdaterInnleggRequestDto() = OppdaterInnleggRequestDto(
+        tittel = tittel,
+        opprettetAvPersonNavn = opprettetAvPersonNavn,
+        opprettetAvPersonBeskrivelse = opprettetAvPersonBeskrivelse,
+        sendesTilJobbsokerTidspunkt = sendesTilJobbsokerTidspunkt,
+        htmlContent = htmlContent,
+        innleggKiLoggId = innleggKiLoggId,
+        lagreLikevel = lagreLikevel
+    )
+}
 
 data class OppdaterInnleggRequestDto(
     val tittel: String,

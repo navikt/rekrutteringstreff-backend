@@ -29,6 +29,7 @@ import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
+import no.nav.toi.rekrutteringstreff.innlegg.InnleggService
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
@@ -228,6 +229,7 @@ class App(
             jobbsøkerService
         )
         val eierService = EierService(eierRepository)
+        val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         RekrutteringstreffController(
             rekrutteringstreffService = rekrutteringstreffService,
@@ -236,7 +238,7 @@ class App(
             javalin = javalin
         )
         InnleggController(
-            innleggRepository = innleggRepository,
+            innleggService = innleggService,
             kiValideringsService = kiValideringsService,
             javalin = javalin
         )
