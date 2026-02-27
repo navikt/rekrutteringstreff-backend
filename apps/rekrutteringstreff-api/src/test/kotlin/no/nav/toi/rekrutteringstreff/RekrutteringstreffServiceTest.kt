@@ -19,6 +19,7 @@ import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
+import no.nav.toi.log
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -272,7 +273,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = "Gammel tittel", nyVerdi = "Ny tittel"))
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
 
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
 
@@ -302,8 +303,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `skal lagre hendelse_data for registrerEndring`() {
-        // Arrange
+    fun `skal lagre hendelse_data for hendelse TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON i registrerEndring når noen har svart ja`() {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fnr = Fødselsnummer("12345678901")
         val navIdent = "Z123456"
@@ -311,27 +311,17 @@ class RekrutteringstreffServiceTest {
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
         jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
-        // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = "Gammel tittel", nyVerdi = "Ny tittel"), sted = Endringsfelt(gammelVerdi = "Gammelt sted", nyVerdi = "Nytt sted"))
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 
-        // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
 
-        // Assert - verifiser at hendelse_data er lagret og kan deserialiseres
         val hendelseData = hentRekrutteringstreffHendelseData(
             treffId,
             RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING
         )
-        assertThat(hendelseData).isNotNull()
-
-        // Deserialiser Rekrutteringstreffendringer
-        val deserializedDto = mapper.readValue(hendelseData, Rekrutteringstreffendringer::class.java)
-        assertThat(deserializedDto.navn).isNotNull()
-        assertThat(deserializedDto.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedDto.navn!!.nyVerdi).isEqualTo("Ny tittel")
-        assertThat(deserializedDto.tidspunkt).isNull() // Ikke endret
+        assertThat(hendelseData).isNull()
 
         val jobbsøkerHendelseData = hentJobbsøkerHendelseData(
             treffId,
@@ -341,8 +331,8 @@ class RekrutteringstreffServiceTest {
         assertThat(jobbsøkerHendelseData).isNotNull()
 
         val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, Rekrutteringstreffendringer::class.java)
-        assertThat(deserializedJobbsøker.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedJobbsøker.navn!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserializedJobbsøker.endredeFelter).isNotNull
+        assertThat(deserializedJobbsøker.endredeFelter).size().isEqualTo(2)
     }
 
     @Test
@@ -350,37 +340,46 @@ class RekrutteringstreffServiceTest {
         // Test at vi kan håndtere JSON fra databasen hvor kun noen felt er satt
         // Dette sikrer bakoverkompatibilitet
 
-        val jsonMedNoenFelt = """{"navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
+        val jsonMedNoenFelt = """
+            {
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
+            }
+            """.trimIndent()
 
         // Act
         val deserialized = mapper.readValue(jsonMedNoenFelt, Rekrutteringstreffendringer::class.java)
 
         // Assert - verifiser at eksisterende felt fungerer
-        assertThat(deserialized.navn).isNotNull()
-        assertThat(deserialized.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserialized.navn!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserialized).isNotNull()
+        assertThat(deserialized.endredeFelter).contains(Endringsfelttype.NAVN)
 
-        // Verifiser at manglende felt er null
-        assertThat(deserialized.tidspunkt).isNull()
-        assertThat(deserialized.introduksjon).isNull()
+        // Verifiser at manglende felt ikke er satt
+        assertThat(deserialized.endredeFelter).doesNotContain(Endringsfelttype.STED)
     }
 
     @Test
-    fun `skal ignorere ukjente felt i JSON fra databasen`() {
+    fun `skal ignorere ukjente felt og enumer i JSON fra databasen`() { // TODO: test det samme ved å bruke RekrutteringstreffController som vil feile om filterNotNull() fjernes
         // Test at vi kan ignorere felt som ikke lenger eksisterer i DTOen
         // Dette sikrer bakoverkompatibilitet hvis vi fjerner felt i framtiden
 
-        val jsonMedEkstraFelt = """{
-            "navn": {"gammelVerdi": "Test", "nyVerdi": "Ny Test"},
-            "ukjentFelt": {"gammelVerdi": "Dette skal ignoreres", "nyVerdi": "Også ignoreres"}
-        }"""
+        val jsonMedEkstraFelt = """
+            {
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}", "ukjentFelt", "${Endringsfelttype.NAVN.tekst}"],
+                "ukjentFelt": "dette feltet finnes ikke"
+            }
+        """
 
         // Act - deserialiserer JSON med ukjent felt (skal ikke kaste exception)
-        val deserialized = mapper.readValue(jsonMedEkstraFelt, Rekrutteringstreffendringer::class.java)
+
+        val endringer = Rekrutteringstreffendringer(
+            JacksonConfig.mapper.readValue(jsonMedEkstraFelt, Rekrutteringstreffendringer::class.java).endredeFelter.filterNotNull()
+                .toSet())
 
         // Assert - verifiser at kjente felt fungerer
-        assertThat(deserialized.navn).isNotNull()
-        assertThat(deserialized.navn!!.gammelVerdi).isEqualTo("Test")
+        assertThat(endringer).isNotNull()
+        assertThat(endringer.endredeFelter).contains(Endringsfelttype.NAVN)
+        log.info(endringer.endredeFelter.toString())
+        assertThat(endringer.endredeFelter).size().isEqualTo(1)
     }
 
     @Test
@@ -404,27 +403,27 @@ class RekrutteringstreffServiceTest {
         assertThat(jobbsøkerHendelser).doesNotContain(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
     }
 
-//    @Test
-//    fun `skal ikke varsle jobbsøker med INVITERT som siste hendelse om endring`() {
-//        // Arrange
-//        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-//        val fnr = Fødselsnummer("12345678901")
-//        val navIdent = "Z123456"
-//
-//        leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
-//        // MERK: Jobbsøker har kun INVITERT, ikke svart ja
-//
-//        publiserTreff(treffId, navIdent)
-//
-//        val endringer = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = "Gammel tittel", nyVerdi = "Ny tittel"), sted = Endringsfelt(gammelVerdi = "Gammelt sted", nyVerdi = "Nytt sted"))
-//
-//        // Act
-//        rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
-//
-//        // Assert - jobbsøker med INVITERT skal ikke varsles
-//        val jobbsøkerHendelser = hentJobbsøkerHendelser(treffId, fnr)
-//        assertThat(jobbsøkerHendelser).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//    }
+    @Test
+    fun `skal ikke varsle jobbsøker med INVITERT som siste hendelse om endring`() {
+        // Arrange
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val fnr = Fødselsnummer("12345678901")
+        val navIdent = "Z123456"
+
+        leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
+        // MERK: Jobbsøker har kun INVITERT, ikke svart ja
+
+        publiserTreff(treffId, navIdent)
+
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
+
+        // Act
+        rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
+
+        // Assert - jobbsøker med INVITERT skal ikke varsles
+        val jobbsøkerHendelser = hentJobbsøkerHendelser(treffId, fnr)
+        assertThat(jobbsøkerHendelser).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+    }
 
     @Test
     fun `skal varsle jobbsøker med SVART_JA_TREFF_AVLYST som siste hendelse om endring`() {
@@ -440,8 +439,7 @@ class RekrutteringstreffServiceTest {
         publiserTreff(treffId, navIdent)
         rekrutteringstreffService.avlys(treffId, navIdent)
 
-        // Nå har jobbsøker SVART_JA_TREFF_AVLYST som siste hendelse
-        val endringer = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = "Gammel tittel", nyVerdi = "Ny tittel"), sted = Endringsfelt(gammelVerdi = "Gammelt sted", nyVerdi = "Nytt sted"))
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -452,86 +450,86 @@ class RekrutteringstreffServiceTest {
         assertThat(jobbsøkerHendelser).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
-//    @Test
-//    fun `skal ikke varsle jobbsøker som har svart nei om endring`() {
-//        // Arrange - Opprett tre jobbsøkere med ulike statuser
-//        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-//        val navIdent = "Z123456"
-//
-//        val fnr1 = Fødselsnummer("11111111111") // Skal varsles: INVITERT → SVART_JA
-//        val fnr2 = Fødselsnummer("22222222222") // Skal IKKE varsles: INVITERT → SVART_JA → SVART_NEI
-//        val fnr3 = Fødselsnummer("33333333333") // Skal varsles: INVITERT
-//
-//        // Jobbsøker 1: Invitert og svart ja
-//        leggTilOgInviterJobbsøker(treffId, fnr1, navIdent)
-//        jobbsøkerService.svarJaTilInvitasjon(fnr1, treffId, navIdent)
-//
-//        // Jobbsøker 2: Invitert, svart ja, ombestemt seg til nei
-//        leggTilOgInviterJobbsøker(treffId, fnr2, navIdent)
-//        jobbsøkerService.svarJaTilInvitasjon(fnr2, treffId, navIdent)
-//        jobbsøkerService.svarNeiTilInvitasjon(fnr2, treffId, navIdent)
-//
-//        // Jobbsøker 3: Kun invitert
-//        leggTilOgInviterJobbsøker(treffId, fnr3, navIdent)
-//
-//        // Publiser treffet først
-//        publiserTreff(treffId, navIdent)
-//
-//        val endringer = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = "Gammel tittel", nyVerdi = "Ny tittel"), sted = Endringsfelt(gammelVerdi = "Gammelt sted", nyVerdi = "Nytt sted"))
-//
-//        // Act
-//        rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
-//
-//        // Assert - verifiser at kun de med INVITERT eller SVART_JA får notifikasjon
-//        val hendelser1 = hentJobbsøkerHendelser(treffId, fnr1)
-//        assertThat(hendelser1).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//
-//        val hendelser2 = hentJobbsøkerHendelser(treffId, fnr2)
-//        assertThat(hendelser2).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//
-//        val hendelser3 = hentJobbsøkerHendelser(treffId, fnr3)
-//        assertThat(hendelser3).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//    }
+    @Test
+    fun `skal ikke varsle jobbsøker som har svart nei om endring`() {
+        // Arrange - Opprett tre jobbsøkere med ulike statuser
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val navIdent = "Z123456"
 
-//    @Test
-//    fun `skal håndtere flere jobbsøkere med ulike statuser ved endring`() {
-//        // Arrange
-//        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
-//        val navIdent = "Z123456"
-//
-//        val fnr1 = Fødselsnummer("11111111111")
-//        val fnr2 = Fødselsnummer("22222222222")
-//        val fnr3 = Fødselsnummer("33333333333")
-//
-//        // Jobbsøker 1: Invitert
-//        leggTilOgInviterJobbsøker(treffId, fnr1, navIdent)
-//
-//        // Jobbsøker 2: Svart ja
-//        leggTilOgInviterJobbsøker(treffId, fnr2, navIdent)
-//        jobbsøkerService.svarJaTilInvitasjon(fnr2, treffId, navIdent)
-//
-//        // Jobbsøker 3: Svart nei
-//        leggTilOgInviterJobbsøker(treffId, fnr3, navIdent)
-//        jobbsøkerService.svarNeiTilInvitasjon(fnr3, treffId, navIdent)
-//
-//        // Publiser treffet først
-//        publiserTreff(treffId, navIdent)
-//
-//        val endringer = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = "Gammel tittel", nyVerdi = "Ny tittel"), sted = Endringsfelt(gammelVerdi = "Gammelt sted", nyVerdi = "Nytt sted"))
-//
-//        // Act
-//        rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
-//
-//        // Assert
-//        val hendelser1 = hentJobbsøkerHendelser(treffId, fnr1)
-//        assertThat(hendelser1).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//
-//        val hendelser2 = hentJobbsøkerHendelser(treffId, fnr2)
-//        assertThat(hendelser2).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//
-//        val hendelser3 = hentJobbsøkerHendelser(treffId, fnr3)
-//        assertThat(hendelser3).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//    }
+        val fnr1 = Fødselsnummer("11111111111") // Skal varsles: INVITERT → SVART_JA
+        val fnr2 = Fødselsnummer("22222222222") // Skal IKKE varsles: INVITERT → SVART_JA → SVART_NEI
+        val fnr3 = Fødselsnummer("33333333333") // Skal varsles: INVITERT
+
+        // Jobbsøker 1: Invitert og svart ja
+        leggTilOgInviterJobbsøker(treffId, fnr1, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr1, treffId, navIdent)
+
+        // Jobbsøker 2: Invitert, svart ja, ombestemt seg til nei
+        leggTilOgInviterJobbsøker(treffId, fnr2, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr2, treffId, navIdent)
+        jobbsøkerService.svarNeiTilInvitasjon(fnr2, treffId, navIdent)
+
+        // Jobbsøker 3: Kun invitert
+        leggTilOgInviterJobbsøker(treffId, fnr3, navIdent)
+
+        // Publiser treffet først
+        publiserTreff(treffId, navIdent)
+
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
+
+        // Act
+        rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
+
+        // Assert - verifiser at kun de med INVITERT eller SVART_JA får notifikasjon
+        val hendelser1 = hentJobbsøkerHendelser(treffId, fnr1)
+        assertThat(hendelser1).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+
+        val hendelser2 = hentJobbsøkerHendelser(treffId, fnr2)
+        assertThat(hendelser2).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+
+        val hendelser3 = hentJobbsøkerHendelser(treffId, fnr3)
+        assertThat(hendelser3).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+    }
+
+    @Test
+    fun `skal håndtere flere jobbsøkere med ulike statuser ved endring`() {
+        // Arrange
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter()
+        val navIdent = "Z123456"
+
+        val fnr1 = Fødselsnummer("11111111111")
+        val fnr2 = Fødselsnummer("22222222222")
+        val fnr3 = Fødselsnummer("33333333333")
+
+        // Jobbsøker 1: Invitert
+        leggTilOgInviterJobbsøker(treffId, fnr1, navIdent)
+
+        // Jobbsøker 2: Svart ja
+        leggTilOgInviterJobbsøker(treffId, fnr2, navIdent)
+        jobbsøkerService.svarJaTilInvitasjon(fnr2, treffId, navIdent)
+
+        // Jobbsøker 3: Svart nei
+        leggTilOgInviterJobbsøker(treffId, fnr3, navIdent)
+        jobbsøkerService.svarNeiTilInvitasjon(fnr3, treffId, navIdent)
+
+        // Publiser treffet først
+        publiserTreff(treffId, navIdent)
+
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
+
+        // Act
+        rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
+
+        // Assert
+        val hendelser1 = hentJobbsøkerHendelser(treffId, fnr1)
+        assertThat(hendelser1).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+
+        val hendelser2 = hentJobbsøkerHendelser(treffId, fnr2)
+        assertThat(hendelser2).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+
+        val hendelser3 = hentJobbsøkerHendelser(treffId, fnr3)
+        assertThat(hendelser3).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+    }
 
     @Test
     fun `skal kunne sende flere endringsnotifikasjoner til samme person`() {
@@ -548,7 +546,7 @@ class RekrutteringstreffServiceTest {
         publiserTreff(treffId, navIdent)
 
         // Act - Registrer første endring
-        val endring1 = Rekrutteringstreffendringer(navn = Endringsfelt(gammelVerdi = "Gammel tittel", nyVerdi = "Ny tittel"), sted = Endringsfelt(gammelVerdi = "Gammelt sted", nyVerdi = "Nytt sted"))
+        val endring1 = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 
         rekrutteringstreffService.registrerEndring(treffId, endring1, navIdent)
 
@@ -560,7 +558,7 @@ class RekrutteringstreffServiceTest {
         assertThat(forsteNotifikasjoner).hasSize(1)
 
         // Act - Registrer andre endring
-        val endring2 = Rekrutteringstreffendringer(introduksjon = Endringsfelt(gammelVerdi = "Gammel intro", nyVerdi = "Ny intro"))
+        val endring2 = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.INTRODUKSJON))
 
         rekrutteringstreffService.registrerEndring(treffId, endring2, navIdent)
 

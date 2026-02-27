@@ -976,9 +976,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
-                "tidspunkt": {"gammelVerdi": "2025-10-30T10:00:00+01:00", "nyVerdi": "2025-10-30T14:00:00+01:00", "skalVarsle": true},
-                "introduksjon": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse", "skalVarsle": false}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}", "${Endringsfelttype.STED.tekst}"]
             }
         """.trimIndent()
 
@@ -995,16 +993,16 @@ class RekrutteringstreffTest {
         assertThat(treffHendelser.map { it.hendelsestype }).contains(RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING)
 
         // Verifiser at jobbsøker ikke har TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON hendelse
-//        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
-//        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
-//            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
-//        }
-//        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
-//            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
-//        }
-//
-//        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
+        }
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
+        }
+
+        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
     @Test
@@ -1055,8 +1053,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
-                "sted": {"gammelVerdi": "Gammel gate 1, 0566 Oslo", "nyVerdi": "Ny gate 2, 0567 Oslo", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}", "${Endringsfelttype.STED.tekst}"]
             }
         """.trimIndent()
 
@@ -1085,102 +1082,102 @@ class RekrutteringstreffTest {
         assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
     }
 
-//    @Test
-//    fun `registrer endring varsler ikke jobbsøkere som har svart nei`() {
-//        val navIdent = "A123456"
-//        val token = authServer.lagToken(authPort, navIdent = navIdent)
-//        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
-//        val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-//        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
-//
-//        // Legg til tre jobbsøkere
-//        val jobbsøker1 = Jobbsøker(
-//            personTreffId = PersonTreffId(UUID.randomUUID()),
-//            treffId = treffId,
-//            fødselsnummer = Fødselsnummer("12345678901"),
-//            fornavn = Fornavn("Ola"),
-//            etternavn = Etternavn("Nordmann"),
-//            navkontor = Navkontor("0318"),
-//            veilederNavn = VeilederNavn("Veileder"),
-//            veilederNavIdent = VeilederNavIdent(navIdent),
-//            status = JobbsøkerStatus.LAGT_TIL,
-//        )
-//        val jobbsøker2 = Jobbsøker(
-//            personTreffId = PersonTreffId(UUID.randomUUID()),
-//            treffId = treffId,
-//            fødselsnummer = Fødselsnummer("23456789012"),
-//            fornavn = Fornavn("Kari"),
-//            etternavn = Etternavn("Nordmann"),
-//            navkontor = Navkontor("0318"),
-//            veilederNavn = VeilederNavn("Veileder"),
-//            veilederNavIdent = VeilederNavIdent(navIdent),
-//            status = JobbsøkerStatus.LAGT_TIL,
-//        )
-//        val jobbsøker3 = Jobbsøker(
-//            personTreffId = PersonTreffId(UUID.randomUUID()),
-//            treffId = treffId,
-//            fødselsnummer = Fødselsnummer("34567890123"),
-//            fornavn = Fornavn("Per"),
-//            etternavn = Etternavn("Hansen"),
-//            navkontor = Navkontor("0318"),
-//            veilederNavn = VeilederNavn("Veileder"),
-//            veilederNavIdent = VeilederNavIdent(navIdent),
-//            status = JobbsøkerStatus.LAGT_TIL,
-//        )
-//        db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2, jobbsøker3))
-//
-//        // Inviter alle
-//        jobbsøkerService.inviter(
-//            listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId, jobbsøker3.personTreffId),
-//            treffId,
-//            navIdent
-//        )
-//
-//        // Jobbsøker1 svarer ja
-//        jobbsøkerService.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
-//
-//        // Jobbsøker2 svarer ja og så nei (ombestemt seg)
-//        jobbsøkerService.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
-//        jobbsøkerService.svarNeiTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
-//
-//        // Publiser treffet
-//        httpPost(
-//            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
-//            "",
-//            token.serialize()
-//        )
-//
-//        // Registrer endringer
-//        val endringer = """
-//            {
-//                "tidspunkt": {"gammelVerdi": "2025-10-30T10:00:00+01:00 - 2025-10-30T12:00:00+01:00", "nyVerdi": "2025-10-30T10:00:00+01:00 - 2025-10-30T14:00:00+01:00", "skalVarsle": true}
-//            }
-//        """.trimIndent()
-//
-//        val response = httpPost(
-//            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
-//            endringer,
-//            token.serialize()
-//        )
-//
-//        assertThat(response.statusCode()).isEqualTo(201)
-//
-//        // Verifiser at kun jobbsøker1 og jobbsøker3 (invitert) får notifikasjon
-//        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
-//        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
-//            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
-//        }
-//        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
-//            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
-//        }
-//        val jobbsøker3Hendelser = alleJobbsøkerHendelser.filter {
-//            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker3.fødselsnummer
-//        }
-//
-//        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//        assertThat(jobbsøker3Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
-//    }
+    @Test
+    fun `registrer endring varsler ikke jobbsøkere som har svart nei`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
+        val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+
+        // Legg til tre jobbsøkere
+        val jobbsøker1 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("12345678901"),
+            fornavn = Fornavn("Ola"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
+        )
+        val jobbsøker2 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("23456789012"),
+            fornavn = Fornavn("Kari"),
+            etternavn = Etternavn("Nordmann"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
+        )
+        val jobbsøker3 = Jobbsøker(
+            personTreffId = PersonTreffId(UUID.randomUUID()),
+            treffId = treffId,
+            fødselsnummer = Fødselsnummer("34567890123"),
+            fornavn = Fornavn("Per"),
+            etternavn = Etternavn("Hansen"),
+            navkontor = Navkontor("0318"),
+            veilederNavn = VeilederNavn("Veileder"),
+            veilederNavIdent = VeilederNavIdent(navIdent),
+            status = JobbsøkerStatus.LAGT_TIL,
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker1, jobbsøker2, jobbsøker3))
+
+        // Inviter alle
+        jobbsøkerService.inviter(
+            listOf(jobbsøker1.personTreffId, jobbsøker2.personTreffId, jobbsøker3.personTreffId),
+            treffId,
+            navIdent
+        )
+
+        // Jobbsøker1 svarer ja
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker1.fødselsnummer, treffId, jobbsøker1.fødselsnummer.asString)
+
+        // Jobbsøker2 svarer ja og så nei (ombestemt seg)
+        jobbsøkerService.svarJaTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+        jobbsøkerService.svarNeiTilInvitasjon(jobbsøker2.fødselsnummer, treffId, jobbsøker2.fødselsnummer.asString)
+
+        // Publiser treffet
+        httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/publiser",
+            "",
+            token.serialize()
+        )
+
+        // Registrer endringer
+        val endringer = """
+            {
+                "endredeFelter": ["${Endringsfelttype.TIDSPUNKT.tekst}"]
+            }
+        """.trimIndent()
+
+        val response = httpPost(
+            "http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somUuid}/endringer",
+            endringer,
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(201)
+
+        // Verifiser at kun jobbsøker1 og jobbsøker3 (invitert) får notifikasjon
+        val alleJobbsøkerHendelser = db.hentJobbsøkerHendelser(treffId)
+        val jobbsøker1Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker1.fødselsnummer
+        }
+        val jobbsøker2Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker2.fødselsnummer
+        }
+        val jobbsøker3Hendelser = alleJobbsøkerHendelser.filter {
+            db.hentFødselsnummerForJobbsøkerHendelse(it.id) == jobbsøker3.fødselsnummer
+        }
+
+        assertThat(jobbsøker1Hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøker2Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+        assertThat(jobbsøker3Hendelser.map { it.hendelsestype }).doesNotContain(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
+    }
 
     @Test
     fun `registrer endring avvises for upubliserte treff`() {
@@ -1208,7 +1205,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på upublisert treff (skal avvises)
         val endringer = """
             {
-                "introduksjon": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.INTRODUKSJON.tekst}"]
             }
         """.trimIndent()
 
@@ -1244,7 +1241,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på fullført treff (skal avvises)
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 
@@ -1279,7 +1276,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på avlyst treff (skal avvises)
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 
@@ -1307,7 +1304,7 @@ class RekrutteringstreffTest {
 
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 
