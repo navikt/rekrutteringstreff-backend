@@ -22,8 +22,9 @@ class InnleggService(
         // For å unngå dette, oppdaterer vi eksisterende innlegg når treffet er i status UTKAST.
         if (rekrutteringstreff.status == RekrutteringstreffStatus.UTKAST) {
             val innleggForTreff = innleggRepository.hentForTreff(treffId)
+            logger.info("Prøver å opprette innleff for treff $treffId som er i status UTKAST, og har ${innleggForTreff.size} innlegg")
             if (innleggForTreff.isNotEmpty()) {
-                log.warn("Innlegg finnes allerede for treff med id $treffId - overskriver eksisterende innlegg")
+                log.warn("Innlegg finnes allerede for treff $treffId - overskriver eksisterende innlegg")
                 val eksisterendeInnlegg = innleggForTreff.first()
                 innleggRepository.oppdater(eksisterendeInnlegg.id, treffId, dto.tilOppdaterInnleggRequestDto())
                 logger.info("Oppdaterte innlegg med id ${eksisterendeInnlegg.id} for rekrutteringstreff med id $treffId")
