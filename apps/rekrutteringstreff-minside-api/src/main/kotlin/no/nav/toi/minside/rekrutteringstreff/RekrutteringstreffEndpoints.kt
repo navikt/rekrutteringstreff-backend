@@ -87,5 +87,5 @@ data class RekrutteringstreffOutboundDto(
     val innlegg: List<InnleggOutboundDto> = emptyList(),
     val arbeidsgivere: List<ArbeidsgiverOutboundDto> = emptyList(),
 ) {
-    fun json() = JacksonConfig.mapper.writeValueAsString(this)
+    fun json(): String = JacksonConfig.mapper.writeValueAsString(this)
 }
