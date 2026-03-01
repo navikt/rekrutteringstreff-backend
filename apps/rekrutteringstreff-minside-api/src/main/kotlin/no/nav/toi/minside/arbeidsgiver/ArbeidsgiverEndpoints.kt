@@ -57,8 +57,8 @@ fun Javalin.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(a
 
 
 data class ArbeidsgiverOutboundDto(
-    val organisasjonsnummer: String,
-    val navn: String
+    private val organisasjonsnummer: String,
+    private val navn: String
 ) {
     fun json() = """
         {
