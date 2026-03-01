@@ -10,6 +10,7 @@ import io.javalin.openapi.OpenApiParam
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.minside.authenticatedUser
+import no.nav.toi.minside.rekrutteringstreff.Arbeidsgiver
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
 import no.nav.toi.minside.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.UUID

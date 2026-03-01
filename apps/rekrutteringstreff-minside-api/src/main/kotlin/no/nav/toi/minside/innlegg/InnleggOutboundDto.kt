@@ -3,6 +3,8 @@ package no.nav.toi.minside.innlegg
 import no.nav.toi.minside.JacksonConfig
 
 data class InnleggOutboundDto(
-    val tittel: String,
-    val htmlContent: String
-)
+    private val tittel: String,
+    private val htmlContent: String
+) {
+    fun json(): String = JacksonConfig.mapper.writeValueAsString(this)
+}
