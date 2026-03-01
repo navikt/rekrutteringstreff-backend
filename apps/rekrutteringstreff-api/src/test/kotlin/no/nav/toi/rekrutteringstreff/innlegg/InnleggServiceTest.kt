@@ -79,7 +79,7 @@ class InnleggServiceTest {
     }
 
     @Test
-    fun `Opprett et innlegg to ganger skal føre til kun ett innlegg`() {
+    fun `Opprett et innlegg to ganger skal føre til kun ett innlegg for å forhindre duplikater`() {
         val tittel1 = "Treff 1"
         val tittel2 = "Treff 2"
         val navIdent1 = "navident 1"
