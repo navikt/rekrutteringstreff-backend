@@ -83,7 +83,7 @@ class InnleggServiceTest {
         val tittel1 = "Treff 1"
         val tittel2 = "Treff 2"
         val navIdent1 = "navident 1"
-        val navIdent2 = "navident 1"
+        val navIdent2 = "navident 2"
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent1, tittel1)
 
         val opprettetInnlegg = innleggService.opprettInnlegg(treffId, opprettInnleggDto(tittel1, navIdent1), navIdent1)
@@ -98,7 +98,7 @@ class InnleggServiceTest {
 
         assertThat(opprettetInnlegg2).isNotNull
         assertThat(opprettetInnlegg2.tittel).isEqualTo(tittel2)
-        assertThat(opprettetInnlegg2.opprettetAvPersonNavident).isEqualTo(navIdent2)
+        assertThat(opprettetInnlegg2.opprettetAvPersonNavident).isEqualTo(navIdent1)
 
         assertThat(alleInnleggForEtTreff).hasSize(1)
         assertThat(alleInnleggForEtTreff[0].tittel).isEqualTo(tittel2) // tittel 2 overskriver tittel 1
