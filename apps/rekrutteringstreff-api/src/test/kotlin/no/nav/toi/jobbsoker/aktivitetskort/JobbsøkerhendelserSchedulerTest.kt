@@ -61,7 +61,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende invitasjoner på rapid og markere dem som pollet dersom vi har nok data`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -87,7 +87,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal ikke sende invitasjoner på rapid dersom vi mangler prerequisites for invitasjon`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -109,7 +109,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal ikke sende samme invitasjon to ganger`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -132,7 +132,7 @@ class JobbsøkerhendelserSchedulerTest {
     fun `skal sende ja-svar på rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -164,7 +164,7 @@ class JobbsøkerhendelserSchedulerTest {
     fun `skal sende nei-svar på rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -196,7 +196,7 @@ class JobbsøkerhendelserSchedulerTest {
     fun `skal ikke sende samme svar to ganger`() {
         val fødselsnummer = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -267,7 +267,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering av aktivitetskort OG minside-varsel når fraTid eller tilTid endres`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -299,7 +299,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering av aktivitetskort OG minside-varsel når adressefelter endres`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -341,7 +341,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering av aktivitetskort OG minside-varsel når kun irrelevante felt er endret`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -375,7 +375,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering av aktivitetskort OG minside-varsel selv når nyVerdi ikke matcher database(det kommer logg i steden for exepeption)`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -415,7 +415,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal ikke sende samme oppdatering to ganger`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -447,7 +447,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering med endredeFelter når skalVarsle er true for tittel`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -489,7 +489,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering med TIDSPUNKT når fraTid har skalVarsle true`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -522,7 +522,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering med STED når gateadresse har skalVarsle true`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -555,7 +555,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering med flere endredeFelter når flere felt har skalVarsle true`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -590,7 +590,7 @@ class JobbsøkerhendelserSchedulerTest {
 //    @Test
 //    fun `skal ikke inkludere endredeFelter når ingen felt har skalVarsle true`() {
 //        val rapid = TestRapid()
-//        val scheduler = `JobbsøkerhendelserScheduler`(
+//        val scheduler = JobbsøkerhendelserScheduler(
 //            db.dataSource,
 //            aktivitetskortRepository,
 //            rekrutteringstreffRepository,
@@ -628,7 +628,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal sende oppdatering med SVARFRIST når svarfrist har skalVarsle true`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -661,7 +661,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal kombinere fraTid og tilTid til TIDSPUNKT endredeFelter-verdi`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -695,7 +695,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal kombinere gateadresse, postnummer og poststed til STED endredeFelter-verdi`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -729,7 +729,7 @@ class JobbsøkerhendelserSchedulerTest {
     fun `skal sende avlyst-status med hendelseId for jobbsøker som har svart ja`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -764,7 +764,7 @@ class JobbsøkerhendelserSchedulerTest {
     fun `skal sende fullfort-status paa rapid og markere dem som pollet`() {
         val expectedFnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -801,7 +801,7 @@ class JobbsøkerhendelserSchedulerTest {
     fun `skal ikke sende samme treffstatus to ganger`() {
         val fnr = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -825,7 +825,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal behandle hendelser i riktig rekkefølge basert på tidspunkt`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -863,7 +863,7 @@ class JobbsøkerhendelserSchedulerTest {
     @Test
     fun `skal ikke gjøre noe hvis det ikke er noen usendte hendelser`() {
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -883,7 +883,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fnrSvartJa = Fødselsnummer("12345678901")
         val fnrIkkeSvart = Fødselsnummer("12345678902")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -945,7 +945,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fnrSvartJa = Fødselsnummer("12345678901")
         val fnrIkkeSvart = Fødselsnummer("12345678902")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -998,7 +998,7 @@ class JobbsøkerhendelserSchedulerTest {
     fun `skal ikke sende avbrutt-status for jobbsøker som har svart nei når treff fullføres`() {
         val fnrSvartNei = Fødselsnummer("12345678901")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -1033,7 +1033,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fnrIkkeSvart1 = Fødselsnummer("12345678902")
         val fnrIkkeSvart2 = Fødselsnummer("12345678903")
         val rapid = TestRapid()
-        val scheduler = `JobbsøkerhendelserScheduler`(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -1079,7 +1079,7 @@ class JobbsøkerhendelserSchedulerTest {
     }
 
 
-    private fun opprettPersonOgInviter(fødselsnummer: Fødselsnummer, rapid: TestRapid, scheduler: `JobbsøkerhendelserScheduler`): no.nav.toi.rekrutteringstreff.TreffId {
+    private fun opprettPersonOgInviter(fødselsnummer: Fødselsnummer, rapid: TestRapid, scheduler: JobbsøkerhendelserScheduler): no.nav.toi.rekrutteringstreff.TreffId {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.behandleJobbsøkerHendelser()  // Send invitasjon
