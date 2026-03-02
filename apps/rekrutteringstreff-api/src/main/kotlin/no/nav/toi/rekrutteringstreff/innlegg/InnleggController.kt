@@ -14,7 +14,7 @@ import java.util.UUID
 
 
 class InnleggController(
-    private val innleggRepository: InnleggRepository,
+    private val innleggService: InnleggService,
     private val kiValideringsService: KiValideringsService,
     javalin: Javalin
 ) {
@@ -67,7 +67,7 @@ class InnleggController(
     private fun hentAlleInnleggForTreff(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET, Rolle.BORGER)
         val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
-        ctx.json(innleggRepository.hentForTreff(treffId).map(Innlegg::toResponseDto))
+        ctx.json(innleggService.hentForTreff(treffId).map(Innlegg::toResponseDto))
     }
 
     @OpenApi(
@@ -102,7 +102,7 @@ class InnleggController(
     private fun hentEttInnlegg(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET, Rolle.BORGER)
         val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
-        ctx.json(innleggRepository.hentById(id)?.toResponseDto() ?: throw NotFoundResponse())
+        ctx.json(innleggService.hentById(id)?.toResponseDto() ?: throw NotFoundResponse())
     }
 
     @OpenApi(
@@ -158,7 +158,7 @@ class InnleggController(
         )
 
         try {
-            ctx.status(HTTP_CREATED).json(innleggRepository.opprett(treffId, dto, navIdent).toResponseDto())
+            ctx.status(HTTP_CREATED).json(innleggService.opprettInnlegg(treffId, dto, navIdent).toResponseDto())
         } catch (e: IllegalStateException) {
             if (e.message?.contains("finnes ikke") == true)
                 throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somUuid} ikke funnet.")
@@ -212,7 +212,7 @@ class InnleggController(
         val innleggId = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
         val dto = ctx.bodyAsClass<OppdaterInnleggRequestDto>()
 
-        val eksisterendeInnlegg = innleggRepository.hentById(innleggId)
+        val eksisterendeInnlegg = innleggService.hentById(innleggId)
         if (eksisterendeInnlegg != null && kiValideringsService.erTekstEndret(eksisterendeInnlegg.htmlContent, dto.htmlContent)) {
             kiValideringsService.verifiserKiValidering(
                 tekst = dto.htmlContent,
@@ -224,7 +224,7 @@ class InnleggController(
         }
 
         try {
-            ctx.status(HTTP_OK).json(innleggRepository.oppdater(innleggId, treffId, dto).toResponseDto())
+            ctx.status(HTTP_OK).json(innleggService.oppdater(innleggId, treffId, dto).toResponseDto())
         } catch (e: IllegalStateException) {
             when {
                 e.message?.contains("Treff") == true -> throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somUuid} ikke funnet.")
@@ -249,6 +249,6 @@ class InnleggController(
     private fun slettEttInnlegg(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
-        if (innleggRepository.slett(id)) ctx.status(HTTP_NO_CONTENT) else throw NotFoundResponse()
+        if (innleggService.slett(id)) ctx.status(HTTP_NO_CONTENT) else throw NotFoundResponse()
     }
 }

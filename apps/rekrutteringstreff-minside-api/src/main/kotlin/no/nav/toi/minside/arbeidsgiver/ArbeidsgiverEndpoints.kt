@@ -10,7 +10,6 @@ import io.javalin.openapi.OpenApiParam
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.minside.authenticatedUser
-import no.nav.toi.minside.rekrutteringstreff.Arbeidsgiver
 import no.nav.toi.minside.rekrutteringstreff.RekrutteringstreffKlient
 import no.nav.toi.minside.rekrutteringstreff.endepunktRekrutteringstreff
 import java.util.UUID
@@ -58,8 +57,8 @@ fun Javalin.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(a
 
 
 data class ArbeidsgiverOutboundDto(
-    private val organisasjonsnummer: String,
-    private val navn: String
+    val organisasjonsnummer: String,
+    val navn: String
 ) {
     fun json() = """
         {

@@ -554,16 +554,17 @@ Når KI gir advarsel, må bruker aktivt velge å lagre likevel.
 
 > **Automatiske tester:** ROBs nøyaktighet måles av automatiske tester i `apps/rekrutteringstreff-api/src/test/kotlin/no/nav/toi/rekrutteringstreff/ki/KiTekstvalideringParameterisertTest.kt`. Nøyaktighet = (antall test-prompts - antall avvikende resultat) / antall test-prompts \* 100.
 
-| #      | Test                                                         | Forventet resultat                                               | ✅❌ | Notat |
-| ------ | ------------------------------------------------------------ | ---------------------------------------------------------------- | ---- | ----- |
-| 11.4.1 | Utvikler - Åpne KI-logg                                      | Ser liste over alle KI-valideringer                              |      |       |
-| 11.4.2 | Utvikler - Sjekk logg for kladd-treff                        | lagret=true for tekst som ble autolagret                         |      |       |
-| 11.4.3 | Utvikler - Sjekk logg etter publisert endring                | lagret=true kun når bruker trykket "Lagre" i dialog              |      |       |
-| 11.4.4 | Utvikler - Sjekk tekst som ble forkastet                     | lagret=false for tekst som ble endret før lagring                |      |       |
-| 11.4.5 | Utvikler - Sjekk lagret-felt før publisering (autolagring)   | lagret=true settes når autolagring kjører i kladd-modus          |      |       |
-| 11.4.6 | Utvikler - Sjekk lagret-felt etter publisering (bekreftelse) | lagret=true settes kun etter submit-knapp i bekreftelsesdialogen |      |       |
-| 11.4.7 | Utvikler - Legg inn manuell vurdering                        | Kan registrere egen vurdering for kvalitetskontroll              |      |       |
-| 11.4.8 | Utvikler - Filtrer på avvik                                  | Kan finne tilfeller der KI vurderte feil                         |      |       |
+| #      | Test                                                                                                      | Forventet resultat                                                                     | ✅❌ | Notat |
+| ------ | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---- | ----- |
+| 11.4.1 | Utvikler - Åpne KI-logg                                                                                   | Ser liste over KI-valideringer for kun dette treffet                                   |      |       |
+| 11.4.2 | Utvikler - Valideringsknapp trykket i kladd → sjekk logg                                                  | Loggoppføring finnes; lagret=true etter at autolagring fullfører i kladd-modus         |      |       |
+| 11.4.3 | Utvikler - Valideringsknapp trykket etter publisering, "Lagre" i dialog trykket → sjekk logg              | Loggoppføring finnes; lagret=true                                                      |      |       |
+| 11.4.4 | Utvikler - Valideringsknapp trykket etter publisering, dialog avbrutt (IKKE trykket "Lagre") → sjekk logg | Loggoppføring finnes; lagret=false – teksten ble validert men ikke lagret              |      |       |
+| 11.4.5 | Utvikler - Valideringsknapp IKKE trykket, tekst skrevet i felt → sjekk logg                               | Ingen loggoppføring for den teksten – tekst sendes ikke til KI uten at knappen trykkes |      |       |
+| 11.4.6 | Utvikler - Sjekk logglinje uten manuell vurdering                                                         | Feltet for manuell vurdering viser strek/dash                                          |      |       |
+| 11.4.7 | Utvikler - Legg inn manuell vurdering som stemmer med KI: tekst er ok (KI: ok, manuell: enig)             | Feltet viser grønn ok – manuell og KI er enige om at teksten er akseptabel             |      |       |
+| 11.4.8 | Utvikler - Legg inn manuell vurdering som stemmer med KI: tekst er ikke ok (KI: advarsel, manuell: enig)  | Feltet viser grønn ok – manuell og KI er enige, selv om teksten avvises                |      |       |
+| 11.4.9 | Utvikler - Legg inn manuell vurdering som er uenig med KI (f.eks. KI: advarsel, manuell: teksten er grei) | Feltet viser rødt kryss – avvik mellom manuell vurdering og KI-sjekk                  |      |       |
 
 ### UI-tekst og brukeransvar (ROS 27979, 27545, 27321)
 
@@ -611,10 +612,10 @@ Test at tittel og innlegg ikke kan lagres med diskriminerende innhold uten at KI
 | #      | Test                                                                                                                         | Forventet resultat                                                                                             | Utviklerhjelp | ✅❌ | Notat |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------- | ---- | ----- |
 | 11.8.1 | **Autolagring med diskriminerende tekst** - Skriv diskriminerende tittel mens autolagring kjører                             | Autolagring venter på KI-validering før lagring. Advarsel vises. Feltet lagres IKKE automatisk uten brukervalg | Ja            |      |       |
-| 11.8.2 | **API-kall uten validering** - Send lagre-request direkte til backend uten å ha kjørt KI-sjekk                               | Backend returnerer feilkode (f.eks. 400/422). Feltet lagres IKKE                                               | Ja            |      |       |
-| 11.8.3 | **API-kall med diskriminerende tekst uten "Lagre likevel"** - Send lagre-request med flaggAdvarsel=true men uten bekreftelse | Backend returnerer feilkode. Diskriminerende felt lagres IKKE                                                  | Ja            |      |       |
-| 11.8.4 | **Verifiser at backend krever valideringsresultat** - Prøv å lagre tittel/innlegg uten tilhørende KI-valideringsresultat     | Backend avviser forespørselen. Logging viser forsøk på å omgå validering                                       | Ja            |      |       |
-| 11.8.5 | **Race condition ved rask redigering** - Endre tekst raskt flere ganger mens KI-sjekk pågår                                  | Kun siste tekst lagres. Tidligere valideringer kanselleres eller ignoreres. Ingen inkonsistent tilstand        | Ja            |      |       |
+| 11.8.2 | **API-kall uten validering** - Send lagre-request direkte til backend uten å ha kjørt KI-sjekk                               | Backend returnerer 422 KI_VALIDERING_MANGLER. Feltet lagres IKKE. ✅ Automatisk test: `RekrutteringstreffTest`, `InnleggTest`                | Ja            |      |       |
+| 11.8.3 | **API-kall med diskriminerende tekst uten "Lagre likevel"** - Send lagre-request med bryterRetningslinjer=true men uten bekreftelse | Backend returnerer 422 KI_KREVER_BEKREFTELSE. Diskriminerende felt lagres IKKE. ✅ Automatisk test: `RekrutteringstreffTest`, `InnleggTest` | Ja            |      |       |
+| 11.8.4 | **Verifiser at backend krever gyldig valideringsresultat** - (a) Send loggId som ikke finnes i DB. (b) Send loggId der teksten er endret siden validering | (a) 422 KI_LOGG_ID_UGYLDIG. (b) 422 KI_TEKST_ENDRET. ✅ Automatisk test: `RekrutteringstreffTest`, `InnleggTest` | Ja            |      |       |
+| 11.8.5 | **Race condition ved rask redigering** - Endre tekst raskt flere ganger mens KI-sjekk pågår                                  | Kun siste tekst lagres. Tidligere valideringer kanselleres eller ignoreres. Ingen inkonsistent tilstand. ⚠️ Ikke automatisert (timing-avhengig)        | Ja            |      |       |
 
 > **Implementasjonsnotat:** Backend skal:
 >
