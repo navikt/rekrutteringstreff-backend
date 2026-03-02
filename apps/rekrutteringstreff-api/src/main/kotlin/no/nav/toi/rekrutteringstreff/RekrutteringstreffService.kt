@@ -236,33 +236,33 @@ class RekrutteringstreffService(
 
             val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
 
-            val jobbsøkereFåOppdatering = alleJobbsøkere
+            val jobbsøkereSomSkalOppdateres = alleJobbsøkere
                 .filter { jobbsøker -> jobbsøker.hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT } }
                 .map { it.personTreffId }
 
-            if (jobbsøkereFåOppdatering.isNotEmpty()) {
+            if (jobbsøkereSomSkalOppdateres.isNotEmpty()) {
                 jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                     connection,
                     JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
-                    jobbsøkereFåOppdatering,
+                    jobbsøkereSomSkalOppdateres,
                     endretAv
                 )
-                logger.info("Registrert endring på rekrutteringstreff ${treffId.somString} for ${jobbsøkereFåOppdatering.size} jobbsøkere")
+                logger.info("Registrert endring på rekrutteringstreff ${treffId.somString} for ${jobbsøkereSomSkalOppdateres.size} jobbsøkere")
             }
 
-            val jobbsøkereFåOppdateringMedVarsel = alleJobbsøkere
+            val jobbsøkereSomSkalVarsles = alleJobbsøkere
                 .filter { jobbsøkerService.skalVarslesOmEndringer(it.hendelser) }
                 .map { it.personTreffId }
 
-            if (jobbsøkereFåOppdateringMedVarsel.isNotEmpty()) {
+            if (jobbsøkereSomSkalVarsles.isNotEmpty()) {
                 jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                     connection,
                     JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
-                    jobbsøkereFåOppdateringMedVarsel,
+                    jobbsøkereSomSkalVarsles,
                     endretAv,
                     hendelseData = endringerJson
                 )
-                logger.info("Registrert at varsel om oppdatert treff ${treffId.somString} skal sendes til ${jobbsøkereFåOppdateringMedVarsel.size} jobbsøkere")
+                logger.info("Registrert at varsel om oppdatert treff ${treffId.somString} skal sendes til ${jobbsøkereSomSkalVarsles.size} jobbsøkere")
             }
         }
     }

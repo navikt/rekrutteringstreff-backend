@@ -19,7 +19,6 @@ import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
-import no.nav.toi.log
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -331,7 +330,7 @@ class RekrutteringstreffServiceTest {
         assertThat(jobbsøkerHendelseData).isNotNull()
 
         val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, Rekrutteringstreffendringer::class.java)
-        assertThat(deserializedJobbsøker.endredeFelter).isNotNull
+        assertThat(deserializedJobbsøker.endredeFelter).isNotNull()
         assertThat(deserializedJobbsøker.endredeFelter).size().isEqualTo(2)
     }
 
@@ -378,7 +377,6 @@ class RekrutteringstreffServiceTest {
         // Assert - verifiser at kjente felt fungerer
         assertThat(endringer).isNotNull()
         assertThat(endringer.endredeFelter).contains(Endringsfelttype.NAVN)
-        log.info(endringer.endredeFelter.toString())
         assertThat(endringer.endredeFelter).size().isEqualTo(1)
     }
 
