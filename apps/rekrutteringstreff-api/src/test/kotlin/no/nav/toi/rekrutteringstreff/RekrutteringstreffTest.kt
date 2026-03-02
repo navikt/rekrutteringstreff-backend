@@ -341,6 +341,7 @@ class RekrutteringstreffTest {
     fun `oppdater rekrutteringstreff med kiLoggId for feil treff gir 422`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
+        db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
         val annetTreffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Annet treff")
         val created = db.hentAlleRekrutteringstreff().first { it.tittel == "Gammel tittel" }
 
