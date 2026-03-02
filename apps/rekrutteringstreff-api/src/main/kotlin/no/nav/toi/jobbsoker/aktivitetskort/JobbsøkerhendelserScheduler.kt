@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.sql.DataSource
 
-class AktivitetskortJobbsøkerScheduler(
+class JobbsøkerhendelserScheduler(
     private val dataSource: DataSource,
     private val aktivitetskortRepository: AktivitetskortRepository,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
@@ -33,7 +33,7 @@ class AktivitetskortJobbsøkerScheduler(
     private val isRunning = AtomicBoolean(false)
 
     fun start() {
-        log.info("Starter AktivitetskortJobbsøkerScheduler")
+        log.info("Starter JobbsøkerhendelserScheduler")
 
         val now = LocalDateTime.now()
         val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
@@ -42,7 +42,7 @@ class AktivitetskortJobbsøkerScheduler(
     }
 
     fun stop() {
-        log.info("Stopper AktivitetskortJobbsøkerScheduler")
+        log.info("Stopper JobbsøkerhendelserScheduler")
         scheduler.shutdown()
         try {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -55,12 +55,12 @@ class AktivitetskortJobbsøkerScheduler(
 
     fun behandleJobbsøkerHendelser() {
         if (isRunning.getAndSet(true)) {
-            log.info("Forrige kjøring av AktivitetskortJobbsøkerScheduler er ikke ferdig, skipper denne kjøringen.")
+            log.info("Forrige kjøring av JobbsøkerhendelserScheduler er ikke ferdig, skipper denne kjøringen.")
             return
         }
 
         if (leaderElection.isLeader().not()) {
-            log.info("Kjøring av AktivitetskortJobbsøkerScheduler skippes, instansen er ikke leader.")
+            log.info("Kjøring av JobbsøkerhendelserScheduler skippes, instansen er ikke leader.")
             isRunning.set(false)
             return
         }
@@ -81,7 +81,7 @@ class AktivitetskortJobbsøkerScheduler(
 
             log.info("Ferdig med behandling av usendte jobbsøker-hendelser for aktivitetskort")
         } catch (e: Exception) {
-            log.error("Feil under kjøring av AktivitetskortJobbsøkerScheduler", e)
+            log.error("Feil under kjøring av JobbsøkerhendelserScheduler", e)
         } finally {
             isRunning.set(false)
         }
@@ -92,6 +92,7 @@ class AktivitetskortJobbsøkerScheduler(
             JobbsøkerHendelsestype.INVITERT,
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
             JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
             JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
             JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
@@ -110,7 +111,8 @@ class AktivitetskortJobbsøkerScheduler(
             JobbsøkerHendelsestype.INVITERT -> behandleInvitasjon(hendelse)
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON -> behandleSvar(hendelse, true)
             JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON -> behandleSvar(hendelse, false)
-            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON -> behandleTreffEndret(hendelse)
+            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING -> behandleTreffEndret(hendelse)
+            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON -> behandleTreffEndretNotifikasjon(hendelse)
             JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST -> behandleSvartJaTreffstatus(hendelse, "avlyst")
             JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT -> behandleSvartJaTreffstatus(hendelse, "fullført")
             JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST -> behandleIkkeSvartTreffstatus(hendelse, "avlyst")
@@ -150,21 +152,32 @@ class AktivitetskortJobbsøkerScheduler(
 
             val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
-            // Hent ut hvilke felt som er endret og skal varsles om
-            val endredeFelter = hendelse.hendelseData?.let { data ->
-                val endringer = objectMapper.readValue(data, Rekrutteringstreffendringer::class.java)
-                endringer.hentFelterSomSkalVarsles().takeIf { it.isNotEmpty() }
-            }
-
-            // Send én samlet melding som brukes av både aktivitetskort-appen og kandidatvarsel-api
             treff.aktivitetskortOppdateringFor(
                 fnr = hendelse.fnr,
                 hendelseId = hendelse.hendelseId,
                 avsenderNavident = hendelse.aktøridentifikasjon,
-                endredeFelter = endredeFelter
             ).publiserTilRapids(rapidsConnection)
 
-            log.info("Sendt rekrutteringstreffoppdatering for treff ${hendelse.rekrutteringstreffUuid}${endredeFelter?.let { " med endredeFelter=$it" } ?: ""}")
+            log.info("Sendt rekrutteringstreffoppdatering for treff ${hendelse.rekrutteringstreffUuid} for jobbsøker")
+        }
+    }
+
+    private fun behandleTreffEndretNotifikasjon(hendelse: JobbsøkerHendelseForAktivitetskort) {
+        dataSource.executeInTransaction { connection ->
+            aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
+
+            val treff = hentTreff(hendelse.rekrutteringstreffUuid)
+
+            val endringer = objectMapper.readValue(hendelse.hendelseData, Rekrutteringstreffendringer::class.java).endredeFelter.toList()
+
+            treff.aktivitetskortOppdateringFor(
+                fnr = hendelse.fnr,
+                hendelseId = hendelse.hendelseId,
+                avsenderNavident = hendelse.aktøridentifikasjon,
+                endredeFelter = endringer
+            ).publiserTilRapids(rapidsConnection)
+
+            log.info("Sendt melding om varsel for oppdatering av treff ${hendelse.rekrutteringstreffUuid} for jobbsøker")
         }
     }
 
