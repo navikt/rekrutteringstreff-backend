@@ -27,7 +27,7 @@ _Dette er funksjonalitet som er essensiell for drift, sikkerhet og feilsøking i
 
 _Funksjonalitet som øker robustheten og standardiseringen i API-et._
 
-4. **Sikkerhetshoder (Security Headers)**
+4. **Sikkerhetsheaders**
    - **I Spring:** Spring Security setter automatisk anbefalte HTTP-headere.
    - **Status hos oss:** Mangler. API-et nås riktignok kun via frontend-proxy, men headere er viktig defense-in-depth.
    - **Tiltak:** Legg til filter som setter standard sikkerhetshoder (f.eks. `X-Frame-Options`, `X-Content-Type-Options`).
