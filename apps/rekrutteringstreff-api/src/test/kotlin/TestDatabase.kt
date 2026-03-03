@@ -281,10 +281,10 @@ class TestDatabase {
         }
     }
 
-    fun registrerTreffEndretNotifikasjon(
+    fun registrerTreffEndretHendelse(
         treffId: TreffId,
         fnr: Fødselsnummer,
-        endringer: no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
+        endringer: Rekrutteringstreffendringer? = null,
     ) = dataSource.connection.use { conn ->
         // Hent jobbsøker_id
         val jobbsøkerId = conn.prepareStatement(
@@ -301,22 +301,28 @@ class TestDatabase {
             if (it.next()) it.getLong(1) else error("Fant ikke jobbsøker for treff $treffId og fnr")
         }
 
-        // Legg til hendelse med hendelse_data
-        val hendelseDataJson = JacksonConfig.mapper.writeValueAsString(endringer)
+        var hendelsestype = JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING.name
+        var hendelsedata: String? = null
+
+        if (endringer != null) {
+            hendelsestype = JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON.name
+            hendelsedata = JacksonConfig.mapper.writeValueAsString(endringer)
+        }
+
         conn.prepareStatement(
             """
-            INSERT INTO jobbsoker_hendelse 
-              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
-            VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)
-            """
+        INSERT INTO jobbsoker_hendelse 
+          (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
+        VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)
+        """
         ).apply {
             setObject(1, UUID.randomUUID())
             setLong(2, jobbsøkerId)
             setTimestamp(3, Timestamp.from(nowOslo().toInstant()))
-            setString(4, JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON.name)
+            setString(4, hendelsestype)
             setString(5, AktørType.ARRANGØR.name)
             setString(6, "Z123456")
-            setString(7, hendelseDataJson)
+            setString(7, hendelsedata)
         }.executeUpdate()
     }
 
