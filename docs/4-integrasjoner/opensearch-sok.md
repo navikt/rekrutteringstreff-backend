@@ -107,6 +107,7 @@ data class RekrutteringstreffSøkTreff(
     val kommune: String?,
     val fylke: String?,
     val opprettetAvPersonNavident: String,
+    val opprettetAvPersonNavn: String?,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
     val sistEndret: ZonedDateTime,
@@ -129,12 +130,12 @@ enum class Visningsstatus {
 }
 ```
 
-| Visningsstatus         | Backend-status | Tidsfilter                                |
-| ---------------------- | -------------- | ----------------------------------------- |
-| ÅPEN_FOR_SØKERE        | `PUBLISERT`    | `svarfrist >= now` (eller svarfrist null)  |
-| STENGT_FOR_SØKERE      | `PUBLISERT`    | `svarfrist < now` AND `tilTid >= now`      |
-| UTLØPT                 | `PUBLISERT`    | `tilTid < now`                             |
-| MINE_IKKE_PUBLISERTE   | `UTKAST`       | `eiere` inneholder innlogget navident      |
+| Visningsstatus       | Backend-status | Tidsfilter                                |
+| -------------------- | -------------- | ----------------------------------------- |
+| ÅPEN_FOR_SØKERE      | `PUBLISERT`    | `svarfrist >= now` (eller svarfrist null) |
+| STENGT_FOR_SØKERE    | `PUBLISERT`    | `svarfrist < now` AND `tilTid >= now`     |
+| UTLØPT               | `PUBLISERT`    | `tilTid < now`                            |
+| MINE_IKKE_PUBLISERTE | `UTKAST`       | `eiere` inneholder innlogget navident     |
 
 `visAvlyste`-flagget (toggle, default av) legger til `AVLYST` i filteret.
 
@@ -227,6 +228,7 @@ Ny app under `rekrutteringstreff-backend/apps/rekrutteringstreff-indekser/`. Fø
   "fylkesnummer": "03",
   "fylke": "Oslo",
   "opprettetAvPersonNavident": "Z993102",
+  "opprettetAvPersonNavn": "Benjamin Hansen",
   "opprettetAvNavkontorEnhetId": "0318",
   "opprettetAvTidspunkt": "2026-03-02T10:00:00+01:00",
   "sistEndret": "2026-03-02T12:00:00+01:00",
@@ -267,15 +269,12 @@ apps/rekrutteringstreff-indekser/
 
 ## Del 4: Søke-app (`rekrutteringstreff-søk`)
 
-Ny app (eller modul) i `rekrutteringstreff-backend` som eksponerer søke-endepunktet.
+Ny, separat app under `rekrutteringstreff-backend/apps/rekrutteringstreff-sok/` som eksponerer søke-endepunktet.
+Dette gjør at vi kan skalere lesning uavhengig av APIet for skriving.
 
-### Alternativ A: Etter mal fra rekrutteringsbistand-kandidatsok-api
+### Query builder
 
-Bruker samme arkitektur og OpenSearch-klient som eksisterende kandidatsøk. Fordel: kjent mønster i NAV. Ulempe: tar inn kandidatsøk-avhengigheter som kanskje ikke passer direkte.
-
-### Alternativ B: Query builder i rekrutteringstreff-backend (anbefalt)
-
-Enkel controller → service → OpenSearch-klient uten ekstra abstraksjonslag. Backend tar imot `RekrutteringstreffSøkRequest`, bygger OpenSearch `bool`-query og returnerer `RekrutteringstreffSøkRespons`.
+Enkel controller → service → OpenSearch-klient uten ekstra abstraksjonslag. Backend tar imot `RekrutteringstreffSøkRequest`, bygger OpenSearch `bool`-query og returnerer `RekrutteringstreffSøkRespons`. Tilgangskontroll håndteres strengt i backend basert på roller og innlogget bruker (fra token).
 
 ```
 RekrutteringstreffSøkController
@@ -294,25 +293,26 @@ implementation("org.apache.httpcomponents.client5:httpclient5:5.4.2")
 
 ### Filtre og OpenSearch-clauses
 
-| Filter        | OpenSearch-clause                                                                                                            |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `fritekst`    | `multi_match` på `tittel`, `beskrivelse`, `innlegg.tittel`, `innlegg.tekstinnhold` + nested match på `arbeidsgivere.orgnavn` |
-| `visningsstatuser` | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus (se tabell over)           |
-| `visAvlyste`  | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                         |
-| `fylker`      | `terms` på `fylkesnummer`                                                                                                    |
-| `kommuner`    | `terms` på `kommunenummer`                                                                                                   |
-| `navkontor`   | `terms` på `opprettetAvNavkontorEnhetId`                                                                                     |
-| `MINE`        | `term` på `eiere` = innlogget navident                                                                                       |
-| `MITT_KONTOR` | `term` på `opprettetAvNavkontorEnhetId` = innlogget kontor                                                                   |
+| Filter             | OpenSearch-clause                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `fritekst`         | `multi_match` på `tittel`, `beskrivelse` + nested match på `arbeidsgivere.orgnavn` og `innlegg` (lav boost)                        |
+| `visningsstatuser` | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus. For aggregeringer brukes Filter Aggregations. |
+| `visAvlyste`       | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                               |
+| `fylker`           | `terms` på `fylkesnummer`                                                                                                          |
+| `kommuner`         | `terms` på `kommunenummer`                                                                                                         |
+| `navkontor`        | `terms` på `opprettetAvNavkontorEnhetId`                                                                                           |
+| `MINE`             | `term` på `eiere` = innlogget navident                                                                                             |
+| `MITT_KONTOR`      | `term` på `opprettetAvNavkontorEnhetId` = innlogget kontor                                                                         |
 
 `SLETTET`-status filtreres alltid bort (`must_not` `term` `status=SLETTET`).
 
 `fritekst` legges i `must`, alle andre i `filter`.
 
 Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni `must`:
+
 - én `multi_match` på toppnivåfelter (`tittel`, `beskrivelse`)
 - én `nested`-query for `arbeidsgivere` (match på `arbeidsgivere.orgnavn`)
-- én `nested`-query for `innlegg` (match på `innlegg.tittel` + `innlegg.tekstinnhold`)
+- én `nested`-query for `innlegg` (match på `innlegg.tittel` + `innlegg.tekstinnhold`, med lav boost `^0.2` for å unngå støy fra praktisk info)
 
 `multi_match` kan ikke søke i nested-felter direkte, derfor kreves separate `nested`-queries. Alle bidrar til relevans via `should`.
 
@@ -354,21 +354,21 @@ Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni 
 
 ---
 
-## Åpne spørsmål
+## Beslutninger på tidligere åpne spørsmål
 
-| #   | Spørsmål                                                        | Status                                                                    |
-| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| 1   | **Søke-app som egen app eller modul i rekrutteringstreff-api?** | Uavklart – egen app gir separat deploy/skalering, modul er enklere        |
-| 2   | **Innlegg som søkefelt – nødvendig?**                           | Kan gi støy, vurder å utelate eller gi lav boost                          |
-| 3   | **Facets/aggregeringer?**                                       | Besluttet: ja. Fylke, visningsstatus, navkontor – med antall i filterpanelet |
-| 4   | **Tilgangskontroll – hva ser veileder vs. markedskontakt?**     | Foreslått avklart – se «Foreslått beslutningstabell for tilgang i søk»    |
-| 5   | **Val av Alternativ A vs. B for søke-app**                      | Foreslått avklart – Alternativ B med ett endepunkt og `visning` i request |
-| 6   | **Visningsstatus-aggregeringer er komplekse**                   | `ÅPEN_FOR_SØKERE` vs `STENGT_FOR_SØKERE` krever `range` på `svarfrist`/`tilTid` + `status`. Korrekte facet-antall krever enten scripted aggregeringer eller flere separate agg-queries. Bør prototypes i fase 3. |
-| 7   | **Eiernavn vs. navident i treffkort**                           | Designet viser «Eies av Benjamin Hansen», men responsen returnerer kun navident. Enten indekser eiernavn i dokumentet, eller la frontend resolva navn separat. |
+| #   | Tema                                                            | Beslutning                                                                                                                                                                                                   |
+| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **Søke-app som egen app eller modul i rekrutteringstreff-api?** | **Egen app** (deployes separat) under `apps/rekrutteringstreff-sok/` for uavhengig skalering av lesetrafikk.                                                                                                 |
+| 2   | **Innlegg som søkefelt – nødvendig?**                           | Inkludert, men listes med **lav boost (0.2)** i `should`-clausen for å unngå for mye støy fra praktisk info («gratis parkering»).                                                                            |
+| 3   | **Facets/aggregeringer?**                                       | Ja, frontend trenger antall på aggregeringer.                                                                                                                                                                |
+| 4   | **Visningsstatus-aggregeringer**                                | Implementeres i OpenSearch med [**Filter Aggregations**](https://opensearch.org/docs/latest/aggregations/bucket/filter/) for de tre visningsstatusene, siden disse er kombinasjoner av flere felter.         |
+| 5   | **Roller og tilgangskontroll**                                  | Rollestyring byges strengt inn **backend** (ingen visningslag i frontend-api teller som sikkerhet). Se "Beslutningstabell for tilgang i søk".                                                                |
+| 6   | **Valg av søke-arkitektur**                                     | Egen Query Builder i ny app (fremfor å trekke inn all kode/abstraksjoner fra kandidatsøk-api).                                                                                                               |
+| 7   | **Eiernavn vs. navident i treffkort**                           | Både ident og navn på eier (den som oppretter treffet) populeres fra tokenet når treffet opprettes/indekseres, slik at OpenSearch og søke-API kan levere ferdig resolvrt navn til frontend uten ekstra kall. |
 
 ---
 
-## Foreslått beslutningstabell for tilgang i søk
+## Beslutningstabell for tilgang i søk
 
 Tabellen under er et konkret forslag som kan vedtas før implementasjon. Den følger eksisterende rollebeskrivelse i tilgangsstyring og gjør reglene eksplisitte i søke-endepunktet.
 
@@ -385,7 +385,7 @@ Presiseringer:
 - `MINE` og `MITT_KONTOR` er visninger oppå rollefilteret, ikke alternativer til tilgangskontroll.
 - Pilotkontor-kravet håndheves som pre-flight-sjekk i controller (403 før søk kjøres), ikke som filter i OpenSearch-query. Se tilgangsstyring.md.
 
-Dette fjerner tvetydighet i spørsmålet «hvem ser hva» og kan flyttes fra «Åpne spørsmål» til «Besluttet» når teamet har godkjent reglene.
+Dette fjerner tvetydighet i spørsmålet «hvem ser hva». Reglene håndheves konsekvent av backend.
 
 ---
 
@@ -676,9 +676,9 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ## Risiko
 
-| Risiko                        | Avbøting                                                            |
-| ----------------------------- | ------------------------------------------------------------------- |
-| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer lag i `sendt_tidspunkt`. |
-| OpenSearch utilgjengelig      | Fallback til `GET /api/rekrutteringstreff` inntil søk er stabilt    |
-| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier        |
+| Risiko                        | Avbøting                                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer lag i `sendt_tidspunkt`.                                                             |
+| OpenSearch utilgjengelig      | Fallback til `GET /api/rekrutteringstreff` inntil søk er stabilt                                                                |
+| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier                                                                    |
 | Visningsstatus-aggregeringer  | Tidsbaserte visningsstatuser krever komplekse agg-queries. Prototype tidlig i fase 3, vurder forenkling hvis ytelsen er dårlig. |
