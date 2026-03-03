@@ -36,7 +36,7 @@ I dag henter frontend **alle** rekrutteringstreff fra backend (`GET /api/rekrutt
 
 ## Del 1: Frontend – søkeformat
 
-Fritekst-feltet søker på tvers av tittel, beskrivelse, innleggsinnhold og arbeidsgivernavn – ikke et eget arbeidsgiver-søkefelt. Tabs (Alle / Mine / Mitt kontor) er mutually exclusive og erstatter separate boolean-flagg.
+Fritekst-feltet søker på tvers av tittel, beskrivelse, innleggsinnhold og arbeidsgivernavn – ikke et eget arbeidsgiver-søkefelt. Tabs (Alle / Mine / Mitt kontor) er gjensidig utelukkende og erstatter separate boolean-flagg.
 
 Søkeformatet modelleres etter mønsteret fra `rekrutteringsbistand-kandidatsok-api` i NAV sitt repo.
 
@@ -45,12 +45,13 @@ Søkeformatet modelleres etter mønsteret fra `rekrutteringsbistand-kandidatsok-
 ```kotlin
 data class RekrutteringstreffSøkRequest(
     val fritekst: String? = null,
-    val statuser: List<RekrutteringstreffStatus>? = null,
+    val visningsstatuser: List<Visningsstatus>? = null,
     val fylker: List<String>? = null,           // fylkesnummer
     val kommuner: List<String>? = null,         // kommunenummer
     val navkontor: List<String>? = null,        // enhetId-er
+    val visAvlyste: Boolean = false,
     val visning: Visning = Visning.ALLE,
-    val sortering: Sortering = Sortering.DATO,
+    val sortering: Sortering = Sortering.SIST_OPPDATERTE,
     val side: Int = 0,
     val antallPerSide: Int = 20,
 )
@@ -63,8 +64,11 @@ enum class Visning {
 
 enum class Sortering {
     RELEVANS,           // _score – default når fritekst er satt
-    PUBLISERINGSDATO,
-    DATO,               // fraTid – default uten fritekst
+    SIST_OPPDATERTE,    // sistEndret desc – default uten fritekst
+    NYESTE,             // opprettetAvTidspunkt desc
+    ELDSTE,             // opprettetAvTidspunkt asc
+    AKTIVE,             // fraTid asc, kun treff med status PUBLISERT og fraTid i fremtiden
+    FULLFØRTE,          // tilTid desc, kun FULLFØRT
 }
 ```
 
@@ -76,6 +80,18 @@ data class RekrutteringstreffSøkRespons(
     val totaltAntall: Long,
     val side: Int,
     val antallPerSide: Int,
+    val aggregeringer: RekrutteringstreffAggregeringer,
+)
+
+data class RekrutteringstreffAggregeringer(
+    val fylker: List<FacetVerdi>,
+    val visningsstatuser: List<FacetVerdi>,
+    val navkontor: List<FacetVerdi>,
+)
+
+data class FacetVerdi(
+    val verdi: String,
+    val antall: Long,
 )
 
 data class RekrutteringstreffSøkTreff(
@@ -93,16 +109,42 @@ data class RekrutteringstreffSøkTreff(
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
+    val sistEndret: ZonedDateTime,
     val antallArbeidsgivere: Int,
     val antallJobbsøkere: Int,
     val eiere: List<String>,
 )
 ```
 
+### Visningsstatus (brukervendt vs. backend)
+
+Frontend opererer med **visningsstatuser** som er avledet fra backend-status + tidsverdier. Søke-appen oversetter disse til OpenSearch-queries:
+
+```kotlin
+enum class Visningsstatus {
+    ÅPEN_FOR_SØKERE,       // backend: PUBLISERT + svarfrist ikke passert
+    STENGT_FOR_SØKERE,     // backend: PUBLISERT + svarfrist passert, men tilTid ikke passert
+    UTLØPT,                // backend: PUBLISERT + tilTid passert (aldri manuelt fullført)
+    MINE_IKKE_PUBLISERTE,  // backend: UTKAST + eiere inneholder innlogget navident
+}
+```
+
+| Visningsstatus         | Backend-status | Tidsfilter                                |
+| ---------------------- | -------------- | ----------------------------------------- |
+| ÅPEN_FOR_SØKERE        | `PUBLISERT`    | `svarfrist >= now` (eller svarfrist null)  |
+| STENGT_FOR_SØKERE      | `PUBLISERT`    | `svarfrist < now` AND `tilTid >= now`      |
+| UTLØPT                 | `PUBLISERT`    | `tilTid < now`                             |
+| MINE_IKKE_PUBLISERTE   | `UTKAST`       | `eiere` inneholder innlogget navident      |
+
+`visAvlyste`-flagget (toggle, default av) legger til `AVLYST` i filteret.
+
+Merk: Backend-status `FULLFØRT` og `SLETTET` er ikke eksponert som eget filter i UI.
+`FULLFØRT` vises via sorteringen `FULLFØRTE`. `SLETTET` filtreres alltid bort.
+
 ### Endepunkt
 
 ```
-POST /api/rekrutteringstreff-sok
+POST /api/rekrutteringstreff/sok
 ```
 
 ---
@@ -123,11 +165,11 @@ Dette er **ikke** en tradisjonell outbox (der payload skrives til en dedikert ou
 **Flyt:**
 
 1. Service skriver til `treff_hendelse` som i dag (samme transaksjon som domeneendringen)
-2. En scheduler (med leader election) kjører periodisk og finner usendterade ved LEFT JOIN + `WHERE kvittering IS NULL`
+2. En scheduler (med leader election) kjører periodisk og finner usendte rader ved LEFT JOIN + `WHERE kvittering IS NULL`
 3. For hver usent hendelse: send Rapids-melding, deretter INSERT kvitteringsrad
 
 ```sql
--- Henter usendterade (samme mønster som AktivitetskortRepository)
+-- Henter usendte rader (samme mønster som AktivitetskortRepository)
 SELECT th.*
 FROM treff_hendelse th
 LEFT JOIN treff_rapids_kvittering k ON th.treff_hendelse_id = k.treff_hendelse_id
@@ -229,7 +271,7 @@ Ny app (eller modul) i `rekrutteringstreff-backend` som eksponerer søke-endepun
 
 ### Alternativ A: Etter mal fra rekrutteringsbistand-kandidatsok-api
 
-Bruker same arkitektur og OpenSearch-klient som eksisterende kandidatsøk. Fordel: kjent mønster i NAV. Ulempe: tar inn kandidatsøk-avhengigheter som kanskje ikke passer direkte.
+Bruker samme arkitektur og OpenSearch-klient som eksisterende kandidatsøk. Fordel: kjent mønster i NAV. Ulempe: tar inn kandidatsøk-avhengigheter som kanskje ikke passer direkte.
 
 ### Alternativ B: Query builder i rekrutteringstreff-backend (anbefalt)
 
@@ -255,14 +297,24 @@ implementation("org.apache.httpcomponents.client5:httpclient5:5.4.2")
 | Filter        | OpenSearch-clause                                                                                                            |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `fritekst`    | `multi_match` på `tittel`, `beskrivelse`, `innlegg.tittel`, `innlegg.tekstinnhold` + nested match på `arbeidsgivere.orgnavn` |
-| `statuser`    | `terms` på `status`                                                                                                          |
+| `visningsstatuser` | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus (se tabell over)           |
+| `visAvlyste`  | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                         |
 | `fylker`      | `terms` på `fylkesnummer`                                                                                                    |
 | `kommuner`    | `terms` på `kommunenummer`                                                                                                   |
 | `navkontor`   | `terms` på `opprettetAvNavkontorEnhetId`                                                                                     |
 | `MINE`        | `term` på `eiere` = innlogget navident                                                                                       |
 | `MITT_KONTOR` | `term` på `opprettetAvNavkontorEnhetId` = innlogget kontor                                                                   |
 
+`SLETTET`-status filtreres alltid bort (`must_not` `term` `status=SLETTET`).
+
 `fritekst` legges i `must`, alle andre i `filter`.
+
+Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni `must`:
+- én `multi_match` på toppnivåfelter (`tittel`, `beskrivelse`)
+- én `nested`-query for `arbeidsgivere` (match på `arbeidsgivere.orgnavn`)
+- én `nested`-query for `innlegg` (match på `innlegg.tittel` + `innlegg.tekstinnhold`)
+
+`multi_match` kan ikke søke i nested-felter direkte, derfor kreves separate `nested`-queries. Alle bidrar til relevans via `should`.
 
 ---
 
@@ -271,8 +323,8 @@ implementation("org.apache.httpcomponents.client5:httpclient5:5.4.2")
 ### Fase 1: Outbox i rekrutteringstreff-api
 
 1. Opprett `treff_rapids_kvittering`-tabell (Flyway-migrasjon)
-2. Service skriver rad til kvitteringstabellen etter eksisterende hendelsesskriving
-3. Scheduler plukker usendte rader, sender Rapids-melding, setter `sendt_tidspunkt`
+2. Scheduler plukker usendte rader fra `treff_hendelse` (LEFT JOIN mot kvittering)
+3. Scheduler sender Rapids-melding og skriver kvitteringsrad med `sendt_tidspunkt` etter vellykket sending
 
 ### Fase 2: Indekser-app
 
@@ -288,7 +340,7 @@ implementation("org.apache.httpcomponents.client5:httpclient5:5.4.2")
 1. Opprett søke-app/-modul med OpenSearch lesekonfig
 2. Implementer query builder (fritekst + status + paginering først)
 3. Legg til geografi-filtre
-4. Legg til visning-filter (MINE / MITT_KONTOR)
+4. Legg til visning-filter og rollevalidering (ALLE / MINE / MITT_KONTOR)
 5. Komponenttester med OpenSearch Testcontainers
 
 ### Fase 4: Frontend
@@ -304,20 +356,329 @@ implementation("org.apache.httpcomponents.client5:httpclient5:5.4.2")
 
 ## Åpne spørsmål
 
-| #   | Spørsmål                                                        | Status                                                             |
-| --- | --------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 1   | **Søke-app som egen app eller modul i rekrutteringstreff-api?** | Uavklart – egen app gir separat deploy/skalering, modul er enklere |
-| 2   | **Innlegg som søkefelt – nødvendig?**                           | Kan gi støy, vurder å utelate eller gi lav boost                   |
-| 3   | **Facets/aggregeringer?**                                       | Antall treff per fylke/status – kan legges til i responsmodellen   |
-| 4   | **Tilgangskontroll – hva ser veileder vs. markedskontakt?**     | Veileder ser alle publiserte + egne; markedskontakt ser alle?      |
-| 5   | **Val av Alternativ A vs. B for søke-app**                      | Se Del 4 over                                                      |
+| #   | Spørsmål                                                        | Status                                                                    |
+| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | **Søke-app som egen app eller modul i rekrutteringstreff-api?** | Uavklart – egen app gir separat deploy/skalering, modul er enklere        |
+| 2   | **Innlegg som søkefelt – nødvendig?**                           | Kan gi støy, vurder å utelate eller gi lav boost                          |
+| 3   | **Facets/aggregeringer?**                                       | Besluttet: ja. Fylke, visningsstatus, navkontor – med antall i filterpanelet |
+| 4   | **Tilgangskontroll – hva ser veileder vs. markedskontakt?**     | Foreslått avklart – se «Foreslått beslutningstabell for tilgang i søk»    |
+| 5   | **Val av Alternativ A vs. B for søke-app**                      | Foreslått avklart – Alternativ B med ett endepunkt og `visning` i request |
+| 6   | **Visningsstatus-aggregeringer er komplekse**                   | `ÅPEN_FOR_SØKERE` vs `STENGT_FOR_SØKERE` krever `range` på `svarfrist`/`tilTid` + `status`. Korrekte facet-antall krever enten scripted aggregeringer eller flere separate agg-queries. Bør prototypes i fase 3. |
+| 7   | **Eiernavn vs. navident i treffkort**                           | Designet viser «Eies av Benjamin Hansen», men responsen returnerer kun navident. Enten indekser eiernavn i dokumentet, eller la frontend resolva navn separat. |
+
+---
+
+## Foreslått beslutningstabell for tilgang i søk
+
+Tabellen under er et konkret forslag som kan vedtas før implementasjon. Den følger eksisterende rollebeskrivelse i tilgangsstyring og gjør reglene eksplisitte i søke-endepunktet.
+
+| Rolle              | ALLE                 | MINE                        | MITT_KONTOR                                                       | Ekstra regler                                       |
+| ------------------ | -------------------- | --------------------------- | ----------------------------------------------------------------- | --------------------------------------------------- |
+| Jobbsøkerrettet    | Ikke tillatt (`403`) | `eiere` inneholder navident | `opprettetAvNavkontorEnhetId = aktivEnhet` + `status = PUBLISERT` | Pilotkontor-krav gjelder (med mindre utviklerrolle) |
+| Arbeidsgiverrettet | Alle statuser        | `eiere` inneholder navident | `opprettetAvNavkontorEnhetId = aktivEnhet`                        | Pilotkontor-krav gjelder (med mindre utviklerrolle) |
+| Utvikler/Admin     | Alle statuser        | `eiere` inneholder navident | `opprettetAvNavkontorEnhetId = aktivEnhet`                        | Ingen pilotkontor-begrensning                       |
+
+Presiseringer:
+
+- Rollefilter legges alltid server-side i søkeappen, uavhengig av hva klienten sender inn.
+- Ved flere roller brukes mest permissiv tilgang (`Utvikler/Admin` > `Arbeidsgiverrettet` > `Jobbsøkerrettet`).
+- `MINE` og `MITT_KONTOR` er visninger oppå rollefilteret, ikke alternativer til tilgangskontroll.
+- Pilotkontor-kravet håndheves som pre-flight-sjekk i controller (403 før søk kjøres), ikke som filter i OpenSearch-query. Se tilgangsstyring.md.
+
+Dette fjerner tvetydighet i spørsmålet «hvem ser hva» og kan flyttes fra «Åpne spørsmål» til «Besluttet» når teamet har godkjent reglene.
+
+---
+
+## Konsistens med `rekrutteringsbistand-kandidatsok-api`
+
+Gjennomgang av kandidatsøk-koden viser følgende etablerte mønster som bør gjenbrukes for treff-søk:
+
+1. **Rolle per visning/endepunkt håndheves i backend**
+   - Kandidatsøk validerer roller server-side før søk (`verifiserAutorisasjon(...)`).
+   - `Alle` er kun tillatt for `ARBEIDSGIVER_RETTET` og `UTVIKLER`.
+   - `Mine brukere`, `Mitt kontor` og `Mine kontorer` er tillatt for `JOBBSØKER_RETTET`, `ARBEIDSGIVER_RETTET`, `UTVIKLER`.
+
+2. **Frontend-faner er ikke sikkerhetsmekanisme**
+   - Kandidatsøk skjuler faner i UI, men backend håndhever fortsatt samme rollekrav.
+   - Treff-søk bør gjøre det samme: avvis ugyldig `visning`/rolle-kombinasjon med `403`.
+
+3. **Anbefalt endpoint-valg for treff-søk**
+   - Behold ett endepunkt: `POST /api/rekrutteringstreff/sok` med `visning` i request.
+   - Oversett `visning` → rollekrav i controller/service:
+     - `ALLE`: `ARBEIDSGIVER_RETTET` eller `UTVIKLER`
+     - `MINE` / `MITT_KONTOR`: `JOBBSØKER_RETTET`, `ARBEIDSGIVER_RETTET`, `UTVIKLER`
+   - Dette gir samme tilgangsmatrise som kandidatsøk, men enklere API-overflate for treff.
+
+4. **Hva som er verdt å hente inspirasjon på videre**
+   - Parameteriserte tilgangstester tilsvarende `KandidatsøkTest` (rolle × visning → forventet status).
+   - Tydelig sorteringsmapping (`String`/enum → eksplisitt OpenSearch-sort).
+   - Defensive fallback-regler for paging-parameter ved ugyldig input.
+
+---
+
+## Inspirasjon fra `toi-stilling-indekser` og frontend stillingssøk
+
+### Fra `toi-stilling-indekser` (backend-indeksering)
+
+1. **Alias + versjonert indeks som standardmønster**
+   - Stilling bruker fast alias (`stilling`) som peker på versjonert indeks (`INDEKS_VERSJON`).
+   - Treff-indekser bør gjøre tilsvarende: fast alias (f.eks. `rekrutteringstreff`) + versjonerte indekser for trygg bytte/revert.
+
+2. **Separat håndtering av full indeksering og inkrementelle oppdateringer**
+   - Stilling skiller på lyttere for vanlig indeksering og reindeksering.
+   - Stilling bruker to env-variabler: `INDEKS_VERSJON` (normal drift) og `REINDEKSER_INDEKS` (reindeksering til ny versjon). Anbefaler samme oppsett for treff-indekseren.
+   - Treff-opplegget bør beholde samme prinsipp: tydelig flyt for initial/reindex vs. løpende hendelser.
+
+3. **Delvise dokumentoppdateringer når bare noen felter endres**
+   - Stilling har egen flyt for `indekserStillingsinfo` som oppdaterer kun del av dokumentet.
+   - For treff kan dette brukes ved felter som tellerverdier eller metadata som endres oftere enn resten av dokumentet.
+
+4. **Mapping-prinsipper som treffer godt for likt domene**
+   - Filterfelter som brukes i `term`/`terms` bør være `keyword`.
+   - Fritekstfelter bør være `text` med norsk analyzer.
+   - Repeaterende objekter (`arbeidsgivere`, `innlegg`) bør være `nested` når de skal søkes korrekt per objekt.
+   - Vurder `copy_to` til ett samlesøk-felt for robust fritekst på tvers av flere felter.
+
+5. **Teststrategi med OpenSearch Testcontainers**
+   - Stilling tester alias-bytte, indeksopprettelse, reindeksering og oppdateringsflyt mot ekte OpenSearch-container.
+   - Treff-indekser bør ha tilsvarende testdekning tidlig, spesielt for alias-bytte og idempotent indeksering.
+
+### Fra frontend stillingssøk (filter og søk)
+
+1. **Skille mellom treff-query og aggregerings-query**
+   - Stilling bygger én query for hits og én for aggregeringer (`size=0`).
+   - Treff-søk kan bruke samme mønster hvis vi trenger facets i UI (fylke/status-antall).
+
+2. **Bruke `post_filter` for visningsstatus uten å ødelegge aggregater**
+   - Stilling bruker `post_filter` slik at facets representerer totalen, mens listevisning filtreres.
+   - Relevant for treff hvis vi introduserer fasetterte filterchips med antall.
+
+3. **Portefølje-/visningsfilter som egen query-modul**
+   - Stilling har egen `portefølje-query` med tydelige regler per visning.
+   - Treff-søk bør gjøre tilsvarende (`visning-query`) i backend for enklere vedlikehold og tydelig autorisasjon.
+
+4. **Tydelige helpere for paging og sortering**
+   - Stilling har sentral beregning av `from/size` og egen sorterings-query.
+   - Treff-søk bør ha dedikert mapping fra `Sortering` → OpenSearch sort, ikke ad hoc-bygging i controller.
+
+5. **Frontend kan skjule valg, men backend må fortsatt håndheve**
+   - Stilling frontend skjuler/tilpasser valg etter rolle, men sikkerheten ligger i backend-reglene.
+   - Treff-dokumentet følger samme prinsipp og bør beholde det.
+
+---
+
+## Foreslått førsteversjon av OpenSearch settings og mapping
+
+Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/resources/treff-settings.json` og `treff-mapping.json`.
+
+### `treff-settings.json` (forslag)
+
+```json
+{
+  "index": {
+    "number_of_shards": 3,
+    "number_of_replicas": 2
+  },
+  "analysis": {
+    "filter": {
+      "norwegian_stop": {
+        "type": "stop",
+        "stopwords": "_norwegian_"
+      },
+      "norwegian_stemmer": {
+        "type": "stemmer",
+        "language": "norwegian"
+      }
+    },
+    "char_filter": {
+      "custom_trim": {
+        "type": "pattern_replace",
+        "pattern": "^\\s+|\\s+$",
+        "replacement": ""
+      }
+    },
+    "normalizer": {
+      "trim_normalizer": {
+        "type": "custom",
+        "char_filter": ["custom_trim"]
+      },
+      "lowercase_normalizer": {
+        "type": "custom",
+        "char_filter": ["custom_trim"],
+        "filter": ["lowercase"]
+      },
+      "lowercase_folding_normalizer": {
+        "type": "custom",
+        "char_filter": ["custom_trim"],
+        "filter": ["lowercase", "asciifolding"]
+      }
+    },
+    "analyzer": {
+      "norwegian_html": {
+        "tokenizer": "standard",
+        "filter": ["lowercase", "norwegian_stop", "norwegian_stemmer"],
+        "char_filter": ["html_strip"]
+      }
+    }
+  }
+}
+```
+
+### `treff-mapping.json` (forslag)
+
+```json
+{
+  "date_detection": false,
+  "dynamic": false,
+  "properties": {
+    "id": {
+      "type": "keyword"
+    },
+    "status": {
+      "type": "keyword"
+    },
+    "fraTid": {
+      "type": "date",
+      "format": "strict_date_optional_time"
+    },
+    "tilTid": {
+      "type": "date",
+      "format": "strict_date_optional_time"
+    },
+    "svarfrist": {
+      "type": "date",
+      "format": "strict_date_optional_time"
+    },
+    "opprettetAvTidspunkt": {
+      "type": "date",
+      "format": "strict_date_optional_time"
+    },
+    "sistEndret": {
+      "type": "date",
+      "format": "strict_date_optional_time"
+    },
+    "opprettetAvPersonNavident": {
+      "type": "keyword",
+      "normalizer": "lowercase_normalizer"
+    },
+    "opprettetAvNavkontorEnhetId": {
+      "type": "keyword"
+    },
+    "eiere": {
+      "type": "keyword",
+      "normalizer": "lowercase_normalizer"
+    },
+    "antallArbeidsgivere": {
+      "type": "integer"
+    },
+    "antallJobbsøkere": {
+      "type": "integer"
+    },
+    "fylkesnummer": {
+      "type": "keyword"
+    },
+    "fylke": {
+      "type": "text",
+      "analyzer": "norwegian",
+      "copy_to": ["all_text_no"],
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "normalizer": "lowercase_folding_normalizer"
+        }
+      }
+    },
+    "kommunenummer": {
+      "type": "keyword"
+    },
+    "kommune": {
+      "type": "text",
+      "analyzer": "norwegian",
+      "copy_to": ["all_text_no"],
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "normalizer": "lowercase_folding_normalizer"
+        }
+      }
+    },
+    "postnummer": {
+      "type": "keyword"
+    },
+    "poststed": {
+      "type": "text",
+      "analyzer": "norwegian",
+      "copy_to": ["all_text_no"],
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "normalizer": "lowercase_folding_normalizer"
+        }
+      }
+    },
+    "gateadresse": {
+      "type": "text",
+      "copy_to": ["all_text_no"]
+    },
+    "tittel": {
+      "type": "text",
+      "analyzer": "norwegian",
+      "copy_to": ["all_text_no"]
+    },
+    "beskrivelse": {
+      "type": "text",
+      "analyzer": "norwegian_html",
+      "copy_to": ["all_text_no"]
+    },
+    "all_text_no": {
+      "type": "text",
+      "analyzer": "norwegian_html",
+      "index": true
+    },
+    "arbeidsgivere": {
+      "type": "nested",
+      "properties": {
+        "orgnr": {
+          "type": "keyword"
+        },
+        "orgnavn": {
+          "type": "text",
+          "analyzer": "norwegian"
+        }
+      }
+    },
+    "innlegg": {
+      "type": "nested",
+      "properties": {
+        "tittel": {
+          "type": "text",
+          "analyzer": "norwegian"
+        },
+        "tekstinnhold": {
+          "type": "text",
+          "analyzer": "norwegian_html"
+        }
+      }
+    }
+  }
+}
+```
+
+### Operasjonelle avklaringer før produksjon
+
+- `number_of_shards`/`number_of_replicas` bør justeres etter datamengde og miljø (dev/prod) før endelig låsing.
+- `dynamic: false` er valgt for kontroll på schema; nye felter krever eksplisitt mapping-endring.
+- Navident-felt er normalisert til lowercase for trygg matching mot token-claims i søkefiltre.
+- `copy_to` er bevisst utelatt fra nested-felter (`arbeidsgivere`, `innlegg`) fordi OpenSearch ikke støtter `copy_to` fra nested til toppnivå. Fritekst-søk i nested-felter løses med eksplisitte nested-queries i query-builderen.
+- Hvis vi trenger facets tidlig, bør vi i tillegg definere eksplisitte aggregeringsfelter (f.eks. `status`, `fylkesnummer`, `opprettetAvNavkontorEnhetId`) i query-laget.
 
 ---
 
 ## Risiko
 
-| Risiko                        | Avbøting                                                         |
-| ----------------------------- | ---------------------------------------------------------------- |
-| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer sendt_tidspunkt-lag.  |
-| OpenSearch utilgjengelig      | Fallback til `GET /api/rekrutteringstreff` inntil søk er stabilt |
-| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier     |
+| Risiko                        | Avbøting                                                            |
+| ----------------------------- | ------------------------------------------------------------------- |
+| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer lag i `sendt_tidspunkt`. |
+| OpenSearch utilgjengelig      | Fallback til `GET /api/rekrutteringstreff` inntil søk er stabilt    |
+| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier        |
+| Visningsstatus-aggregeringer  | Tidsbaserte visningsstatuser krever komplekse agg-queries. Prototype tidlig i fase 3, vurder forenkling hvis ytelsen er dårlig. |
