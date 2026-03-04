@@ -187,12 +187,12 @@ enum class Visningsstatus {
 }
 ```
 
-| Visningsstatus       | Backend-status | Tidsfilter                                |
-| -------------------- | -------------- | ----------------------------------------- |
-| ÅPEN_FOR_SØKERE      | `PUBLISERT`    | `svarfrist >= now` (eller svarfrist null) |
-| STENGT_FOR_SØKERE    | `PUBLISERT`    | `svarfrist < now` AND `tilTid >= now`     |
-| UTLØPT               | `PUBLISERT`    | `tilTid < now`                            |
-| IKKE_PUBLISERTE      | `UTKAST`       | Kun synlig for arbeidsgiverrettet/utvikler |
+| Visningsstatus    | Backend-status | Tidsfilter                                 |
+| ----------------- | -------------- | ------------------------------------------ |
+| ÅPEN_FOR_SØKERE   | `PUBLISERT`    | `svarfrist >= now` (eller svarfrist null)  |
+| STENGT_FOR_SØKERE | `PUBLISERT`    | `svarfrist < now` AND `tilTid >= now`      |
+| UTLØPT            | `PUBLISERT`    | `tilTid < now`                             |
+| IKKE_PUBLISERTE   | `UTKAST`       | Kun synlig for arbeidsgiverrettet/utvikler |
 
 `visAvlyste`-flagget (toggle, default av) legger til `AVLYST` i filteret.
 
@@ -347,19 +347,25 @@ OpenSearchKlient                   ← wrapper rundt opensearch-java
 
 `fritekst` legges i `must`, alle andre i `filter`.
 
-Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni `must`:
+**Fritekst-søk med `copy_to`:**
 
-- én `multi_match` på toppnivåfelter (`tittel`, `beskrivelse`)
-- én `nested`-query for `arbeidsgivere` (match på `arbeidsgivere.orgnavn`)
-- én `nested`-query for `innlegg` (match på `innlegg.tittel` + `innlegg.tekstinnhold`, med lav boost `^0.2` for å unngå støy fra praktisk info)
+Alle toppnivå-tekstfelter (`tittel`, `beskrivelse`, `fylkesnavn`, `kommunenavn`, `poststed`, `gateadresse`) er konfigurert med `copy_to: ["all_text_no"]` i mappingen. Det betyr at verdiene fra disse feltene automatisk kopieres til ett samlefelt (`all_text_no`).
 
-`multi_match` kan ikke søke i nested-felter direkte, derfor kreves separate `nested`-queries. Alle bidrar til relevans via `should`.
+Når brukeren søker på fritekst, kan query-builderen gjøre ett enkelt søk på `all_text_no` i stedet for å bygge komplekse `multi_match`-queries. Dette blir **mer robust** fordi:
+
+1. **Én analyzer** – `all_text_no` bruker norsk analyzer for alle kopierte felter konsistent, uansett om det er tittel, adresse eller sted.
+2. **Enklere query** – Søket blir enklere å vedlikeholde (én `match` + separate `nested`-queries for arbeidsgivere og innlegg).
+3. **Mindre ytelsesproblem** – `multi_match` på mange felter kan bli langsommere; ett samlesøk-felt unngår tungt query-parsing.
+
+**Nested-felter utelatt fra kopiering** (arbeidsgivere, innlegg) må fortsatt løses med eksplisitte nested-queries i query-builderen, siden OpenSearch ikke støtter `copy_to` fra nested til toppnivå.
+
+**Konkret:** Hvis fritekst-søk skal implementeres, anbefales det å søke på `all_text_no` for toppnivåfelter + egne nested-queries for `arbeidsgivere.orgnavn`, `innlegg.tittel` og `innlegg.tekstinnhold`.
 
 ---
 
 ## Oppgaver
 
-Oppgavene under kan legges rett inn i Trello. Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart steg.
+Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart steg.
 
 ### Oppgave 1: Outbox i rekrutteringstreff-api
 
@@ -415,13 +421,13 @@ Rollefilter legges alltid server-side, uavhengig av hva klienten sender inn. Ugy
 
 **Arbeidsgiverrettet / Utvikler** (likt):
 
-| UI-element    | `ALLE`                                                         | `MINE`                                                         | `MITT_KONTOR`                                                  |
-| ------------- | -------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
-| **Tabs**      | Alle · **Mine** · Mitt kontor                                  | Alle · **Mine** · Mitt kontor                                  | Alle · Mine · **Mitt kontor**                                  |
-| **Fritekst**  | Ja                                                             | Ja                                                             | Ja                                                             |
-| **Sortering** | Alle valg                                                      | Alle valg                                                      | Alle valg                                                      |
-| **Steder**    | Ja                                                             | Skjules (egne treff er ikke avgrenset til sted)                | Skjules (allerede avgrenset til eget kontor)                   |
-| **Kontor**    | Ja                                                             | Skjules                                                        | Skjules                                                        |
+| UI-element    | `ALLE`                                                    | `MINE`                                                    | `MITT_KONTOR`                                                  |
+| ------------- | --------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------- |
+| **Tabs**      | Alle · **Mine** · Mitt kontor                             | Alle · **Mine** · Mitt kontor                             | Alle · Mine · **Mitt kontor**                                  |
+| **Fritekst**  | Ja                                                        | Ja                                                        | Ja                                                             |
+| **Sortering** | Alle valg                                                 | Alle valg                                                 | Alle valg                                                      |
+| **Steder**    | Ja                                                        | Skjules (egne treff er ikke avgrenset til sted)           | Skjules (allerede avgrenset til eget kontor)                   |
+| **Kontor**    | Ja                                                        | Skjules                                                   | Skjules                                                        |
 | **Status**    | Alle visningsstatuser + «Ikke publiserte» + «Vis avlyste» | Alle visningsstatuser + «Ikke publiserte» + «Vis avlyste» | Alle visningsstatuser + «Vis avlyste» (ikke «Ikke publiserte») |
 
 **Jobbsøkerrettet:**
