@@ -236,7 +236,9 @@ Tabellen `treff_rapids_kvittering` har følgende kolonner:
 
 Usendte rader finnes ved LEFT JOIN mot kvitteringstabellen.
 
-**Viktig forskjell fra tradisjonell outbox:** Kvitteringsraden skrives _etter_ sending, ikke i samme transaksjon som domeneendringen. Det betyr at hvis appen krasjer mellom sending og kvitteringsskriving, kan meldingen sendes to ganger. Indekseren må derfor være idempotent (upsert på dokument-ID).
+**Viktig forskjell fra tradisjonell outbox:** Kvitteringsraden skrives _etter_ sending, ikke i samme transaksjon som domeneendringen. Det betyr at hvis appen krasjer mellom sending og kvitteringsskriving, kan meldingen sendes to ganger. Indekseren må derfor være **idempotent**.
+
+Idempotensen sikres ved at indekseren bruker OpenSearch **upsert** (index med eksplisitt dokument-ID = treffets UUID). Å indeksere samme dokument to ganger med samme data gir nøyaktig samme resultat. Dette er enklere enn i f.eks. kandidatvarsel-api (som bruker en database med meldingsid-sjekk for å hindre duplikatsending), fordi OpenSearch sin index-operasjon er naturlig idempotent – den overskriver dokumentet med samme ID uten sideeffekter.
 
 Meldingen inneholder nok data til at indekseren kan bygge fullt dokument uten eget DB-oppslag (denormalisert payload).
 
@@ -357,13 +359,13 @@ Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni 
 
 ## Implementeringsrekkefølge
 
-### Fase 1: Outbox i rekrutteringstreff-api
+### Oppgave 1: Outbox i rekrutteringstreff-api
 
 1. Opprett `treff_rapids_kvittering`-tabell (Flyway-migrasjon)
 2. Scheduler plukker usendte rader fra `treff_hendelse` (LEFT JOIN mot kvittering)
 3. Scheduler sender Rapids-melding og skriver kvitteringsrad med `sendt_tidspunkt` etter vellykket sending
 
-### Fase 2: Indekser-app
+### Oppgave 2: Indekser-app
 
 1. Opprett `rekrutteringstreff-indekser`-modul
 2. Definer mapping og settings (norsk analyzer, nested for arbeidsgivere og innlegg)
@@ -372,7 +374,7 @@ Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni 
 5. Implementer `IndekserTreffLytter` for inkrementelle oppdateringer
 6. Deploy til dev, verifiser data
 
-### Fase 3: Søke-app
+### Oppgave 3: Søke-app
 
 1. Opprett søke-app/-modul med OpenSearch lesekonfig
 2. Implementer query builder (fritekst + status + paginering først)
@@ -380,7 +382,7 @@ Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni 
 4. Legg til visning-filter og rollevalidering (ALLE / MINE / MITT_KONTOR)
 5. Komponenttester med OpenSearch Testcontainers
 
-### Fase 4: Frontend
+### Oppgave 4: Frontend
 
 1. Ny hook `useRekrutteringstreffSøk` – POST med SWR, request body som cache-nøkkel
 2. Utvid kontekst med alle filterfelter + `visning`-tab
@@ -391,86 +393,59 @@ Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni 
 
 ---
 
-## Beslutninger på tidligere åpne spørsmål
-
-| #   | Tema                                                            | Beslutning                                                                                                                                                                                                   |
-| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **Søke-app som egen app eller modul i rekrutteringstreff-api?** | **Egen app** (deployes separat) under `apps/rekrutteringstreff-sok/` for uavhengig skalering av lesetrafikk.                                                                                                 |
-| 2   | **Innlegg som søkefelt – nødvendig?**                           | Inkludert, men listes med **lav boost (0.2)** i `should`-clausen for å unngå for mye støy fra praktisk info («gratis parkering»).                                                                            |
-| 3   | **Facets/aggregeringer?**                                       | Ja, frontend trenger antall på aggregeringer.                                                                                                                                                                |
-| 4   | **Visningsstatus-aggregeringer**                                | Implementeres i OpenSearch med [**Filter Aggregations**](https://opensearch.org/docs/latest/aggregations/bucket/filter/) for de tre visningsstatusene, siden disse er kombinasjoner av flere felter.         |
-| 5   | **Roller og tilgangskontroll**                                  | Rollestyring byges strengt inn **backend** (ingen visningslag i frontend-api teller som sikkerhet). Se "Beslutningstabell for tilgang i søk".                                                                |
-| 6   | **Valg av søke-arkitektur**                                     | Egen Query Builder i ny app (fremfor å trekke inn all kode/abstraksjoner fra kandidatsøk-api).                                                                                                               |
-| 7   | **Eiernavn vs. navident i treffkort**                           | Både ident og navn på eier (den som oppretter treffet) populeres fra tokenet når treffet opprettes/indekseres, slik at OpenSearch og søke-API kan levere ferdig resolvrt navn til frontend uten ekstra kall. |
-
----
-
-## Beslutningstabell for tilgang i søk
-
-Tabellen under er et konkret forslag som kan vedtas før implementasjon. Den følger eksisterende rollebeskrivelse i tilgangsstyring og gjør reglene eksplisitte i søke-endepunktet.
+## Tilgang i søk
 
 Søket har tre **visninger** (faner i frontend): `ALLE`, `MINE` og `MITT_KONTOR`. Visningen bestemmer **scope** – altså hvilke treff som er med i resultatet. Rollen bestemmer **tilgang** – om du i det hele tatt får lov til å bruke en visning, og om noen statuser filtreres bort.
 
-**Visning `ALLE` – ingen scope-filter, viser alle treff i systemet:**
+Roller (fra AD-grupper): **Jobbsøkerrettet** (lesetilgang), **Arbeidsgiverrettet** (opprette/administrere treff), **Utvikler/Admin** (full tilgang, ingen pilotkontor-krav). Se [tilgangsstyring.md](../3-sikkerhet/tilgangsstyring.md) for detaljer.
 
-| Rolle              | Tillatt? | Hvilke statuser vises?               | Pilotkontor-krav?           |
-| ------------------ | -------- | ------------------------------------ | --------------------------- |
-| Jobbsøkerrettet    | Nei (403)| –                                    | Ja (med mindre utviklerrolle)|
-| Arbeidsgiverrettet | Ja       | Alle (inkl. opprettet, avlyst, etc.) | Ja (med mindre utviklerrolle)|
-| Utvikler/Admin     | Ja       | Alle                                 | Nei                         |
+Pilotkontor-krav håndheves som pre-flight-sjekk i controller (403 før søk kjøres) og gjelder alle roller unntatt utvikler.
 
-**Visning `MINE` – kun treff der innlogget bruker er eier:**
+| Visning       | Jobbsøkerrettet                                | Arbeidsgiverrettet                 | Utvikler/Admin                     |
+| ------------- | ---------------------------------------------- | ---------------------------------- | ---------------------------------- |
+| `ALLE`        | Alle publiserte treff (ikke avlyste/fullførte) | Alle statuser                      | Alle statuser                      |
+| `MINE`        | Ikke tillatt (403) – kan ikke opprette treff   | `eiere` inneholder brukerens ident | `eiere` inneholder brukerens ident |
+| `MITT_KONTOR` | `navkontorEnhetId = aktivEnhet` + `PUBLISERT`  | `navkontorEnhetId = aktivEnhet`    | `navkontorEnhetId = aktivEnhet`    |
 
-| Rolle              | Tillatt? | OpenSearch-filter                   | Pilotkontor-krav?           |
-| ------------------ | -------- | ----------------------------------- | --------------------------- |
-| Jobbsøkerrettet    | Ja       | `eiere` inneholder brukerens navident | Ja (med mindre utviklerrolle)|
-| Arbeidsgiverrettet | Ja       | `eiere` inneholder brukerens navident | Ja (med mindre utviklerrolle)|
-| Utvikler/Admin     | Ja       | `eiere` inneholder brukerens navident | Nei                         |
+Rollefilter legges alltid server-side, uavhengig av hva klienten sender inn. Ugyldig visning/rolle-kombinasjon gir 403.
 
-**Visning `MITT_KONTOR` – kun treff som tilhører brukerens aktive NAV-kontor:**
+### Hva vises i UI per rolle og visning
 
-| Rolle              | Tillatt? | OpenSearch-filter                                                 | Pilotkontor-krav?           |
-| ------------------ | -------- | ----------------------------------------------------------------- | --------------------------- |
-| Jobbsøkerrettet    | Ja       | `navkontorEnhetId = aktivEnhet` **og** `status = PUBLISERT`       | Ja (med mindre utviklerrolle)|
-| Arbeidsgiverrettet | Ja       | `navkontorEnhetId = aktivEnhet` (alle statuser)                   | Ja (med mindre utviklerrolle)|
-| Utvikler/Admin     | Ja       | `navkontorEnhetId = aktivEnhet` (alle statuser)                   | Nei                         |
+**Arbeidsgiverrettet / Utvikler** (likt):
 
-Presiseringer:
+| UI-element    | `ALLE`                                                         | `MINE`                                                         | `MITT_KONTOR`                                                  |
+| ------------- | -------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Tabs**      | Alle · **Mine** · Mitt kontor                                  | Alle · **Mine** · Mitt kontor                                  | Alle · Mine · **Mitt kontor**                                  |
+| **Fritekst**  | Ja                                                             | Ja                                                             | Ja                                                             |
+| **Sortering** | Alle valg                                                      | Alle valg                                                      | Alle valg                                                      |
+| **Steder**    | Ja                                                             | Skjules (egne treff er ikke avgrenset til sted)                | Skjules (allerede avgrenset til eget kontor)                   |
+| **Kontor**    | Ja                                                             | Skjules                                                        | Skjules                                                        |
+| **Status**    | Alle visningsstatuser + «Mine ikke publiserte» + «Vis avlyste» | Alle visningsstatuser + «Mine ikke publiserte» + «Vis avlyste» | Alle visningsstatuser + «Vis avlyste» (ikke «Mine ikke publ.») |
 
-- Rollefilter legges alltid server-side i søkeappen, uavhengig av hva klienten sender inn.
-- Ved flere roller brukes mest permissiv tilgang (`Utvikler/Admin` > `Arbeidsgiverrettet` > `Jobbsøkerrettet`).
-- `MINE` og `MITT_KONTOR` er visninger oppå rollefilteret, ikke alternativer til tilgangskontroll.
-- Jobbsøkerrettet-rollen ser kun publiserte treff på eget kontor, og har ikke tilgang til `ALLE`-visningen – dette er den mest restriktive rollen.
-- Pilotkontor-kravet håndheves som pre-flight-sjekk i controller (403 før søk kjøres), ikke som filter i OpenSearch-query. Se tilgangsstyring.md.
+**Jobbsøkerrettet:**
 
-Dette fjerner tvetydighet i spørsmålet «hvem ser hva». Reglene håndheves konsekvent av backend.
+| UI-element          | `ALLE`                                        | `MINE`            | `MITT_KONTOR`                                |
+| ------------------- | --------------------------------------------- | ----------------- | -------------------------------------------- |
+| **Tabs**            | **Alle** · Mitt kontor (Mine-tab vises ikke)  | Ikke tilgjengelig | Alle · **Mitt kontor**                       |
+| **Fritekst**        | Ja                                            | –                 | Ja                                           |
+| **Sortering**       | Alle unntatt «Fullførte» (ser ikke fullførte) | –                 | Alle unntatt «Fullførte»                     |
+| **Steder**          | Ja                                            | –                 | Skjules                                      |
+| **Kontor**          | Ja                                            | –                 | Skjules                                      |
+| **Status**          | Åpen for søkere · Stengt for søkere · Utløpt  | –                 | Åpen for søkere · Stengt for søkere · Utløpt |
+| **Vis avlyste**     | Nei (ser aldri avlyste)                       | –                 | Nei                                          |
+| **Mine ikke publ.** | Nei (kan ikke opprette treff)                 | –                 | Nei                                          |
+
+Merk: Skjuling av filtre i frontend er UX-tilpasning – backend håndhever uansett rollebaserte begrensninger uavhengig av hva klienten sender.
 
 ---
 
 ## Konsistens med `rekrutteringsbistand-kandidatsok-api`
 
-Gjennomgang av kandidatsøk-koden viser følgende etablerte mønster som bør gjenbrukes for treff-søk:
+Treff-søk følger samme mønster som kandidatsøk:
 
-1. **Rolle per visning/endepunkt håndheves i backend**
-   - Kandidatsøk validerer roller server-side før søk (`verifiserAutorisasjon(...)`).
-   - `Alle` er kun tillatt for `ARBEIDSGIVER_RETTET` og `UTVIKLER`.
-   - `Mine brukere`, `Mitt kontor` og `Mine kontorer` er tillatt for `JOBBSØKER_RETTET`, `ARBEIDSGIVER_RETTET`, `UTVIKLER`.
-
-2. **Frontend-faner er ikke sikkerhetsmekanisme**
-   - Kandidatsøk skjuler faner i UI, men backend håndhever fortsatt samme rollekrav.
-   - Treff-søk bør gjøre det samme: avvis ugyldig `visning`/rolle-kombinasjon med `403`.
-
-3. **Anbefalt endpoint-valg for treff-søk**
-   - Behold ett endepunkt: `POST /api/rekrutteringstreff/sok` med `visning` i request.
-   - Oversett `visning` → rollekrav i controller/service:
-     - `ALLE`: `ARBEIDSGIVER_RETTET` eller `UTVIKLER`
-     - `MINE` / `MITT_KONTOR`: `JOBBSØKER_RETTET`, `ARBEIDSGIVER_RETTET`, `UTVIKLER`
-   - Dette gir samme tilgangsmatrise som kandidatsøk, men enklere API-overflate for treff.
-
-4. **Hva som er verdt å hente inspirasjon på videre**
-   - Parameteriserte tilgangstester tilsvarende `KandidatsøkTest` (rolle × visning → forventet status).
-   - Tydelig sorteringsmapping (`String`/enum → eksplisitt OpenSearch-sort).
-   - Defensive fallback-regler for paging-parameter ved ugyldig input.
+- Backend håndhever rolle per visning – frontend-faner er ikke sikkerhetsmekanisme.
+- Ett endepunkt (`POST /api/rekrutteringstreff/sok`) med `visning` i request. Ugyldig `visning`/rolle-kombinasjon gir `403`.
+- Parameteriserte tilgangstester (rolle × visning → forventet HTTP-status) etter mønster fra `KandidatsøkTest`.
 
 ---
 
@@ -487,17 +462,13 @@ Gjennomgang av kandidatsøk-koden viser følgende etablerte mønster som bør gj
    - Stilling bruker to env-variabler: `INDEKS_VERSJON` (normal drift) og `REINDEKSER_INDEKS` (reindeksering til ny versjon). Anbefaler samme oppsett for treff-indekseren.
    - Treff-opplegget bør beholde samme prinsipp: tydelig flyt for initial/reindex vs. løpende hendelser.
 
-3. **Delvise dokumentoppdateringer når bare noen felter endres**
-   - Stilling har egen flyt for `indekserStillingsinfo` som oppdaterer kun del av dokumentet.
-   - For treff kan dette brukes ved felter som tellerverdier eller metadata som endres oftere enn resten av dokumentet.
-
-4. **Mapping-prinsipper som treffer godt for likt domene**
+3. **Mapping-prinsipper som treffer godt for likt domene**
    - Filterfelter som brukes i `term`/`terms` bør være `keyword`.
    - Fritekstfelter bør være `text` med norsk analyzer.
    - Repeaterende objekter (`arbeidsgivere`, `innlegg`) bør være `nested` når de skal søkes korrekt per objekt.
    - Vurder `copy_to` til ett samlesøk-felt for robust fritekst på tvers av flere felter.
 
-5. **Teststrategi med OpenSearch Testcontainers**
+4. **Teststrategi med OpenSearch Testcontainers**
    - Stilling tester alias-bytte, indeksopprettelse, reindeksering og oppdateringsflyt mot ekte OpenSearch-container.
    - Treff-indekser bør ha tilsvarende testdekning tidlig, spesielt for alias-bytte og idempotent indeksering.
 
@@ -515,13 +486,18 @@ Gjennomgang av kandidatsøk-koden viser følgende etablerte mønster som bør gj
    - Stilling har egen `portefølje-query` med tydelige regler per visning.
    - Treff-søk bør gjøre tilsvarende (`visning-query`) i backend for enklere vedlikehold og tydelig autorisasjon.
 
-4. **Tydelige helpere for paging og sortering**
-   - Stilling har sentral beregning av `from/size` og egen sorterings-query.
-   - Treff-søk bør ha dedikert mapping fra `Sortering` → OpenSearch sort, ikke ad hoc-bygging i controller.
+4. **Paging og sortering**
+   - Ugyldig `side` eller `antallPerSide` gir 400 (Bad Request), ingen silent fallback.
+   - Sortering mappes eksplisitt fra enum til OpenSearch-sort:
 
-5. **Frontend kan skjule valg, men backend må fortsatt håndheve**
-   - Stilling frontend skjuler/tilpasser valg etter rolle, men sikkerheten ligger i backend-reglene.
-   - Treff-dokumentet følger samme prinsipp og bør beholde det.
+     | `Sortering`       | OpenSearch sort-felt   | Retning | Ekstra filter                           |
+     | ----------------- | ---------------------- | ------- | --------------------------------------- |
+     | `RELEVANS`        | `_score`               | desc    | Kun meningsfull med fritekst            |
+     | `SIST_OPPDATERTE` | `sistEndret`           | desc    | –                                       |
+     | `NYESTE`          | `opprettetAvTidspunkt` | desc    | –                                       |
+     | `ELDSTE`          | `opprettetAvTidspunkt` | asc     | –                                       |
+     | `AKTIVE`          | `fraTid`               | asc     | `status = PUBLISERT` og `fraTid >= now` |
+     | `FULLFØRTE`       | `tilTid`               | desc    | `status = FULLFØRT`                     |
 
 ---
 
@@ -737,9 +713,9 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ## Risiko
 
-| Risiko                        | Avbøting                                                                                                                        |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer lag i `sendt_tidspunkt`.                                                             |
-| OpenSearch utilgjengelig      | Fallback til `GET /api/rekrutteringstreff` inntil søk er stabilt                                                                |
-| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier                                                                    |
-| Visningsstatus-aggregeringer  | Tidsbaserte visningsstatuser krever komplekse agg-queries. Prototype tidlig i fase 3, vurder forenkling hvis ytelsen er dårlig. |
+| Risiko                        | Avbøting                                                                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer lag i `sendt_tidspunkt`.                                                                |
+| OpenSearch utilgjengelig      | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.              |
+| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier                                                                       |
+| Visningsstatus-aggregeringer  | Tidsbaserte visningsstatuser krever komplekse agg-queries. Prototype tidlig i oppgave 3, vurder forenkling hvis ytelsen er dårlig. |
