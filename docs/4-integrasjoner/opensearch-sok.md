@@ -288,7 +288,7 @@ Ny app under `rekrutteringstreff-backend/apps/rekrutteringstreff-indekser/`. Fø
 }
 ```
 
-### Appstruktur
+### Forslag til appstruktur
 
 ```
 apps/rekrutteringstreff-indekser/
@@ -357,7 +357,9 @@ Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni 
 
 ---
 
-## Implementeringsrekkefølge
+## Oppgaver
+
+Oppgavene under kan legges rett inn i Trello. Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart steg.
 
 ### Oppgave 1: Outbox i rekrutteringstreff-api
 
