@@ -115,7 +115,7 @@ data class RekrutteringstreffSøkRequest(
 enum class Visning {
     ALLE,           // ingen ekstra filter
     MINE,           // eiere inneholder innlogget navident
-    MITT_KONTOR,    // opprettetAvNavkontorEnhetId = innlogget kontor
+    MITT_KONTOR,    // navkontorEnhetId = innlogget kontor
 }
 
 enum class Sortering {
@@ -161,11 +161,11 @@ data class RekrutteringstreffSøkTreff(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
-    val kommune: String?,
-    val fylke: String?,
-    val opprettetAvPersonNavident: String,
-    val opprettetAvPersonNavn: String?,
-    val opprettetAvNavkontorEnhetId: String,
+    val kommunenavn: String?,
+    val fylkesnavn: String?,
+    val opprettetAvNavident: String,
+    val opprettetAvNavn: String?,
+    val navkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
     val sistEndret: ZonedDateTime,
     val antallArbeidsgivere: Int,
@@ -268,12 +268,12 @@ Ny app under `rekrutteringstreff-backend/apps/rekrutteringstreff-indekser/`. Fø
   "postnummer": "0301",
   "poststed": "Oslo",
   "kommunenummer": "0301",
-  "kommune": "Oslo",
+  "kommunenavn": "Oslo",
   "fylkesnummer": "03",
-  "fylke": "Oslo",
-  "opprettetAvPersonNavident": "Z993102",
-  "opprettetAvPersonNavn": "Benjamin Hansen",
-  "opprettetAvNavkontorEnhetId": "0318",
+  "fylkesnavn": "Oslo",
+  "opprettetAvNavident": "Z993102",
+  "opprettetAvNavn": "Benjamin Hansen",
+  "navkontorEnhetId": "0318",
   "opprettetAvTidspunkt": "2026-03-02T10:00:00+01:00",
   "sistEndret": "2026-03-02T12:00:00+01:00",
   "eiere": ["Z993102", "Z990659"],
@@ -330,16 +330,16 @@ OpenSearchKlient                   ← wrapper rundt opensearch-java
 
 ### Filtre og OpenSearch-clauses
 
-| Filter             | OpenSearch-clause                                                                                                                  |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `fritekst`         | `multi_match` på `tittel`, `beskrivelse` + nested match på `arbeidsgivere.orgnavn` og `innlegg` (lav boost)                        |
-| `visningsstatuser` | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus. For aggregeringer brukes Filter Aggregations. |
-| `visAvlyste`       | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                               |
-| `fylkesnummer`     | `terms` på `fylkesnummer`                                                                                                          |
-| `kommunenummer`    | `terms` på `kommunenummer`                                                                                                         |
-| `navkontorEnhetIder` | `terms` på `opprettetAvNavkontorEnhetId`                                                                                         |
-| `MINE`             | `term` på `eiere` = innlogget navident                                                                                             |
-| `MITT_KONTOR`      | `term` på `opprettetAvNavkontorEnhetId` = innlogget kontor                                                                         |
+| Filter               | OpenSearch-clause                                                                                                                  |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `fritekst`           | `multi_match` på `tittel`, `beskrivelse` + nested match på `arbeidsgivere.orgnavn` og `innlegg` (lav boost)                        |
+| `visningsstatuser`   | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus. For aggregeringer brukes Filter Aggregations. |
+| `visAvlyste`         | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                               |
+| `fylkesnummer`       | `terms` på `fylkesnummer`                                                                                                          |
+| `kommunenummer`      | `terms` på `kommunenummer`                                                                                                         |
+| `navkontorEnhetIder` | `terms` på `navkontorEnhetId`                                                                                                      |
+| `MINE`               | `term` på `eiere` = innlogget navident                                                                                             |
+| `MITT_KONTOR`        | `term` på `navkontorEnhetId` = innlogget kontor                                                                                    |
 
 `SLETTET`-status filtreres alltid bort (`must_not` `term` `status=SLETTET`).
 
@@ -409,11 +409,11 @@ Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni 
 
 Tabellen under er et konkret forslag som kan vedtas før implementasjon. Den følger eksisterende rollebeskrivelse i tilgangsstyring og gjør reglene eksplisitte i søke-endepunktet.
 
-| Rolle              | ALLE                 | MINE                        | MITT_KONTOR                                                       | Ekstra regler                                       |
-| ------------------ | -------------------- | --------------------------- | ----------------------------------------------------------------- | --------------------------------------------------- |
-| Jobbsøkerrettet    | Ikke tillatt (`403`) | `eiere` inneholder navident | `opprettetAvNavkontorEnhetId = aktivEnhet` + `status = PUBLISERT` | Pilotkontor-krav gjelder (med mindre utviklerrolle) |
-| Arbeidsgiverrettet | Alle statuser        | `eiere` inneholder navident | `opprettetAvNavkontorEnhetId = aktivEnhet`                        | Pilotkontor-krav gjelder (med mindre utviklerrolle) |
-| Utvikler/Admin     | Alle statuser        | `eiere` inneholder navident | `opprettetAvNavkontorEnhetId = aktivEnhet`                        | Ingen pilotkontor-begrensning                       |
+| Rolle              | ALLE                 | MINE                        | MITT_KONTOR                                            | Ekstra regler                                       |
+| ------------------ | -------------------- | --------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
+| Jobbsøkerrettet    | Ikke tillatt (`403`) | `eiere` inneholder navident | `navkontorEnhetId = aktivEnhet` + `status = PUBLISERT` | Pilotkontor-krav gjelder (med mindre utviklerrolle) |
+| Arbeidsgiverrettet | Alle statuser        | `eiere` inneholder navident | `navkontorEnhetId = aktivEnhet`                        | Pilotkontor-krav gjelder (med mindre utviklerrolle) |
+| Utvikler/Admin     | Alle statuser        | `eiere` inneholder navident | `navkontorEnhetId = aktivEnhet`                        | Ingen pilotkontor-begrensning                       |
 
 Presiseringer:
 
@@ -594,11 +594,14 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
       "type": "date",
       "format": "strict_date_optional_time"
     },
-    "opprettetAvPersonNavident": {
+    "opprettetAvNavident": {
       "type": "keyword",
       "normalizer": "lowercase_normalizer"
     },
-    "opprettetAvNavkontorEnhetId": {
+    "opprettetAvNavn": {
+      "type": "keyword"
+    },
+    "navkontorEnhetId": {
       "type": "keyword"
     },
     "eiere": {
@@ -614,7 +617,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
     "fylkesnummer": {
       "type": "keyword"
     },
-    "fylke": {
+    "fylkesnavn": {
       "type": "text",
       "analyzer": "norwegian",
       "copy_to": ["all_text_no"],
@@ -628,7 +631,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
     "kommunenummer": {
       "type": "keyword"
     },
-    "kommune": {
+    "kommunenavn": {
       "type": "text",
       "analyzer": "norwegian",
       "copy_to": ["all_text_no"],
@@ -707,7 +710,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - `dynamic: false` er valgt for kontroll på schema; nye felter krever eksplisitt mapping-endring.
 - Navident-felt er normalisert til lowercase for trygg matching mot token-claims i søkefiltre.
 - `copy_to` er bevisst utelatt fra nested-felter (`arbeidsgivere`, `innlegg`) fordi OpenSearch ikke støtter `copy_to` fra nested til toppnivå. Fritekst-søk i nested-felter løses med eksplisitte nested-queries i query-builderen.
-- Hvis vi trenger facets tidlig, bør vi i tillegg definere eksplisitte aggregeringsfelter (f.eks. `status`, `fylkesnummer`, `opprettetAvNavkontorEnhetId`) i query-laget.
+- Hvis vi trenger facets tidlig, bør vi i tillegg definere eksplisitte aggregeringsfelter (f.eks. `status`, `fylkesnummer`, `navkontorEnhetId`) i query-laget.
 
 ---
 
