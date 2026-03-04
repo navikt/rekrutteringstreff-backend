@@ -119,7 +119,7 @@ enum class Visning {
 }
 
 enum class Sortering {
-    RELEVANS,           // _score – default når fritekst er satt
+    RELEVANS,           // _score – brukes når fritekst er satt
     SIST_OPPDATERTE,    // sistEndret desc – default uten fritekst
     NYESTE,             // opprettetAvTidspunkt desc
     ELDSTE,             // opprettetAvTidspunkt asc
@@ -197,7 +197,7 @@ enum class Visningsstatus {
 `visAvlyste`-flagget (toggle, default av) legger til `AVLYST` i filteret.
 
 Merk: Backend-status `FULLFØRT` og `SLETTET` er ikke eksponert som eget filter i UI.
-`FULLFØRT` vises via sorteringen `FULLFØRTE`. `SLETTET` filtreres alltid bort.
+`FULLFORT`-treff hentes ved å velge sorteringen `FULLØRTE`, som filtrerer til `status = FULLFORT` og sorterer på `tilTid` desc. `SLETTET` filtreres alltid bort.
 
 ### Endepunkt
 
@@ -213,7 +213,7 @@ POST /api/rekrutteringstreff/sok
 
 ### Mønster (etter jobbsøker-hendelse + aktivitetskort_polling)
 
-Dette er **ikke** en tradisjonell outbox (der payload skrives til en dedikert outbox-tabell i samme transaksjon og slettes/markeres etter sending). Vi bruker det samme **kvitteringsbordet-mønsteret** som `aktivitetskort_polling`:
+Dette er **ikke** en tradisjonell outbox (der payload skrives til en dedikert outbox-tabell i samme transaksjon og slettes/markeres etter sending). Vi bruker det samme **kvitteringsbordet-mønsteret** som `aktivitetskort_polling` (se `rekrutteringstreff-backend/apps/rekrutteringstreff-api/`):
 
 | Tabell                    | Rolle                                                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------- |
@@ -384,6 +384,8 @@ Med eksplisitte statuser kan:
 
 **Åpne spørsmål:** Skal `STENGT` og `UTLØPT` opprettes som nye domenestatuser, eller gjenbrukes/omdøpes `FULLFØRT`? Trengs det en overgangsregel for eksisterende `PUBLISERT`-treff der `svarfrist` allerede er passert?
 
+Merk: Hvis `STENGT` innføres som domenestatus, er intensjonen at den erstatter visningsstatusen `STENGT_FOR_SØKERE` med en 1:1-mapping – slik at søke-appens oversettingslag kan fjernes (se punkt 2 under).
+
 ### 2. Terminologigap mellom domenemodell og søkegrensesnitt
 
 Frontend-filtre bruker brukervennlige termer (`Åpen for søkere`, `Stengt for søkere`, `Utløpt`) som i dag ikke finnes som faktiske statuser i backend. Søkeappen inneholder en eksplisitt mapping mellom disse to begrepsverdener, noe som skaper friksjon: nye filtre eller statuser må oppdateres på to steder.
@@ -543,6 +545,8 @@ Treff-søk følger samme mønster som kandidatsøk:
 Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/resources/treff-settings.json` og `treff-mapping.json`.
 
 ### `treff-settings.json` (forslag)
+
+> `norwegian`-analysatoren er innebygd i OpenSearch og trenger ikke defineres her. Kun `norwegian_html` (egendefinert med `html_strip`) defineres eksplisitt.
 
 ```json
 {
