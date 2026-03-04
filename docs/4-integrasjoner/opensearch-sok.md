@@ -36,7 +36,63 @@ I dag henter frontend **alle** rekrutteringstreff fra backend (`GET /api/rekrutt
 
 ## Del 1: Frontend – søkeformat
 
-Fritekst-feltet søker på tvers av tittel, beskrivelse, innleggsinnhold og arbeidsgivernavn – ikke et eget arbeidsgiver-søkefelt. Tabs (Alle / Mine / Mitt kontor) er gjensidig utelukkende og erstatter separate boolean-flagg.
+> **Figma-design:** [Rekrutteringstreff – liste og søk](https://www.figma.com/design/g0uypsepFJoFx3RRgtaw55/Team-ToI---Rekrutteringsbistand-og-Rekrutteringstreff?node-id=1-14565&p=f&m=dev) (krever NAV-tilgang)
+
+### Konseptskisse – søk og filtrering
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  [Søk i rekrutteringstreff 🔍]                                        │
+├─────────────────────┬───────────────────────────────────────────────────┤
+│                     │  Aktive filter-chips:                            │
+│  Sorter (radio)     │  [Oslo ✕] [Status: Åpen ✕]  [Fjern alle filtre]  │
+│  ○ Sist oppdaterte  │                                                  │
+│  ○ Nyeste           │  Tabs (radio):  [ Alle | Mine | Mitt kontor ]    │
+│  ○ Eldste           │                                                  │
+│  ○ Aktive           │  ┌──────────────────────────────────────────────┐ │
+│  ○ Fullførte        │  │ Rekrutteringstreff for nyutdannede ...       │ │
+│                     │  │ 📅 24. mai 2026, kl 12:00    Åpen for søkere│ │
+│  Steder (checkbox)  │  │ 📍 Ravinevegen 11  ⏰ Frist om 24 dager     │ │
+│  ☐ Agder (100)      │  │ 👤 Mitt oppdrag  Publisert for 2 dager ...  │ │
+│  ☐ Akershus (100)   │  └──────────────────────────────────────────────┘ │
+│  ☐ Buskerud (100)   │  ┌──────────────────────────────────────────────┐ │
+│                     │  │ Rekrutteringstreff for nyutdannede ...       │ │
+│  Status (checkbox)  │  │ 📅 24. mai 2026                              │ │
+│  ☐ Åpen for søkere  │  │ Eies av Benjamin Hansen                     │ │
+│  ☐ Stengt for søkere│  └──────────────────────────────────────────────┘ │
+│  ☐ Utløpt           │                                                  │
+│  ☐ Mine ikke publ.  │                        1-100 av 4000   < >       │
+│  🔘 Vis avlyste(200)│                                                  │
+│                     │                                                  │
+│  Kontor (checkbox)  │                                                  │
+│  ☐ Agder (100)      │                                                  │
+│  ☐ Akershus (100)   │                                                  │
+└─────────────────────┴───────────────────────────────────────────────────┘
+```
+
+### Interaksjonsmønstre
+
+| UI-element            | Type                   | Oppførsel                                                                  |
+| --------------------- | ---------------------- | -------------------------------------------------------------------------- |
+| **Sorter**            | Radioknapper (én av)   | Kun én aktiv sortering om gangen                                           |
+| **Alle/Mine/Mitt k.** | Tabs (én av)           | Gjensidig utelukkende – fungerer som radioknapper, men rendret som tabs    |
+| **Steder**            | Sjekkbokser (flervalg) | Flere fylker/kommuner kan velges samtidig                                  |
+| **Status**            | Sjekkbokser (flervalg) | Flere visningsstatuser kan velges samtidig                                 |
+| **Vis avlyste**       | Toggle/switch (av/på)  | Uavhengig av alt annet – kan kombineres fritt med tabs, statuser og steder |
+| **Kontor**            | Sjekkbokser (flervalg) | Flere kontorer kan velges samtidig                                         |
+| **Fritekst**          | Tekstfelt              | Kombineres fritt med alle andre filtre                                     |
+
+### Kombinasjon av filtre
+
+Alle filtergrupper kan brukes **samtidig**. Requestobjektet sender hele tilstanden i hver forespørsel, og backend bygger én samlet OpenSearch-query. Eksempler på gyldige kombinasjoner:
+
+- Tab «Mine» + kommune «Oslo» + visningsstatus «Åpen for søkere»
+- Tab «Mitt kontor» + fritekst «barnehage» + fylke «Vestland» + sortering «Nyeste»
+- Tab «Alle» + status «Stengt for søkere» + status «Utløpt» + toggle «Vis avlyste» på
+
+I OpenSearch-queryen legges filtergruppene som separate `filter`-clauses i en `bool`-query. Flere valg innad i én gruppe (f.eks. to fylker) kombineres med `OR` (`terms`), mens grupper seg imellom kombineres med `AND` (separate `filter`-clauses).
+
+Fritekst-feltet søker på tvers av tittel, beskrivelse, innleggsinnhold og arbeidsgivernavn – ikke et eget arbeidsgiver-søkefelt.
 
 Søkeformatet modelleres etter mønsteret fra `rekrutteringsbistand-kandidatsok-api` i NAV sitt repo.
 
@@ -83,13 +139,14 @@ data class RekrutteringstreffSøkRespons(
     val aggregeringer: RekrutteringstreffAggregeringer,
 )
 
+// Kan brukes til blant annet visning av antall i filtrene
 data class RekrutteringstreffAggregeringer(
-    val fylker: List<FacetVerdi>,
-    val visningsstatuser: List<FacetVerdi>,
-    val navkontor: List<FacetVerdi>,
+    val fylker: List<FilterValg>,
+    val visningsstatuser: List<FilterValg>,
+    val navkontor: List<FilterValg>,
 )
 
-data class FacetVerdi(
+data class FilterValg(
     val verdi: String,
     val antall: Long,
 )
@@ -169,28 +226,15 @@ Dette er **ikke** en tradisjonell outbox (der payload skrives til en dedikert ou
 2. En scheduler (med leader election) kjører periodisk og finner usendte rader ved LEFT JOIN + `WHERE kvittering IS NULL`
 3. For hver usent hendelse: send Rapids-melding, deretter INSERT kvitteringsrad
 
-```sql
--- Henter usendte rader (samme mønster som AktivitetskortRepository)
-SELECT th.*
-FROM treff_hendelse th
-LEFT JOIN treff_rapids_kvittering k ON th.treff_hendelse_id = k.treff_hendelse_id
-WHERE k.treff_rapids_kvittering_id IS NULL
-ORDER BY th.tidspunkt;
+Tabellen `treff_rapids_kvittering` har følgende kolonner:
 
--- Skrives KUN etter vellykket sending
-INSERT INTO treff_rapids_kvittering(treff_hendelse_id, sendt_tidspunkt)
-VALUES (?, NOW());
-```
+| Kolonne                      | Type                     | Beskrivelse                              |
+| ---------------------------- | ------------------------ | ---------------------------------------- |
+| `treff_rapids_kvittering_id` | `bigserial` (PK)         | Primærnøkkel                             |
+| `treff_hendelse_id`          | `bigint` (FK, NOT NULL)  | Fremmednøkkel til `treff_hendelse`       |
+| `sendt_tidspunkt`            | `timestamptz` (NOT NULL) | Tidspunkt meldingen ble sendt til Rapids |
 
-```sql
-CREATE TABLE treff_rapids_kvittering (
-    treff_rapids_kvittering_id bigserial PRIMARY KEY,
-    treff_hendelse_id          bigint                   NOT NULL,
-    sendt_tidspunkt            timestamp with time zone NOT NULL,
-    CONSTRAINT fk_treff_hendelse
-        FOREIGN KEY (treff_hendelse_id) REFERENCES treff_hendelse (treff_hendelse_id)
-);
-```
+Usendte rader finnes ved LEFT JOIN mot kvitteringstabellen.
 
 **Viktig forskjell fra tradisjonell outbox:** Kvitteringsraden skrives _etter_ sending, ikke i samme transaksjon som domeneendringen. Det betyr at hvis appen krasjer mellom sending og kvitteringsskriving, kan meldingen sendes to ganger. Indekseren må derfor være idempotent (upsert på dokument-ID).
 
@@ -282,13 +326,6 @@ RekrutteringstreffSøkController
 RekrutteringstreffSøkService       ← bygger query, kaller klient
     ↓
 OpenSearchKlient                   ← wrapper rundt opensearch-java
-```
-
-Avhengigheter i `build.gradle.kts`:
-
-```kotlin
-implementation("org.opensearch.client:opensearch-java:2.22.0")
-implementation("org.apache.httpcomponents.client5:httpclient5:5.4.2")
 ```
 
 ### Filtre og OpenSearch-clauses
