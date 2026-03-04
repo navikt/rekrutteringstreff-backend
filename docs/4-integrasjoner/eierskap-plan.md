@@ -125,19 +125,11 @@ Ingen DB-endringer nødvendig – `eiere text[]` er allerede på plass.
 
 ---
 
-## 6. Åpne spørsmål
+## 6. Avklaringer
 
-1. **Vise navn på eiere?** Kun navIdent i dag – hent via norg2 ved behov.
-2. **Kontorkrav for legg-til-meg?** Ikke nå – kan strammes til.
-3. **`PUT /eiere` (liste) vs. kun `PUT /eiere/meg`?** Behold begge – list-endepunktet er nyttig for admin/utvikler.
-4. **Jobbsøkerrettet – skal de se eiere?** Avklar behov.
-
----
-
-## 7. Fremtidig avklaring: eierkontor
-
-**Beslutning:** Kontoret settes til innlogget kontor ved opprettelsen (`opprettet_av_kontor_enhetid`) – slik det allerede fungerer i dag.
-
-**Fremtidig funksjon:** Eiere skal kunne overføre treffet til et annet kontor ved behov. Dette er ikke del av denne oppgaven, men bør avklares og planlegges etter pilot.
-
-> Avklaringsspørsmål: Skal kontoret kunne endres fritt av alle eiere, eller kun av oppretteren? Skal det logges som en hendelse?
+- **Maks eiere:** Hvor mange eiere skalman max kunne ha, er et bra tall?
+- **Hvem kan legge til seg selv:** Alle med arbeidsgiverrettet-rolle på samme kontor som treffet. Eler alle som har rollen uansett kontor?
+- **Eier legger til andre:** Bør eiere kunne legge til navIdenten til en annen person direkte, eller kun via "legg til meg selv"?
+- **Navn på eiere:** Viser kun navIdent i dag – skal vi hente og vise fullt navn?
+  **Jobbsøkerrettet – skal de se eiere?** Skal jobbsøkerrettet-brukere se hvem som er eiere av et treff?
+  **Eierkontor:** Kontor settes til innlogget kontor ved opprettelse. Bør eiere kunne overføre treffet til annet kontor? Eventuelt kun kontor som personen som overfører har tilgang til?
