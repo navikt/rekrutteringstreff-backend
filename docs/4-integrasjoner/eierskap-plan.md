@@ -44,10 +44,10 @@ Valideringssjekk i `EierController.leggTil()`: eksisterende + nye eiere (distinc
 
 Logges i `rekrutteringstreff_hendelse` fra `EierService`:
 
-| Hendelsestype   | `hendelse_data`                     | `aktøridentifikasjon`       |
-| --------------- | ----------------------------------- | --------------------------- |
-| `EIER_LAGT_TIL` | `{ "navIdentLagtTil": "A123456" }`  | Den som utfører operasjonen |
-| `EIER_FJERNET`  | `{ "navIdentFjernet": "A123456" }`  | Den som utfører operasjonen |
+| Hendelsestype   | `hendelse_data`                    | `aktøridentifikasjon`       |
+| --------------- | ---------------------------------- | --------------------------- |
+| `EIER_LAGT_TIL` | `{ "navIdentLagtTil": "A123456" }` | Den som utfører operasjonen |
+| `EIER_FJERNET`  | `{ "navIdentFjernet": "A123456" }` | Den som utfører operasjonen |
 
 ### 1.4 Tilgangskontroll – gjennomgang
 
@@ -72,12 +72,12 @@ Plasseres i `OmTreffetForEier.tsx` under "Om treffet"-boksen som eget `InfoBoks`
 └──────────────────────────────────────────┘
 ```
 
-| Element                      | Synlighet                                                          | Kall                       |
-| ---------------------------- | ------------------------------------------------------------------ | -------------------------- |
-| Liste over eiere (navIdent)  | Alltid for eiere                                                   | –                          |
-| Fjern-knapp per eier         | Antall > 1 og innlogget bruker er eier/utvikler                    | `DELETE /eiere/{navIdent}` |
-| "Legg til meg som eier"      | Bruker er ikke eier + antall < 3 + rolle arbeidsgiverrettet/utvikler | `PUT /eiere/meg`         |
-| Kapasitetsindikator          | Alltid                                                             | –                          |
+| Element                     | Synlighet                                                            | Kall                       |
+| --------------------------- | -------------------------------------------------------------------- | -------------------------- |
+| Liste over eiere (navIdent) | Alltid for eiere                                                     | –                          |
+| Fjern-knapp per eier        | Antall > 1 og innlogget bruker er eier/utvikler                      | `DELETE /eiere/{navIdent}` |
+| "Legg til meg som eier"     | Bruker er ikke eier + antall < 3 + rolle arbeidsgiverrettet/utvikler | `PUT /eiere/meg`           |
+| Kapasitetsindikator         | Alltid                                                               | –                          |
 
 > Frontend bruker SWR-hook `useEiere()` etter eksisterende mønster. Kun navIdent vises i første omgang.
 
@@ -104,11 +104,13 @@ Ingen DB-endringer nødvendig – `eiere text[]` er allerede på plass.
 ## 4. Testing
 
 **Backend** (`RekrutteringstreffEierTest.kt`, komponenttester):
+
 - Legg til meg: 201, idempotens (200), maks nådd (400), mangler rolle (403)
 - Slett eier: siste eier (400), ikke eier (403)
 - Hendelser logges i `rekrutteringstreff_hendelse`
 
 **Frontend:**
+
 - Fjern-knapp skjult om kun 1 eier
 - "Legg til meg" skjult om allerede eier eller maks nådd
 
@@ -134,15 +136,8 @@ Ingen DB-endringer nødvendig – `eiere text[]` er allerede på plass.
 
 ## 7. Fremtidig avklaring: eierkontor
 
-I dag har treffet kun ett kontor: `opprettet_av_kontor_enhetid` (oppretterens kontor). Når flere kan eie et treff oppstår spørsmålet om **hvilke(t) kontor som skal knyttes til treffet**.
+**Beslutning:** Kontoret settes til innlogget kontor ved opprettelsen (`opprettet_av_kontor_enhetid`) – slik det allerede fungerer i dag.
 
-Uavklarte problemstillinger:
+**Fremtidig funksjon:** Eiere skal kunne overføre treffet til et annet kontor ved behov. Dette er ikke del av denne oppgaven, men bør avklares og planlegges etter pilot.
 
-- Skal alle eiernes kontorer legges til automatisk?
-- Hva om en eier tilhører flere kontorer – alle, eller kun det de er innlogget med?
-- Hva hvis man blir tildelt eierskap av noen andre mens man er utlogget – hvilket kontor gjelder da?
-- Skal eiere heller kunne **velge kontor manuelt**, uavhengig av eget tilhørende kontor?
-
-Et mulig løsning er å, i likhet med `eiere`, ha et felt `kontorer text[]` i backend som kan administreres separat.
-
-> **Foreløpig antagelse:** Vi beholder kun `opprettet_av_kontor_enhetid` som eneste kontor inntil videre. Dette er et avklaringsspørsmål som bør tas opp etter pilot.
+> Avklaringsspørsmål: Skal kontoret kunne endres fritt av alle eiere, eller kun av oppretteren? Skal det logges som en hendelse?
