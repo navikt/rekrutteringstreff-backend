@@ -334,7 +334,7 @@ OpenSearchKlient                   ← wrapper rundt opensearch-java
 
 | Filter               | OpenSearch-clause                                                                                                                  |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `fritekst`           | `multi_match` på `tittel`, `beskrivelse` + nested match på `arbeidsgivere.orgnavn` og `innlegg` (lav boost)                        |
+| `fritekst`           | `match` på `all_text_no` + nested `match` på `arbeidsgivere.orgnavn`, `innlegg.tittel` og `innlegg.tekstinnhold` (lav boost)       |
 | `visningsstatuser`   | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus. For aggregeringer brukes Filter Aggregations. |
 | `visAvlyste`         | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                               |
 | `fylkesnummer`       | `terms` på `fylkesnummer`                                                                                                          |
@@ -721,9 +721,10 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ## Risiko
 
-| Risiko                        | Avbøting                                                                                                                           |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer lag i `sendt_tidspunkt`.                                                                |
-| OpenSearch utilgjengelig      | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.              |
-| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier                                                                       |
-| Visningsstatus-aggregeringer  | Tidsbaserte visningsstatuser krever komplekse agg-queries. Prototype tidlig i oppgave 3, vurder forenkling hvis ytelsen er dårlig. |
+| Risiko                        | Avbøting                                                                                                                                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer lag i `sendt_tidspunkt`.                                                                                                                                     |
+| OpenSearch utilgjengelig      | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.                                                                                   |
+| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier                                                                                                                                            |
+| Visningsstatus-aggregeringer  | Tidsbaserte visningsstatuser krever komplekse agg-queries. Prototype tidlig i oppgave 3, vurder forenkling hvis ytelsen er dårlig.                                                                      |
+| Clause explosion (fritekst)   | Stillingssøk treffer Aivens clause-grense med `multi_match` mot mange felt × mange ord. Her brukes `match` på `all_text_no`, som holder clause-antallet lavt uavhengig av antall ord eller kommunevalg. |
