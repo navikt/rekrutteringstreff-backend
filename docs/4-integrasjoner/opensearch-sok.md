@@ -61,7 +61,7 @@ I dag henter frontend **alle** rekrutteringstreff fra backend (`GET /api/rekrutt
 │  ☐ Åpen for søkere  │  │ Eies av Benjamin Hansen                     │ │
 │  ☐ Stengt for søkere│  └──────────────────────────────────────────────┘ │
 │  ☐ Utløpt           │                                                  │
-│  ☐ Mine ikke publ.  │                        1-100 av 4000   < >       │
+│  ☐ Ikke publiserte  │                        1-100 av 4000   < >       │
 │  🔘 Vis avlyste(200)│                                                  │
 │                     │                                                  │
 │  Kontor (checkbox)  │                                                  │
@@ -183,7 +183,7 @@ enum class Visningsstatus {
     ÅPEN_FOR_SØKERE,       // backend: PUBLISERT + svarfrist ikke passert
     STENGT_FOR_SØKERE,     // backend: PUBLISERT + svarfrist passert, men tilTid ikke passert
     UTLØPT,                // backend: PUBLISERT + tilTid passert (aldri manuelt fullført)
-    MINE_IKKE_PUBLISERTE,  // backend: UTKAST + eiere inneholder innlogget navident
+    IKKE_PUBLISERTE,       // backend: UTKAST (kun arbeidsgiverrettet/utvikler)
 }
 ```
 
@@ -192,7 +192,7 @@ enum class Visningsstatus {
 | ÅPEN_FOR_SØKERE      | `PUBLISERT`    | `svarfrist >= now` (eller svarfrist null) |
 | STENGT_FOR_SØKERE    | `PUBLISERT`    | `svarfrist < now` AND `tilTid >= now`     |
 | UTLØPT               | `PUBLISERT`    | `tilTid < now`                            |
-| MINE_IKKE_PUBLISERTE | `UTKAST`       | `eiere` inneholder innlogget navident     |
+| IKKE_PUBLISERTE      | `UTKAST`       | Kun synlig for arbeidsgiverrettet/utvikler |
 
 `visAvlyste`-flagget (toggle, default av) legger til `AVLYST` i filteret.
 
@@ -420,7 +420,7 @@ Rollefilter legges alltid server-side, uavhengig av hva klienten sender inn. Ugy
 | **Sortering** | Alle valg                                                      | Alle valg                                                      | Alle valg                                                      |
 | **Steder**    | Ja                                                             | Skjules (egne treff er ikke avgrenset til sted)                | Skjules (allerede avgrenset til eget kontor)                   |
 | **Kontor**    | Ja                                                             | Skjules                                                        | Skjules                                                        |
-| **Status**    | Alle visningsstatuser + «Mine ikke publiserte» + «Vis avlyste» | Alle visningsstatuser + «Mine ikke publiserte» + «Vis avlyste» | Alle visningsstatuser + «Vis avlyste» (ikke «Mine ikke publ.») |
+| **Status**    | Alle visningsstatuser + «Ikke publiserte» + «Vis avlyste» | Alle visningsstatuser + «Ikke publiserte» + «Vis avlyste» | Alle visningsstatuser + «Vis avlyste» (ikke «Ikke publiserte») |
 
 **Jobbsøkerrettet:**
 
@@ -433,7 +433,7 @@ Rollefilter legges alltid server-side, uavhengig av hva klienten sender inn. Ugy
 | **Kontor**          | Ja                                            | –                 | Skjules                                      |
 | **Status**          | Åpen for søkere · Stengt for søkere · Utløpt  | –                 | Åpen for søkere · Stengt for søkere · Utløpt |
 | **Vis avlyste**     | Nei (ser aldri avlyste)                       | –                 | Nei                                          |
-| **Mine ikke publ.** | Nei (kan ikke opprette treff)                 | –                 | Nei                                          |
+| **Ikke publiserte** | Nei (kan ikke opprette treff)                 | –                 | Nei                                          |
 
 Merk: Skjuling av filtre i frontend er UX-tilpasning – backend håndhever uansett rollebaserte begrensninger uavhengig av hva klienten sender.
 
