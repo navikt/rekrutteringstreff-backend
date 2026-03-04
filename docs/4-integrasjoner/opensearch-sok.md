@@ -710,7 +710,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - `dynamic: false` er valgt for kontroll på schema; nye felter krever eksplisitt mapping-endring.
 - Navident-felt er normalisert til lowercase for trygg matching mot token-claims i søkefiltre.
 - `copy_to` er bevisst utelatt fra nested-felter (`arbeidsgivere`, `innlegg`) fordi OpenSearch ikke støtter `copy_to` fra nested til toppnivå. Fritekst-søk i nested-felter løses med eksplisitte nested-queries i query-builderen.
-- Hvis vi trenger facets tidlig, bør vi i tillegg definere eksplisitte aggregeringsfelter (f.eks. `status`, `fylkesnummer`, `navkontorEnhetId`) i query-laget.
+- Aggregeringer (antall per fylke, visningsstatus og navkontor) trengs for å vise tall i filterpanelet. Disse bygges som `terms`-aggregeringer på `keyword`-feltene i mapping, bortsett fra visningsstatuser som krever Filter Aggregations fordi de er sammensatt av status + tidsverdier.
 
 ---
 
