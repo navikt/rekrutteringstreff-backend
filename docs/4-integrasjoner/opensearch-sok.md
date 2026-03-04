@@ -102,9 +102,9 @@ Søkeformatet modelleres etter mønsteret fra `rekrutteringsbistand-kandidatsok-
 data class RekrutteringstreffSøkRequest(
     val fritekst: String? = null,
     val visningsstatuser: List<Visningsstatus>? = null,
-    val fylker: List<String>? = null,           // fylkesnummer
-    val kommuner: List<String>? = null,         // kommunenummer
-    val navkontor: List<String>? = null,        // enhetId-er
+    val fylkesnummer: List<String>? = null,
+    val kommunenummer: List<String>? = null,
+    val navkontorEnhetIder: List<String>? = null,
     val visAvlyste: Boolean = false,
     val visning: Visning = Visning.ALLE,
     val sortering: Sortering = Sortering.SIST_OPPDATERTE,
@@ -141,9 +141,9 @@ data class RekrutteringstreffSøkRespons(
 
 // Kan brukes til blant annet visning av antall i filtrene
 data class RekrutteringstreffAggregeringer(
-    val fylker: List<FilterValg>,
+    val fylkesnummer: List<FilterValg>,
     val visningsstatuser: List<FilterValg>,
-    val navkontor: List<FilterValg>,
+    val navkontorEnhetIder: List<FilterValg>,
 )
 
 data class FilterValg(
@@ -335,9 +335,9 @@ OpenSearchKlient                   ← wrapper rundt opensearch-java
 | `fritekst`         | `multi_match` på `tittel`, `beskrivelse` + nested match på `arbeidsgivere.orgnavn` og `innlegg` (lav boost)                        |
 | `visningsstatuser` | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus. For aggregeringer brukes Filter Aggregations. |
 | `visAvlyste`       | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                               |
-| `fylker`           | `terms` på `fylkesnummer`                                                                                                          |
-| `kommuner`         | `terms` på `kommunenummer`                                                                                                         |
-| `navkontor`        | `terms` på `opprettetAvNavkontorEnhetId`                                                                                           |
+| `fylkesnummer`     | `terms` på `fylkesnummer`                                                                                                          |
+| `kommunenummer`    | `terms` på `kommunenummer`                                                                                                         |
+| `navkontorEnhetIder` | `terms` på `opprettetAvNavkontorEnhetId`                                                                                         |
 | `MINE`             | `term` på `eiere` = innlogget navident                                                                                             |
 | `MITT_KONTOR`      | `term` på `opprettetAvNavkontorEnhetId` = innlogget kontor                                                                         |
 
