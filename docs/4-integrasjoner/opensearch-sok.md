@@ -409,17 +409,38 @@ Ved fritekst-søk bygges en `bool.should` (med `minimum_should_match = 1`) inni 
 
 Tabellen under er et konkret forslag som kan vedtas før implementasjon. Den følger eksisterende rollebeskrivelse i tilgangsstyring og gjør reglene eksplisitte i søke-endepunktet.
 
-| Rolle              | ALLE                 | MINE                        | MITT_KONTOR                                            | Ekstra regler                                       |
-| ------------------ | -------------------- | --------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
-| Jobbsøkerrettet    | Ikke tillatt (`403`) | `eiere` inneholder navident | `navkontorEnhetId = aktivEnhet` + `status = PUBLISERT` | Pilotkontor-krav gjelder (med mindre utviklerrolle) |
-| Arbeidsgiverrettet | Alle statuser        | `eiere` inneholder navident | `navkontorEnhetId = aktivEnhet`                        | Pilotkontor-krav gjelder (med mindre utviklerrolle) |
-| Utvikler/Admin     | Alle statuser        | `eiere` inneholder navident | `navkontorEnhetId = aktivEnhet`                        | Ingen pilotkontor-begrensning                       |
+Søket har tre **visninger** (faner i frontend): `ALLE`, `MINE` og `MITT_KONTOR`. Visningen bestemmer **scope** – altså hvilke treff som er med i resultatet. Rollen bestemmer **tilgang** – om du i det hele tatt får lov til å bruke en visning, og om noen statuser filtreres bort.
+
+**Visning `ALLE` – ingen scope-filter, viser alle treff i systemet:**
+
+| Rolle              | Tillatt? | Hvilke statuser vises?               | Pilotkontor-krav?           |
+| ------------------ | -------- | ------------------------------------ | --------------------------- |
+| Jobbsøkerrettet    | Nei (403)| –                                    | Ja (med mindre utviklerrolle)|
+| Arbeidsgiverrettet | Ja       | Alle (inkl. opprettet, avlyst, etc.) | Ja (med mindre utviklerrolle)|
+| Utvikler/Admin     | Ja       | Alle                                 | Nei                         |
+
+**Visning `MINE` – kun treff der innlogget bruker er eier:**
+
+| Rolle              | Tillatt? | OpenSearch-filter                   | Pilotkontor-krav?           |
+| ------------------ | -------- | ----------------------------------- | --------------------------- |
+| Jobbsøkerrettet    | Ja       | `eiere` inneholder brukerens navident | Ja (med mindre utviklerrolle)|
+| Arbeidsgiverrettet | Ja       | `eiere` inneholder brukerens navident | Ja (med mindre utviklerrolle)|
+| Utvikler/Admin     | Ja       | `eiere` inneholder brukerens navident | Nei                         |
+
+**Visning `MITT_KONTOR` – kun treff som tilhører brukerens aktive NAV-kontor:**
+
+| Rolle              | Tillatt? | OpenSearch-filter                                                 | Pilotkontor-krav?           |
+| ------------------ | -------- | ----------------------------------------------------------------- | --------------------------- |
+| Jobbsøkerrettet    | Ja       | `navkontorEnhetId = aktivEnhet` **og** `status = PUBLISERT`       | Ja (med mindre utviklerrolle)|
+| Arbeidsgiverrettet | Ja       | `navkontorEnhetId = aktivEnhet` (alle statuser)                   | Ja (med mindre utviklerrolle)|
+| Utvikler/Admin     | Ja       | `navkontorEnhetId = aktivEnhet` (alle statuser)                   | Nei                         |
 
 Presiseringer:
 
 - Rollefilter legges alltid server-side i søkeappen, uavhengig av hva klienten sender inn.
 - Ved flere roller brukes mest permissiv tilgang (`Utvikler/Admin` > `Arbeidsgiverrettet` > `Jobbsøkerrettet`).
 - `MINE` og `MITT_KONTOR` er visninger oppå rollefilteret, ikke alternativer til tilgangskontroll.
+- Jobbsøkerrettet-rollen ser kun publiserte treff på eget kontor, og har ikke tilgang til `ALLE`-visningen – dette er den mest restriktive rollen.
 - Pilotkontor-kravet håndheves som pre-flight-sjekk i controller (403 før søk kjøres), ikke som filter i OpenSearch-query. Se tilgangsstyring.md.
 
 Dette fjerner tvetydighet i spørsmålet «hvem ser hva». Reglene håndheves konsekvent av backend.
