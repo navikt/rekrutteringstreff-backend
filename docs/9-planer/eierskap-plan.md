@@ -36,7 +36,7 @@
 - Idempotent: allerede eier → 200 (OK), ny eier → 201 (Created)
 
 **Begrunnelse for metodevalg (PUT) og idempotens:**
-Vi velger `PUT` fordi endepunktet representerer en operasjon for å "sikre en tilstand" (brukeren _skal_ være eier). Ved `POST` ville forventningen gjerne vært å opprette en ny, unik ressurs hver gang, noe som ofte gir en "Conflict" (409) feilmelding om ressursen/knytningen finnes fra før. Ved å gjøre operasjonen idempotent med `PUT`, gjør vi klientkoden mer robust, for eksempel i møte med nettverksproblemer der klienten forsøker operasjonen på nytt. Tilstanden på serveren blir den samme uansett om kallet utføres én eller ti ganger. Returkoden skiller mellom *når tilstanden ble endret* (201 Created) og *når tilstanden allerede var riktig* (200 OK).
+Vi velger `PUT` fordi endepunktet representerer en operasjon for å "sikre en tilstand" (brukeren _skal_ være eier). Ved `POST` ville forventningen gjerne vært å opprette en ny, unik ressurs hver gang, noe som ofte gir en "Conflict" (409) feilmelding om ressursen/knytningen finnes fra før. Ved å gjøre operasjonen idempotent med `PUT`, gjør vi klientkoden mer robust, for eksempel i møte med nettverksproblemer der klienten forsøker operasjonen på nytt. Tilstanden på serveren blir den samme uansett om kallet utføres én eller ti ganger. Returkoden skiller mellom _når tilstanden ble endret_ (201 Created) og _når tilstanden allerede var riktig_ (200 OK).
 
 ### 1.2 Hendelseslogging
 
@@ -78,7 +78,7 @@ Klikk på "Legg til meg som eier" åpner en bekreftelsesdialog før kallet sende
 
 ### 2.2 Synlighet og skjuling
 
-Siden vi i første omgang ikke viser listen over alle eiere, vil knappen for å bli eier i praksis kun være relevant for de som *ikke* er eiere ennå, men som har rettigheter til å bli det (`ARBEIDSGIVER_RETTET` eller `UTVIKLER`). Denne knappen legges i visningen `OmTreffetForIkkeEier`.
+Siden vi i første omgang ikke viser listen over alle eiere, vil knappen for å bli eier i praksis kun være relevant for de som _ikke_ er eiere ennå, men som har rettigheter til å bli det (`ARBEIDSGIVER_RETTET` eller `UTVIKLER`). Denne knappen legges i visningen `OmTreffetForIkkeEier`.
 For brukere som allerede er eier, dukker ikke komponenten/knappen opp i det hele tatt.
 
 ### 2.3 Hendelsesvisning
