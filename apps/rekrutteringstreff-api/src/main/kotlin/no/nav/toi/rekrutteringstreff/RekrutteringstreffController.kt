@@ -129,9 +129,14 @@ class RekrutteringstreffController(
         methods = [HttpMethod.GET]
     )
     private fun hentAlleRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
+        if (ctx.authenticatedUser().erUtvikler()) {
+           log.info("Hent alle rekrutteringstreff - er utvikler så viser alle rekrutteringstreff")
+           ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
+       }
+
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         log.info("Henter alle rekrutteringstreff")
-        ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
+        ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffSomErMineEllerPubliserte(ctx.authenticatedUser().extractNavIdent()))
     }
 
        @OpenApi(

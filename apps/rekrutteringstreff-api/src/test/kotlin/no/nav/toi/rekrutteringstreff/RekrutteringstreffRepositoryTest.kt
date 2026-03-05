@@ -136,4 +136,22 @@ class RekrutteringstreffRepositoryTest {
         assertThat(treffHendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET.name)
         assertThat(jobbsøkerHendelser).isEmpty() // Ikke-synlig jobbsøker filtreres ut
     }
+
+    @Test
+    fun `hentAlleSomErMineEllerPubliserteOgIkkeSlettet henter riktige treff`() {
+        val eierNavIdent = "navIdent 1"
+        val annenNavIdent = "navIdent 2"
+        val treffIdSammeEierUtkast = db.opprettRekrutteringstreffMedAlleFelter(navIdent = eierNavIdent, status = RekrutteringstreffStatus.UTKAST)
+        val treffIdSammeEierSlettet = db.opprettRekrutteringstreffMedAlleFelter(navIdent = eierNavIdent, status = RekrutteringstreffStatus.SLETTET)
+        val treffIdAnnenEierUtkast = db.opprettRekrutteringstreffMedAlleFelter(navIdent = annenNavIdent, status = RekrutteringstreffStatus.UTKAST)
+        val treffIdAnnenEierPublisert = db.opprettRekrutteringstreffMedAlleFelter(navIdent = annenNavIdent, status = RekrutteringstreffStatus.PUBLISERT)
+
+        val resultatIder = repository.hentAlleSomErMineEllerPubliserteOgIkkeSlettet(eierNavIdent).map { it.id }
+
+        assertThat(resultatIder).hasSize(2)
+        assertThat(resultatIder).contains(treffIdSammeEierUtkast)
+        assertThat(resultatIder).doesNotContain(treffIdSammeEierSlettet)
+        assertThat(resultatIder).doesNotContain(treffIdAnnenEierUtkast)
+        assertThat(resultatIder).contains(treffIdAnnenEierPublisert)
+    }
 }
