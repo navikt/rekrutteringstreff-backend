@@ -130,9 +130,9 @@ class RekrutteringstreffController(
     )
     private fun hentAlleRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         if (ctx.authenticatedUser().erUtvikler()) {
-           log.info("Hent alle rekrutteringstreff - er utvikler så viser alle rekrutteringstreff")
-           ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
-       } else {
+            log.info("Hent alle rekrutteringstreff - er utvikler så viser alle rekrutteringstreff")
+            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
+        } else {
             ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
             log.info("Henter alle rekrutteringstreff")
             ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffSomErMineEllerPubliserte(ctx.authenticatedUser().extractNavIdent()))
