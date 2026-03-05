@@ -53,7 +53,7 @@ Sjekk at alle operasjoner som krever eierskap bruker `eierService.erEierEllerUtv
 
 ### 2.1 EiereSeksjon
 
-Plasseres i `OmTreffetForEier.tsx` under "Om treffet"-boksen som eget `InfoBoks`-kort.
+Plasseres som et delt `InfoBoks`-kort som kan brukes i både `OmTreffetForEier.tsx` og `OmTreffetForIkkeEier.tsx`.
 
 ```
 ┌──────────────────────────────────────────┐
@@ -68,7 +68,7 @@ Plasseres i `OmTreffetForEier.tsx` under "Om treffet"-boksen som eget `InfoBoks`
 
 | Element                     | Synlighet                                                        | Kall             |
 | --------------------------- | ---------------------------------------------------------------- | ---------------- |
-| Liste over eiere (navIdent) | Alltid for eiere                                                 | –                |
+| Liste over eiere (navIdent) | Alltid for innloggede brukere med lesetilgang                    | –                |
 | "Legg til meg som eier"     | Bruker er ikke allerede eier + arbeidsgiverrettet/utvikler-rolle | `PUT /eiere/meg` |
 
 > Frontend bruker SWR-hook `useEiere()` etter eksisterende mønster. Kun navIdent vises i første omgang.
@@ -83,11 +83,11 @@ Klikk på "Legg til meg som eier" åpner en bekreftelsesdialog før kallet sende
 
 ### 2.2 Synlighet for ikke-eiere
 
-Eiere-listen vises i `OmTreffetForIkkeEier` som informasjon, uten endringsmuligheter.
+Eiere-listen vises i `OmTreffetForIkkeEier` som informasjon. Hvis brukeren har rollen arbeidsgiverrettet eller utvikler, vil de i denne visningen se knappen "Legg til meg som eier" slik at de kan ta eierskap til treffet.
 
 ### 2.3 Hendelsesvisning
 
-For at `EIER_LAGT_TIL` vises i hendelsesloggen (`Hendelser.tsx`) må disse stedene oppdateres:
+For at eierskap-hendelser vises i hendelsesloggen (`Hendelser.tsx`) må disse stedene oppdateres:
 
 - **`constants.ts`** – legg til `EIER_LAGT_TIL` i `RekrutteringstreffHendelsestype` og tilhørende label (`'eier lagt til'`)
 - **`HentHendelseIkon.tsx`** – ikon for `EIER_LAGT_TIL` (`PersonPlusIcon` fra `@navikt/aksel-icons`)
