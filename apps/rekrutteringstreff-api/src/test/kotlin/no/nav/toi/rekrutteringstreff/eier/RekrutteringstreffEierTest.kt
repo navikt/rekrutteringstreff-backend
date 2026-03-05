@@ -274,6 +274,61 @@ class RekrutteringstreffEierTest {
         assertThat(eiere).contains(beholdIdent)
     }
 
+    @Test
+    fun `leggTilMegSomEier gir 201 og legger til bruker som eier`() {
+        val navIdent = "Z999001"
+        val oppretter = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        assertThat(database.hentEiere(treff.id)).doesNotContain(navIdent)
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
+        assertThat(database.hentEiere(treff.id)).contains(navIdent)
+    }
+
+    @Test
+    fun `leggTilMegSomEier er idempotent og gir 200 når bruker allerede er eier`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        assertThat(database.hentEiere(treff.id)).contains(navIdent)
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        assertThat(database.hentEiere(treff.id)).contains(navIdent)
+    }
+
+    @Test
+    fun `leggTilMegSomEier logger EIER_LAGT_TIL-hendelse`() {
+        val navIdent = "Z999002"
+        val oppretter = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+
+        httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_LAGT_TIL" && it.aktørIdentifikasjon == navIdent }
+    }
+
     private fun opprettRekrutteringstreffIDatabase(
         navIdent: String,
         tittel: String = "Original Tittel",

@@ -55,6 +55,7 @@ class RekrutteringstreffRepository(
         private const val tiltid = "tiltid"
         private const val svarfrist = "svarfrist"
         private const val eiere = "eiere"
+        private const val kontorer = "kontorer"
         private const val innlegg = "innlegg"
         private const val gateadresse = "gateadresse"
         private const val postnummer = "postnummer"
@@ -72,8 +73,8 @@ class RekrutteringstreffRepository(
         val dbId = connection.prepareStatement(
             """
             INSERT INTO $tabellnavn($id,$tittel,$status,$opprettetAvPersonNavident,
-                                     $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere, $sistEndret, $sistEndretAv)
-            VALUES (?,?,?,?,?,?,?,?,?)
+                                     $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere,$kontorer,$sistEndret,$sistEndretAv)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
             RETURNING rekrutteringstreff_id
             """
         ).apply {
@@ -85,6 +86,7 @@ class RekrutteringstreffRepository(
             setString(++i, dto.opprettetAvNavkontorEnhetId)
             setTimestamp(++i, Timestamp.from(Instant.now()))
             setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvPersonNavident)))
+            setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvNavkontorEnhetId)))
             setTimestamp(++i, Timestamp.from(Instant.now()))
             setString(++i, dto.opprettetAvPersonNavident)
         }.executeQuery().run { next(); getLong(1) }
@@ -144,9 +146,9 @@ class RekrutteringstreffRepository(
 
     fun hentAlleForEttKontorSomIkkeErSlettet(kontorId: String): List<Rekrutteringstreff> =
         dataSource.connection.use { c ->
-            c.prepareStatement("SELECT * FROM $tabellnavn where status != ? and $opprettetAvKontorEnhetid = ?").use { s ->
+            c.prepareStatement("SELECT * FROM $tabellnavn WHERE status != ? AND $kontorer @> ARRAY[?]::text[]").use { s ->
                 s.setString(1, RekrutteringstreffStatus.SLETTET.name)
-                s.setObject(2, kontorId)
+                s.setString(2, kontorId)
                 s.executeQuery().let { rs ->
                     generateSequence {
                         if (rs.next()) rs.tilRekrutteringstreff() else null
@@ -208,8 +210,8 @@ class RekrutteringstreffRepository(
                        h.hendelsestype,
                        h.opprettet_av_aktortype,
                        h.aktøridentifikasjon,
-                       NULL AS subjekt_id,
-                       NULL AS subjekt_navn
+                       h.hendelse_data->>'navIdentLagtTil' AS subjekt_id,
+                       h.hendelse_data->>'navIdentLagtTil' AS subjekt_navn
                 FROM   rekrutteringstreff_hendelse h
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
                 WHERE  r.id = ?
@@ -266,13 +268,13 @@ class RekrutteringstreffRepository(
         }
 
 
-    fun leggTilHendelseForTreff(connection: Connection, treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String) {
+    fun leggTilHendelseForTreff(connection: Connection, treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String, hendelseData: String? = null) {
         val dbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
             .apply { setObject(1, treff.somUuid) }
             .executeQuery()
             .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
 
-        leggTilHendelse(connection, dbId, hendelsestype, AktørType.ARRANGØR, ident)
+        leggTilHendelse(connection, dbId, hendelsestype, AktørType.ARRANGØR, ident, hendelseData)
     }
 
     fun hentRekrutteringstreffDbId(c: Connection, treff: TreffId): Long {
@@ -350,7 +352,24 @@ class RekrutteringstreffRepository(
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
         opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
         eiere = (getArray(eiere).array as Array<String>).toList(),
+        kontorer = (getArray(kontorer)?.array as? Array<String>)?.toList() ?: emptyList(),
         sistEndret = getTimestamp(sistEndret).toInstant().atOslo(),
         sistEndretAv = getString(sistEndretAv) ?: "Ukjent",
     )
+
+    fun leggTilKontor(connection: Connection, treffId: TreffId, kontorEnhetId: String): Boolean {
+        val rowsUpdated = connection.prepareStatement(
+            """
+            UPDATE $tabellnavn
+            SET $kontorer = $kontorer || ARRAY[?]::text[]
+            WHERE $id = ? AND NOT ($kontorer @> ARRAY[?]::text[])
+            """
+        ).use { s ->
+            s.setString(1, kontorEnhetId)
+            s.setObject(2, treffId.somUuid)
+            s.setString(3, kontorEnhetId)
+            s.executeUpdate()
+        }
+        return rowsUpdated > 0
+    }
 }

@@ -2,17 +2,23 @@
 
 ## Status
 
-| Komponent                                              | Status          |
-| ------------------------------------------------------ | --------------- |
-| `eiere text[]` i DB                                    | ✅ Implementert |
-| `GET /eiere`, `PUT /eiere`, `DELETE /eiere/{navIdent}` | ✅ Implementert |
-| `EierService.erEierEllerUtvikler()`                    | ✅ Implementert |
-| `RekrutteringstreffDto.eiere`                          | ✅ Implementert |
-| `useErTreffEier()` i frontend                          | ✅ Implementert |
-| Legg til meg selv som eier                             | ❌ Mangler      |
-| Hendelseslogging ved eierskap-endringer                | ❌ Mangler      |
-| GUI for eiere                                          | ❌ Mangler      |
-| Støtte for flere kontorer på treff (`kontorer text[]`) | ❌ Mangler      |
+| Komponent                                              | Status                           |
+| ------------------------------------------------------ | -------------------------------- |
+| `eiere text[]` i DB                                    | ✅ Implementert                  |
+| `GET /eiere`, `PUT /eiere`, `DELETE /eiere/{navIdent}` | ✅ Implementert                  |
+| `EierService.erEierEllerUtvikler()`                    | ✅ Implementert                  |
+| `RekrutteringstreffDto.eiere`                          | ✅ Implementert                  |
+| `useErTreffEier()` i frontend                          | ✅ Implementert                  |
+| Legg til meg selv som eier (`PUT /eiere/meg`)          | ✅ Implementert                  |
+| Hendelseslogging ved eierskap-endringer                | ✅ Implementert                  |
+| GUI for eiere (knapp + bekreftelsesdialog)             | ✅ Implementert                  |
+| `EIER_LAGT_TIL` i frontend constants og ikon           | ✅ Implementert                  |
+| Komponenttester for `/eiere/meg`                       | ✅ Implementert                  |
+| `kontorer text[]` DB-migrasjon (V2)                    | ✅ Implementert                  |
+| Støtte for flere kontorer på treff (`kontorer text[]`) | ✅ Implementert                  |
+| Tilgangskontroll-gjennomgang                           | ✅ Implementert                  |
+| Playwright-test for eierskap-knapp                     | ❌ Gjenstår                      |
+| Slett `opprettet_av_kontor_enhetid` (V3-migrasjon)     | ❌ Gjenstår (verifiser V2 først) |
 
 ---
 
@@ -119,12 +125,14 @@ For at eierskap-hendelser vises i hendelsesloggen (`Hendelser.tsx`) må disse st
 
 ## 5. Arbeidsrekkefølge
 
-1. DB-migrasjon: legg til `kontorer text[]` og kopier `opprettet_av_kontor_enhetid`
-2. Backend: `PUT /eiere/meg` + hendelseslogging + tester
-3. Frontend: Legge til "+ Legg til meg som eier"-knappen for ikke-eiere i `OmTreffetForIkkeEier`
-4. Frontend: hendelsestyper i `constants.ts`, ikon, allehendelser-berikelse
-5. Gjennomgang: tilgangskontroll + Playwright-test
-6. Verifiser migrasjon → eget script for å slette `opprettet_av_kontor_enhetid`
+1. ✅ DB-migrasjon: legg til `kontorer text[]` og kopier `opprettet_av_kontor_enhetid` (V2)
+2. ✅ Backend: `PUT /eiere/meg` + hendelseslogging + tester
+3. ✅ Frontend: Legge til "+ Legg til meg som eier"-knappen for ikke-eiere i `OmTreffetForIkkeEier`
+4. ✅ Frontend: hendelsestyper i `constants.ts`, ikon, allehendelser-berikelse (via query-endring i repository)
+5. ✅ Gjennomgang: tilgangskontroll – `InnleggController` manglet eier-sjekk på `POST`, `PUT`, `DELETE` – fikset
+6. ❌ Playwright-test: eierskap-knapp skjult for eksisterende eier, synlig for ikke-eier med riktig rolle
+7. ❌ Verifiser V2-migrasjon i prod → lag V3-migrasjon som sletter `opprettet_av_kontor_enhetid`
+8. ✅ Backend + frontend: `kontorer text[]` eksponert i DTO, `PUT /kontorer/mitt` (idempotent), kontor-filter oppdatert, UI viser kontorer og lar eiere legge til sitt kontor
 
 ---
 

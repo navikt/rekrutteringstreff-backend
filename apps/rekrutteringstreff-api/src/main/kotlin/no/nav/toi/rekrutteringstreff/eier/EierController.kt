@@ -20,12 +20,14 @@ class EierController(
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"
+        private const val megEndepunkt = "$eiereEndepunkt/meg"
         private const val slettEiereEndepunkt = "$eiereEndepunkt/{navIdent}"
     }
 
     init {
         javalin.get(eiereEndepunkt, hentEiere())
         javalin.put(eiereEndepunkt, leggTil())
+        javalin.put(megEndepunkt, leggTilMeg())
         javalin.delete(slettEiereEndepunkt, slettEier())
     }
 
@@ -63,6 +65,27 @@ class EierController(
         } else {
             throw ForbiddenResponse("Bruker har ikke tilgang til å legge til eier på rekrutteringstreff ${id.somString}")
         }
+    }
+
+    @OpenApi(
+        summary = "Legg til deg selv som eier av et rekrutteringstreff",
+        operationId = "leggTilMegSomEier",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = "id", type = UUID::class)],
+        responses = [
+            OpenApiResponse(status = "200", description = "Allerede eier"),
+            OpenApiResponse(status = "201", description = "Ny eier lagt til")
+        ],
+        path = megEndepunkt,
+        methods = [HttpMethod.PUT]
+    )
+    private fun leggTilMeg(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val id = TreffId(ctx.pathParam("id"))
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        val nyEier = eierService.leggTilMegSomEier(id, navIdent)
+        ctx.status(if (nyEier) 201 else 200)
     }
 
     @OpenApi(

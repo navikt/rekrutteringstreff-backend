@@ -35,6 +35,7 @@ class RekrutteringstreffController(
         private const val avlysPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avlys"
         private const val avpubliserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avpubliser"
         private const val endringerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/endringer"
+        private const val mittKontorPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/kontorer/mitt"
 
         private const val fellesPath =
             "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
@@ -57,6 +58,7 @@ class RekrutteringstreffController(
         javalin.post(avpubliserPath, avpubliserRekrutteringstreffHandler())
         javalin.post(fullforPath, fullforRekrutteringstreffHandler())
         javalin.post(endringerPath, registrerEndringHandler(rekrutteringstreffService))
+        javalin.put(mittKontorPath, leggTilMittKontorHandler())
     }
 
     @OpenApi(
@@ -577,5 +579,18 @@ class RekrutteringstreffController(
                 throw ForbiddenResponse("Personen har ikke tilgang til å registrere endringer for treffet ${treffId.somString}")
             }
         }
+    }
+
+    private fun leggTilMittKontorHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.extractNavIdent()
+        if (!eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke legge til kontor")
+        }
+        val kontorId = ctx.authenticatedUser().extractKontorId()
+            ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
+        val nytt = rekrutteringstreffService.leggTilMittKontor(treffId, kontorId)
+        ctx.status(if (nytt) 201 else 200)
     }
 }

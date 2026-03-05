@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff.eier
 
 import no.nav.toi.rekrutteringstreff.TreffId
+import java.sql.Connection
 import javax.sql.DataSource
 
 class EierRepository(
@@ -30,7 +31,12 @@ class EierRepository(
 
     fun leggTil(treff: TreffId, nyeEiere: List<String>) {
         dataSource.connection.use { connection ->
-            connection.prepareStatement(
+            leggTil(connection, treff, nyeEiere)
+        }
+    }
+
+    fun leggTil(connection: Connection, treff: TreffId, nyeEiere: List<String>) {
+        connection.prepareStatement(
                 """
                     UPDATE $rekrutteringstreff
                     SET $eiere = array(SELECT DISTINCT unnest(array_cat($eiere, ?)))
@@ -41,7 +47,6 @@ class EierRepository(
                 stmt.setObject(2, treff.somUuid)
                 stmt.executeUpdate()
             }
-        }
     }
 
     fun slett(treff: TreffId, eier: String) {
