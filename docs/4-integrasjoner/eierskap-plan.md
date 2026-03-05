@@ -22,8 +22,8 @@
 - Oppretteren settes automatisk som første eier
 - Kun **arbeidsgiverrettet** eller **utvikler** kan bli eier
 - Eier kan: redigere treff, invitere jobbsøkere/arbeidsgivere, administrere eiere
-- Jobbsøkerrettet har kun lesetilgang
-- Et treff kan ha flere kontorer – alle brukere på disse kontorene kan se treffet ved kontor-filtrering
+- **Lesetilgang er global:** Alle med gyldig rolle (inkludert jobbsøkerrettet) kan i API-et lese alle treff, uavhengig av kontor.
+- **Kontor-filtrering:** Et treff kan ha flere kontorer. Dette feltet styrer *ikke* tilgang, men brukes i frontend for at brukere enkelt skal kunne filtrere frem treff knyttet til sitt eget kontor.
 
 ---
 
