@@ -54,16 +54,12 @@ Sjekk at alle operasjoner som krever eierskap bruker `eierService.erEierEllerUtv
 
 ## 2. Frontend – GUI
 
-### 2.1 EiereSeksjon
+### 2.1 Eierskap-knapp
 
-Plasseres som et delt `InfoBoks`-kort som kan brukes i både `OmTreffetForEier.tsx` og `OmTreffetForIkkeEier.tsx`.
+Knappen for å bli eier plasseres i visningen for de som ikke er eier (`OmTreffetForIkkeEier.tsx`), uten å ligge inne i noen egen rammekomponent/infoboks på dette stadiet.
 
 ```
-┌──────────────────────────────────────────┐
-│  Eierskap                                │
-│                                          │
-│  [+ Legg til meg som eier]               │
-└──────────────────────────────────────────┘
+[+ Legg til meg som eier]
 ```
 
 | Element                 | Synlighet                                                        | Kall             |
@@ -82,8 +78,8 @@ Klikk på "Legg til meg som eier" åpner en bekreftelsesdialog før kallet sende
 
 ### 2.2 Synlighet og skjuling
 
-Siden vi i første omgang ikke viser listen over alle eiere, vil infoboksen for "Eierskap" i praksis kun ha et formål for de som *ikke* er eiere ennå, men som har rettigheter til å bli det (`ARBEIDSGIVER_RETTET` eller `UTVIKLER`). 
-For brukere som allerede er eier, kan man vurdere å skjule komponenten helt eller bare vise teksten "Du er eier av dette treffet", inntil en faktisk oversikt over alle eiere eventuelt implementeres.
+Siden vi i første omgang ikke viser listen over alle eiere, vil knappen for å bli eier i praksis kun være relevant for de som *ikke* er eiere ennå, men som har rettigheter til å bli det (`ARBEIDSGIVER_RETTET` eller `UTVIKLER`). Denne knappen legges i visningen `OmTreffetForIkkeEier`.
+For brukere som allerede er eier, dukker ikke komponenten/knappen opp i det hele tatt.
 
 ### 2.3 Hendelsesvisning
 
@@ -125,7 +121,7 @@ For at eierskap-hendelser vises i hendelsesloggen (`Hendelser.tsx`) må disse st
 
 1. DB-migrasjon: legg til `kontorer text[]` og kopier `opprettet_av_kontor_enhetid`
 2. Backend: `PUT /eiere/meg` + hendelseslogging + tester
-3. Frontend: Sette opp `Eierskap`-infoboks med knappen for ikke-eiere i `OmTreffetForIkkeEier`
+3. Frontend: Legge til "+ Legg til meg som eier"-knappen for ikke-eiere i `OmTreffetForIkkeEier`
 4. Frontend: hendelsestyper i `constants.ts`, ikon, allehendelser-berikelse
 5. Gjennomgang: tilgangskontroll + Playwright-test
 6. Verifiser migrasjon → eget script for å slette `opprettet_av_kontor_enhetid`
