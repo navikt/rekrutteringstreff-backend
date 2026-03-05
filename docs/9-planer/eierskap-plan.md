@@ -79,7 +79,7 @@ Klikk på "Legg til meg som eier" åpner en bekreftelsesdialog før kallet sende
 
 ### 2.2 Synlighet og skjuling
 
-Siden vi i første omgang ikke viser listen over alle eiere, vil infoboksen for "Eierskap" i praksis kun ha et formål for de som _ikke_ er eiere ennå, men som har rettigheter til å bli det (`ARBEIDSGIVER_RETTET` eller `UTVIKLER`).
+Siden vi i første omgang ikke viser listen over alle eiere, vil infoboksen for "Eierskap" i praksis kun ha et formål for de som *ikke* er eiere ennå, men som har rettigheter til å bli det (`ARBEIDSGIVER_RETTET` eller `UTVIKLER`). 
 For brukere som allerede er eier, kan man vurdere å skjule komponenten helt eller bare vise teksten "Du er eier av dette treffet", inntil en faktisk oversikt over alle eiere eventuelt implementeres.
 
 ### 2.3 Hendelsesvisning
