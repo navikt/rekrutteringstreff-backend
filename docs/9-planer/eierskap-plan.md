@@ -33,7 +33,10 @@
 
 - Ingen request body – bruker sin egen navIdent
 - Krav: rolle `ARBEIDSGIVER_RETTET` eller `UTVIKLER`
-- Idempotent: allerede eier → 200, ny eier → 201
+- Idempotent: allerede eier → 200 (OK), ny eier → 201 (Created)
+
+**Begrunnelse for metodevalg (PUT) og idempotens:**
+Vi velger `PUT` fordi endepunktet representerer en operasjon for å "sikre en tilstand" (brukeren _skal_ være eier). Ved `POST` ville forventningen gjerne vært å opprette en ny, unik ressurs hver gang, noe som ofte gir en "Conflict" (409) feilmelding om ressursen/knytningen finnes fra før. Ved å gjøre operasjonen idempotent med `PUT`, gjør vi klientkoden mer robust, for eksempel i møte med nettverksproblemer der klienten forsøker operasjonen på nytt. Tilstanden på serveren blir den samme uansett om kallet utføres én eller ti ganger. Returkoden skiller mellom *når tilstanden ble endret* (201 Created) og *når tilstanden allerede var riktig* (200 OK).
 
 ### 1.2 Hendelseslogging
 
