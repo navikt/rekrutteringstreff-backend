@@ -284,6 +284,24 @@ class RekrutteringstreffService(
                 AktørType.ARRANGØR,
                 internalDto.opprettetAvPersonNavident
             )
+            rekrutteringstreffRepository.leggTilHendelse(
+                connection,
+                dbId,
+                RekrutteringstreffHendelsestype.EIER_LAGT_TIL,
+                AktørType.ARRANGØR,
+                internalDto.opprettetAvPersonNavident,
+                subjektId = internalDto.opprettetAvPersonNavident,
+                subjektNavn = internalDto.opprettetAvPersonNavident,
+            )
+            rekrutteringstreffRepository.leggTilHendelse(
+                connection,
+                dbId,
+                RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL,
+                AktørType.ARRANGØR,
+                internalDto.opprettetAvPersonNavident,
+                subjektId = internalDto.opprettetAvNavkontorEnhetId,
+                subjektNavn = internalDto.opprettetAvNavkontorEnhetId,
+            )
             treffId
         }
     }

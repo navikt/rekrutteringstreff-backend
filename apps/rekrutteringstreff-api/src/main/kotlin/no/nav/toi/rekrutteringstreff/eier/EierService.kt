@@ -39,18 +39,6 @@ class EierService(
         }
     }
 
-    fun leggTilEiere(treffId: TreffId, nyeEiere: List<String>, navIdent: String) {
-        dataSource.executeInTransaction { connection ->
-            eierRepository.leggTil(connection, treffId, nyeEiere)
-            nyeEiere.forEach { eierIdent ->
-                rekrutteringstreffRepository.leggTilHendelseForTreff(
-                    connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
-                    subjektId = eierIdent, subjektNavn = eierIdent,
-                )
-            }
-        }
-    }
-
     fun slettEier(treffId: TreffId, eierNavIdent: String) {
         val fjernet = eierRepository.slett(treffId, eierNavIdent)
         if (!fjernet) {

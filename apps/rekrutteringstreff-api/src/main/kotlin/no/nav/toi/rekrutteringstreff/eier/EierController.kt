@@ -25,44 +25,8 @@ class EierController(
 
     init {
         javalin.get(eiereEndepunkt, hentEiere())
-        javalin.put(eiereEndepunkt, leggTil())
         javalin.put(megEndepunkt, leggTilMeg())
         javalin.delete(slettEiereEndepunkt, slettEier())
-    }
-
-    @OpenApi(
-        summary = "Legg til en eller flere eiere til et rekrutteringstreff",
-        description = "Krever at innlogget bruker er eksisterende eier eller utvikler. Duplikater ignoreres. Hver ny eier genererer en EIER_LAGT_TIL-hendelse.",
-        operationId = "leggTilEier",
-        security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
-        requestBody = OpenApiRequestBody(
-            description = "Liste med NAV-identer som skal legges til som eiere",
-            content = [OpenApiContent(
-                from = Array<String>::class,
-                example = """["A123456", "Z999999"]"""
-            )],
-        ),
-        responses = [
-            OpenApiResponse(status = "201", description = "Eiere lagt til"),
-            OpenApiResponse(status = "403", description = "Innlogget bruker er ikke eier eller utvikler"),
-            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
-        ],
-        path = eiereEndepunkt,
-        methods = [HttpMethod.PUT]
-    )
-    private fun leggTil(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val eiere: List<String> = ctx.bodyAsClass<List<String>>()
-        val id = TreffId(ctx.pathParam("id"))
-        val navIdent = ctx.authenticatedUser().extractNavIdent()
-
-        if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
-            eierService.leggTilEiere(id, eiere, navIdent)
-            ctx.status(201)
-        } else {
-            throw ForbiddenResponse("Bruker har ikke tilgang til å legge til eier på rekrutteringstreff ${id.somString}")
-        }
     }
 
     @OpenApi(

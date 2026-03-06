@@ -143,88 +143,6 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    fun leggTilEier() {
-        val bruker = "A123456"
-        val nyEier = "B654321"
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val eiereForTest = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiereForTest).doesNotContain(nyEier)
-
-        val updateResponse = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
-            mapper.writeValueAsString(listOf(nyEier)),
-            token.serialize()
-        )
-
-        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
-        val eiereEtterOppdatering = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiereEtterOppdatering).contains(nyEier)
-    }
-
-    @Test
-    fun leggTilFlereEiereSamtidig() {
-        val bruker = "A123456"
-        val nyeEiere = listOf("B654321", "C987654")
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiere).doesNotContainAnyElementsOf(nyeEiere)
-
-        val updateResponse = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
-            mapper.writeValueAsString(nyeEiere),
-            token.serialize()
-        )
-
-        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
-        val eiereEtterLeggTil = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiereEtterLeggTil).containsAll(nyeEiere)
-    }
-
-    @Test
-    fun ikkeFjernGamleEiereNårManLeggerTilNye() {
-        val bruker = "A123456"
-        val nyeEiere = listOf("B654321", "C987654")
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiere).contains(bruker)
-
-        val updateResponse = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
-            mapper.writeValueAsString(nyeEiere),
-            token.serialize()
-        )
-
-        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
-        val eiereEtterOppdatering = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiereEtterOppdatering).contains(bruker)
-    }
-
-    @Test
-    fun ikkeLeggTilDuplikaterAvEiere() {
-        val bruker = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        assertThat(database.hentEiere(opprettetRekrutteringstreff.id)).contains(bruker)
-
-        val response = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
-            mapper.writeValueAsString(listOf(bruker)),
-            token.serialize()
-        )
-
-        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
-        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiere).contains(bruker).hasSize(1)
-    }
-
-    @Test
     fun `Slett eier er lov hvis det er flere eiere`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
@@ -330,42 +248,6 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    fun `leggTilEiere via PUT eiere logger EIER_LAGT_TIL-hendelse per ny eier`() {
-        val bruker = "A123456"
-        val nyeEiere = listOf("B654321", "C987654")
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val treff = database.hentAlleRekrutteringstreff().first()
-
-        httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere",
-            mapper.writeValueAsString(nyeEiere),
-            token.serialize()
-        )
-
-        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
-        val eierLagtTilHendelser = hendelser.filter { it.hendelsestype == "EIER_LAGT_TIL" }
-        assertThat(eierLagtTilHendelser).hasSize(nyeEiere.size)
-    }
-
-    @Test
-    fun `PUT eiere gir 403 når bruker ikke er eier`() {
-        val oppretter = "A123456"
-        val ikkeEier = "X000000"
-        val token = authServer.lagToken(authPort, navIdent = ikkeEier)
-        opprettRekrutteringstreffIDatabase(oppretter)
-        val treff = database.hentAlleRekrutteringstreff().first()
-
-        val response = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere",
-            mapper.writeValueAsString(listOf("B654321")),
-            token.serialize()
-        )
-
-        assertThat(response.statusCode()).isEqualTo(403)
-    }
-
-    @Test
     fun `DELETE eier gir 403 når bruker ikke er eier`() {
         val oppretter = "A123456"
         val ikkeEier = "X000000"
@@ -441,14 +323,6 @@ class RekrutteringstreffEierTest {
     fun autentiseringHentEiere(autentiseringstest: UautentifiserendeTestCase) {
         val dummyId = UUID.randomUUID().toString()
         val response = autentiseringstest.utførGet("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", authServer, authPort)
-        assertThat(response.statusCode()).isEqualTo(401)
-    }
-
-    @ParameterizedTest
-    @MethodSource("tokenVarianter")
-    fun autentiseringLeggTilEiere(autentiseringstest: UautentifiserendeTestCase) {
-        val dummyId = UUID.randomUUID().toString()
-        val response = autentiseringstest.utførPut("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", mapper.writeValueAsString(listOf("A123456")), authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
