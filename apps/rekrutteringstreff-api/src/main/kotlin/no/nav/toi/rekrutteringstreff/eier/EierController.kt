@@ -12,7 +12,6 @@ import java.util.*
 
 
 class EierController(
-    private val eierRepository: EierRepository,
     private val eierService: EierService,
     javalin: Javalin
 ) {
@@ -75,7 +74,7 @@ class EierController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
 
         val id = TreffId(ctx.pathParam("id"))
-        val eiere = eierRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+        val eiere = eierService.hentEiere(id)
         ctx.status(200).result(eiere.tilJson())
     }
 
@@ -105,7 +104,7 @@ class EierController(
         val innloggetNavIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(id, innloggetNavIdent, ctx)) {
-            eierService.slettEier(id, navIdentSomSkalSlettes)
+            eierService.slettEier(id, navIdentSomSkalSlettes, innloggetNavIdent)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Bruker har ikke tilgang til å slette eier på rekrutteringstreff ${id.somString}")

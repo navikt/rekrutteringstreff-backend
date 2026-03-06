@@ -23,7 +23,7 @@
 | `kontorer text[]` DB-migrasjon (V2)                    | ✅ Implementert                  |
 | Støtte for flere kontorer på treff (`kontorer text[]`) | ✅ Implementert                  |
 | Tilgangskontroll-gjennomgang                           | ✅ Implementert                  |
-| Playwright-test for eierskap-knapp                     | ❌ Gjenstår                      |
+| Playwright-test for eierskap-knapp                     | ✅ Implementert                  |
 | Slett `opprettet_av_kontor_enhetid` (V3-migrasjon)     | ❌ Gjenstår (verifiser V2 først) |
 
 ---
@@ -137,7 +137,7 @@ For at eierskap-hendelser vises i hendelsesloggen (`Hendelser.tsx`) må disse st
 3. ✅ Frontend: Legge til "+ Legg til meg som eier"-knappen for ikke-eiere i `OmTreffetForIkkeEier`
 4. ✅ Frontend: hendelsestyper i `constants.ts`, ikon, allehendelser-berikelse (via query-endring i repository)
 5. ✅ Gjennomgang: tilgangskontroll – `InnleggController` manglet eier-sjekk på `POST`, `PUT`, `DELETE` – fikset
-6. ❌ Playwright-test: eierskap-knapp skjult for eksisterende eier, synlig for ikke-eier med riktig rolle
+6. ✅ Playwright-test: ikke-eier ser knappen, klikker, bekrefter, og får suksessvarsel (`ikke-eier-visning.spec.ts`)
 7. ❌ Verifiser V2-migrasjon i prod → lag V3-migrasjon som sletter `opprettet_av_kontor_enhetid`
 8. ✅ Backend + frontend: `kontorer text[]` eksponert i DTO, `PUT /kontorer/mitt` (idempotent), kontor-filter oppdatert, UI viser kontorer og lar eiere legge til sitt kontor
 

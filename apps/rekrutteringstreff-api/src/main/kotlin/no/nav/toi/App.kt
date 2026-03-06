@@ -244,7 +244,6 @@ class App(
             javalin = javalin
         )
         EierController(
-            eierRepository = eierRepository,
             eierService = eierService,
             javalin = javalin
         )

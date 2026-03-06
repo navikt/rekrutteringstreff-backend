@@ -248,6 +248,24 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
+    fun `slettEier logger EIER_FJERNET-hendelse`() {
+        val navIdent = "A123456"
+        val skalSlettes = "B654321"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        eierRepository.leggTil(treff.id, listOf(skalSlettes))
+
+        httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/$skalSlettes",
+            token.serialize()
+        )
+
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_FJERNET" && it.aktørIdentifikasjon == navIdent }
+    }
+
+    @Test
     fun `DELETE eier gir 403 når bruker ikke er eier`() {
         val oppretter = "A123456"
         val ikkeEier = "X000000"
