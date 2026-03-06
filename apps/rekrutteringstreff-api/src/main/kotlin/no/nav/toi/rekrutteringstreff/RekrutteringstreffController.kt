@@ -381,13 +381,28 @@ class RekrutteringstreffController(
 
     @OpenApi(
         summary = "Hent ALLE hendelser for et rekrutteringstreff (jobbsøker, arbeidsgiver, treff)",
+        description = "Samler hendelser fra rekrutteringstreff, jobbsøker og arbeidsgiver i én sortert liste. Krever at innlogget bruker er eier eller utvikler. Feltet 'subjektId'/'subjektNavn' identifiserer hvem/hva hendelsen gjelder — for jobbsøker: fødselsnummer/navn via FK, for arbeidsgiver: orgnr/orgnavn via FK, for rekrutteringstreff: lagret direkte på hendelsen (kun EIER_LAGT_TIL og KONTOR_LAGT_TIL, null for øvrige).",
         operationId = "hentAlleHendelser",
         security = [OpenApiSecurity("BearerAuth")],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
-        responses = [OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(from = Array<FellesHendelseOutboundDto>::class)]
-        )],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, description = "Rekrutteringstreffets UUID")],
+        responses = [
+            OpenApiResponse(
+                status = "200",
+                description = "Hendelser sortert etter tidspunkt (nyeste først)",
+                content = [OpenApiContent(
+                    from = Array<FellesHendelseOutboundDto>::class,
+                    example = """[
+  {"id": "a1b2c3d4-...", "ressurs": "REKRUTTERINGSTREFF", "tidspunkt": "2025-04-23T10:00:00+02:00", "hendelsestype": "OPPRETTET", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": null, "subjektNavn": null},
+  {"id": "e5f6g7h8-...", "ressurs": "REKRUTTERINGSTREFF", "tidspunkt": "2025-04-23T10:01:00+02:00", "hendelsestype": "EIER_LAGT_TIL", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "B654321", "subjektNavn": "B654321"},
+  {"id": "i9j0k1l2-...", "ressurs": "REKRUTTERINGSTREFF", "tidspunkt": "2025-04-23T10:02:00+02:00", "hendelsestype": "KONTOR_LAGT_TIL", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "0301", "subjektNavn": "0301"},
+  {"id": "m3n4o5p6-...", "ressurs": "JOBBSØKER", "tidspunkt": "2025-04-23T10:05:00+02:00", "hendelsestype": "OPPRETTET", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "12345678901", "subjektNavn": "Ola Nordmann"},
+  {"id": "q7r8s9t0-...", "ressurs": "ARBEIDSGIVER", "tidspunkt": "2025-04-23T10:07:00+02:00", "hendelsestype": "OPPRETTET", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "912345678", "subjektNavn": "NAV OSLO AS"}
+]"""
+                )]
+            ),
+            OpenApiResponse(status = "403", description = "Innlogget bruker er ikke eier eller utvikler"),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
+        ],
         path = fellesPath,
         methods = [HttpMethod.GET]
     )
@@ -581,6 +596,22 @@ class RekrutteringstreffController(
         }
     }
 
+    @OpenApi(
+        summary = "Legg til innlogget brukers kontor på et rekrutteringstreff",
+        description = "Henter kontorId fra tokenet og legger det til i treffets kontor-liste. Idempotent — returnerer 200 hvis kontoret allerede er lagt til, 201 hvis nytt. Genererer KONTOR_LAGT_TIL-hendelse ved ny tilknytning.",
+        operationId = "leggTilMittKontor",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, description = "Rekrutteringstreffets UUID")],
+        responses = [
+            OpenApiResponse(status = "200", description = "Kontoret var allerede tilknyttet, ingen endring"),
+            OpenApiResponse(status = "201", description = "Kontor lagt til. Genererer KONTOR_LAGT_TIL-hendelse."),
+            OpenApiResponse(status = "400", description = "Brukerens kontor er ikke tilgjengelig i tokenet"),
+            OpenApiResponse(status = "403", description = "Innlogget bruker er ikke eier eller utvikler"),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
+        ],
+        path = mittKontorPath,
+        methods = [HttpMethod.PUT]
+    )
     private fun leggTilMittKontorHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))

@@ -31,24 +31,23 @@ class EierController(
     }
 
     @OpenApi(
-        summary = "Legg til ny eier til et rekrutteringstreff",
+        summary = "Legg til en eller flere eiere til et rekrutteringstreff",
+        description = "Krever at innlogget bruker er eksisterende eier eller utvikler. Duplikater ignoreres. Hver ny eier genererer en EIER_LAGT_TIL-hendelse.",
         operationId = "leggTilEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class)],
+        pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
         requestBody = OpenApiRequestBody(
+            description = "Liste med NAV-identer som skal legges til som eiere",
             content = [OpenApiContent(
                 from = Array<String>::class,
-                example = """
-                [
-                    "A123456",
-                    "Z999999"
-                ]
-                """
+                example = """["A123456", "Z999999"]"""
             )],
         ),
-        responses = [OpenApiResponse(
-            status = "201"
-        )],
+        responses = [
+            OpenApiResponse(status = "201", description = "Eiere lagt til"),
+            OpenApiResponse(status = "403", description = "Innlogget bruker er ikke eier eller utvikler"),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
+        ],
         path = eiereEndepunkt,
         methods = [HttpMethod.PUT]
     )
@@ -68,12 +67,13 @@ class EierController(
 
     @OpenApi(
         summary = "Legg til deg selv som eier av et rekrutteringstreff",
+        description = "Bruker trenger ikke være eksisterende eier. Idempotent — returnerer 200 hvis allerede eier, 201 hvis ny. Utføres atomisk med FOR UPDATE-lås.",
         operationId = "leggTilMegSomEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class)],
+        pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
         responses = [
-            OpenApiResponse(status = "200", description = "Allerede eier"),
-            OpenApiResponse(status = "201", description = "Ny eier lagt til")
+            OpenApiResponse(status = "200", description = "Allerede eier, ingen endring"),
+            OpenApiResponse(status = "201", description = "Lagt til som ny eier. Genererer EIER_LAGT_TIL-hendelse.")
         ],
         path = megEndepunkt,
         methods = [HttpMethod.PUT]
@@ -89,21 +89,21 @@ class EierController(
 
     @OpenApi(
         summary = "Hent eierne til et rekrutteringstreff",
+        description = "Returnerer liste med NAV-identer for alle eiere. Tilgjengelig for arbeidsgiverrettet og jobbsøkerrettet rolle.",
         operationId = "hentEiere",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class)],
-        responses = [OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(
-                from = Array<String>::class,
-                example = """
-                [
-                    "A123456",
-                    "Z999999"
-                ]
-                """
-            )]
-        )],
+        pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
+        responses = [
+            OpenApiResponse(
+                status = "200",
+                description = "Liste med NAV-identer",
+                content = [OpenApiContent(
+                    from = Array<String>::class,
+                    example = """["A123456", "Z999999"]"""
+                )]
+            ),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
+        ],
         path = eiereEndepunkt,
         methods = [HttpMethod.GET]
     )
@@ -118,13 +118,19 @@ class EierController(
 
     @OpenApi(
         summary = "Slett eier av et rekrutteringstreff",
+        description = "Fjerner en eier. Kan ikke slette siste eier — treffet må alltid ha minst én.",
         operationId = "slettEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class), OpenApiParam(
-            name = "navIdent",
-            type = String::class
-        )],
-        responses = [OpenApiResponse(status = "200")],
+        pathParams = [
+            OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID"),
+            OpenApiParam(name = "navIdent", type = String::class, description = "NAV-identen som skal fjernes som eier")
+        ],
+        responses = [
+            OpenApiResponse(status = "200", description = "Eier fjernet"),
+            OpenApiResponse(status = "400", description = "Kan ikke slette siste eier"),
+            OpenApiResponse(status = "403", description = "Innlogget bruker er ikke eier eller utvikler"),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
+        ],
         path = slettEiereEndepunkt,
         methods = [HttpMethod.DELETE]
     )
