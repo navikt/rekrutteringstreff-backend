@@ -329,6 +329,78 @@ class RekrutteringstreffEierTest {
         assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_LAGT_TIL" && it.aktørIdentifikasjon == navIdent }
     }
 
+    @Test
+    fun `leggTilEiere via PUT eiere logger EIER_LAGT_TIL-hendelse per ny eier`() {
+        val bruker = "A123456"
+        val nyeEiere = listOf("B654321", "C987654")
+        val token = authServer.lagToken(authPort, navIdent = bruker)
+        opprettRekrutteringstreffIDatabase(bruker)
+        val treff = database.hentAlleRekrutteringstreff().first()
+
+        httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere",
+            mapper.writeValueAsString(nyeEiere),
+            token.serialize()
+        )
+
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        val eierLagtTilHendelser = hendelser.filter { it.hendelsestype == "EIER_LAGT_TIL" }
+        assertThat(eierLagtTilHendelser).hasSize(nyeEiere.size)
+    }
+
+    @Test
+    fun `PUT eiere gir 403 når bruker ikke er eier`() {
+        val oppretter = "A123456"
+        val ikkeEier = "X000000"
+        val token = authServer.lagToken(authPort, navIdent = ikkeEier)
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere",
+            mapper.writeValueAsString(listOf("B654321")),
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+    }
+
+    @Test
+    fun `DELETE eier gir 403 når bruker ikke er eier`() {
+        val oppretter = "A123456"
+        val ikkeEier = "X000000"
+        val token = authServer.lagToken(authPort, navIdent = ikkeEier)
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        eierRepository.leggTil(treff.id, listOf("B654321"))
+
+        val response = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/B654321",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+        assertThat(database.hentEiere(treff.id)).contains("B654321")
+    }
+
+    @Test
+    fun `PUT eiere meg gir 403 for jobbsøkerrettet rolle`() {
+        val oppretter = "A123456"
+        val jobbsøkerRettetBruker = "J000001"
+        val token = authServer.lagToken(authPort, navIdent = jobbsøkerRettetBruker, groups = listOf(jobbsøkerrettet))
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+        assertThat(database.hentEiere(treff.id)).doesNotContain(jobbsøkerRettetBruker)
+    }
+
     private fun opprettRekrutteringstreffIDatabase(
         navIdent: String,
         tittel: String = "Original Tittel",

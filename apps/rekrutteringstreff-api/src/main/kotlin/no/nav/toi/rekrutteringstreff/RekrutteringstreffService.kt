@@ -310,9 +310,16 @@ class RekrutteringstreffService(
         return rekrutteringstreffRepository.hentAlleHendelser(treffId)
     }
 
-    fun leggTilMittKontor(treffId: TreffId, kontorEnhetId: String): Boolean {
+    fun leggTilMittKontor(treffId: TreffId, kontorEnhetId: String, navIdent: String): Boolean {
         return dataSource.executeInTransaction { connection ->
-            rekrutteringstreffRepository.leggTilKontor(connection, treffId, kontorEnhetId)
+            val nytt = rekrutteringstreffRepository.leggTilKontor(connection, treffId, kontorEnhetId)
+            if (nytt) {
+                rekrutteringstreffRepository.leggTilHendelseForTreff(
+                    connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, navIdent,
+                    subjektId = kontorEnhetId, subjektNavn = kontorEnhetId,
+                )
+            }
+            nytt
         }
     }
 

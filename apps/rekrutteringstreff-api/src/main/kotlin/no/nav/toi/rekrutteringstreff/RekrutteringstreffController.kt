@@ -590,7 +590,7 @@ class RekrutteringstreffController(
         }
         val kontorId = ctx.authenticatedUser().extractKontorId()
             ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
-        val nytt = rekrutteringstreffService.leggTilMittKontor(treffId, kontorId)
+        val nytt = rekrutteringstreffService.leggTilMittKontor(treffId, kontorId, navIdent)
         ctx.status(if (nytt) 201 else 200)
     }
 }

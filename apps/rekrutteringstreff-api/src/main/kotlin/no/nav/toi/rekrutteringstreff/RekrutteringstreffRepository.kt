@@ -2,10 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.*
-import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
-import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.dto.*
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -210,8 +207,8 @@ class RekrutteringstreffRepository(
                        h.hendelsestype,
                        h.opprettet_av_aktortype,
                        h.aktøridentifikasjon,
-                       h.hendelse_data->>'navIdentLagtTil' AS subjekt_id,
-                       h.hendelse_data->>'navIdentLagtTil' AS subjekt_navn
+                       h.subjekt_id,
+                       h.subjekt_navn
                 FROM   rekrutteringstreff_hendelse h
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = h.rekrutteringstreff_id
                 WHERE  r.id = ?
@@ -252,29 +249,38 @@ class RekrutteringstreffRepository(
                 repeat(3) { idx -> s.setObject(idx + 1, treff.somUuid) }
                 s.executeQuery().let { rs ->
                     generateSequence {
-                        if (rs.next()) FellesHendelseOutboundDto(
-                            id = rs.getString("id"),
-                            tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atOslo(),
-                            hendelsestype = rs.getString("hendelsestype"),
-                            opprettetAvAktørType = rs.getString("opprettet_av_aktortype"),
-                            aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
-                            ressurs = HendelseRessurs.valueOf(rs.getString("ressurs")),
-                            subjektId = rs.getString("subjekt_id"),
-                            subjektNavn = rs.getString("subjekt_navn")
-                        ) else null
+                        if (rs.next()) {
+                            FellesHendelseOutboundDto(
+                                id = rs.getString("id"),
+                                tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atOslo(),
+                                hendelsestype = rs.getString("hendelsestype"),
+                                opprettetAvAktørType = rs.getString("opprettet_av_aktortype"),
+                                aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
+                                ressurs = HendelseRessurs.valueOf(rs.getString("ressurs")),
+                                subjektId = rs.getString("subjekt_id"),
+                                subjektNavn = rs.getString("subjekt_navn"),
+                            )
+                        } else null
                     }.toList()
                 }
             }
         }
 
 
-    fun leggTilHendelseForTreff(connection: Connection, treff: TreffId, hendelsestype: RekrutteringstreffHendelsestype, ident: String, hendelseData: String? = null) {
+    fun leggTilHendelseForTreff(
+        connection: Connection,
+        treff: TreffId,
+        hendelsestype: RekrutteringstreffHendelsestype,
+        ident: String,
+        subjektId: String? = null,
+        subjektNavn: String? = null,
+    ) {
         val dbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
             .apply { setObject(1, treff.somUuid) }
             .executeQuery()
             .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
 
-        leggTilHendelse(connection, dbId, hendelsestype, AktørType.ARRANGØR, ident, hendelseData)
+        leggTilHendelse(connection, dbId, hendelsestype, AktørType.ARRANGØR, ident, subjektId, subjektNavn)
     }
 
     fun hentRekrutteringstreffDbId(c: Connection, treff: TreffId): Long {
@@ -293,14 +299,16 @@ class RekrutteringstreffRepository(
         type: RekrutteringstreffHendelsestype,
         aktørType: AktørType,
         ident: String,
-        hendelseData: String? = null
+        subjektId: String? = null,
+        subjektNavn: String? = null,
     ) {
         c.prepareStatement(
             """
             INSERT INTO rekrutteringstreff_hendelse
                    (id, rekrutteringstreff_id, tidspunkt,
-                    hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
-            VALUES (?, ?, now(), ?, ?, ?, ?::jsonb)
+                    hendelsestype, opprettet_av_aktortype, aktøridentifikasjon,
+                    subjekt_id, subjekt_navn)
+            VALUES (?, ?, now(), ?, ?, ?, ?, ?)
             """
         ).use { s ->
             s.setObject(1, UUID.randomUUID())
@@ -308,7 +316,8 @@ class RekrutteringstreffRepository(
             s.setString(3, type.name)
             s.setString(4, aktørType.name)
             s.setString(5, ident)
-            s.setString(6, hendelseData)
+            s.setString(6, subjektId)
+            s.setString(7, subjektNavn)
             s.executeUpdate()
         }
     }

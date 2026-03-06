@@ -13,6 +13,12 @@
 | Hendelseslogging ved eierskap-endringer                | ✅ Implementert                  |
 | GUI for eiere (knapp + bekreftelsesdialog)             | ✅ Implementert                  |
 | `EIER_LAGT_TIL` i frontend constants og ikon           | ✅ Implementert                  |
+| `KONTOR_LAGT_TIL` hendelseslogging                     | ✅ Implementert                  |
+| `KONTOR_LAGT_TIL` i frontend constants og ikon         | ✅ Implementert                  |
+| Feilhåndtering (visVarsel) i frontend mutations        | ✅ Implementert                  |
+| Race condition-sikring (`leggTilMegSomEier`)           | ✅ Implementert                  |
+| Hendelseslogging for bulk `PUT /eiere`                 | ✅ Implementert                  |
+| Min 1 eier-guard (SQL-nivå) ved slett                  | ✅ Implementert                  |
 | Komponenttester for `/eiere/meg`                       | ✅ Implementert                  |
 | `kontorer text[]` DB-migrasjon (V2)                    | ✅ Implementert                  |
 | Støtte for flere kontorer på treff (`kontorer text[]`) | ✅ Implementert                  |
@@ -48,9 +54,10 @@ Vi velger `PUT` fordi endepunktet representerer en operasjon for å "sikre en ti
 
 Logges i `rekrutteringstreff_hendelse` fra `EierService`:
 
-| Hendelsestype   | `hendelse_data`                    | `aktøridentifikasjon`       |
-| --------------- | ---------------------------------- | --------------------------- |
-| `EIER_LAGT_TIL` | `{ "navIdentLagtTil": "A123456" }` | Den som utfører operasjonen |
+| Hendelsestype     | `hendelse_data`                    | `aktøridentifikasjon`       |
+| ----------------- | ---------------------------------- | --------------------------- |
+| `EIER_LAGT_TIL`   | `{ "navIdentLagtTil": "A123456" }` | Den som utfører operasjonen |
+| `KONTOR_LAGT_TIL` | `{ "kontorEnhetId": "0318" }`      | Den som utfører operasjonen |
 
 ### 1.3 Tilgangskontroll – gjennomgang
 
@@ -91,9 +98,9 @@ For brukere som allerede er eier, dukker ikke komponenten/knappen opp i det hele
 
 For at eierskap-hendelser vises i hendelsesloggen (`Hendelser.tsx`) må disse stedene oppdateres:
 
-- **`constants.ts`** – legg til `EIER_LAGT_TIL` i `RekrutteringstreffHendelsestype` og tilhørende label (`'eier lagt til'`)
-- **`HentHendelseIkon.tsx`** – ikon for `EIER_LAGT_TIL` (`PersonPlusIcon` fra `@navikt/aksel-icons`)
-- **allehendelser-API** – berik eier-hendelser med navIdent fra `hendelse_data` slik at det vises i "Gjelder"-kolonnen
+- **`constants.ts`** – legg til `EIER_LAGT_TIL` og `KONTOR_LAGT_TIL` i `RekrutteringstreffHendelsestype` og tilhørende labels
+- **`HentHendelseIkon.tsx`** – ikon for `EIER_LAGT_TIL` (`PersonPlusIcon`) og `KONTOR_LAGT_TIL` (`Buildings3Icon`)
+- **allehendelser-API** – berik hendelser med data fra `hendelse_data` via `COALESCE` slik at det vises i "Gjelder"-kolonnen
 
 ---
 
