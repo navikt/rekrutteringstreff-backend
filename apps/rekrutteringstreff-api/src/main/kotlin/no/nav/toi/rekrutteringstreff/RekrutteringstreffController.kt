@@ -158,7 +158,7 @@ class RekrutteringstreffController(
                         "gateadresse": "Malmøgata 1",
                         "postnummer": "0566",
                         "poststed": "Oslo",
-                        "status": "UTKAST",
+                        "status": "PUBLISERT",
                         "opprettetAvPersonNavident": "A123456",
                         "opprettetAvNavkontorEnhetId": "0318",
                         "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",

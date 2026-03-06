@@ -136,7 +136,10 @@ class RekrutteringstreffService(
     }
 
     fun hentAlleRekrutteringstreffForEttKontor(kontorId: String): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentAlleForEttKontorSomIkkeErSlettet(kontorId)
+        val alleRekrutteringstreffForKontorSomIkkeErSlettet = rekrutteringstreffRepository.hentAlleForEttKontorSomIkkeErSlettet(kontorId)
+        val alleRekrutteringstreffForKontor = alleRekrutteringstreffForKontorSomIkkeErSlettet.filter {
+            it.status == RekrutteringstreffStatus.PUBLISERT && it.tilTid?.isAfter(ZonedDateTime.now()) == true
+        }
         return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontor)
     }
 
