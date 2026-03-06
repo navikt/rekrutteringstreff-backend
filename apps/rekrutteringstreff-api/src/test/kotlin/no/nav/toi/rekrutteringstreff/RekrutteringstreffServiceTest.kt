@@ -108,7 +108,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `Skal kunne hente alle rekrutteringstreff for ett kontor`() {
+    fun `Skal kunne hente alle rekrutteringstreff for ett kontor som er publisert med treff-tidspunkt frem i tid`() {
         val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
             tittel = "Treff 1",
             opprettetAvPersonNavident = "NAV1234",
@@ -127,15 +127,94 @@ class RekrutteringstreffServiceTest {
             opprettetAvNavkontorEnhetId = "0600",
             opprettetAvTidspunkt = nowOslo(),
         )
+        val rekrutteringstreff4 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 4",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0605",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+
         val treffId1 = rekrutteringstreffService.opprett(rekrutteringstreff1)
         val treffId2 = rekrutteringstreffService.opprett(rekrutteringstreff2)
         val treffId3 = rekrutteringstreffService.opprett(rekrutteringstreff3)
+        val treffId4 = rekrutteringstreffService.opprett(rekrutteringstreff4)
+
+        val oppdatertTreff1 = OppdaterRekrutteringstreffDto(
+            tittel = rekrutteringstreff1.tittel,
+            beskrivelse = null,
+            fraTid = nowOslo().plusDays(2).plusHours(2),
+            tilTid = nowOslo().plusDays(2).plusHours(3),
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+
+        val oppdatertTreff2 = OppdaterRekrutteringstreffDto(
+            tittel = rekrutteringstreff2.tittel,
+            beskrivelse = null,
+            fraTid = nowOslo().plusDays(5).plusHours(2),
+            tilTid = nowOslo().plusDays(5).plusHours(3),
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+
+        val oppdatertTreff3 = OppdaterRekrutteringstreffDto(
+            tittel = rekrutteringstreff3.tittel,
+            beskrivelse = null,
+            fraTid = nowOslo().plusDays(5).plusHours(2),
+            tilTid = nowOslo().plusDays(5).plusHours(3),
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+
+        val oppdatertTreff4 = OppdaterRekrutteringstreffDto(
+            tittel = rekrutteringstreff4.tittel,
+            beskrivelse = null,
+            fraTid = nowOslo().minusDays(2).plusHours(2),
+            tilTid = nowOslo().minusDays(2).plusHours(3),
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+
+        rekrutteringstreffService.oppdater(treffId1, oppdatertTreff1, "NAV1234")
+        rekrutteringstreffService.oppdater(treffId2, oppdatertTreff2, "NAV1234")
+        rekrutteringstreffService.oppdater(treffId3, oppdatertTreff3, "NAV1234")
+        rekrutteringstreffService.oppdater(treffId4, oppdatertTreff4, "NAV1234")
+
+        rekrutteringstreffService.publiser(treffId1, "NAV1234")
+        rekrutteringstreffService.publiser(treffId2, "NAV1234")
+        rekrutteringstreffService.publiser(treffId3, "NAV1234")
+        rekrutteringstreffService.publiser(treffId4, "NAV1234")
 
         val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor("0605")
 
         assertThat(rekrutteringstreff.any { it.id == treffId1.somUuid }).isTrue
         assertThat(rekrutteringstreff.any { it.id == treffId2.somUuid }).isTrue
         assertThat(rekrutteringstreff.any { it.id == treffId3.somUuid }).isFalse
+        assertThat(rekrutteringstreff.any { it.id == treffId4.somUuid }).isFalse
     }
 
     @Test
