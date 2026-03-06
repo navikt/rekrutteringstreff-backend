@@ -228,7 +228,7 @@ class App(
             arbeidsgiverRepository,
             jobbsøkerService
         )
-        val eierService = EierService(eierRepository)
+        val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         RekrutteringstreffController(
@@ -240,10 +240,10 @@ class App(
         InnleggController(
             innleggService = innleggService,
             kiValideringsService = kiValideringsService,
+            eierService = eierService,
             javalin = javalin
         )
         EierController(
-            eierRepository = eierRepository,
             eierService = eierService,
             javalin = javalin
         )

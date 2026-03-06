@@ -129,7 +129,7 @@ class InnleggTest {
     @Test
     fun `PUT oppdaterer innlegg`() {
         val token  = auth.lagToken(authPort, navIdent = "C123456")
-        val treff  = db.opprettRekrutteringstreffIDatabase()
+        val treff  = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val repo   = InnleggRepository(db.dataSource)
         val id     = repo.opprett(treff, sampleOpprett(), "C123456").id
 
@@ -192,7 +192,7 @@ class InnleggTest {
     @Test
     fun `POST oppretter innlegg`() {
         val token = auth.lagToken(authPort, navIdent = "C123456")
-        val treff = db.opprettRekrutteringstreffIDatabase()
+        val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val kiLoggRepository = KiLoggRepository(db.dataSource)
         val htmlContent = "<p>x</p>"
         val loggId = kiLoggRepository.insert(
@@ -233,7 +233,7 @@ class InnleggTest {
     @Test
     fun `DELETE fjerner innlegg`() {
         val token = auth.lagToken(authPort, navIdent = "C123456")
-        val treff = db.opprettRekrutteringstreffIDatabase()
+        val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val repo = InnleggRepository(db.dataSource)
         val id = repo.opprett(treff, sampleOpprett(), "C123456").id
 
@@ -260,7 +260,7 @@ class InnleggTest {
     @Test
     fun `POST uten KI-validering gir 422`() {
         val token = auth.lagToken(authPort, navIdent = "C123456")
-        val treff = db.opprettRekrutteringstreffIDatabase()
+        val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val body = OpprettInnleggRequestDto(
             tittel = "Tittel",
             opprettetAvPersonNavn = "Ola",
@@ -283,7 +283,7 @@ class InnleggTest {
     @Test
     fun `POST med bryterRetningslinjer og uten lagreLikevel gir 422 KI_KREVER_BEKREFTELSE`() {
         val token = auth.lagToken(authPort, navIdent = "C123456")
-        val treff = db.opprettRekrutteringstreffIDatabase()
+        val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val kiLoggRepository = KiLoggRepository(db.dataSource)
         val htmlContent = "<p>Diskriminerende innhold</p>"
         val loggId = kiLoggRepository.insert(
@@ -322,7 +322,7 @@ class InnleggTest {
     @Test
     fun `POST med ukjent innleggKiLoggId gir 422 KI_LOGG_ID_UGYLDIG`() {
         val token = auth.lagToken(authPort, navIdent = "C123456")
-        val treff = db.opprettRekrutteringstreffIDatabase()
+        val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val body = OpprettInnleggRequestDto(
             tittel = "Tittel",
             opprettetAvPersonNavn = "Ola",
@@ -343,7 +343,7 @@ class InnleggTest {
     @Test
     fun `POST med endret tekst etter validering gir 422 KI_TEKST_ENDRET`() {
         val token = auth.lagToken(authPort, navIdent = "C123456")
-        val treff = db.opprettRekrutteringstreffIDatabase()
+        val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val kiLoggRepository = KiLoggRepository(db.dataSource)
         val loggId = kiLoggRepository.insert(
             KiLoggInsert(

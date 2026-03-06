@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff.eier
 
 import no.nav.toi.rekrutteringstreff.TreffId
+import java.sql.Connection
 import javax.sql.DataSource
 
 class EierRepository(
@@ -15,22 +16,31 @@ class EierRepository(
 
     fun hent(treff: TreffId): List<Eier>? {
         dataSource.connection.use { connection ->
-            connection.prepareStatement("SELECT $eiere FROM $rekrutteringstreff WHERE $id = ?")
-                .use { stmt ->
-                    stmt.setObject(1, treff.somUuid)
-                    val resultSet = stmt.executeQuery()
-                    return if (resultSet.next()) {
-                        (resultSet.getArray("$eiere").array as Array<*>)
-                            .map(Any?::toString)
-                            .map(::Eier)
-                    } else null
-                }
+            return hent(connection, treff)
         }
+    }
+
+    fun hent(connection: Connection, treff: TreffId): List<Eier>? {
+        connection.prepareStatement("SELECT $eiere FROM $rekrutteringstreff WHERE $id = ? FOR UPDATE")
+            .use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                val resultSet = stmt.executeQuery()
+                return if (resultSet.next()) {
+                    (resultSet.getArray("$eiere").array as Array<*>)
+                        .map(Any?::toString)
+                        .map(::Eier)
+                } else null
+            }
     }
 
     fun leggTil(treff: TreffId, nyeEiere: List<String>) {
         dataSource.connection.use { connection ->
-            connection.prepareStatement(
+            leggTil(connection, treff, nyeEiere)
+        }
+    }
+
+    fun leggTil(connection: Connection, treff: TreffId, nyeEiere: List<String>) {
+        connection.prepareStatement(
                 """
                     UPDATE $rekrutteringstreff
                     SET $eiere = array(SELECT DISTINCT unnest(array_cat($eiere, ?)))
@@ -41,22 +51,25 @@ class EierRepository(
                 stmt.setObject(2, treff.somUuid)
                 stmt.executeUpdate()
             }
+    }
+
+    fun slett(treff: TreffId, eier: String): Boolean {
+        dataSource.connection.use { connection ->
+            return slett(connection, treff, eier)
         }
     }
 
-    fun slett(treff: TreffId, eier: String) {
-        dataSource.connection.use { connection ->
-            connection.prepareStatement(
-                """
+    fun slett(connection: Connection, treff: TreffId, eier: String): Boolean {
+        connection.prepareStatement(
+            """
                     UPDATE $rekrutteringstreff
                     SET $eiere = array_remove($eiere, ?) 
-                    WHERE $id = ?
+                    WHERE $id = ? AND array_length($eiere, 1) > 1
                 """.trimIndent()
-            ).use { stmt ->
-                stmt.setString(1, eier)
-                stmt.setObject(2, treff.somUuid)
-                stmt.executeUpdate()
-            }
+        ).use { stmt ->
+            stmt.setString(1, eier)
+            stmt.setObject(2, treff.somUuid)
+            return stmt.executeUpdate() > 0
         }
     }
 }

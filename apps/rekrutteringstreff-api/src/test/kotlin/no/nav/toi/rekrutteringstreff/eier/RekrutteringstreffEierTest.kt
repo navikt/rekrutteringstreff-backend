@@ -143,88 +143,6 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    fun leggTilEier() {
-        val bruker = "A123456"
-        val nyEier = "B654321"
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val eiereForTest = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiereForTest).doesNotContain(nyEier)
-
-        val updateResponse = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
-            mapper.writeValueAsString(listOf(nyEier)),
-            token.serialize()
-        )
-
-        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
-        val eiereEtterOppdatering = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiereEtterOppdatering).contains(nyEier)
-    }
-
-    @Test
-    fun leggTilFlereEiereSamtidig() {
-        val bruker = "A123456"
-        val nyeEiere = listOf("B654321", "C987654")
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiere).doesNotContainAnyElementsOf(nyeEiere)
-
-        val updateResponse = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
-            mapper.writeValueAsString(nyeEiere),
-            token.serialize()
-        )
-
-        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
-        val eiereEtterLeggTil = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiereEtterLeggTil).containsAll(nyeEiere)
-    }
-
-    @Test
-    fun ikkeFjernGamleEiereNårManLeggerTilNye() {
-        val bruker = "A123456"
-        val nyeEiere = listOf("B654321", "C987654")
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiere).contains(bruker)
-
-        val updateResponse = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
-            mapper.writeValueAsString(nyeEiere),
-            token.serialize()
-        )
-
-        assertThat(updateResponse.statusCode()).isEqualTo(HTTP_CREATED)
-        val eiereEtterOppdatering = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiereEtterOppdatering).contains(bruker)
-    }
-
-    @Test
-    fun ikkeLeggTilDuplikaterAvEiere() {
-        val bruker = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = bruker)
-        opprettRekrutteringstreffIDatabase(bruker)
-        val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        assertThat(database.hentEiere(opprettetRekrutteringstreff.id)).contains(bruker)
-
-        val response = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
-            mapper.writeValueAsString(listOf(bruker)),
-            token.serialize()
-        )
-
-        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
-        val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
-        assertThat(eiere).contains(bruker).hasSize(1)
-    }
-
-    @Test
     fun `Slett eier er lov hvis det er flere eiere`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
@@ -274,6 +192,115 @@ class RekrutteringstreffEierTest {
         assertThat(eiere).contains(beholdIdent)
     }
 
+    @Test
+    fun `leggTilMegSomEier gir 201 og legger til bruker som eier`() {
+        val navIdent = "Z999001"
+        val oppretter = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        assertThat(database.hentEiere(treff.id)).doesNotContain(navIdent)
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
+        assertThat(database.hentEiere(treff.id)).contains(navIdent)
+    }
+
+    @Test
+    fun `leggTilMegSomEier er idempotent og gir 200 når bruker allerede er eier`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        assertThat(database.hentEiere(treff.id)).contains(navIdent)
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        assertThat(database.hentEiere(treff.id)).contains(navIdent)
+    }
+
+    @Test
+    fun `leggTilMegSomEier logger EIER_LAGT_TIL-hendelse`() {
+        val navIdent = "Z999002"
+        val oppretter = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+
+        httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_LAGT_TIL" && it.aktørIdentifikasjon == navIdent }
+    }
+
+    @Test
+    fun `slettEier logger EIER_FJERNET-hendelse`() {
+        val navIdent = "A123456"
+        val skalSlettes = "B654321"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        eierRepository.leggTil(treff.id, listOf(skalSlettes))
+
+        httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/$skalSlettes",
+            token.serialize()
+        )
+
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_FJERNET" && it.aktørIdentifikasjon == navIdent }
+    }
+
+    @Test
+    fun `DELETE eier gir 403 når bruker ikke er eier`() {
+        val oppretter = "A123456"
+        val ikkeEier = "X000000"
+        val token = authServer.lagToken(authPort, navIdent = ikkeEier)
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        eierRepository.leggTil(treff.id, listOf("B654321"))
+
+        val response = httpDelete(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/B654321",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+        assertThat(database.hentEiere(treff.id)).contains("B654321")
+    }
+
+    @Test
+    fun `PUT eiere meg gir 403 for jobbsøkerrettet rolle`() {
+        val oppretter = "A123456"
+        val jobbsøkerRettetBruker = "J000001"
+        val token = authServer.lagToken(authPort, navIdent = jobbsøkerRettetBruker, groups = listOf(jobbsøkerrettet))
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+        assertThat(database.hentEiere(treff.id)).doesNotContain(jobbsøkerRettetBruker)
+    }
+
     private fun opprettRekrutteringstreffIDatabase(
         navIdent: String,
         tittel: String = "Original Tittel",
@@ -314,14 +341,6 @@ class RekrutteringstreffEierTest {
     fun autentiseringHentEiere(autentiseringstest: UautentifiserendeTestCase) {
         val dummyId = UUID.randomUUID().toString()
         val response = autentiseringstest.utførGet("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", authServer, authPort)
-        assertThat(response.statusCode()).isEqualTo(401)
-    }
-
-    @ParameterizedTest
-    @MethodSource("tokenVarianter")
-    fun autentiseringLeggTilEiere(autentiseringstest: UautentifiserendeTestCase) {
-        val dummyId = UUID.randomUUID().toString()
-        val response = autentiseringstest.utførPut("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", mapper.writeValueAsString(listOf("A123456")), authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 

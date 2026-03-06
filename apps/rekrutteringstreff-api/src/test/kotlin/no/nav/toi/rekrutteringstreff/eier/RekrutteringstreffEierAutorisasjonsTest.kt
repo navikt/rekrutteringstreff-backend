@@ -163,19 +163,6 @@ class RekrutteringstreffEierAutorisasjonsTest {
         val url: () -> String,
         val metode: () -> HttpRequest.Builder
     ) {
-        LeggTilEier(
-            { "http://localhost:${appPort}/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/eiere" },
-            {
-                HttpRequest.newBuilder().PUT(
-                    HttpRequest.BodyPublishers.ofString(
-                        JacksonConfig.mapper.writeValueAsString(
-                            listOf(
-                                "A12345"
-                            )
-                        )
-                    )
-                )
-            }),
         HentEiere(
             { "http://localhost:${appPort}/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/eiere" },
             {
@@ -196,11 +183,6 @@ class RekrutteringstreffEierAutorisasjonsTest {
     }
 
     private fun autorisasjonsCases() = listOf(
-        Arguments.of(Endepunkt.LeggTilEier, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
-        Arguments.of(Endepunkt.LeggTilEier, Gruppe.Utvikler, HTTP_CREATED),
-        Arguments.of(Endepunkt.LeggTilEier, Gruppe.Arbeidsgiverrettet, HTTP_CREATED),
-        Arguments.of(Endepunkt.LeggTilEier, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
-
         Arguments.of(Endepunkt.HentEiere, Gruppe.Jobbsøkerrettet, HTTP_OK),
         Arguments.of(Endepunkt.HentEiere, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.HentEiere, Gruppe.Arbeidsgiverrettet, HTTP_OK),

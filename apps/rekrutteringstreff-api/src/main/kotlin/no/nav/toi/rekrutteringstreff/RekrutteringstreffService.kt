@@ -289,6 +289,24 @@ class RekrutteringstreffService(
                 AktørType.ARRANGØR,
                 internalDto.opprettetAvPersonNavident
             )
+            rekrutteringstreffRepository.leggTilHendelse(
+                connection,
+                dbId,
+                RekrutteringstreffHendelsestype.EIER_LAGT_TIL,
+                AktørType.ARRANGØR,
+                internalDto.opprettetAvPersonNavident,
+                subjektId = internalDto.opprettetAvPersonNavident,
+                subjektNavn = internalDto.opprettetAvPersonNavident,
+            )
+            rekrutteringstreffRepository.leggTilHendelse(
+                connection,
+                dbId,
+                RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL,
+                AktørType.ARRANGØR,
+                internalDto.opprettetAvPersonNavident,
+                subjektId = internalDto.opprettetAvNavkontorEnhetId,
+                subjektNavn = internalDto.opprettetAvNavkontorEnhetId,
+            )
             treffId
         }
     }
@@ -313,6 +331,19 @@ class RekrutteringstreffService(
 
     fun hentAlleHendelser(treffId: TreffId): List<FellesHendelseOutboundDto> {
         return rekrutteringstreffRepository.hentAlleHendelser(treffId)
+    }
+
+    fun leggTilMittKontor(treffId: TreffId, kontorEnhetId: String, navIdent: String): Boolean {
+        return dataSource.executeInTransaction { connection ->
+            val nytt = rekrutteringstreffRepository.leggTilKontor(connection, treffId, kontorEnhetId)
+            if (nytt) {
+                rekrutteringstreffRepository.leggTilHendelseForTreff(
+                    connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, navIdent,
+                    subjektId = kontorEnhetId, subjektNavn = kontorEnhetId,
+                )
+            }
+            nytt
+        }
     }
 
     fun gjenåpne(treffId: TreffId, navIdent: String) {
