@@ -26,6 +26,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.innlegg.OpprettInnleggRequestDto
@@ -64,7 +65,11 @@ class InnleggAutorisasjonsTest {
     private val authPort = 18012
     private val database = TestDatabase()
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
+    private val eierRepository = EierRepository(database.dataSource)
     private val innleggRepository = InnleggRepository(database.dataSource)
+
+    private val erEier = true
+    private val erIkkeEier = false
     private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
     private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
@@ -147,7 +152,7 @@ class InnleggAutorisasjonsTest {
         rekrutteringstreffService.opprett(
             OpprettRekrutteringstreffInternalDto(
                 "Tittel",
-                "A000001",
+                "A213456",
                 "Kontor",
                 ZonedDateTime.now()
             )
@@ -163,7 +168,7 @@ class InnleggAutorisasjonsTest {
                 sendesTilJobbsokerTidspunkt = null,
                 htmlContent = ""
             ),
-            "A000001"
+            "A213456"
         )
         gyldigInnleggId = innleggRepository.hentForTreff(gyldigRekrutteringstreff).first().id
     }
@@ -258,9 +263,47 @@ class InnleggAutorisasjonsTest {
         Arguments.of(Endepunkt.SlettInnlegg, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
     ).stream()
 
+    private fun autorisasjonsCaserMedEier() = listOf(
+        Arguments.of(Endepunkt.OpprettInnlegg, Gruppe.Utvikler, erIkkeEier, HTTP_CREATED),
+        Arguments.of(Endepunkt.OpprettInnlegg, Gruppe.Arbeidsgiverrettet, erEier, HTTP_CREATED),
+        Arguments.of(Endepunkt.OpprettInnlegg, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.OpprettInnlegg, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+
+        Arguments.of(Endepunkt.OppdaterInnlegg, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
+        Arguments.of(Endepunkt.OppdaterInnlegg, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
+        Arguments.of(Endepunkt.OppdaterInnlegg, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.OppdaterInnlegg, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+
+        Arguments.of(Endepunkt.SlettInnlegg, Gruppe.Utvikler, erIkkeEier, HTTP_NO_CONTENT),
+        Arguments.of(Endepunkt.SlettInnlegg, Gruppe.Arbeidsgiverrettet, erEier, HTTP_NO_CONTENT),
+        Arguments.of(Endepunkt.SlettInnlegg, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.SlettInnlegg, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+    ).stream()
+
     @ParameterizedTest
     @MethodSource("autorisasjonsCases")
     fun testEndepunkt(endepunkt: Endepunkt, gruppetilhørighet: Gruppe, expectedStatus: Int) {
+        eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A000001"))
+
+        val request = endepunkt.metode()
+            .uri(URI(endepunkt.url()))
+            .header(
+                "Authorization",
+                "Bearer ${authServer.lagToken(authPort, groups = gruppetilhørighet.somStringListe).serialize()}"
+            )
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        assertEquals(expectedStatus, response.statusCode())
+    }
+
+    @ParameterizedTest
+    @MethodSource("autorisasjonsCaserMedEier")
+    fun testEndepunktMedEier(endepunkt: Endepunkt, gruppetilhørighet: Gruppe, erEier: Boolean, expectedStatus: Int) {
+        if (erEier) {
+            eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A000001"))
+        }
+
         val request = endepunkt.metode()
             .uri(URI(endepunkt.url()))
             .header(

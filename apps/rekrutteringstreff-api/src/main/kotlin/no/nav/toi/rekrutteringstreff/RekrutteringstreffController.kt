@@ -70,7 +70,7 @@ class RekrutteringstreffController(
                 from = OpprettRekrutteringstreffDto::class,
                 example = """
                     {
-                        "opprettetAvNavkontorEnhetId": "0315"
+                        "tittel": "Nytt rekrutteringstreff"
                     }
                 """
             )]
@@ -88,10 +88,12 @@ class RekrutteringstreffController(
     private fun opprettRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
+        val kontorId = ctx.authenticatedUser().extractKontorId()
+            ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
         val internalDto = OpprettRekrutteringstreffInternalDto(
             tittel = inputDto.tittel,
             opprettetAvPersonNavident = ctx.extractNavIdent(),
-            opprettetAvNavkontorEnhetId = inputDto.opprettetAvNavkontorEnhetId,
+            opprettetAvNavkontorEnhetId = kontorId,
             opprettetAvTidspunkt = ZonedDateTime.now(),
         )
         val id = rekrutteringstreffService.opprett(internalDto)
