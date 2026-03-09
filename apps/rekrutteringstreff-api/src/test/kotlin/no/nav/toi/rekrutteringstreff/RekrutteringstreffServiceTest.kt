@@ -209,7 +209,7 @@ class RekrutteringstreffServiceTest {
         rekrutteringstreffService.publiser(treffId3, "NAV1234")
         rekrutteringstreffService.publiser(treffId4, "NAV1234")
 
-        val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor("0605")
+        val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt("0605")
 
         assertThat(rekrutteringstreff.any { it.id == treffId1.somUuid }).isTrue
         assertThat(rekrutteringstreff.any { it.id == treffId2.somUuid }).isTrue

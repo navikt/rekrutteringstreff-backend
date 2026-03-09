@@ -182,7 +182,7 @@ class RekrutteringstreffController(
                throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
            }
            log.info("Henter alle rekrutteringstreff for kontor $kontorId")
-           ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor(kontorId))
+           ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt(kontorId))
        }
     }
 
