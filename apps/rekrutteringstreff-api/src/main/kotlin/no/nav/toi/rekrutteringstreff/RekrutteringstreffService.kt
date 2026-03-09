@@ -317,19 +317,6 @@ class RekrutteringstreffService(
         return rekrutteringstreffRepository.hentAlleHendelser(treffId)
     }
 
-    fun leggTilMittKontor(treffId: TreffId, kontorEnhetId: String, navIdent: String): Boolean {
-        return dataSource.executeInTransaction { connection ->
-            val nytt = rekrutteringstreffRepository.leggTilKontor(connection, treffId, kontorEnhetId)
-            if (nytt) {
-                rekrutteringstreffRepository.leggTilHendelseForTreff(
-                    connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, navIdent,
-                    subjektId = kontorEnhetId, subjektNavn = kontorEnhetId,
-                )
-            }
-            nytt
-        }
-    }
-
     fun gjenåpne(treffId: TreffId, navIdent: String) {
         val treff = rekrutteringstreffRepository.hent(treffId)
             ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")

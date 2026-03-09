@@ -35,7 +35,6 @@ class RekrutteringstreffController(
         private const val avlysPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avlys"
         private const val avpubliserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/avpubliser"
         private const val endringerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/endringer"
-        private const val mittKontorPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/kontorer/mitt"
 
         private const val fellesPath =
             "$endepunktRekrutteringstreff/{$pathParamTreffId}/allehendelser"
@@ -58,7 +57,6 @@ class RekrutteringstreffController(
         javalin.post(avpubliserPath, avpubliserRekrutteringstreffHandler())
         javalin.post(fullforPath, fullforRekrutteringstreffHandler())
         javalin.post(endringerPath, registrerEndringHandler(rekrutteringstreffService))
-        javalin.put(mittKontorPath, leggTilMittKontorHandler())
     }
 
     @OpenApi(
@@ -596,34 +594,5 @@ class RekrutteringstreffController(
                 throw ForbiddenResponse("Personen har ikke tilgang til å registrere endringer for treffet ${treffId.somString}")
             }
         }
-    }
-
-    @OpenApi(
-        summary = "Legg til innlogget brukers kontor på et rekrutteringstreff",
-        description = "Henter kontorId fra tokenet og legger det til i treffets kontor-liste. Idempotent — returnerer 200 hvis kontoret allerede er lagt til, 201 hvis nytt. Genererer KONTOR_LAGT_TIL-hendelse ved ny tilknytning.",
-        operationId = "leggTilMittKontor",
-        security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, description = "Rekrutteringstreffets UUID")],
-        responses = [
-            OpenApiResponse(status = "200", description = "Kontoret var allerede tilknyttet, ingen endring"),
-            OpenApiResponse(status = "201", description = "Kontor lagt til. Genererer KONTOR_LAGT_TIL-hendelse."),
-            OpenApiResponse(status = "400", description = "Brukerens kontor er ikke tilgjengelig i tokenet"),
-            OpenApiResponse(status = "403", description = "Innlogget bruker er ikke eier eller utvikler"),
-            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
-        ],
-        path = mittKontorPath,
-        methods = [HttpMethod.PUT]
-    )
-    private fun leggTilMittKontorHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = ctx.extractNavIdent()
-        if (!eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke legge til kontor")
-        }
-        val kontorId = ctx.authenticatedUser().extractKontorId()
-            ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
-        val nytt = rekrutteringstreffService.leggTilMittKontor(treffId, kontorId, navIdent)
-        ctx.status(if (nytt) 201 else 200)
     }
 }
