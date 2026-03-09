@@ -15,6 +15,8 @@ val wiremockVersion = "3.12.0"
 val jacksonDatatypeJsr310Version = "2.18.2" // JavaTimeModule, se https://github.com/FasterXML/jackson-modules-java8
 val resilience4jVersion = "2.2.0"
 val navCommonVersion = "3.2024.11.26_16.35-432a29107830"
+val openTelemetryVersion = "1.55.0"
+val kotestVersion = "6.1.4"
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
@@ -35,10 +37,12 @@ dependencies {
     implementation("org.ehcache:ehcache:3.10.8")
     implementation("io.github.resilience4j:resilience4j-retry:$resilience4jVersion")
     implementation("no.nav.common:audit-log:$navCommonVersion")
+    implementation("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
     testImplementation("io.mockk:mockk:1.13.17")
+    testImplementation("io.kotest:kotest-assertions-json-jvm:$kotestVersion")
 }

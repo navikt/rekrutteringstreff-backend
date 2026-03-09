@@ -1,3 +1,3 @@
 package no.nav.toi.exception
 
-class UlovligOppdateringException(message: String): RuntimeException(message)
+class UlovligOppdateringException(override val message: String): RuntimeException(message)

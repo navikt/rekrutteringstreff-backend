@@ -3,6 +3,10 @@ package no.nav.toi
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
+import io.kotest.assertions.json.shouldBeJsonObject
+import io.kotest.assertions.json.shouldBeValidJson
+import io.kotest.assertions.json.shouldContainJsonKey
+import io.kotest.assertions.json.shouldContainJsonKeyValue
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
@@ -15,6 +19,7 @@ import org.junit.jupiter.api.*
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.LocalDateTime
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -116,8 +121,21 @@ class AppExceptionHandlingTest {
 
         assertThat(response.statusCode()).isEqualTo(400)
         val body = response.body()
+
+        //Gamle felter:
         assertThat(body).contains("feil")
         assertThat(body).contains("hint")
+        //Nye felter fra ProblemDetails:
+        body.shouldBeValidJson()
+        body.shouldBeJsonObject()
+        body.shouldContainJsonKeyValue("title", "JsonParseException")
+        body.shouldContainJsonKeyValue("status", "400")
+        body.shouldContainJsonKeyValue("detail", "Unexpected character ('t' (code 116)): was expecting double-quote to start field name\n at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 2]")
+        body.shouldContainJsonKey("instance")
+        assertThat(body).contains("/api/rekrutteringstreff/")
+        body.shouldContainJsonKey("timestamp")
+        body.shouldContainJsonKeyValue("traceid", "00000000000000000000000000000000")
+        println("Body: $body")
     }
 
     @Test
