@@ -169,6 +169,19 @@ class RekrutteringstreffRepository(
             }
         }
 
+    fun hentAlleForEttKontorSomErPublisertMedFremtidigTilTispunkt(kontorId: String): List<Rekrutteringstreff> =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT * FROM $tabellnavn WHERE status = ? AND tiltid > CURRENT_TIMESTAMP AND $opprettetAvKontorEnhetid = ?").use { s ->
+                s.setString(1, RekrutteringstreffStatus.PUBLISERT.name)
+                s.setObject(2, kontorId)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+
     fun hent(treff: TreffId): Rekrutteringstreff? =
         dataSource.connection.use { c ->
             c.prepareStatement("SELECT * FROM $tabellnavn WHERE $id = ?").use { s ->
