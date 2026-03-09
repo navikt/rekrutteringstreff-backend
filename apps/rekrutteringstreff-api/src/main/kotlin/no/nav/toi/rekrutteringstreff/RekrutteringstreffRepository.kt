@@ -141,7 +141,7 @@ class RekrutteringstreffRepository(
             }
         }
 
-    fun hentAlleForEttKontorSomIkkeErSlettet(kontorId: String): List<Rekrutteringstreff> =
+    fun hentIkkeSlettedeForKontor(kontorId: String): List<Rekrutteringstreff> =
         dataSource.connection.use { c ->
             c.prepareStatement("SELECT * FROM $tabellnavn WHERE status != ? AND $kontorer @> ARRAY[?]::text[]").use { s ->
                 s.setString(1, RekrutteringstreffStatus.SLETTET.name)
@@ -371,7 +371,7 @@ class RekrutteringstreffRepository(
             """
             UPDATE $tabellnavn
             SET $kontorer = $kontorer || ARRAY[?]::text[]
-            WHERE $id = ? AND NOT ($kontorer @> ARRAY[?]::text[])
+            WHERE $id = ? AND NOT ($kontorer @> ARRAY[?]::text[]) 
             """
         ).use { s ->
             s.setString(1, kontorEnhetId)

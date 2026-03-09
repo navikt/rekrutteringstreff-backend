@@ -131,7 +131,7 @@ class RekrutteringstreffService(
     }
 
     fun hentAlleRekrutteringstreffForEttKontor(kontorId: String): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentAlleForEttKontorSomIkkeErSlettet(kontorId)
+        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentIkkeSlettedeForKontor(kontorId)
         return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontor)
     }
 
