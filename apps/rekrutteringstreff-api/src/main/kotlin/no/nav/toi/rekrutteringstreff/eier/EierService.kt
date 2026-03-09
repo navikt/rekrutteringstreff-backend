@@ -28,7 +28,7 @@ class EierService(
     }
 
     fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String? = null) {
-        val eiere = eierRepository.hent(connection, treffId)?.tilNavIdenter()
+        val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
         if (eiere?.contains(navIdent) == true) return
 
         eierRepository.leggTil(connection, treffId, listOf(navIdent))

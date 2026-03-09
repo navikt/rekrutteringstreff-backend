@@ -20,8 +20,10 @@ class EierRepository(
         }
     }
 
-    fun hent(connection: Connection, treff: TreffId): List<Eier>? {
-        connection.prepareStatement("SELECT $eiere FROM $rekrutteringstreff WHERE $id = ? FOR UPDATE")
+    fun hent(connection: Connection, treff: TreffId, forUpdate: Boolean = false): List<Eier>? {
+        val sql = "SELECT $eiere FROM $rekrutteringstreff WHERE $id = ?" +
+            if (forUpdate) " FOR UPDATE" else ""
+        connection.prepareStatement(sql)
             .use { stmt ->
                 stmt.setObject(1, treff.somUuid)
                 val resultSet = stmt.executeQuery()
