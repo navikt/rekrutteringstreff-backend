@@ -245,6 +245,18 @@ Se [Arkitekturbeslutninger – hendelse_data](arkitekturbeslutninger.md#hendelse
 
 Data kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
 
+#### Subjekt (aktør vs. subjekt)
+
+Hendelser skiller mellom **aktør** (hvem som utførte handlingen) og **subjekt** (hvem/hva hendelsen gjelder). Aktøren ligger alltid i `aktøridentifikasjon`. Subjektet hentes ulikt per tabell:
+
+| Tabell | `subjekt_id` | `subjekt_navn` | Eksempel |
+|--------|-------------|---------------|----------|
+| `rekrutteringstreff_hendelse` | Lagret direkte i kolonner (V2). Kun satt for eier-/kontorhendelser, ellers `null`. | Samme | `EIER_LAGT_TIL`: id=`B654321` (NAV-ident). `KONTOR_LAGT_TIL`: id=`0301` (enhet-ID). |
+| `jobbsoker_hendelse` | Avledet via JOIN: `jobbsoker.fodselsnummer` | `fornavn \|\| ' ' \|\| etternavn` | id=`12345678901`, navn=`Ola Nordmann` |
+| `arbeidsgiver_hendelse` | Avledet via JOIN: `arbeidsgiver.orgnr` | `arbeidsgiver.orgnavn` | id=`912345678`, navn=`Kiwi Grønland` |
+
+Samleendepunktet `GET /api/rekrutteringstreff/{id}/hendelser` gjør en `UNION ALL` av de tre tabellene og returnerer `subjektId`/`subjektNavn` enhetlig uavhengig av lagringsmekanisme.
+
 ### Støttetabeller
 
 - **naringskode**: Næringskoder for arbeidsgivere (kan ha flere per arbeidsgiver)
