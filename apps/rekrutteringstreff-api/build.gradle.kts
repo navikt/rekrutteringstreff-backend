@@ -16,6 +16,7 @@ val jacksonDatatypeJsr310Version = "2.18.2" // JavaTimeModule, se https://github
 val resilience4jVersion = "2.2.0"
 val navCommonVersion = "3.2024.11.26_16.35-432a29107830"
 val openTelemetryVersion = "1.55.0"
+val opentelemetryLogbackMdcVersion = "2.25.0-alpha"
 val kotestVersion = "6.1.4"
 
 dependencies {
@@ -38,6 +39,8 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-retry:$resilience4jVersion")
     implementation("no.nav.common:audit-log:$navCommonVersion")
     implementation("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
+
+    implementation("io.opentelemetry.instrumentation:opentelemetry-logback-mdc-1.0:${opentelemetryLogbackMdcVersion}")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")

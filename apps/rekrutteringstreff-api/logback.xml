@@ -30,8 +30,12 @@
         </filter>
     </appender>
 
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+        <appender-ref ref="appLog" />
+    </appender>
+
     <root level="INFO">
-        <appender-ref ref="appLog"/>
+        <appender-ref ref="OTEL"/>
         <appender-ref ref="team-logs" />
     </root>
 
