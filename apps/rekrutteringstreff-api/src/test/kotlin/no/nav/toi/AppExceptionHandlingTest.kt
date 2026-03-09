@@ -135,7 +135,6 @@ class AppExceptionHandlingTest {
         assertThat(body).contains("/api/rekrutteringstreff/")
         body.shouldContainJsonKey("timestamp")
         body.shouldContainJsonKeyValue("traceid", "00000000000000000000000000000000")
-        println("Body: $body")
     }
 
     @Test
