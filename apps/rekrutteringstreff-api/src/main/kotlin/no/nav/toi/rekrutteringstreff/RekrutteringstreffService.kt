@@ -13,6 +13,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.ArrayList
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -28,7 +29,8 @@ class RekrutteringstreffService(
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
-    private val jobbsøkerService: JobbsøkerService
+    private val jobbsøkerService: JobbsøkerService,
+    private val eierService: EierService,
 ) {
     private val logger: Logger = log
 
@@ -284,23 +286,10 @@ class RekrutteringstreffService(
                 AktørType.ARRANGØR,
                 internalDto.opprettetAvPersonNavident
             )
-            rekrutteringstreffRepository.leggTilHendelse(
-                connection,
-                dbId,
-                RekrutteringstreffHendelsestype.EIER_LAGT_TIL,
-                AktørType.ARRANGØR,
+            eierService.leggTilEierMedKontor(
+                connection, treffId,
                 internalDto.opprettetAvPersonNavident,
-                subjektId = internalDto.opprettetAvPersonNavident,
-                subjektNavn = internalDto.opprettetAvPersonNavident,
-            )
-            rekrutteringstreffRepository.leggTilHendelse(
-                connection,
-                dbId,
-                RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL,
-                AktørType.ARRANGØR,
-                internalDto.opprettetAvPersonNavident,
-                subjektId = internalDto.opprettetAvNavkontorEnhetId,
-                subjektNavn = internalDto.opprettetAvNavkontorEnhetId,
+                internalDto.opprettetAvNavkontorEnhetId
             )
             treffId
         }

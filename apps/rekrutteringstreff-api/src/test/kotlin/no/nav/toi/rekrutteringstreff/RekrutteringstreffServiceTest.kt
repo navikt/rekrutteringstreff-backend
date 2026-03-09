@@ -22,6 +22,8 @@ import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
@@ -61,7 +63,8 @@ class RekrutteringstreffServiceTest {
                 rekrutteringstreffRepository,
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
-                jobbsøkerService
+                jobbsøkerService,
+                EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource)
             )
         }
     }

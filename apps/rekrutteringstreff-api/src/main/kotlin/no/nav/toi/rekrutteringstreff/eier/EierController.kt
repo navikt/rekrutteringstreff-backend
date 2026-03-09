@@ -30,13 +30,12 @@ class EierController(
 
     @OpenApi(
         summary = "Legg til deg selv som eier av et rekrutteringstreff",
-        description = "Bruker trenger ikke være eksisterende eier. Idempotent — returnerer 200 hvis allerede eier, 201 hvis ny. Utføres atomisk med FOR UPDATE-lås.",
+        description = "Bruker trenger ikke være eksisterende eier. Idempotent — returnerer alltid 200. Utføres atomisk med FOR UPDATE-lås.",
         operationId = "leggTilMegSomEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
         responses = [
-            OpenApiResponse(status = "200", description = "Allerede eier, ingen endring"),
-            OpenApiResponse(status = "201", description = "Lagt til som ny eier. Genererer EIER_LAGT_TIL-hendelse.")
+            OpenApiResponse(status = "200", description = "Eier lagt til (eller allerede eier). Genererer EIER_LAGT_TIL-hendelse hvis ny.")
         ],
         path = megEndepunkt,
         methods = [HttpMethod.PUT]
@@ -45,9 +44,10 @@ class EierController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = TreffId(ctx.pathParam("id"))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
+        val kontorId = ctx.authenticatedUser().extractKontorId()
 
-        val nyEier = eierService.leggTilMegSomEier(id, navIdent)
-        ctx.status(if (nyEier) 201 else 200)
+        eierService.leggTilEierMedKontor(id, navIdent, kontorId)
+        ctx.status(200)
     }
 
     @OpenApi(

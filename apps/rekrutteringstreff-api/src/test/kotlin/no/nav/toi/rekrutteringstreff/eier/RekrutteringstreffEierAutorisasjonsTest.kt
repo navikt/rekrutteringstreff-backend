@@ -28,6 +28,7 @@ import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.AfterAll
@@ -66,12 +67,14 @@ class RekrutteringstreffEierAutorisasjonsTest {
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
     private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
 
+    private val eierService = EierService(eierRepository, rekrutteringstreffRepository, database.dataSource)
     private val rekrutteringstreffService = RekrutteringstreffService(
         database.dataSource,
         rekrutteringstreffRepository = rekrutteringstreffRepository,
         jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper),
         arbeidsgiverRepository = arbeidsgiverRepository,
-        jobbsøkerService = jobbsøkerService
+        jobbsøkerService = jobbsøkerService,
+        eierService = eierService
     )
 
     private lateinit var app: App

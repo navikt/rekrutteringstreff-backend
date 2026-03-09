@@ -21,6 +21,8 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
@@ -51,7 +53,7 @@ class PilotkontorTest {
     private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
     private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
-    private val service = RekrutteringstreffService(database.dataSource, repo, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
+    private val service = RekrutteringstreffService(database.dataSource, repo, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, EierService(EierRepository(database.dataSource), repo, database.dataSource))
 
     private lateinit var app: App
 

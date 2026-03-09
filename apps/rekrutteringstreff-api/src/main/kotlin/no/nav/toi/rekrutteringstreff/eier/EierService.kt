@@ -9,6 +9,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
+import java.sql.Connection
 import javax.sql.DataSource
 
 class EierService(
@@ -26,19 +27,30 @@ class EierService(
         return context.authenticatedUser().erUtvikler() || eiere.contains(navIdent)
     }
 
-    fun leggTilMegSomEier(treffId: TreffId, navIdent: String): Boolean {
-        return dataSource.executeInTransaction { connection ->
-            val eiere = eierRepository.hent(connection, treffId)?.tilNavIdenter()
-                ?: throw IllegalStateException("Rekrutteringstreff med id ${treffId.somString} har ingen eiere")
+    fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String? = null) {
+        val eiere = eierRepository.hent(connection, treffId)?.tilNavIdenter()
+        if (eiere?.contains(navIdent) == true) return
 
-            if (eiere.contains(navIdent)) return@executeInTransaction false
+        eierRepository.leggTil(connection, treffId, listOf(navIdent))
+        rekrutteringstreffRepository.leggTilHendelseForTreff(
+            connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
+            subjektId = navIdent, subjektNavn = navIdent,
+        )
 
-            eierRepository.leggTil(connection, treffId, listOf(navIdent))
-            rekrutteringstreffRepository.leggTilHendelseForTreff(
-                connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
-                subjektId = navIdent, subjektNavn = navIdent,
-            )
-            true
+        if (kontorEnhetId != null) {
+            val nyttKontor = rekrutteringstreffRepository.leggTilKontor(connection, treffId, kontorEnhetId)
+            if (nyttKontor) {
+                rekrutteringstreffRepository.leggTilHendelseForTreff(
+                    connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, navIdent,
+                    subjektId = kontorEnhetId, subjektNavn = kontorEnhetId,
+                )
+            }
+        }
+    }
+
+    fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String? = null) {
+        dataSource.executeInTransaction { connection ->
+            leggTilEierMedKontor(connection, treffId, navIdent, kontorEnhetId)
         }
     }
 

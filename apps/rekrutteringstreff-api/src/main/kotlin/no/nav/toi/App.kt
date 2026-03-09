@@ -221,14 +221,15 @@ class App(
 
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
+        val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
         val rekrutteringstreffService = RekrutteringstreffService(
             dataSource,
             rekrutteringstreffRepository,
             jobbsøkerRepository,
             arbeidsgiverRepository,
-            jobbsøkerService
+            jobbsøkerService,
+            eierService
         )
-        val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         RekrutteringstreffController(

@@ -25,7 +25,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import java.net.HttpURLConnection.HTTP_CREATED
 import java.util.*
 
 
@@ -44,8 +43,9 @@ class RekrutteringstreffEierTest {
         private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
         private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
         private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
-        private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
         private val eierRepository = EierRepository(database.dataSource)
+        private val eierService = EierService(eierRepository, rekrutteringstreffRepository, database.dataSource)
+        private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, eierService)
 
         private val accessTokenClient = AccessTokenClient(
             clientId = "clientId",
@@ -193,7 +193,7 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    fun `leggTilMegSomEier gir 201 og legger til bruker som eier`() {
+    fun `leggTilEierMedKontor gir 200 og legger til bruker som eier`() {
         val navIdent = "Z999001"
         val oppretter = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
@@ -207,12 +207,12 @@ class RekrutteringstreffEierTest {
             token.serialize()
         )
 
-        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
+        assertThat(response.statusCode()).isEqualTo(200)
         assertThat(database.hentEiere(treff.id)).contains(navIdent)
     }
 
     @Test
-    fun `leggTilMegSomEier er idempotent og gir 200 når bruker allerede er eier`() {
+    fun `leggTilEierMedKontor er idempotent og gir 200 når bruker allerede er eier`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
@@ -230,7 +230,7 @@ class RekrutteringstreffEierTest {
     }
 
     @Test
-    fun `leggTilMegSomEier logger EIER_LAGT_TIL-hendelse`() {
+    fun `leggTilEierMedKontor logger EIER_LAGT_TIL-hendelse`() {
         val navIdent = "Z999002"
         val oppretter = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
@@ -245,6 +245,53 @@ class RekrutteringstreffEierTest {
 
         val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
         assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_LAGT_TIL" && it.aktørIdentifikasjon == navIdent }
+    }
+
+    @Test
+    fun `leggTilEierMedKontor legger til kontor fra Modia og logger KONTOR_LAGT_TIL-hendelse`() {
+        val navIdent = "Z999003"
+        val oppretter = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(oppretter)
+        val treff = database.hentAlleRekrutteringstreff().first()
+        assertThat(treff.kontorer).doesNotContain("1234")
+
+        httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        val oppdatertTreff = database.hentAlleRekrutteringstreff().first()
+        assertThat(oppdatertTreff.kontorer).contains("1234")
+
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        assertThat(hendelser).anyMatch {
+            it.hendelsestype == "KONTOR_LAGT_TIL" && it.subjektId == "1234" && it.aktørIdentifikasjon == navIdent
+        }
+    }
+
+    @Test
+    fun `leggTilEierMedKontor legger ikke til duplikat kontor`() {
+        val navIdent = "Z999004"
+        val oppretter = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        opprettRekrutteringstreffIDatabase(oppretter, kontor = "1234")
+        val treff = database.hentAlleRekrutteringstreff().first()
+        assertThat(treff.kontorer).contains("1234")
+
+        httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+            "",
+            token.serialize()
+        )
+
+        val oppdatertTreff = database.hentAlleRekrutteringstreff().first()
+        assertThat(oppdatertTreff.kontorer.count { it == "1234" }).isEqualTo(1)
+
+        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        assertThat(hendelser.filter { it.hendelsestype == "KONTOR_LAGT_TIL" && it.subjektId == "1234" && it.aktørIdentifikasjon == navIdent })
+            .isEmpty()
     }
 
     @Test
@@ -304,10 +351,11 @@ class RekrutteringstreffEierTest {
     private fun opprettRekrutteringstreffIDatabase(
         navIdent: String,
         tittel: String = "Original Tittel",
+        kontor: String = "Original Kontor",
     ) {
         val originalDto = OpprettRekrutteringstreffInternalDto(
             tittel = tittel,
-            opprettetAvNavkontorEnhetId = "Original Kontor",
+            opprettetAvNavkontorEnhetId = kontor,
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),
         )
