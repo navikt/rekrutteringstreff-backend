@@ -96,6 +96,29 @@ Full tilgang til alle funksjoner, inkludert:
 - Tilgang til utviklerverktøy og diagnostikk
 - Tilgang uavhengig av pilotkontor
 
+## Eierskap
+
+Hvert rekrutteringstreff har én eller flere **eiere** (NAV-identer lagret i `eiere text[]`). Eierskap styrer hvem som kan redigere treffet, invitere deltakere og administrere andre eiere.
+
+**Regler:**
+
+- Oppretteren settes automatisk som første eier
+- Minst 1 eier til enhver tid (håndhevet på SQL-nivå ved sletting)
+- Kun arbeidsgiverrettet eller utvikler kan bli eier
+- Utviklere har full tilgang uavhengig av eierskap
+
+**Endepunkter:**
+
+| Endepunkt                                      | Beskrivelse                    | Krav                           |
+| ---------------------------------------------- | ------------------------------ | ------------------------------ |
+| `GET /api/rekrutteringstreff/{id}/eiere`        | Hent alle eiere                | Gyldig rolle                   |
+| `PUT /api/rekrutteringstreff/{id}/eiere/meg`    | Legg til seg selv som eier     | Arbeidsgiverrettet / utvikler  |
+| `DELETE /api/rekrutteringstreff/{id}/eiere/{navIdent}` | Fjern en eier          | Eier / utvikler                |
+
+**Lesetilgang er global:** Alle med gyldig rolle kan lese alle treff, uavhengig av eierskap eller kontor.
+
+**Kontorer:** Hvert treff kan ha flere kontorer (`kontorer text[]`). Dette styrer ikke tilgang, men brukes i frontend for filtrering.
+
 ## 3. System
 
 Systemtilgang brukes for maskin-til-maskin-kommunikasjon mellom tjenester.

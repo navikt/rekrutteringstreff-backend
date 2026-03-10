@@ -99,6 +99,7 @@ erDiagram
         text kommune "Kommune for treffstedet (V5)"
         timestamptz svarfrist "Frist for påmelding/svar"
         text[] eiere "Array av Nav-identer som eier treffet"
+        text[] kontorer "Array av kontor-enhetIDer knyttet til treffet"
         text beskrivelse "Beskrivelse av treffet"
         text sist_endret_av_person_navident "Nav-ident for sist endring (V6)"
         timestamptz sist_endret_av_tidspunkt "Tidspunkt for sist endring (V6)"
@@ -251,7 +252,7 @@ Hendelser skiller mellom **aktør** (hvem som utførte handlingen) og **subjekt*
 
 | Tabell                        | `subjekt_id`                                                                       | `subjekt_navn`                    | Eksempel                                                                            |
 | ----------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------- |
-| `rekrutteringstreff_hendelse` | Lagret direkte i kolonner (V2). Kun satt for eier-/kontorhendelser, ellers `null`. | Samme                             | `EIER_LAGT_TIL`: id=`B654321` (NAV-ident). `KONTOR_LAGT_TIL`: id=`0301` (enhet-ID). |
+| `rekrutteringstreff_hendelse` | Lagret direkte i kolonner (V2). Kun satt for eier-/kontorhendelser, ellers `null`. | Samme                             | `EIER_LAGT_TIL`: id=`B654321` (NAV-ident). `EIER_FJERNET`: id=`B654321`. `KONTOR_LAGT_TIL`: id=`0301` (enhet-ID). |
 | `jobbsoker_hendelse`          | Avledet via JOIN: `jobbsoker.fodselsnummer`                                        | `fornavn \|\| ' ' \|\| etternavn` | id=`12345678901`, navn=`Ola Nordmann`                                               |
 | `arbeidsgiver_hendelse`       | Avledet via JOIN: `arbeidsgiver.orgnr`                                             | `arbeidsgiver.orgnavn`            | id=`912345678`, navn=`Kiwi Grønland`                                                |
 
