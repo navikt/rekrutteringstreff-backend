@@ -109,11 +109,11 @@ Hvert rekrutteringstreff har én eller flere **eiere** (NAV-identer lagret i `ei
 
 **Endepunkter:**
 
-| Endepunkt                                      | Beskrivelse                    | Krav                           |
-| ---------------------------------------------- | ------------------------------ | ------------------------------ |
-| `GET /api/rekrutteringstreff/{id}/eiere`        | Hent alle eiere                | Gyldig rolle                   |
-| `PUT /api/rekrutteringstreff/{id}/eiere/meg`    | Legg til seg selv som eier     | Arbeidsgiverrettet / utvikler  |
-| `DELETE /api/rekrutteringstreff/{id}/eiere/{navIdent}` | Fjern en eier          | Eier / utvikler                |
+| Endepunkt                                              | Beskrivelse                | Krav                          |
+| ------------------------------------------------------ | -------------------------- | ----------------------------- |
+| `GET /api/rekrutteringstreff/{id}/eiere`               | Hent alle eiere            | Gyldig rolle                  |
+| `PUT /api/rekrutteringstreff/{id}/eiere/meg`           | Legg til seg selv som eier | Arbeidsgiverrettet / utvikler |
+| `DELETE /api/rekrutteringstreff/{id}/eiere/{navIdent}` | Fjern en eier              | Eier / utvikler               |
 
 **Lesetilgang er global:** Alle med gyldig rolle kan lese alle treff, uavhengig av eierskap eller kontor.
 
