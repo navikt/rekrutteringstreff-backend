@@ -207,38 +207,70 @@ POST /api/rekrutteringstreff/sok
 
 ## Del 2: Hendelse-publisering og outbox i `rekrutteringstreff-api`
 
-`rekrutteringstreff-api` publiserer én Rapids-melding per treff-hendelse (opprett, oppdater, slett, publiser, avlys, fullfør). Meldingens `@event_name` identifiserer hendelsestypen.
+`rekrutteringstreff-api` publiserer én Rapids-melding per **indekseringsrelevant endring**. Det inkluderer ikke bare rene treff-hendelser, men også endringer i relaterte domeneobjekter som påvirker søkedokumentet: eiere, kontorer, arbeidsgivere, innlegg og jobbsøkertellinger.
 
-### Mønster (etter jobbsøker-hendelse + aktivitetskort_polling)
+Dette er viktig fordi dagens data for søkedokumentet er spredt over flere moduler. En plan som kun reagerer på rader i `rekrutteringstreff_hendelse` vil gi foreldet indeks når f.eks. arbeidsgivere, innlegg eller jobbsøkere endres uten at det samtidig skrives en treff-hendelse.
 
-Dette er **ikke** en tradisjonell outbox (der payload skrives til en dedikert outbox-tabell i samme transaksjon og slettes/markeres etter sending). Vi bruker det samme **kvitteringsbordet-mønsteret** som `aktivitetskort_polling` (se `rekrutteringstreff-backend/apps/rekrutteringstreff-api/`):
+### Indekseringsutløsere
 
-| Tabell                    | Rolle                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------------------- |
-| `rekrutteringstreff_hendelse`          | Domenehendelsene (finnes allerede, skrives transaksjonelt med domeneendringen)              |
-| `rekrutteringstreff_rapids_kvittering` | Kvitteringstabell – tilstedeværelse av en rad betyr «sendt», fravær betyr «ikke sendt ennå» |
+Følgende operasjoner må føre til ny eller oppdatert melding til indekseren:
+
+| Kilde                | Operasjon                                                                | Påvirker felter i søkedokument                                               |
+| -------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `rekrutteringstreff` | opprett, oppdater, publiser, avpubliser, gjenåpne, fullfør, avlys, slett | toppnivåfelter, status, tider, sted, `sistEndret`                            |
+| `eier`               | legg til/fjern eier                                                      | `eiere`, indirekte tilgang i visning `MINE`                                  |
+| `kontor`             | legg til kontor                                                          | `kontorer`, indirekte tilgang i visning `MITT_KONTOR`                        |
+| `arbeidsgiver`       | legg til/fjern arbeidsgiver                                              | `arbeidsgivere`, `antallArbeidsgivere`                                       |
+| `innlegg`            | opprett/oppdater/slett innlegg                                           | `innlegg`, fritekstgrunnlag                                                  |
+| `jobbsøker`          | legg til, gjenopprett, slett, inviter, svar                              | `antallJobbsøkere` og eventuelle senere søkefelter basert på jobbsøkerstatus |
+
+Det anbefales at vi innfører ett eksplisitt «treff må reindekseres»-signal per påvirket `treffId`, uavhengig av hvilken modul endringen kom fra. Her betyr «snapshot» bare et komplett, denormalisert dokumentgrunnlag for ett treff, ikke en egen snapshot-tabell. Dokumentgrunnlaget bygges on demand fra databasen med én felles builder/transformer.
+
+### Mønster: komprimert reindekseringskø per `treffId`
+
+Siden meldingen til indekseren bare inneholder `treffId`, trenger vi ikke én outbox-rad per domenehendelse. Det er enklere å bruke en **komprimert reindekseringskø** der det bare kan finnes én ventende rad per `treffId`.
+
+Det betyr at vi med vilje komprimerer flere endringer på samme treff til én pending rad. Hvis et treff allerede ligger usendt i køen, legger vi ikke til en ny rad. Neste kjøring bygger uansett hele dokumentet fra databasen og får dermed med seg alle endringene som har skjedd siden raden ble opprettet.
+
+| Tabell                             | Rolle                                                    |
+| ---------------------------------- | -------------------------------------------------------- |
+| `rekrutteringstreff_reindeksering` | Pending-kø for treff som må bygges og indekseres på nytt |
+
+**Anbefalte kolonner:**
+
+| Kolonne                 | Type                     | Beskrivelse                     |
+| ----------------------- | ------------------------ | ------------------------------- |
+| `treff_id`              | `uuid` (PK)              | Treff som skal reindekseres     |
+| `opprettet_tidspunkt`   | `timestamptz` (NOT NULL) | Når treffet først ble lagt i kø |
+| `sist_endret_tidspunkt` | `timestamptz` (NOT NULL) | Når kø-raden sist ble berørt    |
 
 **Flyt:**
 
-1. Service skriver til `rekrutteringstreff_hendelse` som i dag (samme transaksjon som domeneendringen)
-2. En scheduler (med leader election) kjører periodisk og finner usendte rader ved LEFT JOIN + `WHERE kvittering IS NULL`
-3. For hver usent hendelse: send Rapids-melding, deretter INSERT kvitteringsrad
+1. Ved en indekseringsrelevant endring skriver samme service `treffId` til `rekrutteringstreff_reindeksering`
+2. Innskriving gjøres i **samme database-transaksjon** som domeneendringen, med `insert ... on conflict (treff_id) do update set sist_endret_tidspunkt = now()`
+3. Hvis transaksjonen rollbackes, rollbackes også kø-innskrivingen
+4. En scheduler (med leader election) plukker pending `treffId`-er fra køen
+5. For hvert `treffId`: bygg fullt dokumentgrunnlag, send melding med `treffId`, og slett raden etter vellykket sending
 
-Tabellen `rekrutteringstreff_rapids_kvittering` har følgende kolonner:
+Denne modellen er enklere enn kvitteringsmønsteret når payloaden bare er `treffId`, fordi den unngår at mange raske endringer på samme treff genererer en lang kø av overflødige meldinger.
 
-| Kolonne                      | Type                     | Beskrivelse                              |
-| ---------------------------- | ------------------------ | ---------------------------------------- |
-| `rekrutteringstreff_rapids_kvittering_id` | `bigserial` (PK)         | Primærnøkkel                             |
-| `rekrutteringstreff_hendelse_id`          | `bigint` (FK, NOT NULL)  | Fremmednøkkel til `rekrutteringstreff_hendelse`       |
-| `sendt_tidspunkt`            | `timestamptz` (NOT NULL) | Tidspunkt meldingen ble sendt til Rapids |
+**Viktig egenskap:** Køen er en best effort-representasjon av hvilke treff som må bygges på nytt, ikke et revisjonsspor over alle hendelser. Hvis et treff endres ti ganger før scheduler kjører, holder det at det finnes én pending rad så lenge indekseren alltid bygger hele dokumentet.
 
-Usendte rader finnes ved LEFT JOIN mot kvitteringstabellen.
+**Transaksjonskrav:** For å unngå tap av meldinger må innlegging i `rekrutteringstreff_reindeksering` skje atomisk sammen med selve domeneendringen. Det betyr at alle skrivende operasjoner som påvirker søkedokumentet må gjøre begge deler i samme `executeInTransaction`-blokk: oppdatere domenedata og legge `treffId` i køen. Vi skal ikke være avhengige av en asynkron etterprosess som først observerer endringen senere og deretter prøver å legge `treffId` i køen.
 
-**Viktig forskjell fra tradisjonell outbox:** Kvitteringsraden skrives _etter_ sending, ikke i samme transaksjon som domeneendringen. Det betyr at hvis appen krasjer mellom sending og kvitteringsskriving, kan meldingen sendes to ganger. Indekseren må derfor være **idempotent**.
+Dette følger mønsteret som allerede brukes i backend: service-laget åpner en database-transaksjon, gjør alle relevante SQL-operasjoner på samme `Connection`, og committer først når alt er vellykket. Hvis en operasjon feiler, rulles alt tilbake. Reindekseringskøen må behandles på samme måte.
 
-Idempotensen sikres ved at indekseren bruker OpenSearch **upsert** (index med eksplisitt dokument-ID = treffets UUID). Å indeksere samme dokument to ganger med samme data gir nøyaktig samme resultat. Dette er enklere enn i f.eks. kandidatvarsel-api (som bruker en database med meldingsid-sjekk for å hindre duplikatsending), fordi OpenSearch sin index-operasjon er naturlig idempotent – den overskriver dokumentet med samme ID uten sideeffekter.
+**Feiltoleranse:** Hvis appen krasjer mellom sending og sletting av kø-raden, kan samme `treffId` sendes flere ganger. Indekseren må derfor fortsatt være **idempotent**.
 
-Meldingen inneholder nok data til at indekseren kan bygge fullt dokument uten eget DB-oppslag (denormalisert payload). Dette betyr at outbox-scheduleren i API-et må hente hovedtreffet, hente aggregerte tall for antall jobbsøkere/arbeidsgivere, og hente komplette innlegg for å bygge og sende én ferdig sammensatt JSON-payload på Rapids.
+Idempotensen sikres ved at indekseren bruker OpenSearch **index** med eksplisitt dokument-ID = treffets UUID, altså full utskifting av dokumentet ved hver oppdatering. Å indeksere samme dokument to ganger med samme data gir nøyaktig samme resultat. Dette er enklere enn i f.eks. kandidatvarsel-api, som bruker meldingsid-sjekk i databasen for å hindre duplikatsending. Her er OpenSearch-operasjonen naturlig idempotent når hele dokumentet overskrives med samme ID.
+
+For å holde løsningen enkel brukes samme builder/transformer både ved full reindeksering og ved inkrementelle endringer. I praksis betyr det at vi alltid bygger hele dokumentet for ett `treffId` og skriver hele dokumentet til OpenSearch, i stedet for å forsøke delvise patch-operasjoner.
+
+Meldingen til indekseren skal derfor bare uttrykke at ett bestemt `treffId` må bygges og indekseres på nytt. Selve dokumentet bygges i indekseren med samme builder som brukes ved full reindeksering.
+
+### Konsekvens for implementasjon
+
+Alle relaterte moduler må ende i samme resultat: ett `treffId` som legges i reindekseringskø i samme transaksjon som domeneendringen. `rekrutteringstreff_hendelse` alene er ikke nok; planen må eksplisitt dekke relaterte domener.
 
 ---
 
@@ -250,8 +282,35 @@ Ny app under `rekrutteringstreff-backend/apps/rekrutteringstreff-indekser/`. Fø
 
 - Lytter på Rapids-meldinger fra `rekrutteringstreff-api`
 - Indekserer/oppdaterer/sletter dokument i OpenSearch basert på `@event_name`
-- Støtter full reindeksering via `TreffApiClient` (poll alle treff fra API ved ny indeksversjon)
+- Støtter full reindeksering ved å lese treff fra databasen og bruke samme builder til å lage fullt dokument per treff ved ny indeksversjon
 - Alias-bytte for zero-downtime reindeksering
+
+Indekseren skal ikke anta at bare toppnivå-treffet endres. Den må kunne motta oppdateringer som skyldes relaterte endringer, men alltid ende opp med ett komplett dokument per `treffId`. Den enkleste strategien er å bygge hele dokumentet på nytt ved hver relevant endring og skrive hele dokumentet til OpenSearch.
+
+### Reindekseringsflyt med nytt alias
+
+Normal drift og full reindeksering løses med to ulike mekanismer som virker sammen:
+
+1. Den komprimerte reindekseringskøen per `treffId` håndterer løpende endringer.
+2. Versjonert indeks + alias håndterer trygg full reindeksering.
+
+Full reindeksering bør kjøres slik:
+
+1. Opprett ny indeks, for eksempel `rekrutteringstreff-v2`, uten å endre aktivt alias.
+2. Bygg alle dokumenter fra databasen og skriv dem til den nye indeksen.
+3. Mens dette pågår, fortsetter alle nye domeneendringer å legge `treffId` i reindekseringskøen i samme transaksjon som før.
+4. Etter første fullscan kjøres en catch-up-fase der alle pending `treffId`-er bygges og skrives til den nye indeksen.
+5. Når køen er tom og den nye indeksen er ajour, byttes alias atomisk til den nye indeksen.
+6. Etter aliasbytte fortsetter normal inkrementell indeksering mot den aktive indeksen bak aliaset.
+
+Dette er viktig fordi en ren fullscan ikke er nok. Uten catch-up-fasen vil endringer som skjer underveis kunne mangle i den nye indeksen ved aliasbytte.
+
+Det er ikke nødvendig å legge alle ID-er i outbox som en separat reindekseringsjobb for fullscan. Fullscan skal hente alle treff direkte fra databasen. Køen brukes for å fange opp endringer som skjer underveis og for vanlig inkrementell drift.
+
+Den praktiske tommelfingerregelen blir derfor:
+
+- Ved vanlig drift: legg berørt `treffId` i reindekseringskøen.
+- Ved full reindeksering: bygg alt til ny indeks, drener køen mot ny indeks, og bytt deretter alias.
 
 ### Dokument som indekseres
 
@@ -284,6 +343,8 @@ Ny app under `rekrutteringstreff-backend/apps/rekrutteringstreff-indekser/`. Fø
 }
 ```
 
+Alle feltene over skal forstås som et **denormalisert snapshot** av ett treff. Her betyr snapshot bare "full dokumentrepresentasjon akkurat nå". Det er ikke et krav om å lagre dette i en egen tabell. Kilden er ikke bare `rekrutteringstreff`-tabellen, men også eier-, kontor-, arbeidsgiver-, innlegg- og jobbsøkerdata.
+
 ### Forslag til appstruktur
 
 ```
@@ -303,7 +364,7 @@ apps/rekrutteringstreff-indekser/
         ├── OpenSearchService.kt       ← indeks-livssyklus, alias-bytte
         ├── TreffDokument.kt
         ├── IndekserTreffLytter.kt     ← Rapids-lytter
-        ├── TreffApiClient.kt          ← for full reindeksering
+        ├── TreffDokumentBuilder.kt    ← samler ett fullstendig dokument for ett treff
         └── Liveness.kt
 ```
 
@@ -326,18 +387,30 @@ RekrutteringstreffSøkService       ← bygger query, kaller klient
 OpenSearchKlient                   ← wrapper rundt opensearch-java
 ```
 
+### Viktig avgrensning mot dagens GET-endepunkter
+
+Søke-appen er et nytt lesegrensesnitt for oversikt og filtrering. Den skal **ikke** i første omgang erstatte alle eksisterende GET-endepunkter i `rekrutteringstreff-api`.
+
+Dagens endepunkter brukes fortsatt i andre flyter enn listevisningen, blant annet ved valg av treff i andre skjermbilder og ved detaljvisning. Planen må derfor være:
+
+1. Ny oversiktsliste i frontend flyttes til `POST /api/rekrutteringstreff/sok`.
+2. Eksisterende detaljendepunkter beholdes uendret i første fase.
+3. Full reindeksering kan ikke baseres på dagens eksisterende listeendepunkter alene, siden de ikke returnerer hele søkedokumentet.
+
+Full reindeksering skal derfor bygge dokumentene direkte fra databasen i indekseren, med samme builder-/repository-lag som brukes ved inkrementelle oppdateringer. Det viktige designvalget er at samme builder/transformer brukes både for full reindeksering og inkrementelle oppdateringer, og at OpenSearch alltid får et komplett dokument som erstatter det gamle.
+
 ### Filtre og OpenSearch-clauses
 
-| Filter               | OpenSearch-clause                                                                                                                  |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `fritekst`           | `match` på `all_text_no` + nested `match` på `arbeidsgivere.orgnavn`, `innlegg.tittel` og `innlegg.tekstinnhold` (lav boost)       |
-| `visningsstatuser`   | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus. For aggregeringer brukes Filter Aggregations. |
-| `visAvlyste`         | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                               |
-| `fylkesnummer`       | `terms` på `fylkesnummer`                                                                                                          |
-| `kommunenummer`      | `terms` på `kommunenummer`                                                                                                         |
-| `kontorer` | `terms` på `kontorer`                                                                                                              |
-| `MINE`               | `term` på `eiere` = innlogget navident                                                                                             |
-| `MITT_KONTOR`        | `term` på `kontorer` = innlogget kontor                                                                                            |
+| Filter             | OpenSearch-clause                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `fritekst`         | `match` på `all_text_no` + nested `match` på `arbeidsgivere.orgnavn`, `innlegg.tittel` og `innlegg.tekstinnhold` (lav boost)       |
+| `visningsstatuser` | Sammensatt: `term` på `status` + `range` på `svarfrist`/`tilTid` per visningsstatus. For aggregeringer brukes Filter Aggregations. |
+| `visAvlyste`       | Hvis false: `must_not` `term` `status=AVLYST`. Hvis true: inkludert.                                                               |
+| `fylkesnummer`     | `terms` på `fylkesnummer`                                                                                                          |
+| `kommunenummer`    | `terms` på `kommunenummer`                                                                                                         |
+| `kontorer`         | `terms` på `kontorer`                                                                                                              |
+| `MINE`             | `term` på `eiere` = innlogget navident                                                                                             |
+| `MITT_KONTOR`      | `term` på `kontorer` = innlogget kontor                                                                                            |
 
 `SLETTET`-status filtreres alltid bort (`must_not` `term` `status=SLETTET`).
 
@@ -394,20 +467,23 @@ En alternativ løsning er at statusfeltet i søkeindeksen har en 1:1-mapping med
 
 Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart steg.
 
-### Oppgave 1: Outbox i rekrutteringstreff-api
+### Oppgave 1: Komprimert reindekseringskø i rekrutteringstreff-api
 
-1. Opprett `rekrutteringstreff_rapids_kvittering`-tabell (Flyway-migrasjon)
-2. Scheduler plukker usendte rader fra `rekrutteringstreff_hendelse` (LEFT JOIN mot kvittering)
-3. Scheduler sender Rapids-melding og skriver kvitteringsrad med `sendt_tidspunkt` etter vellykket sending
+1. Opprett `rekrutteringstreff_reindeksering`-tabell (Flyway-migrasjon) med `treff_id` som primærnøkkel
+2. Legg alle indekseringsrelevante endringer inn i køen i samme transaksjon som domeneendringen, med `insert ... on conflict do update`
+3. Scheduler plukker pending `treffId`-er fra køen
+4. Scheduler sender Rapids-melding med `treffId` og sletter raden etter vellykket sending
+5. Legg til tester som verifiserer at domeneendring og kø-innskriving rollbackes samlet ved feil
 
 ### Oppgave 2: Indekser-app
 
 1. Opprett `rekrutteringstreff-indekser`-modul
 2. Definer mapping og settings (norsk analyzer, nested for arbeidsgivere og innlegg)
 3. Implementer `IndexClient`, `OpenSearchService`, alias-logikk
-4. Implementer `TreffApiClient` for full reindeksering ved oppstart
+4. Implementer `TreffDokumentBuilder` og repositories/spørringer for å bygge fullt dokument per treff
 5. Implementer `IndekserTreffLytter` for inkrementelle oppdateringer
-6. Deploy til dev, verifiser data
+6. Implementer full reindekseringsflyt: ny indeks, fullscan, catch-up fra reindekseringskø og atomisk aliasbytte
+7. Deploy til dev, verifiser data
 
 ### Oppgave 3: Søke-app
 
@@ -430,6 +506,8 @@ Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart 
 
 ## Tilgang i søk
 
+> Tabellen under beskriver **målbildet for det nye søke-endepunktet**. Dette er ikke identisk med dagens semantikk i `GET /api/rekrutteringstreff` og `GET /api/rekrutteringstreff/mittkontor`, og må derfor behandles som en bevisst funksjonell endring.
+
 Søket har tre **visninger** (faner i frontend): `ALLE`, `MINE` og `MITT_KONTOR`. Visningen bestemmer **scope** – altså hvilke treff som er med i resultatet. Rollen bestemmer **tilgang** – om du i det hele tatt får lov til å bruke en visning, og om noen statuser filtreres bort.
 
 Roller (fra AD-grupper): **Jobbsøkerrettet** (lesetilgang), **Arbeidsgiverrettet** (opprette/administrere treff), **Utvikler/Admin** (full tilgang, ingen pilotkontor-krav). Se [tilgangsstyring.md](../3-sikkerhet/tilgangsstyring.md) for detaljer.
@@ -443,6 +521,16 @@ Pilotkontor-krav håndheves som pre-flight-sjekk i controller (403 før søk kj�
 | `MITT_KONTOR` | `kontorer` inneholder aktivEnhet + `PUBLISERT` | `kontorer` inneholder aktivEnhet   | `kontorer` inneholder aktivEnhet   |
 
 Rollefilter legges alltid server-side, uavhengig av hva klienten sender inn. Ugyldig visning/rolle-kombinasjon gir 403.
+
+### Dagens semantikk som avviker fra målbildet
+
+Dette må synliggjøres før implementasjon slik at vi ikke uforvarende bygger produktendringer under dekke av teknisk migrering:
+
+- Dagens `GET /api/rekrutteringstreff` for Nav-brukere betyr i praksis «mine eller publiserte», ikke «alle`.
+- Dagens `GET /api/rekrutteringstreff/mittkontor` betyr i praksis «publiserte treff opprettet av mitt kontor med `tilTid` i fremtiden», ikke generisk filter på `kontorer`.
+- Dagens backend har ikke status `AVPUBLISERT`; avpublisering setter status tilbake til `UTKAST` og skriver hendelsen `AVPUBLISERT`.
+
+Hvis vi ønsker å bevare dagens brukeropplevelse, må query-builderen implementere dagens regler. Hvis vi ønsker nytt målbilde, må endringen avklares eksplisitt med produkt før frontend kobles over.
 
 ### Hva vises i UI per rolle og visning
 
@@ -533,6 +621,15 @@ Treff-søk følger samme mønster som kandidatsøk:
      | `ELDSTE`          | `opprettetAvTidspunkt` | asc     | –                                       |
      | `AKTIVE`          | `fraTid`               | asc     | `status = PUBLISERT` og `fraTid >= now` |
      | `FULLFØRTE`       | `tilTid`               | desc    | `status = FULLFØRT`                     |
+
+### Migrering i frontend
+
+Første migreringssteg bør være smalt og reverserbart:
+
+1. Bytt kun oversiktsvisningen for rekrutteringstreff til nytt søke-endepunkt.
+2. Behold detaljvisning, mutasjoner og hjelpelister på eksisterende endepunkter i første omgang.
+3. La query-parametre i frontend speile `RekrutteringstreffSøkRequest`, slik at URL og backend-modell samsvarer.
+4. Innfør egne komponent- og integrasjonstester for rolle × visning × filterkombinasjoner før gammel klientfiltrering fjernes.
 
 ---
 
