@@ -323,7 +323,7 @@ Domeneeksperter kan overprøve KI-vurderinger via admin-grensesnitt:
 | Felt                                     | Beskrivelse                |
 | ---------------------------------------- | -------------------------- |
 | `manuell_kontroll_bryter_retningslinjer` | Domeneekspertens vurdering |
-| `manuell_kontroll_utført_av`             | NAV-ident for kontrollør   |
+| `manuell_kontroll_utført_av`             | Nav-ident for kontrollør   |
 | `manuell_kontroll_tidspunkt`             | Når kontrollen ble utført  |
 
 ### Admin-grensesnitt

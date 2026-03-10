@@ -252,7 +252,7 @@ Hendelser skiller mellom **aktør** (hvem som utførte handlingen) og **subjekt*
 
 | Tabell                        | `subjekt_id`                                                                       | `subjekt_navn`                    | Eksempel                                                                                                          |
 | ----------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `rekrutteringstreff_hendelse` | Lagret direkte i kolonner (V2). Kun satt for eier-/kontorhendelser, ellers `null`. | Samme                             | `EIER_LAGT_TIL`: id=`B654321` (NAV-ident). `EIER_FJERNET`: id=`B654321`. `KONTOR_LAGT_TIL`: id=`0301` (enhet-ID). |
+| `rekrutteringstreff_hendelse` | Lagret direkte i kolonner (V2). Kun satt for eier-/kontorhendelser, ellers `null`. | Samme                             | `EIER_LAGT_TIL`: id=`B654321` (Nav-ident). `EIER_FJERNET`: id=`B654321`. `KONTOR_LAGT_TIL`: id=`0301` (enhet-ID). |
 | `jobbsoker_hendelse`          | Avledet via JOIN: `jobbsoker.fodselsnummer`                                        | `fornavn \|\| ' ' \|\| etternavn` | id=`12345678901`, navn=`Ola Nordmann`                                                                             |
 | `arbeidsgiver_hendelse`       | Avledet via JOIN: `arbeidsgiver.orgnr`                                             | `arbeidsgiver.orgnavn`            | id=`912345678`, navn=`Kiwi Grønland`                                                                              |
 

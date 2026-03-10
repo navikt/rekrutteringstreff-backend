@@ -402,7 +402,7 @@ class RekrutteringstreffController(
   {"id": "e5f6g7h8-...", "ressurs": "REKRUTTERINGSTREFF", "tidspunkt": "2025-04-23T10:01:00+02:00", "hendelsestype": "EIER_LAGT_TIL", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "B654321", "subjektNavn": "B654321"},
   {"id": "i9j0k1l2-...", "ressurs": "REKRUTTERINGSTREFF", "tidspunkt": "2025-04-23T10:02:00+02:00", "hendelsestype": "KONTOR_LAGT_TIL", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "0301", "subjektNavn": "0301"},
   {"id": "m3n4o5p6-...", "ressurs": "JOBBSØKER", "tidspunkt": "2025-04-23T10:05:00+02:00", "hendelsestype": "OPPRETTET", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "12345678901", "subjektNavn": "Ola Nordmann"},
-  {"id": "q7r8s9t0-...", "ressurs": "ARBEIDSGIVER", "tidspunkt": "2025-04-23T10:07:00+02:00", "hendelsestype": "OPPRETTET", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "912345678", "subjektNavn": "NAV OSLO AS"}
+  {"id": "q7r8s9t0-...", "ressurs": "ARBEIDSGIVER", "tidspunkt": "2025-04-23T10:07:00+02:00", "hendelsestype": "OPPRETTET", "opprettetAvAktørType": "ARRANGØR", "aktørIdentifikasjon": "A123456", "subjektId": "912345678", "subjektNavn": "Nav Oslo AS"}
 ]"""
                 )]
             ),

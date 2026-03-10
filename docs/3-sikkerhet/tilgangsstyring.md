@@ -98,7 +98,7 @@ Full tilgang til alle funksjoner, inkludert:
 
 ## Eierskap
 
-Hvert rekrutteringstreff har én eller flere **eiere** (NAV-identer lagret i `eiere text[]`). Eierskap styrer hvem som kan redigere treffet, invitere deltakere og administrere andre eiere.
+Hvert rekrutteringstreff har én eller flere **eiere** (Nav-identer lagret i `eiere text[]`). Eierskap styrer hvem som kan redigere treffet, invitere deltakere og administrere andre eiere.
 
 **Regler:**
 

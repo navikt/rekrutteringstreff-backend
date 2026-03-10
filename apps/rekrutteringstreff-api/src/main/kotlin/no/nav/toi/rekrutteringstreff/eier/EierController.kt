@@ -52,14 +52,14 @@ class EierController(
 
     @OpenApi(
         summary = "Hent eierne til et rekrutteringstreff",
-        description = "Returnerer liste med NAV-identer for alle eiere. Tilgjengelig for arbeidsgiverrettet og jobbsøkerrettet rolle.",
+        description = "Returnerer liste med Nav-identer for alle eiere. Tilgjengelig for arbeidsgiverrettet og jobbsøkerrettet rolle.",
         operationId = "hentEiere",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
         responses = [
             OpenApiResponse(
                 status = "200",
-                description = "Liste med NAV-identer",
+                description = "Liste med Nav-identer",
                 content = [OpenApiContent(
                     from = Array<String>::class,
                     example = """["A123456", "Z999999"]"""
@@ -86,7 +86,7 @@ class EierController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [
             OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID"),
-            OpenApiParam(name = "navIdent", type = String::class, description = "NAV-identen som skal fjernes som eier")
+            OpenApiParam(name = "navIdent", type = String::class, description = "Nav-identen som skal fjernes som eier")
         ],
         responses = [
             OpenApiResponse(status = "200", description = "Eier fjernet"),
