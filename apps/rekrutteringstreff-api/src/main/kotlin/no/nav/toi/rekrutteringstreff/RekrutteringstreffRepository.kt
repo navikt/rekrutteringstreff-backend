@@ -314,13 +314,14 @@ class RekrutteringstreffRepository(
         ident: String,
         subjektId: String? = null,
         subjektNavn: String? = null,
+        hendelseData: String? = null,
     ) {
         val dbId = connection.prepareStatement("SELECT rekrutteringstreff_id FROM $tabellnavn WHERE $id=?")
             .apply { setObject(1, treff.somUuid) }
             .executeQuery()
             .let { rs -> if (rs.next()) rs.getLong(1) else throw NotFoundResponse("Treff med id ${treff.somUuid} finnes ikke") }
 
-        leggTilHendelse(connection, dbId, hendelsestype, AktørType.ARRANGØR, ident, subjektId, subjektNavn)
+        leggTilHendelse(connection, dbId, hendelsestype, AktørType.ARRANGØR, ident, subjektId, subjektNavn, hendelseData)
     }
 
     fun hentRekrutteringstreffDbId(c: Connection, treff: TreffId): Long {
@@ -341,14 +342,15 @@ class RekrutteringstreffRepository(
         ident: String,
         subjektId: String? = null,
         subjektNavn: String? = null,
+        hendelseData: String? = null,
     ) {
         c.prepareStatement(
             """
             INSERT INTO rekrutteringstreff_hendelse
                    (id, rekrutteringstreff_id, tidspunkt,
                     hendelsestype, opprettet_av_aktortype, aktøridentifikasjon,
-                    subjekt_id, subjekt_navn)
-            VALUES (?, ?, now(), ?, ?, ?, ?, ?)
+                    subjekt_id, subjekt_navn, hendelse_data)
+            VALUES (?, ?, now(), ?, ?, ?, ?, ?, ?::jsonb)
             """
         ).use { s ->
             s.setObject(1, UUID.randomUUID())
@@ -358,6 +360,7 @@ class RekrutteringstreffRepository(
             s.setString(5, ident)
             s.setString(6, subjektId)
             s.setString(7, subjektNavn)
+            s.setString(8, hendelseData)
             s.executeUpdate()
         }
     }

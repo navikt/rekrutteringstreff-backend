@@ -5,7 +5,7 @@
 | Komponent                                              | Status                           |
 | ------------------------------------------------------ | -------------------------------- |
 | `eiere text[]` i DB                                    | ✅ Implementert                  |
-| `GET /eiere`, `PUT /eiere`, `DELETE /eiere/{navIdent}` | ✅ Implementert                  |
+| `GET /eiere`, `DELETE /eiere/{navIdent}`               | ✅ Implementert                  |
 | `EierService.erEierEllerUtvikler()`                    | ✅ Implementert                  |
 | `RekrutteringstreffDto.eiere`                          | ✅ Implementert                  |
 | `useErTreffEier()` i frontend                          | ✅ Implementert                  |
@@ -17,7 +17,7 @@
 | `KONTOR_LAGT_TIL` i frontend constants og ikon         | ✅ Implementert                  |
 | Feilhåndtering (visVarsel) i frontend mutations        | ✅ Implementert                  |
 | Race condition-sikring (`leggTilMegSomEier`)           | ✅ Implementert                  |
-| Hendelseslogging for bulk `PUT /eiere`                 | ✅ Implementert                  |
+| Hendelseslogging for slett eier (`DELETE /eiere`)      | ✅ Implementert                  |
 | Min 1 eier-guard (SQL-nivå) ved slett                  | ✅ Implementert                  |
 | Komponenttester for `/eiere/meg`                       | ✅ Implementert                  |
 | `kontorer text[]` DB-migrasjon (V2)                    | ✅ Implementert                  |
@@ -45,19 +45,19 @@
 
 - Ingen request body – bruker sin egen navIdent
 - Krav: rolle `ARBEIDSGIVER_RETTET` eller `UTVIKLER`
-- Idempotent: allerede eier → 200 (OK), ny eier → 201 (Created)
+- Idempotent: gir alltid 200 (OK) enten brukeren allerede var eier eller ble lagt til ny.
 
 **Begrunnelse for metodevalg (PUT) og idempotens:**
-Vi velger `PUT` fordi endepunktet representerer en operasjon for å "sikre en tilstand" (brukeren _skal_ være eier). Ved `POST` ville forventningen gjerne vært å opprette en ny, unik ressurs hver gang, noe som ofte gir en "Conflict" (409) feilmelding om ressursen/knytningen finnes fra før. Ved å gjøre operasjonen idempotent med `PUT`, gjør vi klientkoden mer robust, for eksempel i møte med nettverksproblemer der klienten forsøker operasjonen på nytt. Tilstanden på serveren blir den samme uansett om kallet utføres én eller ti ganger. Returkoden skiller mellom _når tilstanden ble endret_ (201 Created) og _når tilstanden allerede var riktig_ (200 OK).
+Vi velger `PUT` fordi endepunktet representerer en operasjon for å "sikre en tilstand" (brukeren _skal_ være eier). Ved `POST` ville forventningen gjerne vært å opprette en ny, unik ressurs hver gang, noe som ofte gir en "Conflict" (409) feilmelding om ressursen/knytningen finnes fra før. Ved å gjøre operasjonen idempotent med `PUT`, gjør vi klientkoden mer robust, for eksempel i møte med nettverksproblemer der klienten forsøker operasjonen på nytt. Returkoden er alltid 200 OK, uansett om brukeren allerede var eier eller ble lagt til som ny eier, siden tilstanden på server er sikret i begge tilfeller.
 
 ### 1.2 Hendelseslogging
 
 Logges i `rekrutteringstreff_hendelse` fra `EierService`:
 
-| Hendelsestype     | `hendelse_data`                    | `aktøridentifikasjon`       |
-| ----------------- | ---------------------------------- | --------------------------- |
-| `EIER_LAGT_TIL`   | `{ "navIdentLagtTil": "A123456" }` | Den som utfører operasjonen |
-| `KONTOR_LAGT_TIL` | `{ "kontorEnhetId": "0318" }`      | Den som utfører operasjonen |
+| Hendelsestype     | `subjekt_id` / `subjekt_navn` | `aktøridentifikasjon`       |
+| ----------------- | ----------------------------- | --------------------------- |
+| `EIER_LAGT_TIL`   | navIdent (f.eks `A123456`)    | Den som utfører operasjonen |
+| `KONTOR_LAGT_TIL` | kontorEnhetId (f.eks `0318`)  | Den som utfører operasjonen |
 
 ### 1.3 Tilgangskontroll – gjennomgang
 
@@ -100,7 +100,7 @@ For at eierskap-hendelser vises i hendelsesloggen (`Hendelser.tsx`) må disse st
 
 - **`constants.ts`** – legg til `EIER_LAGT_TIL` og `KONTOR_LAGT_TIL` i `RekrutteringstreffHendelsestype` og tilhørende labels
 - **`HentHendelseIkon.tsx`** – ikon for `EIER_LAGT_TIL` (`PersonPlusIcon`) og `KONTOR_LAGT_TIL` (`Buildings3Icon`)
-- **allehendelser-API** – berik hendelser med data fra `hendelse_data` via `COALESCE` slik at det vises i "Gjelder"-kolonnen
+- **allehendelser-API** – berik hendelser med data direkte fra kolonnene `subjekt_id` og `subjekt_navn` slik at det vises i "Gjelder"-kolonnen
 
 ---
 
