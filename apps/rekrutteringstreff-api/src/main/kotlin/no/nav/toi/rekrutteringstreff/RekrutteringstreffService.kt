@@ -137,6 +137,16 @@ class RekrutteringstreffService(
         return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontor)
     }
 
+    fun hentAlleRekrutteringstreffSomErMineEllerPubliserte(navIdent: String): List<RekrutteringstreffDto> {
+        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleSomErMineEllerPubliserteOgIkkeSlettet(navIdent)
+        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreff)
+    }
+
+    fun hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt(kontorId: String): List<RekrutteringstreffDto> {
+        val alleRekrutteringstreffForKontorSomErPublisertMedFremtidigTilTidspunkt = rekrutteringstreffRepository.hentAlleForEttKontorSomErPublisertMedFremtidigTilTispunkt(kontorId)
+        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontorSomErPublisertMedFremtidigTilTidspunkt)
+    }
+
     private fun tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(rekrutteringstreffListe: List<Rekrutteringstreff>): List<RekrutteringstreffDto> {
         val rekrutteringstreffDto: ArrayList<RekrutteringstreffDto> = ArrayList<RekrutteringstreffDto>()
         rekrutteringstreffListe.forEach {

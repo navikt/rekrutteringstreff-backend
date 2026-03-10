@@ -5,11 +5,10 @@ import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLog
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
-import no.nav.toi.exception.SvarfristUtløptException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
-import no.nav.toi.nowOslo
+import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Instant
 import org.slf4j.Logger
@@ -25,14 +24,27 @@ class JobbsøkerService(
 
     fun leggTilJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, navIdent: String) {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
-        val nyeJobbsøkere = jobbsøkere.filterNot { eksisterendeJobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } }
-        if (nyeJobbsøkere.isNotEmpty()) {
-            dataSource.executeInTransaction { connection ->
-                val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId)
+        val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
+
+        val nyeJobbsøkereSomIkkeHarVærtSlettet = jobbsøkere.filterNot { eksisterendeJobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } || slettedeJobbsøkere.any { slettet -> slettet.fødselsnummer == it.fødselsnummer } }
+
+        val nyeJobbsøkereSomHarVærtSlettet = slettedeJobbsøkere.filter { jobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } }.map { it.personTreffId }
+
+        dataSource.executeInTransaction { connection ->
+            if (nyeJobbsøkereSomIkkeHarVærtSlettet.isNotEmpty()) {
+                log.info("Legger til ${nyeJobbsøkereSomIkkeHarVærtSlettet.size} nye jobbsøkere for treff $treffId")
+                val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkereSomIkkeHarVærtSlettet, treffId)
                 jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
+
+                // Synlighetsbehov publiseres av SynlighetsBehovScheduler som periodisk
+                // finner jobbsøkere uten evaluert synlighet og trigger need-meldinger.
             }
-            // Synlighetsbehov publiseres av SynlighetsBehovScheduler som periodisk
-            // finner jobbsøkere uten evaluert synlighet og trigger need-meldinger.
+
+            if (nyeJobbsøkereSomHarVærtSlettet.isNotEmpty()) {
+                log.info("Gjenoppretter ${nyeJobbsøkereSomHarVærtSlettet.size} jobbsøkere for treff $treffId som tidligere har vært slettet")
+                jobbsøkerRepository.endreStatus(connection = connection, personTreffIder = nyeJobbsøkereSomHarVærtSlettet, jobbsøkerStatus = JobbsøkerStatus.LAGT_TIL)
+                jobbsøkerRepository.leggTilOpprettetHendelser(connection = connection, personTreffIder = nyeJobbsøkereSomHarVærtSlettet, opprettetAv = navIdent)
+            }
         }
     }
 
@@ -134,6 +146,10 @@ class JobbsøkerService(
 
     fun hentJobbsøkere(treffId: TreffId): List<Jobbsøker> {
         return jobbsøkerRepository.hentJobbsøkere(treffId)
+    }
+
+    fun hentSlettedeJobbsøkereUtenHendelser(treffId: TreffId): List<Jobbsøker> {
+        return jobbsøkerRepository.hentSlettedeJobbsøkere(treffId)
     }
 
     /**

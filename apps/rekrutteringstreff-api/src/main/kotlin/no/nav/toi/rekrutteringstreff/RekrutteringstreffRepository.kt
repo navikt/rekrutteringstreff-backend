@@ -154,6 +154,46 @@ class RekrutteringstreffRepository(
             }
         }
 
+    fun hentAlleSomErMineEllerPubliserteOgIkkeSlettet(navIdent: String): List<Rekrutteringstreff> =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT * FROM $tabellnavn where ($status = ? or ? = ANY($eiere)) and $status != ?").use { s ->
+                s.setString(1, RekrutteringstreffStatus.PUBLISERT.name)
+                s.setString(2, navIdent)
+                s.setString(3, RekrutteringstreffStatus.SLETTET.name)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+
+    fun hentAlleForEttKontorSomIkkeErSlettet(kontorId: String): List<Rekrutteringstreff> =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT * FROM $tabellnavn WHERE status != ? AND $kontorer @> ARRAY[?]::text[]").use { s ->
+                s.setString(1, RekrutteringstreffStatus.SLETTET.name)
+                s.setString(2, kontorId)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+
+    fun hentAlleForEttKontorSomErPublisertMedFremtidigTilTispunkt(kontorId: String): List<Rekrutteringstreff> =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT * FROM $tabellnavn WHERE status = ? AND tiltid > CURRENT_TIMESTAMP AND $opprettetAvKontorEnhetid = ?").use { s ->
+                s.setString(1, RekrutteringstreffStatus.PUBLISERT.name)
+                s.setObject(2, kontorId)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+
     fun hent(treff: TreffId): Rekrutteringstreff? =
         dataSource.connection.use { c ->
             c.prepareStatement("SELECT * FROM $tabellnavn WHERE $id = ?").use { s ->

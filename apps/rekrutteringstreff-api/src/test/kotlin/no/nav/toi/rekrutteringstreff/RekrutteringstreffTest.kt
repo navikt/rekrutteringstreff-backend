@@ -172,11 +172,11 @@ class RekrutteringstreffTest {
     fun hentAlleRekrutteringstreff() {
         val tittel1 = "Tittel1111111"
         val tittel2 = "Tittel2222222"
-        db.opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffMedAlleFelter(
             navIdent = "navident1",
             tittel = tittel1,
         )
-        db.opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffMedAlleFelter(
             navIdent = "navIdent2",
             tittel = tittel2,
         )

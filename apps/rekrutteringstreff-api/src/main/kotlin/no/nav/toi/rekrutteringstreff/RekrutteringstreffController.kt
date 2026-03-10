@@ -131,9 +131,14 @@ class RekrutteringstreffController(
         methods = [HttpMethod.GET]
     )
     private fun hentAlleRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
-        log.info("Henter alle rekrutteringstreff")
-        ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
+        if (ctx.authenticatedUser().erUtvikler()) {
+            log.info("Hent alle rekrutteringstreff - er utvikler så viser alle rekrutteringstreff")
+            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
+        } else {
+            ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+            log.info("Henter alle rekrutteringstreff")
+            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffSomErMineEllerPubliserte(ctx.authenticatedUser().extractNavIdent()))
+        }
     }
 
        @OpenApi(
@@ -155,7 +160,7 @@ class RekrutteringstreffController(
                         "gateadresse": "Malmøgata 1",
                         "postnummer": "0566",
                         "poststed": "Oslo",
-                        "status": "UTKAST",
+                        "status": "PUBLISERT",
                         "opprettetAvPersonNavident": "A123456",
                         "opprettetAvNavkontorEnhetId": "0318",
                         "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
@@ -174,12 +179,13 @@ class RekrutteringstreffController(
        if (kontorId.isNullOrEmpty() && ctx.authenticatedUser().erUtvikler()) {
            log.info("Utvikler som ikke har valgt et kontor - henter alle rekrutteringstreff")
            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
+       } else {
+           if (kontorId.isNullOrEmpty()) {
+               throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
+           }
+           log.info("Henter alle rekrutteringstreff for kontor $kontorId")
+           ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt(kontorId))
        }
-       if (kontorId.isNullOrEmpty()) {
-           throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
-       }
-       log.info("Henter alle rekrutteringstreff for kontor $kontorId")
-       ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor(kontorId))
     }
 
     @OpenApi(
