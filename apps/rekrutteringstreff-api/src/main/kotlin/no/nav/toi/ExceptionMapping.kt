@@ -7,7 +7,6 @@ import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.HttpStatus
 import io.opentelemetry.api.trace.Span
-import io.opentelemetry.api.trace.SpanContext
 import no.nav.toi.exception.*
 import java.sql.SQLException
 import java.time.LocalDateTime
