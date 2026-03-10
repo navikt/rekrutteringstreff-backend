@@ -66,11 +66,12 @@ class EierRepository(
             """
                     UPDATE $rekrutteringstreff
                     SET $eiere = array_remove($eiere, ?) 
-                    WHERE $id = ? AND array_length($eiere, 1) > 1
+                    WHERE $id = ? AND array_length($eiere, 1) > 1 AND $eiere @> ARRAY[?]::text[]
                 """.trimIndent()
         ).use { stmt ->
             stmt.setString(1, eier)
             stmt.setObject(2, treff.somUuid)
+            stmt.setString(3, eier)
             return stmt.executeUpdate() > 0
         }
     }

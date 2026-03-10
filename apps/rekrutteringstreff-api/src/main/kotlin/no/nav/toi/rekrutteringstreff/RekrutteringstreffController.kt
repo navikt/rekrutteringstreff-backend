@@ -381,7 +381,7 @@ class RekrutteringstreffController(
 
     @OpenApi(
         summary = "Hent ALLE hendelser for et rekrutteringstreff (jobbsøker, arbeidsgiver, treff)",
-        description = "Samler hendelser fra rekrutteringstreff, jobbsøker og arbeidsgiver i én sortert liste. Krever at innlogget bruker er eier eller utvikler. Feltet 'subjektId'/'subjektNavn' identifiserer hvem/hva hendelsen gjelder — for jobbsøker: fødselsnummer/navn via FK, for arbeidsgiver: orgnr/orgnavn via FK, for rekrutteringstreff: lagret direkte på hendelsen (kun EIER_LAGT_TIL og KONTOR_LAGT_TIL, null for øvrige).",
+        description = "Samler hendelser fra rekrutteringstreff, jobbsøker og arbeidsgiver i én sortert liste. Krever at innlogget bruker er eier eller utvikler. Feltet 'subjektId'/'subjektNavn' identifiserer hvem/hva hendelsen gjelder — for jobbsøker: fødselsnummer/navn via FK, for arbeidsgiver: orgnr/orgnavn via FK, for rekrutteringstreff: lagret direkte på hendelsen (EIER_LAGT_TIL, EIER_FJERNET og KONTOR_LAGT_TIL, null for øvrige).",
         operationId = "hentAlleHendelser",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, description = "Rekrutteringstreffets UUID")],

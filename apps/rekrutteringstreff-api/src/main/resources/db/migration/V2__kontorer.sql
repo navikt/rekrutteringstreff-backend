@@ -1,4 +1,4 @@
-ALTER TABLE rekrutteringstreff ADD COLUMN kontorer text[];
+ALTER TABLE rekrutteringstreff ADD COLUMN kontorer text[] NOT NULL DEFAULT '{}'::text[];
 
 UPDATE rekrutteringstreff
 SET kontorer = ARRAY[opprettet_av_kontor_enhetid]

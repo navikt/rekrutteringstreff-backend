@@ -83,7 +83,7 @@ _(Visning av selve eier-listen holdes utenfor i første mvp for å unngå komple
 
 Klikk på "Legg til meg som eier" åpner en bekreftelsesdialog før kallet sendes:
 
-> **Bli eier av dette treffet?**
+> **Bli medeier av dette treffet?**
 >
 > Som eier får du tilgang til å jobbe med treffet. Det innebærer blant annet at du kan se påmeldte kandidater, sende invitasjoner og se svarstatus.
 >

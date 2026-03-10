@@ -29,7 +29,8 @@ class EierService(
 
     fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String? = null) {
         val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
-        if (eiere?.contains(navIdent) == true) return
+            ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
+        if (eiere.contains(navIdent)) return
 
         eierRepository.leggTil(connection, treffId, listOf(navIdent))
         rekrutteringstreffRepository.leggTilHendelseForTreff(
@@ -56,10 +57,15 @@ class EierService(
 
     fun slettEier(treffId: TreffId, eierNavIdent: String, utførtAv: String) {
         dataSource.executeInTransaction { connection ->
-            val fjernet = eierRepository.slett(connection, treffId, eierNavIdent)
-            if (!fjernet) {
+            val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
+                ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
+            if (!eiere.contains(eierNavIdent)) {
+                throw NotFoundResponse("Eier med navIdent $eierNavIdent finnes ikke for rekrutteringstreff ${treffId.somString}")
+            }
+            if (eiere.size <= 1) {
                 throw BadRequestResponse("Kan ikke slette siste eier for rekrutteringstreff ${treffId.somString}")
             }
+            eierRepository.slett(connection, treffId, eierNavIdent)
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.EIER_FJERNET, utførtAv,
                 subjektId = eierNavIdent, subjektNavn = eierNavIdent,
