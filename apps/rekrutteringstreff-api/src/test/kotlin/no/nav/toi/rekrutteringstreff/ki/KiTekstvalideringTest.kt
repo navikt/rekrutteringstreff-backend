@@ -15,6 +15,9 @@ private const val MAX_LENGDE_PROMPT_NAVN = 40
 private const val TESTRESULTATER_FIL = "robTestresultater.txt"
 // Testen skriver resultatene på et mer lesbart format enn loggene til filen definert over
 
+/**
+ * For å kjøre testen må man sette OPENAI_API_KEY som environment variabel. Den finnes som secret i dev under openai-toi-rekrutteringstreff
+ */
 @Disabled("Testen skal kun kjøres manuelt ved behov")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiTekstvalideringTest {
