@@ -665,7 +665,7 @@ class JobbsøkerServiceTest {
     }
 
     @Test
-    fun `legg tilbake slettet jobbsøker oppretter ny rad og jobbsøker vises i listen`() {
+    fun `legg tilbake slettet jobbsøker oppretter ikke en ny rad og jobbsøker vises i listen`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val fnr = Fødselsnummer("12345678901")
         val jobbsøkerData = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
@@ -681,11 +681,41 @@ class JobbsøkerServiceTest {
         // Legg til jobbsøkeren igjen
         jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøkerData), treffId, "testperson")
         
-        // Verifiser at jobbsøkeren vises igjen med ny personTreffId
+        // Verifiser at jobbsøkeren vises i listen med samme personTreffId
         val jobbsøkereListe = jobbsøkerService.hentJobbsøkere(treffId)
         assertThat(jobbsøkereListe).hasSize(1)
         assertThat(jobbsøkereListe.first().fødselsnummer).isEqualTo(fnr)
-        // Ny personTreffId fordi det er en ny rad
-        assertThat(jobbsøkereListe.first().personTreffId).isNotEqualTo(personTreffId)
+        assertThat(jobbsøkereListe.first().personTreffId).isEqualTo(personTreffId)
+    }
+
+    @Test
+    fun `kan legge til både nye og tidligere slettede jobbsøkere og status blir riktig`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+
+        val jobbsøker1 = LeggTilJobbsøker(Fødselsnummer("00000000001"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val jobbsøker2 = LeggTilJobbsøker(Fødselsnummer("00000000002"), Fornavn("Pål"), Etternavn("Askeladd"), null, null, null)
+        val jobbsøker3 = LeggTilJobbsøker(Fødselsnummer("00000000003"), Fornavn("Per"), Etternavn("Askeladd"), null, null, null)
+        val jobbsøker4 = LeggTilJobbsøker(Fødselsnummer("00000000004"), Fornavn("Espen"), Etternavn("Askeladd"), null, null, null)
+        val jobbsøker5 = LeggTilJobbsøker(Fødselsnummer("00000000005"), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null)
+
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker1), treffId, "testperson")
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker2), treffId, "testperson")
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker3), treffId, "testperson")
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker4), treffId, "testperson")
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker5), treffId, "testperson")
+
+        val jobbsøker1PersonTreffId = jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer("00000000001"))!!.personTreffId
+        val jobbsøker2PersonTreffId = jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer("00000000002"))!!.personTreffId
+        jobbsøkerService.markerSlettet(jobbsøker1PersonTreffId, treffId, "testperson")
+        jobbsøkerService.markerSlettet(jobbsøker2PersonTreffId, treffId, "testperson")
+
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker1), treffId, "testperson")
+
+        val jobbsøkerSomErLagtTilIgjen = jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer("00000000001"))
+        assertThat(jobbsøkerSomErLagtTilIgjen).isNotNull
+        assertThat(jobbsøkerSomErLagtTilIgjen!!.status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
+
+        val jobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkere).hasSize(4)
     }
 }

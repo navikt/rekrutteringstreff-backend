@@ -13,6 +13,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.ArrayList
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -28,7 +29,8 @@ class RekrutteringstreffService(
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
-    private val jobbsøkerService: JobbsøkerService
+    private val jobbsøkerService: JobbsøkerService,
+    private val eierService: EierService,
 ) {
     private val logger: Logger = log
 
@@ -131,8 +133,18 @@ class RekrutteringstreffService(
     }
 
     fun hentAlleRekrutteringstreffForEttKontor(kontorId: String): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentAlleForEttKontorSomIkkeErSlettet(kontorId)
+        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentIkkeSlettedeForKontor(kontorId)
         return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontor)
+    }
+
+    fun hentAlleRekrutteringstreffSomErMineEllerPubliserte(navIdent: String): List<RekrutteringstreffDto> {
+        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleSomErMineEllerPubliserteOgIkkeSlettet(navIdent)
+        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreff)
+    }
+
+    fun hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt(kontorId: String): List<RekrutteringstreffDto> {
+        val alleRekrutteringstreffForKontorSomErPublisertMedFremtidigTilTidspunkt = rekrutteringstreffRepository.hentAlleForEttKontorSomErPublisertMedFremtidigTilTispunkt(kontorId)
+        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontorSomErPublisertMedFremtidigTilTidspunkt)
     }
 
     private fun tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(rekrutteringstreffListe: List<Rekrutteringstreff>): List<RekrutteringstreffDto> {
@@ -283,6 +295,11 @@ class RekrutteringstreffService(
                 RekrutteringstreffHendelsestype.OPPRETTET,
                 AktørType.ARRANGØR,
                 internalDto.opprettetAvPersonNavident
+            )
+            eierService.leggTilEierMedKontor(
+                connection, treffId,
+                internalDto.opprettetAvPersonNavident,
+                internalDto.opprettetAvNavkontorEnhetId
             )
             treffId
         }

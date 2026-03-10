@@ -7,9 +7,9 @@ import java.time.ZonedDateTime
 import kotlin.text.Charsets.UTF_8
 
 object SystemPrompt {
-    const val versjonsnummer = 4
-    private const val tidsstempelUtenSone = "2025-10-29T12:00:00"
-    const val hash = "a082f3" // Viktig: Inkrementer alltid versjonsnummer og tidsstempel samtidig med at denne endres
+    const val versjonsnummer = 5
+    private const val tidsstempelUtenSone = "2026-03-10T12:50:00"
+    const val hash = "d35ce2" // Viktig: Inkrementer alltid versjonsnummer og tidsstempel samtidig med at denne endres
 
     private const val VALIDATION_SYSTEM_MESSAGE = """
         Du er ekspert på å vurdere tekst for rekrutteringstreff. Ikke oppgi personopplysninger i begrunnelsen.
@@ -69,7 +69,7 @@ object SystemPrompt {
         Returner JSON (uten markdown):
         bryterRetningslinjer (boolean)
         begrunnelse (string)
-        Kort begrunnelse når OK (1 setning); maks 3 setninger ved brudd.
+        Kort begrunnelse når OK (1 setning); maks 3 setninger ved brudd. Ikke referer til kjernekrav i begrunnelsen.
     """
     val endretTidspunkt: ZonedDateTime = ZonedDateTime.of(
         LocalDateTime.parse(tidsstempelUtenSone),

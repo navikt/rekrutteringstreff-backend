@@ -99,6 +99,7 @@ erDiagram
         text kommune "Kommune for treffstedet (V5)"
         timestamptz svarfrist "Frist for påmelding/svar"
         text[] eiere "Array av Nav-identer som eier treffet"
+        text[] kontorer "Array av kontor-enhetIDer knyttet til treffet"
         text beskrivelse "Beskrivelse av treffet"
         text sist_endret_av_person_navident "Nav-ident for sist endring (V6)"
         timestamptz sist_endret_av_tidspunkt "Tidspunkt for sist endring (V6)"
@@ -244,6 +245,18 @@ Alle hendelse-tabeller har en `hendelse_data jsonb`-kolonne som inneholder ekstr
 Se [Arkitekturbeslutninger – hendelse_data](arkitekturbeslutninger.md#hendelse_data-polymorfe-json-objekter-i-hendelsestabellene) for detaljert dokumentasjon av JSON-strukturene, serialisering, og bruk i frontend.
 
 Data kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
+
+#### Subjekt (aktør vs. subjekt)
+
+Hendelser skiller mellom **aktør** (hvem som utførte handlingen) og **subjekt** (hvem/hva hendelsen gjelder). Aktøren ligger alltid i `aktøridentifikasjon`. Subjektet hentes ulikt per tabell:
+
+| Tabell                        | `subjekt_id`                                                                       | `subjekt_navn`                    | Eksempel                                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `rekrutteringstreff_hendelse` | Lagret direkte i kolonner (V2). Kun satt for eier-/kontorhendelser, ellers `null`. | Samme                             | `EIER_LAGT_TIL`: id=`B654321` (Nav-ident). `EIER_FJERNET`: id=`B654321`. `KONTOR_LAGT_TIL`: id=`0301` (enhet-ID). |
+| `jobbsoker_hendelse`          | Avledet via JOIN: `jobbsoker.fodselsnummer`                                        | `fornavn \|\| ' ' \|\| etternavn` | id=`12345678901`, navn=`Ola Nordmann`                                                                             |
+| `arbeidsgiver_hendelse`       | Avledet via JOIN: `arbeidsgiver.orgnr`                                             | `arbeidsgiver.orgnavn`            | id=`912345678`, navn=`Kiwi Grønland`                                                                              |
+
+Samleendepunktet `GET /api/rekrutteringstreff/{id}/hendelser` gjør en `UNION ALL` av de tre tabellene og returnerer `subjektId`/`subjektNavn` enhetlig uavhengig av lagringsmekanisme.
 
 ### Støttetabeller
 

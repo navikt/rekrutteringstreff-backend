@@ -113,15 +113,10 @@ class RekrutteringstreffTest {
     fun opprettRekrutteringstreff() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val gyldigKontorfelt = "Gyldig NAV Kontor"
         val gyldigStatus = RekrutteringstreffStatus.UTKAST
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
-            """
-            {
-                "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt"
-            }
-            """.trimIndent(),
+            "{}",
             token.serialize()
         )
         assertThat(response.statusCode()).isEqualTo(201)
@@ -139,21 +134,20 @@ class RekrutteringstreffTest {
         assertThat(rekrutteringstreff.postnummer).isNull()
         assertThat(rekrutteringstreff.poststed).isNull()
         assertThat(rekrutteringstreff.status.name).isEqualTo(gyldigStatus.name)
-        assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
+        assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo("1234")
         assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
         assertThat(rekrutteringstreff.id.somString).isEqualTo(postId)
         assertThat(rekrutteringstreff.sistEndretAv).isEqualTo(navIdent)
     }
 
     @Test
-    fun `opprett rekrutteringstreff med manglende påkrevd felt gir 400`() {
+    fun `opprett rekrutteringstreff med ugyldig request body gir 400`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
 
-        // Mangler opprettetAvNavkontorEnhetId som er påkrevd
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
-            """{}""",
+            """ikke json i det hele tatt""",
             token.serialize()
         )
 
@@ -178,11 +172,11 @@ class RekrutteringstreffTest {
     fun hentAlleRekrutteringstreff() {
         val tittel1 = "Tittel1111111"
         val tittel2 = "Tittel2222222"
-        db.opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffMedAlleFelter(
             navIdent = "navident1",
             tittel = tittel1,
         )
-        db.opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffMedAlleFelter(
             navIdent = "navIdent2",
             tittel = tittel2,
         )

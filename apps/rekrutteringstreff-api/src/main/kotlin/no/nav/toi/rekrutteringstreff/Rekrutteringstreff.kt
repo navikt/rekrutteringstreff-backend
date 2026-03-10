@@ -26,6 +26,7 @@ class Rekrutteringstreff(
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
     val eiere: List<String>,
+    val kontorer: List<String>,
     val sistEndret: ZonedDateTime,
     val sistEndretAv: String,
 ) {
@@ -50,6 +51,7 @@ class Rekrutteringstreff(
         antallArbeidsgivere = antallArbeidsgivere,
         antallJobbsøkere = antallJobsøkere,
         eiere = eiere,
+        kontorer = kontorer,
         sistEndret = sistEndret,
         sistEndretAv = sistEndretAv
     )

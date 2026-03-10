@@ -148,7 +148,7 @@ class AppExceptionHandlingTest {
     }
 
     @Test
-    fun `Oppdatering av treff som ikke finnes og dermed ingen eiere gir 500`() {
+    fun `Oppdatering av treff som ikke finnes og dermed ingen eiere gir 404`() {
         val ikkeEksisterendeId = UUID.randomUUID()
         val json = """{
             "tittel":"Test",
@@ -170,6 +170,6 @@ class AppExceptionHandlingTest {
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
-        assertThat(response.statusCode()).isEqualTo(500)
+        assertThat(response.statusCode()).isEqualTo(404)
     }
 }
