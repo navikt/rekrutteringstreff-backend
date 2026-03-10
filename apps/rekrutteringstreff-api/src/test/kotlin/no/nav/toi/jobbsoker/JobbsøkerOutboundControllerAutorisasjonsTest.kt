@@ -36,6 +36,8 @@ import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.lagToken
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -80,7 +82,8 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
         rekrutteringstreffRepository = rekrutteringstreffRepository,
         jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper),
         arbeidsgiverRepository = arbeidsgiverRepository,
-        jobbsøkerService = jobbsøkerService
+        jobbsøkerService = jobbsøkerService,
+        eierService = EierService(EierRepository(database.dataSource), rekrutteringstreffRepository, database.dataSource)
     )
 
     private lateinit var app: App

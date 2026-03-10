@@ -8,80 +8,65 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilJson
-import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilNavIdenter
 import java.util.*
 
 
 class EierController(
-    private val eierRepository: EierRepository,
     private val eierService: EierService,
     javalin: Javalin
 ) {
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"
+        private const val megEndepunkt = "$eiereEndepunkt/meg"
         private const val slettEiereEndepunkt = "$eiereEndepunkt/{navIdent}"
     }
 
     init {
         javalin.get(eiereEndepunkt, hentEiere())
-        javalin.put(eiereEndepunkt, leggTil())
+        javalin.put(megEndepunkt, leggTilMeg())
         javalin.delete(slettEiereEndepunkt, slettEier())
     }
 
     @OpenApi(
-        summary = "Legg til ny eier til et rekrutteringstreff",
-        operationId = "leggTilEier",
+        summary = "Legg til deg selv som eier av et rekrutteringstreff",
+        description = "Bruker trenger ikke være eksisterende eier. Idempotent — returnerer alltid 200. Utføres atomisk med FOR UPDATE-lås.",
+        operationId = "leggTilMegSomEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class)],
-        requestBody = OpenApiRequestBody(
-            content = [OpenApiContent(
-                from = Array<String>::class,
-                example = """
-                [
-                    "A123456",
-                    "Z999999"
-                ]
-                """
-            )],
-        ),
-        responses = [OpenApiResponse(
-            status = "201"
-        )],
-        path = eiereEndepunkt,
+        pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
+        responses = [
+            OpenApiResponse(status = "200", description = "Eier lagt til (eller allerede eier). Genererer EIER_LAGT_TIL-hendelse hvis ny.")
+        ],
+        path = megEndepunkt,
         methods = [HttpMethod.PUT]
     )
-    private fun leggTil(): (Context) -> Unit = { ctx ->
+    private fun leggTilMeg(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val eiere: List<String> = ctx.bodyAsClass<List<String>>()
         val id = TreffId(ctx.pathParam("id"))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
+        val kontorId = ctx.authenticatedUser().extractKontorId()
 
-        if (eierService.erEierEllerUtvikler(treffId = id, navIdent = navIdent, context = ctx)) {
-            eierRepository.leggTil(id, eiere)
-            ctx.status(201)
-        } else {
-            throw ForbiddenResponse("Bruker har ikke tilgang til å legge til eier på rekrutteringstreff ${id.somString}")
-        }
+        eierService.leggTilEierMedKontor(id, navIdent, kontorId)
+        ctx.status(200)
     }
 
     @OpenApi(
         summary = "Hent eierne til et rekrutteringstreff",
+        description = "Returnerer liste med Nav-identer for alle eiere. Tilgjengelig for arbeidsgiverrettet og jobbsøkerrettet rolle.",
         operationId = "hentEiere",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class)],
-        responses = [OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(
-                from = Array<String>::class,
-                example = """
-                [
-                    "A123456",
-                    "Z999999"
-                ]
-                """
-            )]
-        )],
+        pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
+        responses = [
+            OpenApiResponse(
+                status = "200",
+                description = "Liste med Nav-identer",
+                content = [OpenApiContent(
+                    from = Array<String>::class,
+                    example = """["A123456", "Z999999"]"""
+                )]
+            ),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
+        ],
         path = eiereEndepunkt,
         methods = [HttpMethod.GET]
     )
@@ -89,20 +74,26 @@ class EierController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
 
         val id = TreffId(ctx.pathParam("id"))
-        val eiere = eierRepository.hent(id) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+        val eiere = eierService.hentEiere(id)
         ctx.status(200).result(eiere.tilJson())
     }
 
 
     @OpenApi(
         summary = "Slett eier av et rekrutteringstreff",
+        description = "Fjerner en eier. Kan ikke slette siste eier — treffet må alltid ha minst én.",
         operationId = "slettEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class), OpenApiParam(
-            name = "navIdent",
-            type = String::class
-        )],
-        responses = [OpenApiResponse(status = "200")],
+        pathParams = [
+            OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID"),
+            OpenApiParam(name = "navIdent", type = String::class, description = "Nav-identen som skal fjernes som eier")
+        ],
+        responses = [
+            OpenApiResponse(status = "200", description = "Eier fjernet"),
+            OpenApiResponse(status = "400", description = "Kan ikke slette siste eier"),
+            OpenApiResponse(status = "403", description = "Innlogget bruker er ikke eier eller utvikler"),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
+        ],
         path = slettEiereEndepunkt,
         methods = [HttpMethod.DELETE]
     )
@@ -112,14 +103,8 @@ class EierController(
         val navIdentSomSkalSlettes = ctx.pathParam("navIdent")
         val innloggetNavIdent = ctx.authenticatedUser().extractNavIdent()
 
-        val eiere = eierRepository.hent(id)?.tilNavIdenter()
-            ?: throw IllegalStateException("Rekrutteringstreff med id ${id.somString} har ingen eiere")
         if (eierService.erEierEllerUtvikler(id, innloggetNavIdent, ctx)) {
-            if (eiere.size <= 1) {
-                throw BadRequestResponse("Kan ikke slette siste eier for rekrutteringstreff ${id.somString}")
-            }
-
-            eierRepository.slett(id, navIdentSomSkalSlettes)
+            eierService.slettEier(id, navIdentSomSkalSlettes, innloggetNavIdent)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Bruker har ikke tilgang til å slette eier på rekrutteringstreff ${id.somString}")
