@@ -3,7 +3,6 @@ package no.nav.toi.rekrutteringstreff.ki
 import no.nav.toi.log
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -15,7 +14,10 @@ private const val MAX_LENGDE_PROMPT_NAVN = 40
 private const val TESTRESULTATER_FIL = "robTestresultater.txt"
 // Testen skriver resultatene på et mer lesbart format enn loggene til filen definert over
 
-@Disabled("Testen skal kun kjøres manuelt ved behov")
+/**
+ * For å kjøre testen må man sette OPENAI_API_KEY som environment variabel. Den finnes som secret i dev under openai-toi-rekrutteringstreff
+ */
+//@Disabled("Testen skal kun kjøres manuelt ved behov")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiTekstvalideringTest {
     private val openAiClient = OpenAiTestClient()
