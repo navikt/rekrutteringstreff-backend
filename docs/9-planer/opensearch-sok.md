@@ -719,9 +719,33 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ### Oppgave 6: Frontend
 
-- [ ] Bytt oversiktsvisningen til nytt søke-endepunkt
-- [ ] Behold detaljvisning og mutasjoner på eksisterende endepunkter i første fase
-- [ ] La query-parametre speile `RekrutteringstreffSøkRequest`
-- [ ] Oppdater filter-UI til statusene `Utkast`, `Publisert`, `Søknadsfrist passert`, `Fullført`, `Avlyst`
-- [ ] Legg til tester for rolle × visning × filterkombinasjoner
-- [ ] Fjern gammel klientfiltrering når ny flyt er verifisert
+> I dag henter `useRekrutteringstreffOversikt` hele listen uten query-parametre, og all filtrering/sortering skjer klientsiden i `RekrutteringstreffSøk.tsx` med `useMemo`. Denne oppgaven bytter til server-side søk.
+>
+> **Uberørt i denne oppgaven:** Detaljvisning (`GET /api/rekrutteringstreff/{id}`), opprettelse, redigering, publisering, avlysing, fullføring, eier-/arbeidsgiver-/jobbsøker-endringer — alt som skriver til `rekrutteringstreff-api` — beholder eksisterende endepunkter og hooks.
+
+**Datahenting**
+- [ ] Nytt SWR-hook `useRekrutteringstreffSøk` som kaller `POST /api/rekrutteringstreff/sok`
+- [ ] Synk alle søkeparametre til URL query-params (fritekst, visningsstatuser, sortering, visning, side) slik at søk er delbart og bokmerkvennlig
+
+**Tabs (visning)**
+- [ ] Implementer tab-rad med `Alle`, `Mine`, `Mitt kontor` — mapper til `visning`-parameteret i requesten
+
+**Fritekst**
+- [ ] Søkefelt som sender `fritekst`-parameteret — søker på tvers av tittel, beskrivelse, innlegg og arbeidsgivernavn
+
+**Filter og sortering**
+- [ ] Statusfilter (checkboxes): `Utkast`, `Publisert`, `Søknadsfrist passert`, `Fullført`, `Avlyst`
+- [ ] Sortering (radio): sist oppdaterte, nyeste, eldste, aktive, fullførte (+ relevans når fritekst er satt)
+- [ ] Aktiver geografi- og kontorfiltre (UI-komponentene finnes allerede, men er deaktivert)
+- [ ] Vis antall treff per filterverdi fra `aggregeringer` i responsen (f.eks. «Publisert (42)»)
+- [ ] Vis aktive filter-chips med «Fjern alle»-knapp over resultatlisten
+
+**Paginering**
+- [ ] Vis «1–20 av N» med forrige/neste-knapper, basert på `totaltAntall`, `side` og `antallPerSide` fra responsen
+
+**Treffkort**
+- [ ] Vis tittel, dato/klokkeslett (`fraTid`), adresse, og eierskap («Mitt oppdrag» hvis innlogget er eier, ellers «Eies av [navn]»)
+
+**Opprydding**
+- [ ] Fjern klientside-filtrering og sortering i `RekrutteringstreffSøk.tsx` (`useMemo`-logikken)
+- [ ] Fjern `useRekrutteringstreffOversikt` når ny flyt er verifisert
