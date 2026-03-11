@@ -25,12 +25,12 @@ I dag henter frontend alle rekrutteringstreff fra backend og gjør filtrering, s
                                                └────────────────────────────────┘
 ```
 
-| Komponent                                 | Ansvar                                                |
-| ----------------------------------------- | ----------------------------------------------------- |
-| **Frontend**                              | Sender søkeparametere, viser paginerte resultater     |
-| **rekrutteringstreff-søk** (ny app)       | Søke-endepunkt, bygger OpenSearch-spørringer          |
-| **rekrutteringstreff-indekser** (ny app)  | Lytter på Rapids-meldinger, indekserer til OpenSearch |
-| **rekrutteringstreff-api** (eksisterende) | Publiserer treff-hendelser via outbox til Rapids      |
+| Komponent                                 | Ansvar                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Frontend**                              | Sender søkeparametere, viser paginerte resultater. Har også en egen minside for å trigge reindeksering. |
+| **rekrutteringstreff-søk** (ny app)       | Søke-endepunkt, bygger OpenSearch-spørringer                                                            |
+| **rekrutteringstreff-indekser** (ny app)  | Tynn Kafka-konsument uten REST API. Skriver til OpenSearch basert på hendelser fra Rapids.              |
+| **rekrutteringstreff-api** (eksisterende) | Eier databasen, bygger de fulle søkedokumentene, og styrer rutiner for reindeksering.                   |
 
 ---
 
@@ -243,19 +243,15 @@ Det gjelder også mens full reindeksering pågår. Kontinuerlige endringer og fu
 2. Innskriving gjøres i **samme database-transaksjon** som domeneendringen, med `insert ... on conflict (treff_id) do update set sist_endret_tidspunkt = now()`
 3. Hvis transaksjonen rollbackes, rollbackes også kø-innskrivingen
 4. En scheduler (med leader election eller kun en node, eller lockingi db) plukker pending `treffId`-er fra køen
-5. For hvert `treffId`: bygg fullt dokumentgrunnlag, send melding med `treffId`, og slett raden etter vellykket sending
+5. For hvert `treffId`: Bygg det _fulle søkedokumentet_ (JSON) fra databasen. Send hendelse på Rapids med hele dokumentet, og slett deretter raden fra køen etter vellykket utsendelse.
 
-Raden bør slettes etter vellykket sending. `rekrutteringstreff_indeksering` er en pending-kø, ikke en historikktabell. Et `fullfort`-flagg vil gi mer opprydding, mer filtrering og større tabell uten å gi bedre robusthet i selve kømekanismen. Hvis vi trenger sporbarhet eller overvåking, er det bedre å bruke metrikker, logger eller en egen historikktabell enn å la køen akkumulere fullførte rader.
+Raden bør slettes etter vellykket sending. `rekrutteringstreff_indeksering` er en pending-kø, ikke en historikktabell. Et `fullfort`-flagg vil gi mer opprydding, mer filtrering og større tabell uten å gi bedre robusthet i selve kømekanismen.
 
-**Transaksjonskrav:** For å unngå tap av meldinger må innlegging i `rekrutteringstreff_indeksering` skje atomisk sammen med selve domeneendringen. Det betyr at alle skrivende operasjoner som påvirker søkedokumentet må gjøre begge deler i samme `executeInTransaction`-blokk: oppdatere domenedata og legge `treffId` i køen. Vi skal ikke være avhengige av en asynkron etterprosess som først observerer endringen senere og deretter prøver å legge `treffId` i køen.
+**Transaksjonskrav:** Innlegging i `rekrutteringstreff_indeksering` må skje atomisk sammen med domeneendringen (i samme `executeInTransaction`-blokk). Dette garanterer at endringen plukkes opp for indeksering.
 
-**Feiltoleranse:** Hvis appen krasjer mellom sending og sletting av kø-raden, kan samme `treffId` sendes flere ganger. Indekseren må derfor fortsatt være **idempotent**.
+**Feiltoleranse:** Hvis appen krasjer mellom utsendelse på Rapids og sletting av kø-raden, vil identisk dokument bli lagt på køen igjen. Indekser-appen overskriver dokumentet i OpenSearch (idempotent via `index`-operasjon på treffets UUID).
 
-Idempotensen sikres ved at indekseren bruker OpenSearch `index` med dokument-ID = treffets UUID.
-
-Samme builder brukes både ved full reindeksering og ved inkrementelle endringer. Hele dokumentet skrives hver gang.
-
-Meldingen til indekseren inneholder bare `treffId`.
+**Rapids-hendelsen** inneholder ikke bare id-en, men den _komplette og ferdigbygde søkemodellen_ for det treffet. Det betyr at konsumenter (`rekrutteringstreff-indekser`) ikke trenger å gjøre database- eller REST-oppslag for å hente innholdet. All berikelse er unnagjort i `rekrutteringstreff-api`.
 
 ### Konsekvens for implementasjon
 
@@ -267,139 +263,53 @@ Alle relaterte moduler må ende i samme resultat: ett `treffId` som legges i ind
 
 Ny app under `rekrutteringstreff-backend/apps/rekrutteringstreff-indekser/`.
 
+Dette er en **"tynn" applikasjon**. Den har **ingen REST-endepunkter** eller admin-grensesnitt. Den er en ren Kafka-konsument som gjør én ting: omsetter konvensjonsstyrte JSON-meldinger på Rapids til operasjoner i OpenSearch.
+
 ### Ansvar
 
-- Lytter på Rapids-meldinger fra `rekrutteringstreff-api`
-- Indekserer/oppdaterer/sletter dokument i OpenSearch basert på `@event_name`
-- Støtter full reindeksering ved å lese treff fra databasen og bruke samme builder til å lage fullt dokument per treff ved ny indeksversjon
-- Alias-bytte for zero-downtime reindeksering
+- Lytte på Rapids-meldinger fra `rekrutteringstreff-api`.
+- Mottar `@event_name: rekrutteringstreff.oppdatert`: tar JSON-modellen (som allerede er ferdig utledet med eier, sted, fylke, etc.) og u-betinget `upsert`'er den til aktiv OpenSearch-indeks (samt evt. målindeks hvis indeksering pågår).
+- Mottar `@event_name: reindeksering.start` med konfigurasjon (navn på ny indeks): klargjør og oppretter rykende fersk indeks i OpenSearch med riktig mapping og settings, og aktiverer dual-write lokalt.
+- Mottar `@event_name: reindeksering.dokument`: Lagrer opphentet dokument direkte i ny målindeks (utenfor alias).
+- Mottar `@event_name: reindeksering.ferdig`: utfører alias-swap mot OpenSearch i bakkant og muliggjør zero-downtime cutover. Deretter skrur den av dual-write mode.
 
-Indekseren bygger alltid ett komplett dokument per `treffId` og skriver hele dokumentet til OpenSearch.
+---
 
-### Hvordan reindeksering trigges
+## Reindeksering og Admin-API (i `rekrutteringstreff-api`)
 
-For rekrutteringstreff bør full reindeksering trigges med eksplisitte interne admin-endepunkter i `rekrutteringstreff-indekser`, sikret med delt passord fra Kubernetes secret, på samme måte som i `toi-sammenstille-kandidat`.
+I stedet for at indekseren trekker data fra databasen, er det **`rekrutteringstreff-api`** som eier reindekseringsprosessen og skyver ferdigbygde dokumenter og status-kommandoer over Kafka (Rapids).
 
-Forslag:
+Dette eksponeres i API-et via egne admin-endepunkter:
 
 ```text
-POST /internal/reindeksering/start
-POST /internal/reindeksering/status
+POST /api/internal/reindeksering/start
+GET /api/internal/reindeksering/status
 ```
 
-Foreslått request-body for begge:
+Denne API-funksjonaliteten vil bli brukt fra **Frontend**, på en egen mini-side for utviklere/admin med "Start reindeksering"-knapp + bekreftelsesdialog, pluss visning av status for indekseringen. Tilgang styres med rolle for utviklere (f.eks. en AD-gruppe for teamet). Eksakt hvor denne inngangen skal bo avklares senere.
 
-```json
-{
-  "passord": "<secret>"
-}
-```
+### Reindekseringsflyt og Alias-bytte uten nedetid (Zero-downtime cutover)
 
-Ansvar ved `POST /internal/reindeksering/start`:
+Reindeksering skjer helt uten nedetid. Dette løses i OpenSearch ved bruk av logiske alias. Søke-appen (klientene) peker aldri direkte på en spesifikk indeks (f.eks. `rekrutteringstreff-v1`), men på et logisk alias (f.eks. `rekrutteringstreff-alias`).
 
-1. Valider at det ikke allerede pågår en aktiv reindeksering
-2. Opprett ny målindeks
-3. Lagre reindekseringsstatus: aktiv indeks, målindeks, aktiv=true
-4. Start fullscan fra databasen i bakgrunnen
+Prosedyren med hendelser på Kafka ser slik ut:
 
-Ansvar ved `POST /internal/reindeksering/status`:
-
-1. Valider passord
-2. Returner gjeldende reindekseringsstatus
-3. Returner aktiv indeks, målindeks og om reindeksering pågår
-4. Returner nok informasjon til å se om jobben fortsatt jobber eller er ferdig
-
-### Tilgang til admin-kallet
-
-Endepunktene bør sikres med et delt passord lagret i Kubernetes secret.
-
-Forslag:
-
-- secret, for eksempel `passord-for-reindeksering`
-- env-variabel i appen, for eksempel `PASSORD_FOR_REINDEKSERING`
-- request-body med `passord`, som valideres før kallene kjøres
-
-Dette er enklere operasjonelt for et rent internt admin-kall, og følger mønsteret som allerede brukes i `toi-sammenstille-kandidat`.
-
-I tillegg bør endepunktet være internt eksponert, ikke del av vanlig offentlig frontendflyt. Det betyr i praksis:
-
-- legg det under `/internal/...`
-- ikke eksponer det som vanlig brukerfunksjon i frontend
-- logg at reindeksering ble startet, tidspunkt og målindeks
-- returner `409 Conflict` hvis reindeksering allerede kjører
-
-For `status`-endepunktet returneres `200 OK` med statusobjekt også når ingen reindeksering kjører.
-
-### Hvor admin-kallet gjøres fra
-
-Admin-kallet bør ikke komme fra vanlig UI.
-
-Anbefalt bruk:
-
-- manuell kjøring fra terminal av en utvikler som kjenner passordet
-- dokumentert som en driftsrutine i utviklerdokumentasjon
-- eventuelt senere en liten utviklerside, men ikke i første versjon
-
-I første versjon er det enklest og tryggest å kjøre dette som et eksplisitt HTTP-kall mot indekser-appen, for eksempel via port-forward eller intern ingress i miljøet.
-
-Eksempel:
-
-```bash
-jo passord="$PASSORD_FOR_REINDEKSERING" | curl -X POST --json @- https://<intern-host>/internal/reindeksering/start
-jo passord="$PASSORD_FOR_REINDEKSERING" | curl -X POST --json @- https://<intern-host>/internal/reindeksering/status
-```
-
-Dette passer bedre for rekrutteringstreff fordi samme app eier:
-
-- alias-bytte
-- reindekseringsstatus
-- fullscan fra databasen
-- dual-write-logikken under reindeksering
-
-Et separat endepunkt i `rekrutteringstreff-api` er ikke nødvendig for å starte reindeksering, siden `rekrutteringstreff-indekser` allerede har nok ansvar og kontekst til å gjøre dette selv.
-
-### Reindekseringsflyt med nytt alias
-
-Normal drift og full reindeksering løses med to mekanismer:
-
-1. Den komprimerte indekseringskøen per `treffId` håndterer løpende endringer.
-2. Versjonert indeks + alias håndterer trygg full reindeksering.
-
-Under full reindeksering finnes det to indekser samtidig:
-
-- aktiv indeks, som fortsatt brukes av dagens lesetrafikk
-- ny målindeks, som bygges opp før aliasbytte
-
-Begge må holdes ajour med løpende endringer frem til aliasbytte. Det betyr at inkrementell indeksering må skrive til begge mens reindeksering pågår.
-
-Dette bør ikke styres av en egen scheduler. I stedet bør indekseren ha én eksplisitt reindekseringsstatus, for eksempel i en liten kontrolltabell eller konfigurasjonsrad, med:
-
-- om reindeksering er aktiv
-- navn på aktiv indeks
-- navn på målindeks
-
-Når inkrementell indeksering behandler et `treffId`, leser den denne statusen:
-
-- hvis reindeksering ikke er aktiv: skriv kun til aktiv indeks
-- hvis reindeksering er aktiv: skriv til både aktiv indeks og målindeks
-
-Det er altså samme inkrementelle prosess som vanlig, men i et eksplisitt reindekseringsmodus.
-
-Full reindeksering bør kjøres slik:
-
-1. Opprett ny indeks, for eksempel `rekrutteringstreff-v2`, uten å endre aktivt alias.
-2. Marker at reindeksering er aktiv i kontrollstatusen, med gammel aktiv indeks og ny målindeks.
-3. Bygg alle dokumenter fra databasen og skriv dem til den nye indeksen.
-4. Mens dette pågår, fortsetter alle nye domeneendringer å legge `treffId` i den samme komprimerte indekseringskøen i samme transaksjon som før. Hvis et `treffId` allerede ligger pending, oppdateres bare raden.
-5. Mens reindeksering er aktiv, skriver den vanlige inkrementelle indekseringen fullt dokument til både aktiv indeks og målindeks.
-6. Etter første fullscan kjøres en catch-up-fase der alle pending `treffId`-er bygges og skrives til målindeksen. Aktiv indeks holdes fortsatt løpende oppdatert til aliasbytte.
-7. Når køen er tom og den nye indeksen er ajour, byttes alias atomisk til den nye indeksen.
-8. Etter aliasbytte oppdateres kontrollstatusen slik at reindeksering ikke lenger er aktiv, og normal inkrementell indeksering fortsetter kun mot den aktive indeksen bak aliaset.
-
-Tommelfingerregel:
-
-- Ved vanlig drift: legg berørt `treffId` i indekseringskøen.
-- Ved full reindeksering: bygg alt til ny indeks, skriv inkrementelle endringer til både gammel og ny indeks, drener indekseringskøen mot ny indeks, og bytt deretter alias.
+1. **Start**: Reindekseringen trigges via frontend-minisiden som kaller `POST /api/internal/reindeksering/start`.
+2. **Klargjøring** (`@event_name: reindeksering.start`):
+   - API-et genererer et unikt målindeksnavn (f.eks. timestampbasert: `rekrutteringstreff-20261103-1430`) og sender det på køen.
+   - Indekser-appen mottar dette, kontakter OpenSearch og oppretter den _nye_ indeksen med ferske mappinger/settings fra koden.
+   - Indekser-appen setter seg i lokal "reindeksering pågår"-tilstand under dette indeksnavnet. (Dette prepper for dual-write).
+3. **Fullscan pluss historikk-pumping** (`@event_name: reindeksering.dokument`):
+   - API-et starter en asynkron bakgrunnsjobb som porsjonsvis itererer over _alle_ treff fra databasen.
+   - For hvert treff bygger API-et det komplette JSON-søkedokumentet, og sender det over Rapids. Indekseren legger dem rett inn i den nye (og inntil videre kalde) målindeksen.
+4. **Dual-write underveis** (`@event_name: rekrutteringstreff.oppdatert`):
+   - Siden databasetømmingen kan ta noe tid, vil eventuelle vanlige oppdateringshendelser fra brukere sendes og fanges opp samtidig.
+   - Ettersom indekseren er i "reindekserings-modus" (fra punkt 2) rutes endringene til _både_ nåværende aktiv indeks (via alias) og den nyopprettede målindeksen, slik at de inntil videre holdes i sync.
+5. **Selve byttet** (`@event_name: reindeksering.ferdig`):
+   - Når API-et er 100% ferdig med utkastelsen av databasen, sender API-et en "ferdig"-kommando over Rapids.
+   - Indekser-appen sender da en `/aliases` POST request til OpenSearch som sier: _Fjern det gamle indeks-navnet fra aliaset og legg inn den nye målindeksen i aliaset_.
+   - OpenSearch gjør denne peker-omkoblingen 100% atomisk. Etterfølgende søk rutes umiddelbart til den nye og ferdig-populerte indeksen, og oppdateringen er live.
+6. **Opprydding (fremtidig forbedring, pt. manuell)**: Dual-write avsluttes. Gamle utilknyttede OpenSearch-indekser fjernes. Dette gjøres enten direkte i reindeksering-konsumenten eller plukkes opp ved en definert ILM/Lifecycle.
 
 ### Dokument som indekseres
 
@@ -449,11 +359,9 @@ apps/rekrutteringstreff-indekser/
     └── kotlin/no/nav/toi/rekrutteringstreff/indekser/
         ├── Application.kt
         ├── OpenSearchConfig.kt
-        ├── IndexClient.kt
-        ├── OpenSearchService.kt       ← indeks-livssyklus, alias-bytte
-        ├── TreffDokument.kt
-        ├── IndekserTreffLytter.kt     ← Rapids-lytter
-        ├── TreffDokumentBuilder.kt    ← samler ett fullstendig dokument for ett treff
+        ├── OpenSearchClient.kt        ← kommunikasjon med aiven/OpenSearch (inkl alias)
+        ├── TreffDokumentLytter.kt     ← Lytter på 'rekrutteringstreff.oppdatert' mm.
+        ├── ReindekseringLytter.kt     ← Lytter på 'reindeksering.start/ferdig/dokument'
         └── Liveness.kt
 ```
 
@@ -543,19 +451,21 @@ Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart 
 4. Avklar og implementer hvilke manuelle overganger som skal være tillatt fra `SOKNADSFRIST_PASSERT`
 5. Legg til tester for scheduler, statusovergang og reindeksering
 
-### Oppgave 3: Indekser-app
+### Oppgave 3: Reindekserings-håndtering (rekrutteringstreff-api)
 
-1. Opprett `rekrutteringstreff-indekser`-modul
-2. Definer mapping og settings (norsk analyzer, nested for arbeidsgivere og innlegg)
-3. Implementer `IndexClient`, `OpenSearchService`, alias-logikk
-4. Implementer interne `POST`-endepunkter for `start` og `status`
-5. Beskytt endepunktene med passord fra Kubernetes secret
-6. Implementer lagring/lesing av eksplisitt reindekseringsstatus
-7. Implementer `TreffDokumentBuilder` og repositories/spørringer for å bygge fullt dokument per treff
-8. Implementer `IndekserTreffLytter` for inkrementelle oppdateringer
-9. Implementer full reindekseringsflyt: admin-endepunkt, ny indeks, dual-write under reindeksering, fullscan, catch-up fra indekseringskøen og atomisk aliasbytte
-10. Dokumenter hvordan passord hentes fra secret og hvordan `start`/`status` kalles i dev/prod
-11. Deploy til dev, verifiser data
+1. Implementer databaselogikken for å bygge et komplett søkedokument (`TreffDokumentBuilder` e.l.).
+2. Implementer publisering over Rapids av oppdaterte, komplette dokument-JSON-modeller.
+3. Legg til admin-endepunkter (`/api/internal/reindeksering/start` og `/status`) bak tilgangskontroll.
+4. Implementer bakgrunnsjobben (fullscan av database) som publiserer `reindeksering.dokument`-meldinger.
+
+### Oppgave 3.5: Indekser-app (den tynne konsumenten)
+
+1. Opprett `rekrutteringstreff-indekser`-modul.
+2. Definer mapping og settings (norsk analyzer, nested for arbeidsgivere og innlegg).
+3. Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml`).
+4. Implementer lytter for `rekrutteringstreff.oppdatert` (vanlig indeksering).
+5. Implementer lyttere og logikk for reindekseringshendelsene over Rapids.
+6. Deploy til dev, verifiser flyten.
 
 ### Oppgave 4: Søke-app
 
@@ -810,21 +720,22 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Avklar og implementer lovlige manuelle overganger fra `SOKNADSFRIST_PASSERT`
 - [ ] Legg til tester for statusovergang og reindeksering
 
-### Oppgave 3: Indekser-app
+### Oppgave 3: Reindekserings-håndtering (rekrutteringstreff-api)
+
+- [ ] Implementer bygging av fullverdig dokument (`TreffDokumentBuilder`) og pakking i Rapids-melding
+- [ ] Implementer `POST /api/internal/reindeksering/start` og `GET /api/internal/reindeksering/status` i API-et
+- [ ] Definer logikk/bakgrunnsjobb for full databasetømming og utsending av `reindeksering.dokument`
+- [ ] Styr livssyklusen via hendelser på Rapids (`reindeksering.start`, `reindeksering.ferdig`)
+
+### Oppgave 3.5: Indekser-app (den tynne konsumenten)
 
 - [ ] Opprett `rekrutteringstreff-indekser`-modul
-- [ ] Sett opp Aiven/OpenSearch for indekser-appen som eget NAIS-oppsett, inkludert `opensearch.yaml`, `nais.yaml` og nødvendige secrets/env-vars
-- [ ] Definer mapping og settings i resources
-- [ ] Implementer `IndexClient` og `OpenSearchService`
-- [ ] Implementer `POST /internal/reindeksering/start`
-- [ ] Implementer `POST /internal/reindeksering/status`
-- [ ] Beskytt endepunktene med passord fra Kubernetes secret
-- [ ] Implementer lagring og lesing av reindekseringsstatus
-- [ ] Implementer `TreffDokumentBuilder` og nødvendige repositories/spørringer
-- [ ] Implementer `IndekserTreffLytter` for inkrementelle oppdateringer
-- [ ] Implementer fullscan, dual-write, catch-up og aliasbytte
-- [ ] Dokumenter hvordan passord hentes og hvordan endepunktene brukes i dev/prod
-- [ ] Verifiser flyten i dev
+- [ ] Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml` og nødvendige dev/prod envs)
+- [ ] Legg inn mapping og settings i resources
+- [ ] Implementer lytter for vanlige domeneoppdateringer (`rekrutteringstreff.oppdatert`)
+- [ ] Implementer lyttere for innkommende reindekserings-kommandoer (start, dokument, ferdig)
+- [ ] Implementer OpenSearch opprettelse av indeks og utførende alias-bytte
+- [ ] Verifiser ende-til-ende i dev
 
 ### Oppgave 4: Søke-app
 
@@ -841,5 +752,6 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Behold detaljvisning og mutasjoner på eksisterende endepunkter i første fase
 - [ ] La query-parametre speile `RekrutteringstreffSøkRequest`
 - [ ] Oppdater filter-UI til statusene `Utkast`, `Publisert`, `Søknadsfrist passert`, `Fullført`, `Avlyst`
+- [ ] Lag en mini-side for utviklere/admin (tilgangsstyrt av AD-gruppe) for å trigge reindeksering. Skal ha "Start"-knapp (med bekreftelsesdialog) og "Status"-knapp.
 - [ ] Legg til tester for rolle × visning × filterkombinasjoner
 - [ ] Fjern gammel klientfiltrering når ny flyt er verifisert
