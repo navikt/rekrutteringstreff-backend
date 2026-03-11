@@ -680,15 +680,13 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Legg kø-innskriving inn i samme transaksjon som alle indekseringsrelevante domeneendringer
 - [ ] Implementer scheduler/worker som plukker pending `treffId`-er og publiserer melding
 - [ ] Slett kø-rad etter vellykket sending
+- [ ] Implementer `TreffDokumentBuilder` som bygger komplett søkedokument fra databasen
 - [ ] Scheduler må skille status `SLETTET` (send `rekrutteringstreff.slettet`) fra andre statuser (bygg fullt dokument med `TreffDokumentBuilder` og send `rekrutteringstreff.oppdatert`)
 - [ ] Legg til tester for rollback, deduplisering og idempotent resend
 
-> Avhengighet: `TreffDokumentBuilder` bygges i Oppgave 2, men brukes av scheduleren her.
-
 ### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
 
-- [ ] Implementer `TreffDokumentBuilder` som bygger komplett søkedokument fra databasen
-- [ ] Implementer internt REST-endepunkt (`POST /internal/reindeksering/start`) som porsjonsvis publiserer alle treff på Rapids
+- [ ] Implementer internt REST-endepunkt (`POST /internal/reindeksering/start`) som porsjonsvis publiserer alle treff på Rapids (bruker `TreffDokumentBuilder` fra Oppgave 1)
 - [ ] Endepunktet skal kun være tilgjengelig internt (nais ingress)
 
 ### Oppgave 3: Geografi-berikelse med PAM geografi-tjeneste
