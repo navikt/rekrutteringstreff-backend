@@ -199,7 +199,7 @@ POST /api/rekrutteringstreff/sok
 
 Alle indekseringsrelevante endringer skal legge `treffId` i en komprimert indekseringskø.
 
-Denne køen er for løpende endringer i normal drift. Den er ikke mekanismen som starter full reindeksering. Full reindeksering trigges via env-var-styrt bakgrunnsjobb (se [Reindeksering](#reindeksering)), men bruker den samme køen til catch-up av endringer som skjer mens fullscan pågår.
+Denne køen er for løpende endringer i normal drift. Den er ikke mekanismen som starter full reindeksering. Full reindeksering trigges av indekser-appen som kaller et internt REST-endepunkt på API-et (se [Reindeksering](#reindeksering)). Køen fanger opp løpende endringer som skjer mens fullscan pågår.
 
 ### Indekseringsutløsere
 
@@ -287,13 +287,13 @@ Reindeksering følger mønsteret fra `toi-stilling-indekser`: env-var-styrt, med
 
 1. **Forbered**: Sett `REINDEKSER_ENABLED=true` og `REINDEKSER_INDEKS=rekrutteringstreff-v2` i nais-config. Deploy.
 2. **Oppstart**: Appen oppdager at `REINDEKSER_INDEKS` ikke finnes i OpenSearch, oppretter den med mapping/settings fra koden.
-3. **Trigger fullscan**: API-et har et internt endepunkt eller bakgrunnsjobb som porsjonsvis publiserer alle treff som `rekrutteringstreff.oppdatert`-meldinger på Rapids.
+3. **Trigger fullscan**: Indekser-appen kaller et internt REST-endepunkt på `rekrutteringstreff-api` (f.eks. `POST /internal/reindeksering/start`). API-et itererer porsjonsvis over alle treff, bygger komplett søkedokument med `TreffDokumentBuilder`, og publiserer hvert treff som `rekrutteringstreff.oppdatert` på Rapids.
 4. **Dual-write**: Under reindeksering kjører appen to konsumenter parallelt:
    - Én som skriver til **gammel** indeks (`INDEKS_VERSJON`)
    - Én som skriver til **ny** indeks (`REINDEKSER_INDEKS`)
    - Begge prosesserer `rekrutteringstreff.oppdatert`-meldinger, slik at ingen oppdateringer går tapt.
-5. **Verifiser**: Sjekk at ny indeks har forventet antall dokumenter.
-6. **Swap**: Oppdater `INDEKS_VERSJON=rekrutteringstreff-v2`. Deploy. Appen peker aliaset til ny indeks.
+5. **Verifiser (manuelt)**: Utvikler sjekker at ny indeks har forventet antall dokumenter (f.eks. via OpenSearch Dashboard eller API). Det finnes ingen automatisk "ferdig"-signalering — fullscan kjører og dual-write holder begge indeksene oppdatert i mellomtiden.
+6. **Swap (deploy-drevet)**: Når utvikler er fornøyd, oppdateres `INDEKS_VERSJON=rekrutteringstreff-v2` i nais-config og deployes. Ved oppstart oppdager appen at alias peker på feil indeks og swapper automatisk.
 7. **Rydd opp**: Sett `REINDEKSER_ENABLED=false`. Slett gammel indeks manuelt ved behov.
 
 ### Alias
@@ -413,9 +413,7 @@ Plan:
 
 1. Ny oversiktsliste i frontend flyttes til `POST /api/rekrutteringstreff/sok`.
 2. Eksisterende detaljendepunkter beholdes uendret i første fase.
-3. Full reindeksering kan ikke baseres på dagens eksisterende listeendepunkter alene, siden de ikke returnerer hele søkedokumentet.
-
-Full reindeksering bygger dokumentene direkte fra databasen i indekseren, med samme builder som ved inkrementelle oppdateringer.
+3. Full reindeksering bygger dokumentene i `rekrutteringstreff-api` med `TreffDokumentBuilder` og publiserer dem på Rapids. Indekseren konsumerer derfra.
 
 ### Filtre og OpenSearch-clauses
 
@@ -674,8 +672,8 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 ### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
 
 - [ ] Implementer `TreffDokumentBuilder` som bygger komplett søkedokument fra databasen
-- [ ] Implementer bakgrunnsjobb som porsjonsvis publiserer alle treff som `rekrutteringstreff.oppdatert`-meldinger på Rapids
-- [ ] Bakgrunnsjobben trigges av indekser-appen ved oppstart med `REINDEKSER_ENABLED=true`
+- [ ] Implementer internt REST-endepunkt (`POST /internal/reindeksering/start`) som porsjonsvis publiserer alle treff på Rapids
+- [ ] Endepunktet skal kun være tilgjengelig internt (nais ingress)
 
 ### Oppgave 3: Indekser-app (den tynne konsumenten)
 
@@ -686,6 +684,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Implementer lytter for `rekrutteringstreff.slettet` (fysisk sletting fra OpenSearch)
 - [ ] Implementer env-var-styrt reindeksering med dual-consumer (`INDEKS_VERSJON`, `REINDEKSER_INDEKS`)
 - [ ] Implementer alias-håndtering og opprettelse av ny indeks ved reindeksering
+- [ ] Kall `POST /internal/reindeksering/start` på rekrutteringstreff-api ved oppstart med `REINDEKSER_ENABLED=true`
 - [ ] Verifiser ende-til-ende i dev
 
 ### Oppgave 4: Søke-app
