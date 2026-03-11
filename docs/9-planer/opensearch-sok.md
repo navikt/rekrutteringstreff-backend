@@ -25,12 +25,12 @@ I dag henter frontend alle rekrutteringstreff fra backend og gjør filtrering, s
                                                └────────────────────────────────┘
 ```
 
-| Komponent                                 | Ansvar                                                                                                  |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Frontend**                              | Sender søkeparametere, viser paginerte resultater. Har også en egen minside for å trigge reindeksering. |
-| **rekrutteringstreff-søk** (ny app)       | Søke-endepunkt, bygger OpenSearch-spørringer                                                            |
-| **rekrutteringstreff-indekser** (ny app)  | Tynn Kafka-konsument uten REST API. Skriver til OpenSearch basert på hendelser fra Rapids.              |
-| **rekrutteringstreff-api** (eksisterende) | Eier databasen, bygger de fulle søkedokumentene, og styrer rutiner for reindeksering.                   |
+| Komponent                                 | Ansvar                                                                                        |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Frontend**                              | Sender søkeparametere, viser paginerte resultater.                                            |
+| **rekrutteringstreff-søk** (ny app)       | Søke-endepunkt, bygger OpenSearch-spørringer                                                  |
+| **rekrutteringstreff-indekser** (ny app)  | Tynn Kafka-konsument uten REST API. Skriver til OpenSearch basert på hendelser fra Rapids.    |
+| **rekrutteringstreff-api** (eksisterende) | Eier databasen, bygger de fulle søkedokumentene, og publiserer dem på Rapids for indeksering. |
 
 ---
 
@@ -98,7 +98,7 @@ enum class Sortering {
     SIST_OPPDATERTE,    // sistEndret desc – default uten fritekst
     NYESTE,             // opprettetAvTidspunkt desc
     ELDSTE,             // opprettetAvTidspunkt asc
-    AKTIVE,             // fraTid asc, kun treff med status PUBLISERT eller SOKNADSFRIST_PASSERT og tilTid i fremtiden
+    AKTIVE,             // fraTid asc, kun treff med status PUBLISERT og tilTid i fremtiden
     FULLFØRTE,          // tilTid desc, typisk brukt sammen med status FULLFØRT
 }
 ```
@@ -149,7 +149,7 @@ data class RekrutteringstreffSøkTreff(
 
 ### Visningsstatus
 
-Statusene som skal brukes gjennomgående i løsning og UI er:
+Statusene som vises i UI og brukes som filterverdier er:
 
 - `Utkast`
 - `Publisert`
@@ -157,7 +157,7 @@ Statusene som skal brukes gjennomgående i løsning og UI er:
 - `Fullført`
 - `Avlyst`
 
-Faktiske treffstatuser i backend i dag er:
+Backend-statuser i databasen er uendret:
 
 - `UTKAST`
 - `PUBLISERT`
@@ -165,9 +165,7 @@ Faktiske treffstatuser i backend i dag er:
 - `AVLYST`
 - `SLETTET`
 
-Planen forutsetter at backend utvides med en ny domenestatus `SOKNADSFRIST_PASSERT`, slik at filterstatusene over kan brukes direkte i stedet for å avledes i søket.
-
-`AVPUBLISERT` og `GJENÅPNET` er fortsatt hendelser, ikke statuser.
+`SOKNADSFRIST_PASSERT` er **ikke** en domenestatus. Den avledes i OpenSearch-queryen som `status = PUBLISERT AND svarfrist < now`. Dette gir korrekt visningsstatus i sanntid uten scheduler, og unngår å utvide domenemodellen for et rent søke-behov.
 
 ```kotlin
 enum class Visningsstatus {
@@ -179,15 +177,15 @@ enum class Visningsstatus {
 }
 ```
 
-| Visningsstatus         | Backend-status         | Regel                                                             |
-| ---------------------- | ---------------------- | ----------------------------------------------------------------- |
-| `UTKAST`               | `UTKAST`               | Direkte                                                           |
-| `PUBLISERT`            | `PUBLISERT`            | Direkte                                                           |
-| `SOKNADSFRIST_PASSERT` | `SOKNADSFRIST_PASSERT` | Settes av scheduler når `status = PUBLISERT` og `svarfrist < now` |
-| `FULLFORT`             | `FULLFØRT`             | Direkte                                                           |
-| `AVLYST`               | `AVLYST`               | Direkte                                                           |
+| Visningsstatus         | Backend-status | OpenSearch-clause                                                  |
+| ---------------------- | -------------- | ------------------------------------------------------------------ |
+| `UTKAST`               | `UTKAST`       | `term` `status=UTKAST`                                             |
+| `PUBLISERT`            | `PUBLISERT`    | `bool`: `term` `status=PUBLISERT` AND (`svarfrist >= now` OR null) |
+| `SOKNADSFRIST_PASSERT` | `PUBLISERT`    | `bool`: `term` `status=PUBLISERT` AND `svarfrist < now`            |
+| `FULLFORT`             | `FULLFØRT`     | `term` `status=FULLFØRT`                                           |
+| `AVLYST`               | `AVLYST`       | `term` `status=AVLYST`                                             |
 
-`SLETTET` filtreres alltid bort.
+`SLETTET` filtreres alltid bort. Slettede treff fjernes også fysisk fra OpenSearch (se [Sletting](#sletting-fra-opensearch)).
 
 ### Endepunkt
 
@@ -210,7 +208,6 @@ Følgende operasjoner må føre til ny eller oppdatert melding til indekseren:
 | Kilde                | Operasjon                                                                | Påvirker felter i søkedokument                                               |
 | -------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | `rekrutteringstreff` | opprett, oppdater, publiser, avpubliser, gjenåpne, fullfør, avlys, slett | toppnivåfelter, status, tider, sted, `sistEndret`                            |
-| `scheduler`          | overgang fra `PUBLISERT` til `SOKNADSFRIST_PASSERT`                      | `status`, `sistEndret`                                                       |
 | `eier`               | legg til/fjern eier                                                      | `eiere`, indirekte tilgang i visning `MINE`                                  |
 | `kontor`             | legg til kontor                                                          | `kontorer`, indirekte tilgang i visning `MITT_KONTOR`                        |
 | `arbeidsgiver`       | legg til/fjern arbeidsgiver                                              | `arbeidsgivere`, `antallArbeidsgivere`                                       |
@@ -263,56 +260,45 @@ Alle relaterte moduler må ende i samme resultat: ett `treffId` som legges i ind
 
 Ny app under `rekrutteringstreff-backend/apps/rekrutteringstreff-indekser/`.
 
-Dette er en **"tynn" applikasjon**. Den har **ingen REST-endepunkter** eller admin-grensesnitt. Den er en ren Kafka-konsument som gjør én ting: omsetter konvensjonsstyrte JSON-meldinger på Rapids til operasjoner i OpenSearch.
+Appen følger samme mønster som `toi-stilling-indekser`: en tynn Kafka-konsument som indekserer ferdigbygde dokumenter til OpenSearch, med env-var-styrt reindeksering.
 
 ### Ansvar
 
 - Lytte på Rapids-meldinger fra `rekrutteringstreff-api`.
-- Mottar `@event_name: rekrutteringstreff.oppdatert`: tar JSON-modellen (som allerede er ferdig utledet med eier, sted, fylke, etc.) og u-betinget `upsert`'er den til aktiv OpenSearch-indeks (samt evt. målindeks hvis indeksering pågår).
-- Mottar `@event_name: reindeksering.start` med konfigurasjon (navn på ny indeks): klargjør og oppretter rykende fersk indeks i OpenSearch med riktig mapping og settings, og aktiverer dual-write lokalt.
-- Mottar `@event_name: reindeksering.dokument`: Lagrer opphentet dokument direkte i ny målindeks (utenfor alias).
-- Mottar `@event_name: reindeksering.ferdig`: utfører alias-swap mot OpenSearch i bakkant og muliggjør zero-downtime cutover. Deretter skrur den av dual-write mode.
+- Mottar `@event_name: rekrutteringstreff.oppdatert`: upsert av ferdigbygd JSON-dokument til aktiv OpenSearch-indeks.
+- Mottar `@event_name: rekrutteringstreff.slettet`: sletter dokumentet fra OpenSearch (se [Sletting](#sletting-fra-opensearch)).
+- Håndtere reindeksering via dual-consumer-mønster (se [Reindeksering](#reindeksering)).
 
 ---
 
-## Reindeksering og Admin-API (i `rekrutteringstreff-api`)
+## Reindeksering
 
-I stedet for at indekseren trekker data fra databasen, er det **`rekrutteringstreff-api`** som eier reindekseringsprosessen og skyver ferdigbygde dokumenter og status-kommandoer over Kafka (Rapids).
+Reindeksering følger mønsteret fra `toi-stilling-indekser`: env-var-styrt, med dual-write under reindeksering og manuell alias-swap. Ingen admin-endepunkter eller admin-UI.
 
-Dette eksponeres i API-et via egne admin-endepunkter:
+### Env-variabler
 
-```text
-POST /api/internal/reindeksering/start
-GET /api/internal/reindeksering/status
-```
+| Variabel             | Eksempel                | Beskrivelse                    |
+| -------------------- | ----------------------- | ------------------------------ |
+| `INDEKS_VERSJON`     | `rekrutteringstreff-v1` | Nåværende aktiv indeks (alias) |
+| `REINDEKSER_ENABLED` | `true`                  | Aktiverer reindekseringsmodus  |
+| `REINDEKSER_INDEKS`  | `rekrutteringstreff-v2` | Målindeks for reindeksering    |
 
-Denne API-funksjonaliteten vil bli brukt fra **Frontend**, på en egen mini-side for utviklere/admin med "Start reindeksering"-knapp + bekreftelsesdialog, pluss visning av status for indekseringen. Tilgang styres med `UTVIKLER`-rollen (samme rolle som allerede brukes for utviklertilgang i API-et). Eksakt hvor denne inngangen skal bo avklares senere.
+### Flyten steg for steg
 
-### Reindekseringsflyt og Alias-bytte uten nedetid (Zero-downtime cutover)
+1. **Forbered**: Sett `REINDEKSER_ENABLED=true` og `REINDEKSER_INDEKS=rekrutteringstreff-v2` i nais-config. Deploy.
+2. **Oppstart**: Appen oppdager at `REINDEKSER_INDEKS` ikke finnes i OpenSearch, oppretter den med mapping/settings fra koden.
+3. **Trigger fullscan**: API-et har et internt endepunkt eller bakgrunnsjobb som porsjonsvis publiserer alle treff som `rekrutteringstreff.oppdatert`-meldinger på Rapids.
+4. **Dual-write**: Under reindeksering kjører appen to konsumenter parallelt:
+   - Én som skriver til **gammel** indeks (`INDEKS_VERSJON`)
+   - Én som skriver til **ny** indeks (`REINDEKSER_INDEKS`)
+   - Begge prosesserer `rekrutteringstreff.oppdatert`-meldinger, slik at ingen oppdateringer går tapt.
+5. **Verifiser**: Sjekk at ny indeks har forventet antall dokumenter.
+6. **Swap**: Oppdater `INDEKS_VERSJON=rekrutteringstreff-v2`. Deploy. Appen peker aliaset til ny indeks.
+7. **Rydd opp**: Sett `REINDEKSER_ENABLED=false`. Slett gammel indeks manuelt ved behov.
 
-Reindeksering skjer helt uten nedetid. Dette løses i OpenSearch ved bruk av logiske alias. Søke-appen (klientene) peker aldri direkte på en spesifikk indeks (f.eks. `rekrutteringstreff-v1`), men på et logisk alias (f.eks. `rekrutteringstreff-alias`).
+### Alias
 
-Prosedyren med hendelser på Kafka ser slik ut:
-
-1. **Start**: Reindekseringen trigges via frontend-minisiden som kaller `POST /api/internal/reindeksering/start`.
-2. **Klargjøring** (`@event_name: reindeksering.start`):
-   - API-et genererer et unikt målindeksnavn (f.eks. timestampbasert: `rekrutteringstreff-20261103-1430`) og sender det på køen.
-   - Indekser-appen mottar dette, kontakter OpenSearch og oppretter den _nye_ indeksen med ferske mappinger/settings fra koden.
-   - Indekser-appen setter seg i lokal "reindeksering pågår"-tilstand under dette indeksnavnet. (Dette prepper for dual-write).
-3. **Fullscan pluss historikk-pumping** (`@event_name: reindeksering.dokument`):
-   - API-et starter en asynkron bakgrunnsjobb som porsjonsvis itererer over _alle_ treff fra databasen.
-   - For hvert treff bygger API-et det komplette JSON-søkedokumentet, og sender det over Rapids. Indekseren legger dem rett inn i den nye (og inntil videre kalde) målindeksen.
-4. **Dual-write underveis** (`@event_name: rekrutteringstreff.oppdatert`):
-   - Siden databasetømmingen kan ta noe tid, vil eventuelle vanlige oppdateringshendelser fra brukere sendes og fanges opp samtidig.
-   - Ettersom indekseren er i "reindekserings-modus" (fra punkt 2) rutes endringene til _både_ nåværende aktiv indeks (via alias) og den nyopprettede målindeksen, slik at de inntil videre holdes i sync.
-5. **Selve byttet med offset-sjekk** (`@event_name: reindeksering.ferdig`):
-   - Når API-et er 100% ferdig med utkastelsen av databasen, sender det en "ferdig"-melding på Rapids.
-   - Siden flere pods leser hver sine Kafka-partisjoner parallelt, kan andre pods fortsatt drive med å tygge gjennom titusenvis av nyankomne `reindeksering.dokument`-meldinger på sine partisjoner når denne flagg-meldingen mottas.
-   - Indekser-appen som mottar pakken sjekker da **Kafka-offset (lag)** for alle partisjonene i consumer-gruppen (tilsvarende funksjonalitet som brukes i `toi-helseapp`).
-   - Hvis det er lag (flere ubehandlede meldinger på en eller flere partisjoner), kastes en exception, slik at meldingen "feiler" og legges tilbake av Rapids. Appen vil da fortsette i en retry-loop fram til konsumet på alle partisjoner er helt ajour.
-   - Først når Kafka bekrefter at offset for hele consumer-gruppen er oppe a-jour (altså at platformens køer faktisk *er* tømt), utfører appen en `/aliases` POST request for å peke søk til den nye indeksen.
-   - OpenSearch gjør selve peker-omkoblingen 100% atomisk. Etterfølgende søk rutes umiddelbart til den nye indeksen, helt uten tap av dokumenter eller uforutsett forsinkelse.
-6. **Opprydding (fremtidig forbedring, pt. manuell)**: Dual-write avsluttes. Gamle utilknyttede OpenSearch-indekser fjernes. Dette gjøres enten direkte i reindeksering-konsumenten eller plukkes opp ved en definert ILM/Lifecycle.
+Søke-appen leser fra et logisk alias (f.eks. `rekrutteringstreff`), aldri fra en spesifikk indeks. Alias-swap er atomisk i OpenSearch.
 
 ### Dokument som indekseres
 
@@ -339,13 +325,51 @@ Prosedyren med hendelser på Kafka ser slik ut:
   "arbeidsgivere": [{ "orgnr": "912345678", "orgnavn": "Eksempel AS" }],
   "antallArbeidsgivere": 1,
   "antallJobbsøkere": 4,
-  "innlegg": [
-    { "tittel": "Velkommen", "tekstinnhold": "Ren tekst, for fritekst-søk" }
-  ]
+  "innlegg": [{ "tittel": "Velkommen" }]
 }
 ```
 
-Alle feltene over skal forstås som et **denormalisert snapshot** av ett treff. Her betyr snapshot bare "full dokumentrepresentasjon akkurat nå". Det er ikke et krav om å lagre dette i en egen tabell. Kilden er ikke bare `rekrutteringstreff`-tabellen, men også eier-, kontor-, arbeidsgiver-, innlegg- og jobbsøkerdata.
+Alle feltene over skal forstås som et **denormalisert snapshot** av ett treff. Kilden er ikke bare `rekrutteringstreff`-tabellen, men også eier-, kontor-, arbeidsgiver-, innlegg- og jobbsøkerdata.
+
+Geografi-feltene (`kommune`, `kommunenummer`, `fylke`, `fylkesnummer`) hentes fra rekrutteringstreffets eksisterende databasefelter. Se [Åpen avklaring: Geografi-berikelse](#åpen-avklaring-geografi-berikelse) for strategi for å sikre at disse alltid er utfylt.
+
+### `sistEndret`
+
+`sistEndret` er tidspunktet for siste databaseendring for treffet, satt innenfor transaksjonen som utfører endringen (eller så nærme som mulig etterpå). Enhver endring som trigger indekseringsutløser oppdaterer dette feltet.
+
+### `all_text_no` (fritekst-felt)
+
+I OpenSearch-mappingen defineres et `all_text_no`-felt med norsk analyzer som brukes til fritekst-søk. Følgende felter kopieres inn via `copy_to`:
+
+- `tittel`
+- `arbeidsgivere.orgnr`
+- `arbeidsgivere.orgnavn`
+- `innlegg.tittel`
+
+Innleggs tekstinnhold inkluderes ikke i fritekst-søk i første versjon. Bare tittel (maks 20 tegn i visning, men fullt felt i indeks) brukes.
+
+### Sletting fra OpenSearch
+
+Når et treff slettes (`status = SLETTET`), skal dokumentet **fysisk fjernes** fra OpenSearch-indeksen. Dette gir en renere og mindre indeks over tid.
+
+Flyten:
+
+1. `rekrutteringstreff-api` markerer treffet som `SLETTET` i databasen.
+2. I samme transaksjon legges `treffId` i indekseringskøen.
+3. Scheduleren plukker opp raden, men i stedet for å bygge et fullt dokument, sender den en `@event_name: rekrutteringstreff.slettet`-melding på Rapids med bare `treffId`.
+4. Indekser-appen mottar meldingen og kaller `client.delete()` med treffets UUID mot OpenSearch.
+
+Dokumentbuilderen sjekker status: hvis `SLETTET`, skrives det _ingen_ søkedokument-melding – bare slette-meldingen sendes.
+
+### Tilgangskontroll
+
+Søke-endepunktet (`POST /api/rekrutteringstreff/sok`) krever autentisering og er tilgjengelig for rollene:
+
+- `JOBBSØKERRETTET` (veileder)
+- `ARBEIDSGIVERRETTET` (markedskontakt)
+- `UTVIKLER`
+
+Innlogget brukers navident og kontor leses fra tokenet via auth-klassen (som igjen henter fra Modia Context Holder). Disse brukes for `MINE`- og `MITT_KONTOR`-visningene.
 
 ### Forslag til appstruktur
 
@@ -353,18 +377,18 @@ Alle feltene over skal forstås som et **denormalisert snapshot** av ett treff. 
 apps/rekrutteringstreff-indekser/
 ├── build.gradle.kts
 ├── Dockerfile
-├── nais.yaml / nais-dev.yaml / nais-prod.yaml
+├── nais-dev.yaml / nais-prod.yaml
 ├── opensearch.yaml
 └── src/main/
     ├── resources/
-    │   ├── treff-mapping.json       ← norsk analyzer, nested for arbeidsgivere/innlegg
+    │   ├── treff-mapping.json       ← norsk analyzer, nested for arbeidsgivere/innlegg, copy_to for all_text_no
     │   └── treff-settings.json
     └── kotlin/no/nav/toi/rekrutteringstreff/indekser/
-        ├── Application.kt
+        ├── Application.kt            ← oppstart, reindekseringslogikk (env-var-sjekk)
         ├── OpenSearchConfig.kt
-        ├── OpenSearchClient.kt        ← kommunikasjon med aiven/OpenSearch (inkl alias)
-        ├── TreffDokumentLytter.kt     ← Lytter på 'rekrutteringstreff.oppdatert' mm.
-        ├── ReindekseringLytter.kt     ← Lytter på 'reindeksering.start/ferdig/dokument'
+        ├── OpenSearchClient.kt        ← kommunikasjon med Aiven/OpenSearch (inkl. alias, delete)
+        ├── TreffDokumentLytter.kt     ← Lytter på 'rekrutteringstreff.oppdatert'
+        ├── TreffSlettetLytter.kt      ← Lytter på 'rekrutteringstreff.slettet'
         └── Liveness.kt
 ```
 
@@ -400,17 +424,17 @@ Full reindeksering bygger dokumentene direkte fra databasen i indekseren, med sa
 
 ### Filtre og OpenSearch-clauses
 
-| Filter             | OpenSearch-clause                                                                                                            |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `fritekst`         | `match` på `all_text_no` + nested `match` på `arbeidsgivere.orgnavn`, `innlegg.tittel` og `innlegg.tekstinnhold` (lav boost) |
-| `visningsstatuser` | `terms` på `status`. `SOKNADSFRIST_PASSERT` er en egen status satt av scheduler.                                             |
-| `fylkesnummer`     | `terms` på `fylkesnummer`                                                                                                    |
-| `kommunenummer`    | `terms` på `kommunenummer`                                                                                                   |
-| `kontorer`         | `terms` på `kontorer`                                                                                                        |
-| `MINE`             | `term` på `eiere` = innlogget navident                                                                                       |
-| `MITT_KONTOR`      | `term` på `kontorer` = innlogget kontor                                                                                      |
+| Filter             | OpenSearch-clause                                                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `fritekst`         | `match` på `all_text_no` + nested `match` på `arbeidsgivere.orgnr`, `arbeidsgivere.orgnavn` og `innlegg.tittel` (lav boost) |
+| `visningsstatuser` | `filters`-aggregering. `SOKNADSFRIST_PASSERT` avledes som `status=PUBLISERT AND svarfrist < now` (se Visningsstatus-tabell) |
+| `fylkesnummer`     | `terms` på `fylkesnummer`                                                                                                   |
+| `kommunenummer`    | `terms` på `kommunenummer`                                                                                                  |
+| `kontorer`         | `terms` på `kontorer`                                                                                                       |
+| `MINE`             | `term` på `eiere` = innlogget navident                                                                                      |
+| `MITT_KONTOR`      | `term` på `kontorer` = innlogget kontor                                                                                     |
 
-`SLETTET`-status filtreres alltid bort (`must_not` `term` `status=SLETTET`).
+Slettede treff finnes ikke i indeksen (se [Sletting](#sletting-fra-opensearch)).
 
 `fritekst` legges i `must`, alle andre i `filter`.
 
@@ -418,39 +442,51 @@ Fritekst søker på `all_text_no` for toppnivåfelter og egne nested-queries for
 
 ---
 
-## Statusoverganger
+## Statusmodell
 
-Planen legger til én ny domenestatus: `SOKNADSFRIST_PASSERT`.
+Planen endrer ikke domenestatusene. Eksisterende statusoverganger i backend er uendret:
 
-### Komplett statusmodell
+| Fra status            | Trigger                     | Til status  |
+| --------------------- | --------------------------- | ----------- |
+| `UTKAST`              | manuell publisering         | `PUBLISERT` |
+| `UTKAST`              | sletting (ingen jobbsøkere) | `SLETTET`   |
+| `PUBLISERT`           | manuell fullføring          | `FULLFØRT`  |
+| `PUBLISERT`           | manuell avlysning           | `AVLYST`    |
+| `FULLFØRT` / `AVLYST` | gjenåpning                  | `PUBLISERT` |
 
-| Fra status             | Trigger                      | Til status             |
-| ---------------------- | ---------------------------- | ---------------------- |
-| `UTKAST`               | manuell publisering          | `PUBLISERT`            |
-| `UTKAST`               | sletting (ingen jobbsøkere)  | `SLETTET`              |
-| `PUBLISERT`            | scheduler: `svarfrist < now` | `SOKNADSFRIST_PASSERT` |
-| `PUBLISERT`            | manuell fullføring           | `FULLFØRT`             |
-| `PUBLISERT`            | manuell avlysning            | `AVLYST`               |
-| `SOKNADSFRIST_PASSERT` | manuell fullføring           | `FULLFØRT`             |
-| `SOKNADSFRIST_PASSERT` | manuell avlysning            | `AVLYST`               |
-| `FULLFØRT` / `AVLYST`  | gjenåpning                   | `PUBLISERT`            |
+Visningsstatusen `SOKNADSFRIST_PASSERT` avledes i OpenSearch-queryen (se [Visningsstatus](#visningsstatus)). Ingen scheduler, ingen ny enum-verdi i backend.
 
-> **Merk:** Avpublisering (`PUBLISERT → UTKAST`) finnes i koden i dag, men det er uavklart om dette skal videreføres. Foreløpig tas den ikke med i den planlagte statusmodellen.
+---
 
-### Nye overganger innført av denne planen
+## Åpen avklaring: Geografi-berikelse
 
-De nye radene i tabellen over er:
+Databasen har allerede feltene `kommune`, `kommunenummer`, `fylke` og `fylkesnummer` på rekrutteringstreff. Disse brukes direkte i søkedokumentet og i geografi-filteret. Utfordringen er at feltene er fritekst og ikke nødvendigvis alltid utfylt.
 
-| Fra status             | Trigger                      | Til status             |
-| ---------------------- | ---------------------------- | ---------------------- |
-| `PUBLISERT`            | scheduler: `svarfrist < now` | `SOKNADSFRIST_PASSERT` |
-| `SOKNADSFRIST_PASSERT` | manuell fullføring           | `FULLFØRT`             |
-| `SOKNADSFRIST_PASSERT` | manuell avlysning            | `AVLYST`               |
+For at geografi-filtrene skal fungere pålitelig, trengs en strategi for å sikre at kommune/fylke alltid er populert:
 
-Dette krever:
+### Alternativ 1: Postnummerregister (anbefalt)
 
-- En scheduler som periodisk finner treff med `status = PUBLISERT` og `svarfrist < now`, oppdaterer status til `SOKNADSFRIST_PASSERT`, og legger `treffId` i indekseringskøen i samme transaksjon.
-- At `fullfør()` og `avlys()` i `RekrutteringstreffService` oppdateres til å akseptere `SOKNADSFRIST_PASSERT` i tillegg til `PUBLISERT`.
+Posten/Bring publiserer et offisielt postnummerregister (TSV/CSV) som mapper postnummer til poststed, kommunenummer og kommunenavn. Fra kommunenummer kan fylkesnummer avledes (de to første sifrene).
+
+- **Fordel**: Selvforsynt, ingen ekstern avhengighet i runtime. Postnummerregisteret oppdateres sjelden (noen ganger i året).
+- **Implementasjon**: Bygg inn en statisk mapping-fil i `rekrutteringstreff-api`. Når et treff opprettes eller oppdateres med postnummer, slår backend opp kommune og fylke automatisk. Filen oppdateres ved behov.
+- **Risiko**: Filen kan bli utdatert, men endringer i postnummerregisteret er svært sjeldne.
+
+### Alternativ 2: PAM geografi-tjeneste
+
+Nav har en intern geografi-tjeneste (brukt av `toi-geografi`) som mapper postnummer til kommune/fylke via REST (`PAM_GEOGRAFI_URL`).
+
+- **Fordel**: Alltid oppdatert.
+- **Ulempe**: Legger til en ekstern runtime-avhengighet for en enkel oppslag. Overkill for dette formålet.
+
+### Alternativ 3: Bruker-input
+
+La brukeren velge kommune/fylke eksplisitt i UI (dropdown med kjente verdier fra frontend-mapping).
+
+- **Fordel**: Eksakt. Ingen berikelse nødvendig.
+- **Ulempe**: Mer komplekst UI, dobbeltarbeid for bruker som allerede har skrevet postnummer.
+
+**Anbefaling**: Alternativ 1 (postnummerregister) gir best balanse mellom pålitelighet og enkelhet. For eksisterende treff uten kommune/fylke kan en engangsmigrasjon berike basert på postnummeret.
 
 ---
 
@@ -462,41 +498,35 @@ Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart 
 
 1. Opprett `rekrutteringstreff_indeksering`-tabell (Flyway-migrasjon) med `treff_id` som primærnøkkel
 2. Legg alle indekseringsrelevante endringer inn i køen i samme transaksjon som domeneendringen, med `insert ... on conflict do update`
-3. Scheduler plukker pending `treffId`-er fra køen
-4. Scheduler sender Rapids-melding med `treffId` og sletter raden etter vellykket sending
+3. Scheduler plukker pending `treffId`-er fra køen (med leader election)
+4. For hvert treffId: bygg fullt søkedokument fra databasen, send `rekrutteringstreff.oppdatert` på Rapids (eller `rekrutteringstreff.slettet` ved status `SLETTET`), og slett raden etter vellykket sending
 5. Legg til tester som verifiserer at domeneendring og kø-innskriving rollbackes samlet ved feil
 
-### Oppgave 2: Statusovergang for søknadsfrist passert
+### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
 
-1. Innfør ny domenestatus `SOKNADSFRIST_PASSERT`
-2. Implementer scheduler som finner treff med `status = PUBLISERT` og `svarfrist < now`
-3. Oppdater status og legg `treffId` i indekseringskøen i samme transaksjon
-4. Avklar og implementer hvilke manuelle overganger som skal være tillatt fra `SOKNADSFRIST_PASSERT`
-5. Legg til tester for scheduler, statusovergang og reindeksering
+1. Implementer databaselogikken for å bygge et komplett søkedokument (`TreffDokumentBuilder` e.l.)
+2. Implementer publisering over Rapids av oppdaterte, komplette dokument-JSON-modeller
+3. Implementer bakgrunnsjobben som porsjonsvis publiserer alle treff som `rekrutteringstreff.oppdatert`-meldinger (trigges av indekser-appen ved oppstart med `REINDEKSER_ENABLED=true`)
 
-### Oppgave 3: Reindekserings-håndtering (rekrutteringstreff-api)
+### Oppgave 3: Indekser-app
 
-1. Implementer databaselogikken for å bygge et komplett søkedokument (`TreffDokumentBuilder` e.l.).
-2. Implementer publisering over Rapids av oppdaterte, komplette dokument-JSON-modeller.
-3. Legg til admin-endepunkter (`/api/internal/reindeksering/start` og `/status`) bak tilgangskontroll.
-4. Implementer bakgrunnsjobben (fullscan av database) som publiserer `reindeksering.dokument`-meldinger.
+1. Opprett `rekrutteringstreff-indekser`-modul etter mønster fra `toi-stilling-indekser`
+2. Definer mapping og settings (norsk analyzer, nested for arbeidsgivere og innlegg, `all_text_no` med `copy_to`)
+3. Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml`)
+4. Implementer lytter for `rekrutteringstreff.oppdatert` (vanlig indeksering)
+5. Implementer lytter for `rekrutteringstreff.slettet` (fysisk sletting fra indeks)
+6. Implementer env-var-styrt reindeksering med dual-consumer
+7. Deploy til dev, verifiser flyten
 
-### Oppgave 4: Indekser-app (den tynne konsumenten)
+### Oppgave 4: Søke-app
 
-1. Opprett `rekrutteringstreff-indekser`-modul.
-2. Definer mapping og settings (norsk analyzer, nested for arbeidsgivere og innlegg).
-3. Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml`).
-4. Implementer lytter for `rekrutteringstreff.oppdatert` (vanlig indeksering).
-5. Implementer lyttere og logikk for reindekseringshendelsene over Rapids.
-6. Deploy til dev, verifiser flyten.
-
-### Oppgave 5: Søke-app
-
-1. Opprett søke-app/-modul med OpenSearch lesekonfig
-2. Implementer query builder for fritekst, status, paginering og visning
-3. Legg til geografi-filtre
-4. Legg til visning-filter og rollevalidering (ALLE / MINE / MITT_KONTOR)
-5. Komponenttester med OpenSearch Testcontainers
+1. Opprett søke-app/-modul med OpenSearch lesekonfig og auth (jobbsøkerrettet, arbeidsgiverrettet, utvikler)
+2. Implementer query builder for fritekst, paginering og sortering
+3. Implementer visningsstatus-filter med avledet `SOKNADSFRIST_PASSERT` (`status=PUBLISERT AND svarfrist < now`)
+4. Legg til geografi-filtre (fylkesnummer, kommunenummer)
+5. Legg til visning-filter (ALLE / MINE / MITT_KONTOR)
+6. Legg til aggregeringer for filtre
+7. Komponenttester med OpenSearch Testcontainers
 
 Hvis dagens brukeropplevelse skal bevares, må query-builderen følge dagens regler. Hvis ikke, må dette avklares som funksjonell endring.
 
