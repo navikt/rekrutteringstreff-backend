@@ -286,7 +286,7 @@ POST /api/internal/reindeksering/start
 GET /api/internal/reindeksering/status
 ```
 
-Denne API-funksjonaliteten vil bli brukt fra **Frontend**, på en egen mini-side for utviklere/admin med "Start reindeksering"-knapp + bekreftelsesdialog, pluss visning av status for indekseringen. Tilgang styres med rolle for utviklere (f.eks. en AD-gruppe for teamet). Eksakt hvor denne inngangen skal bo avklares senere.
+Denne API-funksjonaliteten vil bli brukt fra **Frontend**, på en egen mini-side for utviklere/admin med "Start reindeksering"-knapp + bekreftelsesdialog, pluss visning av status for indekseringen. Tilgang styres med `UTVIKLER`-rollen (samme rolle som allerede brukes for utviklertilgang i API-et). Eksakt hvor denne inngangen skal bo avklares senere.
 
 ### Reindekseringsflyt og Alias-bytte uten nedetid (Zero-downtime cutover)
 
@@ -419,15 +419,35 @@ Fritekst søker på `all_text_no` for toppnivåfelter og egne nested-queries for
 
 Planen legger til én ny domenestatus: `SOKNADSFRIST_PASSERT`.
 
-| Fra status             | Trigger            | Til status             |
-| ---------------------- | ------------------ | ---------------------- |
-| `PUBLISERT`            | `svarfrist < now`  | `SOKNADSFRIST_PASSERT` |
-| `PUBLISERT`            | manuell fullføring | `FULLFØRT`             |
-| `PUBLISERT`            | manuell avlysning  | `AVLYST`               |
-| `SOKNADSFRIST_PASSERT` | manuell fullføring | `FULLFØRT`             |
-| `SOKNADSFRIST_PASSERT` | manuell avlysning  | `AVLYST`               |
+### Komplett statusmodell
 
-Dette krever en scheduler som periodisk finner treff med `status = PUBLISERT` og `svarfrist < now`, oppdaterer status til `SOKNADSFRIST_PASSERT`, og legger `treffId` i indekseringskøen i samme transaksjon.
+| Fra status             | Trigger                      | Til status             |
+| ---------------------- | ---------------------------- | ---------------------- |
+| `UTKAST`               | manuell publisering          | `PUBLISERT`            |
+| `UTKAST`               | sletting (ingen jobbsøkere)  | `SLETTET`              |
+| `PUBLISERT`            | scheduler: `svarfrist < now` | `SOKNADSFRIST_PASSERT` |
+| `PUBLISERT`            | manuell fullføring           | `FULLFØRT`             |
+| `PUBLISERT`            | manuell avlysning            | `AVLYST`               |
+| `SOKNADSFRIST_PASSERT` | manuell fullføring           | `FULLFØRT`             |
+| `SOKNADSFRIST_PASSERT` | manuell avlysning            | `AVLYST`               |
+| `FULLFØRT` / `AVLYST`  | gjenåpning                   | `PUBLISERT`            |
+
+> **Merk:** Avpublisering (`PUBLISERT → UTKAST`) finnes i koden i dag, men det er uavklart om dette skal videreføres. Foreløpig tas den ikke med i den planlagte statusmodellen.
+
+### Nye overganger innført av denne planen
+
+De nye radene i tabellen over er:
+
+| Fra status             | Trigger                      | Til status             |
+| ---------------------- | ---------------------------- | ---------------------- |
+| `PUBLISERT`            | scheduler: `svarfrist < now` | `SOKNADSFRIST_PASSERT` |
+| `SOKNADSFRIST_PASSERT` | manuell fullføring           | `FULLFØRT`             |
+| `SOKNADSFRIST_PASSERT` | manuell avlysning            | `AVLYST`               |
+
+Dette krever:
+
+- En scheduler som periodisk finner treff med `status = PUBLISERT` og `svarfrist < now`, oppdaterer status til `SOKNADSFRIST_PASSERT`, og legger `treffId` i indekseringskøen i samme transaksjon.
+- At `fullfør()` og `avlys()` i `RekrutteringstreffService` oppdateres til å akseptere `SOKNADSFRIST_PASSERT` i tillegg til `PUBLISERT`.
 
 ---
 
@@ -644,7 +664,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
     },
     "beskrivelse": {
       "type": "text",
-      "analyzer": "norwegian_html",
+      "analyzer": "norwegian",
       "copy_to": ["all_text_no"]
     },
     "all_text_no": {
@@ -693,12 +713,15 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ## Risiko
 
-| Risiko                        | Avbøting                                                                                                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer alder og antall rader i `rekrutteringstreff_indeksering`.                                                          |
-| OpenSearch utilgjengelig      | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.                                         |
-| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier                                                                                                  |
-| Statusovergang på tid         | Scheduler må kjøre stabilt og oppdatere både domenestatus og indekseringskø. Overvåk antall treff som står for lenge i `PUBLISERT` etter passert `svarfrist`. |
+| Risiko                         | Avbøting                                                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Indeks og database ut av synk  | Full reindeksering som fallback. Monitorer alder og antall rader i `rekrutteringstreff_indeksering`.                                                          |
+| OpenSearch utilgjengelig       | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.                                         |
+| Query-ytelse                   | Start enkelt, profiler med reelle data, juster boost-verdier.                                                                                                 |
+| Statusovergang på tid          | Scheduler må kjøre stabilt og oppdatere både domenestatus og indekseringskø. Overvåk antall treff som står for lenge i `PUBLISERT` etter passert `svarfrist`. |
+| Ny status påvirker andre apper | `SOKNADSFRIST_PASSERT` må håndteres i MinSide-API, aktivitetskort-lytter og begge frontender. Kartlegg alle steder som matcher på `RekrutteringstreffStatus`. |
+| Kafka-volum ved reindeksering  | Bakgrunnsjobben sender mange meldinger raskt. Porsjonering med throttling. Sjekk topic-retensjon og partisjonering før første kjøring.                        |
+| Nested query-ytelse            | `arbeidsgivere` og `innlegg` som nested-felter krever nested queries for fritekst, som er tregere enn flat struktur. Profiler med realistisk datamengde.      |
 
 ---
 
@@ -754,4 +777,4 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Oppdater filter-UI til statusene `Utkast`, `Publisert`, `Søknadsfrist passert`, `Fullført`, `Avlyst`
 - [ ] Legg til tester for rolle × visning × filterkombinasjoner
 - [ ] Fjern gammel klientfiltrering når ny flyt er verifisert
-- [ ] Lag en mini-side for utviklere/admin (tilgangsstyrt av AD-gruppe) for å trigge reindeksering. Skal ha "Start"-knapp (med bekreftelsesdialog) og "Status"-knapp.
+- [ ] Lag en mini-side for utviklere/admin (tilgangsstyrt med `UTVIKLER`-rollen) for å trigge reindeksering. Skal ha "Start"-knapp (med bekreftelsesdialog) og "Status"-knapp.
