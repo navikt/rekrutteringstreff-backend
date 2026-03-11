@@ -458,7 +458,7 @@ Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart 
 3. Legg til admin-endepunkter (`/api/internal/reindeksering/start` og `/status`) bak tilgangskontroll.
 4. Implementer bakgrunnsjobben (fullscan av database) som publiserer `reindeksering.dokument`-meldinger.
 
-### Oppgave 3.5: Indekser-app (den tynne konsumenten)
+### Oppgave 4: Indekser-app (den tynne konsumenten)
 
 1. Opprett `rekrutteringstreff-indekser`-modul.
 2. Definer mapping og settings (norsk analyzer, nested for arbeidsgivere og innlegg).
@@ -467,7 +467,7 @@ Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart 
 5. Implementer lyttere og logikk for reindekseringshendelsene over Rapids.
 6. Deploy til dev, verifiser flyten.
 
-### Oppgave 4: Søke-app
+### Oppgave 5: Søke-app
 
 1. Opprett søke-app/-modul med OpenSearch lesekonfig
 2. Implementer query builder for fritekst, status, paginering og visning
@@ -477,7 +477,7 @@ Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart 
 
 Hvis dagens brukeropplevelse skal bevares, må query-builderen følge dagens regler. Hvis ikke, må dette avklares som funksjonell endring.
 
-### Oppgave 5: Frontend
+### Oppgave 6: Frontend
 
 1. Bytt kun oversiktsvisningen for rekrutteringstreff til nytt søke-endepunkt.
 2. Behold detaljvisning, mutasjoner og hjelpelister på eksisterende endepunkter i første omgang.
@@ -727,7 +727,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Definer logikk/bakgrunnsjobb for full databasetømming og utsending av `reindeksering.dokument`
 - [ ] Styr livssyklusen via hendelser på Rapids (`reindeksering.start`, `reindeksering.ferdig`)
 
-### Oppgave 3.5: Indekser-app (den tynne konsumenten)
+### Oppgave 4: Indekser-app (den tynne konsumenten)
 
 - [ ] Opprett `rekrutteringstreff-indekser`-modul
 - [ ] Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml` og nødvendige dev/prod envs)
@@ -737,7 +737,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Implementer OpenSearch opprettelse av indeks og utførende alias-bytte
 - [ ] Verifiser ende-til-ende i dev
 
-### Oppgave 4: Søke-app
+### Oppgave 5: Søke-app
 
 - [ ] Opprett `rekrutteringstreff-sok`-modul
 - [ ] Implementer query builder for fritekst, status, paginering og visning
@@ -746,7 +746,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Implementer aggregeringer for status, fylke og kontor
 - [ ] Legg til komponenttester med OpenSearch Testcontainers
 
-### Oppgave 5: Frontend
+### Oppgave 6: Frontend
 
 - [ ] Bytt oversiktsvisningen til nytt søke-endepunkt
 - [ ] Behold detaljvisning og mutasjoner på eksisterende endepunkter i første fase
