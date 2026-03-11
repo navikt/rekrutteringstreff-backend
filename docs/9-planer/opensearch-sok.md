@@ -704,21 +704,21 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ## TODO
 
-### Oppgave 1: Komprimert indekseringskø i rekrutteringstreff-api
-
-- [ ] Opprett Flyway-migrasjon for `rekrutteringstreff_indeksering`
-- [ ] Legg kø-innskriving inn i samme transaksjon som alle indekseringsrelevante domeneendringer
-- [ ] Implementer scheduler/worker som plukker pending `treffId`-er og publiserer melding
-- [ ] Slett kø-rad etter vellykket sending
-- [ ] Legg til tester for rollback, deduplisering og idempotent resend
-
-### Oppgave 2: Statusovergang for søknadsfrist passert
+### Oppgave 1: Statusovergang for søknadsfrist passert
 
 - [ ] Innfør ny domenestatus `SOKNADSFRIST_PASSERT`
 - [ ] Implementer scheduler som finner `PUBLISERT` med passert `svarfrist`
 - [ ] Oppdater status og legg `treffId` i reindekseringskøen i samme transaksjon
 - [ ] Avklar og implementer lovlige manuelle overganger fra `SOKNADSFRIST_PASSERT`
 - [ ] Legg til tester for statusovergang og reindeksering
+
+### Oppgave 2: Komprimert indekseringskø i rekrutteringstreff-api
+
+- [ ] Opprett Flyway-migrasjon for `rekrutteringstreff_indeksering`
+- [ ] Legg kø-innskriving inn i samme transaksjon som alle indekseringsrelevante domeneendringer
+- [ ] Implementer scheduler/worker som plukker pending `treffId`-er og publiserer melding
+- [ ] Slett kø-rad etter vellykket sending
+- [ ] Legg til tester for rollback, deduplisering og idempotent resend
 
 ### Oppgave 3: Reindekserings-håndtering (rekrutteringstreff-api)
 
