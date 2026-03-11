@@ -305,10 +305,13 @@ Prosedyren med hendelser på Kafka ser slik ut:
 4. **Dual-write underveis** (`@event_name: rekrutteringstreff.oppdatert`):
    - Siden databasetømmingen kan ta noe tid, vil eventuelle vanlige oppdateringshendelser fra brukere sendes og fanges opp samtidig.
    - Ettersom indekseren er i "reindekserings-modus" (fra punkt 2) rutes endringene til _både_ nåværende aktiv indeks (via alias) og den nyopprettede målindeksen, slik at de inntil videre holdes i sync.
-5. **Selve byttet** (`@event_name: reindeksering.ferdig`):
-   - Når API-et er 100% ferdig med utkastelsen av databasen, sender API-et en "ferdig"-kommando over Rapids.
-   - Indekser-appen sender da en `/aliases` POST request til OpenSearch som sier: _Fjern det gamle indeks-navnet fra aliaset og legg inn den nye målindeksen i aliaset_.
-   - OpenSearch gjør denne peker-omkoblingen 100% atomisk. Etterfølgende søk rutes umiddelbart til den nye og ferdig-populerte indeksen, og oppdateringen er live.
+5. **Selve byttet med offset-sjekk** (`@event_name: reindeksering.ferdig`):
+   - Når API-et er 100% ferdig med utkastelsen av databasen, sender det en "ferdig"-melding på Rapids.
+   - Siden flere pods leser hver sine Kafka-partisjoner parallelt, kan andre pods fortsatt drive med å tygge gjennom titusenvis av nyankomne `reindeksering.dokument`-meldinger på sine partisjoner når denne flagg-meldingen mottas.
+   - Indekser-appen som mottar pakken sjekker da **Kafka-offset (lag)** for alle partisjonene i consumer-gruppen (tilsvarende funksjonalitet som brukes i `toi-helseapp`).
+   - Hvis det er lag (flere ubehandlede meldinger på en eller flere partisjoner), kastes en exception, slik at meldingen "feiler" og legges tilbake av Rapids. Appen vil da fortsette i en retry-loop fram til konsumet på alle partisjoner er helt ajour.
+   - Først når Kafka bekrefter at offset for hele consumer-gruppen er oppe a-jour (altså at platformens køer faktisk *er* tømt), utfører appen en `/aliases` POST request for å peke søk til den nye indeksen.
+   - OpenSearch gjør selve peker-omkoblingen 100% atomisk. Etterfølgende søk rutes umiddelbart til den nye indeksen, helt uten tap av dokumenter eller uforutsett forsinkelse.
 6. **Opprydding (fremtidig forbedring, pt. manuell)**: Dual-write avsluttes. Gamle utilknyttede OpenSearch-indekser fjernes. Dette gjøres enten direkte i reindeksering-konsumenten eller plukkes opp ved en definert ILM/Lifecycle.
 
 ### Dokument som indekseres
