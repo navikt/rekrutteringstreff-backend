@@ -199,7 +199,7 @@ POST /api/rekrutteringstreff/sok
 
 Alle indekseringsrelevante endringer skal legge `treffId` i en komprimert indekseringskø.
 
-Denne køen er for løpende endringer i normal drift. Den er ikke mekanismen som starter full reindeksering. Full reindeksering startes eksplisitt via admin-endepunktet i indekser-appen, men bruker den samme køen til catch-up av endringer som skjer mens fullscan pågår.
+Denne køen er for løpende endringer i normal drift. Den er ikke mekanismen som starter full reindeksering. Full reindeksering trigges via env-var-styrt bakgrunnsjobb (se [Reindeksering](#reindeksering)), men bruker den samme køen til catch-up av endringer som skjer mens fullscan pågår.
 
 ### Indekseringsutløsere
 
@@ -331,7 +331,7 @@ Søke-appen leser fra et logisk alias (f.eks. `rekrutteringstreff`), aldri fra e
 
 Alle feltene over skal forstås som et **denormalisert snapshot** av ett treff. Kilden er ikke bare `rekrutteringstreff`-tabellen, men også eier-, kontor-, arbeidsgiver-, innlegg- og jobbsøkerdata.
 
-Geografi-feltene (`kommune`, `kommunenummer`, `fylke`, `fylkesnummer`) hentes fra rekrutteringstreffets eksisterende databasefelter. Se [Åpen avklaring: Geografi-berikelse](#åpen-avklaring-geografi-berikelse) for strategi for å sikre at disse alltid er utfylt.
+Geografi-feltene (`kommune`, `kommunenummer`, `fylke`, `fylkesnummer`) hentes fra rekrutteringstreffets eksisterende databasefelter. Se [Geografi-berikelse](#geografi-berikelse) for strategi for å sikre at disse alltid er utfylt.
 
 ### `sistEndret`
 
@@ -339,14 +339,9 @@ Geografi-feltene (`kommune`, `kommunenummer`, `fylke`, `fylkesnummer`) hentes fr
 
 ### `all_text_no` (fritekst-felt)
 
-I OpenSearch-mappingen defineres et `all_text_no`-felt med norsk analyzer som brukes til fritekst-søk. Følgende felter kopieres inn via `copy_to`:
+I OpenSearch-mappingen defineres et `all_text_no`-felt med norsk analyzer som brukes til fritekst-søk. Følgende toppnivåfelter kopieres inn via `copy_to`: `tittel`, `beskrivelse`, `fylke`, `kommune`, `poststed`, `gateadresse`.
 
-- `tittel`
-- `arbeidsgivere.orgnr`
-- `arbeidsgivere.orgnavn`
-- `innlegg.tittel`
-
-Innleggs tekstinnhold inkluderes ikke i fritekst-søk i første versjon. Bare tittel (maks 20 tegn i visning, men fullt felt i indeks) brukes.
+Nested-felter (`arbeidsgivere`, `innlegg`) støtter ikke `copy_to` til toppnivå i OpenSearch. Fritekst-søk i disse løses med eksplisitte nested-queries i query-builderen.
 
 ### Sletting fra OpenSearch
 
@@ -434,27 +429,7 @@ Full reindeksering bygger dokumentene direkte fra databasen i indekseren, med sa
 | `MINE`             | `term` på `eiere` = innlogget navident                                                                                      |
 | `MITT_KONTOR`      | `term` på `kontorer` = innlogget kontor                                                                                     |
 
-Slettede treff finnes ikke i indeksen (se [Sletting](#sletting-fra-opensearch)).
-
 `fritekst` legges i `must`, alle andre i `filter`.
-
-Fritekst søker på `all_text_no` for toppnivåfelter og egne nested-queries for `arbeidsgivere` og `innlegg`.
-
----
-
-## Statusmodell
-
-Planen endrer ikke domenestatusene. Eksisterende statusoverganger i backend er uendret:
-
-| Fra status            | Trigger                     | Til status  |
-| --------------------- | --------------------------- | ----------- |
-| `UTKAST`              | manuell publisering         | `PUBLISERT` |
-| `UTKAST`              | sletting (ingen jobbsøkere) | `SLETTET`   |
-| `PUBLISERT`           | manuell fullføring          | `FULLFØRT`  |
-| `PUBLISERT`           | manuell avlysning           | `AVLYST`    |
-| `FULLFØRT` / `AVLYST` | gjenåpning                  | `PUBLISERT` |
-
-Visningsstatusen `SOKNADSFRIST_PASSERT` avledes i OpenSearch-queryen (se [Visningsstatus](#visningsstatus)). Ingen scheduler, ingen ny enum-verdi i backend.
 
 ---
 
@@ -473,62 +448,13 @@ Nav har en intern geografi-tjeneste (brukt av bl.a. `toi-geografi`) som mapper p
 
 ---
 
-## Oppgaver
-
-Rekkefølgen er foreslått, men hver oppgave beskriver et selvstendig leverbart steg.
-
-### Oppgave 1: Komprimert indekseringskø i rekrutteringstreff-api
-
-1. Opprett `rekrutteringstreff_indeksering`-tabell (Flyway-migrasjon) med `treff_id` som primærnøkkel
-2. Legg alle indekseringsrelevante endringer inn i køen i samme transaksjon som domeneendringen, med `insert ... on conflict do update`
-3. Scheduler plukker pending `treffId`-er fra køen (med leader election)
-4. For hvert treffId: bygg fullt søkedokument fra databasen, send `rekrutteringstreff.oppdatert` på Rapids (eller `rekrutteringstreff.slettet` ved status `SLETTET`), og slett raden etter vellykket sending
-5. Legg til tester som verifiserer at domeneendring og kø-innskriving rollbackes samlet ved feil
-
-### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
-
-1. Implementer databaselogikken for å bygge et komplett søkedokument (`TreffDokumentBuilder` e.l.)
-2. Implementer publisering over Rapids av oppdaterte, komplette dokument-JSON-modeller
-3. Implementer bakgrunnsjobben som porsjonsvis publiserer alle treff som `rekrutteringstreff.oppdatert`-meldinger (trigges av indekser-appen ved oppstart med `REINDEKSER_ENABLED=true`)
-
-### Oppgave 3: Indekser-app
-
-1. Opprett `rekrutteringstreff-indekser`-modul etter mønster fra `toi-stilling-indekser`
-2. Definer mapping og settings (norsk analyzer, nested for arbeidsgivere og innlegg, `all_text_no` med `copy_to`)
-3. Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml`)
-4. Implementer lytter for `rekrutteringstreff.oppdatert` (vanlig indeksering)
-5. Implementer lytter for `rekrutteringstreff.slettet` (fysisk sletting fra indeks)
-6. Implementer env-var-styrt reindeksering med dual-consumer
-7. Deploy til dev, verifiser flyten
-
-### Oppgave 4: Søke-app
-
-1. Opprett søke-app/-modul med OpenSearch lesekonfig og auth (jobbsøkerrettet, arbeidsgiverrettet, utvikler)
-2. Implementer query builder for fritekst, paginering og sortering
-3. Implementer visningsstatus-filter med avledet `SOKNADSFRIST_PASSERT` (`status=PUBLISERT AND svarfrist < now`)
-4. Legg til geografi-filtre (fylkesnummer, kommunenummer)
-5. Legg til visning-filter (ALLE / MINE / MITT_KONTOR)
-6. Legg til aggregeringer for filtre
-7. Komponenttester med OpenSearch Testcontainers
-
-Hvis dagens brukeropplevelse skal bevares, må query-builderen følge dagens regler. Hvis ikke, må dette avklares som funksjonell endring.
-
-### Oppgave 6: Frontend
-
-1. Bytt kun oversiktsvisningen for rekrutteringstreff til nytt søke-endepunkt.
-2. Behold detaljvisning, mutasjoner og hjelpelister på eksisterende endepunkter i første omgang.
-3. La query-parametre i frontend speile `RekrutteringstreffSøkRequest`, slik at URL og backend-modell samsvarer.
-4. Innfør egne komponent- og integrasjonstester for rolle × visning × filterkombinasjoner før gammel klientfiltrering fjernes.
-
----
-
 ## Foreslått førsteversjon av OpenSearch settings og mapping
 
 Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/resources/treff-settings.json` og `treff-mapping.json`.
 
 ### `treff-settings.json` (forslag)
 
-> `norwegian`-analysatoren er innebygd i OpenSearch og trenger ikke defineres her. Kun `norwegian_html` (egendefinert med `html_strip`) defineres eksplisitt.
+> `norwegian`-analysatoren er innebygd i OpenSearch og trenger ikke defineres her. `norwegian_html` (egendefinert med `html_strip`) brukes av `all_text_no` som sikkerhetsnett for eventuell HTML-markering.
 
 ```json
 {
@@ -706,10 +632,6 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
         "tittel": {
           "type": "text",
           "analyzer": "norwegian"
-        },
-        "tekstinnhold": {
-          "type": "text",
-          "analyzer": "norwegian_html"
         }
       }
     }
@@ -722,36 +644,26 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - `number_of_shards`/`number_of_replicas` bør justeres etter datamengde og miljø (dev/prod) før endelig låsing.
 - `dynamic: false` er valgt for kontroll på schema; nye felter krever eksplisitt mapping-endring.
 - Navident-felt er normalisert til lowercase for trygg matching mot token-claims i søkefiltre.
-- `copy_to` er bevisst utelatt fra nested-felter (`arbeidsgivere`, `innlegg`) fordi OpenSearch ikke støtter `copy_to` fra nested til toppnivå. Fritekst-søk i nested-felter løses med eksplisitte nested-queries i query-builderen.
+- `copy_to` er utelatt fra nested-felter (`arbeidsgivere`, `innlegg`) fordi OpenSearch ikke støtter `copy_to` fra nested til toppnivå.
 - Aggregeringer (antall per fylke, status og navkontor) trengs for å vise tall i filterpanelet. Disse bygges som `terms`-aggregeringer på `keyword`-feltene i mapping.
 
 ---
 
 ## Risiko
 
-| Risiko                         | Avbøting                                                                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Indeks og database ut av synk  | Full reindeksering som fallback. Monitorer alder og antall rader i `rekrutteringstreff_indeksering`.                                                          |
-| OpenSearch utilgjengelig       | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.                                         |
-| Query-ytelse                   | Start enkelt, profiler med reelle data, juster boost-verdier.                                                                                                 |
-| Statusovergang på tid          | Scheduler må kjøre stabilt og oppdatere både domenestatus og indekseringskø. Overvåk antall treff som står for lenge i `PUBLISERT` etter passert `svarfrist`. |
-| Ny status påvirker andre apper | `SOKNADSFRIST_PASSERT` må håndteres i MinSide-API, aktivitetskort-lytter og begge frontender. Kartlegg alle steder som matcher på `RekrutteringstreffStatus`. |
-| Kafka-volum ved reindeksering  | Bakgrunnsjobben sender mange meldinger raskt. Porsjonering med throttling. Sjekk topic-retensjon og partisjonering før første kjøring.                        |
-| Nested query-ytelse            | `arbeidsgivere` og `innlegg` som nested-felter krever nested queries for fritekst, som er tregere enn flat struktur. Profiler med realistisk datamengde.      |
+| Risiko                        | Fiks.                                                                                                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer alder og antall rader i `rekrutteringstreff_indeksering`.                                                     |
+| OpenSearch utilgjengelig      | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.                                    |
+| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier.                                                                                            |
+| Kafka-volum ved reindeksering | Bakgrunnsjobben sender mange meldinger raskt. Porsjonering med throttling. Sjekk topic-retensjon og partisjonering før første kjøring.                   |
+| Nested query-ytelse           | `arbeidsgivere` og `innlegg` som nested-felter krever nested queries for fritekst, som er tregere enn flat struktur. Profiler med realistisk datamengde. |
 
 ---
 
 ## TODO
 
-### Oppgave 1: Statusovergang for søknadsfrist passert
-
-- [ ] Innfør ny domenestatus `SOKNADSFRIST_PASSERT`
-- [ ] Implementer scheduler som finner `PUBLISERT` med passert `svarfrist`
-- [ ] Oppdater status og legg `treffId` i reindekseringskøen i samme transaksjon
-- [ ] Avklar og implementer lovlige manuelle overganger fra `SOKNADSFRIST_PASSERT`
-- [ ] Legg til tester for statusovergang og reindeksering
-
-### Oppgave 2: Komprimert indekseringskø i rekrutteringstreff-api
+### Oppgave 1: Komprimert indekseringskø i rekrutteringstreff-api
 
 - [ ] Opprett Flyway-migrasjon for `rekrutteringstreff_indeksering`
 - [ ] Legg kø-innskriving inn i samme transaksjon som alle indekseringsrelevante domeneendringer
@@ -759,24 +671,24 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Slett kø-rad etter vellykket sending
 - [ ] Legg til tester for rollback, deduplisering og idempotent resend
 
-### Oppgave 3: Reindekserings-håndtering (rekrutteringstreff-api)
+### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
 
-- [ ] Implementer bygging av fullverdig dokument (`TreffDokumentBuilder`) og pakking i Rapids-melding
-- [ ] Implementer `POST /api/internal/reindeksering/start` og `GET /api/internal/reindeksering/status` i API-et
-- [ ] Definer logikk/bakgrunnsjobb for full databasetømming og utsending av `reindeksering.dokument`
-- [ ] Styr livssyklusen via hendelser på Rapids (`reindeksering.start`, `reindeksering.ferdig`)
+- [ ] Implementer `TreffDokumentBuilder` som bygger komplett søkedokument fra databasen
+- [ ] Implementer bakgrunnsjobb som porsjonsvis publiserer alle treff som `rekrutteringstreff.oppdatert`-meldinger på Rapids
+- [ ] Bakgrunnsjobben trigges av indekser-appen ved oppstart med `REINDEKSER_ENABLED=true`
 
-### Oppgave 4: Indekser-app (den tynne konsumenten)
+### Oppgave 3: Indekser-app (den tynne konsumenten)
 
 - [ ] Opprett `rekrutteringstreff-indekser`-modul
 - [ ] Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml` og nødvendige dev/prod envs)
 - [ ] Legg inn mapping og settings i resources
-- [ ] Implementer lytter for vanlige domeneoppdateringer (`rekrutteringstreff.oppdatert`)
-- [ ] Implementer lyttere for innkommende reindekserings-kommandoer (start, dokument, ferdig)
-- [ ] Implementer OpenSearch opprettelse av indeks og utførende alias-bytte
+- [ ] Implementer lytter for `rekrutteringstreff.oppdatert` (upsert til OpenSearch)
+- [ ] Implementer lytter for `rekrutteringstreff.slettet` (fysisk sletting fra OpenSearch)
+- [ ] Implementer env-var-styrt reindeksering med dual-consumer (`INDEKS_VERSJON`, `REINDEKSER_INDEKS`)
+- [ ] Implementer alias-håndtering og opprettelse av ny indeks ved reindeksering
 - [ ] Verifiser ende-til-ende i dev
 
-### Oppgave 5: Søke-app
+### Oppgave 4: Søke-app
 
 - [ ] Opprett `rekrutteringstreff-sok`-modul
 - [ ] Implementer query builder for fritekst, status, paginering og visning
@@ -785,7 +697,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Implementer aggregeringer for status, fylke og kontor
 - [ ] Legg til komponenttester med OpenSearch Testcontainers
 
-### Oppgave 6: Frontend
+### Oppgave 5: Frontend
 
 - [ ] Bytt oversiktsvisningen til nytt søke-endepunkt
 - [ ] Behold detaljvisning og mutasjoner på eksisterende endepunkter i første fase
@@ -793,4 +705,3 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Oppdater filter-UI til statusene `Utkast`, `Publisert`, `Søknadsfrist passert`, `Fullført`, `Avlyst`
 - [ ] Legg til tester for rolle × visning × filterkombinasjoner
 - [ ] Fjern gammel klientfiltrering når ny flyt er verifisert
-- [ ] Lag en mini-side for utviklere/admin (tilgangsstyrt med `UTVIKLER`-rollen) for å trigge reindeksering. Skal ha "Start"-knapp (med bekreftelsesdialog) og "Status"-knapp.
