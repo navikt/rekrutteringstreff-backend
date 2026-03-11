@@ -752,6 +752,6 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Behold detaljvisning og mutasjoner på eksisterende endepunkter i første fase
 - [ ] La query-parametre speile `RekrutteringstreffSøkRequest`
 - [ ] Oppdater filter-UI til statusene `Utkast`, `Publisert`, `Søknadsfrist passert`, `Fullført`, `Avlyst`
-- [ ] Lag en mini-side for utviklere/admin (tilgangsstyrt av AD-gruppe) for å trigge reindeksering. Skal ha "Start"-knapp (med bekreftelsesdialog) og "Status"-knapp.
 - [ ] Legg til tester for rolle × visning × filterkombinasjoner
 - [ ] Fjern gammel klientfiltrering når ny flyt er verifisert
+- [ ] Lag en mini-side for utviklere/admin (tilgangsstyrt av AD-gruppe) for å trigge reindeksering. Skal ha "Start"-knapp (med bekreftelsesdialog) og "Status"-knapp.
