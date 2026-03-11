@@ -458,35 +458,18 @@ Visningsstatusen `SOKNADSFRIST_PASSERT` avledes i OpenSearch-queryen (se [Visnin
 
 ---
 
-## Åpen avklaring: Geografi-berikelse
+## Geografi-berikelse
 
 Databasen har allerede feltene `kommune`, `kommunenummer`, `fylke` og `fylkesnummer` på rekrutteringstreff. Disse brukes direkte i søkedokumentet og i geografi-filteret. Utfordringen er at feltene er fritekst og ikke nødvendigvis alltid utfylt.
 
-For at geografi-filtrene skal fungere pålitelig, trengs en strategi for å sikre at kommune/fylke alltid er populert:
+For at geografi-filtrene skal fungere pålitelig, må kommune/fylke alltid være populert.
 
-### Alternativ 1: Postnummerregister (anbefalt)
+### Strategi: PAM geografi-tjeneste
 
-Posten/Bring publiserer et offisielt postnummerregister (TSV/CSV) som mapper postnummer til poststed, kommunenummer og kommunenavn. Fra kommunenummer kan fylkesnummer avledes (de to første sifrene).
+Nav har en intern geografi-tjeneste (brukt av bl.a. `toi-geografi`) som mapper postnummer til kommune/fylke via REST (`PAM_GEOGRAFI_URL`). Tjenesten er alltid oppdatert og brukes allerede av andre Nav-team.
 
-- **Fordel**: Selvforsynt, ingen ekstern avhengighet i runtime. Postnummerregisteret oppdateres sjelden (noen ganger i året).
-- **Implementasjon**: Bygg inn en statisk mapping-fil i `rekrutteringstreff-api`. Når et treff opprettes eller oppdateres med postnummer, slår backend opp kommune og fylke automatisk. Filen oppdateres ved behov.
-- **Risiko**: Filen kan bli utdatert, men endringer i postnummerregisteret er svært sjeldne.
-
-### Alternativ 2: PAM geografi-tjeneste
-
-Nav har en intern geografi-tjeneste (brukt av `toi-geografi`) som mapper postnummer til kommune/fylke via REST (`PAM_GEOGRAFI_URL`).
-
-- **Fordel**: Alltid oppdatert.
-- **Ulempe**: Legger til en ekstern runtime-avhengighet for en enkel oppslag. Overkill for dette formålet.
-
-### Alternativ 3: Bruker-input
-
-La brukeren velge kommune/fylke eksplisitt i UI (dropdown med kjente verdier fra frontend-mapping).
-
-- **Fordel**: Eksakt. Ingen berikelse nødvendig.
-- **Ulempe**: Mer komplekst UI, dobbeltarbeid for bruker som allerede har skrevet postnummer.
-
-**Anbefaling**: Alternativ 1 (postnummerregister) gir best balanse mellom pålitelighet og enkelhet. For eksisterende treff uten kommune/fylke kan en engangsmigrasjon berike basert på postnummeret.
+- **Implementasjon**: `rekrutteringstreff-api` kaller PAM geografi-tjenesten ved opprettelse/oppdatering av et treff med postnummer, og setter `kommunenummer`, `kommune`, `fylkesnummer` og `fylke` automatisk.
+- For eksisterende treff uten kommune/fylke kan en engangsmigrasjon berike basert på postnummeret.
 
 ---
 
