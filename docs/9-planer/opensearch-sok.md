@@ -25,12 +25,12 @@ I dag henter frontend alle rekrutteringstreff fra backend og gjør filtrering, s
                                                └────────────────────────────────┘
 ```
 
-| Komponent                                 | Ansvar                                                                                        |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Frontend**                              | Sender søkeparametere, viser paginerte resultater.                                            |
-| **rekrutteringstreff-søk** (ny app)       | Søke-endepunkt, bygger OpenSearch-spørringer                                                  |
-| **rekrutteringstreff-indekser** (ny app)  | Tynn Kafka-konsument uten REST API. Skriver til OpenSearch basert på hendelser fra Rapids.    |
-| **rekrutteringstreff-api** (eksisterende) | Eier databasen, bygger de fulle søkedokumentene, og publiserer dem på Rapids for indeksering. |
+| Komponent                                 | Ansvar                                                                                                                                                                                       |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Frontend**                              | Sender søkeparametere, viser paginerte resultater.                                                                                                                                           |
+| **rekrutteringstreff-søk** (ny app)       | Søke-endepunkt, bygger OpenSearch-spørringer                                                                                                                                                 |
+| **rekrutteringstreff-indekser** (ny app)  | Tynn Kafka-konsument uten REST API. Skriver til OpenSearch basert på hendelser fra Rapids.                                                                                                   |
+| **rekrutteringstreff-api** (eksisterende) | Eier databasen og indekseringskøen. Ved domeneendringer legges `treffId` i køen (i samme transaksjon). En scheduler bygger fulle søkedokumenter og publiserer dem på Rapids for indeksering. |
 
 ---
 
@@ -237,12 +237,12 @@ Det gjelder også mens full reindeksering pågår. Kontinuerlige endringer og fu
 **Flyt**
 
 1. Ved en indekseringsrelevant endring skriver samme service `treffId` til `rekrutteringstreff_indeksering`
-2. Innskriving gjøres i **samme database-transaksjon** som domeneendringen, med `insert ... on conflict (treff_id) do update set sist_endret_tidspunkt = now()`
+2. Innskriving gjøres i **samme database-transaksjon** som domeneendringen, med `insert ... on conflict (treff_id) do update set sist_endret_tidspunkt = now()`. `on conflict` sørger for at gjentatte endringer på samme treff (f.eks. titteloppdatering etterfulgt av eierbyttet) ikke gir flere kø-rader — bare én rad per treff, med nyeste tidsstempel. Scheduleren bygger uansett hele dokumentet på nytt, så mellomliggende endringer trenger ikke egne rader.
 3. Hvis transaksjonen rollbackes, rollbackes også kø-innskrivingen
 4. En scheduler (med leader election eller kun en node, eller lockingi db) plukker pending `treffId`-er fra køen
 5. For hvert `treffId`: Bygg det _fulle søkedokumentet_ (JSON) fra databasen. Send hendelse på Rapids med hele dokumentet, og slett deretter raden fra køen etter vellykket utsendelse.
 
-Raden bør slettes etter vellykket sending. `rekrutteringstreff_indeksering` er en pending-kø, ikke en historikktabell. Et `fullfort`-flagg vil gi mer opprydding, mer filtrering og større tabell uten å gi bedre robusthet i selve kømekanismen.
+Raden slettes etter vellykket sending. Sporbarhet ivaretas av `rekrutteringstreff_hendelse`-tabellene (som allerede logger alle domeneendringer) — indekseringskøen er kun en transient meldingskø, ikke en historikktabell.
 
 **Transaksjonskrav:** Innlegging i `rekrutteringstreff_indeksering` må skje atomisk sammen med domeneendringen (i samme `executeInTransaction`-blokk). Dette garanterer at endringen plukkes opp for indeksering.
 
@@ -404,6 +404,19 @@ RekrutteringstreffSøkService       ← bygger query, kaller klient
     ↓
 OpenSearchKlient                   ← wrapper rundt opensearch-java
 ```
+
+**Klient:** `opensearch-java` (offisiell Java-klient med typed DSL). Queryen bygges med `SearchRequest.Builder` og `BoolQuery.Builder`. Filtere implementeres som separate klasser med et felles `Filter`-interface, etter mønsteret i `rekrutteringsbistand-kandidatsok-api`:
+
+```kotlin
+typealias FilterFunksjon = BoolQuery.Builder.() -> ObjectBuilder<BoolQuery>
+
+interface Filter {
+    fun erAktiv(): Boolean
+    fun lagQuery(): FilterFunksjon
+}
+```
+
+Hvert filter (fritekst, status, geografi, visning) er en egen klasse som avgjør om den er aktiv basert på requesten, og legger til `must`/`filter`-clauses på `BoolQuery.Builder`. Queryen komponeres ved å kjede aktive filtere.
 
 ### Viktig avgrensning mot dagens GET-endepunkter
 
@@ -667,7 +680,10 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Legg kø-innskriving inn i samme transaksjon som alle indekseringsrelevante domeneendringer
 - [ ] Implementer scheduler/worker som plukker pending `treffId`-er og publiserer melding
 - [ ] Slett kø-rad etter vellykket sending
+- [ ] Scheduler må skille status `SLETTET` (send `rekrutteringstreff.slettet`) fra andre statuser (bygg fullt dokument med `TreffDokumentBuilder` og send `rekrutteringstreff.oppdatert`)
 - [ ] Legg til tester for rollback, deduplisering og idempotent resend
+
+> Avhengighet: `TreffDokumentBuilder` bygges i Oppgave 2, men brukes av scheduleren her.
 
 ### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
 
@@ -675,7 +691,13 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Implementer internt REST-endepunkt (`POST /internal/reindeksering/start`) som porsjonsvis publiserer alle treff på Rapids
 - [ ] Endepunktet skal kun være tilgjengelig internt (nais ingress)
 
-### Oppgave 3: Indekser-app (den tynne konsumenten)
+### Oppgave 3: Geografi-berikelse med PAM geografi-tjeneste
+
+- [ ] Integrer `rekrutteringstreff-api` med PAM geografi-tjeneste (`PAM_GEOGRAFI_URL`)
+- [ ] Ved opprettelse/oppdatering av treff med postnummer: sett `kommunenummer`, `kommune`, `fylkesnummer`, `fylke` automatisk
+- [ ] Engangsmigrasjon for eksisterende treff uten kommune/fylke
+
+### Oppgave 4: Indekser-app (den tynne konsumenten)
 
 - [ ] Opprett `rekrutteringstreff-indekser`-modul
 - [ ] Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml` og nødvendige dev/prod envs)
@@ -687,16 +709,17 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Kall `POST /internal/reindeksering/start` på rekrutteringstreff-api ved oppstart med `REINDEKSER_ENABLED=true`
 - [ ] Verifiser ende-til-ende i dev
 
-### Oppgave 4: Søke-app
+### Oppgave 5: Søke-app
 
 - [ ] Opprett `rekrutteringstreff-sok`-modul
-- [ ] Implementer query builder for fritekst, status, paginering og visning
+- [ ] Implementer query builder for fritekst, status, sortering, paginering og visning
+- [ ] Implementer sorteringslogikk for alle 6 alternativer (RELEVANS, SIST_OPPDATERTE, NYESTE, ELDSTE, AKTIVE, FULLFØRTE)
 - [ ] Legg til geografi-filtre
 - [ ] Legg til rollevalidering for `ALLE`, `MINE` og `MITT_KONTOR`
 - [ ] Implementer aggregeringer for status, fylke og kontor
 - [ ] Legg til komponenttester med OpenSearch Testcontainers
 
-### Oppgave 5: Frontend
+### Oppgave 6: Frontend
 
 - [ ] Bytt oversiktsvisningen til nytt søke-endepunkt
 - [ ] Behold detaljvisning og mutasjoner på eksisterende endepunkter i første fase
