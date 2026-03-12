@@ -8,7 +8,7 @@ import no.nav.toi.arbeidsgiver.Orgnr
 data class LeggTilArbeidsgiverDto(
     val organisasjonsnummer: String,
     val navn: String,
-    val næringskoder: List<Næringskode>? = emptyList(),
+    val næringskoder: List<Næringskode>? = null,
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
