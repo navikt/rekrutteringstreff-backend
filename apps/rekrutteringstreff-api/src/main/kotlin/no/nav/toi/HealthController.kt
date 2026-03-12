@@ -7,15 +7,15 @@ import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
 
-class HealthController(val javalin: Javalin, val isAliveRepository: IsAliveRepository)  {
+class HealthController(val javalin: Javalin, val healthRepository: HealthRepository)  {
     companion object {
-        private const val endepunktReady = "/isready"
-        private const val endepunktAlive = "/isalive"
+        private const val ENDEPUNKT_READY = "/isready"
+        private const val ENDEPUNKT_ALIVE = "/isalive"
     }
 
     init {
-        javalin.get(endepunktReady, isReadyHandler() )
-        javalin.get(endepunktAlive, isAliveHandler() )
+        javalin.get(ENDEPUNKT_READY, isReadyHandler())
+        javalin.get(ENDEPUNKT_ALIVE, isAliveHandler())
     }
 
     @OpenApi(
@@ -26,14 +26,14 @@ class HealthController(val javalin: Javalin, val isAliveRepository: IsAliveRepos
                 content = [OpenApiContent(from = String::class, example = "isready")]
             )
         ],
-        path = endepunktReady,
+        path = ENDEPUNKT_READY,
         methods = [HttpMethod.GET]
     )
     fun isReadyHandler(): (Context) -> Unit = { ctx ->
-        if (isAliveRepository.fårKontaktMedDatabasen()) {
+        if (healthRepository.fårKontaktMedDatabasen()) {
             ctx.result("isready")
         } else {
-            log.info("isReady FEIL")
+            log.info("isReady får ikke kontakt med databasen")
             ctx.status(500).result("db not ready")
         }
     }
@@ -46,14 +46,14 @@ class HealthController(val javalin: Javalin, val isAliveRepository: IsAliveRepos
                 content = [OpenApiContent(from = String::class, example = "isalive")]
             )
         ],
-        path = endepunktAlive,
+        path = ENDEPUNKT_ALIVE,
         methods = [HttpMethod.GET]
     )
     fun isAliveHandler(): (Context) -> Unit = { ctx ->
-        if (isAliveRepository.fårKontaktMedDatabasen()) {
-            ctx.status(200).result("isalive")
+        if (healthRepository.fårKontaktMedDatabasen()) {
+            ctx.result("isalive")
         } else {
-            log.info("isAliveHandler FEIL")
+            log.info("isAliveHandler får ikke kontakt med databasen")
             ctx.status(500).result("db not alive")
         }
     }

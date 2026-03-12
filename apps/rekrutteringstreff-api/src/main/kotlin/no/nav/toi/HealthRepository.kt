@@ -4,7 +4,7 @@ import java.sql.SQLException
 import javax.sql.DataSource
 import kotlin.use
 
-class IsAliveRepository(
+class HealthRepository(
     private val dataSource: DataSource,
 ) {
     fun fårKontaktMedDatabasen(): Boolean {
