@@ -216,11 +216,11 @@ Følgende operasjoner må føre til ny eller oppdatert melding til indekseren:
 
 Det brukes ett eksplisitt «treff må reindekseres»-signal per `treffId`. Dokumentet bygges on demand fra databasen med én felles builder.
 
-### Mønster: komprimert indekseringskø per `treffId`
+### Mønster: Event-basert indekseringskø (Outbox pattern)
 
-Det skal bare kunne finnes én ventende rad per `treffId`. Hvis treffet allerede ligger i køen, oppdateres raden i stedet for å opprette en ny.
+Det legges inn en ny rad i køen for _hver_ endring, selv om det allerede finnes rader for samme `treffId`. Dette er et enklere mønster som fjerner all tvil rundt sortering, tabell-låsinger og rekkefølge (i motsetning til upsert-basert kø). Om det blir to identiske `treffId` i køen rett etter hverandre, har det i praksis null betydning (den bygger og sender dokumentet to ganger, OpenSearch er idempotent).
 
-Det gjelder også mens full reindeksering pågår. Kontinuerlige endringer og full reindeksering skal samarbeide via samme pending-kø: hvis et `treffId` allerede er uprosessert, skal vi ikke legge inn en ny rad, bare oppdatere `sist_endret_tidspunkt`.
+Det gjelder også mens full reindeksering pågår. Kontinuerlige endringer og full reindeksering kan skrive til samme pending-kø uten å trenge komplisert konflikt-håndtering.
 
 | Tabell                           | Rolle                                                                            |
 | -------------------------------- | -------------------------------------------------------------------------------- |
@@ -228,19 +228,18 @@ Det gjelder også mens full reindeksering pågår. Kontinuerlige endringer og fu
 
 **Anbefalte kolonner:**
 
-| Kolonne                 | Type                     | Beskrivelse                     |
-| ----------------------- | ------------------------ | ------------------------------- |
-| `treff_id`              | `uuid` (PK)              | Treff som skal reindekseres     |
-| `opprettet_tidspunkt`   | `timestamptz` (NOT NULL) | Når treffet først ble lagt i kø |
-| `sist_endret_tidspunkt` | `timestamptz` (NOT NULL) | Når kø-raden sist ble berørt    |
+| Kolonne               | Type                     | Beskrivelse                         |
+| --------------------- | ------------------------ | ----------------------------------- |
+| `id`                  | `serial` (PK)            | Unik auto-inkrement id for oppgaven |
+| `treff_id`            | `uuid` (NOT NULL)        | Treff som skal reindekseres         |
+| `opprettet_tidspunkt` | `timestamptz` (NOT NULL) | Når raden ble lagt i kø             |
 
 **Flyt**
 
-1. Ved en indekseringsrelevant endring skriver samme service `treffId` til `rekrutteringstreff_indeksering`
-2. Innskriving gjøres i **samme database-transaksjon** som domeneendringen, med `insert ... on conflict (treff_id) do update set sist_endret_tidspunkt = now()`. `on conflict` sørger for at gjentatte endringer på samme treff (f.eks. titteloppdatering etterfulgt av eierbyttet) ikke gir flere kø-rader — bare én rad per treff, med nyeste tidsstempel. Scheduleren bygger uansett hele dokumentet på nytt, så mellomliggende endringer trenger ikke egne rader.
-3. Hvis transaksjonen rollbackes, rollbackes også kø-innskrivingen
-4. En scheduler (med leader election eller kun en node, eller lockingi db) plukker pending `treffId`-er fra køen
-5. For hvert `treffId`: Bygg det _fulle søkedokumentet_ (JSON) fra databasen. Send hendelse på Rapids med hele dokumentet, og slett deretter raden fra køen etter vellykket utsendelse.
+1. Ved en indekseringsrelevant endring skriver samme service en ny rad med `treffId` til `rekrutteringstreff_indeksering`
+2. Innskriving gjøres i **samme database-transaksjon** som domeneendringen, med en vanlig `INSERT`. Dette er ukomplisert, robust og gir ikke feil ved parallelle oppdateringer. Scheduleren bygger uansett hele dokumentet på nytt når den plukker oppgaven.
+3. En scheduler (med leader election eller kun en node, eller lockingi db) plukker pending `treffId`-er fra køen
+4. For hvert `treffId`: Bygg det _fulle søkedokumentet_ (JSON) fra databasen. Send hendelse på Rapids med hele dokumentet, og slett deretter raden fra køen etter vellykket utsendelse.
 
 Raden slettes etter vellykket sending. Sporbarhet ivaretas av `rekrutteringstreff_hendelse`-tabellene (som allerede logger alle domeneendringer) — indekseringskøen er kun en transient meldingskø, ikke en historikktabell.
 
@@ -724,16 +723,20 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 > **Uberørt i denne oppgaven:** Detaljvisning (`GET /api/rekrutteringstreff/{id}`), opprettelse, redigering, publisering, avlysing, fullføring, eier-/arbeidsgiver-/jobbsøker-endringer — alt som skriver til `rekrutteringstreff-api` — beholder eksisterende endepunkter og hooks.
 
 **Datahenting**
+
 - [ ] Nytt SWR-hook `useRekrutteringstreffSøk` som kaller `POST /api/rekrutteringstreff/sok`
 - [ ] Synk alle søkeparametre til URL query-params (fritekst, visningsstatuser, sortering, visning, side) slik at søk er delbart og bokmerkvennlig
 
 **Tabs (visning)**
+
 - [ ] Implementer tab-rad med `Alle`, `Mine`, `Mitt kontor` — mapper til `visning`-parameteret i requesten
 
 **Fritekst**
+
 - [ ] Søkefelt som sender `fritekst`-parameteret — søker på tvers av tittel, beskrivelse, innlegg og arbeidsgivernavn
 
 **Filter og sortering**
+
 - [ ] Statusfilter (checkboxes): `Utkast`, `Publisert`, `Søknadsfrist passert`, `Fullført`, `Avlyst`
 - [ ] Sortering (radio): sist oppdaterte, nyeste, eldste, aktive, fullførte (+ relevans når fritekst er satt)
 - [ ] Aktiver geografi- og kontorfiltre (UI-komponentene finnes allerede, men er deaktivert)
@@ -741,11 +744,14 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Vis aktive filter-chips med «Fjern alle»-knapp over resultatlisten
 
 **Paginering**
+
 - [ ] Vis «1–20 av N» med forrige/neste-knapper, basert på `totaltAntall`, `side` og `antallPerSide` fra responsen
 
 **Treffkort**
+
 - [ ] Vis tittel, dato/klokkeslett (`fraTid`), adresse, og eierskap («Mitt oppdrag» hvis innlogget er eier, ellers «Eies av [navn]»)
 
 **Opprydding**
+
 - [ ] Fjern klientside-filtrering og sortering i `RekrutteringstreffSøk.tsx` (`useMemo`-logikken)
 - [ ] Fjern `useRekrutteringstreffOversikt` når ny flyt er verifisert
