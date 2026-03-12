@@ -7,10 +7,15 @@ import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
 
-class HealthEndpoints {
+class HealthController(val javalin: Javalin, val isAliveRepository: IsAliveRepository)  {
     companion object {
-        const val ENDEPUNKT_READY = "/isready"
-        const val ENDEPUNKT_ALIVE = "/isalive"
+        private const val endepunktReady = "/isready"
+        private const val endepunktAlive = "/isalive"
+    }
+
+    init {
+        javalin.get(endepunktReady, isReadyHandler() )
+        javalin.get(endepunktAlive, isAliveHandler() )
     }
 
     @OpenApi(
@@ -21,10 +26,10 @@ class HealthEndpoints {
                 content = [OpenApiContent(from = String::class, example = "isready")]
             )
         ],
-        path = ENDEPUNKT_READY,
+        path = endepunktReady,
         methods = [HttpMethod.GET]
     )
-    fun isReadyHandler(ctx: Context, isAliveRepository: IsAliveRepository) {
+    fun isReadyHandler(): (Context) -> Unit = { ctx ->
         if (isAliveRepository.fårKontaktMedDatabasen()) {
             log.info("isReady OK")
             ctx.result("isready")
@@ -42,10 +47,10 @@ class HealthEndpoints {
                 content = [OpenApiContent(from = String::class, example = "isalive")]
             )
         ],
-        path = ENDEPUNKT_ALIVE,
+        path = endepunktAlive,
         methods = [HttpMethod.GET]
     )
-    fun isAliveHandler(ctx: Context, isAliveRepository: IsAliveRepository) {
+    fun isAliveHandler(): (Context) -> Unit = { ctx ->
         if (isAliveRepository.fårKontaktMedDatabasen()) {
             log.info("isAliveHandler OK")
             ctx.status(200).result("isalive")
@@ -54,10 +59,4 @@ class HealthEndpoints {
             ctx.status(500).result("db not alive")
         }
     }
-}
-
-
-fun Javalin.handleHealth(isAliveRepository: IsAliveRepository) {
-    get(HealthEndpoints.ENDEPUNKT_READY) { ctx -> HealthEndpoints().isReadyHandler(ctx, isAliveRepository) }
-    get(HealthEndpoints.ENDEPUNKT_ALIVE) { ctx -> HealthEndpoints().isAliveHandler(ctx, isAliveRepository) }
 }

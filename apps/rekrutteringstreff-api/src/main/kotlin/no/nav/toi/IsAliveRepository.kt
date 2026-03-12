@@ -4,18 +4,15 @@ import java.sql.SQLException
 import javax.sql.DataSource
 import kotlin.use
 
-
 class IsAliveRepository(
     private val dataSource: DataSource,
 ) {
-
     fun fårKontaktMedDatabasen(): Boolean {
         try {
             dataSource.connection.use { conn ->
                 conn.prepareStatement("SELECT 1").use { stmt ->
                     stmt.executeQuery().use { rs ->
                         if (rs.next()) {
-                            log.error("Databasesjekk ok")
                             return true
                         }
                     }
