@@ -24,6 +24,10 @@ class HealthController(javalin: Javalin, private val healthRepository: HealthRep
             OpenApiResponse(
                 status = "200",
                 content = [OpenApiContent(from = String::class, example = "isready")]
+            ),
+            OpenApiResponse(
+                status = "503",
+                content = [OpenApiContent(from = String::class, example = "db not ready")]
             )
         ],
         path = ENDEPUNKT_READY,
@@ -34,7 +38,7 @@ class HealthController(javalin: Javalin, private val healthRepository: HealthRep
             ctx.result("isready")
         } else {
             log.info("isReady får ikke kontakt med databasen")
-            ctx.status(500).result("db not ready")
+            ctx.status(503).result("db not ready")
         }
     }
 
