@@ -31,7 +31,6 @@ class HealthController(val javalin: Javalin, val isAliveRepository: IsAliveRepos
     )
     fun isReadyHandler(): (Context) -> Unit = { ctx ->
         if (isAliveRepository.fårKontaktMedDatabasen()) {
-            log.info("isReady OK")
             ctx.result("isready")
         } else {
             log.info("isReady FEIL")
@@ -52,7 +51,6 @@ class HealthController(val javalin: Javalin, val isAliveRepository: IsAliveRepos
     )
     fun isAliveHandler(): (Context) -> Unit = { ctx ->
         if (isAliveRepository.fårKontaktMedDatabasen()) {
-            log.info("isAliveHandler OK")
             ctx.status(200).result("isalive")
         } else {
             log.info("isAliveHandler FEIL")
