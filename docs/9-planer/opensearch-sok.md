@@ -123,6 +123,7 @@ data class RekrutteringstreffAggregeringer(
 
 data class FilterValg(
     val verdi: String,
+  val label: String,
     val antall: Long,
 )
 
@@ -276,11 +277,12 @@ Reindeksering følger mønsteret fra `toi-stilling-indekser`: env-var-styrt, med
 
 ### Env-variabler
 
-| Variabel             | Eksempel                | Beskrivelse                    |
-| -------------------- | ----------------------- | ------------------------------ |
-| `INDEKS_VERSJON`     | `rekrutteringstreff-v1` | Nåværende aktiv indeks (alias) |
-| `REINDEKSER_ENABLED` | `true`                  | Aktiverer reindekseringsmodus  |
-| `REINDEKSER_INDEKS`  | `rekrutteringstreff-v2` | Målindeks for reindeksering    |
+| Variabel             | Eksempel                | Beskrivelse                                                 |
+| -------------------- | ----------------------- | ----------------------------------------------------------- |
+| `AKTIVT_ALIAS`       | `rekrutteringstreff`    | Fast logisk alias som søke-appen leser fra                  |
+| `INDEKS_VERSJON`     | `rekrutteringstreff-v1` | Fysisk indeks som aliaset skal peke på i normal drift       |
+| `REINDEKSER_ENABLED` | `true`                  | Aktiverer reindekseringsmodus                               |
+| `REINDEKSER_INDEKS`  | `rekrutteringstreff-v2` | Ny fysisk målindeks som fylles opp før aliaset flyttes over |
 
 ### Flyten steg for steg
 
@@ -288,16 +290,18 @@ Reindeksering følger mønsteret fra `toi-stilling-indekser`: env-var-styrt, med
 2. **Oppstart**: Appen oppdager at `REINDEKSER_INDEKS` ikke finnes i OpenSearch, oppretter den med mapping/settings fra koden.
 3. **Trigger fullscan**: Indekser-appen kaller et internt REST-endepunkt på `rekrutteringstreff-api` (f.eks. `POST /internal/reindeksering/start`). API-et itererer porsjonsvis over alle treff, bygger komplett søkedokument med `TreffDokumentBuilder`, og publiserer hvert treff som `rekrutteringstreff.oppdatert` på Rapids.
 4. **Dual-write**: Under reindeksering kjører appen to konsumenter parallelt:
-   - Én som skriver til **gammel** indeks (`INDEKS_VERSJON`)
-   - Én som skriver til **ny** indeks (`REINDEKSER_INDEKS`)
-   - Begge prosesserer `rekrutteringstreff.oppdatert`-meldinger, slik at ingen oppdateringer går tapt.
+
+- Én som skriver til **gammel fysisk indeks** (`INDEKS_VERSJON`)
+- Én som skriver til **ny fysisk indeks** (`REINDEKSER_INDEKS`)
+- Begge prosesserer `rekrutteringstreff.oppdatert`-meldinger, slik at ingen oppdateringer går tapt.
+
 5. **Verifiser (manuelt)**: Utvikler sjekker at ny indeks har forventet antall dokumenter (f.eks. via OpenSearch Dashboard eller API). Det finnes ingen automatisk "ferdig"-signalering — fullscan kjører og dual-write holder begge indeksene oppdatert i mellomtiden.
-6. **Swap (deploy-drevet)**: Når utvikler er fornøyd, oppdateres `INDEKS_VERSJON=rekrutteringstreff-v2` i nais-config og deployes. Ved oppstart oppdager appen at alias peker på feil indeks og swapper automatisk.
+6. **Swap (deploy-drevet)**: Når utvikler er fornøyd, oppdateres `INDEKS_VERSJON=rekrutteringstreff-v2` i nais-config og deployes. Ved oppstart oppdager appen at `AKTIVT_ALIAS` peker på feil fysisk indeks og flytter aliaset atomisk til ny indeks.
 7. **Rydd opp**: Sett `REINDEKSER_ENABLED=false`. Slett gammel indeks manuelt ved behov.
 
 ### Alias
 
-Søke-appen leser fra et logisk alias (f.eks. `rekrutteringstreff`), aldri fra en spesifikk indeks. Alias-swap er atomisk i OpenSearch.
+Søke-appen leser alltid fra `AKTIVT_ALIAS` (f.eks. `rekrutteringstreff`), aldri direkte fra en fysisk indeks. `INDEKS_VERSJON` og `REINDEKSER_INDEKS` er fysiske indeksnavn. Alias-swap er atomisk i OpenSearch.
 
 ### Dokument som indekseres
 
@@ -662,6 +666,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 - Navident-felt er normalisert til lowercase for trygg matching mot token-claims i søkefiltre.
 - Aggregeringer (antall per fylke, status og navkontor) trengs for å vise tall i filterpanelet. Disse bygges som `terms`-aggregeringer på `keyword`-feltene i mapping.
+- Backend returnerer både råverdi og visningslabel i `FilterValg`, slik at frontend kan vise f.eks. `Agder (12)` selv om filterverdien er `42` eller et kontor-id.
 
 ---
 
@@ -687,12 +692,18 @@ SSL/TLS mot OpenSearch håndteres av nais automatisk.
 
 ### Manuelle indekserings-endepunkter i `rekrutteringstreff-api`
 
-For å trigge indeksering manuelt (både massiv reindeksering og enkeltdokumenter), eksponerer `rekrutteringstreff-api` usikrede interne REST-endepunkter. Siden endepunktene bare legger meldinger på et internt topic (som gjenbruker eier-tilgangsregler uansett nedstrøms), er det ufarlig at de er usikret på `/internal/*`.
+For å trigge indeksering manuelt (både massiv reindeksering og enkeltdokumenter), eksponerer `rekrutteringstreff-api` interne REST-endepunkter. Disse skal **ikke** være åpne uten autentisering: de kan trigge fullscan, skape betydelig last og republisere store datamengder.
+
+Anbefalt sikkerhetsmodell:
+
+- Endepunktene eksponeres kun internt i NAIS, ikke offentlig.
+- Kall fra `rekrutteringstreff-indekser` til `rekrutteringstreff-api` bruker maskin-til-maskin-autentisering.
+- Manuelle kall fra utviklere går via intern ingress og samme tilgangskontroll, eventuelt begrenset til utviklerrolle i dev.
 
 Indekser-appen har ingen slike endepunkter, den lytter kun asynkront på Rapids-topicet som disse endepunktene til slutt skriver til.
 
 **1. Reindeksering med indeksbytte (full reindeksering mot "ny" indeks):**
-Dette er endepunktet indekser-appen kaller automatisk ved oppstart hvis `REINDEKSER_ENABLED=true`. Det bør sikres hvis det kalles utenfra, men siden indekser-appen ligger i dev/prod gcp, kan maskin-til-maskin autentisering/nais intern access benyttes, eller bare lene seg på nais ingress-filtrering siden operasjonen er safe.
+Dette er endepunktet indekser-appen kaller automatisk ved oppstart hvis `REINDEKSER_ENABLED=true`. Kallet skal være autentisert maskin-til-maskin og kun tilgjengelig internt.
 
 ```
 POST /internal/reindeksering/start
@@ -703,15 +714,16 @@ Henter alle treff fra databasen og dytter dem porsjonsvis på Rapids med throttl
 
 - **Porsjonsstørrelse**: 100 treff per batch
 - **Delay mellom batcher**: 500 ms
-- Treffene hentes med `LIMIT 100 OFFSET n` sortert på `id`. Hvert treff bygges til fullt søkedokument med `TreffDokumentBuilder` før det publiseres.
-  Dette hindrer overbelastning. Tidsbruk: ~4000 treff gir 40 batcher × 0.5s = ~20 sek. Usikret internt endepunkt.
+- Treffene hentes med keyset-paginering: `WHERE id > :sistLesteId ORDER BY id LIMIT 100`. Dette gir stabil gjennomlesning selv om rader opprettes, slettes eller endres mens fullscan pågår.
+- Hvert treff bygges til fullt søkedokument med `TreffDokumentBuilder` før det publiseres.
+  Dette hindrer overbelastning. Tidsbruk: ~4000 treff gir 40 batcher × 0.5s = ~20 sek. Endepunktet er kun tilgjengelig internt.
 
 ```
 POST /internal/indekser
 ```
 
 **3. Indeksering av enkeltdokument for aktiv (eksisterende) indeks:**
-Eksponeres for å trigge oppfriskning av ett spesifikt treff direkte. Endepunktet bygger ferdig dokument (via `TreffDokumentBuilder`) og dytter det på Rapids-topicet som en vanlig `rekrutteringstreff.oppdatert`-melding. Nyttig for manuell feilretting. Usikret internt endepunkt.
+Eksponeres for å trigge oppfriskning av ett spesifikt treff direkte. Endepunktet bygger ferdig dokument (via `TreffDokumentBuilder`) og dytter det på Rapids-topicet som en vanlig `rekrutteringstreff.oppdatert`-melding. Nyttig for manuell feilretting. Endepunktet er kun tilgjengelig internt.
 
 ```
 POST /internal/indekser/{treffId}
