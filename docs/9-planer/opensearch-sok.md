@@ -339,8 +339,9 @@ Geografi-feltene (`kommune`, `kommunenummer`, `fylke`, `fylkesnummer`) hentes fr
 ### `all_text_no` (fritekst-felt)
 
 I OpenSearch-mappingen defineres et `all_text_no`-felt med norsk analyzer som brukes til fritekst-søk. Følgende toppnivåfelter kopieres inn via `copy_to`: `tittel`, `beskrivelse`, `fylke`, `kommune`, `poststed`, `gateadresse`.
+I OpenSearch-mappingen defineres et `all_text_no`-felt med norsk analyzer som brukes til fritekst-søk. Følgende felter kopieres inn via `copy_to`: `tittel`, `beskrivelse`, `fylke`, `kommune`, `poststed`, `gateadresse`, `arbeidsgivere.orgnavn` og `innlegg.tittel`.
 
-Nested-felter (`arbeidsgivere`, `innlegg`) støtter ikke `copy_to` til toppnivå i OpenSearch. Fritekst-søk i disse løses med eksplisitte nested-queries i query-builderen.
+Nested-felter støtter ikke `copy_to` til toppnivå i OpenSearch. Så ingen av fletene over kan markere som nested.
 
 ### Sletting fra OpenSearch
 
@@ -423,9 +424,11 @@ Søke-appen erstatter oversiktslisten, ikke alle eksisterende GET-endepunkter.
 
 Plan:
 
-1. Ny oversiktsliste i frontend flyttes til `POST /api/rekrutteringstreff/sok`.
-2. Eksisterende detaljendepunkter beholdes uendret i første fase.
-3. Full reindeksering bygger dokumentene i `rekrutteringstreff-api` med `TreffDokumentBuilder` og publiserer dem på Rapids. Indekseren konsumerer derfra.
+### Filtre og OpenSearch-clauses
+
+| Filter     | OpenSearch-clause        |
+| ---------- | ------------------------ |
+| `fritekst` | `match` på `all_text_no` |
 
 ### Filtre og OpenSearch-clauses
 
@@ -621,27 +624,29 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
     },
     "all_text_no": {
       "type": "text",
+    "all_text_no": {
+      "type": "text",
       "analyzer": "norwegian_html",
       "index": true
     },
     "arbeidsgivere": {
-      "type": "nested",
       "properties": {
         "orgnr": {
           "type": "keyword"
         },
         "orgnavn": {
           "type": "text",
-          "analyzer": "norwegian"
+          "analyzer": "norwegian",
+          "copy_to": ["all_text_no"]
         }
       }
     },
     "innlegg": {
-      "type": "nested",
       "properties": {
         "tittel": {
           "type": "text",
-          "analyzer": "norwegian"
+          "analyzer": "norwegian",
+          "copy_to": ["all_text_no"]
         }
       }
     }
@@ -649,10 +654,6 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 }
 ```
 
-### Operasjonelle avklaringer før produksjon
-
-- `number_of_shards`/`number_of_replicas` bør justeres etter datamengde og miljø (dev/prod) før endelig låsing.
-- `dynamic: false` er valgt for kontroll på schema; nye felter krever eksplisitt mapping-endring.
 - Navident-felt er normalisert til lowercase for trygg matching mot token-claims i søkefiltre.
 - `copy_to` er utelatt fra nested-felter (`arbeidsgivere`, `innlegg`) fordi OpenSearch ikke støtter `copy_to` fra nested til toppnivå.
 - Aggregeringer (antall per fylke, status og navkontor) trengs for å vise tall i filterpanelet. Disse bygges som `terms`-aggregeringer på `keyword`-feltene i mapping.
@@ -661,13 +662,12 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ## Risiko
 
-| Risiko                        | Fiks.                                                                                                                                                    |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer alder og antall rader i `rekrutteringstreff_indeksering`.                                                     |
-| OpenSearch utilgjengelig      | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.                                    |
-| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier.                                                                                            |
-| Kafka-volum ved reindeksering | Bakgrunnsjobben sender mange meldinger raskt. Porsjonering med throttling. Sjekk topic-retensjon og partisjonering før første kjøring.                   |
-| Nested query-ytelse           | `arbeidsgivere` og `innlegg` som nested-felter krever nested queries for fritekst, som er tregere enn flat struktur. Profiler med realistisk datamengde. |
+| Risiko                        | Fiks.                                                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer alder og antall rader i `rekrutteringstreff_indeksering`.                                   |
+| OpenSearch utilgjengelig      | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.                  |
+| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier.                                                                          |
+| Kafka-volum ved reindeksering | Bakgrunnsjobben sender mange meldinger raskt. Porsjonering med throttling. Sjekk topic-retensjon og partisjonering før første kjøring. |
 
 ---
 
