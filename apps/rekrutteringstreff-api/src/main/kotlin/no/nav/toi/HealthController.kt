@@ -7,7 +7,7 @@ import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
 
-class HealthController(val javalin: Javalin, val healthRepository: HealthRepository)  {
+class HealthController(javalin: Javalin, private val healthRepository: HealthRepository)  {
     companion object {
         private const val ENDEPUNKT_READY = "/isready"
         private const val ENDEPUNKT_ALIVE = "/isalive"
@@ -29,7 +29,7 @@ class HealthController(val javalin: Javalin, val healthRepository: HealthReposit
         path = ENDEPUNKT_READY,
         methods = [HttpMethod.GET]
     )
-    fun isReadyHandler(): (Context) -> Unit = { ctx ->
+    private fun isReadyHandler(): (Context) -> Unit = { ctx ->
         if (healthRepository.fårKontaktMedDatabasen()) {
             ctx.result("isready")
         } else {
@@ -49,8 +49,7 @@ class HealthController(val javalin: Javalin, val healthRepository: HealthReposit
         path = ENDEPUNKT_ALIVE,
         methods = [HttpMethod.GET]
     )
-    fun isAliveHandler(): (Context) -> Unit = { ctx ->
+    private fun isAliveHandler(): (Context) -> Unit = { ctx ->
         ctx.result("isalive")
     }
-}
 }
