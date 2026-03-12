@@ -238,7 +238,7 @@ Det gjelder også mens full reindeksering pågår. Kontinuerlige endringer og fu
 
 1. Ved en indekseringsrelevant endring skriver samme service en ny rad med `treffId` til `rekrutteringstreff_indeksering`
 2. Innskriving gjøres i **samme database-transaksjon** som domeneendringen, med en vanlig `INSERT`. Dette er ukomplisert, robust og gir ikke feil ved parallelle oppdateringer. Scheduleren bygger uansett hele dokumentet på nytt når den plukker oppgaven.
-3. En scheduler (med leader election eller kun en node, eller lockingi db) plukker pending `treffId`-er fra køen
+3. En scheduler (med leader election) plukker pending `treffId`-er fra køen. Scheduleren settes opp til å kjøre 10 sekunder etter at forrige kjøring er ferdig (fixed delay).
 4. For hvert `treffId`: Bygg det _fulle søkedokumentet_ (JSON) fra databasen. Send hendelse på Rapids med hele dokumentet, og slett deretter raden fra køen etter vellykket utsendelse.
 
 Raden slettes etter vellykket sending. Sporbarhet ivaretas av `rekrutteringstreff_hendelse`-tabellene (som allerede logger alle domeneendringer) — indekseringskøen er kun en transient meldingskø, ikke en historikktabell.
