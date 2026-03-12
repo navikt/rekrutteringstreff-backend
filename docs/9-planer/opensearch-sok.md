@@ -197,13 +197,13 @@ POST /api/rekrutteringstreff/sok
 
 ## Del 2: Indekseringskø i `rekrutteringstreff-api`
 
-Alle indekseringsrelevante endringer skal legge `treffId` i en komprimert indekseringskø.
+Alle indekseringsrelevante endringer skal legge `treffId` i indekseringskøen.
 
 Denne køen er for løpende endringer i normal drift. Den er ikke mekanismen som starter full reindeksering. Full reindeksering trigges av indekser-appen som kaller et internt REST-endepunkt på API-et (se [Reindeksering](#reindeksering)). Køen fanger opp løpende endringer som skjer mens fullscan pågår.
 
 ### Indekseringsutløsere
 
-Følgende operasjoner må føre til ny eller oppdatert melding til indekseren:
+Følgende operasjoner må føre til ny rad i indekseringskøen:
 
 | Kilde                | Operasjon                                                                | Påvirker felter i søkedokument                                               |
 | -------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
@@ -673,7 +673,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ## TODO
 
-### Oppgave 1: Komprimert indekseringskø i rekrutteringstreff-api
+### Oppgave 1: Indekseringskø (Outbox) i rekrutteringstreff-api
 
 - [ ] Opprett Flyway-migrasjon for `rekrutteringstreff_indeksering`
 - [ ] Legg kø-innskriving inn i samme transaksjon som alle indekseringsrelevante domeneendringer
@@ -681,7 +681,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Slett kø-rad etter vellykket sending
 - [ ] Implementer `TreffDokumentBuilder` som bygger komplett søkedokument fra databasen
 - [ ] Scheduler må skille status `SLETTET` (send `rekrutteringstreff.slettet`) fra andre statuser (bygg fullt dokument med `TreffDokumentBuilder` og send `rekrutteringstreff.oppdatert`)
-- [ ] Legg til tester for rollback, deduplisering og idempotent resend
+- [ ] Legg til tester for rollback og idempotent resend
 
 ### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
 
