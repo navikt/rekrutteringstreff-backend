@@ -200,7 +200,8 @@ class App(
             )
         }
 
-        javalin.handleHealth()
+        val isAliveRepository = IsAliveRepository(dataSource)
+        javalin.handleHealth(isAliveRepository)
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             authConfigs = authConfigs,
             rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
