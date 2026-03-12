@@ -2,7 +2,6 @@ package no.nav.toi
 
 import java.sql.SQLException
 import javax.sql.DataSource
-import kotlin.use
 
 class HealthRepository(
     private val dataSource: DataSource,
