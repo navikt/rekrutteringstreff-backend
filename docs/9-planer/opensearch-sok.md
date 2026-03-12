@@ -365,6 +365,24 @@ Søke-endepunktet (`POST /api/rekrutteringstreff/sok`) krever autentisering og e
 
 Innlogget brukers navident og kontor leses fra tokenet via auth-klassen (som igjen henter fra Modia Context Holder). Disse brukes for `MINE`- og `MITT_KONTOR`-visningene.
 
+### Feilhåndtering
+
+Indekser-appen bruker **fail-fast**: ved feil krasjer appen og Kubernetes restarter pod-en. Kafka-meldingen som feilet blir plukket opp igjen etter restart (at-least-once-semantikk). Indeksering til OpenSearch er idempotent (upsert via dokument-UUID), så gjentatt indeksering av samme melding er ufarlig.
+
+Dette gjelder også **poison pills** (ugyldige meldinger): appen krasjer og restarter. Dersom en melding kontinuerlig feiler, vil pod-en gå i CrashLoopBackOff. Utvikler overvåker alerts og logger, og publiserer fix eller fjerner meldingen manuelt.
+
+### Refresh-strategi
+
+Indekser-appen bruker **OpenSearch sin standard refresh** (1 sekund). Det betyr at dokumenter blir søkbare innen ~1 sekund etter indeksering, uten at vi kaller `Refresh.True` per operasjon. Dette gir bedre skriveytelse enn per-dokument-refresh.
+
+### Liveness
+
+Appen er en **RapidApp** og arver liveness/readiness fra Rapids-rammeverket. Ingen egne helse-endepunkter trengs.
+
+- `/isalive` — satt av Rapids, returnerer 503 ved ukontrollert feil
+- `/isready` — satt av Rapids
+- `/metrics` — Prometheus-metrikker
+
 ### Forslag til appstruktur
 
 ```
@@ -378,12 +396,11 @@ apps/rekrutteringstreff-indekser/
     │   ├── treff-mapping.json       ← norsk analyzer, object-type for arbeidsgivere/innlegg, copy_to for all_text_no
     │   └── treff-settings.json
     └── kotlin/no/nav/toi/rekrutteringstreff/indekser/
-        ├── Application.kt            ← oppstart, reindekseringslogikk (env-var-sjekk)
+        ├── Application.kt            ← RapidApp, oppstart, reindekseringslogikk (env-var-sjekk)
         ├── OpenSearchConfig.kt
         ├── OpenSearchClient.kt        ← kommunikasjon med Aiven/OpenSearch (inkl. alias, delete)
         ├── TreffDokumentLytter.kt     ← Lytter på 'rekrutteringstreff.oppdatert'
-        ├── TreffSlettetLytter.kt      ← Lytter på 'rekrutteringstreff.slettet'
-        └── Liveness.kt
+        └── TreffSlettetLytter.kt      ← Lytter på 'rekrutteringstreff.slettet'
 ```
 
 ---
@@ -425,7 +442,7 @@ Søke-appen erstatter oversiktslisten, ikke alle eksisterende GET-endepunkter.
 
 | Filter             | OpenSearch-clause                                                                                                           |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `fritekst`         | `match` på `all_text_no` + `term` på `arbeidsgivere.orgnr` (eksakt treff på orgnr, lav boost) |
+| `fritekst`         | `match` på `all_text_no` + `term` på `arbeidsgivere.orgnr` (eksakt treff på orgnr, lav boost)                               |
 | `visningsstatuser` | `filters`-aggregering. `SOKNADSFRIST_PASSERT` avledes som `status=PUBLISERT AND svarfrist < now` (se Visningsstatus-tabell) |
 | `fylkesnummer`     | `terms` på `fylkesnummer`                                                                                                   |
 | `kommunenummer`    | `terms` på `kommunenummer`                                                                                                  |
@@ -648,14 +665,102 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 ---
 
+## Drift
+
+### Deploy-strategi (nais)
+
+Indekser-appen bruker `Recreate`-strategi (ikke rolling) med **1 replika**, likt `toi-stilling-indekser`. Dette sikrer konsistent Kafka-offset-håndtering — kun én instans konsumerer meldinger om gangen.
+
+Søke-appen kan skaleres fritt med rolling deploys.
+
+SSL/TLS mot OpenSearch håndteres av nais automatisk.
+
+### Kafka-konfigurasjon
+
+| Variabel                  | Verdi         | Beskrivelse                                        |
+| ------------------------- | ------------- | -------------------------------------------------- |
+| `KAFKA_RAPID_TOPIC`       | `toi.rapid-1` | Rapids-topic (felles)                              |
+| `KAFKA_CONSUMER_GROUP_ID` | app-spesifikk | Separat consumer group per miljø                   |
+| `KAFKA_RESET_POLICY`      | `latest`      | Plukker kun opp nye meldinger etter deploy/restart |
+
+`latest` er trygt fordi alle meldinger som trengs for å bygge indeksen kan gjenskapes via full reindeksering. Ved normal drift er meldingene allerede prosessert, og ved reindeksering trigges fullscan eksplisitt.
+
+### Reindekserings-throttling
+
+Når `POST /internal/reindeksering/start` kalles, sender API-et alle treff porsjonsvis på Rapids:
+
+- **Porsjonsstørrelse**: 100 treff per batch
+- **Delay mellom batcher**: 500 ms
+- Treffene hentes med `LIMIT 100 OFFSET n` sortert på `id`, og hvert treff bygges til fullt søkedokument med `TreffDokumentBuilder` før det publiseres
+
+Denne throttlingen hindrer at Rapids-topicet overbelastes under reindeksering. Med ~4000 treff gir dette ~40 batcher × 0.5s = ~20 sekunder pluss byggetid.
+
+### Push-endepunkt for eksisterende indeks
+
+Likt `toi-stilling-indekser` eksponerer indekser-appen et usikret internt endepunkt for å trigge indeksering av enkeltdokumenter direkte:
+
+```
+POST /internal/indekser/{treffId}
+```
+
+Endepunktet henter ferdigbygd dokument fra `rekrutteringstreff-api` (via internt REST-kall) og indekserer det i aktiv OpenSearch-indeks. Nyttig for manuell feilretting uten å måtte kjøre full reindeksering.
+
+### Alerting
+
+Indekser-appen skal ha Prometheus-alerts i `alerts.yaml`:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+spec:
+  groups:
+    - name: rekrutteringstreff-indekser-alerts
+      rules:
+        - alert: AppNede
+          expr: kube_deployment_status_replicas_available{deployment="rekrutteringstreff-indekser"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "rekrutteringstreff-indekser har 0 tilgjengelige replikaer"
+
+        - alert: FeilSpike
+          expr: sum(increase(log_messages_errors{app="rekrutteringstreff-indekser", level="Error"}[10m])) > 0
+          for: 1s
+          labels:
+            severity: critical
+          annotations:
+            summary: "Feil i rekrutteringstreff-indekser siste 10 minutter"
+
+        - alert: CrashLoopBackOff
+          expr: increase(kube_pod_container_status_restarts_total{container="rekrutteringstreff-indekser"}[15m]) > 3
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "rekrutteringstreff-indekser restarter gjentatte ganger — mulig poison pill"
+```
+
+### Observabilitet
+
+Appen bruker standard nais-observabilitet:
+
+- **Logging**: Strukturerte JSON-logger til Loki og Elastic
+- **Metrikker**: Prometheus via `/metrics` (standard Rapids-metrikker)
+- **Kø-overvåking**: Scheduleren i `rekrutteringstreff-api` bør logge antall pending rader i `rekrutteringstreff_indeksering` ved hver kjøring, slik at kø-vekst er synlig i logger
+
+---
+
 ## Risiko
 
-| Risiko                        | Fiks.                                                                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer alder og antall rader i `rekrutteringstreff_indeksering`.                                   |
-| OpenSearch utilgjengelig      | Returner feilmelding (503). Ingen fallback til gammelt endepunkt – risikoen for å vise feil data/statuser er for høy.                  |
-| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier.                                                                          |
-| Kafka-volum ved reindeksering | Bakgrunnsjobben sender mange meldinger raskt. Porsjonering med throttling. Sjekk topic-retensjon og partisjonering før første kjøring. |
+| Risiko                        | Tiltak                                                                                                                                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Indeks og database ut av synk | Full reindeksering som fallback. Monitorer alder og antall rader i `rekrutteringstreff_indeksering`.                                         |
+| OpenSearch utilgjengelig      | Indekser-appen krasjer og restarter (fail-fast). Søke-appen returnerer 503. Ingen fallback til gammelt endepunkt.                            |
+| Query-ytelse                  | Start enkelt, profiler med reelle data, juster boost-verdier.                                                                                |
+| Kafka-volum ved reindeksering | Porsjonering: 100 treff per batch med 500 ms delay. Sjekk topic-retensjon og partisjonering før første kjøring.                              |
+| Poison pill på Rapids         | App krasjer og restarter. CrashLoopBackOff-alert varsler. Manuell feilretting.                                                               |
+| Reindeksering: verifisering   | Manuell kontroll av dokumentantall i ny indeks via OpenSearch Dashboard. Ingen automatisk ferdig-signal — dual-write holder begge oppdatert. |
 
 ---
 
@@ -675,7 +780,9 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 ### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
 
 - [ ] Implementer internt REST-endepunkt (`POST /internal/reindeksering/start`) som porsjonsvis publiserer alle treff på Rapids (bruker `TreffDokumentBuilder` fra Oppgave 1)
+- [ ] Porsjonsstørrelse: 100 treff per batch, 500 ms delay mellom batcher
 - [ ] Endepunktet skal kun være tilgjengelig internt (nais ingress)
+- [ ] Logg antall treff prosessert og total varighet ved fullscan
 
 ### Oppgave 3: Geografi-berikelse med PAM geografi-tjeneste
 
@@ -683,16 +790,20 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 - [ ] Ved opprettelse/oppdatering av treff med postnummer: sett `kommunenummer`, `kommune`, `fylkesnummer`, `fylke` automatisk
 - [ ] Engangsmigrasjon for eksisterende treff uten kommune/fylke
 
-### Oppgave 4: Indekser-app (den tynne konsumenten)
+### Oppgave 4: Indekser-app (RapidApp-konsument)
 
-- [ ] Opprett `rekrutteringstreff-indekser`-modul
-- [ ] Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml` og nødvendige dev/prod envs)
+- [ ] Opprett `rekrutteringstreff-indekser`-modul som RapidApp
+- [ ] Sett opp Aiven/OpenSearch (`opensearch.yaml`, `nais.yaml` med `strategy: Recreate`, 1 replika)
+- [ ] Sett `KAFKA_RESET_POLICY=latest`
 - [ ] Legg inn mapping og settings i resources
-- [ ] Implementer lytter for `rekrutteringstreff.oppdatert` (upsert til OpenSearch)
+- [ ] Implementer lytter for `rekrutteringstreff.oppdatert` (upsert til OpenSearch, standard refresh)
 - [ ] Implementer lytter for `rekrutteringstreff.slettet` (fysisk sletting fra OpenSearch)
+- [ ] Feilhåndtering: fail-fast (la exceptions propagere, pod restarter)
 - [ ] Implementer env-var-styrt reindeksering med dual-consumer (`INDEKS_VERSJON`, `REINDEKSER_INDEKS`)
 - [ ] Implementer alias-håndtering og opprettelse av ny indeks ved reindeksering
 - [ ] Kall `POST /internal/reindeksering/start` på rekrutteringstreff-api ved oppstart med `REINDEKSER_ENABLED=true`
+- [ ] Implementer `POST /internal/indekser/{treffId}` for manuell indeksering av enkeltdokumenter
+- [ ] Legg til `alerts.yaml` (AppNede, FeilSpike, CrashLoopBackOff)
 - [ ] Verifiser ende-til-ende i dev
 
 ### Oppgave 5: Søke-app
