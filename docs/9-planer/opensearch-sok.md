@@ -665,7 +665,8 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 
 - [ ] Opprett Flyway-migrasjon for `rekrutteringstreff_indeksering`
 - [ ] Legg kø-innskriving inn i samme transaksjon som alle indekseringsrelevante domeneendringer
-- [ ] Implementer scheduler/worker som plukker pending `treffId`-er og publiserer melding
+- [ ] Sørg for at `sistEndret` oppdateres ved alle indekseringsrelevante endringer (også fra relaterte domener som eier, kontor, arbeidsgiver, innlegg, jobbsøker)
+- [ ] Implementer scheduler/worker (med leader election) som plukker pending `treffId`-er og publiserer melding
 - [ ] Slett kø-rad etter vellykket sending
 - [ ] Implementer `TreffDokumentBuilder` som bygger komplett søkedokument fra databasen
 - [ ] Scheduler må skille status `SLETTET` (send `rekrutteringstreff.slettet`) fra andre statuser (bygg fullt dokument med `TreffDokumentBuilder` og send `rekrutteringstreff.oppdatert`)
@@ -697,6 +698,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 ### Oppgave 5: Søke-app
 
 - [ ] Opprett `rekrutteringstreff-sok`-modul
+- [ ] Legg til autentisering og rollevalidering på endepunktet (`JOBBSØKERRETTET`, `ARBEIDSGIVERRETTET`, `UTVIKLER`)
 - [ ] Implementer query builder for fritekst, status, sortering, paginering og visning
 - [ ] Implementer sorteringslogikk for alle 6 alternativer (RELEVANS, SIST_OPPDATERTE, NYESTE, ELDSTE, AKTIVE, FULLFØRTE)
 - [ ] Legg til geografi-filtre
@@ -713,7 +715,7 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 **Datahenting**
 
 - [ ] Nytt SWR-hook `useRekrutteringstreffSøk` som kaller `POST /api/rekrutteringstreff/sok`
-- [ ] Synk alle søkeparametre til URL query-params (fritekst, visningsstatuser, sortering, visning, side) slik at søk er delbart og bokmerkvennlig
+- [ ] Synk alle søkeparametre til URL query-params (fritekst, visningsstatuser, fylkesnummer, kommunenummer, kontorer, sortering, visning, side) slik at søk er delbart og bokmerkvennlig
 
 **Tabs (visning)**
 
