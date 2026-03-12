@@ -624,8 +624,6 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
     },
     "all_text_no": {
       "type": "text",
-    "all_text_no": {
-      "type": "text",
       "analyzer": "norwegian_html",
       "index": true
     },
@@ -655,7 +653,6 @@ Dette er et konkret utgangspunkt for `apps/rekrutteringstreff-indekser/src/main/
 ```
 
 - Navident-felt er normalisert til lowercase for trygg matching mot token-claims i søkefiltre.
-- `copy_to` er utelatt fra nested-felter (`arbeidsgivere`, `innlegg`) fordi OpenSearch ikke støtter `copy_to` fra nested til toppnivå.
 - Aggregeringer (antall per fylke, status og navkontor) trengs for å vise tall i filterpanelet. Disse bygges som `terms`-aggregeringer på `keyword`-feltene i mapping.
 
 ---
