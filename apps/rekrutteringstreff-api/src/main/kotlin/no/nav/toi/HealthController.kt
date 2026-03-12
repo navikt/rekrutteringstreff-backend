@@ -50,11 +50,7 @@ class HealthController(val javalin: Javalin, val healthRepository: HealthReposit
         methods = [HttpMethod.GET]
     )
     fun isAliveHandler(): (Context) -> Unit = { ctx ->
-        if (healthRepository.fårKontaktMedDatabasen()) {
-            ctx.result("isalive")
-        } else {
-            log.info("isAliveHandler får ikke kontakt med databasen")
-            ctx.status(500).result("db not alive")
-        }
+        ctx.result("isalive")
     }
+}
 }
