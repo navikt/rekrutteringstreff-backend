@@ -685,25 +685,37 @@ SSL/TLS mot OpenSearch håndteres av nais automatisk.
 
 `latest` er trygt fordi alle meldinger som trengs for å bygge indeksen kan gjenskapes via full reindeksering. Ved normal drift er meldingene allerede prosessert, og ved reindeksering trigges fullscan eksplisitt.
 
-### Reindekserings-throttling
+### Manuelle indekserings-endepunkter i `rekrutteringstreff-api`
 
-Når `POST /internal/reindeksering/start` kalles, sender API-et alle treff porsjonsvis på Rapids:
+For å trigge indeksering manuelt (både massiv reindeksering og enkeltdokumenter), eksponerer `rekrutteringstreff-api` usikrede interne REST-endepunkter. Siden endepunktene bare legger meldinger på et internt topic (som gjenbruker eier-tilgangsregler uansett nedstrøms), er det ufarlig at de er usikret på `/internal/*`.
+
+Indekser-appen har ingen slike endepunkter, den lytter kun asynkront på Rapids-topicet som disse endepunktene til slutt skriver til.
+
+**1. Reindeksering med indeksbytte (full reindeksering mot "ny" indeks):**
+Dette er endepunktet indekser-appen kaller automatisk ved oppstart hvis `REINDEKSER_ENABLED=true`. Det bør sikres hvis det kalles utenfra, men siden indekser-appen ligger i dev/prod gcp, kan maskin-til-maskin autentisering/nais intern access benyttes, eller bare lene seg på nais ingress-filtrering siden operasjonen er safe.
+
+```
+POST /internal/reindeksering/start
+```
+
+**2. Pushing av alle treff til _eksisterende_ indeks:**
+Henter alle treff fra databasen og dytter dem porsjonsvis på Rapids med throttling. Uten indeksbytte går alt inn i nåværende aktiv indeks.
 
 - **Porsjonsstørrelse**: 100 treff per batch
 - **Delay mellom batcher**: 500 ms
-- Treffene hentes med `LIMIT 100 OFFSET n` sortert på `id`, og hvert treff bygges til fullt søkedokument med `TreffDokumentBuilder` før det publiseres
+- Treffene hentes med `LIMIT 100 OFFSET n` sortert på `id`. Hvert treff bygges til fullt søkedokument med `TreffDokumentBuilder` før det publiseres.
+  Dette hindrer overbelastning. Tidsbruk: ~4000 treff gir 40 batcher × 0.5s = ~20 sek. Usikret internt endepunkt.
 
-Denne throttlingen hindrer at Rapids-topicet overbelastes under reindeksering. Med ~4000 treff gir dette ~40 batcher × 0.5s = ~20 sekunder pluss byggetid.
+```
+POST /internal/indekser
+```
 
-### Push-endepunkt for eksisterende indeks
-
-Likt `toi-stilling-indekser` eksponerer indekser-appen et usikret internt endepunkt for å trigge indeksering av enkeltdokumenter direkte:
+**3. Indeksering av enkeltdokument for aktiv (eksisterende) indeks:**
+Eksponeres for å trigge oppfriskning av ett spesifikt treff direkte. Endepunktet bygger ferdig dokument (via `TreffDokumentBuilder`) og dytter det på Rapids-topicet som en vanlig `rekrutteringstreff.oppdatert`-melding. Nyttig for manuell feilretting. Usikret internt endepunkt.
 
 ```
 POST /internal/indekser/{treffId}
 ```
-
-Endepunktet henter ferdigbygd dokument fra `rekrutteringstreff-api` (via internt REST-kall) og indekserer det i aktiv OpenSearch-indeks. Nyttig for manuell feilretting uten å måtte kjøre full reindeksering.
 
 ### Alerting
 
@@ -779,10 +791,10 @@ Appen bruker standard nais-observabilitet:
 
 ### Oppgave 2: Reindekserings-støtte (rekrutteringstreff-api)
 
-- [ ] Implementer internt REST-endepunkt (`POST /internal/reindeksering/start`) som porsjonsvis publiserer alle treff på Rapids (bruker `TreffDokumentBuilder` fra Oppgave 1)
-- [ ] Porsjonsstørrelse: 100 treff per batch, 500 ms delay mellom batcher
-- [ ] Endepunktet skal kun være tilgjengelig internt (nais ingress)
-- [ ] Logg antall treff prosessert og total varighet ved fullscan
+- [ ] Implementer `POST /internal/reindeksering/start` for lukket reindeksering (Aiven-sikret, trigger ny indeks og alias-bytte). Porsjonsvis publisering via Rapids (100 treff/batch, 500 ms delay).
+- [ ] Implementer `POST /internal/indekser` for bulk-indeksering av alle treff rett i _aktiv_ indeks uten alias-bytte (kun tilgjengelig via NAIS ingress).
+- [ ] Implementer `POST /internal/indekser/{treffId}` for manuell synkron indeksering av ett spesifikt treff i _aktiv_ indeks (kun tilgjengelig via NAIS ingress).
+- [ ] Bygg inn logging for antall treff prosessert og total varighet ved fullscan i disse endepunktene.
 
 ### Oppgave 3: Geografi-berikelse med PAM geografi-tjeneste
 
@@ -802,7 +814,6 @@ Appen bruker standard nais-observabilitet:
 - [ ] Implementer env-var-styrt reindeksering med dual-consumer (`INDEKS_VERSJON`, `REINDEKSER_INDEKS`)
 - [ ] Implementer alias-håndtering og opprettelse av ny indeks ved reindeksering
 - [ ] Kall `POST /internal/reindeksering/start` på rekrutteringstreff-api ved oppstart med `REINDEKSER_ENABLED=true`
-- [ ] Implementer `POST /internal/indekser/{treffId}` for manuell indeksering av enkeltdokumenter
 - [ ] Legg til `alerts.yaml` (AppNede, FeilSpike, CrashLoopBackOff)
 - [ ] Verifiser ende-til-ende i dev
 
