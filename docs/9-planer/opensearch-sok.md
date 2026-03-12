@@ -338,10 +338,9 @@ Geografi-feltene (`kommune`, `kommunenummer`, `fylke`, `fylkesnummer`) hentes fr
 
 ### `all_text_no` (fritekst-felt)
 
-I OpenSearch-mappingen defineres et `all_text_no`-felt med norsk analyzer som brukes til fritekst-søk. Følgende toppnivåfelter kopieres inn via `copy_to`: `tittel`, `beskrivelse`, `fylke`, `kommune`, `poststed`, `gateadresse`.
 I OpenSearch-mappingen defineres et `all_text_no`-felt med norsk analyzer som brukes til fritekst-søk. Følgende felter kopieres inn via `copy_to`: `tittel`, `beskrivelse`, `fylke`, `kommune`, `poststed`, `gateadresse`, `arbeidsgivere.orgnavn` og `innlegg.tittel`.
 
-Nested-felter støtter ikke `copy_to` til toppnivå i OpenSearch. Så ingen av fletene over kan markere som nested.
+Nested-felter støtter ikke `copy_to` til toppnivå i OpenSearch. Derfor er `arbeidsgivere` og `innlegg` definert som `object` (ikke `nested`) i mappingen, slik at `copy_to` fungerer.
 
 ### Sletting fra OpenSearch
 
@@ -376,7 +375,7 @@ apps/rekrutteringstreff-indekser/
 ├── opensearch.yaml
 └── src/main/
     ├── resources/
-    │   ├── treff-mapping.json       ← norsk analyzer, nested for arbeidsgivere/innlegg, copy_to for all_text_no
+    │   ├── treff-mapping.json       ← norsk analyzer, object-type for arbeidsgivere/innlegg, copy_to for all_text_no
     │   └── treff-settings.json
     └── kotlin/no/nav/toi/rekrutteringstreff/indekser/
         ├── Application.kt            ← oppstart, reindekseringslogikk (env-var-sjekk)
@@ -422,19 +421,11 @@ Hvert filter (fritekst, status, geografi, visning) er en egen klasse som avgjør
 
 Søke-appen erstatter oversiktslisten, ikke alle eksisterende GET-endepunkter.
 
-Plan:
-
-### Filtre og OpenSearch-clauses
-
-| Filter     | OpenSearch-clause        |
-| ---------- | ------------------------ |
-| `fritekst` | `match` på `all_text_no` |
-
 ### Filtre og OpenSearch-clauses
 
 | Filter             | OpenSearch-clause                                                                                                           |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `fritekst`         | `match` på `all_text_no` + nested `match` på `arbeidsgivere.orgnr`, `arbeidsgivere.orgnavn` og `innlegg.tittel` (lav boost) |
+| `fritekst`         | `match` på `all_text_no` + `term` på `arbeidsgivere.orgnr` (eksakt treff på orgnr, lav boost) |
 | `visningsstatuser` | `filters`-aggregering. `SOKNADSFRIST_PASSERT` avledes som `status=PUBLISERT AND svarfrist < now` (se Visningsstatus-tabell) |
 | `fylkesnummer`     | `terms` på `fylkesnummer`                                                                                                   |
 | `kommunenummer`    | `terms` på `kommunenummer`                                                                                                  |
