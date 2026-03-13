@@ -73,6 +73,15 @@ class OpenAiClient(
             val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(tekst)
             secureLogger.info("melding før filter: $tekst etter filter: $userMessageFiltered")
 
+            if (userMessageFiltered.isBlank()) {
+                result = ValiderRekrutteringstreffResponsDto(
+                    bryterRetningslinjer = true,
+                    begrunnelse = "Teksten inneholder kun personsensitive data og kan derfor ikke vurderes av KI."
+                )
+                filtered = userMessageFiltered
+                return@measureTimeMillis
+            }
+
             val body = mapper.writeValueAsString(
                 OpenAiRequest(
                     messages = listOf(
