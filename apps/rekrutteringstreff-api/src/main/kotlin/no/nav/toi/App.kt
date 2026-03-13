@@ -353,7 +353,7 @@ fun main() {
         httpClient = httpClient,
     )
 
-    App(
+    val app = App(
         port = 8080,
         authConfigs = listOfNotNull(
             AuthenticationConfiguration(
@@ -385,7 +385,11 @@ fun main() {
         pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() },
         httpClient = httpClient,
         leaderElection = LeaderElection(),
-    ).start()
+    )
+    Runtime.getRuntime().addShutdownHook(Thread {
+        app.close()
+    })
+    app.start()
 }
 
 
