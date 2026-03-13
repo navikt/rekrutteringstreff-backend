@@ -30,7 +30,9 @@ class App(private val rapidsConnection: RapidsConnection, private val repository
     }
 
     fun stop() {
+        log.info("Shutting down application")
         rapidsConnection.stop()
+        log.info("Application shutdown complete")
     }
 }
 
@@ -42,6 +44,9 @@ fun main() {
         env.variable("DAB_AKTIVITETSKORT_FEIL_TOPIC"),
         LeaderElection(),
     )
+    Runtime.getRuntime().addShutdownHook(Thread {
+        app.stop()
+    })
     app.start()
 }
 

@@ -45,9 +45,11 @@ class App(
     }
 
     fun close() {
+        log.info("Shutting down application")
         if (::javalin.isInitialized) {
             javalin.stop()
         }
+        log.info("Application shutdown complete")
     }
 }
 
@@ -77,7 +79,7 @@ fun main() {
         .version(HttpClient.Version.HTTP_1_1)
         .build()
 
-    App(
+    val app = App(
         port = 8080,
         rekrutteringstreffUrl = "http://rekrutteringstreff-api",
         rekrutteringstreffAudience = env("REKRUTTERINGSTREFF_AUDIENCE"),
@@ -96,7 +98,11 @@ fun main() {
             )
         ),
         httpClient = httpClient
-    ).start()
+    )
+    Runtime.getRuntime().addShutdownHook(Thread {
+        app.close()
+    })
+    app.start()
 }
 
 private fun env(key: String) = System.getenv(key) ?: throw RuntimeException("Missing environment variable $key")
