@@ -200,7 +200,7 @@ class App(
             )
         }
 
-        javalin.handleHealth()
+        HealthController(javalin, HealthRepository(dataSource))
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             authConfigs = authConfigs,
             rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
