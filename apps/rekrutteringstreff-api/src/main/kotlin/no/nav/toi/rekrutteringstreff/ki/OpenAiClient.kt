@@ -76,7 +76,7 @@ class OpenAiClient(
             if (userMessageFiltered.isBlank()) {
                 result = ValiderRekrutteringstreffResponsDto(
                     bryterRetningslinjer = true,
-                    begrunnelse = "Teksten inneholder kun personsensitive data og kan derfor ikke vurderes av KI."
+                    begrunnelse = "Teksten inneholder kun personsensitive data eller tall og kan derfor ikke vurderes av KI."
                 )
                 filtered = userMessageFiltered
                 return@measureTimeMillis
