@@ -222,7 +222,7 @@ object ExceptionMapping {
                     throwable = e,
                     status = HttpStatus.INTERNAL_SERVER_ERROR,
                     ctx = ctx,
-                    feil = "En databasefeil oppstod på serveren.",
+                    feil = "En ukjent feil oppstod på serveren.",
                 )
             )
         }
