@@ -1,4 +1,4 @@
-# OpenSearch-søk for rekrutteringstreff
+# Alternativ 1: OpenSearch
 
 ## Bakgrunn og motivasjon
 
@@ -84,7 +84,7 @@ data class RekrutteringstreffSøkRequest(
     val visning: Visning = Visning.ALLE,
     val sortering: Sortering = Sortering.SIST_OPPDATERTE,
     val side: Int = 0,
-    val antallPerSide: Int = 20,
+    val antallPerSide: Int = 25,
 )
 
 enum class Visning {
@@ -869,7 +869,7 @@ Appen bruker standard nais-observabilitet:
 
 **Paginering**
 
-- [ ] Vis «1–20 av N» med forrige/neste-knapper, basert på `totaltAntall`, `side` og `antallPerSide` fra responsen
+- [ ] Vis «1–25 av N» med forrige/neste-knapper, basert på `totaltAntall`, `side` og `antallPerSide` fra responsen
 
 **Treffkort**
 
