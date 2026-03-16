@@ -141,9 +141,10 @@ class OpenAiClient(
                         "tall".takeIf { inneholderTall },
                         "epost".takeIf { inneholderEpost }
                     ).joinToString(" og ")
+                    val forrigeBegrunnelse = if (result.bryterRetningslinjer) result.begrunnelse else ""
                     result = ValiderRekrutteringstreffResponsDto(
                         bryterRetningslinjer = true,
-                        begrunnelse = (result.begrunnelse + " Teksten inneholder $hva så sjekk om dette er sensitivt før du går videre.").trim(),
+                        begrunnelse = (forrigeBegrunnelse + " Teksten inneholder $hva så sjekk om dette er sensitivt før du går videre.").trim(),
                     )
                 }
 
