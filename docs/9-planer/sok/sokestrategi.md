@@ -75,7 +75,7 @@ Alle tre alternativer bruker samme request/response-struktur (`Rekrutteringstref
 ```
 Steg 1                    Steg 2                       Steg 3 (om nødvendig)
 ─────────────────────     ──────────────────────────    ───────────────────────
-Alt. 3: Minimal           Alt. 3 utvidet ELLER         Alt. 1 eller 2
+Alt. 3: Minimal           Alt. 3 utvidet ELLER         Alt. 1
                           Alt. 2
 
 Eier + status             + fritekst                   Fullverdig søk
