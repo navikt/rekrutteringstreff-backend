@@ -19,35 +19,35 @@ Spørsmålet er hvor mye infrastruktur vi trenger for å løse dette.
 
 ---
 
-## Kan vi starte med bare eier + status?
+## Kan vi starte med eier + status + geografi?
 
 Uavhengig av alternativ er det verdt å vurdere om vi kan starte med en minimal versjon:
 
-**Kun to filtre:**
+**Tre filterdimensjoner:**
 
 - **Eierfilter** (tabs): Alle / Mine / Mitt kontor
-- **Statusfilter**: Utkast, Publisert, Fullført, Avlyst
+- **Statusfilter**: Utkast, Publisert, Søknadsfrist passert, Fullført, Avlyst
+- **Fylkesfilter**: Velg ett eller flere fylker
+- **Kommunefilter**: Velg én eller flere kommuner
 
 **Hva dette gir:**
 
-- Brukerne kan finne «sine» treff og filtrere på status — som dekker det mest akutte behovet
-- Antall per statusverdi i filterpanelet (f.eks. «Publisert (42)»)
+- Brukerne kan finne «sine» treff og filtrere på status og geografi — som dekker det mest akutte behovet
+- Antall per filterverdi i filterpanelet (status, fylke, kommune)
 - Paginering (25 per side)
-- Kan implementeres på kort tid med alternativ 3
 
 **Hva det ikke gir:**
 
 - Fritekst (søk på tittel, arbeidsgivernavn osv.)
-- Geografifiltrering (fylke, kommune)
-- Kontorfiltrering
-- Aggregeringer for geografi og kontor
+- Kontorfiltrering (utover «Mitt kontor»-tab)
 - Sorteringsvalg utover default
+- Typo-toleranse eller stemming
 
-Denne minimale versjonen kan bygges med alternativ 3 og utvides stegvis uten å låse oss til noen bestemt retning.
+Denne minimale versjonen bygges med alternativ 2.5 og utvides stegvis uten å låse oss til noen bestemt retning.
 
 ### Felles API-kontrakt
 
-Alle tre alternativer bruker samme request/response-struktur (`RekrutteringstreffSokRequest`/`RekrutteringstreffSokRespons`) med paginering (25 per side). I den minimale versjonen ignorerer backend felt som ikke er støttet ennå (fritekst, geografi, kontorer), og aggregeringer returneres som tomme lister. Frontend kan dermed bygges én gang og fungerer uendret uavhengig av hvilket alternativ backend velger.
+Alle tre alternativer bruker samme request/response-struktur (`RekrutteringstreffSokRequest`/`RekrutteringstreffSokRespons`) med paginering (25 per side). I den minimale versjonen ignorerer backend felt som ikke er støttet ennå (fritekst, kontorer), og aggregeringer for disse returneres som tomme lister. Frontend kan dermed bygges én gang og fungerer uendret uavhengig av hvilket alternativ backend velger.
 
 ---
 
