@@ -1,4 +1,4 @@
-# Alternativ 1: OpenSearch
+# Alternativ 1: OpenSearch (rekrutteringstreffsøk)
 
 ## Bakgrunn og motivasjon
 

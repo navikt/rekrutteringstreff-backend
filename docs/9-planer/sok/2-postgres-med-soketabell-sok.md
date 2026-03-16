@@ -1,8 +1,8 @@
-# Alternativ 2: PostgreSQL med søketabell
+# Alternativ 2: PostgreSQL med søketabell (rekrutteringstreffsøk)
 
 ## Bakgrunn og mål
 
-Dette dokumentet beskriver et alternativ til OpenSearch der søk, filtrering, sortering og aggregeringer løses i PostgreSQL (17+).
+Dette dokumentet beskriver et alternativ til OpenSearch der søk, filtrering, sortering og aggregeringer for rekrutteringstreffsøk løses i PostgreSQL (17+).
 
 Målet er å flytte dagens klientside-filtrering til backend uten å innføre en separat søkeinfrastruktur. Alternativet er mest aktuelt dersom:
 

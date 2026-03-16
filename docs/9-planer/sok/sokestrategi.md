@@ -8,7 +8,7 @@ Spørsmålet er hvor mye infrastruktur vi trenger for å løse dette.
 
 ---
 
-## Tre alternativer
+## Tre alternativer for rekrutteringstreffsøk
 
 | #   | Alternativ                                                      | Kort beskrivelse                                                     | Nye apper | Ny infrastruktur                    |
 | --- | --------------------------------------------------------------- | -------------------------------------------------------------------- | --------- | ----------------------------------- |
@@ -97,6 +97,20 @@ tabeller                  + sorteringsvalg
 **Alternativ 2.5 — PostgreSQL med view.**
 
 Vi starter med et view over eksisterende tabeller som gir eier-, status- og geografifiltrering (fylke/kommune). Vi venter med fritekst.
+
+---
+
+## Jobbsøkersøk innad i et treff
+
+Når rekrutteringstreffsøket er på plass, kopierer vi de samme strategiene og strukturene for å paginere og filtrere jobbsøkerne i et enkelt treff.
+
+Samme mønster: view, dynamisk SQL, aggregeringer, paginering. Se [jobbsokersok.md](jobbsokersok.md) for detaljer.
+
+- [ ] Definer scope og filtre for jobbsøkersøk
+- [ ] Kopier view-tilnærmingen fra rekrutteringstreffsøk
+- [ ] Kopier lagdeling (Controller → Service → Repository)
+- [ ] Kopier filter/paginering-mønsteret i frontend
+- [ ] Detaljer og scope defineres nærmere når rekrutteringstreffsøket er ferdig
 
 Begrunnelse:
 

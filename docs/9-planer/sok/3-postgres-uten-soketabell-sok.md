@@ -1,4 +1,4 @@
-# Alternativ 3: PostgreSQL uten søketabell
+# Alternativ 3: PostgreSQL uten søketabell (rekrutteringstreffsøk)
 
 ## Idé
 
