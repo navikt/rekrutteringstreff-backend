@@ -57,13 +57,13 @@ Alle tre alternativer bruker samme request/response-struktur (`Rekrutteringstref
 | **Nye apper**              | 2 (indekser + søk)                       | 0                          | 0                            |
 | **Ny infrastruktur**       | OpenSearch-kluster, Kafka                | Ingen                      | Ingen                        |
 | **Tid til første versjon** | Høy                                      | Middels                    | Lav                          |
-| **Fritekst**               | BM25, norsk analyzer                     | tsvector + pg_trgm         | ILIKE (ok til ~10k rader)    |
+| **Fritekst**               | BM25(keyword search), norsk analyzer     | tsvector + pg_trgm         | ILIKE (ok til ~10k rader)    |
 | **Typo-toleranse**         | Innebygd                                 | pg_trgm (brukbart)         | Ingen                        |
 | **Relevans**               | Sterk (BM25 + boost)                     | Brukbar (ts_rank)          | Ingen                        |
 | **Filtre**                 | term/terms, svært raskt                  | B-tree + GIN, raskt        | Joins, raskt ved lavt volum  |
 | **Aggregeringer**          | aggs + post_filter i ett kall            | N+1 COUNT GROUP BY         | N+1 COUNT GROUP BY med joins |
-| **Konsistens**             | Eventual (~10–15 sek)                    | Sterk (synkron)            | Sterk (alltid kildedata)     |
-| **Reindeksering**          | Dual-write, alias-swap, deploy           | truncate + batch-upsert    | Ikke nødvendig               |
+| **Konsistens**             | Eventual consistence(~10–15 sek)         | Sterk (synkron)            | Sterk (alltid kildedata)     |
+| **Reindeksering**          | Dual-write, alias-swap, deploy           | truncate + batch-insert    | Ikke nødvendig               |
 | **Vedlikeholdskostnad**    | Høy (mapping, settings, lyttere, alerts) | Middels (søketabell-synk)  | Lav                          |
 | **Skaleringstak**          | Nesten ubegrenset                        | 100k+ med riktige indekser | ~10k uten søkeindekser       |
 | **Mønstergjenbruk**        | Kandidat/stilling bruker samme           | Ingen eksisterende         | Ingen eksisterende           |
