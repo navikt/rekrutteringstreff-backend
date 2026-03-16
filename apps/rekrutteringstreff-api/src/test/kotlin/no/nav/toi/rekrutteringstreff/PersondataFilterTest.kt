@@ -80,4 +80,34 @@ class PersondataFilterTest {
         val expected = "Nummeret er ."
         assertThat(PersondataFilter.filtrerUtPersonsensitiveData(input)).isEqualTo(expected)
     }
+
+    @Test
+    fun `erTomStreng gir riktig svar for tall og epost`() {
+        assertThat(PersondataFilter.erTomTekstEtterFiltrering("")).isTrue
+        assertThat(PersondataFilter.erTomTekstEtterFiltrering("  ")).isTrue
+        assertThat(PersondataFilter.erTomTekstEtterFiltrering("123")).isTrue
+        assertThat(PersondataFilter.erTomTekstEtterFiltrering("test@nav.no")).isTrue
+        assertThat(PersondataFilter.erTomTekstEtterFiltrering("test@nav.no 12356789")).isTrue
+
+        assertThat(PersondataFilter.erTomTekstEtterFiltrering("12")).isFalse
+        assertThat(PersondataFilter.erTomTekstEtterFiltrering("test")).isFalse
+    }
+
+    @Test
+    fun `inneholderTall gir riktig svar`() {
+        assertThat(PersondataFilter.inneholderTall("123")).isTrue
+
+        assertThat(PersondataFilter.inneholderTall("")).isFalse
+        assertThat(PersondataFilter.inneholderTall("  ")).isFalse
+        assertThat(PersondataFilter.inneholderTall("12")).isFalse
+        assertThat(PersondataFilter.inneholderTall("test@nav.no")).isFalse
+    }
+
+    @Test
+    fun `inneholderEpost gir riktig svar`() {
+        assertThat(PersondataFilter.inneholderEpost("test@nav.no")).isTrue
+
+        assertThat(PersondataFilter.inneholderEpost("123")).isFalse
+        assertThat(PersondataFilter.inneholderEpost("")).isFalse
+    }
 }
