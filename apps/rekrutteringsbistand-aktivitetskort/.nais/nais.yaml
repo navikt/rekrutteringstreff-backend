@@ -58,6 +58,9 @@ spec:
     - name: DAB_AKTIVITETSKORT_FEIL_TOPIC
       value: {{ dab_aktivitetskort_feil_topic }}
   observability:
+    autoInstrumentation:
+      enabled: true
+      runtime: java
     logging:
       destinations:
         - id: loki
