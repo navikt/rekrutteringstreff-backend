@@ -116,7 +116,7 @@ class App(
 
         javalin.exceptionMapping()
 
-        javalin.handleHealth()
+        HealthController(javalin, HealthRepository(dataSource))
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             authConfigs = authConfigs,
             rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
@@ -137,14 +137,15 @@ class App(
 
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
+        val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
         val rekrutteringstreffService = RekrutteringstreffService(
             dataSource,
             rekrutteringstreffRepository,
             jobbsøkerRepository,
             arbeidsgiverRepository,
-            jobbsøkerService
+            jobbsøkerService,
+            eierService
         )
-        val eierService = EierService(eierRepository)
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         RekrutteringstreffController(
@@ -156,10 +157,10 @@ class App(
         InnleggController(
             innleggService = innleggService,
             kiValideringsService = kiValideringsService,
+            eierService = eierService,
             javalin = javalin
         )
         EierController(
-            eierRepository = eierRepository,
             eierService = eierService,
             javalin = javalin
         )

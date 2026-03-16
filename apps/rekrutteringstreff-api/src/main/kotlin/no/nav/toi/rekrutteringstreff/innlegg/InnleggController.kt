@@ -3,11 +3,13 @@ package no.nav.toi.rekrutteringstreff.innlegg
 import io.javalin.openapi.*
 import io.javalin.http.Context
 import io.javalin.Javalin
+import io.javalin.http.ForbiddenResponse
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
 import java.net.HttpURLConnection.*
 import java.util.UUID
@@ -16,6 +18,7 @@ import java.util.UUID
 class InnleggController(
     private val innleggService: InnleggService,
     private val kiValideringsService: KiValideringsService,
+    private val eierService: EierService,
     javalin: Javalin
 ) {
     companion object {
@@ -146,8 +149,13 @@ class InnleggController(
     private fun opprettInnlegg(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
-        val dto = ctx.bodyAsClass<OpprettInnleggRequestDto>()
         val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        if (!eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke opprette innlegg")
+        }
+
+        val dto = ctx.bodyAsClass<OpprettInnleggRequestDto>()
 
         kiValideringsService.verifiserKiValidering(
             tekst = dto.htmlContent,
@@ -210,6 +218,12 @@ class InnleggController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
         val innleggId = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        if (!eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke oppdatere innlegg")
+        }
+
         val dto = ctx.bodyAsClass<OppdaterInnleggRequestDto>()
 
         val eksisterendeInnlegg = innleggService.hentById(innleggId)
@@ -248,7 +262,14 @@ class InnleggController(
     )
     private fun slettEttInnlegg(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treffId = TreffId(ctx.pathParam(REKRUTTERINGSTREFF_ID_PARAM))
         val id = UUID.fromString(ctx.pathParam(INNLEGG_ID_PARAM))
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        if (!eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke slette innlegg")
+        }
+
         if (innleggService.slett(id)) ctx.status(HTTP_NO_CONTENT) else throw NotFoundResponse()
     }
 }

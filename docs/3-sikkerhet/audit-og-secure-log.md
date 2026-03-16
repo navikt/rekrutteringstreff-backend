@@ -28,7 +28,7 @@ Audit-logging gjøres ved hjelp av NAVs fellesbibliotek `audit-log`. Vi logger i
 De viktigste feltene vi må huske på er:
 
 - **Event**: Hva slags hendelse det er (f.eks. `ACCESS` for visning).
-- **Source User**: Hvem som gjør oppslaget (NAV-ident).
+- **Source User**: Hvem som gjør oppslaget (Nav-ident).
 - **Destination User**: Hvem oppslaget gjelder (Fødselsnummer).
 - **Message**: En lesbar beskrivelse av hva som har skjedd.
 
@@ -36,7 +36,7 @@ De viktigste feltene vi må huske på er:
 
 | Hendelse              | Trigger                                       | Logget informasjon  |
 | --------------------- | --------------------------------------------- | ------------------- |
-| Visning av jobbsøkere | GET `/api/rekrutteringstreff/{id}/jobbsokere` | NAV-ident, treff-ID |
+| Visning av jobbsøkere | GET `/api/rekrutteringstreff/{id}/jobbsokere` | Nav-ident, treff-ID |
 
 ---
 

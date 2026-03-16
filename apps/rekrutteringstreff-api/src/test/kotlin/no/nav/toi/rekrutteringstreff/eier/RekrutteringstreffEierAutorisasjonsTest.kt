@@ -28,6 +28,7 @@ import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.AfterAll
@@ -66,12 +67,14 @@ class RekrutteringstreffEierAutorisasjonsTest {
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
     private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
 
+    private val eierService = EierService(eierRepository, rekrutteringstreffRepository, database.dataSource)
     private val rekrutteringstreffService = RekrutteringstreffService(
         database.dataSource,
         rekrutteringstreffRepository = rekrutteringstreffRepository,
         jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper),
         arbeidsgiverRepository = arbeidsgiverRepository,
-        jobbsøkerService = jobbsøkerService
+        jobbsøkerService = jobbsøkerService,
+        eierService = eierService
     )
 
     private lateinit var app: App
@@ -163,19 +166,6 @@ class RekrutteringstreffEierAutorisasjonsTest {
         val url: () -> String,
         val metode: () -> HttpRequest.Builder
     ) {
-        LeggTilEier(
-            { "http://localhost:${appPort}/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/eiere" },
-            {
-                HttpRequest.newBuilder().PUT(
-                    HttpRequest.BodyPublishers.ofString(
-                        JacksonConfig.mapper.writeValueAsString(
-                            listOf(
-                                "A12345"
-                            )
-                        )
-                    )
-                )
-            }),
         HentEiere(
             { "http://localhost:${appPort}/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/eiere" },
             {
@@ -196,11 +186,6 @@ class RekrutteringstreffEierAutorisasjonsTest {
     }
 
     private fun autorisasjonsCases() = listOf(
-        Arguments.of(Endepunkt.LeggTilEier, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
-        Arguments.of(Endepunkt.LeggTilEier, Gruppe.Utvikler, HTTP_CREATED),
-        Arguments.of(Endepunkt.LeggTilEier, Gruppe.Arbeidsgiverrettet, HTTP_CREATED),
-        Arguments.of(Endepunkt.LeggTilEier, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
-
         Arguments.of(Endepunkt.HentEiere, Gruppe.Jobbsøkerrettet, HTTP_OK),
         Arguments.of(Endepunkt.HentEiere, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.HentEiere, Gruppe.Arbeidsgiverrettet, HTTP_OK),
