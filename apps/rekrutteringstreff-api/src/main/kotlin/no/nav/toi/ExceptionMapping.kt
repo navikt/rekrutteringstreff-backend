@@ -13,7 +13,7 @@ import java.time.LocalDateTime
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ProblemDetails(
-    val type: String?,
+    val type: String,
     val title: String,
     val status: Int,
     val detail: String,
@@ -33,7 +33,7 @@ data class ProblemDetails(
             status: HttpStatus,
             ctx: Context,
             timestamp : LocalDateTime = LocalDateTime.now(),
-            type: String? = null,
+            type: String = "about:blank",
             traceid: String = traceIdFraOpenTelemetry(),
             hint: String? = null,
             feil: String? = null,
