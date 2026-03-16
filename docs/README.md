@@ -56,7 +56,7 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 
 ### 9. [Planer](9-planer/)
 
-- [OpenSearch-søk](9-planer/opensearch-sok.md) - Plan for å flytte treffsøk, filtrering og indeksering til OpenSearch
+- [Søkestrategi](9-planer/sok/sokestrategi.md) - Overordnet vurdering av søkealternativer og stegvis plan
 
 ## Applikasjoner i monorepoet
 
