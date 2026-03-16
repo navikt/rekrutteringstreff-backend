@@ -48,6 +48,9 @@ spec:
     - name: REKRUTTERINGSTREFF_AUDIENCE
       value: {{ rekrutteringstreff_audience }}
   observability:
+    autoInstrumentation:
+      enabled: true
+      runtime: java
     logging:
       destinations:
         - id: loki
