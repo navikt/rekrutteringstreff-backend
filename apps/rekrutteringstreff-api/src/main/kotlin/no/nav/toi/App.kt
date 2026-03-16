@@ -322,6 +322,7 @@ class App(
         if (::jobbsøkerhendelserScheduler.isInitialized) jobbsøkerhendelserScheduler.stop()
         if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
+        rapidsConnection.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")
     }
