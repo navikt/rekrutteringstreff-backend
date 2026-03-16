@@ -43,6 +43,22 @@ Denne tilnærmingen sikrer at vi aldri mister hendelser, og at all prosessering 
 - **Flyway** for migrasjoner
 - **HikariCP** for connection pooling
 
+### SQL-mønstre i repository-laget
+
+#### Inline-aggregering med `json_agg` / `json_build_object`
+
+For å hente entiteter med tilhørende subtabelldata (f.eks. jobbsøker med hendelser) bruker vi PostgreSQLs `json_agg(json_build_object(...))` direkte i SELECT-spørringen. Dette gir én enkelt spørring som returnerer hovedraden med en JSON-array av relaterte rader:
+
+#### Alternativer vi vurderte
+
+| Tilnærming                                 | Ytelse                             | Lesbarhet                                                  | Gjenbrukbarhet                                 |
+| ------------------------------------------ | ---------------------------------- | ---------------------------------------------------------- | ---------------------------------------------- |
+| **`json_agg` i én spørring** ✅            | Best – én roundtrip til databasen  | Middels – SQL blir kompleks, men godt isolert i repository | Lav – spørringen er skreddersydd per use case  |
+| **Separate spørringer, kobling i service** | Dårligere – N+1 eller 2 roundtrips | Høy – enkle, lesbare SQL-spørringer                        | Høy – repository-metodene kan gjenbrukes fritt |
+| **Subselect med `array_agg`**              | Tilsvarende `json_agg`             | Noe lavere – krever custom array-parsing                   | Lav                                            |
+
+Vi valgte `json_agg`-tilnærmingen fordi den gir best ytelse for våre leseoperasjoner, og kompleksiteten er isolert til repository-laget. Dersom vi får behov for mer fleksibel sammensetning av data (f.eks. at ulike endepunkter trenger ulike kombinasjoner av subtabeller), kan det være verdt å vurdere separate spørringer koblet i service-laget.
+
 ---
 
 ## Entity Relationship Diagram
@@ -83,6 +99,7 @@ erDiagram
         text kommune "Kommune for treffstedet (V5)"
         timestamptz svarfrist "Frist for påmelding/svar"
         text[] eiere "Array av Nav-identer som eier treffet"
+        text[] kontorer "Array av kontor-enhetIDer knyttet til treffet"
         text beskrivelse "Beskrivelse av treffet"
         text sist_endret_av_person_navident "Nav-ident for sist endring (V6)"
         timestamptz sist_endret_av_tidspunkt "Tidspunkt for sist endring (V6)"
@@ -228,6 +245,18 @@ Alle hendelse-tabeller har en `hendelse_data jsonb`-kolonne som inneholder ekstr
 Se [Arkitekturbeslutninger – hendelse_data](arkitekturbeslutninger.md#hendelse_data-polymorfe-json-objekter-i-hendelsestabellene) for detaljert dokumentasjon av JSON-strukturene, serialisering, og bruk i frontend.
 
 Data kan queries med PostgreSQLs JSON-operatører (`->`, `->>`, `#>` osv.).
+
+#### Subjekt (aktør vs. subjekt)
+
+Hendelser skiller mellom **aktør** (hvem som utførte handlingen) og **subjekt** (hvem/hva hendelsen gjelder). Aktøren ligger alltid i `aktøridentifikasjon`. Subjektet hentes ulikt per tabell:
+
+| Tabell                        | `subjekt_id`                                                                       | `subjekt_navn`                    | Eksempel                                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `rekrutteringstreff_hendelse` | Lagret direkte i kolonner (V2). Kun satt for eier-/kontorhendelser, ellers `null`. | Samme                             | `EIER_LAGT_TIL`: id=`B654321` (Nav-ident). `EIER_FJERNET`: id=`B654321`. `KONTOR_LAGT_TIL`: id=`0301` (enhet-ID). |
+| `jobbsoker_hendelse`          | Avledet via JOIN: `jobbsoker.fodselsnummer`                                        | `fornavn \|\| ' ' \|\| etternavn` | id=`12345678901`, navn=`Ola Nordmann`                                                                             |
+| `arbeidsgiver_hendelse`       | Avledet via JOIN: `arbeidsgiver.orgnr`                                             | `arbeidsgiver.orgnavn`            | id=`912345678`, navn=`Kiwi Grønland`                                                                              |
+
+Samleendepunktet `GET /api/rekrutteringstreff/{id}/hendelser` gjør en `UNION ALL` av de tre tabellene og returnerer `subjektId`/`subjektNavn` enhetlig uavhengig av lagringsmekanisme.
 
 ### Støttetabeller
 

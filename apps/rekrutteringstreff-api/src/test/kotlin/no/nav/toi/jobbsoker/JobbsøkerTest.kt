@@ -13,6 +13,7 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.jobbsoker.dto.MinsideVarselSvarDataDto
 import no.nav.toi.jobbsoker.dto.RekrutteringstreffendringerDto
+import no.nav.toi.rekrutteringstreff.Endringsfelttype
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -459,11 +460,8 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
 
-        val endringer = Rekrutteringstreffendringer(
-            navn = no.nav.toi.rekrutteringstreff.Endringsfelt("Gammel tittel", "Ny tittel", true),
-            sted = no.nav.toi.rekrutteringstreff.Endringsfelt("Gammel sted", "Nytt sted", false),
-        )
-        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
+        db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
         val response = httpGet(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
@@ -478,13 +476,7 @@ class JobbsøkerTest {
         assertThat(hendelse).isNotNull
         assertThat(hendelse!!.hendelseData).isNotNull
         val data = mapper.convertValue(hendelse.hendelseData, RekrutteringstreffendringerDto::class.java)
-        assertThat(data.navn?.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(data.navn?.nyVerdi).isEqualTo("Ny tittel")
-        assertThat(data.navn?.skalVarsle).isTrue()
-        assertThat(data.sted?.gammelVerdi).isEqualTo("Gammel sted")
-        assertThat(data.sted?.nyVerdi).isEqualTo("Nytt sted")
-        assertThat(data.sted?.skalVarsle).isFalse()
-        assertThat(data.tidspunkt).isNull()
+        assertThat(data.endredeFelter).isNotNull
     }
 
     @Test

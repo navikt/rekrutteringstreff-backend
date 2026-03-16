@@ -7,9 +7,13 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.rekrutteringstreff.Endringsfelttype
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
+import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeAll
@@ -39,7 +43,7 @@ class AktivitetskortTransaksjonTest {
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
         arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
         jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
-        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService)
+        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource))
     }
 
     @BeforeEach
@@ -50,7 +54,7 @@ class AktivitetskortTransaksjonTest {
     @Test
     fun `skal rulle tilbake databaseendringer dersom kafka feiler ved invitasjon`() {
         val failingRapid = FailingRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -86,7 +90,7 @@ class AktivitetskortTransaksjonTest {
     @Test
     fun `skal rulle tilbake databaseendringer dersom kafka feiler ved treff endret`() {
         val failingRapid = FailingRapid()
-        val scheduler = AktivitetskortJobbsøkerScheduler(
+        val scheduler = JobbsøkerhendelserScheduler(
             db.dataSource,
             aktivitetskortRepository,
             rekrutteringstreffRepository,
@@ -116,10 +120,8 @@ class AktivitetskortTransaksjonTest {
         val invitasjoner = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         invitasjoner.forEach { aktivitetskortRepository.lagrePollingstatus(it.jobbsokerHendelseDbId) }
 
-        val endringer = no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer(
-            navn = no.nav.toi.rekrutteringstreff.Endringsfelt(gammelVerdi = "Gammel", nyVerdi = "Ny")
-        )
-        db.registrerTreffEndretNotifikasjon(treffId, fødselsnummer, endringer)
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
+        db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
         scheduler.behandleJobbsøkerHendelser()
 

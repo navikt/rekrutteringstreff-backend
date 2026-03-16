@@ -113,15 +113,10 @@ class RekrutteringstreffTest {
     fun opprettRekrutteringstreff() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val gyldigKontorfelt = "Gyldig NAV Kontor"
         val gyldigStatus = RekrutteringstreffStatus.UTKAST
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
-            """
-            {
-                "opprettetAvNavkontorEnhetId": "$gyldigKontorfelt"
-            }
-            """.trimIndent(),
+            "{}",
             token.serialize()
         )
         assertThat(response.statusCode()).isEqualTo(201)
@@ -139,21 +134,20 @@ class RekrutteringstreffTest {
         assertThat(rekrutteringstreff.postnummer).isNull()
         assertThat(rekrutteringstreff.poststed).isNull()
         assertThat(rekrutteringstreff.status.name).isEqualTo(gyldigStatus.name)
-        assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo(gyldigKontorfelt)
+        assertThat(rekrutteringstreff.opprettetAvNavkontorEnhetId).isEqualTo("1234")
         assertThat(rekrutteringstreff.opprettetAvPersonNavident).isEqualTo(navIdent)
         assertThat(rekrutteringstreff.id.somString).isEqualTo(postId)
         assertThat(rekrutteringstreff.sistEndretAv).isEqualTo(navIdent)
     }
 
     @Test
-    fun `opprett rekrutteringstreff med manglende påkrevd felt gir 400`() {
+    fun `opprett rekrutteringstreff med ugyldig request body gir 400`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
 
-        // Mangler opprettetAvNavkontorEnhetId som er påkrevd
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
-            """{}""",
+            """ikke json i det hele tatt""",
             token.serialize()
         )
 
@@ -178,11 +172,11 @@ class RekrutteringstreffTest {
     fun hentAlleRekrutteringstreff() {
         val tittel1 = "Tittel1111111"
         val tittel2 = "Tittel2222222"
-        db.opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffMedAlleFelter(
             navIdent = "navident1",
             tittel = tittel1,
         )
-        db.opprettRekrutteringstreffIDatabase(
+        db.opprettRekrutteringstreffMedAlleFelter(
             navIdent = "navIdent2",
             tittel = tittel2,
         )
@@ -341,7 +335,7 @@ class RekrutteringstreffTest {
     fun `oppdater rekrutteringstreff med kiLoggId for feil treff gir 422`() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
         val annetTreffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Annet treff")
         val created = db.hentAlleRekrutteringstreff().first { it.tittel == "Gammel tittel" }
 
@@ -385,6 +379,129 @@ class RekrutteringstreffTest {
         )
         assertThat(response.statusCode()).isEqualTo(422)
         assertThat(response.body()).contains("KI_FEIL_TREFF")
+    }
+
+    @Test
+    fun `oppdater rekrutteringstreff med bryterRetningslinjer og uten lagreLikevel gir 422 KI_KREVER_BEKREFTELSE`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val created = db.hentAlleRekrutteringstreff().first()
+        val kiLoggRepository = no.nav.toi.rekrutteringstreff.ki.KiLoggRepository(db.dataSource)
+        val loggId = kiLoggRepository.insert(
+            no.nav.toi.rekrutteringstreff.ki.KiLoggInsert(
+                treffId = treffId.somUuid,
+                feltType = "tittel",
+                spørringFraFrontend = "Diskriminerende tittel",
+                spørringFiltrert = "Diskriminerende tittel",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = true,
+                begrunnelse = "Diskriminerende innhold",
+                kiNavn = "azure-openai",
+                kiVersjon = "test",
+                svartidMs = 100
+            )
+        )
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Diskriminerende tittel",
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+            tittelKiLoggId = loggId.toString(),
+            lagreLikevel = false
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("KI_KREVER_BEKREFTELSE")
+    }
+
+    @Test
+    fun `oppdater rekrutteringstreff med ukjent kiLoggId gir 422 KI_LOGG_ID_UGYLDIG`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val created = db.hentAlleRekrutteringstreff().first()
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Ny tittel",
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+            tittelKiLoggId = UUID.randomUUID().toString()
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("KI_LOGG_ID_UGYLDIG")
+    }
+
+    @Test
+    fun `oppdater rekrutteringstreff med endret tekst etter validering gir 422 KI_TEKST_ENDRET`() {
+        val navIdent = "A123456"
+        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
+        val created = db.hentAlleRekrutteringstreff().first()
+        val kiLoggRepository = no.nav.toi.rekrutteringstreff.ki.KiLoggRepository(db.dataSource)
+        val loggId = kiLoggRepository.insert(
+            no.nav.toi.rekrutteringstreff.ki.KiLoggInsert(
+                treffId = treffId.somUuid,
+                feltType = "tittel",
+                spørringFraFrontend = "Validert tittel",
+                spørringFiltrert = "Validert tittel",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "test",
+                svartidMs = 100
+            )
+        )
+        val updateDto = OppdaterRekrutteringstreffDto(
+            tittel = "Endret tittel etter validering",
+            beskrivelse = null,
+            fraTid = null,
+            tilTid = null,
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+            tittelKiLoggId = loggId.toString()
+        )
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${created.id}",
+            mapper.writeValueAsString(updateDto),
+            token.serialize()
+        )
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("KI_TEKST_ENDRET")
     }
 
     @Test
@@ -976,9 +1093,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
-                "tidspunkt": {"gammelVerdi": "2025-10-30T10:00:00+01:00", "nyVerdi": "2025-10-30T14:00:00+01:00", "skalVarsle": true},
-                "introduksjon": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse", "skalVarsle": false}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}", "${Endringsfelttype.STED.tekst}"]
             }
         """.trimIndent()
 
@@ -1055,8 +1170,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true},
-                "sted": {"gammelVerdi": "Gammel gate 1, 0566 Oslo", "nyVerdi": "Ny gate 2, 0567 Oslo", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}", "${Endringsfelttype.STED.tekst}"]
             }
         """.trimIndent()
 
@@ -1153,7 +1267,7 @@ class RekrutteringstreffTest {
         // Registrer endringer
         val endringer = """
             {
-                "tidspunkt": {"gammelVerdi": "2025-10-30T10:00:00+01:00 - 2025-10-30T12:00:00+01:00", "nyVerdi": "2025-10-30T10:00:00+01:00 - 2025-10-30T14:00:00+01:00", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.TIDSPUNKT.tekst}"]
             }
         """.trimIndent()
 
@@ -1208,7 +1322,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på upublisert treff (skal avvises)
         val endringer = """
             {
-                "introduksjon": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Ny beskrivelse", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.INTRODUKSJON.tekst}"]
             }
         """.trimIndent()
 
@@ -1244,7 +1358,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på fullført treff (skal avvises)
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 
@@ -1279,7 +1393,7 @@ class RekrutteringstreffTest {
         // Prøv å registrere endringer på avlyst treff (skal avvises)
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 
@@ -1307,7 +1421,7 @@ class RekrutteringstreffTest {
 
         val endringer = """
             {
-                "navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel", "skalVarsle": true}
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
             }
         """.trimIndent()
 

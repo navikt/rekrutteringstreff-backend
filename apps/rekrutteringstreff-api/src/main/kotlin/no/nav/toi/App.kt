@@ -15,7 +15,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.exception.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortJobbsøkerScheduler
+import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
@@ -29,6 +29,7 @@ import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggController
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
+import no.nav.toi.rekrutteringstreff.innlegg.InnleggService
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
@@ -91,7 +92,7 @@ class App(
     )
 
     private lateinit var javalin: Javalin
-    private lateinit var aktivitetskortJobbsøkerScheduler: AktivitetskortJobbsøkerScheduler
+    private lateinit var jobbsøkerhendelserScheduler: JobbsøkerhendelserScheduler
     private lateinit var synlighetsBehovScheduler: SynlighetsBehovScheduler
     private val secureLog = SecureLog(log)
 
@@ -220,14 +221,16 @@ class App(
 
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
+        val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
         val rekrutteringstreffService = RekrutteringstreffService(
             dataSource,
             rekrutteringstreffRepository,
             jobbsøkerRepository,
             arbeidsgiverRepository,
-            jobbsøkerService
+            jobbsøkerService,
+            eierService
         )
-        val eierService = EierService(eierRepository)
+        val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         RekrutteringstreffController(
             rekrutteringstreffService = rekrutteringstreffService,
@@ -236,12 +239,12 @@ class App(
             javalin = javalin
         )
         InnleggController(
-            innleggRepository = innleggRepository,
+            innleggService = innleggService,
             kiValideringsService = kiValideringsService,
+            eierService = eierService,
             javalin = javalin
         )
         EierController(
-            eierRepository = eierRepository,
             eierService = eierService,
             javalin = javalin
         )
@@ -280,7 +283,7 @@ class App(
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)
         val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
 
-        aktivitetskortJobbsøkerScheduler = AktivitetskortJobbsøkerScheduler(
+        jobbsøkerhendelserScheduler = JobbsøkerhendelserScheduler(
             dataSource = dataSource,
             aktivitetskortRepository = aktivitetskortRepository,
             rekrutteringstreffRepository = rekrutteringstreffRepository,
@@ -288,7 +291,7 @@ class App(
             objectMapper = JacksonConfig.mapper,
             leaderElection = leaderElection,
         )
-        aktivitetskortJobbsøkerScheduler.start()
+        jobbsøkerhendelserScheduler.start()
 
         synlighetsBehovScheduler = SynlighetsBehovScheduler(
             jobbsøkerService = jobbsøkerService,
@@ -316,15 +319,13 @@ class App(
 
     fun close() {
         log.info("Shutting down application")
-        if (::aktivitetskortJobbsøkerScheduler.isInitialized) aktivitetskortJobbsøkerScheduler.stop()
+        if (::jobbsøkerhendelserScheduler.isInitialized) jobbsøkerhendelserScheduler.stop()
         if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")
     }
 }
-
-private val log = noClassLogger()
 
 fun main() {
     val dataSource = createDataSource()

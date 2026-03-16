@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
+import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
@@ -12,6 +13,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.ArrayList
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -27,7 +29,8 @@ class RekrutteringstreffService(
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
-    private val jobbsøkerService: JobbsøkerService
+    private val jobbsøkerService: JobbsøkerService,
+    private val eierService: EierService,
 ) {
     private val logger: Logger = log
 
@@ -130,8 +133,18 @@ class RekrutteringstreffService(
     }
 
     fun hentAlleRekrutteringstreffForEttKontor(kontorId: String): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentAlleForEttKontorSomIkkeErSlettet(kontorId)
+        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentIkkeSlettedeForKontor(kontorId)
         return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontor)
+    }
+
+    fun hentAlleRekrutteringstreffSomErMineEllerPubliserte(navIdent: String): List<RekrutteringstreffDto> {
+        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleSomErMineEllerPubliserteOgIkkeSlettet(navIdent)
+        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreff)
+    }
+
+    fun hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt(kontorId: String): List<RekrutteringstreffDto> {
+        val alleRekrutteringstreffForKontorSomErPublisertMedFremtidigTilTidspunkt = rekrutteringstreffRepository.hentAlleForEttKontorSomErPublisertMedFremtidigTilTispunkt(kontorId)
+        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontorSomErPublisertMedFremtidigTilTidspunkt)
     }
 
     private fun tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(rekrutteringstreffListe: List<Rekrutteringstreff>): List<RekrutteringstreffDto> {
@@ -219,20 +232,36 @@ class RekrutteringstreffService(
         }
     }
 
-    fun registrerEndring(treffId: TreffId, endringer: String, endretAv: String) {
+    fun registrerEndring(treffId: TreffId, endringer: Rekrutteringstreffendringer, endretAv: String) {
         dataSource.executeInTransaction { connection ->
             val dbId = rekrutteringstreffRepository.hentRekrutteringstreffDbId(connection, treffId)
+
+            val endringerJson = JacksonConfig.mapper.writeValueAsString(endringer)
 
             rekrutteringstreffRepository.leggTilHendelse(
                 connection,
                 dbId,
                 RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
                 AktørType.ARRANGØR,
-                endretAv,
-                endringer
+                endretAv
             )
 
             val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
+
+            val jobbsøkereSomSkalOppdateres = alleJobbsøkere
+                .filter { jobbsøker -> jobbsøker.hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT } }
+                .map { it.personTreffId }
+
+            if (jobbsøkereSomSkalOppdateres.isNotEmpty()) {
+                jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                    connection,
+                    JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
+                    jobbsøkereSomSkalOppdateres,
+                    endretAv
+                )
+                logger.info("Registrert endring på rekrutteringstreff ${treffId.somString} for ${jobbsøkereSomSkalOppdateres.size} jobbsøkere")
+            }
+
             val jobbsøkereSomSkalVarsles = alleJobbsøkere
                 .filter { jobbsøkerService.skalVarslesOmEndringer(it.hendelser) }
                 .map { it.personTreffId }
@@ -243,9 +272,9 @@ class RekrutteringstreffService(
                     JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
                     jobbsøkereSomSkalVarsles,
                     endretAv,
-                    hendelseData = endringer
+                    hendelseData = endringerJson
                 )
-                logger.info("Registrert endring for rekrutteringstreff  ${treffId.somString} med ${jobbsøkereSomSkalVarsles.size} jobbsøkere som skal varsles")
+                logger.info("Registrert at varsel om oppdatert treff ${treffId.somString} skal sendes til ${jobbsøkereSomSkalVarsles.size} jobbsøkere")
             }
         }
     }
@@ -266,6 +295,11 @@ class RekrutteringstreffService(
                 RekrutteringstreffHendelsestype.OPPRETTET,
                 AktørType.ARRANGØR,
                 internalDto.opprettetAvPersonNavident
+            )
+            eierService.leggTilEierMedKontor(
+                connection, treffId,
+                internalDto.opprettetAvPersonNavident,
+                internalDto.opprettetAvNavkontorEnhetId
             )
             treffId
         }

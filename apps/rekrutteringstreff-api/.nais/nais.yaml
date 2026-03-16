@@ -94,7 +94,7 @@ spec:
     - name: KAFKA_CONSUMER_GROUP_ID
       value: {{kafka_consumer_group_id}}
     - name: PILOTKONTORER
-      value: {{pilotkontorer}}
+      value: "{{ pilotkontorer }}"
     - name: OPENAI_API_URL
       value: "https://{{openai_azure_host}}/openai/deployments/{{openai_deployment}}/chat/completions?api-version={{openai_api_version}}"
     - name: OPENAI_DEPLOYMENT

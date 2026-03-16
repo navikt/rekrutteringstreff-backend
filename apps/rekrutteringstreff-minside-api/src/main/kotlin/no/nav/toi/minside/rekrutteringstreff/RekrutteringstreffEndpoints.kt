@@ -8,6 +8,7 @@ import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiParam
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
+import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.minside.arbeidsgiver.ArbeidsgiverOutboundDto
 import no.nav.toi.minside.authenticatedUser
 import no.nav.toi.minside.innlegg.InnleggOutboundDto
@@ -64,7 +65,8 @@ class RekrutteringstreffEndpoints {
             val innlegg =
                 treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
             log.info("Hentet rekrutteringstrefff med id: $id")
-            ctx.status(200).json(treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg).json())
+            val treff = treff.copy(arbeidsgivere = arbeidsgivere, innlegg = innlegg)
+            ctx.status(200).json(treff)
         }
     }
 }
@@ -72,33 +74,18 @@ class RekrutteringstreffEndpoints {
 fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, RekrutteringstreffEndpoints().hentRekrutteringstreffHandler(treffKlient))
 
 data class RekrutteringstreffOutboundDto(
-    private val id: UUID,
-    private val tittel: String,
-    private val beskrivelse: String?,
-    private val fraTid: ZonedDateTime?,
-    private val tilTid: ZonedDateTime?,
-    private val svarfrist: ZonedDateTime?,
-    private val gateadresse: String?,
-    private val postnummer: String?,
-    private val poststed: String?,
-    private val status: String?,
-    private val innlegg: List<InnleggOutboundDto> = emptyList(),
-    private val arbeidsgivere: List<ArbeidsgiverOutboundDto> = emptyList(),
+    val id: UUID,
+    val tittel: String,
+    val beskrivelse: String?,
+    val fraTid: ZonedDateTime?,
+    val tilTid: ZonedDateTime?,
+    val svarfrist: ZonedDateTime?,
+    val gateadresse: String?,
+    val postnummer: String?,
+    val poststed: String?,
+    val status: String?,
+    val innlegg: List<InnleggOutboundDto> = emptyList(),
+    val arbeidsgivere: List<ArbeidsgiverOutboundDto> = emptyList(),
 ) {
-    fun json() = """
-        {
-            "id": "$id",
-            "tittel": "$tittel",
-            "beskrivelse": ${beskrivelse?.let { "\"$it\"" } },
-            "fraTid": ${fraTid?.let { "\"$it\"" } },
-            "tilTid": ${tilTid?.let { "\"$it\"" } },
-            "svarfrist": ${svarfrist?.let { "\"$it\"" } },
-            "gateadresse": ${gateadresse?.let { "\"$it\"" } },
-            "postnummer": ${postnummer?.let { "\"$it\"" } },
-            "poststed": ${poststed?.let { "\"$it\"" } },
-            "status": ${status?.let { "\"$it\"" } },
-            "innlegg": [ ${innlegg.map { it.json() }.joinToString(",\n")} ],
-            "arbeidsgivere": [ ${arbeidsgivere.map { it.json() }.joinToString(",\n")} ]
-        }
-    """.trimIndent()
+    fun json(): String = JacksonConfig.mapper.writeValueAsString(this)
 }

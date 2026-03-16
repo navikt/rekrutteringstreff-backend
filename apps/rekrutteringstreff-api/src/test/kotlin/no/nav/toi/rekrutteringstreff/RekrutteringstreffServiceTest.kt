@@ -22,6 +22,8 @@ import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
@@ -61,7 +63,8 @@ class RekrutteringstreffServiceTest {
                 rekrutteringstreffRepository,
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
-                jobbsøkerService
+                jobbsøkerService,
+                EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource)
             )
         }
     }
@@ -108,7 +111,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `Skal kunne hente alle rekrutteringstreff for ett kontor`() {
+    fun `Skal kunne hente alle rekrutteringstreff for ett kontor som er publisert med treff-tidspunkt frem i tid`() {
         val rekrutteringstreff1 = OpprettRekrutteringstreffInternalDto(
             tittel = "Treff 1",
             opprettetAvPersonNavident = "NAV1234",
@@ -127,15 +130,94 @@ class RekrutteringstreffServiceTest {
             opprettetAvNavkontorEnhetId = "0600",
             opprettetAvTidspunkt = nowOslo(),
         )
+        val rekrutteringstreff4 = OpprettRekrutteringstreffInternalDto(
+            tittel = "Treff 4",
+            opprettetAvPersonNavident = "NAV1234",
+            opprettetAvNavkontorEnhetId = "0605",
+            opprettetAvTidspunkt = nowOslo(),
+        )
+
         val treffId1 = rekrutteringstreffService.opprett(rekrutteringstreff1)
         val treffId2 = rekrutteringstreffService.opprett(rekrutteringstreff2)
         val treffId3 = rekrutteringstreffService.opprett(rekrutteringstreff3)
+        val treffId4 = rekrutteringstreffService.opprett(rekrutteringstreff4)
 
-        val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontor("0605")
+        val oppdatertTreff1 = OppdaterRekrutteringstreffDto(
+            tittel = rekrutteringstreff1.tittel,
+            beskrivelse = null,
+            fraTid = nowOslo().plusDays(2).plusHours(2),
+            tilTid = nowOslo().plusDays(2).plusHours(3),
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+
+        val oppdatertTreff2 = OppdaterRekrutteringstreffDto(
+            tittel = rekrutteringstreff2.tittel,
+            beskrivelse = null,
+            fraTid = nowOslo().plusDays(5).plusHours(2),
+            tilTid = nowOslo().plusDays(5).plusHours(3),
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+
+        val oppdatertTreff3 = OppdaterRekrutteringstreffDto(
+            tittel = rekrutteringstreff3.tittel,
+            beskrivelse = null,
+            fraTid = nowOslo().plusDays(5).plusHours(2),
+            tilTid = nowOslo().plusDays(5).plusHours(3),
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+
+        val oppdatertTreff4 = OppdaterRekrutteringstreffDto(
+            tittel = rekrutteringstreff4.tittel,
+            beskrivelse = null,
+            fraTid = nowOslo().minusDays(2).plusHours(2),
+            tilTid = nowOslo().minusDays(2).plusHours(3),
+            svarfrist = null,
+            gateadresse = null,
+            postnummer = null,
+            poststed = null,
+            kommune = null,
+            kommunenummer = null,
+            fylke = null,
+            fylkesnummer = null,
+        )
+
+        rekrutteringstreffService.oppdater(treffId1, oppdatertTreff1, "NAV1234")
+        rekrutteringstreffService.oppdater(treffId2, oppdatertTreff2, "NAV1234")
+        rekrutteringstreffService.oppdater(treffId3, oppdatertTreff3, "NAV1234")
+        rekrutteringstreffService.oppdater(treffId4, oppdatertTreff4, "NAV1234")
+
+        rekrutteringstreffService.publiser(treffId1, "NAV1234")
+        rekrutteringstreffService.publiser(treffId2, "NAV1234")
+        rekrutteringstreffService.publiser(treffId3, "NAV1234")
+        rekrutteringstreffService.publiser(treffId4, "NAV1234")
+
+        val rekrutteringstreff = rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt("0605")
 
         assertThat(rekrutteringstreff.any { it.id == treffId1.somUuid }).isTrue
         assertThat(rekrutteringstreff.any { it.id == treffId2.somUuid }).isTrue
         assertThat(rekrutteringstreff.any { it.id == treffId3.somUuid }).isFalse
+        assertThat(rekrutteringstreff.any { it.id == treffId4.somUuid }).isFalse
     }
 
     @Test
@@ -272,9 +354,8 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
 
-        // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
 
         // Assert - verifiser at BÅDE rekrutteringstreff-hendelse OG jobbsøker-hendelse er lagret
@@ -303,8 +384,7 @@ class RekrutteringstreffServiceTest {
     }
 
     @Test
-    fun `skal lagre hendelse_data for registrerEndring`() {
-        // Arrange
+    fun `skal lagre hendelse_data for hendelse TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON i registrerEndring når noen har svart ja`() {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         val fnr = Fødselsnummer("12345678901")
         val navIdent = "Z123456"
@@ -312,28 +392,17 @@ class RekrutteringstreffServiceTest {
         leggTilOgInviterJobbsøker(treffId, fnr, navIdent)
         jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, navIdent)
 
-        // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer =
-            """{"navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}, "sted": {"gammelVerdi": "Gammel sted", "nyVerdi": "Ny sted"}}"""
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 
-        // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
 
-        // Assert - verifiser at hendelse_data er lagret og kan deserialiseres
         val hendelseData = hentRekrutteringstreffHendelseData(
             treffId,
             RekrutteringstreffHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING
         )
-        assertThat(hendelseData).isNotNull()
-
-        // Deserialiser Rekrutteringstreffendringer
-        val deserializedDto = mapper.readValue(hendelseData, Rekrutteringstreffendringer::class.java)
-        assertThat(deserializedDto.navn).isNotNull()
-        assertThat(deserializedDto.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedDto.navn!!.nyVerdi).isEqualTo("Ny tittel")
-        assertThat(deserializedDto.tidspunkt).isNull() // Ikke endret
+        assertThat(hendelseData).isNull()
 
         val jobbsøkerHendelseData = hentJobbsøkerHendelseData(
             treffId,
@@ -343,8 +412,8 @@ class RekrutteringstreffServiceTest {
         assertThat(jobbsøkerHendelseData).isNotNull()
 
         val deserializedJobbsøker = mapper.readValue(jobbsøkerHendelseData, Rekrutteringstreffendringer::class.java)
-        assertThat(deserializedJobbsøker.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserializedJobbsøker.navn!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserializedJobbsøker.endredeFelter).isNotNull()
+        assertThat(deserializedJobbsøker.endredeFelter).size().isEqualTo(2)
     }
 
     @Test
@@ -352,37 +421,45 @@ class RekrutteringstreffServiceTest {
         // Test at vi kan håndtere JSON fra databasen hvor kun noen felt er satt
         // Dette sikrer bakoverkompatibilitet
 
-        val jsonMedNoenFelt = """{"navn": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Ny tittel"}}"""
+        val jsonMedNoenFelt = """
+            {
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}"]
+            }
+            """.trimIndent()
 
         // Act
         val deserialized = mapper.readValue(jsonMedNoenFelt, Rekrutteringstreffendringer::class.java)
 
         // Assert - verifiser at eksisterende felt fungerer
-        assertThat(deserialized.navn).isNotNull()
-        assertThat(deserialized.navn!!.gammelVerdi).isEqualTo("Gammel tittel")
-        assertThat(deserialized.navn!!.nyVerdi).isEqualTo("Ny tittel")
+        assertThat(deserialized).isNotNull()
+        assertThat(deserialized.endredeFelter).contains(Endringsfelttype.NAVN)
 
-        // Verifiser at manglende felt er null
-        assertThat(deserialized.tidspunkt).isNull()
-        assertThat(deserialized.introduksjon).isNull()
+        // Verifiser at manglende felt ikke er satt
+        assertThat(deserialized.endredeFelter).doesNotContain(Endringsfelttype.STED)
     }
 
     @Test
-    fun `skal ignorere ukjente felt i JSON fra databasen`() {
+    fun `skal ignorere ukjente felt og enumer i JSON fra databasen`() { // TODO: test det samme ved å bruke RekrutteringstreffController som vil feile om filterNotNull() fjernes
         // Test at vi kan ignorere felt som ikke lenger eksisterer i DTOen
         // Dette sikrer bakoverkompatibilitet hvis vi fjerner felt i framtiden
 
-        val jsonMedEkstraFelt = """{
-            "navn": {"gammelVerdi": "Test", "nyVerdi": "Ny Test"},
-            "ukjentFelt": {"gammelVerdi": "Dette skal ignoreres", "nyVerdi": "Også ignoreres"}
-        }"""
+        val jsonMedEkstraFelt = """
+            {
+                "endredeFelter": ["${Endringsfelttype.NAVN.tekst}", "ukjentFelt", "${Endringsfelttype.NAVN.tekst}"],
+                "ukjentFelt": "dette feltet finnes ikke"
+            }
+        """
 
         // Act - deserialiserer JSON med ukjent felt (skal ikke kaste exception)
-        val deserialized = mapper.readValue(jsonMedEkstraFelt, Rekrutteringstreffendringer::class.java)
+
+        val endringer = Rekrutteringstreffendringer(
+            JacksonConfig.mapper.readValue(jsonMedEkstraFelt, Rekrutteringstreffendringer::class.java).endredeFelter.filterNotNull()
+                .toSet())
 
         // Assert - verifiser at kjente felt fungerer
-        assertThat(deserialized.navn).isNotNull()
-        assertThat(deserialized.navn!!.gammelVerdi).isEqualTo("Test")
+        assertThat(endringer).isNotNull()
+        assertThat(endringer.endredeFelter).contains(Endringsfelttype.NAVN)
+        assertThat(endringer.endredeFelter).size().isEqualTo(1)
     }
 
     @Test
@@ -418,7 +495,7 @@ class RekrutteringstreffServiceTest {
 
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Endret tittel"}}"""
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -442,8 +519,7 @@ class RekrutteringstreffServiceTest {
         publiserTreff(treffId, navIdent)
         rekrutteringstreffService.avlys(treffId, navIdent)
 
-        // Nå har jobbsøker SVART_JA_TREFF_AVLYST som siste hendelse
-        val endringer = """{"tittel": {"gammelVerdi": "Gammel", "nyVerdi": "Gjenåpnet og endret"}}"""
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -479,7 +555,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Endret tittel"}}"""
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -519,7 +595,7 @@ class RekrutteringstreffServiceTest {
         // Publiser treffet først
         publiserTreff(treffId, navIdent)
 
-        val endringer = """{"tittel": {"gammelVerdi": "Gammel", "nyVerdi": "Endret for alle"}}"""
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
 
         // Act
         rekrutteringstreffService.registrerEndring(treffId, endringer, navIdent)
@@ -550,7 +626,8 @@ class RekrutteringstreffServiceTest {
         publiserTreff(treffId, navIdent)
 
         // Act - Registrer første endring
-        val endring1 = """{"tittel": {"gammelVerdi": "Gammel tittel", "nyVerdi": "Endret tittel 1"}}"""
+        val endring1 = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED))
+
         rekrutteringstreffService.registrerEndring(treffId, endring1, navIdent)
 
         // Verifiser første notifikasjon
@@ -561,8 +638,8 @@ class RekrutteringstreffServiceTest {
         assertThat(forsteNotifikasjoner).hasSize(1)
 
         // Act - Registrer andre endring
-        val endring2 =
-            """{"beskrivelse": {"gammelVerdi": "Gammel beskrivelse", "nyVerdi": "Endret beskrivelse 2"}}"""
+        val endring2 = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.INTRODUKSJON))
+
         rekrutteringstreffService.registrerEndring(treffId, endring2, navIdent)
 
         // Assert - Jobbsøker skal ha fått to notifikasjoner

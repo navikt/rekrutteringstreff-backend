@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.javalin.openapi.OneOf
 import io.javalin.openapi.OpenApiName
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.rekrutteringstreff.Endringsfelttype
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
 @JsonSubTypes(
@@ -36,18 +37,8 @@ data class MinsideVarselSvarDataDto(
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 @OpenApiName("Rekrutteringstreffendringer")
 data class RekrutteringstreffendringerDto(
-    val navn: Endringsfelt? = null,
-    val sted: Endringsfelt? = null,
-    val tidspunkt: Endringsfelt? = null,
-    val svarfrist: Endringsfelt? = null,
-    val introduksjon: Endringsfelt? = null,
+    val endredeFelter: Set<Endringsfelttype>
 ) : HendelseDataDto
-
-data class Endringsfelt(
-    val gammelVerdi: String? = null,
-    val nyVerdi: String? = null,
-    val skalVarsle: Boolean = false,
-)
 
 fun parseHendelseData(mapper: ObjectMapper, hendelsestype: JobbsøkerHendelsestype, node: JsonNode?): HendelseDataDto? {
     if (node == null || node.isNull) return null
