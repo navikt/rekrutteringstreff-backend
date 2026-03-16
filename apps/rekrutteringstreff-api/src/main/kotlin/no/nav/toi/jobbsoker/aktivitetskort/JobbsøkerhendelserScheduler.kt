@@ -2,6 +2,10 @@ package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
@@ -53,6 +57,7 @@ class JobbsøkerhendelserScheduler(
         }
     }
 
+    @WithSpan
     fun behandleJobbsøkerHendelser() {
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av JobbsøkerhendelserScheduler er ikke ferdig, skipper denne kjøringen.")

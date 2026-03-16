@@ -15,6 +15,7 @@ jobs:
     with:
       app_name: ${{ github.workflow }}
       deploy_dev_branch: refs/heads/ignorer-tom-tekststreng-til-ki
+    secrets: inherit
     permissions:
       contents: read
       id-token: write

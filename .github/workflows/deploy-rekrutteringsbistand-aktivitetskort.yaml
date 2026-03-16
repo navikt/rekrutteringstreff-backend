@@ -14,7 +14,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/oppdater_dependencies
+      deploy_dev_branch: refs/heads/problemdetails
     secrets: inherit
     permissions:
       contents: read

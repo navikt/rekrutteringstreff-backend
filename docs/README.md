@@ -50,6 +50,14 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 - [Akseptansetester](7-akseptansetest-og-ros/akseptansetester.md) - Manuelle tester for domeneeksperter før pilot/prodsetting
 - [Automatiske backend-tester](7-akseptansetest-og-ros/automatiske-tester.md) - Plan for automatisering av akseptansetester i backend
 
+### 8. [Utviklerrutiner](8-utviklerrutiner/)
+
+- [KI-rutiner](8-utviklerrutiner/ki-rutiner.md) - Rutiner for bruk og vedlikehold av KI-oppsettet
+
+### 9. [Planer](9-planer/)
+
+- [Søkestrategi](9-planer/sok/sokestrategi.md) - Overordnet vurdering av søkealternativer og stegvis plan
+
 ## Applikasjoner i monorepoet
 
 | Applikasjon                           | Beskrivelse                                                     |
