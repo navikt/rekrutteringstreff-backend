@@ -119,13 +119,15 @@ Alt bor i eksisterende `rekrutteringstreff-api`. Endepunktet er `POST /api/rekru
 
 ## API-kontrakt
 
-Kontrakten utvides stegvis. I den minimale versjonen inneholder request og respons kun det som er implementert. Nye felt legges til i takt med at backend og frontend utvides. Strukturen er kompatibel med alternativ 1 og 2, så frontend kan byttes uten endringer når vi eventuelt oppgraderer.
+Kontrakten utvides stegvis. Strukturen er kompatibel med alternativ 1 og 2, så frontend kan byttes uten endringer når vi eventuelt oppgraderer.
 
 ### Request
 
 ```kotlin
 data class RekrutteringstreffSokRequest(
     val visningsstatuser: List<Visningsstatus>? = null,
+    val fylkesnummer: List<String>? = null,
+    val kommunenummer: List<String>? = null,
     val visning: Visning = Visning.ALLE,
     val side: Int = 0,
     val antallPerSide: Int = 25,
@@ -141,10 +143,12 @@ data class RekrutteringstreffSokRespons(
     val side: Int,
     val antallPerSide: Int,
     val statusaggregering: List<FilterValg>,
+    val fylkesaggregering: List<FilterValg>,
+    val kommuneaggregering: List<FilterValg>,
 )
 ```
 
-Felt som fritekst, geografi, kontorer, sortering og ytterligere aggregeringer legges til når de implementeres.
+Felt som fritekst, kontorer, sortering og ytterligere aggregeringer legges til når de implementeres.
 
 ---
 
