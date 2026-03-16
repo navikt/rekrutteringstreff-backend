@@ -34,7 +34,7 @@ Den enkleste versjonen som gir reell verdi er kun to dimensjoner:
 | UTKAST               | `status = 'UTKAST'`                                                  |
 | PUBLISERT            | `status = 'PUBLISERT' AND (svarfrist IS NULL OR svarfrist >= now())` |
 | SOKNADSFRIST_PASSERT | `status = 'PUBLISERT' AND svarfrist < now()`                         |
-| FULLFORT             | `status = 'FULLFORT'`                                                |
+| FULLFORT             | `status = 'FULLFØRT'`                                                |
 | AVLYST               | `status = 'AVLYST'`                                                  |
 
 `SLETTET` filtreres alltid bort.
@@ -68,7 +68,7 @@ SELECT
     CASE
         WHEN status = 'UTKAST' THEN 'UTKAST'
         WHEN status = 'AVLYST' THEN 'AVLYST'
-        WHEN status = 'FULLFORT' THEN 'FULLFORT'
+        WHEN status = 'FULLFØRT' THEN 'FULLFORT'
         WHEN status = 'PUBLISERT' AND svarfrist IS NOT NULL AND svarfrist < now() THEN 'SOKNADSFRIST_PASSERT'
         WHEN status = 'PUBLISERT' THEN 'PUBLISERT'
     END AS visningsstatus,

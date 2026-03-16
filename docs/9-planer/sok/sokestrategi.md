@@ -8,7 +8,7 @@ Spørsmålet er hvor mye infrastruktur vi trenger for å løse dette.
 
 ---
 
-## Tre alternativer for rekrutteringstreffsøk
+## Alternativer for rekrutteringstreffsøk
 
 | #   | Alternativ                                                      | Kort beskrivelse                                                     | Nye apper | Ny infrastruktur                    |
 | --- | --------------------------------------------------------------- | -------------------------------------------------------------------- | --------- | ----------------------------------- |
@@ -19,27 +19,28 @@ Spørsmålet er hvor mye infrastruktur vi trenger for å løse dette.
 
 ---
 
-## Kan vi starte med eier + status + geografi?
+## Kan vi starte med eier + status + kontor?
 
 Uavhengig av alternativ er det verdt å vurdere om vi kan starte med en minimal versjon:
 
-**Tre filterdimensjoner:**
+**Filterdimensjoner:**
 
 - **Eierfilter** (tabs): Alle / Mine / Mitt kontor
 - **Statusfilter**: Utkast, Publisert, Søknadsfrist passert, Fullført, Avlyst
-- **Fylkesfilter**: Velg ett eller flere fylker
-- **Kommunefilter**: Velg én eller flere kommuner
+- **Kontorfilter**: Velg ett eller flere Nav-kontorer (kun synlig på «Alle»-taben)
 
 **Hva dette gir:**
 
-- Brukerne kan finne «sine» treff og filtrere på status og geografi — som dekker det mest akutte behovet
-- Antall per filterverdi i filterpanelet (status, fylke, kommune)
+- Brukerne kan finne «sine» treff og filtrere på status og kontor — som dekker det mest akutte behovet
+- Antall per filterverdi i filterpanelet (status, kontor)
 - Paginering (25 per side)
+
+`kontorer` lagres som `text[]` med enhetId-er (f.eks. `'0318'`) på `rekrutteringstreff`-tabellen. Frontend har en komplett mapping mellom enhetId og kontornavn i `enheter.json`, som også fungerer som listen over alle Nav-kontorer.
 
 **Hva det ikke gir:**
 
 - Fritekst (søk på tittel, arbeidsgivernavn osv.)
-- Kontorfiltrering (utover «Mitt kontor»-tab)
+- Geografifiltrering (fylke/kommune)
 - Sorteringsvalg utover default
 - Typo-toleranse eller stemming
 
@@ -47,7 +48,7 @@ Denne minimale versjonen bygges med alternativ 2.5 og utvides stegvis uten å l�
 
 ### Felles API-kontrakt
 
-Alle tre alternativer bruker samme request/response-struktur (`RekrutteringstreffSokRequest`/`RekrutteringstreffSokRespons`) med paginering (25 per side). I den minimale versjonen ignorerer backend felt som ikke er støttet ennå (fritekst, kontorer), og aggregeringer for disse returneres som tomme lister. Frontend kan dermed bygges én gang og fungerer uendret uavhengig av hvilket alternativ backend velger.
+Alle tre alternativer bruker samme request/response-struktur (`RekrutteringstreffSokRequest`/`RekrutteringstreffSokRespons`) med paginering (25 per side). I den minimale versjonen ignorerer backend felt som ikke er støttet ennå (fritekst, geografi), og aggregeringer for disse returneres som tomme lister. Frontend kan dermed bygges én gang og fungerer uendret uavhengig av hvilket alternativ backend velger.
 
 ---
 
@@ -78,15 +79,15 @@ Steg 1 (valgt)            Steg 2 (ved behov)           Steg 3 (om nødvendig)
 ─────────────────────     ──────────────────────────    ───────────────────────
 Alt. 2.5: View            Alt. 2: Søketabell           Alt. 1: OpenSearch
 
-Eier + status + geografi  + fritekst (tsvector/trgm)   Fullverdig søk
+Eier + status + kontor    + fritekst (tsvector/trgm)   Fullverdig søk
 View over eksisterende    + egne indekser              med søkemotor
 tabeller                  + sorteringsvalg
-                          + kontorfilter
+                          + geografifilter
 ```
 
-**Steg 1** — alternativ 2.5 — gir eier-, status- og geografifiltrering via et view. Ingen synkronisering, ingen indekser, ingen fritekst. Dekker det mest akutte behovet med minimal innsats.
+**Steg 1** — alternativ 2.5 — gir eier-, status- og kontorfiltrering via et view. Ingen synkronisering, ingen indekser, ingen fritekst. Dekker det mest akutte behovet med minimal innsats.
 
-**Steg 2** utvider med fritekst og flere filtre via alternativ 2 (søketabell). Naturlig overgang fra viewet: vi materialiserer den flate strukturen til en egen tabell og legger til tsvector, pg_trgm og indekser.
+**Steg 2** utvider med fritekst og flere filtre via alternativ 2 (søketabell). Naturlig overgang fra viewet: vi materialiserer den flate strukturen til en egen tabell og legger til tsvector, pg_trgm, geografi og indekser.
 
 **Steg 3** er kun aktuelt hvis vi opplever at PostgreSQL ikke dekker behovet — enten på grunn av volum, søkekvalitet eller at mønstergjenbruk med kandidat/stilling veier tungt nok.
 
@@ -96,7 +97,7 @@ tabeller                  + sorteringsvalg
 
 **Alternativ 2.5 — PostgreSQL med view.**
 
-Vi starter med et view over eksisterende tabeller som gir eier-, status- og geografifiltrering (fylke/kommune). Vi venter med fritekst.
+Vi starter med et view over eksisterende tabeller som gir eier-, status- og kontorfiltrering. Vi venter med fritekst og geografi.
 
 ---
 
@@ -114,7 +115,7 @@ Samme mønster: view, dynamisk SQL, aggregeringer, paginering. Se [jobbsokersok.
 
 Begrunnelse:
 
-- Dekker de viktigste behovene: finne treff man er eier/medeier av, filtrere på status og område
+- Dekker de viktigste behovene: finne treff man er eier/medeier av, filtrere på status og kontor
 - Ingen ny infrastruktur, ingen synkroniseringslogikk, ingen indekser å vedlikeholde
 - View er alltid konsistent — leser direkte fra kildetabellene
 - Naturlig migrasjonssti til alternativ 2 (søketabell) når vi trenger fritekst, og videre til alternativ 1 (OpenSearch) hvis PostgreSQL ikke dekker behovet

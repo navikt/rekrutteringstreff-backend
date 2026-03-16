@@ -332,7 +332,7 @@ Forslag:
 case
     when status = 'UTKAST' then 'UTKAST'
     when status = 'AVLYST' then 'AVLYST'
-    when status = 'FULLFORT' then 'FULLFORT'
+    when status = 'FULLFØRT' then 'FULLFORT'
     when status = 'PUBLISERT' and svarfrist is not null and svarfrist < now() then 'SOKNADSFRIST_PASSERT'
     when status = 'PUBLISERT' then 'PUBLISERT'
 end
@@ -423,7 +423,7 @@ order by fra_tid asc nulls last
 ### `FULLFØRTE`
 
 ```sql
-where status = 'FULLFORT'
+where status = 'FULLFØRT'
 order by til_tid desc nulls last
 ```
 
@@ -461,7 +461,7 @@ select
     case
         when status = 'UTKAST' then 'UTKAST'
         when status = 'AVLYST' then 'AVLYST'
-        when status = 'FULLFORT' then 'FULLFORT'
+        when status = 'FULLFØRT' then 'FULLFORT'
         when status = 'PUBLISERT' and svarfrist is not null and svarfrist < now() then 'SOKNADSFRIST_PASSERT'
         when status = 'PUBLISERT' then 'PUBLISERT'
     end as visningsstatus,
