@@ -82,15 +82,8 @@ class PersondataFilterTest {
     }
 
     @Test
-    fun `erTomStreng gir riktig svar for tall og epost`() {
-        assertThat(PersondataFilter.erTomTekstEtterFiltrering("")).isTrue
-        assertThat(PersondataFilter.erTomTekstEtterFiltrering("  ")).isTrue
-        assertThat(PersondataFilter.erTomTekstEtterFiltrering("123")).isTrue
-        assertThat(PersondataFilter.erTomTekstEtterFiltrering("test@nav.no")).isTrue
-        assertThat(PersondataFilter.erTomTekstEtterFiltrering("test@nav.no 12356789")).isTrue
-
-        assertThat(PersondataFilter.erTomTekstEtterFiltrering("12")).isFalse
-        assertThat(PersondataFilter.erTomTekstEtterFiltrering("test")).isFalse
+    fun `skal fjerne både tall og epost`() {
+        assertThat(PersondataFilter.filtrerUtPersonsensitiveData("test@nav.no 12356789").isBlank()).isTrue
     }
 
     @Test

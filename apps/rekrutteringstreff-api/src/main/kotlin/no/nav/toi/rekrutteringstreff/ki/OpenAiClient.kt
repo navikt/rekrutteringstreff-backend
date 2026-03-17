@@ -73,7 +73,7 @@ class OpenAiClient(
             val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(tekst)
             secureLogger.info("melding før filter: $tekst etter filter: $userMessageFiltered")
 
-            if (PersondataFilter.erTomTekstEtterFiltrering(tekst)) {
+            if (userMessageFiltered.isBlank()) {
                 result = ValiderRekrutteringstreffResponsDto(
                     bryterRetningslinjer = true,
                     begrunnelse = "Teksten gjør det ikke klart at dette er et rekrutteringstreff eller jobbtreff, og oppfyller derfor ikke formålet."

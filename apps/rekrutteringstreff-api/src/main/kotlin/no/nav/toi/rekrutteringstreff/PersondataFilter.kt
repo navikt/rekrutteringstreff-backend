@@ -14,10 +14,6 @@ object PersondataFilter {
             .let { numberRegex.replace(it, "") }
     }
 
-    fun erTomTekstEtterFiltrering(tekst: String): Boolean {
-        return filtrerUtPersonsensitiveData(tekst).isBlank()
-    }
-
     fun inneholderEpost(tekst: String): Boolean {
         return emailRegex.containsMatchIn(tekst)
     }
