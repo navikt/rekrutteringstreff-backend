@@ -9,6 +9,7 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
@@ -21,6 +22,7 @@ import javax.sql.DataSource
 class TestDatabase {
 
     private val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
+    private val eierRepository by lazy { EierRepository(dataSource) }
     private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
     private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
 
@@ -114,13 +116,14 @@ class TestDatabase {
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
+        opprettetAvNavkontorEnhetId: String = "Original Kontor",
     ): TreffId {
         return dataSource.connection.use { connection ->
             val (id, _) = rekrutteringstreffRepository.opprett(
                 connection,
                 OpprettRekrutteringstreffInternalDto(
                     tittel = tittel,
-                    opprettetAvNavkontorEnhetId = "Original Kontor",
+                    opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
                     opprettetAvPersonNavident = navIdent,
                     opprettetAvTidspunkt = nowOslo().minusDays(10),
                 )
@@ -151,7 +154,8 @@ class TestDatabase {
     ): TreffId {
         val treffId = opprettRekrutteringstreffIDatabase(
             navIdent = navIdent,
-            tittel = tittel
+            tittel = tittel,
+            opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
         )
 
         // Bruk repository-metode for å oppdatere
@@ -185,15 +189,23 @@ class TestDatabase {
             }
         }
 
-        // Oppdater opprettet_av_kontor_enhetid hvis nødvendig (ingen repository-metode for dette)
-        if (opprettetAvNavkontorEnhetId != "Original Kontor") {
-            dataSource.connection.use {
-                it.prepareStatement("UPDATE rekrutteringstreff SET opprettet_av_kontor_enhetid = ? WHERE id = ?").apply {
-                    setString(1, opprettetAvNavkontorEnhetId)
-                    setObject(2, treffId.somUuid)
-                }.executeUpdate()
-            }
-        }
+        return treffId
+    }
+
+    fun opprettRekrutteringstreffMedEierOgKontor(
+        navIdent: String = "A123456",
+        tittel: String = "TestTreff",
+        status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
+        kontorId: String = "0315"
+    ): TreffId {
+        val treffId = opprettRekrutteringstreffMedAlleFelter(
+            navIdent = navIdent,
+            tittel = tittel,
+            status = status,
+            opprettetAvNavkontorEnhetId = kontorId,
+        )
+
+        eierRepository.leggTil(treffId, listOf(navIdent))
 
         return treffId
     }
