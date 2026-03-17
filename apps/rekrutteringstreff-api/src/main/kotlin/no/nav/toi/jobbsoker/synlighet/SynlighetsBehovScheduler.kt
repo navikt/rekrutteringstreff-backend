@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker.synlighet
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.SecureLog
 import no.nav.toi.jobbsoker.JobbsøkerService
@@ -55,6 +56,7 @@ class SynlighetsBehovScheduler(
         }
     }
 
+    @WithSpan
     fun behandleJobbsøkereUtenSynlighet() {
         log.info("Kjører SynlighetsBehovScheduler for å finne jobbsøkere uten evaluert synlighet")
         if (isRunning.getAndSet(true)) {

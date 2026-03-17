@@ -1,3 +1,3 @@
 package no.nav.toi.exception
 
-class UlovligSlettingException(message: String): RuntimeException(message)
+class UlovligSlettingException(override val message: String): RuntimeException(message)

@@ -1,3 +1,3 @@
 package no.nav.toi.exception
 
-class RekrutteringstreffIkkeFunnetException(message: String): RuntimeException(message)
+class RekrutteringstreffIkkeFunnetException(override val message: String): RuntimeException(message)
