@@ -194,7 +194,7 @@ class KiTest {
         val dto = mapper.readValue(postRes.body(), ValiderMedLoggResponseDto::class.java)
         assertThat(dto.loggId).isNotBlank()
         assertThat(dto.bryterRetningslinjer).isTrue()
-        assertThat(dto.begrunnelse).isEqualTo(begrunnelseFraOpenAi + " Teksten inneholder tall så sjekk om dette er sensitivt før du går videre.")
+        assertThat(dto.begrunnelse).isEqualTo(begrunnelseFraOpenAi + " Teksten inneholder tall som kan være personopplysninger. Sjekk dette før du går videre.")
 
         // Fake en eldre promptmeta og lagre i DB for denne loggen
         val oldMeta = """

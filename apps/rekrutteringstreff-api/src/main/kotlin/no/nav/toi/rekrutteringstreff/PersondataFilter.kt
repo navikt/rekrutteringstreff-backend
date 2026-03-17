@@ -8,14 +8,14 @@ object PersondataFilter {
     // Regex for å matche tall med 3 eller flere sifre, med eller uten mellomrom eller bindestrek
     private val numberRegex = "\\d(?:[ -]?\\d){2,}".toRegex()
 
-    fun filtrerUtPersonsensitiveData(tekst: String, replacementEmail: String = "emailadresse"): String {
+    fun filtrerUtPersonsensitiveData(tekst: String): String {
         return tekst
-            .let { emailRegex.replace(it, replacementEmail) }
+            .let { emailRegex.replace(it, "") }
             .let { numberRegex.replace(it, "") }
     }
 
     fun erTomTekstEtterFiltrering(tekst: String): Boolean {
-        return filtrerUtPersonsensitiveData(tekst, "").isBlank()
+        return filtrerUtPersonsensitiveData(tekst).isBlank()
     }
 
     fun inneholderEpost(tekst: String): Boolean {

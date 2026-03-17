@@ -10,7 +10,7 @@ class PersondataFilterTest {
     @Test
     fun `skal erstatte e-postadresse`() {
         val input = "Send en e-post til test@eksempel.no."
-        val expected = "Send en e-post til emailadresse."
+        val expected = "Send en e-post til ."
         assertThat(PersondataFilter.filtrerUtPersonsensitiveData(input)).isEqualTo(expected)
     }
 
@@ -44,7 +44,7 @@ class PersondataFilterTest {
     @Test
     fun `skal fjerne både e-post og tall i samme streng`() {
         val input = "Kontakt meg på test@nav.no eller ring 98765432."
-        val expected = "Kontakt meg på emailadresse eller ring ."
+        val expected = "Kontakt meg på  eller ring ."
         assertThat(PersondataFilter.filtrerUtPersonsensitiveData(input)).isEqualTo(expected)
     }
 

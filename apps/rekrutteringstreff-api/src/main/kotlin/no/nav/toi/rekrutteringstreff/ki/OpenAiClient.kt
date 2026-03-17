@@ -144,7 +144,7 @@ class OpenAiClient(
                     val forrigeBegrunnelse = if (result.bryterRetningslinjer) result.begrunnelse else ""
                     result = ValiderRekrutteringstreffResponsDto(
                         bryterRetningslinjer = true,
-                        begrunnelse = (forrigeBegrunnelse + " Teksten inneholder $hva så sjekk om dette er sensitivt før du går videre.").trim(),
+                        begrunnelse = (forrigeBegrunnelse + " Teksten inneholder $hva som kan være personopplysninger. Sjekk dette før du går videre.").trim(),
                     )
                 }
 
