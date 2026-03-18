@@ -178,6 +178,20 @@ class RekrutteringstreffSokRepositoryTest {
     }
 
     @Test
+    fun `sok handterer store sidetall uten overflow`() {
+        opprettTreff(tittel = "Treff 1")
+
+        val (treff, totalt) = repository.sok(
+            navIdent = "A123456", kontorId = "0315",
+            statuser = null, kontorer = null,
+            visning = Visning.ALLE, side = Int.MAX_VALUE, antallPerSide = 100
+        )
+
+        assertThat(treff).isEmpty()
+        assertThat(totalt).isEqualTo(1)
+    }
+
+    @Test
     fun `sok mapper alle felter korrekt`() {
         opprettTreff(tittel = "Fullt treff", navIdent = "A123456", kontorId = "0315")
 

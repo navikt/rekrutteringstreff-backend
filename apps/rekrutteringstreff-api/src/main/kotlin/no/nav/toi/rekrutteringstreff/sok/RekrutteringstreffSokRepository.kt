@@ -41,8 +41,9 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         val treff = dataSource.connection.use { c ->
             c.prepareStatement(sql).use { s ->
                 params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
+                val offset = (side - 1).toLong() * antallPerSide.toLong()
                 s.setInt(params.size + 1, antallPerSide)
-                s.setInt(params.size + 2, (side - 1) * antallPerSide)
+                s.setLong(params.size + 2, offset)
                 s.executeQuery().use { rs ->
                     generateSequence { if (rs.next()) tilTreff(rs) else null }.toList()
                 }

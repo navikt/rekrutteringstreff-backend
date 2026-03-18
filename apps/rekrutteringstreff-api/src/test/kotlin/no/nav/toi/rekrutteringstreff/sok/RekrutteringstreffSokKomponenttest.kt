@@ -162,6 +162,19 @@ class RekrutteringstreffSokKomponenttest {
     }
 
     @Test
+    fun `visning ALLE for utvikler leser ikke kontor fra Modia`() {
+        opprettTreffMedEier(navIdent = "A123456", tittel = "Treff", kontorId = "0315")
+
+        val response = sokGet(
+            queryParams = "?visning=alle",
+            grupper = listOf(AzureAdRoller.utvikler),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        verify(0, getRequestedFor(urlPathEqualTo("/api/context/v2/aktivenhet")))
+    }
+
+    @Test
     fun `sok med visning MINE returnerer kun treff der bruker er eier`() {
         opprettTreffMedEier(navIdent = "A123456", tittel = "Mitt treff")
         opprettTreffMedEier(navIdent = "B654321", tittel = "Andres treff")

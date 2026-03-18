@@ -133,9 +133,14 @@ class RekrutteringstreffSokController(
         )
 
         val navIdent = ctx.extractNavIdent()
-        val kontorId = ctx.authenticatedUser().extractKontorId()
-        if (visning == Visning.MITT_KONTOR && kontorId.isNullOrEmpty()) {
-            throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
+        val kontorId = if (visning == Visning.MITT_KONTOR) {
+            ctx.authenticatedUser().extractKontorId().also {
+                if (it.isNullOrEmpty()) {
+                    throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
+                }
+            }
+        } else {
+            null
         }
 
         ctx.status(200).json(sokService.sok(request, navIdent, kontorId))
