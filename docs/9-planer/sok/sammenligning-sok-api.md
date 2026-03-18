@@ -119,12 +119,6 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | **Sortering**  | Query param            | Body (ES `sort`)      | Query param  |
 | **Paginering** | Query params           | Body (`from`, `size`) | Query params |
 
-### Observasjoner
-
-- Stillingssøk bruker POST fordi den sender en Elasticsearch-query direkte.
-- Kandidatsøk bruker POST for filtre i body, men paginering og sortering i query params — en hybrid.
-- Rekrutteringstreff bruker GET med alt i query params. Naturlig og RESTful for PostgreSQL-basert søk med få filterdimensjoner.
-
 ---
 
 ## Oppsummering: konsistens og avvik
