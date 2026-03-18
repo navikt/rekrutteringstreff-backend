@@ -62,7 +62,7 @@ class RekrutteringstreffSokServiceTest {
         assertThat(respons.treff).hasSize(3)
         assertThat(respons.antallTotalt).isEqualTo(3)
         assertThat(respons.side).isEqualTo(1)
-        assertThat(respons.antallPerSide).isEqualTo(25)
+        assertThat(respons.antallPerSide).isEqualTo(20)
         assertThat(respons.statusaggregering).isNotEmpty()
     }
 
@@ -144,8 +144,8 @@ class RekrutteringstreffSokServiceTest {
 
         assertThat(respons.treff).hasSize(1)
 
-        val statusPub = respons.statusaggregering.find { it.verdi == "PUBLISERT" }
-        val statusUtkast = respons.statusaggregering.find { it.verdi == "UTKAST" }
+        val statusPub = respons.statusaggregering.find { it.verdi == "publisert" }
+        val statusUtkast = respons.statusaggregering.find { it.verdi == "utkast" }
         assertThat(statusPub?.antall).isEqualTo(1)
         assertThat(statusUtkast?.antall).isEqualTo(1)
     }

@@ -23,7 +23,7 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | ------------------- | ---------------------- | -------------------- | ------------------------ |
 | **Sideparam**       | `side` (query param)   | `side` (browser-URL) | `side` (query param)     |
 | **Indeksering**     | 1-indeksert            | 1-indeksert          | 1-indeksert              |
-| **Antall per side** | `antallPerSide=25`     | `size=20` (body)     | 25 (hardkodet i backend) |
+| **Antall per side** | `antallPerSide=20`     | `size=20` (body)     | 25 (hardkodet i backend) |
 | **Param-navn**      | `antallPerSide`        | `size` (ES-felt)     | Ikke konfigurerbart      |
 | **Total-respons**   | `antallTotalt`         | ES `hits.total`      | `antallTotalt`           |
 

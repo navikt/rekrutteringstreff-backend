@@ -77,7 +77,7 @@ class RekrutteringstreffSokController(
                     ],
                     "antallTotalt": 42,
                     "side": 1,
-                    "antallPerSide": 25,
+                    "antallPerSide": 20,
                     "statusaggregering": [
                         {"verdi": "publisert", "antall": 20},
                         {"verdi": "utkast", "antall": 12},
@@ -115,7 +115,7 @@ class RekrutteringstreffSokController(
         val kontorer = ctx.csvQueryParam("kontorer")
 
         val side = ctx.queryParamAsInt("side") ?: 1
-        val antallPerSide = ctx.queryParamAsInt("antallPerSide") ?: 25
+        val antallPerSide = ctx.queryParamAsInt("antallPerSide") ?: 20
         if (side < 1) {
             throw BadRequestResponse("side må være 1 eller høyere")
         }

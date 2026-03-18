@@ -50,7 +50,7 @@ data class RekrutteringstreffSokRequest(
     val visning: Visning = Visning.ALLE,
     val sortering: Sortering = Sortering.SIST_OPPDATERTE,
     val side: Int = 1,
-    val antallPerSide: Int = 25,
+    val antallPerSide: Int = 20,
 )
 
 data class RekrutteringstreffSokRespons(
