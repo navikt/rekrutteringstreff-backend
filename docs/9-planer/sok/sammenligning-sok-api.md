@@ -138,7 +138,7 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | Statusfilterparam  | `statuser` (rekrutteringstreff + stillingssøk)    |
 | Fritekstsøk (plan) | `fritekst` (stillingssøk + kandidatsøk)           |
 
-### Gjenstående avvik (akseptable)
+### Gjenstående avvik
 
 | #   | Hva                                       | Vurdering                                                                                                         |
 | --- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
