@@ -279,6 +279,18 @@ class RekrutteringstreffSokKomponenttest {
     }
 
     @Test
+    fun `antallPerSide lik 0 returnerer 400`() {
+        val response = sokGet("?antallPerSide=0")
+        assertThat(response.statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `antallPerSide over maksgrense returnerer 400`() {
+        val response = sokGet("?antallPerSide=101")
+        assertThat(response.statusCode()).isEqualTo(400)
+    }
+
+    @Test
     fun `negativ antallPerSide returnerer 400`() {
         val response = sokGet("?antallPerSide=-1")
         assertThat(response.statusCode()).isEqualTo(400)

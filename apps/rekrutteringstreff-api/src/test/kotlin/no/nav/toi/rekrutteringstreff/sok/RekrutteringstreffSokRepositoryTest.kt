@@ -214,8 +214,8 @@ class RekrutteringstreffSokRepositoryTest {
             navIdent = "A123456", kontorId = "0315",
             kontorer = null, visning = Visning.ALLE
         )
-        val publisert = agg.find { it.verdi == "PUBLISERT" }
-        val utkast = agg.find { it.verdi == "UTKAST" }
+        val publisert = agg.find { it.verdi == "publisert" }
+        val utkast = agg.find { it.verdi == "utkast" }
         assertThat(publisert?.antall).isEqualTo(2)
         assertThat(utkast?.antall).isEqualTo(1)
     }
@@ -230,8 +230,8 @@ class RekrutteringstreffSokRepositoryTest {
             navIdent = "A123456", kontorId = "0315",
             kontorer = listOf("0315"), visning = Visning.ALLE
         )
-        val publisert = agg.find { it.verdi == "PUBLISERT" }
-        val utkast = agg.find { it.verdi == "UTKAST" }
+        val publisert = agg.find { it.verdi == "publisert" }
+        val utkast = agg.find { it.verdi == "utkast" }
         assertThat(publisert?.antall).isEqualTo(1)
         assertThat(utkast?.antall).isEqualTo(1)
     }

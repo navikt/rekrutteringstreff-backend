@@ -25,12 +25,12 @@ class RekrutteringstreffSokController(
         operationId = "sokRekrutteringstreff",
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
-            OpenApiParam(name = "visning", type = Visning::class, required = false),
-            OpenApiParam(name = "statuser", type = Visningsstatus::class, required = false, description = "Kommaseparert liste av visningsstatuser"),
-            OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er"),
-            OpenApiParam(name = "sortering", type = String::class, required = false, description = "Sorteringsrekkefølge: sist_oppdaterte, nyeste, eldste"),
-            OpenApiParam(name = "side", type = Int::class, required = false),
-            OpenApiParam(name = "antallPerSide", type = Int::class, required = false),
+            OpenApiParam(name = "visning", type = Visning::class, required = false, description = "Filter for hvilke treff som skal vises", example = "alle"),
+            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av visningsstatuser, for eksempel publisert,utkast", example = "publisert,utkast"),
+            OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
+            OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
+            OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
+            OpenApiParam(name = "antallPerSide", type = Int::class, required = false, description = "Antall treff per side, må være mellom 1 og 100", example = "20"),
         ],
         responses = [OpenApiResponse(
             status = "200",
@@ -119,8 +119,8 @@ class RekrutteringstreffSokController(
         if (side < 1) {
             throw BadRequestResponse("side må være 1 eller høyere")
         }
-        if (antallPerSide <= 0) {
-            throw BadRequestResponse("antallPerSide må være større enn 0")
+        if (antallPerSide !in 1..100) {
+            throw BadRequestResponse("antallPerSide må være mellom 1 og 100")
         }
 
         val request = RekrutteringstreffSokRequest(
