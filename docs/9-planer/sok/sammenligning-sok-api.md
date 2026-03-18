@@ -19,35 +19,35 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 
 ## Paginering
 
-| Egenskap            | Rekrutteringstreff-søk | Stillingssøk         | Kandidatsøk              |
-| ------------------- | ---------------------- | -------------------- | ------------------------ |
-| **Sideparam**       | `side` (query param)   | `side` (browser-URL) | `side` (query param)     |
-| **Indeksering**     | 1-indeksert            | 1-indeksert          | 1-indeksert              |
-| **Antall per side** | `antallPerSide=20`     | `size=20` (body)     | 25 (hardkodet i backend) |
-| **Param-navn**      | `antallPerSide`        | `size` (ES-felt)     | Ikke konfigurerbart      |
-| **Total-respons**   | `antallTotalt`         | ES `hits.total`      | `antallTotalt`           |
+| Egenskap            | Rekrutteringstreff-søk     | Stillingssøk         | Kandidatsøk              |
+| ------------------- | -------------------------- | -------------------- | ------------------------ |
+| **Sideparam**       | `side` (query param)       | `side` (browser-URL) | `side` (query param)     |
+| **Indeksering**     | 1-indeksert                | 1-indeksert          | 1-indeksert              |
+| **Antall per side** | Default `antallPerSide=20` | `size=20` (body)     | 25 (hardkodet i backend) |
+| **Param-navn**      | `antallPerSide` (API)      | `size` (ES-felt)     | Ikke konfigurerbart      |
+| **Total-respons**   | `antallTotalt`             | ES `hits.total`      | `antallTotalt`           |
 
 ### Observasjoner
 
 - Sideindeksering er konsekvent (1-indeksert) på tvers av alle tre.
 - Rekrutteringstreff og kandidatsøk bruker begge `antallTotalt` i respons.
-- Rekrutteringstreff er eneste som lar frontend styre antall per side via `antallPerSide`.
+- Rekrutteringstreff-API-et støtter `antallPerSide`, men dagens frontend sender ikke denne parameteren og bruker derfor default på 20.
 
 ---
 
 ## Sortering
 
-| Egenskap       | Rekrutteringstreff-søk                | Stillingssøk             | Kandidatsøk       |
-| -------------- | ------------------------------------- | ------------------------ | ----------------- |
-| **Param-navn** | `sortering`                           | `sortering`              | `sortering`       |
-| **Verdier**    | `sist_oppdaterte`, `nyeste`, `eldste` | `publiseringsdato` m.fl. | `nyeste`, `score` |
-| **Casing**     | lowercase                             | camelCase                | lowercase         |
-| **Default**    | `sist_oppdaterte`                     | `publiseringsdato`       | `nyeste`          |
+| Egenskap       | Rekrutteringstreff-søk                | Stillingssøk                                                                       | Kandidatsøk       |
+| -------------- | ------------------------------------- | ---------------------------------------------------------------------------------- | ----------------- |
+| **Param-navn** | `sortering`                           | `sortering`                                                                        | `sortering`       |
+| **Verdier**    | `sist_oppdaterte`, `nyeste`, `eldste` | `publiseringsdato`, `utløpsdato` (og `relevans` i querybygger)                     | `nyeste`, `score` |
+| **Casing**     | lowercase                             | lowercase                                                                          | lowercase         |
+| **Default**    | `sist_oppdaterte`                     | `publiseringsdato` i frontend-state, som gir publiseringsdato-sortering i ES-query | `nyeste`          |
 
 ### Observasjoner
 
 - Param-navnet `sortering` er konsekvent på tvers.
-- Rekrutteringstreff og kandidatsøk bruker begge lowercase verdier. Stillingssøk bruker camelCase.
+- Alle tre bruker lowercase sorteringsverdier, men stillingssøk har samtidig camelCase i porteføljeverdier (`visMine`, `mittKontor`).
 
 ---
 
@@ -65,23 +65,24 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 - Kandidatsøk bruker separate URL-paths per portefølje — mest RESTful, men fem separate endepunkter.
 - Stillingssøk og rekrutteringstreff bruker param, men med ulikt navn (`portefolje` vs `visning`).
 - Rekrutteringstreff og kandidatsøk bruker begge lowercase verdier.
-- Kontorfilter: rekrutteringstreff bruker `kontorer` (query param), kandidatsøk bruker `valgtKontor` (body), stillingssøk bygger det inn i ES-query.
+- Kontorfilter: rekrutteringstreff bruker `kontorer` (query param), kandidatsøk bruker `valgtKontor` i request body, stillingssøk bygger det inn i ES-query.
+- Rekrutteringstreff støtter `valgte_kontorer` i API-et, og frontend har en egen `Velg kontor`-visning for dette. Den er rollebegrenset til arbeidsgiverrettet rolle.
 
 ---
 
 ## Statusfiltrering
 
-| Egenskap       | Rekrutteringstreff-søk                                              | Stillingssøk            | Kandidatsøk |
-| -------------- | ------------------------------------------------------------------- | ----------------------- | ----------- |
-| **Param-navn** | `statuser`                                                          | `statuser`              | N/A         |
-| **Format**     | Kommaseparert query param                                           | Array i browser-URL     | —           |
-| **Verdier**    | `utkast`, `publisert`, `soknadsfrist_passert`, `fullfort`, `avlyst` | `aktiv`, `utløpt` m.fl. | —           |
+| Egenskap       | Rekrutteringstreff-søk                                              | Stillingssøk                                                                                       | Kandidatsøk |
+| -------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------- |
+| **Param-navn** | `statuser`                                                          | `statuser`                                                                                         | N/A         |
+| **Format**     | Kommaseparert query param                                           | Array i browser-URL                                                                                | —           |
+| **Verdier**    | `utkast`, `publisert`, `soknadsfrist_passert`, `fullfort`, `avlyst` | `Åpen for søkere`, `Stengt for søkere`, `Utløpt - Stengt for søkere`, `Fullført`, `Ikke publisert` | —           |
 
 ### Observasjoner
 
 - Rekrutteringstreff og stillingssøk bruker begge `statuser` som param-navn.
-- Rekrutteringstreff og stillingssøk bruker begge lowercase verdier.
-- Rekrutteringstreff bruker `fullfort` (med o) i URL-verdien — mappet til enum `FULLFØRT` i backend.
+- Rekrutteringstreff bruker lowercase URL-verdier, mens stillingssøk i dag lagrer visningsnavn i browser-state/querystring.
+- Rekrutteringstreff bruker `fullfort` (med o) i URL-verdien. I søk-API-et er dette visningsstatusen `FULLFORT`, som avledes fra domenestatusen `FULLFØRT` i søke-viewet.
 - Kandidatsøk har ikke statusfiltrering.
 
 ---
@@ -119,6 +120,12 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | **Sortering**  | Query param            | Body (ES `sort`)      | Query param  |
 | **Paginering** | Query params           | Body (`from`, `size`) | Query params |
 
+### Presiseringer
+
+- Rekrutteringstreff ignorerer `kontorer` når `visning=mitt_kontor`.
+- Rekrutteringstreff med `visning=valgte_kontorer` og uten `kontorer`-param returnerer i dag alle treff.
+- Kandidatsøk styres primært av path-segment for portefølje, men frontend holder også `portefolje` som browser-state og sender `portefølje` i request body.
+
 ---
 
 ## Oppsummering: konsistens og avvik
@@ -132,7 +139,6 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | Sorteringsparam    | `sortering`                                       |
 | Sorteringscasing   | lowercase (rekrutteringstreff + kandidatsøk)      |
 | Visningscasing     | lowercase (rekrutteringstreff + kandidatsøk)      |
-| Statusfiltercasing | lowercase (rekrutteringstreff + stillingssøk)     |
 | Totalfelt          | `antallTotalt` (rekrutteringstreff + kandidatsøk) |
 | Statusfilterparam  | `statuser` (rekrutteringstreff + stillingssøk)    |
 | Fritekstsøk (plan) | `fritekst` (stillingssøk + kandidatsøk)           |
@@ -143,5 +149,5 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | --- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | 1   | Porteføljenavn: `visning` vs `portefolje` | `visning` er mer dekkende for rekrutteringstreff. `portefolje` er etablert i stillingssøk. Begge fungerer.        |
 | 2   | Kontorparam: `kontorer` vs `valgtKontor`  | `kontorer` (rekrutteringstreff) er klarere enn `valgtKontor` (kandidatsøk). Behold som det er.                    |
-| 3   | Antall per side som param                 | Bare rekrutteringstreff eksponerer `antallPerSide`. Gir fleksibilitet.                                            |
+| 3   | Antall per side som param                 | Bare rekrutteringstreff-API-et eksponerer `antallPerSide`. Dagens frontend bruker likevel fast default på 20.     |
 | 4   | HTTP-metode (GET vs POST)                 | GET er naturlig for rekrutteringstreff. POST-mønsteret i de andre skyldes ES/OpenSearch og mange filterparametre. |
