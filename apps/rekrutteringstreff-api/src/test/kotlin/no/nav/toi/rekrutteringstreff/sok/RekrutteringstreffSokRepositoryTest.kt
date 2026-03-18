@@ -248,47 +248,4 @@ class RekrutteringstreffSokRepositoryTest {
         assertThat(agg).hasSize(2)
     }
 
-    @Test
-    fun `kontoraggregering teller per kontor`() {
-        opprettTreff(kontorId = "0315")
-        opprettTreff(kontorId = "0315")
-        opprettTreff(kontorId = "1201")
-
-        val agg = repository.kontoraggregering(
-            navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, visning = Visning.ALLE
-        )
-        val oslo = agg.find { it.verdi == "0315" }
-        val bergen = agg.find { it.verdi == "1201" }
-        assertThat(oslo?.antall).isEqualTo(2)
-        assertThat(bergen?.antall).isEqualTo(1)
-    }
-
-    @Test
-    fun `kontoraggregering respekterer statusfilter`() {
-        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "0315")
-        opprettTreff(status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
-        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
-
-        val agg = repository.kontoraggregering(
-            navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = listOf(Visningsstatus.PUBLISERT), visning = Visning.ALLE
-        )
-        val oslo = agg.find { it.verdi == "0315" }
-        val bergen = agg.find { it.verdi == "1201" }
-        assertThat(oslo?.antall).isEqualTo(1)
-        assertThat(bergen?.antall).isEqualTo(1)
-    }
-
-    @Test
-    fun `kontoraggregering ekskluderer kontorfilter`() {
-        opprettTreff(kontorId = "0315")
-        opprettTreff(kontorId = "1201")
-
-        val agg = repository.kontoraggregering(
-            navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, visning = Visning.ALLE
-        )
-        assertThat(agg).hasSize(2)
-    }
 }

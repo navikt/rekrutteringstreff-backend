@@ -82,37 +82,6 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun kontoraggregering(
-        navIdent: String?,
-        kontorId: String?,
-        visningsstatuser: List<Visningsstatus>?,
-        visning: Visning,
-    ): List<FilterValg> {
-        val (whereClause, params) = byggWhere(navIdent, kontorId, visningsstatuser = visningsstatuser, kontorer = null, visning = visning)
-
-        val sql = """
-            SELECT kontor AS verdi, count(*) AS antall
-            FROM rekrutteringstreff_sok_view, unnest(kontorer) AS kontor
-            $whereClause
-            GROUP BY kontor
-            ORDER BY antall DESC
-        """.trimIndent()
-
-        return dataSource.connection.use { c ->
-            c.prepareStatement(sql).use { s ->
-                params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
-                s.executeQuery().use { rs ->
-                    generateSequence {
-                        if (rs.next()) FilterValg(
-                            verdi = rs.getString("verdi"),
-                            antall = rs.getLong("antall"),
-                        ) else null
-                    }.toList()
-                }
-            }
-        }
-    }
-
     private data class SqlParam(val value: Any, val type: ParamType)
     private data class Condition(val clause: String, val params: List<SqlParam>)
     private enum class ParamType { STRING, STRING_ARRAY, VISNINGSSTATUS_ARRAY }
@@ -144,7 +113,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                         params = listOf(SqlParam(listOf(kontorId ?: ""), ParamType.STRING_ARRAY)),
                     )
                 )
-                Visning.ALLE -> Unit
+                Visning.ALLE, Visning.VALGTE_KONTORER -> Unit
             }
 
             if (!visningsstatuser.isNullOrEmpty()) {

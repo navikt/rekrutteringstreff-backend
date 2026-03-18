@@ -12,6 +12,7 @@ enum class Visning {
     ALLE,
     MINE,
     MITT_KONTOR,
+    VALGTE_KONTORER,
 }
 
 data class RekrutteringstreffSokRequest(
@@ -28,7 +29,6 @@ data class RekrutteringstreffSokRespons(
     val side: Int,
     val antallPerSide: Int,
     val statusaggregering: List<FilterValg>,
-    val kontoraggregering: List<FilterValg>,
 )
 
 data class RekrutteringstreffSokTreff(

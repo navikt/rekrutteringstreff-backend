@@ -128,20 +128,19 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(respons.treff).isEmpty()
         assertThat(respons.totaltAntall).isEqualTo(0)
         assertThat(respons.statusaggregering).isEmpty()
-        assertThat(respons.kontoraggregering).isEmpty()
     }
 
     @Test
-    fun `sok returnerer treff uten filtre`() {
-        opprettTreffMedEier(tittel = "Treff 1")
-        opprettTreffMedEier(tittel = "Treff 2")
+    fun `visning ALLE returnerer treff fra alle kontorer og eiere`() {
+        opprettTreffMedEier(navIdent = "A123456", tittel = "Mitt Oslo-treff", kontorId = "0315")
+        opprettTreffMedEier(navIdent = "B654321", tittel = "Andres Bergen-treff", kontorId = "1201")
 
-        val response = sokGet()
+        val response = sokGet("?visning=ALLE")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).hasSize(2)
-        assertThat(respons.totaltAntall).isEqualTo(2)
+        assertThat(respons.treff.map { it.tittel }).containsExactlyInAnyOrder("Mitt Oslo-treff", "Andres Bergen-treff")
     }
 
     @Test
@@ -197,22 +196,6 @@ class RekrutteringstreffSokKomponenttest {
         val utkast = respons.statusaggregering.find { it.verdi == "UTKAST" }
         assertThat(publisert?.antall).isEqualTo(2)
         assertThat(utkast?.antall).isEqualTo(1)
-    }
-
-    @Test
-    fun `kontoraggregering teller riktig per kontor`() {
-        opprettTreffMedEier(tittel = "Oslo1", kontorId = "0315")
-        opprettTreffMedEier(tittel = "Oslo2", kontorId = "0315")
-        opprettTreffMedEier(tittel = "Bergen", kontorId = "1201")
-
-        val response = sokGet()
-        assertThat(response.statusCode()).isEqualTo(200)
-
-        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
-        val oslo = respons.kontoraggregering.find { it.verdi == "0315" }
-        val bergen = respons.kontoraggregering.find { it.verdi == "1201" }
-        assertThat(oslo?.antall).isEqualTo(2)
-        assertThat(bergen?.antall).isEqualTo(1)
     }
 
     @Test
@@ -319,18 +302,60 @@ class RekrutteringstreffSokKomponenttest {
     }
 
     @Test
-    fun `kontoraggregering ekskluderer kontorfilteret men inkluderer statusfilteret`() {
-        opprettTreffMedEier(tittel = "Oslo pub", status = RekrutteringstreffStatus.PUBLISERT, kontorId = "0315")
-        opprettTreffMedEier(tittel = "Bergen pub", status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
-        opprettTreffMedEier(tittel = "Oslo utkast", status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
+    fun `visning MITT_KONTOR returnerer kun treff fra veileders kontor`() {
+        opprettTreffMedEier(navIdent = "B654321", tittel = "Oslo-treff", kontorId = "0315")
+        opprettTreffMedEier(navIdent = "C999999", tittel = "Bergen-treff", kontorId = "1201")
 
-        val response = sokGet("?visningsstatuser=PUBLISERT&kontorer=0315")
+        val response = sokGet(
+            queryParams = "?visning=MITT_KONTOR",
+            grupper = listOf(AzureAdRoller.utvikler),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().tittel).isEqualTo("Oslo-treff")
+    }
 
-        val kontorAgg = respons.kontoraggregering
-        val oslo = kontorAgg.find { it.verdi == "0315" }
-        val bergen = kontorAgg.find { it.verdi == "1201" }
-        assertThat(oslo?.antall).isEqualTo(1)
-        assertThat(bergen?.antall).isEqualTo(1)
+    @Test
+    fun `visning VALGTE_KONTORER med kontorer-param returnerer kun treff fra valgte kontorer`() {
+        opprettTreffMedEier(tittel = "Oslo-treff", kontorId = "0315")
+        opprettTreffMedEier(tittel = "Bergen-treff", kontorId = "1201")
+        opprettTreffMedEier(tittel = "Tromsø-treff", kontorId = "1902")
+
+        val response = sokGet("?visning=VALGTE_KONTORER&kontorer=0315,1201")
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(2)
+        assertThat(respons.treff.map { it.tittel }).containsExactlyInAnyOrder("Oslo-treff", "Bergen-treff")
+    }
+
+    @Test
+    fun `visning VALGTE_KONTORER uten kontorer-param returnerer alle treff`() {
+        opprettTreffMedEier(tittel = "Oslo-treff", kontorId = "0315")
+        opprettTreffMedEier(tittel = "Bergen-treff", kontorId = "1201")
+
+        val response = sokGet("?visning=VALGTE_KONTORER")
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(2)
+    }
+
+    @Test
+    fun `visning MITT_KONTOR ignorerer kontorer-param og returnerer kun treff fra veileders kontor`() {
+        opprettTreffMedEier(navIdent = "B654321", tittel = "Oslo-treff", kontorId = "0315")
+        opprettTreffMedEier(navIdent = "C999999", tittel = "Bergen-treff", kontorId = "1201")
+
+        val response = sokGet(
+            queryParams = "?visning=MITT_KONTOR&kontorer=1201",
+            grupper = listOf(AzureAdRoller.utvikler),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().tittel).isEqualTo("Oslo-treff")
     }
 }

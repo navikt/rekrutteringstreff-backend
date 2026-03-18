@@ -25,20 +25,12 @@ class RekrutteringstreffSokService(
             visning = request.visning,
         )
 
-        val kontoraggregering = repository.kontoraggregering(
-            navIdent = navIdent,
-            kontorId = kontorId,
-            visningsstatuser = request.visningsstatuser,
-            visning = request.visning,
-        )
-
         return RekrutteringstreffSokRespons(
             treff = treff,
             totaltAntall = totaltAntall,
             side = request.side,
             antallPerSide = request.antallPerSide,
             statusaggregering = statusaggregering,
-            kontoraggregering = kontoraggregering,
         )
     }
 }

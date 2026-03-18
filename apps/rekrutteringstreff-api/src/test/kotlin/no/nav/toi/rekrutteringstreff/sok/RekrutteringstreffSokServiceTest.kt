@@ -64,7 +64,6 @@ class RekrutteringstreffSokServiceTest {
         assertThat(respons.side).isEqualTo(0)
         assertThat(respons.antallPerSide).isEqualTo(25)
         assertThat(respons.statusaggregering).isNotEmpty()
-        assertThat(respons.kontoraggregering).isNotEmpty()
     }
 
     @Test
@@ -83,7 +82,7 @@ class RekrutteringstreffSokServiceTest {
     }
 
     @Test
-    fun `sok med kontorfilter gir treff kun for valgt kontor og komplett kontoraggregering`() {
+    fun `sok med kontorfilter gir treff kun for valgt kontor`() {
         opprettTreff(kontorId = "0315")
         opprettTreff(kontorId = "1201")
 
@@ -94,7 +93,6 @@ class RekrutteringstreffSokServiceTest {
         )
 
         assertThat(respons.treff).hasSize(1)
-        assertThat(respons.kontoraggregering).hasSize(2)
     }
 
     @Test
@@ -150,26 +148,5 @@ class RekrutteringstreffSokServiceTest {
         val statusUtkast = respons.statusaggregering.find { it.verdi == "UTKAST" }
         assertThat(statusPub?.antall).isEqualTo(1)
         assertThat(statusUtkast?.antall).isEqualTo(1)
-    }
-
-    @Test
-    fun `kontoraggregering ekskluderer kontorfilteret men inkluderer statusfilteret`() {
-        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "0315")
-        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
-        opprettTreff(status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
-
-        val respons = service.sok(
-            request = RekrutteringstreffSokRequest(
-                visningsstatuser = listOf(Visningsstatus.PUBLISERT),
-                kontorer = listOf("0315"),
-            ),
-            navIdent = "A123456",
-            kontorId = "0315",
-        )
-
-        val kontorOslo = respons.kontoraggregering.find { it.verdi == "0315" }
-        val kontorBergen = respons.kontoraggregering.find { it.verdi == "1201" }
-        assertThat(kontorOslo?.antall).isEqualTo(1)
-        assertThat(kontorBergen?.antall).isEqualTo(1)
     }
 }

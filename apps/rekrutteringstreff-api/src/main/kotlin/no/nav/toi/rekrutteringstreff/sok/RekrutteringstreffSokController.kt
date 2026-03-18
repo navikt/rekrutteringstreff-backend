@@ -83,11 +83,6 @@ class RekrutteringstreffSokController(
                         {"verdi": "SOKNADSFRIST_PASSERT", "antall": 5},
                         {"verdi": "FULLFORT", "antall": 3},
                         {"verdi": "AVLYST", "antall": 2}
-                    ],
-                    "kontoraggregering": [
-                        {"verdi": "0315", "antall": 25},
-                        {"verdi": "1201", "antall": 10},
-                        {"verdi": "5001", "antall": 7}
                     ]
                 }"""
             )]
@@ -116,7 +111,7 @@ class RekrutteringstreffSokController(
 
         val request = RekrutteringstreffSokRequest(
             visningsstatuser = visningsstatuser,
-            kontorer = kontorer,
+            kontorer = if (visning == Visning.MITT_KONTOR) null else kontorer,
             visning = visning,
             side = side,
             antallPerSide = antallPerSide,
