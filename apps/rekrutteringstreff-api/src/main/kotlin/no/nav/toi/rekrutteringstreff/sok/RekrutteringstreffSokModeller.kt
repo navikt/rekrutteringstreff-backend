@@ -15,10 +15,17 @@ enum class Visning {
     VALGTE_KONTORER,
 }
 
+enum class Sortering(val sql: String) {
+    SIST_OPPDATERTE("sist_endret DESC"),
+    NYESTE("opprettet_av_tidspunkt DESC"),
+    ELDSTE("opprettet_av_tidspunkt ASC"),
+}
+
 data class RekrutteringstreffSokRequest(
     val visningsstatuser: List<Visningsstatus>? = null,
     val kontorer: List<String>? = null,
     val visning: Visning = Visning.ALLE,
+    val sortering: Sortering = Sortering.SIST_OPPDATERTE,
     val side: Int = 0,
     val antallPerSide: Int = 25,
 )

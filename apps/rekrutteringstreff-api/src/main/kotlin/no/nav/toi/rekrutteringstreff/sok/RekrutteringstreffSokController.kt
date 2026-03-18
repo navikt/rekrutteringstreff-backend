@@ -28,6 +28,7 @@ class RekrutteringstreffSokController(
             OpenApiParam(name = "visning", type = Visning::class, required = false),
             OpenApiParam(name = "visningsstatuser", type = Visningsstatus::class, required = false, description = "Kommaseparert liste av visningsstatuser"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er"),
+            OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge: SIST_OPPDATERTE, NYESTE, ELDSTE"),
             OpenApiParam(name = "side", type = Int::class, required = false),
             OpenApiParam(name = "antallPerSide", type = Int::class, required = false),
         ],
@@ -96,6 +97,7 @@ class RekrutteringstreffSokController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
 
         val visning = ctx.queryParamAsEnum<Visning>("visning") ?: Visning.ALLE
+        val sortering = ctx.queryParamAsEnum<Sortering>("sortering") ?: Sortering.SIST_OPPDATERTE
 
         val visningsstatuser = ctx.csvQueryParamAsEnum<Visningsstatus>("visningsstatuser")
         val kontorer = ctx.csvQueryParam("kontorer")
@@ -113,6 +115,7 @@ class RekrutteringstreffSokController(
             visningsstatuser = visningsstatuser,
             kontorer = if (visning == Visning.MITT_KONTOR) null else kontorer,
             visning = visning,
+            sortering = sortering,
             side = side,
             antallPerSide = antallPerSide,
         )

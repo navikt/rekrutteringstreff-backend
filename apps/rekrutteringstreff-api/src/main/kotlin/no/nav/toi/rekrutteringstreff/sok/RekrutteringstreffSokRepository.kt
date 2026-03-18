@@ -11,6 +11,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         visningsstatuser: List<Visningsstatus>?,
         kontorer: List<String>?,
         visning: Visning,
+        sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
         antallPerSide: Int,
     ): Pair<List<RekrutteringstreffSokTreff>, Long> {
@@ -33,7 +34,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                    opprettet_av_tidspunkt, sist_endret, eiere, kontorer
             FROM rekrutteringstreff_sok_view
             $whereClause
-            ORDER BY sist_endret DESC
+            ORDER BY ${sortering.sql}
             LIMIT ? OFFSET ?
         """.trimIndent()
 

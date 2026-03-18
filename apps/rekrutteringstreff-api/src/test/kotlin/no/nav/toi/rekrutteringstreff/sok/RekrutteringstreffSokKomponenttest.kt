@@ -14,6 +14,8 @@ import org.junit.jupiter.api.*
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -118,6 +120,22 @@ class RekrutteringstreffSokKomponenttest {
             status = status,
             kontorId = kontorId,
         )
+
+    private fun settTidspunkter(
+        treffId: no.nav.toi.rekrutteringstreff.TreffId,
+        opprettetAvTidspunkt: Instant,
+        sistEndret: Instant,
+    ) {
+        db.dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                "UPDATE rekrutteringstreff SET opprettet_av_tidspunkt = ?, sist_endret = ? WHERE id = ?"
+            ).apply {
+                setTimestamp(1, Timestamp.from(opprettetAvTidspunkt))
+                setTimestamp(2, Timestamp.from(sistEndret))
+                setObject(3, treffId.somUuid)
+            }.executeUpdate()
+        }
+    }
 
     @Test
     fun `sok returnerer tomme resultater når det ikke finnes treff`() {
@@ -357,5 +375,85 @@ class RekrutteringstreffSokKomponenttest {
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).hasSize(1)
         assertThat(respons.treff.first().tittel).isEqualTo("Oslo-treff")
+    }
+
+    @Test
+    fun `sortering SIST_OPPDATERTE returnerer treff sortert etter sist endret dato synkende`() {
+        val treff1 = opprettTreffMedEier(tittel = "Gammelt oppdatert")
+        val treff2 = opprettTreffMedEier(tittel = "Nylig oppdatert")
+        val treff3 = opprettTreffMedEier(tittel = "Sist oppdatert")
+
+        settTidspunkter(treff1, Instant.parse("2025-01-01T10:00:00Z"), Instant.parse("2025-03-01T10:00:00Z"))
+        settTidspunkter(treff2, Instant.parse("2025-02-01T10:00:00Z"), Instant.parse("2025-04-01T10:00:00Z"))
+        settTidspunkter(treff3, Instant.parse("2025-03-01T10:00:00Z"), Instant.parse("2025-05-01T10:00:00Z"))
+
+        val response = sokGet("?sortering=SIST_OPPDATERTE")
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff.map { it.tittel }).containsExactly(
+            "Sist oppdatert", "Nylig oppdatert", "Gammelt oppdatert"
+        )
+    }
+
+    @Test
+    fun `sortering NYESTE returnerer treff sortert etter opprettet dato synkende`() {
+        val treff1 = opprettTreffMedEier(tittel = "Eldst")
+        val treff2 = opprettTreffMedEier(tittel = "Midterst")
+        val treff3 = opprettTreffMedEier(tittel = "Nyest")
+
+        settTidspunkter(treff1, Instant.parse("2025-01-01T10:00:00Z"), Instant.parse("2025-06-01T10:00:00Z"))
+        settTidspunkter(treff2, Instant.parse("2025-03-01T10:00:00Z"), Instant.parse("2025-04-01T10:00:00Z"))
+        settTidspunkter(treff3, Instant.parse("2025-05-01T10:00:00Z"), Instant.parse("2025-02-01T10:00:00Z"))
+
+        val response = sokGet("?sortering=NYESTE")
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff.map { it.tittel }).containsExactly(
+            "Nyest", "Midterst", "Eldst"
+        )
+    }
+
+    @Test
+    fun `sortering ELDSTE returnerer treff sortert etter opprettet dato stigende`() {
+        val treff1 = opprettTreffMedEier(tittel = "Eldst")
+        val treff2 = opprettTreffMedEier(tittel = "Midterst")
+        val treff3 = opprettTreffMedEier(tittel = "Nyest")
+
+        settTidspunkter(treff1, Instant.parse("2025-01-01T10:00:00Z"), Instant.parse("2025-06-01T10:00:00Z"))
+        settTidspunkter(treff2, Instant.parse("2025-03-01T10:00:00Z"), Instant.parse("2025-04-01T10:00:00Z"))
+        settTidspunkter(treff3, Instant.parse("2025-05-01T10:00:00Z"), Instant.parse("2025-02-01T10:00:00Z"))
+
+        val response = sokGet("?sortering=ELDSTE")
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff.map { it.tittel }).containsExactly(
+            "Eldst", "Midterst", "Nyest"
+        )
+    }
+
+    @Test
+    fun `standard sortering er SIST_OPPDATERTE når sortering ikke er angitt`() {
+        val treff1 = opprettTreffMedEier(tittel = "Eldre oppdatering")
+        val treff2 = opprettTreffMedEier(tittel = "Nyere oppdatering")
+
+        settTidspunkter(treff1, Instant.parse("2025-05-01T10:00:00Z"), Instant.parse("2025-01-01T10:00:00Z"))
+        settTidspunkter(treff2, Instant.parse("2025-01-01T10:00:00Z"), Instant.parse("2025-06-01T10:00:00Z"))
+
+        val response = sokGet()
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff.map { it.tittel }).containsExactly(
+            "Nyere oppdatering", "Eldre oppdatering"
+        )
+    }
+
+    @Test
+    fun `ugyldig sortering returnerer 400`() {
+        val response = sokGet("?sortering=UGYLDIG")
+        assertThat(response.statusCode()).isEqualTo(400)
     }
 }

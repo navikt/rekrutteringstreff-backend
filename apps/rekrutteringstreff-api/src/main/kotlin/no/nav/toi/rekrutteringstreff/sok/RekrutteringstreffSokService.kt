@@ -14,6 +14,7 @@ class RekrutteringstreffSokService(
             visningsstatuser = request.visningsstatuser,
             kontorer = request.kontorer,
             visning = request.visning,
+            sortering = request.sortering,
             side = request.side,
             antallPerSide = request.antallPerSide,
         )
