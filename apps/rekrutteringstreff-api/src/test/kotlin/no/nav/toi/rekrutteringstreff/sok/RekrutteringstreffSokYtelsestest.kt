@@ -105,7 +105,7 @@ class RekrutteringstreffSokYtelsestest {
     }
 
     @Test
-    fun `sok med 10k genererte testtreff logger tid for warmup og endret kall`() {
+    fun `sok med 50k genererte testtreff logger tid for warmup og endret kall`() {
         val warmupRequest = RekrutteringstreffSokRequest(
             visning = Visning.ALLE,
             sortering = Sortering.SIST_OPPDATERTE,
