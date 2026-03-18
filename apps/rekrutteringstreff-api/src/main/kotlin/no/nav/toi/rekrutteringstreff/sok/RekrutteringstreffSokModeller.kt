@@ -15,24 +15,31 @@ enum class Visning {
     VALGTE_KONTORER,
 }
 
-enum class Sortering(val sql: String) {
-    SIST_OPPDATERTE("sist_endret DESC"),
-    NYESTE("opprettet_av_tidspunkt DESC"),
-    ELDSTE("opprettet_av_tidspunkt ASC"),
+enum class Sortering(val sql: String, val jsonVerdi: String) {
+    SIST_OPPDATERTE("sist_endret DESC", "sist_oppdaterte"),
+    NYESTE("opprettet_av_tidspunkt DESC", "nyeste"),
+    ELDSTE("opprettet_av_tidspunkt ASC", "eldste"),
+    ;
+
+    companion object {
+        fun fraJsonVerdi(verdi: String): Sortering =
+            entries.find { it.jsonVerdi == verdi }
+                ?: throw IllegalArgumentException("Ugyldig sortering: $verdi")
+    }
 }
 
 data class RekrutteringstreffSokRequest(
-    val visningsstatuser: List<Visningsstatus>? = null,
+    val statuser: List<Visningsstatus>? = null,
     val kontorer: List<String>? = null,
     val visning: Visning = Visning.ALLE,
     val sortering: Sortering = Sortering.SIST_OPPDATERTE,
-    val side: Int = 0,
+    val side: Int = 1,
     val antallPerSide: Int = 25,
 )
 
 data class RekrutteringstreffSokRespons(
     val treff: List<RekrutteringstreffSokTreff>,
-    val totaltAntall: Long,
+    val antallTotalt: Long,
     val side: Int,
     val antallPerSide: Int,
     val statusaggregering: List<FilterValg>,

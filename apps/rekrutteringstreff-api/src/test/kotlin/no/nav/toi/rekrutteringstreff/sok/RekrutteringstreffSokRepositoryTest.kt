@@ -49,8 +49,8 @@ class RekrutteringstreffSokRepositoryTest {
     fun `sok returnerer tomme resultater når ingen treff finnes`() {
         val (treff, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = null,
-            visning = Visning.ALLE, side = 0, antallPerSide = 25
+            statuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).isEmpty()
         assertThat(totalt).isEqualTo(0)
@@ -63,8 +63,8 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = null,
-            visning = Visning.ALLE, side = 0, antallPerSide = 25
+            statuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(2)
         assertThat(totalt).isEqualTo(2)
@@ -77,8 +77,8 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = null,
-            visning = Visning.MINE, side = 0, antallPerSide = 25
+            statuser = null, kontorer = null,
+            visning = Visning.MINE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
         assertThat(treff.first().tittel).isEqualTo("Mitt")
@@ -91,8 +91,8 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = null,
-            visning = Visning.MITT_KONTOR, side = 0, antallPerSide = 25
+            statuser = null, kontorer = null,
+            visning = Visning.MITT_KONTOR, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
         assertThat(treff.first().tittel).isEqualTo("Mitt kontor")
@@ -105,25 +105,25 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = listOf(Visningsstatus.PUBLISERT),
+            statuser = listOf(Visningsstatus.PUBLISERT),
             kontorer = null, visning = Visning.ALLE,
-            side = 0, antallPerSide = 25
+            side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
         assertThat(treff.first().tittel).isEqualTo("Pub")
     }
 
     @Test
-    fun `sok filtrerer på flere visningsstatuser`() {
+    fun `sok filtrerer på flere statuser`() {
         opprettTreff(tittel = "Pub", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreff(tittel = "Utkast", status = RekrutteringstreffStatus.UTKAST)
         opprettTreff(tittel = "Avlyst", status = RekrutteringstreffStatus.AVLYST)
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = listOf(Visningsstatus.PUBLISERT, Visningsstatus.UTKAST),
+            statuser = listOf(Visningsstatus.PUBLISERT, Visningsstatus.UTKAST),
             kontorer = null, visning = Visning.ALLE,
-            side = 0, antallPerSide = 25
+            side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(2)
     }
@@ -135,8 +135,8 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = listOf("0315"),
-            visning = Visning.ALLE, side = 0, antallPerSide = 25
+            statuser = null, kontorer = listOf("0315"),
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
         assertThat(treff.first().tittel).isEqualTo("Oslo")
@@ -149,8 +149,8 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = null,
-            visning = Visning.ALLE, side = 0, antallPerSide = 25
+            statuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
         assertThat(totalt).isEqualTo(1)
@@ -163,16 +163,16 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (side0, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = null,
-            visning = Visning.ALLE, side = 0, antallPerSide = 2
+            statuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 2
         )
         assertThat(side0).hasSize(2)
         assertThat(totalt).isEqualTo(5)
 
         val (side2, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = null,
-            visning = Visning.ALLE, side = 2, antallPerSide = 2
+            statuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 3, antallPerSide = 2
         )
         assertThat(side2).hasSize(1)
     }
@@ -183,8 +183,8 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            visningsstatuser = null, kontorer = null,
-            visning = Visning.ALLE, side = 0, antallPerSide = 25
+            statuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
         val t = treff.first()

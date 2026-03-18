@@ -26,9 +26,9 @@ class RekrutteringstreffSokController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
             OpenApiParam(name = "visning", type = Visning::class, required = false),
-            OpenApiParam(name = "visningsstatuser", type = Visningsstatus::class, required = false, description = "Kommaseparert liste av visningsstatuser"),
+            OpenApiParam(name = "statuser", type = Visningsstatus::class, required = false, description = "Kommaseparert liste av visningsstatuser"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er"),
-            OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge: SIST_OPPDATERTE, NYESTE, ELDSTE"),
+            OpenApiParam(name = "sortering", type = String::class, required = false, description = "Sorteringsrekkefølge: sist_oppdaterte, nyeste, eldste"),
             OpenApiParam(name = "side", type = Int::class, required = false),
             OpenApiParam(name = "antallPerSide", type = Int::class, required = false),
         ],
@@ -75,8 +75,8 @@ class RekrutteringstreffSokController(
                             "kontorer": ["1201"]
                         }
                     ],
-                    "totaltAntall": 42,
-                    "side": 0,
+                    "antallTotalt": 42,
+                    "side": 1,
                     "antallPerSide": 25,
                     "statusaggregering": [
                         {"verdi": "PUBLISERT", "antall": 20},
@@ -88,7 +88,7 @@ class RekrutteringstreffSokController(
                 }"""
             )]
         ),
-        OpenApiResponse(status = "400", description = "Ugyldig visning eller visningsstatus"),
+        OpenApiResponse(status = "400", description = "Ugyldig visning, status eller sortering"),
         OpenApiResponse(status = "401", description = "Manglende eller ugyldig token")],
         path = sokPath,
         methods = [HttpMethod.GET]
@@ -97,22 +97,26 @@ class RekrutteringstreffSokController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
 
         val visning = ctx.queryParamAsEnum<Visning>("visning") ?: Visning.ALLE
-        val sortering = ctx.queryParamAsEnum<Sortering>("sortering") ?: Sortering.SIST_OPPDATERTE
+        val sortering = ctx.queryParam("sortering")?.let {
+            try { Sortering.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
+                throw BadRequestResponse("Ugyldig sortering: $it")
+            }
+        } ?: Sortering.SIST_OPPDATERTE
 
-        val visningsstatuser = ctx.csvQueryParamAsEnum<Visningsstatus>("visningsstatuser")
+        val statuser = ctx.csvQueryParamAsEnum<Visningsstatus>("statuser")
         val kontorer = ctx.csvQueryParam("kontorer")
 
-        val side = ctx.queryParamAsInt("side") ?: 0
+        val side = ctx.queryParamAsInt("side") ?: 1
         val antallPerSide = ctx.queryParamAsInt("antallPerSide") ?: 25
-        if (side < 0) {
-            throw BadRequestResponse("side må være 0 eller høyere")
+        if (side < 1) {
+            throw BadRequestResponse("side må være 1 eller høyere")
         }
         if (antallPerSide <= 0) {
             throw BadRequestResponse("antallPerSide må være større enn 0")
         }
 
         val request = RekrutteringstreffSokRequest(
-            visningsstatuser = visningsstatuser,
+            statuser = statuser,
             kontorer = if (visning == Visning.MITT_KONTOR) null else kontorer,
             visning = visning,
             sortering = sortering,

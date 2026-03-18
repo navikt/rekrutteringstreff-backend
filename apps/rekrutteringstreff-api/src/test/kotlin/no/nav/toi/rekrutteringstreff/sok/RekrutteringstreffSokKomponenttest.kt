@@ -144,7 +144,7 @@ class RekrutteringstreffSokKomponenttest {
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).isEmpty()
-        assertThat(respons.totaltAntall).isEqualTo(0)
+        assertThat(respons.antallTotalt).isEqualTo(0)
         assertThat(respons.statusaggregering).isEmpty()
     }
 
@@ -179,7 +179,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Publisert treff", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreffMedEier(tittel = "Utkast treff", status = RekrutteringstreffStatus.UTKAST)
 
-        val response = sokGet("?visningsstatuser=PUBLISERT")
+        val response = sokGet("?statuser=PUBLISERT")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -222,18 +222,18 @@ class RekrutteringstreffSokKomponenttest {
             opprettTreffMedEier(tittel = "Treff $i")
         }
 
-        val responseSide0 = sokGet("?side=0&antallPerSide=2")
+        val responseSide0 = sokGet("?side=1&antallPerSide=2")
         val respons0 = mapper.readValue<RekrutteringstreffSokRespons>(responseSide0.body())
         assertThat(respons0.treff).hasSize(2)
-        assertThat(respons0.totaltAntall).isEqualTo(5)
-        assertThat(respons0.side).isEqualTo(0)
+        assertThat(respons0.antallTotalt).isEqualTo(5)
+        assertThat(respons0.side).isEqualTo(1)
         assertThat(respons0.antallPerSide).isEqualTo(2)
 
-        val responseSide1 = sokGet("?side=1&antallPerSide=2")
+        val responseSide1 = sokGet("?side=2&antallPerSide=2")
         val respons1 = mapper.readValue<RekrutteringstreffSokRespons>(responseSide1.body())
         assertThat(respons1.treff).hasSize(2)
 
-        val responseSide2 = sokGet("?side=2&antallPerSide=2")
+        val responseSide2 = sokGet("?side=3&antallPerSide=2")
         val respons2 = mapper.readValue<RekrutteringstreffSokRespons>(responseSide2.body())
         assertThat(respons2.treff).hasSize(1)
     }
@@ -255,7 +255,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Utkast", status = RekrutteringstreffStatus.UTKAST)
         opprettTreffMedEier(tittel = "Avlyst", status = RekrutteringstreffStatus.AVLYST)
 
-        val response = sokGet("?visningsstatuser=PUBLISERT,UTKAST")
+        val response = sokGet("?statuser=PUBLISERT,UTKAST")
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).hasSize(2)
     }
@@ -268,7 +268,7 @@ class RekrutteringstreffSokKomponenttest {
 
     @Test
     fun `ugyldig visningsstatus returnerer 400`() {
-        val response = sokGet("?visningsstatuser=UGYLDIG_STATUS")
+        val response = sokGet("?statuser=UGYLDIG_STATUS")
         assertThat(response.statusCode()).isEqualTo(400)
     }
 
@@ -306,7 +306,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Bergen pub", status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
         opprettTreffMedEier(tittel = "Oslo utkast", status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
 
-        val response = sokGet("?visningsstatuser=PUBLISERT&kontorer=0315")
+        val response = sokGet("?statuser=PUBLISERT&kontorer=0315")
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
 
         assertThat(respons.treff).hasSize(1)
@@ -387,7 +387,7 @@ class RekrutteringstreffSokKomponenttest {
         settTidspunkter(treff2, Instant.parse("2025-02-01T10:00:00Z"), Instant.parse("2025-04-01T10:00:00Z"))
         settTidspunkter(treff3, Instant.parse("2025-03-01T10:00:00Z"), Instant.parse("2025-05-01T10:00:00Z"))
 
-        val response = sokGet("?sortering=SIST_OPPDATERTE")
+        val response = sokGet("?sortering=sist_oppdaterte")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -406,7 +406,7 @@ class RekrutteringstreffSokKomponenttest {
         settTidspunkter(treff2, Instant.parse("2025-03-01T10:00:00Z"), Instant.parse("2025-04-01T10:00:00Z"))
         settTidspunkter(treff3, Instant.parse("2025-05-01T10:00:00Z"), Instant.parse("2025-02-01T10:00:00Z"))
 
-        val response = sokGet("?sortering=NYESTE")
+        val response = sokGet("?sortering=nyeste")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -425,7 +425,7 @@ class RekrutteringstreffSokKomponenttest {
         settTidspunkter(treff2, Instant.parse("2025-03-01T10:00:00Z"), Instant.parse("2025-04-01T10:00:00Z"))
         settTidspunkter(treff3, Instant.parse("2025-05-01T10:00:00Z"), Instant.parse("2025-02-01T10:00:00Z"))
 
-        val response = sokGet("?sortering=ELDSTE")
+        val response = sokGet("?sortering=eldste")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())

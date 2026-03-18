@@ -8,17 +8,17 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     fun sok(
         navIdent: String?,
         kontorId: String?,
-        visningsstatuser: List<Visningsstatus>?,
+        statuser: List<Visningsstatus>?,
         kontorer: List<String>?,
         visning: Visning,
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
         antallPerSide: Int,
     ): Pair<List<RekrutteringstreffSokTreff>, Long> {
-        val (whereClause, params) = byggWhere(navIdent, kontorId, visningsstatuser, kontorer, visning)
+        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser, kontorer, visning)
 
         val countSql = "SELECT count(*) FROM rekrutteringstreff_sok_view $whereClause"
-        val totaltAntall = dataSource.connection.use { c ->
+        val antallTotalt = dataSource.connection.use { c ->
             c.prepareStatement(countSql).use { s ->
                 params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
                 s.executeQuery().use { rs ->
@@ -42,14 +42,14 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             c.prepareStatement(sql).use { s ->
                 params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
                 s.setInt(params.size + 1, antallPerSide)
-                s.setInt(params.size + 2, side * antallPerSide)
+                s.setInt(params.size + 2, (side - 1) * antallPerSide)
                 s.executeQuery().use { rs ->
                     generateSequence { if (rs.next()) tilTreff(rs) else null }.toList()
                 }
             }
         }
 
-        return Pair(treff, totaltAntall)
+        return Pair(treff, antallTotalt)
     }
 
     fun statusaggregering(
@@ -58,7 +58,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kontorer: List<String>?,
         visning: Visning,
     ): List<FilterValg> {
-        val (whereClause, params) = byggWhere(navIdent, kontorId, visningsstatuser = null, kontorer = kontorer, visning = visning)
+        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser = null, kontorer = kontorer, visning = visning)
 
         val sql = """
             SELECT visningsstatus, count(*) AS antall
@@ -96,7 +96,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     private fun byggWhere(
         navIdent: String?,
         kontorId: String?,
-        visningsstatuser: List<Visningsstatus>?,
+        statuser: List<Visningsstatus>?,
         kontorer: List<String>?,
         visning: Visning,
     ): Pair<String, List<SqlParam>> {
@@ -117,11 +117,11 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 Visning.ALLE, Visning.VALGTE_KONTORER -> Unit
             }
 
-            if (!visningsstatuser.isNullOrEmpty()) {
+            if (!statuser.isNullOrEmpty()) {
                 add(
                     Condition(
                         clause = "visningsstatus = ANY(?)",
-                        params = listOf(SqlParam(visningsstatuser, ParamType.VISNINGSSTATUS_ARRAY)),
+                        params = listOf(SqlParam(statuser, ParamType.VISNINGSSTATUS_ARRAY)),
                     )
                 )
             }

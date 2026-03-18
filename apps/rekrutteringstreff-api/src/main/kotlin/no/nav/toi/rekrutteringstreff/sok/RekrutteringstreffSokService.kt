@@ -8,10 +8,10 @@ class RekrutteringstreffSokService(
         navIdent: String,
         kontorId: String?,
     ): RekrutteringstreffSokRespons {
-        val (treff, totaltAntall) = repository.sok(
+        val (treff, antallTotalt) = repository.sok(
             navIdent = navIdent,
             kontorId = kontorId,
-            visningsstatuser = request.visningsstatuser,
+            statuser = request.statuser,
             kontorer = request.kontorer,
             visning = request.visning,
             sortering = request.sortering,
@@ -28,7 +28,7 @@ class RekrutteringstreffSokService(
 
         return RekrutteringstreffSokRespons(
             treff = treff,
-            totaltAntall = totaltAntall,
+            antallTotalt = antallTotalt,
             side = request.side,
             antallPerSide = request.antallPerSide,
             statusaggregering = statusaggregering,

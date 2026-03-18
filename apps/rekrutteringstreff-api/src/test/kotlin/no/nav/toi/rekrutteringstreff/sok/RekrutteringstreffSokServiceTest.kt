@@ -60,8 +60,8 @@ class RekrutteringstreffSokServiceTest {
         )
 
         assertThat(respons.treff).hasSize(3)
-        assertThat(respons.totaltAntall).isEqualTo(3)
-        assertThat(respons.side).isEqualTo(0)
+        assertThat(respons.antallTotalt).isEqualTo(3)
+        assertThat(respons.side).isEqualTo(1)
         assertThat(respons.antallPerSide).isEqualTo(25)
         assertThat(respons.statusaggregering).isNotEmpty()
     }
@@ -72,7 +72,7 @@ class RekrutteringstreffSokServiceTest {
         opprettTreff(status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
 
         val respons = service.sok(
-            request = RekrutteringstreffSokRequest(visningsstatuser = listOf(Visningsstatus.PUBLISERT)),
+            request = RekrutteringstreffSokRequest(statuser = listOf(Visningsstatus.PUBLISERT)),
             navIdent = "A123456",
             kontorId = "0315",
         )
@@ -122,7 +122,7 @@ class RekrutteringstreffSokServiceTest {
         )
 
         assertThat(respons.treff).hasSize(2)
-        assertThat(respons.totaltAntall).isEqualTo(5)
+        assertThat(respons.antallTotalt).isEqualTo(5)
         assertThat(respons.side).isEqualTo(1)
         assertThat(respons.antallPerSide).isEqualTo(2)
     }
@@ -135,7 +135,7 @@ class RekrutteringstreffSokServiceTest {
 
         val respons = service.sok(
             request = RekrutteringstreffSokRequest(
-                visningsstatuser = listOf(Visningsstatus.PUBLISERT),
+                statuser = listOf(Visningsstatus.PUBLISERT),
                 kontorer = listOf("0315"),
             ),
             navIdent = "A123456",
