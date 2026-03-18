@@ -153,7 +153,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(navIdent = "A123456", tittel = "Mitt Oslo-treff", kontorId = "0315")
         opprettTreffMedEier(navIdent = "B654321", tittel = "Andres Bergen-treff", kontorId = "1201")
 
-        val response = sokGet("?visning=ALLE")
+        val response = sokGet("?visning=alle")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -166,7 +166,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(navIdent = "A123456", tittel = "Mitt treff")
         opprettTreffMedEier(navIdent = "B654321", tittel = "Andres treff")
 
-        val response = sokGet("?visning=MINE")
+        val response = sokGet("?visning=mine")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -179,7 +179,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Publisert treff", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreffMedEier(tittel = "Utkast treff", status = RekrutteringstreffStatus.UTKAST)
 
-        val response = sokGet("?statuser=PUBLISERT")
+        val response = sokGet("?statuser=publisert")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -210,8 +210,8 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
-        val publisert = respons.statusaggregering.find { it.verdi == "PUBLISERT" }
-        val utkast = respons.statusaggregering.find { it.verdi == "UTKAST" }
+        val publisert = respons.statusaggregering.find { it.verdi == "publisert" }
+        val utkast = respons.statusaggregering.find { it.verdi == "utkast" }
         assertThat(publisert?.antall).isEqualTo(2)
         assertThat(utkast?.antall).isEqualTo(1)
     }
@@ -255,7 +255,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Utkast", status = RekrutteringstreffStatus.UTKAST)
         opprettTreffMedEier(tittel = "Avlyst", status = RekrutteringstreffStatus.AVLYST)
 
-        val response = sokGet("?statuser=PUBLISERT,UTKAST")
+        val response = sokGet("?statuser=publisert,utkast")
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).hasSize(2)
     }
@@ -293,7 +293,7 @@ class RekrutteringstreffSokKomponenttest {
         )
 
         val response = sokGet(
-            queryParams = "?visning=MITT_KONTOR",
+            queryParams = "?visning=mitt_kontor",
             grupper = listOf(AzureAdRoller.utvikler),
         )
 
@@ -306,15 +306,15 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Bergen pub", status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
         opprettTreffMedEier(tittel = "Oslo utkast", status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
 
-        val response = sokGet("?statuser=PUBLISERT&kontorer=0315")
+        val response = sokGet("?statuser=publisert&kontorer=0315")
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
 
         assertThat(respons.treff).hasSize(1)
         assertThat(respons.treff.first().tittel).isEqualTo("Oslo pub")
 
         val statusAgg = respons.statusaggregering
-        val publisert = statusAgg.find { it.verdi == "PUBLISERT" }
-        val utkast = statusAgg.find { it.verdi == "UTKAST" }
+        val publisert = statusAgg.find { it.verdi == "publisert" }
+        val utkast = statusAgg.find { it.verdi == "utkast" }
         assertThat(publisert?.antall).isEqualTo(1)
         assertThat(utkast?.antall).isEqualTo(1)
     }
@@ -325,7 +325,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(navIdent = "C999999", tittel = "Bergen-treff", kontorId = "1201")
 
         val response = sokGet(
-            queryParams = "?visning=MITT_KONTOR",
+            queryParams = "?visning=mitt_kontor",
             grupper = listOf(AzureAdRoller.utvikler),
         )
 
@@ -341,7 +341,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Bergen-treff", kontorId = "1201")
         opprettTreffMedEier(tittel = "Tromsø-treff", kontorId = "1902")
 
-        val response = sokGet("?visning=VALGTE_KONTORER&kontorer=0315,1201")
+        val response = sokGet("?visning=valgte_kontorer&kontorer=0315,1201")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -354,7 +354,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Oslo-treff", kontorId = "0315")
         opprettTreffMedEier(tittel = "Bergen-treff", kontorId = "1201")
 
-        val response = sokGet("?visning=VALGTE_KONTORER")
+        val response = sokGet("?visning=valgte_kontorer")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -367,7 +367,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(navIdent = "C999999", tittel = "Bergen-treff", kontorId = "1201")
 
         val response = sokGet(
-            queryParams = "?visning=MITT_KONTOR&kontorer=1201",
+            queryParams = "?visning=mitt_kontor&kontorer=1201",
             grupper = listOf(AzureAdRoller.utvikler),
         )
 

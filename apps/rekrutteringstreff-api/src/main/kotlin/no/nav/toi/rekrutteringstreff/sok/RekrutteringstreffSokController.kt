@@ -42,7 +42,7 @@ class RekrutteringstreffSokController(
                             "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                             "tittel": "Rekrutteringstreff – bygg og anlegg",
                             "beskrivelse": "Treff for arbeidsgivere og jobbsøkere innen bygg og anlegg",
-                            "visningsstatus": "PUBLISERT",
+                            "visningsstatus": "publisert",
                             "fraTid": "2026-04-15T09:00:00Z",
                             "tilTid": "2026-04-15T12:00:00Z",
                             "svarfrist": "2026-04-10T23:59:59Z",
@@ -60,7 +60,7 @@ class RekrutteringstreffSokController(
                             "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
                             "tittel": "Jobbmesse for helsesektoren",
                             "beskrivelse": null,
-                            "visningsstatus": "UTKAST",
+                            "visningsstatus": "utkast",
                             "fraTid": null,
                             "tilTid": null,
                             "svarfrist": null,
@@ -79,11 +79,11 @@ class RekrutteringstreffSokController(
                     "side": 1,
                     "antallPerSide": 25,
                     "statusaggregering": [
-                        {"verdi": "PUBLISERT", "antall": 20},
-                        {"verdi": "UTKAST", "antall": 12},
-                        {"verdi": "SOKNADSFRIST_PASSERT", "antall": 5},
-                        {"verdi": "FULLFORT", "antall": 3},
-                        {"verdi": "AVLYST", "antall": 2}
+                        {"verdi": "publisert", "antall": 20},
+                        {"verdi": "utkast", "antall": 12},
+                        {"verdi": "soknadsfrist_passert", "antall": 5},
+                        {"verdi": "fullfort", "antall": 3},
+                        {"verdi": "avlyst", "antall": 2}
                     ]
                 }"""
             )]
@@ -96,14 +96,22 @@ class RekrutteringstreffSokController(
     private fun sokHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
 
-        val visning = ctx.queryParamAsEnum<Visning>("visning") ?: Visning.ALLE
+        val visning = ctx.queryParam("visning")?.let {
+            try { Visning.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
+                throw BadRequestResponse("Ugyldig visning: $it")
+            }
+        } ?: Visning.ALLE
         val sortering = ctx.queryParam("sortering")?.let {
             try { Sortering.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
                 throw BadRequestResponse("Ugyldig sortering: $it")
             }
         } ?: Sortering.SIST_OPPDATERTE
 
-        val statuser = ctx.csvQueryParamAsEnum<Visningsstatus>("statuser")
+        val statuser = ctx.queryParam("statuser")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
+            try { Visningsstatus.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
+                throw BadRequestResponse("Ugyldig visningsstatus: $it")
+            }
+        }
         val kontorer = ctx.csvQueryParam("kontorer")
 
         val side = ctx.queryParamAsInt("side") ?: 1
@@ -133,19 +141,6 @@ class RekrutteringstreffSokController(
         ctx.status(200).json(sokService.sok(request, navIdent, kontorId))
     }
 }
-
-private inline fun <reified T : Enum<T>> String.parseEnum(): T =
-    try {
-        enumValueOf<T>(this)
-    } catch (_: IllegalArgumentException) {
-        throw BadRequestResponse("Ugyldig ${T::class.simpleName}: $this")
-    }
-
-private inline fun <reified T : Enum<T>> Context.queryParamAsEnum(name: String): T? =
-    queryParam(name)?.parseEnum<T>()
-
-private inline fun <reified T : Enum<T>> Context.csvQueryParamAsEnum(name: String): List<T>? =
-    queryParam(name)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map { it.parseEnum<T>() }
 
 private fun Context.csvQueryParam(name: String): List<String>? =
     queryParam(name)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }

@@ -74,7 +74,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 s.executeQuery().use { rs ->
                     generateSequence {
                         if (rs.next()) FilterValg(
-                            verdi = rs.getString("visningsstatus"),
+                            verdi = Visningsstatus.valueOf(rs.getString("visningsstatus")).jsonVerdi,
                             antall = rs.getLong("antall"),
                         ) else null
                     }.toList()

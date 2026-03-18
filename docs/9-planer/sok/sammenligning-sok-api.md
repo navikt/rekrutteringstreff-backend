@@ -57,13 +57,14 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | -------------- | ------------------------------------------------ | --------------------------------------------------- | --------------------------------------------------------------------- |
 | **Param-navn** | `visning`                                        | `portefolje`                                        | Del av URL-path (`/minebrukere`, `/mittkontor`, `/alle` osv.)         |
 | **Plassering** | Query param                                      | Browser-URL param → ES-query                        | URL-path-segment                                                      |
-| **Verdier**    | `ALLE`, `MINE`, `MITT_KONTOR`, `VALGTE_KONTORER` | `intern`, `visMine`, `mittKontor`, `arbeidsplassen` | `minebrukere`, `mittkontor`, `minekontorer`, `valgtekontorer`, `alle` |
-| **Casing**     | UPPER_SNAKE_CASE                                 | camelCase                                           | lowercase (URL-path)                                                  |
+| **Verdier**    | `alle`, `mine`, `mitt_kontor`, `valgte_kontorer` | `intern`, `visMine`, `mittKontor`, `arbeidsplassen` | `minebrukere`, `mittkontor`, `minekontorer`, `valgtekontorer`, `alle` |
+| **Casing**     | lowercase                                        | camelCase                                           | lowercase (URL-path)                                                  |
 
 ### Observasjoner
 
 - Kandidatsøk bruker separate URL-paths per portefølje — mest RESTful, men fem separate endepunkter.
 - Stillingssøk og rekrutteringstreff bruker param, men med ulikt navn (`portefolje` vs `visning`).
+- Rekrutteringstreff og kandidatsøk bruker begge lowercase verdier.
 - Kontorfilter: rekrutteringstreff bruker `kontorer` (query param), kandidatsøk bruker `valgtKontor` (body), stillingssøk bygger det inn i ES-query.
 
 ---
@@ -74,11 +75,13 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | -------------- | ------------------------------------------------------------------- | ----------------------- | ----------- |
 | **Param-navn** | `statuser`                                                          | `statuser`              | N/A         |
 | **Format**     | Kommaseparert query param                                           | Array i browser-URL     | —           |
-| **Verdier**    | `UTKAST`, `PUBLISERT`, `SOKNADSFRIST_PASSERT`, `FULLFORT`, `AVLYST` | `aktiv`, `utløpt` m.fl. | —           |
+| **Verdier**    | `utkast`, `publisert`, `soknadsfrist_passert`, `fullfort`, `avlyst` | `aktiv`, `utløpt` m.fl. | —           |
 
 ### Observasjoner
 
 - Rekrutteringstreff og stillingssøk bruker begge `statuser` som param-navn.
+- Rekrutteringstreff og stillingssøk bruker begge lowercase verdier.
+- Rekrutteringstreff bruker `fullfort` (med o) i URL-verdien — mappet til enum `FULLFØRT` i backend.
 - Kandidatsøk har ikke statusfiltrering.
 
 ---
@@ -134,6 +137,8 @@ Sammenligning av rekrutteringstreff-søk, stillingssøk og kandidatsøk — hva 
 | Sideparam          | `side`                                            |
 | Sorteringsparam    | `sortering`                                       |
 | Sorteringscasing   | lowercase (rekrutteringstreff + kandidatsøk)      |
+| Visningscasing     | lowercase (rekrutteringstreff + kandidatsøk)      |
+| Statusfiltercasing | lowercase (rekrutteringstreff + stillingssøk)     |
 | Totalfelt          | `antallTotalt` (rekrutteringstreff + kandidatsøk) |
 | Statusfilterparam  | `statuser` (rekrutteringstreff + stillingssøk)    |
 | Fritekstsøk (plan) | `fritekst` (stillingssøk + kandidatsøk)           |

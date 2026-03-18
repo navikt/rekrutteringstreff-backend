@@ -1,18 +1,34 @@
 package no.nav.toi.rekrutteringstreff.sok
 
-enum class Visningsstatus {
-    UTKAST,
-    PUBLISERT,
-    SOKNADSFRIST_PASSERT,
-    FULLFORT,
-    AVLYST,
+import com.fasterxml.jackson.annotation.JsonValue
+
+enum class Visningsstatus(@JsonValue val jsonVerdi: String) {
+    UTKAST("utkast"),
+    PUBLISERT("publisert"),
+    SOKNADSFRIST_PASSERT("soknadsfrist_passert"),
+    FULLFORT("fullfort"),
+    AVLYST("avlyst"),
+    ;
+
+    companion object {
+        fun fraJsonVerdi(verdi: String): Visningsstatus =
+            entries.find { it.jsonVerdi == verdi }
+                ?: throw IllegalArgumentException("Ugyldig visningsstatus: $verdi")
+    }
 }
 
-enum class Visning {
-    ALLE,
-    MINE,
-    MITT_KONTOR,
-    VALGTE_KONTORER,
+enum class Visning(@JsonValue val jsonVerdi: String) {
+    ALLE("alle"),
+    MINE("mine"),
+    MITT_KONTOR("mitt_kontor"),
+    VALGTE_KONTORER("valgte_kontorer"),
+    ;
+
+    companion object {
+        fun fraJsonVerdi(verdi: String): Visning =
+            entries.find { it.jsonVerdi == verdi }
+                ?: throw IllegalArgumentException("Ugyldig visning: $verdi")
+    }
 }
 
 enum class Sortering(val sql: String, val jsonVerdi: String) {
