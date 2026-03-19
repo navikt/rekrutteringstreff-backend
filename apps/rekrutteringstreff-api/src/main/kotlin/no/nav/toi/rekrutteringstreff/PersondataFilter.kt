@@ -10,7 +10,15 @@ object PersondataFilter {
 
     fun filtrerUtPersonsensitiveData(tekst: String): String {
         return tekst
-            .let { emailRegex.replace(it, "emailadresse") }
+            .let { emailRegex.replace(it, "") }
             .let { numberRegex.replace(it, "") }
+    }
+
+    fun inneholderEpost(tekst: String): Boolean {
+        return emailRegex.containsMatchIn(tekst)
+    }
+
+    fun inneholderTall(tekst: String): Boolean {
+        return numberRegex.containsMatchIn(tekst)
     }
 }
