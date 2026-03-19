@@ -44,6 +44,35 @@ NAV har et konsept med "Workops" der det arrangeres formøter med kandidater fø
 
 > **Innsikt nødvendig**: Det kreves ytterligere brukerinnsikt for å forstå behovene og finne riktig løsning for Workops-flyten.
 
+## Søk
+
+Rekrutteringstreffsøk er i dag implementert med et PostgreSQL-view (`rekrutteringstreff_sok_view`) over eksisterende tabeller. Viewet gir en flat struktur med beregnet `visningsstatus`, og støtter eier-, status- og kontorfiltrering med aggregeringer og paginering. Ingen egen søketabell, ingen synkronisering, ingen indekser.
+
+Jobbsøkersøk innad i et treff følger samme mønster.
+
+### Gradvis utvidelse ved behov
+
+```
+Dagens løsning              Ved behov for fritekst        Ved behov for søkemotor
+──────────────────────      ──────────────────────────    ──────────────────────
+PostgreSQL view             Indeksert søketabell          OpenSearch
+
+Eier + status + kontor      + tsvector / pg_trgm          Fullverdig søk med
+View over eksisterende      + egne indekser               relevansscoring,
+tabeller, ingen synk        + sorteringsvalg              typotoleranse,
+                            + geografifilter              norsk analyzer
+```
+
+| Behov                                            | Neste steg                                |
+| ------------------------------------------------ | ----------------------------------------- |
+| Fritekst (tittel, beskrivelse, arbeidsgivernavn) | Søketabell med tsvector/pg_trgm           |
+| Egne indekser for søk                            | Materialized view eller søketabell        |
+| Typotoleranse / stemming                         | pg_trgm eller OpenSearch                  |
+| Volum over ~10 000 aktive                        | Søketabell med indekser                   |
+| Søkekvalitet på nivå med kandidatsøk             | OpenSearch (eget søke-API + indekser-app) |
+
+API-kontrakten er designet slik at backend kan oppgraderes uten endringer i frontend.
+
 ## Arkitekturprinsipper for utvidbarhet
 
 ### Hendelsesdrevet utvidelse
