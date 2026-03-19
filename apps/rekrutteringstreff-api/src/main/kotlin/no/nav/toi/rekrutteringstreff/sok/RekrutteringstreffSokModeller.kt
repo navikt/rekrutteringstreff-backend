@@ -2,18 +2,25 @@ package no.nav.toi.rekrutteringstreff.sok
 
 import com.fasterxml.jackson.annotation.JsonValue
 
-enum class Visningsstatus(@JsonValue val jsonVerdi: String) {
+enum class SokStatus(@JsonValue val jsonVerdi: String) {
     UTKAST("utkast"),
     PUBLISERT("publisert"),
-    SOKNADSFRIST_PASSERT("soknadsfrist_passert"),
-    FULLFORT("fullfort"),
+    FULLFØRT("fullfort"),
     AVLYST("avlyst"),
     ;
 
     companion object {
-        fun fraJsonVerdi(verdi: String): Visningsstatus =
+        fun fraDbVerdi(verdi: String): SokStatus = when (verdi) {
+            "UTKAST" -> UTKAST
+            "PUBLISERT" -> PUBLISERT
+            "FULLFØRT" -> FULLFØRT
+            "AVLYST" -> AVLYST
+            else -> throw IllegalArgumentException("Ugyldig status fra database: $verdi")
+        }
+
+        fun fraJsonVerdi(verdi: String): SokStatus =
             entries.find { it.jsonVerdi == verdi }
-                ?: throw IllegalArgumentException("Ugyldig visningsstatus: $verdi")
+                ?: throw IllegalArgumentException("Ugyldig status: $verdi")
     }
 }
 
@@ -45,7 +52,8 @@ enum class Sortering(val sql: String, val jsonVerdi: String) {
 }
 
 data class RekrutteringstreffSokRequest(
-    val statuser: List<Visningsstatus>? = null,
+    val statuser: List<SokStatus>? = null,
+    val apenForSokere: Boolean? = null,
     val kontorer: List<String>? = null,
     val visning: Visning = Visning.ALLE,
     val sortering: Sortering = Sortering.SIST_OPPDATERTE,
@@ -59,21 +67,21 @@ data class RekrutteringstreffSokRespons(
     val side: Int,
     val antallPerSide: Int,
     val statusaggregering: List<FilterValg>,
+    val antallApenForSokere: Long,
 )
 
 data class RekrutteringstreffSokTreff(
     val id: String,
     val tittel: String,
     val beskrivelse: String?,
-    val visningsstatus: Visningsstatus,
+    val status: SokStatus,
+    val apenForSokere: Boolean,
     val fraTid: String?,
     val tilTid: String?,
     val svarfrist: String?,
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
-    val kommune: String?,
-    val fylke: String?,
     val opprettetAvTidspunkt: String,
     val sistEndret: String,
     val eiere: List<String>,

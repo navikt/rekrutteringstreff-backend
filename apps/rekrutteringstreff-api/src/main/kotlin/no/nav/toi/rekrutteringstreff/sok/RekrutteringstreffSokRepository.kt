@@ -8,14 +8,15 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     fun sok(
         navIdent: String?,
         kontorId: String?,
-        statuser: List<Visningsstatus>?,
+        statuser: List<SokStatus>?,
+        apenForSokere: Boolean?,
         kontorer: List<String>?,
         visning: Visning,
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
         antallPerSide: Int,
     ): Pair<List<RekrutteringstreffSokTreff>, Long> {
-        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser, kontorer, visning)
+        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser, apenForSokere, kontorer, visning)
 
         val countSql = "SELECT count(*) FROM rekrutteringstreff_sok_view $whereClause"
         val antallTotalt = dataSource.connection.use { c ->
@@ -29,8 +30,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         }
 
         val sql = """
-            SELECT id, tittel, beskrivelse, visningsstatus, fra_tid, til_tid, svarfrist,
-                   gateadresse, postnummer, poststed, kommune, fylke,
+            SELECT id, tittel, beskrivelse, status, apen_for_sokere, fra_tid, til_tid, svarfrist,
+                   gateadresse, postnummer, poststed,
                    opprettet_av_tidspunkt, sist_endret, eiere, kontorer
             FROM rekrutteringstreff_sok_view
             $whereClause
@@ -59,14 +60,14 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kontorer: List<String>?,
         visning: Visning,
     ): List<FilterValg> {
-        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser = null, kontorer = kontorer, visning = visning)
+        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser = null, apenForSokere = null, kontorer = kontorer, visning = visning)
 
         val sql = """
-            SELECT visningsstatus, count(*) AS antall
+            SELECT status, count(*) AS antall
             FROM rekrutteringstreff_sok_view
             $whereClause
-            GROUP BY visningsstatus
-            ORDER BY visningsstatus
+            GROUP BY status
+            ORDER BY status
         """.trimIndent()
 
         return dataSource.connection.use { c ->
@@ -75,7 +76,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 s.executeQuery().use { rs ->
                     generateSequence {
                         if (rs.next()) FilterValg(
-                            verdi = Visningsstatus.valueOf(rs.getString("visningsstatus")).jsonVerdi,
+                            verdi = SokStatus.fraDbVerdi(rs.getString("status")).jsonVerdi,
                             antall = rs.getLong("antall"),
                         ) else null
                     }.toList()
@@ -84,20 +85,37 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun antallApenForSokere(
+        navIdent: String?,
+        kontorId: String?,
+        kontorer: List<String>?,
+        visning: Visning,
+    ): Long {
+        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser = null, apenForSokere = null, kontorer = kontorer, visning = visning)
+
+        val extraWhere = if (whereClause.isNotEmpty()) " AND " else "WHERE "
+        val sql = """SELECT count(*) FROM rekrutteringstreff_sok_view $whereClause${extraWhere}status = 'PUBLISERT' AND apen_for_sokere = true"""
+
+        return dataSource.connection.use { c ->
+            c.prepareStatement(sql).use { s ->
+                params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
+                s.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getLong(1)
+                }
+            }
+        }
+    }
+
     private data class SqlParam(val value: Any, val type: ParamType)
     private data class Condition(val clause: String, val params: List<SqlParam>)
-    private enum class ParamType { STRING, STRING_ARRAY, VISNINGSSTATUS_ARRAY }
+    private enum class ParamType { STRING, STRING_ARRAY, STATUS_ARRAY, BOOLEAN }
 
-    /**
-     * Bygger SQL-fragmentet for `WHERE` og tilhørende params for søk mot `rekrutteringstreff_sok_view`.
-     *
-     * Resultatet er enten tom streng når ingen filtre er satt, eller en `WHERE`-clause
-     * sammensatt av vilkår for visning, visningsstatus og kontorer.
-     */
     private fun byggWhere(
         navIdent: String?,
         kontorId: String?,
-        statuser: List<Visningsstatus>?,
+        statuser: List<SokStatus>?,
+        apenForSokere: Boolean?,
         kontorer: List<String>?,
         visning: Visning,
     ): Pair<String, List<SqlParam>> {
@@ -118,11 +136,25 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 Visning.ALLE, Visning.VALGTE_KONTORER -> Unit
             }
 
-            if (!statuser.isNullOrEmpty()) {
+            if (!statuser.isNullOrEmpty() && apenForSokere == true) {
                 add(
                     Condition(
-                        clause = "visningsstatus = ANY(?)",
-                        params = listOf(SqlParam(statuser, ParamType.VISNINGSSTATUS_ARRAY)),
+                        clause = "(status = ANY(?) OR (status = 'PUBLISERT' AND apen_for_sokere = true))",
+                        params = listOf(SqlParam(statuser, ParamType.STATUS_ARRAY)),
+                    )
+                )
+            } else if (!statuser.isNullOrEmpty()) {
+                add(
+                    Condition(
+                        clause = "status = ANY(?)",
+                        params = listOf(SqlParam(statuser, ParamType.STATUS_ARRAY)),
+                    )
+                )
+            } else if (apenForSokere == true) {
+                add(
+                    Condition(
+                        clause = "(status = 'PUBLISERT' AND apen_for_sokere = true)",
+                        params = emptyList(),
                     )
                 )
             }
@@ -154,11 +186,12 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 val arr = param.value as List<String>
                 s.setArray(index, s.connection.createArrayOf("text", arr.toTypedArray()))
             }
-            ParamType.VISNINGSSTATUS_ARRAY -> {
+            ParamType.STATUS_ARRAY -> {
                 @Suppress("UNCHECKED_CAST")
-                val arr = (param.value as List<Visningsstatus>).map { it.name }
+                val arr = (param.value as List<SokStatus>).map { it.name }
                 s.setArray(index, s.connection.createArrayOf("text", arr.toTypedArray()))
             }
+            ParamType.BOOLEAN -> s.setBoolean(index, param.value as Boolean)
         }
     }
 
@@ -169,15 +202,14 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             id = rs.getString("id"),
             tittel = rs.getString("tittel"),
             beskrivelse = rs.getString("beskrivelse"),
-            visningsstatus = Visningsstatus.valueOf(rs.getString("visningsstatus")),
+            status = SokStatus.fraDbVerdi(rs.getString("status")),
+            apenForSokere = rs.getBoolean("apen_for_sokere"),
             fraTid = rs.getTimestamp("fra_tid")?.toInstant()?.toString(),
             tilTid = rs.getTimestamp("til_tid")?.toInstant()?.toString(),
             svarfrist = rs.getTimestamp("svarfrist")?.toInstant()?.toString(),
             gateadresse = rs.getString("gateadresse"),
             postnummer = rs.getString("postnummer"),
             poststed = rs.getString("poststed"),
-            kommune = rs.getString("kommune"),
-            fylke = rs.getString("fylke"),
             opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().toString(),
             sistEndret = rs.getTimestamp("sist_endret").toInstant().toString(),
             eiere = eiereArr?.map { it.toString() } ?: emptyList(),

@@ -214,7 +214,7 @@ class RekrutteringstreffSokKomponenttest {
     }
 
     @Test
-    fun `statusaggregering teller riktig per visningsstatus`() {
+    fun `statusaggregering teller riktig per status`() {
         opprettTreffMedEier(tittel = "Pub1", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreffMedEier(tittel = "Pub2", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreffMedEier(tittel = "Utkast", status = RekrutteringstreffStatus.UTKAST)
@@ -280,7 +280,7 @@ class RekrutteringstreffSokKomponenttest {
     }
 
     @Test
-    fun `ugyldig visningsstatus returnerer 400`() {
+    fun `ugyldig status returnerer 400`() {
         val response = sokGet("?statuser=UGYLDIG_STATUS")
         assertThat(response.statusCode()).isEqualTo(400)
     }

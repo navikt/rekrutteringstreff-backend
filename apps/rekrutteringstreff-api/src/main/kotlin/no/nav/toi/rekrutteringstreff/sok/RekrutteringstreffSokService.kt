@@ -23,6 +23,7 @@ class RekrutteringstreffSokService(
             navIdent = navIdent,
             kontorId = kontorId,
             statuser = request.statuser,
+            apenForSokere = request.apenForSokere,
             kontorer = request.kontorer,
             visning = request.visning,
             sortering = request.sortering,
@@ -37,12 +38,20 @@ class RekrutteringstreffSokService(
             visning = request.visning,
         )
 
+        val antallApenForSokere = repository.antallApenForSokere(
+            navIdent = navIdent,
+            kontorId = kontorId,
+            kontorer = request.kontorer,
+            visning = request.visning,
+        )
+
         val respons = RekrutteringstreffSokRespons(
             treff = treff,
             antallTotalt = antallTotalt,
             side = request.side,
             antallPerSide = request.antallPerSide,
             statusaggregering = statusaggregering,
+            antallApenForSokere = antallApenForSokere,
         )
 
         val varighetMs = Duration.ofNanos(System.nanoTime() - startTidNanos).toMillis()

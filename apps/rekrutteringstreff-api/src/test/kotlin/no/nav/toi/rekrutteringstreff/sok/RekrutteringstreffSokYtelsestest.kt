@@ -113,7 +113,7 @@ class RekrutteringstreffSokYtelsestest {
             antallPerSide = 20,
         )
         val maltRequest = RekrutteringstreffSokRequest(
-            statuser = listOf(Visningsstatus.PUBLISERT),
+            statuser = listOf(SokStatus.PUBLISERT),
             kontorer = listOf("0315"),
             visning = Visning.VALGTE_KONTORER,
             sortering = Sortering.NYESTE,

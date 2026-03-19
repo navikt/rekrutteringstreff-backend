@@ -10,20 +10,13 @@ SELECT
     rt.gateadresse,
     rt.postnummer,
     rt.poststed,
-    rt.kommunenummer,
-    rt.kommune,
-    rt.fylkesnummer,
-    rt.fylke,
     rt.opprettet_av_tidspunkt,
     rt.sist_endret,
     rt.eiere,
     rt.kontorer,
     CASE
-        WHEN rt.status = 'UTKAST' THEN 'UTKAST'
-        WHEN rt.status = 'AVLYST' THEN 'AVLYST'
-        WHEN rt.status = 'FULLFØRT' THEN 'FULLFORT'
-        WHEN rt.status = 'PUBLISERT' AND rt.svarfrist IS NOT NULL AND rt.svarfrist < now() THEN 'SOKNADSFRIST_PASSERT'
-        WHEN rt.status = 'PUBLISERT' THEN 'PUBLISERT'
-    END AS visningsstatus
+        WHEN rt.status = 'PUBLISERT' AND (rt.svarfrist IS NULL OR rt.svarfrist >= now()) THEN true
+        ELSE false
+    END AS apen_for_sokere
 FROM rekrutteringstreff rt
 WHERE rt.status != 'SLETTET';

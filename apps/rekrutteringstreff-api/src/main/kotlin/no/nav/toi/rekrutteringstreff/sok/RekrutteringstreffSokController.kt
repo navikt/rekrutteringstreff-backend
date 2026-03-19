@@ -26,7 +26,8 @@ class RekrutteringstreffSokController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
             OpenApiParam(name = "visning", type = Visning::class, required = false, description = "Filter for hvilke treff som skal vises", example = "alle"),
-            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av visningsstatuser, for eksempel publisert,utkast", example = "publisert,utkast"),
+            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel publisert,utkast", example = "publisert,utkast"),
+            OpenApiParam(name = "apenForSokere", type = Boolean::class, required = false, description = "Inkluder publiserte treff som er åpne for søkere", example = "true"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
@@ -42,15 +43,14 @@ class RekrutteringstreffSokController(
                             "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                             "tittel": "Rekrutteringstreff – bygg og anlegg",
                             "beskrivelse": "Treff for arbeidsgivere og jobbsøkere innen bygg og anlegg",
-                            "visningsstatus": "publisert",
+                            "status": "publisert",
+                            "apenForSokere": true,
                             "fraTid": "2026-04-15T09:00:00Z",
                             "tilTid": "2026-04-15T12:00:00Z",
                             "svarfrist": "2026-04-10T23:59:59Z",
                             "gateadresse": "Storgata 1",
                             "postnummer": "0182",
                             "poststed": "Oslo",
-                            "kommune": "Oslo",
-                            "fylke": "Oslo",
                             "opprettetAvTidspunkt": "2026-03-01T10:00:00Z",
                             "sistEndret": "2026-03-10T14:30:00Z",
                             "eiere": ["A123456"],
@@ -60,15 +60,14 @@ class RekrutteringstreffSokController(
                             "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
                             "tittel": "Jobbmesse for helsesektoren",
                             "beskrivelse": null,
-                            "visningsstatus": "utkast",
+                            "status": "utkast",
+                            "apenForSokere": false,
                             "fraTid": null,
                             "tilTid": null,
                             "svarfrist": null,
                             "gateadresse": null,
                             "postnummer": null,
                             "poststed": null,
-                            "kommune": null,
-                            "fylke": null,
                             "opprettetAvTidspunkt": "2026-03-05T08:00:00Z",
                             "sistEndret": "2026-03-05T08:00:00Z",
                             "eiere": ["B654321"],
@@ -81,10 +80,10 @@ class RekrutteringstreffSokController(
                     "statusaggregering": [
                         {"verdi": "publisert", "antall": 20},
                         {"verdi": "utkast", "antall": 12},
-                        {"verdi": "soknadsfrist_passert", "antall": 5},
                         {"verdi": "fullfort", "antall": 3},
                         {"verdi": "avlyst", "antall": 2}
-                    ]
+                    ],
+                    "antallApenForSokere": 15
                 }"""
             )]
         ),
@@ -108,10 +107,11 @@ class RekrutteringstreffSokController(
         } ?: Sortering.SIST_OPPDATERTE
 
         val statuser = ctx.queryParam("statuser")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
-            try { Visningsstatus.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
-                throw BadRequestResponse("Ugyldig visningsstatus: $it")
+            try { SokStatus.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
+                throw BadRequestResponse("Ugyldig status: $it")
             }
         }
+        val apenForSokere = ctx.queryParam("apenForSokere")?.toBooleanStrictOrNull()
         val kontorer = ctx.csvQueryParam("kontorer")
 
         val side = ctx.queryParamAsInt("side") ?: 1
@@ -125,6 +125,7 @@ class RekrutteringstreffSokController(
 
         val request = RekrutteringstreffSokRequest(
             statuser = statuser,
+            apenForSokere = apenForSokere,
             kontorer = if (visning == Visning.MITT_KONTOR) null else kontorer,
             visning = visning,
             sortering = sortering,

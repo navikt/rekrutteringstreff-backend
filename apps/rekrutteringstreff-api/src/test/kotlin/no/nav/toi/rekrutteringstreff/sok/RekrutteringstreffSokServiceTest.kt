@@ -72,7 +72,7 @@ class RekrutteringstreffSokServiceTest {
         opprettTreff(status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
 
         val respons = service.sok(
-            request = RekrutteringstreffSokRequest(statuser = listOf(Visningsstatus.PUBLISERT)),
+            request = RekrutteringstreffSokRequest(statuser = listOf(SokStatus.PUBLISERT)),
             navIdent = "A123456",
             kontorId = "0315",
         )
@@ -135,7 +135,7 @@ class RekrutteringstreffSokServiceTest {
 
         val respons = service.sok(
             request = RekrutteringstreffSokRequest(
-                statuser = listOf(Visningsstatus.PUBLISERT),
+                statuser = listOf(SokStatus.PUBLISERT),
                 kontorer = listOf("0315"),
             ),
             navIdent = "A123456",

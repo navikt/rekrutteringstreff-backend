@@ -49,7 +49,7 @@ class RekrutteringstreffSokRepositoryTest {
     fun `sok returnerer tomme resultater når ingen treff finnes`() {
         val (treff, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).isEmpty()
@@ -63,7 +63,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(2)
@@ -77,7 +77,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.MINE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
@@ -91,7 +91,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.MITT_KONTOR, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
@@ -99,13 +99,13 @@ class RekrutteringstreffSokRepositoryTest {
     }
 
     @Test
-    fun `sok filtrerer på visningsstatus`() {
+    fun `sok filtrerer på status`() {
         opprettTreff(tittel = "Pub", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreff(tittel = "Utkast", status = RekrutteringstreffStatus.UTKAST)
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = listOf(Visningsstatus.PUBLISERT),
+            statuser = listOf(SokStatus.PUBLISERT), apenForSokere = null,
             kontorer = null, visning = Visning.ALLE,
             side = 1, antallPerSide = 25
         )
@@ -121,7 +121,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = listOf(Visningsstatus.PUBLISERT, Visningsstatus.UTKAST),
+            statuser = listOf(SokStatus.PUBLISERT, SokStatus.UTKAST), apenForSokere = null,
             kontorer = null, visning = Visning.ALLE,
             side = 1, antallPerSide = 25
         )
@@ -135,7 +135,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = listOf("0315"),
+            statuser = null, apenForSokere = null, kontorer = listOf("0315"),
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
@@ -149,7 +149,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
@@ -163,7 +163,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (side0, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 2
         )
         assertThat(side0).hasSize(2)
@@ -171,7 +171,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (side2, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 3, antallPerSide = 2
         )
         assertThat(side2).hasSize(1)
@@ -183,7 +183,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, totalt) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = Int.MAX_VALUE, antallPerSide = 100
         )
 
@@ -197,21 +197,20 @@ class RekrutteringstreffSokRepositoryTest {
 
         val (treff, _) = repository.sok(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, kontorer = null,
+            statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(treff).hasSize(1)
         val t = treff.first()
         assertThat(t.tittel).isEqualTo("Fullt treff")
         assertThat(t.beskrivelse).isNotNull()
-        assertThat(t.visningsstatus).isEqualTo(Visningsstatus.PUBLISERT)
+        assertThat(t.status).isEqualTo(SokStatus.PUBLISERT)
+        assertThat(t.apenForSokere).isTrue()
         assertThat(t.fraTid).isNotNull()
         assertThat(t.tilTid).isNotNull()
         assertThat(t.gateadresse).isEqualTo("Testgata 123")
         assertThat(t.postnummer).isEqualTo("0484")
         assertThat(t.poststed).isEqualTo("OSLO")
-        assertThat(t.kommune).isEqualTo("Oslo")
-        assertThat(t.fylke).isEqualTo("Oslo")
         assertThat(t.eiere).contains("A123456")
         assertThat(t.kontorer).contains("0315")
         assertThat(t.opprettetAvTidspunkt).isNotNull()
@@ -219,7 +218,7 @@ class RekrutteringstreffSokRepositoryTest {
     }
 
     @Test
-    fun `statusaggregering teller per visningsstatus`() {
+    fun `statusaggregering teller per status`() {
         opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreff(status = RekrutteringstreffStatus.UTKAST)
