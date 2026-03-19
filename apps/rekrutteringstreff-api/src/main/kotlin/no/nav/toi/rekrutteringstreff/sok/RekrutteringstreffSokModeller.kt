@@ -92,3 +92,10 @@ data class FilterValg(
     val verdi: String,
     val antall: Long,
 )
+
+data class SokMedAggregeringResultat(
+    val treff: List<RekrutteringstreffSokTreff>,
+    val antallTotalt: Long,
+    val statusaggregering: List<FilterValg>,
+    val antallApenForSokere: Long,
+)

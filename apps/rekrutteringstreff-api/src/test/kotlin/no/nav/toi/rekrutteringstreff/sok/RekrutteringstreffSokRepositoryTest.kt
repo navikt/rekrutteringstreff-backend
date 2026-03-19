@@ -47,13 +47,13 @@ class RekrutteringstreffSokRepositoryTest {
 
     @Test
     fun `sok returnerer tomme resultater når ingen treff finnes`() {
-        val (treff, totalt) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        assertThat(treff).isEmpty()
-        assertThat(totalt).isEqualTo(0)
+        assertThat(resultat.treff).isEmpty()
+        assertThat(resultat.antallTotalt).isEqualTo(0)
     }
 
     @Test
@@ -61,13 +61,13 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Treff 1")
         opprettTreff(tittel = "Treff 2")
 
-        val (treff, totalt) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        assertThat(treff).hasSize(2)
-        assertThat(totalt).isEqualTo(2)
+        assertThat(resultat.treff).hasSize(2)
+        assertThat(resultat.antallTotalt).isEqualTo(2)
     }
 
     @Test
@@ -75,13 +75,13 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(navIdent = "A123456", tittel = "Mitt")
         opprettTreff(navIdent = "B654321", tittel = "Andres")
 
-        val (treff, _) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.MINE, side = 1, antallPerSide = 25
         )
-        assertThat(treff).hasSize(1)
-        assertThat(treff.first().tittel).isEqualTo("Mitt")
+        assertThat(resultat.treff).hasSize(1)
+        assertThat(resultat.treff.first().tittel).isEqualTo("Mitt")
     }
 
     @Test
@@ -89,13 +89,13 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(kontorId = "0315", tittel = "Mitt kontor")
         opprettTreff(kontorId = "1201", tittel = "Annet kontor")
 
-        val (treff, _) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.MITT_KONTOR, side = 1, antallPerSide = 25
         )
-        assertThat(treff).hasSize(1)
-        assertThat(treff.first().tittel).isEqualTo("Mitt kontor")
+        assertThat(resultat.treff).hasSize(1)
+        assertThat(resultat.treff.first().tittel).isEqualTo("Mitt kontor")
     }
 
     @Test
@@ -103,14 +103,14 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Pub", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreff(tittel = "Utkast", status = RekrutteringstreffStatus.UTKAST)
 
-        val (treff, _) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = listOf(SokStatus.PUBLISERT), apenForSokere = null,
             kontorer = null, visning = Visning.ALLE,
             side = 1, antallPerSide = 25
         )
-        assertThat(treff).hasSize(1)
-        assertThat(treff.first().tittel).isEqualTo("Pub")
+        assertThat(resultat.treff).hasSize(1)
+        assertThat(resultat.treff.first().tittel).isEqualTo("Pub")
     }
 
     @Test
@@ -119,13 +119,13 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Utkast", status = RekrutteringstreffStatus.UTKAST)
         opprettTreff(tittel = "Avlyst", status = RekrutteringstreffStatus.AVLYST)
 
-        val (treff, _) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = listOf(SokStatus.PUBLISERT, SokStatus.UTKAST), apenForSokere = null,
             kontorer = null, visning = Visning.ALLE,
             side = 1, antallPerSide = 25
         )
-        assertThat(treff).hasSize(2)
+        assertThat(resultat.treff).hasSize(2)
     }
 
     @Test
@@ -133,13 +133,13 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Oslo", kontorId = "0315")
         opprettTreff(tittel = "Bergen", kontorId = "1201")
 
-        val (treff, _) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = listOf("0315"),
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        assertThat(treff).hasSize(1)
-        assertThat(treff.first().tittel).isEqualTo("Oslo")
+        assertThat(resultat.treff).hasSize(1)
+        assertThat(resultat.treff.first().tittel).isEqualTo("Oslo")
     }
 
     @Test
@@ -147,61 +147,61 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Synlig", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreff(tittel = "Slettet", status = RekrutteringstreffStatus.SLETTET)
 
-        val (treff, totalt) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        assertThat(treff).hasSize(1)
-        assertThat(totalt).isEqualTo(1)
-        assertThat(treff.first().tittel).isEqualTo("Synlig")
+        assertThat(resultat.treff).hasSize(1)
+        assertThat(resultat.antallTotalt).isEqualTo(1)
+        assertThat(resultat.treff.first().tittel).isEqualTo("Synlig")
     }
 
     @Test
     fun `sok paginerer korrekt`() {
         repeat(5) { opprettTreff(tittel = "Treff $it") }
 
-        val (side0, totalt) = repository.sok(
+        val resultat1 = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 2
         )
-        assertThat(side0).hasSize(2)
-        assertThat(totalt).isEqualTo(5)
+        assertThat(resultat1.treff).hasSize(2)
+        assertThat(resultat1.antallTotalt).isEqualTo(5)
 
-        val (side2, _) = repository.sok(
+        val resultat3 = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 3, antallPerSide = 2
         )
-        assertThat(side2).hasSize(1)
+        assertThat(resultat3.treff).hasSize(1)
     }
 
     @Test
     fun `sok handterer store sidetall uten overflow`() {
         opprettTreff(tittel = "Treff 1")
 
-        val (treff, totalt) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = Int.MAX_VALUE, antallPerSide = 100
         )
 
-        assertThat(treff).isEmpty()
-        assertThat(totalt).isEqualTo(1)
+        assertThat(resultat.treff).isEmpty()
+        assertThat(resultat.antallTotalt).isEqualTo(1)
     }
 
     @Test
     fun `sok mapper alle felter korrekt`() {
         opprettTreff(tittel = "Fullt treff", navIdent = "A123456", kontorId = "0315")
 
-        val (treff, _) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
             statuser = null, apenForSokere = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        assertThat(treff).hasSize(1)
-        val t = treff.first()
+        assertThat(resultat.treff).hasSize(1)
+        val t = resultat.treff.first()
         assertThat(t.tittel).isEqualTo("Fullt treff")
         assertThat(t.beskrivelse).isNotNull()
         assertThat(t.status).isEqualTo(SokStatus.PUBLISERT)
@@ -223,12 +223,13 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreff(status = RekrutteringstreffStatus.UTKAST)
 
-        val agg = repository.statusaggregering(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
-            kontorer = null, visning = Visning.ALLE
+            statuser = null, apenForSokere = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        val publisert = agg.find { it.verdi == "publisert" }
-        val utkast = agg.find { it.verdi == "utkast" }
+        val publisert = resultat.statusaggregering.find { it.verdi == "publisert" }
+        val utkast = resultat.statusaggregering.find { it.verdi == "utkast" }
         assertThat(publisert?.antall).isEqualTo(2)
         assertThat(utkast?.antall).isEqualTo(1)
     }
@@ -239,12 +240,13 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
         opprettTreff(status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
 
-        val agg = repository.statusaggregering(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
-            kontorer = listOf("0315"), visning = Visning.ALLE
+            statuser = null, apenForSokere = null, kontorer = listOf("0315"),
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        val publisert = agg.find { it.verdi == "publisert" }
-        val utkast = agg.find { it.verdi == "utkast" }
+        val publisert = resultat.statusaggregering.find { it.verdi == "publisert" }
+        val utkast = resultat.statusaggregering.find { it.verdi == "utkast" }
         assertThat(publisert?.antall).isEqualTo(1)
         assertThat(utkast?.antall).isEqualTo(1)
     }
@@ -254,11 +256,12 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreff(status = RekrutteringstreffStatus.UTKAST)
 
-        val agg = repository.statusaggregering(
+        val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
-            kontorer = null, visning = Visning.ALLE
+            statuser = null, apenForSokere = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        assertThat(agg).hasSize(2)
+        assertThat(resultat.statusaggregering).hasSize(2)
     }
 
 }

@@ -19,7 +19,7 @@ class RekrutteringstreffSokService(
         kontorId: String?,
     ): RekrutteringstreffSokRespons {
         val startTidNanos = System.nanoTime()
-        val (treff, antallTotalt) = repository.sok(
+        val resultat = repository.sokMedAggregering(
             navIdent = navIdent,
             kontorId = kontorId,
             statuser = request.statuser,
@@ -31,27 +31,13 @@ class RekrutteringstreffSokService(
             antallPerSide = request.antallPerSide,
         )
 
-        val statusaggregering = repository.statusaggregering(
-            navIdent = navIdent,
-            kontorId = kontorId,
-            kontorer = request.kontorer,
-            visning = request.visning,
-        )
-
-        val antallApenForSokere = repository.antallApenForSokere(
-            navIdent = navIdent,
-            kontorId = kontorId,
-            kontorer = request.kontorer,
-            visning = request.visning,
-        )
-
         val respons = RekrutteringstreffSokRespons(
-            treff = treff,
-            antallTotalt = antallTotalt,
+            treff = resultat.treff,
+            antallTotalt = resultat.antallTotalt,
             side = request.side,
             antallPerSide = request.antallPerSide,
-            statusaggregering = statusaggregering,
-            antallApenForSokere = antallApenForSokere,
+            statusaggregering = resultat.statusaggregering,
+            antallApenForSokere = resultat.antallApenForSokere,
         )
 
         val varighetMs = Duration.ofNanos(System.nanoTime() - startTidNanos).toMillis()
@@ -65,7 +51,7 @@ class RekrutteringstreffSokService(
                 request.antallPerSide,
                 request.statuser?.size ?: 0,
                 request.kontorer?.size ?: 0,
-                antallTotalt,
+                resultat.antallTotalt,
             )
         }
 

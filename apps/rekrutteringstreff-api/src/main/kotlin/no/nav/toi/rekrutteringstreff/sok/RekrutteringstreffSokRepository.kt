@@ -5,7 +5,11 @@ import javax.sql.DataSource
 
 class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
 
-    fun sok(
+    companion object {
+        private const val QUERY_TIMEOUT_SECONDS = 10
+    }
+
+    fun sokMedAggregering(
         navIdent: String?,
         kontorId: String?,
         statuser: List<SokStatus>?,
@@ -15,95 +19,77 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
         antallPerSide: Int,
-    ): Pair<List<RekrutteringstreffSokTreff>, Long> {
-        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser, apenForSokere, kontorer, visning)
+    ): SokMedAggregeringResultat {
+        val (baseWhere, baseParams) = byggWhere(navIdent, kontorId, statuser = null, apenForSokere = null, kontorer = kontorer, visning = visning)
+        val (fullWhere, fullParams) = byggWhere(navIdent, kontorId, statuser, apenForSokere, kontorer, visning)
 
-        val countSql = "SELECT count(*) FROM rekrutteringstreff_sok_view $whereClause"
-        val antallTotalt = dataSource.connection.use { c ->
-            c.prepareStatement(countSql).use { s ->
-                params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
+        return dataSource.connection.use { conn ->
+            val countSql = "SELECT count(*) FROM rekrutteringstreff_sok_view $fullWhere"
+            val antallTotalt = conn.prepareStatement(countSql).use { s ->
+                s.queryTimeout = QUERY_TIMEOUT_SECONDS
+                fullParams.forEachIndexed { i, p -> settParam(s, i + 1, p) }
                 s.executeQuery().use { rs ->
                     rs.next()
                     rs.getLong(1)
                 }
             }
-        }
 
-        val sql = """
-            SELECT id, tittel, beskrivelse, status, apen_for_sokere, fra_tid, til_tid, svarfrist,
-                   gateadresse, postnummer, poststed,
-                   opprettet_av_tidspunkt, sist_endret, eiere, kontorer
-            FROM rekrutteringstreff_sok_view
-            $whereClause
-            ORDER BY ${sortering.sql}
-            LIMIT ? OFFSET ?
-        """.trimIndent()
+            val mainSql = """
+                SELECT id, tittel, beskrivelse, status, apen_for_sokere, fra_tid, til_tid, svarfrist,
+                       gateadresse, postnummer, poststed,
+                       opprettet_av_tidspunkt, sist_endret, eiere, kontorer
+                FROM rekrutteringstreff_sok_view
+                $fullWhere
+                ORDER BY ${sortering.sql}
+                LIMIT ? OFFSET ?
+            """.trimIndent()
 
-        val treff = dataSource.connection.use { c ->
-            c.prepareStatement(sql).use { s ->
-                params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
+            val treff = conn.prepareStatement(mainSql).use { s ->
+                s.queryTimeout = QUERY_TIMEOUT_SECONDS
+                fullParams.forEachIndexed { i, p -> settParam(s, i + 1, p) }
                 val offset = (side - 1).toLong() * antallPerSide.toLong()
-                s.setInt(params.size + 1, antallPerSide)
-                s.setLong(params.size + 2, offset)
+                s.setInt(fullParams.size + 1, antallPerSide)
+                s.setLong(fullParams.size + 2, offset)
                 s.executeQuery().use { rs ->
                     generateSequence { if (rs.next()) tilTreff(rs) else null }.toList()
                 }
             }
-        }
 
-        return Pair(treff, antallTotalt)
-    }
+            val aggSql = """
+                SELECT status, count(*) AS antall,
+                       count(*) FILTER (WHERE apen_for_sokere = true) AS antall_apen
+                FROM rekrutteringstreff_sok_view
+                $baseWhere
+                GROUP BY status
+                ORDER BY status
+            """.trimIndent()
 
-    fun statusaggregering(
-        navIdent: String?,
-        kontorId: String?,
-        kontorer: List<String>?,
-        visning: Visning,
-    ): List<FilterValg> {
-        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser = null, apenForSokere = null, kontorer = kontorer, visning = visning)
-
-        val sql = """
-            SELECT status, count(*) AS antall
-            FROM rekrutteringstreff_sok_view
-            $whereClause
-            GROUP BY status
-            ORDER BY status
-        """.trimIndent()
-
-        return dataSource.connection.use { c ->
-            c.prepareStatement(sql).use { s ->
-                params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
+            var antallApenForSokere = 0L
+            val statusaggregering = conn.prepareStatement(aggSql).use { s ->
+                s.queryTimeout = QUERY_TIMEOUT_SECONDS
+                baseParams.forEachIndexed { i, p -> settParam(s, i + 1, p) }
                 s.executeQuery().use { rs ->
-                    generateSequence {
-                        if (rs.next()) FilterValg(
-                            verdi = SokStatus.fraDbVerdi(rs.getString("status")).jsonVerdi,
-                            antall = rs.getLong("antall"),
-                        ) else null
-                    }.toList()
+                    buildList {
+                        while (rs.next()) {
+                            val dbStatus = rs.getString("status")
+                            add(FilterValg(
+                                verdi = SokStatus.fraDbVerdi(dbStatus).jsonVerdi,
+                                antall = rs.getLong("antall"),
+                            ))
+                            if (dbStatus == "PUBLISERT") {
+                                antallApenForSokere = rs.getLong("antall_apen")
+                            }
+                        }
+                    }
                 }
             }
-        }
-    }
 
-    fun antallApenForSokere(
-        navIdent: String?,
-        kontorId: String?,
-        kontorer: List<String>?,
-        visning: Visning,
-    ): Long {
-        val (whereClause, params) = byggWhere(navIdent, kontorId, statuser = null, apenForSokere = null, kontorer = kontorer, visning = visning)
-
-        val extraWhere = if (whereClause.isNotEmpty()) " AND " else "WHERE "
-        val sql = """SELECT count(*) FROM rekrutteringstreff_sok_view $whereClause${extraWhere}status = 'PUBLISERT' AND apen_for_sokere = true"""
-
-        return dataSource.connection.use { c ->
-            c.prepareStatement(sql).use { s ->
-                params.forEachIndexed { i, p -> settParam(s, i + 1, p) }
-                s.executeQuery().use { rs ->
-                    rs.next()
-                    rs.getLong(1)
-                }
-            }
+            SokMedAggregeringResultat(
+                treff = treff,
+                antallTotalt = antallTotalt,
+                statusaggregering = statusaggregering,
+                antallApenForSokere = antallApenForSokere,
+            )
         }
     }
 
