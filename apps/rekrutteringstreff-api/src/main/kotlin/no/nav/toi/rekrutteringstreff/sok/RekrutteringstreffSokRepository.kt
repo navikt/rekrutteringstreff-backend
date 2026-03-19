@@ -37,7 +37,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             val mainSql = """
                 SELECT id, tittel, beskrivelse, status, apen_for_sokere, fra_tid, til_tid, svarfrist,
                        gateadresse, postnummer, poststed,
-                       opprettet_av_tidspunkt, sist_endret, eiere, kontorer
+                       opprettet_av_tidspunkt, sist_endret, eiere, kontorer,
+                       antall_arbeidsgivere, antall_jobbsokere
                 FROM rekrutteringstreff_sok_view
                 $fullWhere
                 ORDER BY ${sortering.sql}
@@ -200,6 +201,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             sistEndret = rs.getTimestamp("sist_endret").toInstant().toString(),
             eiere = eiereArr?.map { it.toString() } ?: emptyList(),
             kontorer = kontorerArr?.map { it.toString() } ?: emptyList(),
+            antallArbeidsgivere = rs.getLong("antall_arbeidsgivere"),
+            antallJobbsokere = rs.getLong("antall_jobbsokere"),
         )
     }
 }

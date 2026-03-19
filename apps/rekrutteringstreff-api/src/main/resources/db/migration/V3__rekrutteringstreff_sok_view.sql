@@ -17,6 +17,8 @@ SELECT
     CASE
         WHEN rt.status = 'PUBLISERT' AND (rt.svarfrist IS NULL OR rt.svarfrist >= now()) THEN true
         ELSE false
-    END AS apen_for_sokere
+    END AS apen_for_sokere,
+    (SELECT count(*) FROM arbeidsgiver a WHERE a.rekrutteringstreff_id = rt.rekrutteringstreff_id) AS antall_arbeidsgivere,
+    (SELECT count(*) FROM jobbsoker j WHERE j.rekrutteringstreff_id = rt.rekrutteringstreff_id) AS antall_jobbsokere
 FROM rekrutteringstreff rt
 WHERE rt.status != 'SLETTET';

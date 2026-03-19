@@ -477,6 +477,58 @@ class RekrutteringstreffSokKomponenttest {
     }
 
     @Test
+    fun `sok returnerer antall arbeidsgivere og jobbsokere per treff`() {
+        val treffId = opprettTreffMedEier(tittel = "Treff med deltakere")
+
+        db.dataSource.connection.use { conn ->
+            val internId = conn.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").use { s ->
+                s.setObject(1, treffId.somUuid)
+                s.executeQuery().use { rs -> rs.next(); rs.getLong(1) }
+            }
+            conn.prepareStatement("INSERT INTO arbeidsgiver (rekrutteringstreff_id, orgnr, orgnavn, id) VALUES (?, ?, ?, ?)").use { s ->
+                repeat(3) {
+                    s.setLong(1, internId)
+                    s.setString(2, "99900000$it")
+                    s.setString(3, "Bedrift $it")
+                    s.setObject(4, UUID.randomUUID())
+                    s.addBatch()
+                }
+                s.executeBatch()
+            }
+            conn.prepareStatement("INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id) VALUES (?, ?, ?)").use { s ->
+                repeat(7) {
+                    s.setLong(1, internId)
+                    s.setString(2, "1234560000$it")
+                    s.setObject(3, UUID.randomUUID())
+                    s.addBatch()
+                }
+                s.executeBatch()
+            }
+        }
+
+        val response = sokGet()
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().antallArbeidsgivere).isEqualTo(3)
+        assertThat(respons.treff.first().antallJobbsokere).isEqualTo(7)
+    }
+
+    @Test
+    fun `sok returnerer 0 arbeidsgivere og jobbsokere for treff uten deltakere`() {
+        opprettTreffMedEier(tittel = "Tomt treff")
+
+        val response = sokGet()
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().antallArbeidsgivere).isEqualTo(0)
+        assertThat(respons.treff.first().antallJobbsokere).isEqualTo(0)
+    }
+
+    @Test
     fun `ugyldig sortering returnerer 400`() {
         val response = sokGet("?sortering=UGYLDIG")
         assertThat(response.statusCode()).isEqualTo(400)

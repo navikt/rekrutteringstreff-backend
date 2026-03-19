@@ -86,6 +86,8 @@ data class RekrutteringstreffSokTreff(
     val sistEndret: String,
     val eiere: List<String>,
     val kontorer: List<String>,
+    val antallArbeidsgivere: Long,
+    val antallJobbsokere: Long,
 )
 
 data class FilterValg(

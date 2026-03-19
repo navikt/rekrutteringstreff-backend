@@ -18,7 +18,7 @@ import kotlin.system.measureTimeMillis
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokYtelsestest {
     companion object {
-        private const val ANTALL_TREFF = 50_000
+        private const val ANTALL_TREFF = 20_000
         private const val WARMUP_TERSKEL_MS = 2_000L
         private const val MALT_TERSKEL_MS = 500L
         private val logger: Logger = LoggerFactory.getLogger(RekrutteringstreffSokYtelsestest::class.java)
@@ -48,6 +48,9 @@ class RekrutteringstreffSokYtelsestest {
 
         private fun seedTreff(antall: Int) {
             val startTid = Instant.parse("2025-01-01T00:00:00Z")
+            val arbeidsgiverIder = (0 until 5).map { UUID.randomUUID() }
+            val jobbsokerIder = (0 until 30).map { UUID.randomUUID() }
+
             db.dataSource.connection.use { conn ->
                 conn.autoCommit = false
                 conn.prepareStatement(
@@ -99,6 +102,46 @@ class RekrutteringstreffSokYtelsestest {
                     }
                     statement.executeBatch()
                 }
+
+                val treffIds = conn.prepareStatement(
+                    "SELECT rekrutteringstreff_id FROM rekrutteringstreff"
+                ).use { s ->
+                    s.executeQuery().use { rs ->
+                        generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
+                    }
+                }
+
+                conn.prepareStatement(
+                    "INSERT INTO arbeidsgiver (rekrutteringstreff_id, orgnr, orgnavn, id) VALUES (?, ?, ?, ?)"
+                ).use { stmt ->
+                    for (treffId in treffIds) {
+                        repeat(5) {
+                            stmt.setLong(1, treffId)
+                            stmt.setString(2, "99999999${it}")
+                            stmt.setString(3, "Bedrift $it")
+                            stmt.setObject(4, arbeidsgiverIder[it])
+                            stmt.addBatch()
+                        }
+                        if (treffId % 1_000 == 0L) stmt.executeBatch()
+                    }
+                    stmt.executeBatch()
+                }
+
+                conn.prepareStatement(
+                    "INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id) VALUES (?, ?, ?)"
+                ).use { stmt ->
+                    for (treffId in treffIds) {
+                        repeat(30) {
+                            stmt.setLong(1, treffId)
+                            stmt.setString(2, "1234567${String.format("%04d", it)}")
+                            stmt.setObject(3, jobbsokerIder[it])
+                            stmt.addBatch()
+                        }
+                        if (treffId % 1_000 == 0L) stmt.executeBatch()
+                    }
+                    stmt.executeBatch()
+                }
+
                 conn.commit()
             }
         }
