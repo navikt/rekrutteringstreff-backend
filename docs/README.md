@@ -56,8 +56,6 @@ Denne mappen inneholder dokumentasjon for hele rekrutteringstreff-backend monore
 
 ### 9. [Planer](9-planer/)
 
-- [Søkestrategi](9-planer/sok/sokestrategi.md) - Overordnet vurdering av søkealternativer og stegvis plan
-
 ## Applikasjoner i monorepoet
 
 | Applikasjon                           | Beskrivelse                                                     |

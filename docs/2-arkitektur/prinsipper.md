@@ -68,8 +68,18 @@ Vi bruker **Javalin**, et lett HTTP-rammeverk bygget på Jetty.
 - **403 Forbidden**: Bruker mangler tilgang
 - **404 Not Found**: Ressurs finnes ikke
 - **409 Conflict**: Konflikt med eksisterende ressurs eller ugyldig tilstandsendring
-- **422 Unprocessable Entity**: Semantisk ugyldig input (f.eks. sletting ikke tillatt)
+- **422 Unprocessable Entity**: Semantisk ugyldig input (f.eks. KI-valideringsfeil)
 - **500 Internal Server Error**: Uventede feil
+
+**Feilresponser og ProblemDetails (RFC 7807):**
+
+Alle feilresponser bruker `ProblemDetails`-formatet definert i `ExceptionMapping.kt`. For at dette skal fungere konsistent, gjelder følgende:
+
+- Bruk exceptions som håndteres i `ExceptionMapping.kt`, for eksempel `IllegalArgumentException` for ugyldig input og domenespesifikke exceptions som `UlovligOppdateringException`.
+- Ikke bruk Javalins `BadRequestResponse` eller andre `HttpResponseException`-subklasser for valideringsfeil. De omgår vår sentrale mapping og gir inkonsistente feilresponser.
+- `ForbiddenResponse` kan brukes for autorisasjon, men ikke for inputvalidering.
+
+Se [vedlikeholdbarhet.md](../6-kvalitet/vedlikeholdbarhet.md) for full oversikt over exceptions og ProblemDetails-format.
 
 ### Service-laget
 
@@ -90,6 +100,21 @@ Service-laget er kjernen i forretningslogikken.
 - Mapping mellom database-rader og domene-objekter
 
 Se [database.md](database.md) for detaljer om databasearkitektur.
+
+---
+
+## Tidstyper
+
+Vi bruker `java.time`-typer for alle tidspunkter – aldri `String`.
+
+| Lag                          | Type                       | Begrunnelse                                                    |
+| ---------------------------- | -------------------------- | -------------------------------------------------------------- |
+| Domenemodell                 | `ZonedDateTime`            | Bærer med seg tidssone, typisk `Europe/Oslo`                   |
+| DTO-er (intern API-respons)  | `ZonedDateTime`            | Konsistent med domenemodellen                                  |
+| Søke-DTO-er (listevisninger) | `Instant`                  | Kommer fra JDBC `Timestamp.toInstant()`, trenger ikke tidssone |
+| Database                     | `timestamp with time zone` | PostgreSQL lagrer alltid som UTC                               |
+
+Jackson med `JavaTimeModule` og `WRITE_DATES_AS_TIMESTAMPS = false` serialiserer begge til ISO-8601 (`2026-03-01T10:00:00Z`). Klienten ser samme format uavhengig av om Kotlin-typen er `ZonedDateTime` eller `Instant`.
 
 ---
 

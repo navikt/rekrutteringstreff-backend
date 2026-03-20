@@ -34,6 +34,9 @@ import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
 import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
+import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokController
+import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokRepository
+import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.flywaydb.core.Flyway
 import java.net.http.HttpClient
@@ -147,6 +150,13 @@ class App(
             eierService
         )
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
+
+        val sokRepository = RekrutteringstreffSokRepository(dataSource)
+        val sokService = RekrutteringstreffSokService(sokRepository)
+        RekrutteringstreffSokController(
+            sokService = sokService,
+            javalin = javalin
+        )
 
         RekrutteringstreffController(
             rekrutteringstreffService = rekrutteringstreffService,

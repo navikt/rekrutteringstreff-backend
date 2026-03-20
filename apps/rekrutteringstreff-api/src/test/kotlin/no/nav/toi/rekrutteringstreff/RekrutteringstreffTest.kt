@@ -169,31 +169,6 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun hentAlleRekrutteringstreff() {
-        val tittel1 = "Tittel1111111"
-        val tittel2 = "Tittel2222222"
-        db.opprettRekrutteringstreffMedAlleFelter(
-            navIdent = "navident1",
-            tittel = tittel1,
-        )
-        db.opprettRekrutteringstreffMedAlleFelter(
-            navIdent = "navIdent2",
-            tittel = tittel2,
-        )
-
-        val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
-
-        val response = httpGet("http://localhost:$appPort/api/rekrutteringstreff", token.serialize())
-
-        assertThat(response.statusCode()).isEqualTo(200)
-        val type = mapper.typeFactory.constructCollectionType(List::class.java, RekrutteringstreffDto::class.java)
-        val liste: List<RekrutteringstreffDto> = mapper.readValue(response.body(), type)
-        assertThat(liste).hasSize(2)
-        assertThat(liste.map { it.tittel }).contains(tittel1, tittel2)
-    }
-
-    @Test
     fun hentRekrutteringstreff() {
         val navIdent = "A123456"
         val token = authServer.lagToken(authPort, navIdent = navIdent)
@@ -748,13 +723,6 @@ class RekrutteringstreffTest {
     @MethodSource("tokenVarianter")
     fun autentiseringOpprett(autentiseringstest: UautentifiserendeTestCase) {
         val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff", "", authServer, authPort)
-        assertThat(response.statusCode()).isEqualTo(401)
-    }
-
-    @ParameterizedTest
-    @MethodSource("tokenVarianter")
-    fun autentiseringHentAlle(autentiseringstest: UautentifiserendeTestCase) {
-        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
