@@ -100,6 +100,9 @@ spec:
     - name: OPENAI_DEPLOYMENT
       value: {{openai_deployment}}
   observability:
+    autoInstrumentation:
+      enabled: true
+      runtime: java
     logging:
       destinations:
         - id: loki

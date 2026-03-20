@@ -82,8 +82,10 @@ class App(
     }
 
     fun stop() {
+        log.info("Shutting down application")
         rapidsConnection.stop()
         if (::javalin.isInitialized) javalin.stop()
+        log.info("Application shutdown complete")
     }
 }
 
@@ -113,6 +115,9 @@ fun main() {
         isRunning = rapidsConnection::isRunning,
         isReady = rapidsConnection::isReady
     )
+    Runtime.getRuntime().addShutdownHook(Thread {
+        app.stop()
+    })
     app.start()
 }
 

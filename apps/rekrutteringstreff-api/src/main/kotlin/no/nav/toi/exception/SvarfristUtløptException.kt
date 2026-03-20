@@ -1,3 +1,3 @@
 package no.nav.toi.exception
 
-class SvarfristUtløptException(message: String): RuntimeException(message)
+class SvarfristUtløptException(override val message: String): RuntimeException(message)

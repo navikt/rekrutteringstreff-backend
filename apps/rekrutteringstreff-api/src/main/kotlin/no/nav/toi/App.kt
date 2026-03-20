@@ -9,10 +9,10 @@ import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.helse.rapids_rivers.RapidApplication
+import no.nav.toi.ExceptionMapping.exceptionMapping
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
-import no.nav.toi.exception.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
@@ -114,93 +114,9 @@ class App(
             configureOpenApi(config)
         }
 
-        // TODO exceptions kan også skje steder hvor disse feilmeldingene ikke gir mening.
-        javalin.exception(com.fasterxml.jackson.core.JsonParseException::class.java) { _, ctx ->
-            ctx.status(400).json(
-                mapOf(
-                    "feil" to "Ugyldig JSON i request-body.",
-                    "hint" to "Sett Content-Type: application/json, bruk gyldig JSON med \"-siterte feltnavn og ISO-8601 dato/tid med tidsone (f.eks. 2025-09-10T08:00:00+02:00)."
-                )
-            )
-        }
-        javalin.exception(com.fasterxml.jackson.databind.JsonMappingException::class.java) { _, ctx ->
-            ctx.status(400).json(
-                mapOf(
-                    "feil" to "Klarte ikke å lese request-body til forventet format.",
-                    "hint" to "Body må være JSON som matcher skjemaet for OppdaterRekrutteringstreffDto. Dato/tid må inkludere tidsone (f.eks. +02:00)."
-                )
-            )
-        }
-        // I enkelte Javalin-versjoner pakkes Jackson-feil i JsonMapperException
-        try {
-            val k = Class.forName("io.javalin.json.JsonMapperException") as Class<out Exception>
-            @Suppress("UNCHECKED_CAST")
-            javalin.exception(k) { _, ctx ->
-                ctx.status(400).json(
-                    mapOf(
-                        "feil" to "Ugyldig request-body (JSON).",
-                        "hint" to "Sett Content-Type: application/json og bruk ISO-8601 dato/tid med tidsone på alle datoer."
-                    )
-                )
-            }
-        } catch (_: ClassNotFoundException) {
-            // Ignorer – typen finnes ikke i denne Javalin-versjonen
-        }
+        javalin.exceptionMapping()
 
-        javalin.exception(java.sql.SQLException::class.java) { e, ctx ->
-            if (e.sqlState == "23503") {
-                ctx.status(409).json(
-                    mapOf(
-                        "feil" to "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes. Slett barn først."
-                    )
-                )
-            } else {
-                secureLog.error("SQL-feil", e)
-                ctx.status(500).json(mapOf("feil" to "En databasefeil oppstod på serveren."))
-            }
-        }
-        javalin.exception(UlovligSlettingException::class.java) { e, ctx ->
-            ctx.status(409).json(mapOf("feil" to (e.message ?: "Ulovlig sletting")))
-        }
-
-        javalin.exception(UlovligOppdateringException::class.java) { e, ctx ->
-            ctx.status(409).json(mapOf("feil" to (e.message ?: "Konflikt ved oppdatering")))
-        }
-
-        javalin.exception(IllegalArgumentException::class.java) { e, ctx ->
-            ctx.status(400).json(mapOf("feil" to (e.message ?: "Ugyldig input")))
-        }
-
-        javalin.exception(SvarfristUtløptException::class.java) { e, ctx ->
-            ctx.status(400).json(mapOf("feil" to (e.message ?: "Svarfristen har utløpt")))
-        }
-
-        javalin.exception(RekrutteringstreffIkkeFunnetException::class.java) { e, ctx ->
-            ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke rekrutteringstreffet")))
-        }
-
-        javalin.exception(JobbsøkerIkkeFunnetException::class.java) { e, ctx ->
-            ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke jobbsøkeren")))
-        }
-
-        javalin.exception(JobbsøkerIkkeSynligException::class.java) { e, ctx ->
-            ctx.status(403).json(mapOf("feil" to (e.message ?: "Jobbsøker er ikke synlig")))
-        }
-
-        javalin.exception(KiValideringsException::class.java) { e, ctx ->
-            ctx.status(422).json(mapOf("feilkode" to e.feilkode, "melding" to e.melding))
-        }
-
-        javalin.exception(Exception::class.java) { e, ctx ->
-            log.error("Uventet feil", e)
-            ctx.status(500).json(
-                mapOf(
-                    "feil" to "En databasefeil oppstod på serveren."
-                )
-            )
-        }
-
-        javalin.handleHealth()
+        HealthController(javalin, HealthRepository(dataSource))
         javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             authConfigs = authConfigs,
             rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
@@ -322,6 +238,7 @@ class App(
         if (::jobbsøkerhendelserScheduler.isInitialized) jobbsøkerhendelserScheduler.stop()
         if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
+        rapidsConnection.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")
     }
@@ -353,7 +270,7 @@ fun main() {
         httpClient = httpClient,
     )
 
-    App(
+    val app = App(
         port = 8080,
         authConfigs = listOfNotNull(
             AuthenticationConfiguration(
@@ -385,7 +302,11 @@ fun main() {
         pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() },
         httpClient = httpClient,
         leaderElection = LeaderElection(),
-    ).start()
+    )
+    Runtime.getRuntime().addShutdownHook(Thread {
+        app.close()
+    })
+    app.start()
 }
 
 

@@ -10,6 +10,8 @@ val postgresTestContainerVersion = "1.21.4"
 val javalinVersion = "6.7.0"
 val micrometerVersion = "1.15.2"
 val tbdLibsVersion = "2026.01.28-07.21-5436e475"
+val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
+val openTelemetryAnnotationsVersion = "2.26.0"
 
 dependencies {
     implementation("io.javalin:javalin:${javalinVersion}")
@@ -23,6 +25,8 @@ dependencies {
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("com.auth0:java-jwt:4.4.0")
     implementation("com.auth0:jwks-rsa:0.22.1")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-logback-mdc-1.0:${opentelemetryLogbackMdcVersion}")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:${openTelemetryAnnotationsVersion}")
 
     // Rapids and rivers fra tbd-libs (uten Ktor)
     implementation("com.github.navikt.tbd-libs:rapids-and-rivers:${tbdLibsVersion}")

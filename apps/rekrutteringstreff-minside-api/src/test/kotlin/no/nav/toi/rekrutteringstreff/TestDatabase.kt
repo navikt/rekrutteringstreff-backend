@@ -192,7 +192,7 @@ class TestDatabase {
         eiere = (rs.getArray("eiere").array as Array<String>).toList(),
         sistEndret = rs.getTimestamp("sist_endret").toInstant().atOslo(),
         sistEndretAv = rs.getString("sist_endret_av") ?: "Ukjent",
-        kontorer = (rs.getArray("kontorer").array as Array<String>).toList()
+        kontorer = (rs.getArray("kontorer")?.array as? Array<String>)?.toList() ?: emptyList(),
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(

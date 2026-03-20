@@ -73,6 +73,15 @@ class OpenAiClient(
             val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(tekst)
             secureLogger.info("melding før filter: $tekst etter filter: $userMessageFiltered")
 
+            if (userMessageFiltered.isBlank()) {
+                result = ValiderRekrutteringstreffResponsDto(
+                    bryterRetningslinjer = true,
+                    begrunnelse = "Teksten gjør det ikke klart at dette er et rekrutteringstreff eller jobbtreff, og oppfyller derfor ikke formålet."
+                )
+                filtered = userMessageFiltered
+                return@measureTimeMillis
+            }
+
             val body = mapper.writeValueAsString(
                 OpenAiRequest(
                     messages = listOf(
@@ -124,6 +133,20 @@ class OpenAiClient(
                     ?: error("Ingen respons fra OpenAI")
                 result = mapper.readValue(responseResult.trim())
                 filtered = userMessageFiltered
+
+                val inneholderEpost = PersondataFilter.inneholderEpost(tekst)
+                val inneholderTall = PersondataFilter.inneholderTall(tekst)
+                if (inneholderEpost || inneholderTall) {
+                    val hva = listOfNotNull(
+                        "tall".takeIf { inneholderTall },
+                        "epost".takeIf { inneholderEpost }
+                    ).joinToString(" og ")
+                    val forrigeBegrunnelse = if (result.bryterRetningslinjer) result.begrunnelse else ""
+                    result = ValiderRekrutteringstreffResponsDto(
+                        bryterRetningslinjer = true,
+                        begrunnelse = (forrigeBegrunnelse + " Teksten inneholder $hva som kan være personopplysninger. Sjekk dette før du går videre.").trim(),
+                    )
+                }
 
             } else {
                 secureLogger.error("Feil ved kall mot OpenAI: ${response.statusCode()}")

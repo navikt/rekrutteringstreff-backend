@@ -19,6 +19,7 @@ val testContainerVersion = "1.21.4"
 val swaggerParserVersion = "2.1.12"
 val nimbusVersion = "10.0.1"
 val wiremockVersion = "3.12.0"
+val opentelemetryLogbackMdcVersion = "2.25.0-alpha"
 
 dependencies {
 
@@ -35,6 +36,7 @@ dependencies {
     implementation("com.auth0:jwks-rsa:0.22.1")
     kapt("io.swagger.parser.v3:swagger-parser:$swaggerParserVersion")
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusVersion")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-logback-mdc-1.0:${opentelemetryLogbackMdcVersion}")
 
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
