@@ -340,7 +340,8 @@ class TestDatabase {
 
     fun hentAlleRekrutteringstreff(): List<Rekrutteringstreff> = rekrutteringstreffRepository.hentAlle()
 
-    fun hentAlleRekrutteringstreffSomIkkeErSlettet(): List<Rekrutteringstreff> = rekrutteringstreffRepository.hentAlleSomIkkeErSlettet()
+    fun hentAlleRekrutteringstreffSomIkkeErSlettet(): List<Rekrutteringstreff> =
+        hentAlleRekrutteringstreff().filter { it.status != RekrutteringstreffStatus.SLETTET }
 
     fun hentEiere(id: TreffId): List<String> =
         rekrutteringstreffRepository.hent(id)?.eiere ?: emptyList()
