@@ -1,7 +1,6 @@
 package no.nav.toi.rekrutteringstreff.sok
 
 import io.javalin.Javalin
-import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
@@ -102,38 +101,38 @@ class RekrutteringstreffSokController(
 
         val visning = ctx.queryParam("visning")?.let {
             try { Visning.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
-                throw BadRequestResponse("Ugyldig visning: $it")
+                throw IllegalArgumentException("Ugyldig visning: $it")
             }
         } ?: Visning.ALLE
         val sortering = ctx.queryParam("sortering")?.let {
             try { Sortering.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
-                throw BadRequestResponse("Ugyldig sortering: $it")
+                throw IllegalArgumentException("Ugyldig sortering: $it")
             }
         } ?: Sortering.SIST_OPPDATERTE
 
         val statuser = ctx.queryParam("statuser")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
             try { SokStatus.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
-                throw BadRequestResponse("Ugyldig status: $it")
+                throw IllegalArgumentException("Ugyldig status: $it")
             }
         }
         val apenForSokere = ctx.queryParam("apenForSokere")?.let {
-            it.toBooleanStrictOrNull() ?: throw BadRequestResponse("Ugyldig apenForSokere: $it")
+            it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig apenForSokere: $it")
         }
         val publisertApen = ctx.queryParam("publisertApen")?.let {
-            it.toBooleanStrictOrNull() ?: throw BadRequestResponse("Ugyldig publisertApen: $it")
+            it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig publisertApen: $it")
         } ?: apenForSokere
         val publisertFristUtgatt = ctx.queryParam("publisertFristUtgatt")?.let {
-            it.toBooleanStrictOrNull() ?: throw BadRequestResponse("Ugyldig publisertFristUtgatt: $it")
+            it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig publisertFristUtgatt: $it")
         }
         val kontorer = ctx.csvQueryParam("kontorer")
 
         val side = ctx.queryParamAsInt("side") ?: 1
         val antallPerSide = ctx.queryParamAsInt("antallPerSide") ?: 20
         if (side < 1) {
-            throw BadRequestResponse("side må være 1 eller høyere")
+            throw IllegalArgumentException("side må være 1 eller høyere")
         }
         if (antallPerSide !in 1..100) {
-            throw BadRequestResponse("antallPerSide må være mellom 1 og 100")
+            throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
         }
 
         val request = RekrutteringstreffSokRequest(
@@ -151,7 +150,7 @@ class RekrutteringstreffSokController(
         val kontorId = if (visning == Visning.MITT_KONTOR) {
             ctx.authenticatedUser().extractKontorId().also {
                 if (it.isNullOrEmpty()) {
-                    throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
+                    throw IllegalArgumentException("Veileders kontor er ikke tilgjengelig")
                 }
             }
         } else {
@@ -167,5 +166,5 @@ private fun Context.csvQueryParam(name: String): List<String>? =
 
 private fun Context.queryParamAsInt(name: String): Int? =
     queryParam(name)?.let { value ->
-        value.toIntOrNull() ?: throw BadRequestResponse("Ugyldig $name: $value")
+        value.toIntOrNull() ?: throw IllegalArgumentException("Ugyldig $name: $value")
     }

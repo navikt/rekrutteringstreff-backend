@@ -533,4 +533,16 @@ class RekrutteringstreffSokKomponenttest {
         val response = sokGet("?sortering=UGYLDIG")
         assertThat(response.statusCode()).isEqualTo(400)
     }
+
+    @Test
+    fun `valideringsfeil returnerer ProblemDetails-format`() {
+        val response = sokGet("?visning=UGYLDIG")
+        assertThat(response.statusCode()).isEqualTo(400)
+
+        val body = mapper.readTree(response.body())
+        assertThat(body.has("type")).isTrue()
+        assertThat(body.has("title")).isTrue()
+        assertThat(body.get("status").asInt()).isEqualTo(400)
+        assertThat(body.get("detail").asText()).contains("Ugyldig visning")
+    }
 }

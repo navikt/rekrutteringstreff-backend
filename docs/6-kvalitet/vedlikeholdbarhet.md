@@ -62,40 +62,46 @@ Endepunkter følger RESTful konvensjoner med små bokstaver og kebab-case:
 
 ## Feilhåndteringsstrategi
 
-### Egendefinerte exceptions
+### ProblemDetails (RFC 7807)
 
-Domenespesifikke exceptions kastes fra service-laget:
+For vedlikeholdbarhet skal alle feil gå gjennom `ExceptionMapping.kt` og returneres som `ProblemDetails`.
+
+Dette gjør løsningen enklere å vedlikeholde fordi vi får:
+
+- ett felles feilformat mot klientene
+- ett sted å endre mapping fra exceptions til HTTP-responser
+- enklere tester og mindre spesiallogikk i controllere
+
+Typiske exceptions:
 
 | Exception                               | Bruksområde              | HTTP-status |
 | --------------------------------------- | ------------------------ | ----------- |
+| `IllegalArgumentException`              | Ugyldig input            | 400         |
+| `SvarfristUtløptException`              | Svarfrist utgått         | 400         |
+| `JobbsøkerIkkeSynligException`          | Jobbsøker ikke synlig    | 403         |
 | `RekrutteringstreffIkkeFunnetException` | Ressurs finnes ikke      | 404         |
+| `JobbsøkerIkkeFunnetException`          | Jobbsøker finnes ikke    | 404         |
 | `UlovligOppdateringException`           | Ugyldig tilstandsendring | 409         |
 | `UlovligSlettingException`              | Sletting ikke tillatt    | 409         |
+| `KiValideringsException`                | KI-validering feilet     | 422         |
 
-### Global exception-håndtering
+### Unngå Javalins HttpResponseException for valideringsfeil
 
-Javalin fanger opp exceptions og mapper til HTTP-statuskoder:
+Ikke bruk Javalins `BadRequestResponse`, `ForbiddenResponse` osv. for valideringsfeil. De omgår `ExceptionMapping` og gjør feilhåndteringen mindre ensartet.
+
+**Gjør dette:**
 
 ```kotlin
-javalin.exception(RekrutteringstreffIkkeFunnetException::class.java) { e, ctx ->
-    ctx.status(404).json(mapOf("feil" to (e.message ?: "Fant ikke rekrutteringstreffet")))
-}
-
-javalin.exception(UlovligOppdateringException::class.java) { e, ctx ->
-    ctx.status(409).json(mapOf("feil" to (e.message ?: "Konflikt ved oppdatering")))
-}
+throw IllegalArgumentException("Ugyldig visning: $it")
 ```
 
-### Feilrespons-format
+**Ikke gjør dette:**
 
-Alle feilresponser returneres som JSON med `feil`-felt:
-
-```json
-{
-  "feil": "Kan ikke slette rekrutteringstreff fordi avhengige rader finnes.",
-  "hint": "Fjern først alle jobbsøkere og arbeidsgivere fra treffet."
-}
+```kotlin
+throw BadRequestResponse("Ugyldig visning: $it")  // Omgår ProblemDetails!
 ```
+
+`ForbiddenResponse` kan brukes for autorisasjon, men ikke for inputvalidering.
 
 ---
 
