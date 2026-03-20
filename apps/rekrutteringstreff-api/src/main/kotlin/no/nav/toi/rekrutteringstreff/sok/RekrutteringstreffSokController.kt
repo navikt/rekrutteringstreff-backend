@@ -27,7 +27,8 @@ class RekrutteringstreffSokController(
         queryParams = [
             OpenApiParam(name = "visning", type = Visning::class, required = false, description = "Filter for hvilke treff som skal vises", example = "alle"),
             OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel publisert,utkast", example = "publisert,utkast"),
-            OpenApiParam(name = "apenForSokere", type = Boolean::class, required = false, description = "Inkluder publiserte treff som er åpne for søkere", example = "true"),
+            OpenApiParam(name = "publisertApen", type = Boolean::class, required = false, description = "Inkluder publiserte treff som er åpne for søkere (frist ikke utgått)", example = "true"),
+            OpenApiParam(name = "publisertFristUtgatt", type = Boolean::class, required = false, description = "Inkluder publiserte treff som er stengt for søkere (frist utgått)", example = "true"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
@@ -43,8 +44,7 @@ class RekrutteringstreffSokController(
                             "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                             "tittel": "Rekrutteringstreff – bygg og anlegg",
                             "beskrivelse": "Treff for arbeidsgivere og jobbsøkere innen bygg og anlegg",
-                            "status": "publisert",
-                            "apenForSokere": true,
+                            "status": "publisert_apen",
                             "fraTid": "2026-04-15T09:00:00Z",
                             "tilTid": "2026-04-15T12:00:00Z",
                             "svarfrist": "2026-04-10T23:59:59Z",
@@ -61,7 +61,6 @@ class RekrutteringstreffSokController(
                             "tittel": "Jobbmesse for helsesektoren",
                             "beskrivelse": null,
                             "status": "utkast",
-                            "apenForSokere": false,
                             "fraTid": null,
                             "tilTid": null,
                             "svarfrist": null,
@@ -78,12 +77,12 @@ class RekrutteringstreffSokController(
                     "side": 1,
                     "antallPerSide": 20,
                     "statusaggregering": [
-                        {"verdi": "publisert", "antall": 20},
+                        {"verdi": "publisert_apen", "antall": 12},
+                        {"verdi": "publisert_frist_utgatt", "antall": 8},
                         {"verdi": "utkast", "antall": 12},
                         {"verdi": "fullfort", "antall": 3},
                         {"verdi": "avlyst", "antall": 2}
-                    ],
-                    "antallApenForSokere": 15
+                    ]
                 }"""
             )]
         ),
@@ -112,6 +111,8 @@ class RekrutteringstreffSokController(
             }
         }
         val apenForSokere = ctx.queryParam("apenForSokere")?.toBooleanStrictOrNull()
+        val publisertApen = ctx.queryParam("publisertApen")?.toBooleanStrictOrNull() ?: (apenForSokere)
+        val publisertFristUtgatt = ctx.queryParam("publisertFristUtgatt")?.toBooleanStrictOrNull()
         val kontorer = ctx.csvQueryParam("kontorer")
 
         val side = ctx.queryParamAsInt("side") ?: 1
@@ -125,7 +126,8 @@ class RekrutteringstreffSokController(
 
         val request = RekrutteringstreffSokRequest(
             statuser = statuser,
-            apenForSokere = apenForSokere,
+            publisertApen = publisertApen,
+            publisertFristUtgatt = publisertFristUtgatt,
             kontorer = if (visning == Visning.MITT_KONTOR) null else kontorer,
             visning = visning,
             sortering = sortering,

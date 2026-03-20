@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonValue
 enum class SokStatus(@JsonValue val jsonVerdi: String) {
     UTKAST("utkast"),
     PUBLISERT("publisert"),
+    PUBLISERT_APEN("publisert_apen"),
+    PUBLISERT_FRIST_UTGATT("publisert_frist_utgatt"),
     FULLFØRT("fullfort"),
     AVLYST("avlyst"),
     ;
@@ -16,6 +18,11 @@ enum class SokStatus(@JsonValue val jsonVerdi: String) {
             "FULLFØRT" -> FULLFØRT
             "AVLYST" -> AVLYST
             else -> throw IllegalArgumentException("Ugyldig status fra database: $verdi")
+        }
+
+        fun fraDbVerdiMedFrist(verdi: String, fristUtgatt: Boolean): SokStatus = when (verdi) {
+            "PUBLISERT" -> if (fristUtgatt) PUBLISERT_FRIST_UTGATT else PUBLISERT_APEN
+            else -> fraDbVerdi(verdi)
         }
 
         fun fraJsonVerdi(verdi: String): SokStatus =
@@ -53,7 +60,8 @@ enum class Sortering(val sql: String, val jsonVerdi: String) {
 
 data class RekrutteringstreffSokRequest(
     val statuser: List<SokStatus>? = null,
-    val apenForSokere: Boolean? = null,
+    val publisertApen: Boolean? = null,
+    val publisertFristUtgatt: Boolean? = null,
     val kontorer: List<String>? = null,
     val visning: Visning = Visning.ALLE,
     val sortering: Sortering = Sortering.SIST_OPPDATERTE,
@@ -67,7 +75,6 @@ data class RekrutteringstreffSokRespons(
     val side: Int,
     val antallPerSide: Int,
     val statusaggregering: List<FilterValg>,
-    val antallApenForSokere: Long,
 )
 
 data class RekrutteringstreffSokTreff(
@@ -75,7 +82,6 @@ data class RekrutteringstreffSokTreff(
     val tittel: String,
     val beskrivelse: String?,
     val status: SokStatus,
-    val apenForSokere: Boolean,
     val fraTid: String?,
     val tilTid: String?,
     val svarfrist: String?,
@@ -99,5 +105,4 @@ data class SokMedAggregeringResultat(
     val treff: List<RekrutteringstreffSokTreff>,
     val antallTotalt: Long,
     val statusaggregering: List<FilterValg>,
-    val antallApenForSokere: Long,
 )

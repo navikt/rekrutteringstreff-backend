@@ -23,7 +23,8 @@ class RekrutteringstreffSokService(
             navIdent = navIdent,
             kontorId = kontorId,
             statuser = request.statuser,
-            apenForSokere = request.apenForSokere,
+            publisertApen = request.publisertApen,
+            publisertFristUtgatt = request.publisertFristUtgatt,
             kontorer = request.kontorer,
             visning = request.visning,
             sortering = request.sortering,
@@ -37,7 +38,6 @@ class RekrutteringstreffSokService(
             side = request.side,
             antallPerSide = request.antallPerSide,
             statusaggregering = resultat.statusaggregering,
-            antallApenForSokere = resultat.antallApenForSokere,
         )
 
         val varighetMs = Duration.ofNanos(System.nanoTime() - startTidNanos).toMillis()
