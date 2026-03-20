@@ -212,6 +212,7 @@ class RekrutteringstreffSokRepositoryTest {
         assertThat(t.poststed).isEqualTo("OSLO")
         assertThat(t.eiere).contains("A123456")
         assertThat(t.kontorer).contains("0315")
+        assertThat(t.opprettetAv).isEqualTo("A123456")
         assertThat(t.opprettetAvTidspunkt).isNotNull()
         assertThat(t.sistEndret).isNotNull()
     }

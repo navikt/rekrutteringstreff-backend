@@ -38,7 +38,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             val mainSql = """
                 SELECT id, tittel, beskrivelse, status, frist_utgatt, fra_tid, til_tid, svarfrist,
                        gateadresse, postnummer, poststed,
-                       opprettet_av_tidspunkt, sist_endret, eiere, kontorer,
+                       opprettet_av_person_navident, opprettet_av_tidspunkt, sist_endret,
+                       eiere, kontorer,
                        antall_arbeidsgivere, antall_jobbsokere
                 FROM rekrutteringstreff_sok_view
                 $fullWhere
@@ -127,14 +128,27 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             val statusConditions = mutableListOf<String>()
             val statusParams = mutableListOf<SqlParam>()
 
+            val domeneStatuser = mutableListOf<SokStatus>()
+            var includePublisertApen = publisertApen == true
+            var includePublisertFristUtgatt = publisertFristUtgatt == true
+
             if (!statuser.isNullOrEmpty()) {
-                statusConditions.add("status = ANY(?)")
-                statusParams.add(SqlParam(statuser, ParamType.STATUS_ARRAY))
+                statuser.forEach { status ->
+                    when (status) {
+                        SokStatus.PUBLISERT_APEN -> includePublisertApen = true
+                        SokStatus.PUBLISERT_FRIST_UTGATT -> includePublisertFristUtgatt = true
+                        else -> domeneStatuser.add(status)
+                    }
+                }
             }
-            if (publisertApen == true) {
+            if (domeneStatuser.isNotEmpty()) {
+                statusConditions.add("status = ANY(?)")
+                statusParams.add(SqlParam(domeneStatuser, ParamType.STATUS_ARRAY))
+            }
+            if (includePublisertApen) {
                 statusConditions.add("(status = 'PUBLISERT' AND frist_utgatt = false)")
             }
-            if (publisertFristUtgatt == true) {
+            if (includePublisertFristUtgatt) {
                 statusConditions.add("(status = 'PUBLISERT' AND frist_utgatt = true)")
             }
 
@@ -191,14 +205,15 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             tittel = rs.getString("tittel"),
             beskrivelse = rs.getString("beskrivelse"),
             status = SokStatus.fraDbVerdiMedFrist(rs.getString("status"), rs.getBoolean("frist_utgatt")),
-            fraTid = rs.getTimestamp("fra_tid")?.toInstant()?.toString(),
-            tilTid = rs.getTimestamp("til_tid")?.toInstant()?.toString(),
-            svarfrist = rs.getTimestamp("svarfrist")?.toInstant()?.toString(),
+            fraTid = rs.getTimestamp("fra_tid")?.toInstant(),
+            tilTid = rs.getTimestamp("til_tid")?.toInstant(),
+            svarfrist = rs.getTimestamp("svarfrist")?.toInstant(),
             gateadresse = rs.getString("gateadresse"),
             postnummer = rs.getString("postnummer"),
             poststed = rs.getString("poststed"),
-            opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().toString(),
-            sistEndret = rs.getTimestamp("sist_endret").toInstant().toString(),
+            opprettetAv = rs.getString("opprettet_av_person_navident"),
+            opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant(),
+            sistEndret = rs.getTimestamp("sist_endret").toInstant(),
             eiere = eiereArr?.map { it.toString() } ?: emptyList(),
             kontorer = kontorerArr?.map { it.toString() } ?: emptyList(),
             antallArbeidsgivere = rs.getLong("antall_arbeidsgivere"),

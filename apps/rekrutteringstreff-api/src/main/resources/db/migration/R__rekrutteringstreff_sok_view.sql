@@ -10,6 +10,7 @@ SELECT
     rt.gateadresse,
     rt.postnummer,
     rt.poststed,
+    rt.opprettet_av_person_navident,
     rt.opprettet_av_tidspunkt,
     rt.sist_endret,
     rt.eiere,

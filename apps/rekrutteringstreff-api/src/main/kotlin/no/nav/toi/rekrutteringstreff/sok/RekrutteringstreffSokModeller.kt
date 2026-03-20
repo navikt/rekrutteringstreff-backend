@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff.sok
 
 import com.fasterxml.jackson.annotation.JsonValue
+import java.time.Instant
 
 enum class SokStatus(@JsonValue val jsonVerdi: String) {
     UTKAST("utkast"),
@@ -82,14 +83,15 @@ data class RekrutteringstreffSokTreff(
     val tittel: String,
     val beskrivelse: String?,
     val status: SokStatus,
-    val fraTid: String?,
-    val tilTid: String?,
-    val svarfrist: String?,
+    val fraTid: Instant?,
+    val tilTid: Instant?,
+    val svarfrist: Instant?,
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
-    val opprettetAvTidspunkt: String,
-    val sistEndret: String,
+    val opprettetAv: String,
+    val opprettetAvTidspunkt: Instant,
+    val sistEndret: Instant,
     val eiere: List<String>,
     val kontorer: List<String>,
     val antallArbeidsgivere: Long,

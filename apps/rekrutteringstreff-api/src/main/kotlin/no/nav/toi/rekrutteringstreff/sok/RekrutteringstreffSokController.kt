@@ -51,10 +51,13 @@ class RekrutteringstreffSokController(
                             "gateadresse": "Storgata 1",
                             "postnummer": "0182",
                             "poststed": "Oslo",
+                            "opprettetAv": "A123456",
                             "opprettetAvTidspunkt": "2026-03-01T10:00:00Z",
                             "sistEndret": "2026-03-10T14:30:00Z",
                             "eiere": ["A123456"],
-                            "kontorer": ["0315"]
+                            "kontorer": ["0315"],
+                            "antallArbeidsgivere": 3,
+                            "antallJobbsokere": 12
                         },
                         {
                             "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
@@ -67,10 +70,13 @@ class RekrutteringstreffSokController(
                             "gateadresse": null,
                             "postnummer": null,
                             "poststed": null,
+                            "opprettetAv": "B654321",
                             "opprettetAvTidspunkt": "2026-03-05T08:00:00Z",
                             "sistEndret": "2026-03-05T08:00:00Z",
                             "eiere": ["B654321"],
-                            "kontorer": ["1201"]
+                            "kontorer": ["1201"],
+                            "antallArbeidsgivere": 0,
+                            "antallJobbsokere": 0
                         }
                     ],
                     "antallTotalt": 42,
@@ -86,7 +92,7 @@ class RekrutteringstreffSokController(
                 }"""
             )]
         ),
-        OpenApiResponse(status = "400", description = "Ugyldig visning, status eller sortering"),
+        OpenApiResponse(status = "400", description = "Ugyldig parameter (visning, status, sortering, side, antallPerSide m.fl.)"),
         OpenApiResponse(status = "401", description = "Manglende eller ugyldig token")],
         path = sokPath,
         methods = [HttpMethod.GET]
@@ -110,9 +116,15 @@ class RekrutteringstreffSokController(
                 throw BadRequestResponse("Ugyldig status: $it")
             }
         }
-        val apenForSokere = ctx.queryParam("apenForSokere")?.toBooleanStrictOrNull()
-        val publisertApen = ctx.queryParam("publisertApen")?.toBooleanStrictOrNull() ?: (apenForSokere)
-        val publisertFristUtgatt = ctx.queryParam("publisertFristUtgatt")?.toBooleanStrictOrNull()
+        val apenForSokere = ctx.queryParam("apenForSokere")?.let {
+            it.toBooleanStrictOrNull() ?: throw BadRequestResponse("Ugyldig apenForSokere: $it")
+        }
+        val publisertApen = ctx.queryParam("publisertApen")?.let {
+            it.toBooleanStrictOrNull() ?: throw BadRequestResponse("Ugyldig publisertApen: $it")
+        } ?: apenForSokere
+        val publisertFristUtgatt = ctx.queryParam("publisertFristUtgatt")?.let {
+            it.toBooleanStrictOrNull() ?: throw BadRequestResponse("Ugyldig publisertFristUtgatt: $it")
+        }
         val kontorer = ctx.csvQueryParam("kontorer")
 
         val side = ctx.queryParamAsInt("side") ?: 1
