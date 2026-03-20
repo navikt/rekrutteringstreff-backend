@@ -115,12 +115,9 @@ class RekrutteringstreffSokController(
                 throw IllegalArgumentException("Ugyldig status: $it")
             }
         }
-        val apenForSokere = ctx.queryParam("apenForSokere")?.let {
-            it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig apenForSokere: $it")
-        }
         val publisertApen = ctx.queryParam("publisertApen")?.let {
             it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig publisertApen: $it")
-        } ?: apenForSokere
+        }
         val publisertFristUtgatt = ctx.queryParam("publisertFristUtgatt")?.let {
             it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig publisertFristUtgatt: $it")
         }

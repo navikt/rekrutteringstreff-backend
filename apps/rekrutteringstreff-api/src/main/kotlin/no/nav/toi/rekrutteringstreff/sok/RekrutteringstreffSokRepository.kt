@@ -63,7 +63,10 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                     CASE
                         WHEN status = 'PUBLISERT' AND frist_utgatt = false THEN 'publisert_apen'
                         WHEN status = 'PUBLISERT' AND frist_utgatt = true THEN 'publisert_frist_utgatt'
-                        ELSE lower(replace(status, 'Ø', 'o'))
+                        WHEN status = 'UTKAST' THEN 'utkast'
+                        WHEN status = 'FULLFØRT' THEN 'fullfort'
+                        WHEN status = 'AVLYST' THEN 'avlyst'
+                        ELSE lower(status)
                     END AS aggregert_status,
                     count(*) AS antall
                 FROM rekrutteringstreff_sok_view
