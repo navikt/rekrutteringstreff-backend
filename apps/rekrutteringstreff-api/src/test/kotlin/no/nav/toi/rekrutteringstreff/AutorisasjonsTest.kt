@@ -140,7 +140,7 @@ private class AutorisasjonsTest {
                 """.trimIndent())
 
         )}),
-        HentAlleRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff" }, {HttpRequest.newBuilder().GET()}),
+        HentAlleRekrutteringstreff({ "http://localhost:$appPort/api/rekrutteringstreff/sok" }, {HttpRequest.newBuilder().GET()}),
         HentRekrutteringstreff(
             { "http://localhost:$appPort/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}" },
             {HttpRequest.newBuilder().GET()}

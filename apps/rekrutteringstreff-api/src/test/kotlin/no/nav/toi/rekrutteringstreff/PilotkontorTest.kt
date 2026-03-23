@@ -111,7 +111,7 @@ class PilotkontorTest {
         every { modiaKlient.hentVeiledersAktivEnhet(any())} returns "1234"
 
         val request = HttpRequest.newBuilder()
-            .uri(URI("http://localhost:$appPort/api/rekrutteringstreff"))
+            .uri(URI("http://localhost:$appPort/api/rekrutteringstreff/sok"))
             .header("Authorization", "Bearer ${authServer.lagToken(authPort, groups = listOf(arbeidsgiverrettet)).serialize()}")
             .GET().build()
 
@@ -128,7 +128,7 @@ class PilotkontorTest {
         every { modiaKlient.hentVeiledersAktivEnhet(any()) } returns "5678"
 
         val request = HttpRequest.newBuilder()
-            .uri(URI("http://localhost:$appPort/api/rekrutteringstreff"))
+            .uri(URI("http://localhost:$appPort/api/rekrutteringstreff/sok"))
             .header("Authorization", "Bearer ${authServer.lagToken(authPort, groups = listOf(arbeidsgiverrettet)).serialize()}")
             .GET().build()
 
