@@ -248,6 +248,7 @@ class App(
         if (::jobbsøkerhendelserScheduler.isInitialized) jobbsøkerhendelserScheduler.stop()
         if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
+        rapidsConnection.stop()
         (dataSource as? HikariDataSource)?.close()
         log.info("Application shutdown complete")
     }
@@ -279,7 +280,7 @@ fun main() {
         httpClient = httpClient,
     )
 
-    App(
+    val app = App(
         port = 8080,
         authConfigs = listOfNotNull(
             AuthenticationConfiguration(
@@ -311,7 +312,11 @@ fun main() {
         pilotkontorer = getenv("PILOTKONTORER").split(",").map { it.trim() },
         httpClient = httpClient,
         leaderElection = LeaderElection(),
-    ).start()
+    )
+    Runtime.getRuntime().addShutdownHook(Thread {
+        app.close()
+    })
+    app.start()
 }
 
 
