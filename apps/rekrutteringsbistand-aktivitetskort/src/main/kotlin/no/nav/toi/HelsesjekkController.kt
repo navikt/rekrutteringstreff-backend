@@ -26,7 +26,7 @@ class HelsesjekkController(
             }
         }
         javalin.get(
-            "/internal/prometheus",
+            "/metrics",
         ) { it.contentType(TextFormat.CONTENT_TYPE_004).result(prometheusMeterRegistry.scrape()) }
     }
 }

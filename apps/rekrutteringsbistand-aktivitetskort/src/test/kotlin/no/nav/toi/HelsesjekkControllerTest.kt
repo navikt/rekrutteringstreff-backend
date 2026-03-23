@@ -4,6 +4,7 @@ import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
 import org.apache.kafka.clients.producer.MockProducer
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -37,9 +38,13 @@ class HelsesjekkControllerTest {
     private lateinit var app: App
 
     @AfterEach
+    fun stoppApp() {
+        app.stop()
+    }
+
+    @AfterAll
     fun teardown() {
         localPostgres.close()
-        app.stop()
     }
 
     fun opprettApp(isRunning: () -> Boolean, isReady: () -> Boolean) = App(
