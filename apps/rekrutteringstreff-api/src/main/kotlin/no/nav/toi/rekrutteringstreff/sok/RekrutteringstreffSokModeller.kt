@@ -99,7 +99,7 @@ data class RekrutteringstreffSokTreff(
 )
 
 data class FilterValg(
-    val verdi: String,
+    val verdi: SokStatus,
     val antall: Long,
 )
 

@@ -228,8 +228,8 @@ class RekrutteringstreffSokRepositoryTest {
             statuser = null, publisertApen = null, publisertFristUtgatt = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        val publisertApen = resultat.statusaggregering.find { it.verdi == "publisert_apen" }
-        val utkast = resultat.statusaggregering.find { it.verdi == "utkast" }
+        val publisertApen = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT_APEN }
+        val utkast = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST }
         assertThat(publisertApen?.antall).isEqualTo(2)
         assertThat(utkast?.antall).isEqualTo(1)
     }
@@ -245,8 +245,8 @@ class RekrutteringstreffSokRepositoryTest {
             statuser = null, publisertApen = null, publisertFristUtgatt = null, kontorer = listOf("0315"),
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
-        val publisertApen = resultat.statusaggregering.find { it.verdi == "publisert_apen" }
-        val utkast = resultat.statusaggregering.find { it.verdi == "utkast" }
+        val publisertApen = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT_APEN }
+        val utkast = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST }
         assertThat(publisertApen?.antall).isEqualTo(1)
         assertThat(utkast?.antall).isEqualTo(1)
     }
