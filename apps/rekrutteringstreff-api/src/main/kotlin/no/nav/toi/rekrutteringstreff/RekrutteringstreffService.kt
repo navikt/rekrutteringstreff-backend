@@ -127,36 +127,6 @@ class RekrutteringstreffService(
         }
     }
 
-    fun hentAlleRekrutteringstreff(): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleSomIkkeErSlettet()
-        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreff)
-    }
-
-    fun hentAlleRekrutteringstreffForEttKontor(kontorId: String): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreffForKontor = rekrutteringstreffRepository.hentIkkeSlettedeForKontor(kontorId)
-        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontor)
-    }
-
-    fun hentAlleRekrutteringstreffSomErMineEllerPubliserte(navIdent: String): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreff = rekrutteringstreffRepository.hentAlleSomErMineEllerPubliserteOgIkkeSlettet(navIdent)
-        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreff)
-    }
-
-    fun hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt(kontorId: String): List<RekrutteringstreffDto> {
-        val alleRekrutteringstreffForKontorSomErPublisertMedFremtidigTilTidspunkt = rekrutteringstreffRepository.hentAlleForEttKontorSomErPublisertMedFremtidigTilTispunkt(kontorId)
-        return tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(alleRekrutteringstreffForKontorSomErPublisertMedFremtidigTilTidspunkt)
-    }
-
-    private fun tilDtoListeMedAntallArbeidsgivereOgJobbsøkere(rekrutteringstreffListe: List<Rekrutteringstreff>): List<RekrutteringstreffDto> {
-        val rekrutteringstreffDto: ArrayList<RekrutteringstreffDto> = ArrayList<RekrutteringstreffDto>()
-        rekrutteringstreffListe.forEach {
-            val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(it.id)
-            val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(it.id)
-            rekrutteringstreffDto.add(it.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere))
-        }
-        return rekrutteringstreffDto
-    }
-
     fun hentRekrutteringstreff(treffId: TreffId): RekrutteringstreffDto? {
         val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
         if (rekrutteringstreff == null) {

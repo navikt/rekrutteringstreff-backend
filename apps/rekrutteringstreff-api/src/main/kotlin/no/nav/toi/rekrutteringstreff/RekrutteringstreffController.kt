@@ -27,7 +27,6 @@ class RekrutteringstreffController(
     companion object {
         private const val pathParamTreffId = "id"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
-        private const val endepunktRekrutteringstreffMittKontor = "$endepunktRekrutteringstreff/mittkontor"
         private const val hendelserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/hendelser"
         private const val publiserPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/publiser"
         private const val gjenapnPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/gjenapn"
@@ -44,8 +43,6 @@ class RekrutteringstreffController(
 
     init {
         javalin.post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler())
-        javalin.get(endepunktRekrutteringstreff, hentAlleRekrutteringstreffHandler())
-        javalin.get(endepunktRekrutteringstreffMittKontor, hentAlleRekrutteringstreffForMittKontorHandler())
         javalin.get("${endepunktRekrutteringstreff}/{id}", hentRekrutteringstreffHandler())
         javalin.put("${endepunktRekrutteringstreff}/{id}", oppdaterRekrutteringstreffHandler())
         javalin.delete("${endepunktRekrutteringstreff}/{id}", slettRekrutteringstreffHandler())
@@ -96,96 +93,6 @@ class RekrutteringstreffController(
         )
         val id = rekrutteringstreffService.opprett(internalDto)
         ctx.status(201).json(mapOf("id" to id.toString()))
-    }
-
-    @OpenApi(
-        summary = "Hent alle rekrutteringstreff",
-        operationId = "hentAlleRekrutteringstreff",
-        security = [OpenApiSecurity(name = "BearerAuth")],
-        responses = [OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(
-                from = Array<RekrutteringstreffDto>::class,
-                example = """[
-                    {
-                        "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
-                        "tittel": "Sommerjobbtreff",
-                        "beskrivelse": "Beskrivelse av Sommerjobbtreff",
-                        "fraTid": "2025-06-15T09:00:00+02:00",
-                        "tilTid": "2025-06-15T11:00:00+02:00",
-                        "svarfrist": "2025-06-14T11:00:00+02:00",
-                        "gateadresse": "Malmøgata 1",
-                        "postnummer": "0566",
-                        "poststed": "Oslo",
-                        "status": "UTKAST",
-                        "opprettetAvPersonNavident": "A123456",
-                        "opprettetAvNavkontorEnhetId": "0318",
-                        "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
-                        "antallArbeidsgivere":1,
-                        "antallJobbsøkere":1
-                    }
-                ]"""
-            )]
-        )],
-        path = endepunktRekrutteringstreff,
-        methods = [HttpMethod.GET]
-    )
-    private fun hentAlleRekrutteringstreffHandler(): (Context) -> Unit = { ctx ->
-        if (ctx.authenticatedUser().erUtvikler()) {
-            log.info("Hent alle rekrutteringstreff - er utvikler så viser alle rekrutteringstreff")
-            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
-        } else {
-            ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
-            log.info("Henter alle rekrutteringstreff")
-            ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffSomErMineEllerPubliserte(ctx.authenticatedUser().extractNavIdent()))
-        }
-    }
-
-       @OpenApi(
-        summary = "Hent alle rekrutteringstreff for mitt kontor",
-        operationId = "hentAlleRekrutteringstreffForMittKontor",
-        security = [OpenApiSecurity(name = "BearerAuth")],
-        responses = [OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(
-                from = Array<RekrutteringstreffDto>::class,
-                example = """[
-                    {
-                        "id": "d6a587cd-8797-4b9a-a68b-575373f16d65",
-                        "tittel": "Sommerjobbtreff",
-                        "beskrivelse": "Beskrivelse av Sommerjobbtreff",
-                        "fraTid": "2025-06-15T09:00:00+02:00",
-                        "tilTid": "2025-06-15T11:00:00+02:00",
-                        "svarfrist": "2025-06-14T11:00:00+02:00",
-                        "gateadresse": "Malmøgata 1",
-                        "postnummer": "0566",
-                        "poststed": "Oslo",
-                        "status": "PUBLISERT",
-                        "opprettetAvPersonNavident": "A123456",
-                        "opprettetAvNavkontorEnhetId": "0318",
-                        "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
-                        "antallArbeidsgivere":1,
-                        "antallJobbsøkere":1
-                    }
-                ]"""
-            )]
-        )],
-        path = endepunktRekrutteringstreffMittKontor,
-        methods = [HttpMethod.GET]
-    )
-    private fun hentAlleRekrutteringstreffForMittKontorHandler(): (Context) -> Unit = { ctx ->
-       ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
-       val kontorId = ctx.authenticatedUser().extractKontorId()
-       if (kontorId.isNullOrEmpty() && ctx.authenticatedUser().erUtvikler()) {
-           log.info("Utvikler som ikke har valgt et kontor - henter alle rekrutteringstreff")
-           ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreff())
-       } else {
-           if (kontorId.isNullOrEmpty()) {
-               throw BadRequestResponse("Veileders kontor er ikke tilgjengelig")
-           }
-           log.info("Henter alle rekrutteringstreff for kontor $kontorId")
-           ctx.status(200).json(rekrutteringstreffService.hentAlleRekrutteringstreffForEttKontorSomErPublisertMedFremtidigTilTidspunkt(kontorId))
-       }
     }
 
     @OpenApi(
