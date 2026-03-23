@@ -107,12 +107,12 @@ Se [database.md](database.md) for detaljer om databasearkitektur.
 
 Vi bruker `java.time`-typer for alle tidspunkter – aldri `String`.
 
-| Lag                          | Type                       | Begrunnelse                                                    |
-| ---------------------------- | -------------------------- | -------------------------------------------------------------- |
-| Domenemodell                 | `ZonedDateTime`            | Bærer med seg tidssone, typisk `Europe/Oslo`                   |
-| DTO-er (intern API-respons)  | `ZonedDateTime`            | Konsistent med domenemodellen                                  |
-| Søke-DTO-er (listevisninger) | `Instant`                  | Kommer fra JDBC `Timestamp.toInstant()`, trenger ikke tidssone |
-| Database                     | `timestamp with time zone` | PostgreSQL lagrer alltid som UTC                               |
+| Lag                          | Type                       | Begrunnelse                                  |
+| ---------------------------- | -------------------------- | -------------------------------------------- |
+| Domenemodell                 | `ZonedDateTime`            | Bærer med seg tidssone, typisk `Europe/Oslo` |
+| DTO-er (intern API-respons)  | `ZonedDateTime`            | Konsistent med domenemodellen                |
+| Søke-DTO-er (listevisninger) | `Instant`                  | Kommer fra JDBC `Timestamp.toInstant()`      |
+| Database                     | `timestamp with time zone` | PostgreSQL lagrer alltid som UTC             |
 
 Jackson med `JavaTimeModule` og `WRITE_DATES_AS_TIMESTAMPS = false` serialiserer begge til ISO-8601 (`2026-03-01T10:00:00Z`). Klienten ser samme format uavhengig av om Kotlin-typen er `ZonedDateTime` eller `Instant`.
 
