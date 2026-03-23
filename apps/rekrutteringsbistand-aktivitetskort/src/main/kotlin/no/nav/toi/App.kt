@@ -10,6 +10,7 @@ import io.javalin.json.JavalinJackson
 import io.javalin.micrometer.MicrometerPlugin
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import no.nav.toi.aktivitetskort.SchedulerContext
 import no.nav.toi.aktivitetskort.scheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
@@ -39,11 +40,12 @@ class App(
     private val isReady: () -> Boolean,
 ) {
     private lateinit var javalin: Javalin
+    private lateinit var schedulerContext: SchedulerContext
     private val secureLog = SecureLog(log)
 
     fun start() {
         startJavalin()
-        scheduler(0, 0, repository, producer, consumer, rapidsConnection, dabAktivitetskortFeilTopic, leaderElection)
+        schedulerContext = scheduler(0, 0, repository, producer, consumer, rapidsConnection, dabAktivitetskortFeilTopic, leaderElection)
         startRapidsAndRivers()
     }
 
@@ -84,6 +86,7 @@ class App(
     fun stop() {
         log.info("Shutting down application")
         rapidsConnection.stop()
+        if (::schedulerContext.isInitialized) schedulerContext.stop()
         if (::javalin.isInitialized) javalin.stop()
         log.info("Application shutdown complete")
     }

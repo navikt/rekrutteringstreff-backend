@@ -18,7 +18,20 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MILLIS
 import java.util.UUID
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+
+data class SchedulerContext(
+    val scheduledExecutor: ScheduledExecutorService,
+    val scheduledFeilExecutor: ScheduledExecutorService,
+) {
+    fun stop() {
+        scheduledExecutor.shutdown()
+        scheduledFeilExecutor.shutdown()
+        if (!scheduledExecutor.awaitTermination(5, TimeUnit.SECONDS)) scheduledExecutor.shutdownNow()
+        if (!scheduledFeilExecutor.awaitTermination(5, TimeUnit.SECONDS)) scheduledFeilExecutor.shutdownNow()
+    }
+}
 
 fun scheduler(
     second: Int,
@@ -29,7 +42,7 @@ fun scheduler(
     rapidsConnection: RapidsConnection,
     dabAktivitetskortFeilTopic: String,
     leaderElection: LeaderElectionInterface,
-) = runBlocking {
+): SchedulerContext = runBlocking {
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
     val myJob = AktivitetskortJobb(repository, producer, leaderElection)
@@ -45,6 +58,7 @@ fun scheduler(
 
     scheduledExecutor.scheduleAtFixedRate(myJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
     scheduledFeilExecutor.scheduleAtFixedRate(myErrorJob, delay, TimeUnit.MINUTES.toMillis(1), TimeUnit.MILLISECONDS)
+    SchedulerContext(scheduledExecutor, scheduledFeilExecutor)
 }
 
 class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>, private val leaderElection: LeaderElectionInterface): Runnable {

@@ -38,6 +38,7 @@ class HelsesjekkControllerTest {
 
     @AfterEach
     fun teardown() {
+        localPostgres.close()
         app.stop()
     }
 
@@ -71,7 +72,7 @@ class HelsesjekkControllerTest {
     }
 
     @Test
-    fun `Skal returenere 200 OK på isready hvis alt kjører`() {
+    fun `Skal returnere 200 OK på isready hvis alt kjører`() {
         app = opprettApp(isRunning = { true }, isReady = { true })
         app.start()
 

@@ -16,7 +16,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
     init {
         Flyway.configure()
             .loggers("slf4j")
-            .dataSource(databaseConfig.lagDatasource())
+            .dataSource(dataSource)
             .load()
             .migrate()
     }
