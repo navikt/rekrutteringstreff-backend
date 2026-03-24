@@ -121,7 +121,7 @@ Brukes i:
 
 **Konsistent design gjenbrukt.** Samme modal brukes både ved opprettelse av treff og etter publisering. Samme operasjon: søk arbeidsgiver → fylles behov → lagrer. Brukere gjenkjenner mønsteret uansett hvor de legger til arbeidsgivere.
 
-## Testliste
+## Spec/Forslag til tester
 
 ### Backend komponenttester
 
