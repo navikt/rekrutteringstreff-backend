@@ -9,7 +9,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.utility.DockerImageName
 import java.net.URI

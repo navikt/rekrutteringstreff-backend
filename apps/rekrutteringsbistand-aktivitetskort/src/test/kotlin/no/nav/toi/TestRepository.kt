@@ -2,7 +2,6 @@ package no.nav.toi
 
 import io.ktor.server.util.toZonedDateTime
 import io.ktor.utils.io.InternalAPI
-import no.nav.toi.aktivitetskort.AktivitetskortDetalj
 import no.nav.toi.aktivitetskort.ErrorType
 import java.time.LocalDate
 import java.time.ZonedDateTime

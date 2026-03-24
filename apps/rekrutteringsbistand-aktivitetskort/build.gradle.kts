@@ -5,8 +5,7 @@ plugins {
 val flywayVersion = "11.3.0"
 val postgresVersion = "42.7.10"
 val hikariVersion = "6.2.1"
-val testContainerVersion = "2.0.3"
-val postgresTestContainerVersion = "1.21.4"
+val testContainerVersion = "2.0.4"
 val javalinVersion = "6.7.0"
 val micrometerVersion = "1.15.2"
 val tbdLibsVersion = "2026.01.28-07.21-5436e475"
@@ -35,5 +34,5 @@ dependencies {
     testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers-test:${tbdLibsVersion}")
 
     testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
-    testImplementation("org.testcontainers:postgresql:$postgresTestContainerVersion")
+    testImplementation("org.testcontainers:testcontainers-postgresql:$testContainerVersion")
 }
