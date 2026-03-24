@@ -26,10 +26,12 @@ Eksisterende hendelsestyper `OPPRETTET` og `SLETTET` beholdes som i dag. `OPPDAT
 
 - Kun eiere av treffet og utvikler ser behov. Andre roller ser arbeidsgiver + orgnummer som i dag, uten knapp for å åpne modal og uten annen behovsvisning.
 - Bare eier kan legge til arbeidsgiver.
-- Behov opprettes sammen med arbeidsgiveropprettelsen i treffet (utvid eksisterende opprettelsesflyt).
+- Behov opprettes **ikke** sammen med arbeidsgiveropprettelsen. Arbeidsgivere legges til som i dag (enkeltvis inline, eller batch i modal etter publisering). Behov registreres etterpå via en egen behovsmodal åpnet fra arbeidsgiverkortet.
 - Næringskoder følger eksisterende flyt og lagres som i dag ved opprettelse av arbeidsgiver.
-- Alle feltene i `ArbeidsgiverBehovDto` er obligatoriske ved opprettelse og oppdatering. Vi legger alltid ved alle verdiene ved oppdatering, også de som ikke er endret, ingen patching.
-- Listefeltene `kompetanser`, `arbeidssprak` og `arbeidsoppgaver` må inneholde minst ett element ved opprettelse og oppdatering.
+- Alle feltene i `ArbeidsgiverBehovDto` er obligatoriske ved lagring av behov. Vi legger alltid ved alle verdiene, også de som ikke er endret, ingen patching.
+- Listefeltene `kompetanser`, `arbeidssprak` og `arbeidsoppgaver` må inneholde minst ett element ved lagring av behov.
+- En arbeidsgiver uten behovsbeskrivelse er tillatt teknisk, men vises som inaktiv/grået ut med teksten «Behovsbeskrivelse mangler» på arbeidsgiverkortet. Arbeidsgiveren er ikke synlig for jobbsøkere eller i andre visninger før behovsbeskrivelsen er registrert.
+- Publisering krever minst én arbeidsgiver med behovsbeskrivelse. Sjekklisten (`useSjekklisteStatus`) må oppdateres: `arbeidsgiver`-punktet er oppfylt når minst én arbeidsgiver har registrert behovsbeskrivelse, ikke bare når det finnes arbeidsgivere.
 - Behov kan endres i etterkant. Orgnavn og orgnummer kan ikke endres. Hvis arbeidsgivernavn eller organisasjonsnummer er feil, må arbeidsgiveren slettes og legges inn på nytt.
 - Ved endring av arbeidsgiver: orgnavn og orgnummer er ikke redigerbare (vises som `disabled`/grået ut).
 - Behov vises og redigeres i modal åpnet fra arbeidsgiverkortet, ikke direkte i kortet.
@@ -69,60 +71,65 @@ data class ArbeidsgiverBehovDto(
 Brukes i:
 
 - Request-body for `PUT .../behov`
-- Obligatorisk felt i `LeggTilArbeidsgiver` ved opprettelse: `behov: ArbeidsgiverBehovDto`
-- Valgfritt felt `behov` i respons fra `GET .../arbeidsgiver?include=behov`
-- Alle feltene i `ArbeidsgiverBehovDto` valideres som obligatoriske, og listefeltene må ha minst ett element.
+- Valgfritt felt `behov` i respons fra `GET .../arbeidsgiver?include=behov` (null hvis ikke registrert ennå)
+- Alle feltene i `ArbeidsgiverBehovDto` valideres som obligatoriske ved lagring, og listefeltene må ha minst ett element.
 
 ## Plassering i backend
 
 - Gjenbruk `ArbeidsgiverController`, `ArbeidsgiverService` og utvid `ArbeidsgiverRepository`, siden behov er en del av arbeidsgiverressursen og naturlig hører hjemme i eksisterende arbeidsgiverflyt.
-- `leggTilArbeidsgiverHandler()` kan fortsatt være inngangen for opprettelse, men service-laget bør få ansvar for å lagre arbeidsgiver, næringskoder, hendelse og eventuelt behov samlet.
+- `leggTilArbeidsgiverHandler()` endres **ikke** — opprettelse av arbeidsgiver forblir som i dag, uten behov.
 - Endringen skal ikke påvirke eksisterende håndtering av `næringskoder`; de følger fortsatt arbeidsgiveropprettelsen og trenger ikke egne endepunkter eller egen UI i denne planen.
 - Behov leses via eksisterende arbeidsgiver-endepunkt med `include=behov`, ikke via eget `GET .../behov`.
 - `GET .../arbeidsgiver` uten `include=behov` følger dagens tilgang og respons.
 - `GET .../arbeidsgiver?include=behov` krever eier eller utvikler. Andre roller får `403` når de eksplisitt ber om behov.
-- `PUT .../behov` kan implementeres i `ArbeidsgiverController`, med samme autorisasjonsmønster som dagens eierbeskyttede arbeidsgiver-endepunkter: eiere og utvikler har tilgang.
+- `PUT .../behov` oppretter behov hvis det ikke finnes, eller oppdaterer eksisterende. Implementeres i `ArbeidsgiverController`, med samme autorisasjonsmønster som dagens eierbeskyttede arbeidsgiver-endepunkter: eiere og utvikler har tilgang.
 
 ## Backend
 
 - [ ] Flyway-migrasjon V4 (SQL over)
 - [ ] `ArbeidsgiverBehov`-modell og utvidelser i `ArbeidsgiverRepository`
-- [ ] Utvid `LeggTilArbeidsgiver`-DTOen med obligatorisk `behov: ArbeidsgiverBehovDto`
-- [ ] Utvid `ArbeidsgiverService` til å lagre behov i samme transaksjon som arbeidsgiveropprettelse
-- [ ] Utvid `leggTilArbeidsgiverHandler()` i `ArbeidsgiverController` til å sende behov videre i eksisterende opprettelsesflyt
 - [ ] Utvid `GET /api/rekrutteringstreff/{id}/arbeidsgiver` med støtte for `include=behov`
-- [ ] Nytt endepunkt: `PUT /api/rekrutteringstreff/{id}/arbeidsgiver/{arbeidsgiverId}/behov`
+- [ ] Nytt endepunkt: `PUT /api/rekrutteringstreff/{id}/arbeidsgiver/{arbeidsgiverId}/behov` (upsert — oppretter eller oppdaterer)
 - [ ] Tilgangskontroll: `GET .../arbeidsgiver?include=behov` og `PUT .../behov` krever eier eller utvikler
-- [ ] `OPPDATERT`-hendelse brukes ved endring av behov med `hendelse_data = null`
+- [ ] `OPPDATERT`-hendelse brukes ved opprettelse og endring av behov med `hendelse_data = null`
 
 ## Frontend
 
-- [ ] Utvid `LeggTilArbeidsgiverForm` med behovfelter under arbeidsgiverseksjonen
+- [ ] `LeggTilArbeidsgiverForm` endres **ikke** — arbeidsgivere legges til som i dag, uten behovfelter.
+- [ ] Ny `ArbeidsgiverBehovModal`: åpnes fra arbeidsgiverkortet. Viser orgnavn og orgnummer som readonly kontekst øverst. Inneholder behovfeltene:
   - Kompetanser: `Combobox` uten fritekst, kun valg fra forslag
   - Arbeidsspråk: `Combobox` med `allowNewValues`
   - Antall: tallfelt
   - Arbeidsoppgaver: `Combobox` med Janzz yrkesontologi-typeahead, kun valg fra Janzz-forslag
   - Ansettelsesform: `Select` med samme faste verdier som stillingens `engagementtype`
-- [ ] Legg til en egen knapp på arbeidsgiverkortet ved siden av slett knappen, for å åpne redigering av behov i modal
-- [ ] Rediger arbeidsgiver i modal: orgnavn og orgnummer vises som `disabled` (grået ut, ikke redigerbare). Kun behovfelter er redigerbare.
+- [ ] Behovsmodalen brukes både til førstegangsregistrering og redigering av behov (upsert). Hvis arbeidsgiver allerede har behov, preloades feltene med eksisterende verdier.
+- [ ] Frontendvalidering i behovsmodalen: listefeltene (`kompetanser`, `arbeidssprak`, `arbeidsoppgaver`) må ha minst ett element, `antall` må være positivt heltall, og `ansettelsesform` må være valgt. Vis feilmeldinger inline under hvert felt. Lagre-knappen er `disabled` inntil skjemaet er gyldig.
+- [ ] Legg til en egen knapp på arbeidsgiverkortet ved siden av slett-knappen for å åpne `ArbeidsgiverBehovModal`. Knappen viser «Legg til behovsbeskrivelse» hvis behovsbeskrivelse ikke finnes, «Rediger behovsbeskrivelse» hvis den finnes.
+- [ ] Arbeidsgiver uten behovsbeskrivelse vises grået ut / inaktivt på arbeidsgiverkortet, med teksten «Behovsbeskrivelse mangler». Behovsmodalen åpnes automatisk etter at arbeidsgiver er lagt til, eller brukeren kan åpne den manuelt fra kortet.
+- [ ] Oppdater `useSjekklisteStatus`: `arbeidsgiver`-punktet krever minst én arbeidsgiver med behovsbeskrivelse (ikke bare at det finnes arbeidsgivere). Frontend henter arbeidsgivere med `include=behov` for eiere.
 - [ ] Valgte `kompetanser` og `arbeidsoppgaver` kan fjernes med små kryss, etter samme mønster som andre multivalg i løsningen
-- [ ] Skjul behovfelter for brukere som ikke eier treffet. De skal ikke se knappen som åpner modalen, og behov skal ikke vises andre steder.
+- [ ] Skjul behovknappen og behov for brukere som ikke eier treffet.
+
+### UX-vurderinger
+
+**Behovsbeskrivelse er frikoblet fra arbeidsgiveropprettelse, men påkrevd før arbeidsgiveren er aktiv.** Arbeidsgivere legges til på to måter: inline i treffskjemaet ved opprettelse, og via batch-modal (`LeggTilArbeidsgiverKnapp`) etter publisering. I batch-modalen velger man flere arbeidsgivere i en pending-liste og sender dem inn samlet. Å knytte behovfelter til enkeltarbeidsgivere i den flyten ville gjort modalen kompleks og forvirrende. Derfor er behovsbeskrivelsen en egen operasjon som gjøres fra arbeidsgiverkortet rett etterpå — konsistent uavhengig av hvordan arbeidsgiveren ble lagt til. Arbeidsgivere uten behovsbeskrivelse vises grået ut med «Behovsbeskrivelse mangler» og teller ikke som oppfylt i publiseringssjekklisten.
+
+**Forholdet til stilling:** `OmVirksomheten` i stilling bruker en inline `Combobox` for å velge én arbeidsgiver direkte i skjemaet, uten modal og uten behovskonsept. Rekrutteringstreff har flere arbeidsgivere med behov koblet til hver. Det er ingen komponentkonflikt — kontekstene er helt ulike (`/stilling/` vs `/rekrutteringstreff/`), og `VelgArbeidsgiver`-komponentene er allerede separate implementasjoner.
+
+**Én modal for behov.** Samme `ArbeidsgiverBehovModal` brukes både for førstegangsregistrering og redigering. Brukeren åpner modalen fra arbeidsgiverkortet uavhengig av kontekst. Dette gir én konsistent flyt i stedet for ulike mønstre for opprettelse og endring.
 
 ## Testliste
 
 ### Backend komponenttester
 
-- [ ] Opprette arbeidsgiver med behov lagrer arbeidsgiver og behov i samme transaksjon
-- [ ] Opprette arbeidsgiver med næringskoder og behov lagrer både næringskoder og behov
-- [ ] Opprette arbeidsgiver uten behov gir valideringsfeil
-- [ ] Opprette arbeidsgiver med manglende felt i `behov` gir valideringsfeil
-- [ ] Opprette arbeidsgiver med tom `kompetanser` gir valideringsfeil
-- [ ] Opprette arbeidsgiver med tom `arbeidssprak` gir valideringsfeil
-- [ ] Opprette arbeidsgiver med tom `arbeidsoppgaver` gir valideringsfeil
-- [ ] `GET .../arbeidsgiver?include=behov` returnerer lagrede verdier for eier
-- [ ] Oppdatere behov endrer verdiene og oppretter `OPPDATERT`-hendelse
+- [ ] `PUT .../behov` oppretter behov for arbeidsgiver som ikke har behov fra før
+- [ ] `PUT .../behov` oppdaterer eksisterende behov
+- [ ] `PUT .../behov` oppretter `OPPDATERT`-hendelse
 - [ ] `PUT .../behov` med manglende felt gir valideringsfeil
 - [ ] `PUT .../behov` med tom `kompetanser`, `arbeidssprak` eller `arbeidsoppgaver` gir valideringsfeil
+- [ ] `GET .../arbeidsgiver?include=behov` returnerer lagrede verdier for eier
+- [ ] `GET .../arbeidsgiver?include=behov` returnerer `behov: null` for arbeidsgiver uten registrerte behov
+- [ ] Opprette arbeidsgiver fungerer som i dag uten behov
 - [ ] Ikke-eier får `403` ved opprettelse av arbeidsgiver
 - [ ] Ikke-eier med arbeidsgiverrettet rolle får `403` på `GET .../arbeidsgiver?include=behov`
 - [ ] Ikke-eier med arbeidsgiverrettet rolle får `403` på `PUT .../behov`
@@ -140,25 +147,27 @@ Brukes i:
 
 ### Backend servicetester
 
-- [ ] `ArbeidsgiverService` lagrer behov ved opprettelse når DTO inneholder behov
-- [ ] `ArbeidsgiverService` avviser opprettelse når DTO mangler behov
-- [ ] `ArbeidsgiverService` avviser opprettelse når et obligatorisk felt i `behov` mangler
-- [ ] `ArbeidsgiverService` avviser opprettelse når et listefelt i `behov` er tomt
-- [ ] `ArbeidsgiverService` oppdaterer behov og oppretter `OPPDATERT`-hendelse
-- [ ] `ArbeidsgiverService` avviser oppdatering når et obligatorisk felt i `behov` mangler
-- [ ] `ArbeidsgiverService` avviser oppdatering når et listefelt i `behov` er tomt
-- [ ] Transaksjonen ruller tilbake hvis lagring av behov feiler under opprettelse
+- [ ] `ArbeidsgiverService` oppretter behov via upsert og oppretter `OPPDATERT`-hendelse
+- [ ] `ArbeidsgiverService` oppdaterer eksisterende behov via upsert og oppretter `OPPDATERT`-hendelse
+- [ ] `ArbeidsgiverService` avviser lagring når et obligatorisk felt i `behov` mangler
+- [ ] `ArbeidsgiverService` avviser lagring når et listefelt i `behov` er tomt
 
 ### Frontend Playwright
 
-- [ ] Eier kan legge til arbeidsgiver med behov ved opprettelse av treff
-- [ ] Eier kan ikke lagre arbeidsgiver hvis et obligatorisk behovsfelt mangler
-- [ ] Eier kan ikke lagre arbeidsgiver hvis `kompetanser`, `arbeidsspråk` eller `arbeidsoppgaver` er tomme
-- [ ] Eier kan åpne redigeringsmodal fra arbeidsgiverkortet og redigere kun behovfeltene
-- [ ] Eier kan ikke lagre oppdatering hvis et obligatorisk behovsfelt mangler
-- [ ] Eier kan ikke lagre oppdatering hvis `kompetanser`, `arbeidsspråk` eller `arbeidsoppgaver` er tomme
-- [ ] Eier ser lagrede behov i redigeringsmodalen etter reload
-- [ ] Ikke-eier ser arbeidsgiver uten behovfelter, uten knapp for å åpne modal og uten annen behovsvisning
+- [ ] Eier kan legge til arbeidsgiver som før, uten behovfelter
+- [ ] Arbeidsgiver uten behovsbeskrivelse vises grået ut med «Behovsbeskrivelse mangler» på kortet
+- [ ] Behovsmodalen åpnes automatisk etter at arbeidsgiver er lagt til (eller manuelt fra kortet)
+- [ ] Eier kan åpne behovsmodal fra arbeidsgiverkortet og registrere behovsbeskrivelse for første gang
+- [ ] Arbeidsgiver vises som aktiv (ikke-grået) etter at behovsbeskrivelsen er lagret
+- [ ] Eier kan åpne behovsmodal og redigere eksisterende behovsbeskrivelse
+- [ ] Behovsmodalen preloader eksisterende verdier ved redigering
+- [ ] Eier kan ikke lagre behovsbeskrivelse hvis et obligatorisk felt mangler
+- [ ] Eier kan ikke lagre behovsbeskrivelse hvis `kompetanser`, `arbeidsspråk` eller `arbeidsoppgaver` er tomme
+- [ ] Eier ser lagret behovsbeskrivelse i behovsmodalen etter reload
+- [ ] Publiseringsknappen er `disabled` når ingen arbeidsgiver har behovsbeskrivelse
+- [ ] Publiseringsknappen aktiveres når minst én arbeidsgiver har behovsbeskrivelse (og øvrige krav er oppfylt)
+- [ ] Knappen viser «Legg til behovsbeskrivelse» når behovsbeskrivelse ikke finnes, «Rediger behovsbeskrivelse» når den finnes
+- [ ] Ikke-eier ser arbeidsgiver uten behovknapp og uten behovsvisning
 - [ ] Utvikler ser behov på samme måte som eier
 - [ ] Ansettelsesform viser samme verdier som stillingsfeltet
 - [ ] Arbeidsoppgaver kan legges til via Janzz-typeahead uten fritekst
