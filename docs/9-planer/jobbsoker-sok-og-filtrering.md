@@ -25,7 +25,7 @@ Basert på behovene fra arbeidsgiverens behov-plan og stilling sine jobsøkere-l
 ### Navn og identifikator
 
 - **Fritekst (navn)**: Søk i `fornavn` + `etternavn` kombinert
-- **Fødselsnummer**: Eksakt søk på `fodselsnummer`
+- **Fødselsnummer**: Eksakt oppslag via POST-body (ikke query-param, av sikkerhetshensyn – samme mønster som stilling sitt kandidatsøk)
 
 ### Jobbsøkers deltakerstatus
 
@@ -37,7 +37,7 @@ Basert på behovene fra arbeidsgiverens behov-plan og stilling sine jobsøkere-l
 - **Nav-kontor**: Filter på `navkontor` (lagret ved innleggelse)
 - **Veileder**: Filter på `veileder_navident` eller `veileder_navn` (lagret ved innleggelse)
 
-**Notat:** Disse feltene fylles inn ved opprettelse av jobbsøker og er allerede tilgjengelig i tabellen – ingen ekstra oppslag nødvendig.
+**Notat:** Disse feltene fylles inn ved opprettelse av jobbsøker og er allerede tilgjengelig i tabellen – ingen ekstra oppslag nødvendig. Dersom veileder-felter er NULL ignoreres de i filtrering (jobbsøkeren vises ikke for veileder-filter, men vises ellers).
 
 ---
 
@@ -53,7 +53,6 @@ Basert på behovene fra arbeidsgiverens behov-plan og stilling sine jobsøkere-l
 **Valgfrie (filtre):**
 
 - `fritekst` – søk i navn
-- `fodselsnummer` – eksakt søk
 - `status` – kommaseparert liste (f.eks. `INVITERT,SVART_JA`)
 - `navkontor` – filter på kontor
 - `veileder` – filter på veileder (navident)
@@ -77,6 +76,17 @@ GET /api/rekrutteringstreff/{treffId}/jobbsoker
   &sortering=navn
 ```
 
+**Eksempel fødselsnummer-oppslag (POST):**
+
+```
+POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
+Content-Type: application/json
+
+{ "fodselsnummer": "12345678901" }
+```
+
+Fødselsnummer sendes i body, ikke som query-param – samme mønster som `rekrutteringsbistand-kandidatsok-api` bruker for `/kandidatsok/navn` og `/kandidatsok/arena-kandidatnr`.
+
 ### Response DTO (MVP)
 
 ```
@@ -84,45 +94,55 @@ GET /api/rekrutteringstreff/{treffId}/jobbsoker
   "totalt": 9996,                               // Totalt antall AKTIVE treff (skjulte/slettede ekskludert)
   "side": 1,                                    // Nåværende side (paginering)
   "sideStørrelse": 20,                          // Treff per side (garantert fulle sider)
-  "jobbsØkere": [
+  "jobbsøkere": [
     {
       "jobbsøkerId": "<uuid>",
       "personTreffId": "<uuid>",
       "fornavn": "Ola",
       "etternavn": "Nordmann",
-      "fodselsnummer": "12345678901",
       "navkontor": "0301",
       "veilederNavn": "Per Pål",
       "veilederNavident": "B654321",
       "status": "INVITERT",
+      "invitertDato": "2026-03-20T10:00:00Z",
       "erSynlig": true
     }
   ]
 }
 ```
 
-**Notat:** `totalt` reflekterer kun aktive jobbsøkere (med `er_synlig = true`). Skjulte og slettede jobbsøkere telles ikke og vises ikke, hvilket sikrer fulle sider.
+**Notat:** `totalt` reflekterer kun aktive jobbsøkere (med `er_synlig = true` og `status != 'SLETTET'`). Skjulte og slettede jobbsøkere telles ikke og vises ikke, hvilket sikrer fulle sider.
+
+**Notat:** `fodselsnummer` er bevisst utelatt fra response. Fødselsnummer er kun relevant som input-filter (oppslag), ikke som visningsdata.
 
 ---
 
-## Database-strategi: Denormalisert status i jobbsoker
+## Database-strategi: Denormaliserte søkefelter i jobbsoker
 
 **jobbsoker-tabell** inneholder nå:
 
 - Grunnleggende personalia (`fornavn`, `etternavn`, `fodselsnummer`)
 - Veileder-info (`navkontor`, `veileder_navn`, `veileder_navident`)
-- **Status (`status` ENUM)** – denormalisert, oppdatert når hendelser oppstår
+- **Status (`status`)** – denormalisert, oppdatert når hendelser oppstår
+- **Invitert-dato (`invitert_dato`)** – denormalisert, settes når hendelsestype = `INVITERT`
 - Synlighet (`er_synlig` fra synlighetsmotor)
 
-**MVP-strategi:** Søk direkte mot `jobbsoker`-tabellen – ingen view, ingen joins. Søket blir streitforward SQL med WHERE-klausuler.
+### Retning: Flat søketabell
+
+Vi denormaliserer felter fra `jobbsoker_hendelse` inn i `jobbsoker`-tabellen for å unngå joins i søk. Hvert felt som er relevant for filtrering eller sortering bør ligge direkte på `jobbsoker`. Hendelsestabellen forblir kilden til sannhet, men `jobbsoker`-raden oppdateres atomisk når hendelser oppstår.
+
+Dette er et bevisst valg: `jobbsoker` fungerer som en flat søketabell, mens `jobbsoker_hendelse` er audit-loggen. Dersom flere felter fra hendelser blir relevante for søk i fremtiden, denormaliserer vi dem inn etter samme mønster.
+
+**MVP-strategi:** Søk direkte mot `jobbsoker`-tabellen – ingen view, ingen joins. Søket blir rett-frem SQL med WHERE-klausuler.
 
 **Indekser som trengs:**
 
 1. **B-tree på navn** – `idx_jobbsoker_navn_search ON (LOWER(fornavn || ' ' || etternavn))`
-2. **B-tree på fnr** – `idx_jobbsoker_fodselsnummer`
+2. **B-tree på fnr** – `idx_jobbsoker_fodselsnummer` (eksisterer allerede)
 3. **B-tree på status** – `idx_jobbsoker_status`
 4. **B-tree på navkontor** – `idx_jobbsoker_navkontor`
 5. **B-tree på veileder** – `idx_jobbsoker_veileder_navident`
+6. **B-tree på invitert_dato** – `idx_jobbsoker_invitert_dato`
 
 ---
 
@@ -134,15 +154,17 @@ GET /api/rekrutteringstreff/{treffId}/jobbsoker
 
 **Oppgaver:**
 
-- [ ] Flyway-migrasjon: Legg til `status` ENUM-kolonne i `jobbsoker` og opprett indekser
-  - Alter table: `ALTER TABLE jobbsoker ADD COLUMN status VARCHAR(50)`
+- [ ] Flyway-migrasjon: Legg til `invitert_dato`-kolonne og søkeindekser
+  - Alter table: `ALTER TABLE jobbsoker ADD COLUMN invitert_dato TIMESTAMPTZ`
+  - Backfill: `UPDATE jobbsoker SET invitert_dato = (SELECT tidspunkt FROM jobbsoker_hendelse WHERE hendelsestype = 'INVITERT' AND jobbsoker_hendelse.jobbsoker_id = jobbsoker.jobbsoker_id ORDER BY tidspunkt LIMIT 1)`
   - B-tree indekser:
     - `idx_jobbsoker_navn_search ON (LOWER(fornavn || ' ' || etternavn))`
-    - `idx_jobbsoker_fodselsnummer ON (fodselsnummer)`
     - `idx_jobbsoker_status ON (status)`
     - `idx_jobbsoker_navkontor ON (navkontor)`
     - `idx_jobbsoker_veileder_navident ON (veileder_navident)`
-- [ ] Oppdater hendelseslogikk: når `jobbsoker_hendelse` opprettes, oppdater `jobbsoker.status` atomisk
+    - `idx_jobbsoker_invitert_dato ON (invitert_dato)`
+  - Merk: `idx_jobbsoker_fodselsnummer` eksisterer allerede
+- [ ] Oppdater hendelseslogikk: når `jobbsoker_hendelse` opprettes, oppdater `jobbsoker.status` og `jobbsoker.invitert_dato` atomisk
 - [ ] Lag `JobbsøkerSøkResultat` DTO med paginering + sortering
 - [ ] **Erstatt `hentJobbsøkereHandler()` med én unified handler** som:
   - Tar query-parametere: `side` (påkrevd), `sideStørrelse` (påkrevd), + valgfrie filtre
@@ -150,16 +172,18 @@ GET /api/rekrutteringstreff/{treffId}/jobbsoker
   - Hvis filtre: returnerer filtrert resultat (med paginering)
 - [ ] Implementer `JobbsøkerRepository.sok()` med WHERE-klausuler:
   - `(fornavn || ' ' || etternavn) ILIKE ?` (navn-fritekst, valgfritt)
-  - `fodselsnummer = ?` (fnr eksakt oppslag, valgfritt)
   - `status IN (?)` (status-liste, valgfritt)
   - `navkontor = ?` (kontor, valgfritt)
   - `veileder_navident = ?` (veileder, valgfritt)
-  - **`er_synlig = true`** (filtrere bort skjulte jobbsøkere fra synlighetsmotor)
+  - **`er_synlig = true`** (filtrere bort skjulte jobbsøkere)
+  - **`status != 'SLETTET'`** (filtrere bort slettede jobbsøkere)
+- [ ] Implementer `JobbsøkerRepository.hentViaFodselsnummer()` – eget POST-endepunkt
+  - `fodselsnummer = ?` (eksakt oppslag, sendt i request body, ikke query-param)
 - [ ] Implementer paginering (LIMIT/OFFSET) og sortering
-  - **Rekkefølge:** WHERE-filtrering → ORDER BY sortering → LIMIT/OFFSET paginering
-  - Sikrer fulle sider: hver side har `sideStørrelse` aktive jobbsøkere (bortsett fra mulig siste side)
-  - `totalt` = COUNT(\*) etter WHERE-filtrering, før paginering
-  - Garanterer ingen "hull" eller tomme plasser på sidene fra skjulte/slettede
+  - **Rekkefølge:** WHERE-filtrering (inkl. `er_synlig = true AND status != 'SLETTET'`) → ORDER BY sortering → LIMIT/OFFSET paginering
+  - `totalt` = COUNT(\*) med WHERE `er_synlig = true AND status != 'SLETTET'` (+ eventuelle filtre), utført i samme query
+  - Skjulte og slettede er _aldri_ med i hverken telling eller resultatsett
+  - Garanterer fulle sider uten hull
 - [ ] **Backend-tester:**
   - Komponenttester: Full søk-flow mot Testcontainers-database inkl. autorisasjon
     - Test: Hent alle uten filtre (no-filter case)
@@ -181,7 +205,16 @@ GET /api/rekrutteringstreff/{treffId}/jobbsoker
   - Playwright e2e-tester: Søk, filtrering, paginering, sortering
   - Responsivitet og UX-validering
 
-**Navn-søk ytelsestesting:** Bekreft at navn-søk over 10K jobbsøkere tar < 200 ms med B-tree indeks.
+### Ytelsestesting
+
+Følger samme mønster som `RekrutteringstreffSokYtelsestest` – egne terskelkonstanter, seed-data, warmup + målt kall:
+
+- **Seed:** Opprett ett treff med 10 000 jobbsøkere (ulike statuser, navkontorer, veiledere)
+- **Warmup-kall:** Hent alle uten filtre, terskel 2 000 ms
+- **Målt kall:** Søk med navn-fritekst + status-filter + sortering, terskel 500 ms
+- **Sorteringskall:** Sorter på `invitert_dato` (annen sortering enn naturlig rekkefølge), terskel 500 ms
+
+Ytelsen måles ende-til-ende (SQL-query inkl. indeksbruk), ikke bare DB-tid. Med B-tree indekser og 10K rader bør dette holde komfortabelt.
 
 ---
 
@@ -220,7 +253,7 @@ Dette sikrer konsistens på tvers av Nav-plattformen og reduserer design-arbeid.
 
 ## Autorisasjon og synlighet
 
-- **Søk innad i treff:** Kun tilgjengelig for **eiere** og **utvikler**
+- **Søk innad i treff:** Kun tilgjengelig for **eiere** og **utvikler** (admin = utvikler, samme tilgang)
 - **Arbeidsgiver-brukere:** Får varsler om kandidater via separat mekanisme, ikke direkte søk
 - **Jobbsøker-bruker:** Ser sitt eget treff-svar, ikke søkbar liste
 
@@ -230,13 +263,15 @@ Dette sikrer konsistens på tvers av Nav-plattformen og reduserer design-arbeid.
 
 ### 1. Paginering med skjulte/slettede jobbsøkere
 
-**Valg:** Skjulte og slettede jobbsøkere filtreres ut FØR paginering, ikke etter.
+**Valg:** Skjulte og slettede jobbsøkere filtreres ut FØR paginering, ikke etter. De er aldri med i hverken resultat eller telling.
 
 **Implementering:**
 
 ```sql
-SELECT * FROM jobbsoker
+SELECT *, COUNT(*) OVER() AS totalt
+FROM jobbsoker
 WHERE er_synlig = true
+  AND status != 'SLETTET'
   AND (øvrige filtre)
 ORDER BY (sortering)
 LIMIT 20 OFFSET (side-1)*20
@@ -244,9 +279,9 @@ LIMIT 20 OFFSET (side-1)*20
 
 **Konsekvenser:**
 
-- `totalt` = antall aktive jobbsøkere kun (ikke inkludert skjulte/slettede)
+- `totalt` = `COUNT(*) OVER()` – antall rader som matcher WHERE-klausulen (uten LIMIT/OFFSET)
+- Skjulte (`er_synlig = false`) og slettede (`status = 'SLETTET'`) er _ekskludert_ fra alt
 - Hver side garanteres fulle `sideStørrelse` rader (bortsett fra potensielt siste side)
-- Ingen "hull" eller tomme plasser fra skjulte/slettede
 - Brukeren opplever konsistent paginering
 
 **Eksempel:** Hvis 10 000 jobbsøkere totalt, 4 skjulte/slettede → totalt = 9996, side 1 = 20 aktive.
@@ -261,7 +296,7 @@ LIMIT 20 OFFSET (side-1)*20
 
 ### 2. MVP-fokus – kun navn/status, ikke kandidatdata
 
-**Valg:** Dropp Arena-kandidatdata fra MVP. Start med navn/fnr/status-filtrering.
+**Valg:** Dropp Arena-kandidatdata fra MVP. Start med navn/status-filtrering + fnr-oppslag via POST.
 
 **Begrunnelse:**
 
@@ -278,7 +313,7 @@ LIMIT 20 OFFSET (side-1)*20
 
 - Paginering: `side` (1-indeksert) + `sideStørrelse` (default 20)
 - Sortering: `sortering` med verdier `navn`, `invitert_dato`, `status`
-- Backend returnerer `totalt` (antall rader uten paginering) for frontend-UI
+- Backend returnerer `totalt` via `COUNT(*) OVER()` i samme query – kun aktive jobbsøkere (ikke skjulte/slettede)
 
 **Begrunnelse:** Samme mønster som stilling-søk. Mindre data over nettet, bedre for mobile.
 
@@ -299,16 +334,22 @@ Frontend med filtre:
     ?fritekst=Ola&status=INVITERT&side=1&sideStørrelse=20
     ↓ (returnerer filtrert resultat med paginering)
 
-Begge casene:
+Fnr-oppslag (eget endepunkt):
+  POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
+    body: { "fodselsnummer": "12345678901" }
+    ↓ (returnerer match eller 404)
+
+Begge søke-casene:
     ↓
-SQL mot jobbsoker-tabellen direkte (ingen view/join):
+SQL mot jobbsoker-tabellen direkte (flat søketabell, ingen view/join):
+  SELECT *, COUNT(*) OVER() AS totalt FROM jobbsoker
   WHERE
+    er_synlig = true
+    AND status != 'SLETTET'
     AND (LOWER(fornavn || ' ' || etternavn) ILIKE ? OR fritekst IS NULL)
-    AND (fodselsnummer = ? OR fodselsnummer IS NULL)
     AND (status = ANY(?) OR status-liste IS NULL)
     AND (navkontor = ? OR navkontor IS NULL)
     AND (veileder_navident = ? OR veileder_navident IS NULL)
-    AND er_synlig = true
   ORDER BY (sortering)
   LIMIT sideStørrelse OFFSET (side-1)*sideStørrelse
     ↓
@@ -333,11 +374,15 @@ Frontend viser resultater + paginering
 ✅ **Backend:** Én handler – erstatter `hentJobbsøkereHandler()` – håndterer både "hent alle" og "søk med filtre"  
 ✅ **Frontend:** Én custom hook `useJobbsøkerSøk()` – håndterer begge casene (filtre valgfrie)  
 ✅ **Veileder og navkontor:** Allerede lagret ved innleggelse  
-✅ **Database-strategi:** Denormalisert `status` i `jobbsoker`-tabell, direkte søk (ingen view)  
-✅ **Indekser:** B-tree på navn, fnr, status, navkontor, veileder_navident  
+✅ **Database-strategi:** Flat søketabell – `jobbsoker` med denormalisert `status` og `invitert_dato`, direkte søk (ingen view/join)  
+✅ **Indekser:** B-tree på navn, fnr (eksisterer), status, navkontor, veileder_navident, invitert_dato  
 ✅ **OpenSearch:** Utelukket – synkron PostgreSQL-løsning  
-✅ **MVP-fokus:** Navn / fnr / status / kontor / veileder-filtrering  
+✅ **MVP-fokus:** Navn / status / kontor / veileder-filtrering + fnr-oppslag via POST  
+✅ **Fødselsnummer:** Ikke i response, kun i request (POST body) for oppslag  
+✅ **Veileder:** NULL-felter ignoreres i filtrering – jobbsøker uten veileder vises i alle-søk, ikke i veileder-filter  
 ✅ **Paginering:** Backend-håndtert via `side` + `sideStørrelse` – **påkrevd**  
+✅ **Paginering og totalt:** `COUNT(*) OVER()` – skjulte/slettede er aldri med i telling eller resultat  
 ✅ **Filtre:** Alle søk-parametere valgfrie (ingen filtre = hent alle)  
 ✅ **Sortering:** `navn`, `invitert_dato`, `status`  
-✅ **Skjulte/slettede:** Filtreres ut før paginering – fulle sider garantert, totalt reflekterer kun aktive
+✅ **Admin:** admin = utvikler, samme tilgang  
+✅ **Ytelsestest:** Følger `RekrutteringstreffSokYtelsestest`-mønster med 10K jobbsøkere, warmup 2s, målt 500ms
