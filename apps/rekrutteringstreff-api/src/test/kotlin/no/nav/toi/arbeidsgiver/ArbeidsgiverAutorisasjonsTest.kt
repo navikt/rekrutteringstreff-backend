@@ -28,6 +28,7 @@ import no.nav.toi.arbeidsgiver.dto.LeggTilArbeidsgiverDto
 import no.nav.toi.httpClient
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.lagToken
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
@@ -74,7 +75,7 @@ class ArbeidsgiverAutorisasjonsTest {
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
     private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
-    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
 
     private val rekrutteringstreffService = RekrutteringstreffService(
         database.dataSource,

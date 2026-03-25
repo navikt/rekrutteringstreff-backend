@@ -28,6 +28,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -75,7 +76,7 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
     private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
-    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
 
     private val rekrutteringstreffService = RekrutteringstreffService(
         database.dataSource,

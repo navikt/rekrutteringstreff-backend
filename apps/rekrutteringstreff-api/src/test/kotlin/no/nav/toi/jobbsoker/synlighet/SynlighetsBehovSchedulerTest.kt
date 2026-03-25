@@ -8,6 +8,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
@@ -34,7 +35,7 @@ class SynlighetsBehovSchedulerTest {
     fun beforeAll() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, objectMapper)
-        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
     }
 
     @BeforeEach
