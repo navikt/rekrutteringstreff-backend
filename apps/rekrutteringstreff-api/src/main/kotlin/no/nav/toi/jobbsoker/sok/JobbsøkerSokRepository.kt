@@ -142,11 +142,15 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             val (where, params) = byggWhere(treffDbId, request)
             val totalt = hentTotalt(conn, where, params)
             val treff = hentTreff(conn, where, params, request.sortering, request.side, request.antallPerSide)
+            val minsideHendelser = hentMinsideHendelser(conn, treff.map { it.personTreffId })
+            val jobbsøkereMedHendelser = treff.map { t ->
+                t.copy(minsideHendelser = minsideHendelser[t.personTreffId] ?: emptyList())
+            }
             JobbsøkerSøkRespons(
                 totalt = totalt,
                 side = request.side,
                 antallPerSide = request.antallPerSide,
-                jobbsøkere = treff,
+                jobbsøkere = jobbsøkereMedHendelser,
             )
         }
     }
@@ -370,4 +374,45 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         status = JobbsøkerStatus.valueOf(getString("status")),
         invitertDato = getTimestamp("invitert_dato")?.toInstant(),
     )
+
+    private fun hentMinsideHendelser(
+        conn: Connection,
+        personTreffIds: List<String>,
+    ): Map<String, List<MinsideHendelseSøkDto>> {
+        if (personTreffIds.isEmpty()) return emptyMap()
+
+        val placeholders = personTreffIds.joinToString(",") { "?" }
+        val sql = """
+            SELECT j.id::text as person_treff_id, jh.id::text as hendelse_id, jh.tidspunkt,
+                   jh.hendelsestype, jh.opprettet_av_aktortype, jh.aktøridentifikasjon, jh.hendelse_data
+            FROM jobbsoker_hendelse jh
+            JOIN jobbsoker j ON jh.jobbsoker_id = j.jobbsoker_id
+            WHERE j.id IN ($placeholders)
+            AND jh.hendelsestype = 'MOTTATT_SVAR_FRA_MINSIDE'
+            ORDER BY jh.tidspunkt
+        """.trimIndent()
+
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            personTreffIds.forEachIndexed { index, id ->
+                stmt.setObject(index + 1, UUID.fromString(id))
+            }
+            stmt.executeQuery().use { rs ->
+                val result = mutableMapOf<String, MutableList<MinsideHendelseSøkDto>>()
+                while (rs.next()) {
+                    val personTreffId = rs.getString("person_treff_id")
+                    val hendelse = MinsideHendelseSøkDto(
+                        id = rs.getString("hendelse_id"),
+                        tidspunkt = rs.getTimestamp("tidspunkt").toInstant().toString(),
+                        hendelsestype = rs.getString("hendelsestype"),
+                        opprettetAvAktørType = rs.getString("opprettet_av_aktortype"),
+                        aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
+                        hendelseData = rs.getString("hendelse_data"),
+                    )
+                    result.getOrPut(personTreffId) { mutableListOf() }.add(hendelse)
+                }
+                result
+            }
+        }
+    }
 }

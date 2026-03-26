@@ -66,6 +66,17 @@ data class JobbsøkerSøkTreff(
     val veilederNavident: String?,
     val status: JobbsøkerStatus,
     val invitertDato: Instant?,
+    val minsideHendelser: List<MinsideHendelseSøkDto> = emptyList(),
+)
+
+data class MinsideHendelseSøkDto(
+    val id: String,
+    val tidspunkt: String,
+    val hendelsestype: String,
+    val opprettetAvAktørType: String,
+    val aktørIdentifikasjon: String?,
+    @get:com.fasterxml.jackson.annotation.JsonRawValue
+    val hendelseData: String?,
 )
 
 data class FødselsnummerSøkRequest(

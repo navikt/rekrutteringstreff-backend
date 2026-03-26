@@ -257,6 +257,19 @@ class TestDatabase {
         }.executeUpdate()
     }
 
+    fun leggTilMinsideHendelse(personTreffId: PersonTreffId, hendelseData: String) {
+        dataSource.connection.use { connection ->
+            jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                connection,
+                JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE,
+                listOf(personTreffId),
+                "system",
+                AktørType.SYSTEM,
+                hendelseData
+            )
+        }
+    }
+
     fun hentJobbsøkerStatus(personTreffId: PersonTreffId): JobbsøkerStatus? = dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT status FROM jobbsoker WHERE id = ?").apply {
             setObject(1, personTreffId.somUuid)

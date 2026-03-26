@@ -538,4 +538,107 @@ class JobbsøkerSokKomponenttest {
         assertThat(js.kommune).isNull()
         assertThat(js.poststed).isNull()
     }
+
+    @Test
+    fun `søk inkluderer minsideHendelser for jobbsøkere med MOTTATT_SVAR_FRA_MINSIDE`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Med"), Etternavn("Hendelse"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Uten"), Etternavn("Hendelse"), null, null, null),
+        ), treffId)
+
+        db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "sortering=navn")).body()
+        )
+
+        assertThat(dto.jobbsøkere).hasSize(2)
+        val medHendelse = dto.jobbsøkere.first { it.fornavn == "Med" }
+        val utenHendelse = dto.jobbsøkere.first { it.fornavn == "Uten" }
+
+        assertThat(medHendelse.minsideHendelser).hasSize(1)
+        assertThat(medHendelse.minsideHendelser.first().hendelsestype).isEqualTo("MOTTATT_SVAR_FRA_MINSIDE")
+
+        assertThat(utenHendelse.minsideHendelser).isEmpty()
+    }
+
+    @Test
+    fun `søk inkluderer flere minsideHendelser per jobbsøker`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+        ), treffId)
+
+        db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT"}""")
+        db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v2","eksternKanal":null,"eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId)).body()
+        )
+
+        assertThat(dto.jobbsøkere).hasSize(1)
+        assertThat(dto.jobbsøkere.first().minsideHendelser).hasSize(2)
+    }
+
+    @Test
+    fun `minsideHendelser inkluderer hendelseData som json`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+        ), treffId)
+
+        val hendelseJson = """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT","minsideStatus":"OPPRETTET","eksternFeilmelding":null}"""
+        db.leggTilMinsideHendelse(personTreffIder[0], hendelseJson)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId)).body()
+        )
+
+        val hendelse = dto.jobbsøkere.first().minsideHendelser.first()
+        val hendelseDataNode = mapper.readTree(mapper.writeValueAsString(hendelse)).get("hendelseData")
+        assertThat(hendelseDataNode.get("varselId").asText()).isEqualTo("v1")
+        assertThat(hendelseDataNode.get("eksternKanal").asText()).isEqualTo("SMS")
+        assertThat(hendelseDataNode.get("eksternStatus").asText()).isEqualTo("SENDT")
+    }
+
+    @Test
+    fun `minsideHendelser returneres ikke for andre hendelsetyper`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+        ), treffId)
+        db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId)).body()
+        )
+
+        assertThat(dto.jobbsøkere.first().minsideHendelser).isEmpty()
+    }
+
+    @Test
+    fun `minsideHendelser isoleres per treff ved paginering`() {
+        val treffId = opprettTreffMedEier()
+        val jobbsøkere = (1..3).map { i ->
+            LeggTilJobbsøker(Fødselsnummer("${i}1111111111".take(11)), Fornavn("Person$i"), Etternavn("Etternavn$i"), null, null, null)
+        }
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId)
+
+        db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT"}""")
+        db.leggTilMinsideHendelse(personTreffIder[2], """{"varselId":"v2","eksternKanal":null,"eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
+
+        val side1 = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=1&antallPerSide=2&sortering=navn").body()
+        )
+        assertThat(side1.jobbsøkere).hasSize(2)
+
+        val side2 = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=2&antallPerSide=2&sortering=navn").body()
+        )
+        assertThat(side2.jobbsøkere).hasSize(1)
+
+        val alleMedHendelser = (side1.jobbsøkere + side2.jobbsøkere).filter { it.minsideHendelser.isNotEmpty() }
+        assertThat(alleMedHendelser).hasSize(2)
+    }
 }
