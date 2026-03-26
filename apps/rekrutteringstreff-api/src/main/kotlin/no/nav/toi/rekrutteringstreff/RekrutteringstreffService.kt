@@ -73,6 +73,7 @@ class RekrutteringstreffService(
     }
 
     fun fullfør(treffId: TreffId, fullfortAv: String) {
+        log.info("Fullfører treff med id $treffId")
         val treff = rekrutteringstreffRepository.hent(treffId)
             ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
 
