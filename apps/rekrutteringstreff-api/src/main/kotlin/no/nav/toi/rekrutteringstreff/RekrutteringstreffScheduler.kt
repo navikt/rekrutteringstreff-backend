@@ -20,11 +20,7 @@ class RekrutteringstreffScheduler(
 
     fun start() {
         log.info("Starter RekrutteringstreffScheduler")
-
-        val now = LocalDateTime.now()
-        val initialDelay = Duration.between(now, now.plusMinutes(2).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
-
-        scheduler.scheduleAtFixedRate(::fullførJobbtreff, initialDelay, 15, TimeUnit.MINUTES)
+        scheduler.scheduleAtFixedRate(::fullførJobbtreff, 2, 15, TimeUnit.MINUTES)
     }
 
     fun stop() {
