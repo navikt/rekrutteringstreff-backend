@@ -22,9 +22,9 @@ class RekrutteringstreffScheduler(
         log.info("Starter RekrutteringstreffScheduler")
 
         val now = LocalDateTime.now()
-        val initialDelay = Duration.between(now, now.plusMinutes(5).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
+        val initialDelay = Duration.between(now, now.plusMinutes(2).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
 
-        scheduler.scheduleAtFixedRate(::fullførJobbtreff, initialDelay, 1, TimeUnit.HOURS)
+        scheduler.scheduleAtFixedRate(::fullførJobbtreff, initialDelay, 15, TimeUnit.MINUTES)
     }
 
     fun stop() {
@@ -41,6 +41,7 @@ class RekrutteringstreffScheduler(
 
     @WithSpan
     fun fullførJobbtreff() {
+        log.info("Starter fullførJobbtreff i RekrutteringstreffScheduler")
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av RekrutteringstreffScheduler er ikke ferdig, skipper denne kjøringen.")
             return
@@ -55,7 +56,7 @@ class RekrutteringstreffScheduler(
         try {
             val publiserteTreffHvorTilTidErPassert = rekrutteringstreffService.hentPubliserteTreffHvorTilTidErPassert()
             if (publiserteTreffHvorTilTidErPassert.isNotEmpty()) {
-                log.info("Fullfører ${publiserteTreffHvorTilTidErPassert.size} rekrutteringstreff")
+                log.info("RekrutteringstreffScheduler fullfører ${publiserteTreffHvorTilTidErPassert.size} rekrutteringstreff")
                 publiserteTreffHvorTilTidErPassert.forEach { treff ->
                     rekrutteringstreffService.fullfør(treff.id, "SYSTEM")
                 }
