@@ -136,4 +136,30 @@ class RekrutteringstreffRepositoryTest {
         assertThat(treffHendelser.first().hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET.name)
         assertThat(jobbsøkerHendelser).isEmpty() // Ikke-synlig jobbsøker filtreres ut
     }
+
+        @Test
+    fun `hentPubliserteTreffSomErFerdig skal vise riktig resultat`() {
+        val ferdigPublisert = db.opprettRekrutteringstreffMedAlleFelter(
+            tittel = "Ferdig og publisert",
+            status = RekrutteringstreffStatus.PUBLISERT,
+            tilTid = nowOslo().minusDays(1),
+        )
+        val ikkeForbiPublisert = db.opprettRekrutteringstreffMedAlleFelter(
+            tittel = "Publisert men ikke ferdig",
+            status = RekrutteringstreffStatus.PUBLISERT,
+            tilTid = nowOslo().plusDays(1),
+        )
+        val ferdigUtkast = db.opprettRekrutteringstreffMedAlleFelter(
+            tittel = "Ferdig men utkast",
+            status = RekrutteringstreffStatus.UTKAST,
+            tilTid = nowOslo().minusDays(1),
+        )
+
+        val resultat = repository.hentPubliserteTreffHvorTilTidErPassert()
+
+        assertThat(resultat).hasSize(1)
+        assertThat(resultat.first().id).isEqualTo(ferdigPublisert)
+        assertThat(resultat).noneMatch { it.id == ikkeForbiPublisert }
+        assertThat(resultat).noneMatch { it.id == ferdigUtkast }
+    }
 }

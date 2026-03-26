@@ -129,6 +129,18 @@ class RekrutteringstreffRepository(
             }
         }
 
+    fun hentPubliserteTreffHvorTilTidErPassert(): List<Rekrutteringstreff> =
+        dataSource.connection.use { c ->
+            c.prepareStatement("SELECT * FROM $tabellnavn where $status = ? and $tiltid < now()").use { s ->
+                s.setObject(1, RekrutteringstreffStatus.PUBLISERT.name)
+                s.executeQuery().let { rs ->
+                    generateSequence {
+                        if (rs.next()) rs.tilRekrutteringstreff() else null
+                    }.toList()
+                }
+            }
+        }
+
     fun hent(treff: TreffId): Rekrutteringstreff? =
         dataSource.connection.use { c ->
             c.prepareStatement("SELECT * FROM $tabellnavn WHERE $id = ?").use { s ->
