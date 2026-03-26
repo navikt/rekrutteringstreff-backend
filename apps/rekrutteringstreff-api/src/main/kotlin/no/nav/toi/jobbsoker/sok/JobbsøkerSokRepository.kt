@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.sok
 
+import no.nav.toi.JacksonConfig
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -401,13 +402,14 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 val result = mutableMapOf<String, MutableList<MinsideHendelseSøkDto>>()
                 while (rs.next()) {
                     val personTreffId = rs.getString("person_treff_id")
+                    val rawData = rs.getString("hendelse_data")
                     val hendelse = MinsideHendelseSøkDto(
                         id = rs.getString("hendelse_id"),
                         tidspunkt = rs.getTimestamp("tidspunkt").toInstant().toString(),
                         hendelsestype = rs.getString("hendelsestype"),
                         opprettetAvAktørType = rs.getString("opprettet_av_aktortype"),
                         aktørIdentifikasjon = rs.getString("aktøridentifikasjon"),
-                        hendelseData = rs.getString("hendelse_data"),
+                        hendelseData = rawData?.let { JacksonConfig.mapper.readTree(it) },
                     )
                     result.getOrPut(personTreffId) { mutableListOf() }.add(hendelse)
                 }

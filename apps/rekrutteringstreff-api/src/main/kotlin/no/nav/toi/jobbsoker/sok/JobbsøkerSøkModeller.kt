@@ -75,8 +75,7 @@ data class MinsideHendelseSøkDto(
     val hendelsestype: String,
     val opprettetAvAktørType: String,
     val aktørIdentifikasjon: String?,
-    @get:com.fasterxml.jackson.annotation.JsonRawValue
-    val hendelseData: String?,
+    val hendelseData: com.fasterxml.jackson.databind.JsonNode?,
 )
 
 data class FødselsnummerSøkRequest(
