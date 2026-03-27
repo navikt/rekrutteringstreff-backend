@@ -151,7 +151,7 @@ class JobbsøkerSokYtelsestest {
             antallPerSide = 20,
         )
         val sorteringRequest = JobbsøkerSøkRequest(
-            sortering = JobbsøkerSortering.INVITERT_DATO,
+            sortering = JobbsøkerSortering.LAGT_TIL_DATO,
             side = 1,
             antallPerSide = 20,
         )
