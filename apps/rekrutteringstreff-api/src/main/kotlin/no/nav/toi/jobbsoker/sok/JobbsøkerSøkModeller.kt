@@ -48,6 +48,8 @@ data class JobbsøkerSøkRequest(
 
 data class JobbsøkerSøkRespons(
     val totalt: Long,
+    val antallSkjulte: Int,
+    val antallSlettede: Int,
     val side: Int,
     val antallPerSide: Int,
     val jobbsøkere: List<JobbsøkerSøkTreff>,

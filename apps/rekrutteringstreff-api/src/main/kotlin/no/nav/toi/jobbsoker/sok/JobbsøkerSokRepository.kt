@@ -142,6 +142,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             val treffDbId = conn.treffDbId(treffId)
             val (where, params) = byggWhere(treffDbId, request)
             val totalt = hentTotalt(conn, where, params)
+            val tellinger = hentTellinger(conn, treffDbId)
             val treff = hentTreff(conn, where, params, request.sortering, request.side, request.antallPerSide)
             val minsideHendelser = hentMinsideHendelser(conn, treff.map { it.personTreffId })
             val jobbsøkereMedHendelser = treff.map { t ->
@@ -149,6 +150,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             }
             JobbsøkerSøkRespons(
                 totalt = totalt,
+                antallSkjulte = tellinger.first,
+                antallSlettede = tellinger.second,
                 side = request.side,
                 antallPerSide = request.antallPerSide,
                 jobbsøkere = jobbsøkereMedHendelser,
@@ -185,6 +188,24 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 innsatsgrupper = hentTekstFilterverdier(conn, treffDbId, "innsatsgruppe"),
                 steder = hentStedFilterverdier(conn, treffDbId),
             )
+        }
+    }
+
+    private fun hentTellinger(conn: Connection, treffDbId: Long): Pair<Int, Int> {
+        val sql = """
+            SELECT
+                COUNT(*) FILTER (WHERE status != 'SLETTET' AND er_synlig = FALSE) AS antall_skjulte,
+                COUNT(*) FILTER (WHERE status = 'SLETTET') AS antall_slettede
+            FROM jobbsoker_sok
+            WHERE rekrutteringstreff_id = ?
+        """.trimIndent()
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            stmt.setLong(1, treffDbId)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) Pair(rs.getInt("antall_skjulte"), rs.getInt("antall_slettede"))
+                else Pair(0, 0)
+            }
         }
     }
 
