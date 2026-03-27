@@ -6,6 +6,8 @@ CREATE TABLE jobbsoker_sok (
 
     status                 text NOT NULL DEFAULT 'LAGT_TIL',
     invitert_dato          timestamptz,
+    lagt_til_dato          timestamptz,
+    lagt_til_av            text,
     er_synlig              boolean NOT NULL DEFAULT TRUE,
 
     fornavn                text,
@@ -35,7 +37,7 @@ CREATE TABLE jobbsoker_sok (
 
 -- Backfill fra eksisterende jobbsøkere
 INSERT INTO jobbsoker_sok (
-    jobbsoker_id, rekrutteringstreff_id, status, invitert_dato, er_synlig,
+    jobbsoker_id, rekrutteringstreff_id, status, invitert_dato, lagt_til_dato, lagt_til_av, er_synlig,
     fornavn, etternavn, navkontor, veileder_navident, veileder_navn
 )
 SELECT
@@ -45,6 +47,13 @@ SELECT
     (SELECT MIN(jh.tidspunkt)
      FROM jobbsoker_hendelse jh
      WHERE jh.jobbsoker_id = js.jobbsoker_id AND jh.hendelsestype = 'INVITERT'),
+    (SELECT MIN(jh.tidspunkt)
+     FROM jobbsoker_hendelse jh
+     WHERE jh.jobbsoker_id = js.jobbsoker_id AND jh.hendelsestype = 'OPPRETTET'),
+    (SELECT jh.aktor_identifikasjon
+     FROM jobbsoker_hendelse jh
+     WHERE jh.jobbsoker_id = js.jobbsoker_id AND jh.hendelsestype = 'OPPRETTET'
+     ORDER BY jh.tidspunkt ASC LIMIT 1),
     js.er_synlig,
     js.fornavn,
     js.etternavn,

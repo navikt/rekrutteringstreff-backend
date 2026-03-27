@@ -23,13 +23,15 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         jobbsøkerId: Long,
         treffDbId: Long,
         jobbsøker: LeggTilJobbsøker,
+        navIdent: String,
     ) {
         val sql = """
             INSERT INTO jobbsoker_sok (
                 jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
                 fornavn, etternavn, fylke, kommune, poststed,
-                navkontor, veileder_navident, veileder_navn, innsatsgruppe
-            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                navkontor, veileder_navident, veileder_navn, innsatsgruppe,
+                lagt_til_dato, lagt_til_av
+            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, jobbsøkerId)
@@ -43,6 +45,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             stmt.setString(9, jobbsøker.veilederNavIdent?.asString)
             stmt.setString(10, jobbsøker.veilederNavn?.asString)
             stmt.setString(11, jobbsøker.innsatsgruppe)
+            stmt.setTimestamp(12, Timestamp.from(Instant.now()))
+            stmt.setString(13, navIdent)
             stmt.executeUpdate()
         }
     }
@@ -52,15 +56,18 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         jobbsøkerIder: List<Long>,
         treffDbId: Long,
         jobbsøkere: List<LeggTilJobbsøker>,
+        navIdent: String,
     ) {
         val sql = """
             INSERT INTO jobbsoker_sok (
                 jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
                 fornavn, etternavn, fylke, kommune, poststed,
-                navkontor, veileder_navident, veileder_navn, innsatsgruppe
-            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                navkontor, veileder_navident, veileder_navn, innsatsgruppe,
+                lagt_til_dato, lagt_til_av
+            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
+            val now = Timestamp.from(Instant.now())
             jobbsøkerIder.zip(jobbsøkere).forEach { (id, js) ->
                 stmt.setLong(1, id)
                 stmt.setLong(2, treffDbId)
@@ -73,6 +80,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 stmt.setString(9, js.veilederNavIdent?.asString)
                 stmt.setString(10, js.veilederNavn?.asString)
                 stmt.setString(11, js.innsatsgruppe)
+                stmt.setTimestamp(12, now)
+                stmt.setString(13, navIdent)
                 stmt.addBatch()
             }
             stmt.executeBatch()
@@ -395,6 +404,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         veilederNavident = getString("veileder_navident"),
         status = JobbsøkerStatus.valueOf(getString("status")),
         invitertDato = getTimestamp("invitert_dato")?.toInstant(),
+        lagtTilDato = getTimestamp("lagt_til_dato")?.toInstant(),
+        lagtTilAv = getString("lagt_til_av"),
     )
 
     private fun hentMinsideHendelser(

@@ -42,6 +42,7 @@ class TestDatabase {
                 opprettedeJobbsøkere.map { it.jobbsøkerId },
                 treffDbId,
                 jobbsøkere,
+                opprettetAv,
             )
             personTreffIder
         }

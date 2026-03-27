@@ -341,6 +341,7 @@ class JobbsøkerService(
             opprettedeJobbsøkere.map { it.jobbsøkerId },
             treffDbId,
             jobbsøkere,
+            navIdent,
         )
     }
 
