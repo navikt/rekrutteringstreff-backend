@@ -9,17 +9,17 @@ import org.junit.jupiter.api.*
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class KiValideringsServiceTest {
+class KiLoggServiceTest {
 
     private val db = TestDatabase()
     private lateinit var kiLoggRepository: KiLoggRepository
-    private lateinit var service: KiValideringsService
+    private lateinit var kiLoggService: KiLoggService
 
     @BeforeAll
     fun setup() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         kiLoggRepository = KiLoggRepository(db.dataSource)
-        service = KiValideringsService(kiLoggRepository)
+        kiLoggService = KiLoggService(kiLoggRepository)
     }
 
     @AfterEach
@@ -30,14 +30,14 @@ class KiValideringsServiceTest {
     @Test
     fun `tom tekst hopper over validering`() {
         // Skal ikke kaste exception
-        service.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = "",
             kiLoggId = null,
             lagreLikevel = false,
             feltType = "tittel"
         )
 
-        service.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = "   ",
             kiLoggId = null,
             lagreLikevel = false,
@@ -48,7 +48,7 @@ class KiValideringsServiceTest {
     @Test
     fun `manglende loggId gir KI_VALIDERING_MANGLER`() {
         assertThatThrownBy {
-            service.verifiserKiValidering(
+            kiLoggService.verifiserKiValidering(
                 tekst = "Noe tekst",
                 kiLoggId = null,
                 lagreLikevel = false,
@@ -62,7 +62,7 @@ class KiValideringsServiceTest {
     @Test
     fun `tom loggId gir KI_VALIDERING_MANGLER`() {
         assertThatThrownBy {
-            service.verifiserKiValidering(
+            kiLoggService.verifiserKiValidering(
                 tekst = "Noe tekst",
                 kiLoggId = "",
                 lagreLikevel = false,
@@ -76,7 +76,7 @@ class KiValideringsServiceTest {
     @Test
     fun `ugyldig UUID-format gir KI_LOGG_ID_UGYLDIG`() {
         assertThatThrownBy {
-            service.verifiserKiValidering(
+            kiLoggService.verifiserKiValidering(
                 tekst = "Noe tekst",
                 kiLoggId = "ikke-en-uuid",
                 lagreLikevel = false,
@@ -90,7 +90,7 @@ class KiValideringsServiceTest {
     @Test
     fun `loggId som ikke finnes i database gir KI_LOGG_ID_UGYLDIG`() {
         assertThatThrownBy {
-            service.verifiserKiValidering(
+            kiLoggService.verifiserKiValidering(
                 tekst = "Noe tekst",
                 kiLoggId = UUID.randomUUID().toString(),
                 lagreLikevel = false,
@@ -121,7 +121,7 @@ class KiValideringsServiceTest {
         )
 
         assertThatThrownBy {
-            service.verifiserKiValidering(
+            kiLoggService.verifiserKiValidering(
                 tekst = "Endret tekst",
                 kiLoggId = loggId.toString(),
                 lagreLikevel = false,
@@ -152,7 +152,7 @@ class KiValideringsServiceTest {
         )
 
         assertThatThrownBy {
-            service.verifiserKiValidering(
+            kiLoggService.verifiserKiValidering(
                 tekst = "Tekst med brudd",
                 kiLoggId = loggId.toString(),
                 lagreLikevel = false,
@@ -183,7 +183,7 @@ class KiValideringsServiceTest {
         )
 
         // Skal ikke kaste exception
-        service.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = "Tekst med brudd",
             kiLoggId = loggId.toString(),
             lagreLikevel = true,
@@ -211,7 +211,7 @@ class KiValideringsServiceTest {
         )
 
         // Skal ikke kaste exception
-        service.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = "Gyldig tekst",
             kiLoggId = loggId.toString(),
             lagreLikevel = false,
@@ -239,7 +239,7 @@ class KiValideringsServiceTest {
         )
 
         // Skal ikke kaste exception - HTML-tagger fjernes ved sammenligning
-        service.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = "<div>Tekst med HTML</div>",
             kiLoggId = loggId.toString(),
             lagreLikevel = false,
@@ -267,7 +267,7 @@ class KiValideringsServiceTest {
         )
 
         // Skal ikke kaste exception - whitespace kollapses
-        service.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = "Tekst  med\nwhitespace",
             kiLoggId = loggId.toString(),
             lagreLikevel = false,
@@ -277,27 +277,27 @@ class KiValideringsServiceTest {
 
     @Test
     fun `erTekstEndret returnerer true for ulik tekst`() {
-        assertThat(service.erTekstEndret("Tekst 1", "Tekst 2")).isTrue()
+        assertThat(kiLoggService.erTekstEndret("Tekst 1", "Tekst 2")).isTrue()
     }
 
     @Test
     fun `erTekstEndret returnerer false for lik tekst`() {
-        assertThat(service.erTekstEndret("Samme tekst", "Samme tekst")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("Samme tekst", "Samme tekst")).isFalse()
     }
 
     @Test
     fun `erTekstEndret normaliserer HTML og whitespace`() {
-        assertThat(service.erTekstEndret("<p>Tekst</p>", "Tekst")).isFalse()
-        assertThat(service.erTekstEndret("Tekst  med   space", "Tekst med space")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("<p>Tekst</p>", "Tekst")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("Tekst  med   space", "Tekst med space")).isFalse()
     }
 
     @Test
     fun `erTekstEndret handterer null`() {
-        assertThat(service.erTekstEndret(null, null)).isFalse()
-        assertThat(service.erTekstEndret(null, "")).isFalse()
-        assertThat(service.erTekstEndret("", null)).isFalse()
-        assertThat(service.erTekstEndret(null, "Tekst")).isTrue()
-        assertThat(service.erTekstEndret("Tekst", null)).isTrue()
+        assertThat(kiLoggService.erTekstEndret(null, null)).isFalse()
+        assertThat(kiLoggService.erTekstEndret(null, "")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("", null)).isFalse()
+        assertThat(kiLoggService.erTekstEndret(null, "Tekst")).isTrue()
+        assertThat(kiLoggService.erTekstEndret("Tekst", null)).isTrue()
     }
 
     @Test
@@ -320,7 +320,7 @@ class KiValideringsServiceTest {
         )
 
         assertThatThrownBy {
-            service.verifiserKiValidering(
+            kiLoggService.verifiserKiValidering(
                 tekst = "Tekst",
                 kiLoggId = loggId.toString(),
                 lagreLikevel = false,
@@ -352,7 +352,7 @@ class KiValideringsServiceTest {
         )
 
         assertThatThrownBy {
-            service.verifiserKiValidering(
+            kiLoggService.verifiserKiValidering(
                 tekst = "Tekst",
                 kiLoggId = loggId.toString(),
                 lagreLikevel = false,
@@ -384,7 +384,7 @@ class KiValideringsServiceTest {
         )
 
         // Skal ikke kaste exception
-        service.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = "Tekst",
             kiLoggId = loggId.toString(),
             lagreLikevel = false,
@@ -413,7 +413,7 @@ class KiValideringsServiceTest {
         )
 
         // Skal ikke kaste exception - forventetTreffId er null
-        service.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = "Tekst",
             kiLoggId = loggId.toString(),
             lagreLikevel = false,

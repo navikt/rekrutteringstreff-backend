@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff.ki
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.sql.Types
+import java.time.OffsetDateTime
 import java.time.ZonedDateTime
 import java.util.UUID
 import javax.sql.DataSource
@@ -158,10 +159,99 @@ class KiLoggRepository(private val dataSource: DataSource) {
         manuellKontrollUtfortAv = rs.getString("manuell_kontroll_utført_av"),
         manuellKontrollTidspunkt = rs.getTimestamp("manuell_kontroll_tidspunkt")?.toInstant()?.atZone(ZonedDateTime.now().zone)
     )
+
+    fun hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet: Int): List<UUID> =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                select 
+                    k.id
+                from ki_spørring_logg k
+                where k.opprettet_tidspunkt <= current_timestamp - interval '${månederSidenLoggOpprettet} months'
+                """.trimIndent()
+            ).use { ps ->
+                ps.executeQuery().use { rs ->
+                    generateSequence { if (rs.next()) rs.getObject("id", UUID::class.java) else null }.toList()
+                }
+            }
+        }
+
+    fun slettKiLogg(KiLoggUuid: UUID) {
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                delete
+                from ki_spørring_logg k
+                where k.id = ?
+                """.trimIndent()
+            ).use { ps ->
+                ps.setObject(1,  KiLoggUuid)
+                ps.executeUpdate()
+            }
+        }
+    }
+
+    fun testInsert(kiLoggTestInsert: KiLoggTestInsert): UUID =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+            insert into ki_spørring_logg(
+                opprettet_tidspunkt,
+                treff_id,
+                felt_type,
+                spørring_fra_frontend,
+                spørring_filtrert,
+                systemprompt,
+                ekstra_parametre,
+                bryter_retningslinjer,
+                begrunnelse,
+                ki_navn,
+                ki_versjon,
+                svartid_ms,
+                lagret
+            ) values (?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, false)
+            returning id
+            """.trimIndent()
+            ).use { preparedStatement ->
+                var i = 0
+                preparedStatement.setObject(++i, OffsetDateTime.from(kiLoggTestInsert.opprettetTidspunkt))
+                preparedStatement.setObject(++i, kiLoggTestInsert.treffId)
+                preparedStatement.setString(++i, kiLoggTestInsert.feltType)
+                preparedStatement.setString(++i, kiLoggTestInsert.spørringFraFrontend)
+                preparedStatement.setString(++i, kiLoggTestInsert.spørringFiltrert)
+                preparedStatement.setString(++i, kiLoggTestInsert.systemprompt)
+                preparedStatement.setString(++i, kiLoggTestInsert.ekstraParametreJson)
+                preparedStatement.setBoolean(++i, kiLoggTestInsert.bryterRetningslinjer)
+                preparedStatement.setString(++i, kiLoggTestInsert.begrunnelse)
+                preparedStatement.setString(++i, kiLoggTestInsert.kiNavn)
+                preparedStatement.setString(++i, kiLoggTestInsert.kiVersjon)
+                preparedStatement.setInt(++i, kiLoggTestInsert.svartidMs)
+
+                preparedStatement.executeQuery().use { resultSet ->
+                    resultSet.next()
+                    resultSet.getObject(1, UUID::class.java)
+                }
+            }
+        }
 }
 
 data class KiLoggInsert(
     val treffId: UUID?,
+    val feltType: String,
+    val spørringFraFrontend: String,
+    val spørringFiltrert: String,
+    val systemprompt: String?,
+    val ekstraParametreJson: String?,
+    val bryterRetningslinjer: Boolean,
+    val begrunnelse: String?,
+    val kiNavn: String,
+    val kiVersjon: String,
+    val svartidMs: Int
+)
+
+data class KiLoggTestInsert( //Brukes for i testene for å legge inn logger med opprettetTidspunkt tilbake i tid
+    val treffId: UUID?,
+    val opprettetTidspunkt: ZonedDateTime,
     val feltType: String,
     val spørringFraFrontend: String,
     val spørringFiltrert: String,

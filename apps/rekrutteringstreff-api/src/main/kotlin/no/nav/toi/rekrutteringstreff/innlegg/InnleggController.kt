@@ -10,14 +10,14 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
-import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
+import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import java.net.HttpURLConnection.*
 import java.util.UUID
 
 
 class InnleggController(
     private val innleggService: InnleggService,
-    private val kiValideringsService: KiValideringsService,
+    private val kiLoggService: KiLoggService,
     private val eierService: EierService,
     javalin: Javalin
 ) {
@@ -157,7 +157,7 @@ class InnleggController(
 
         val dto = ctx.bodyAsClass<OpprettInnleggRequestDto>()
 
-        kiValideringsService.verifiserKiValidering(
+        kiLoggService.verifiserKiValidering(
             tekst = dto.htmlContent,
             kiLoggId = dto.innleggKiLoggId,
             lagreLikevel = dto.lagreLikevel,
@@ -227,8 +227,8 @@ class InnleggController(
         val dto = ctx.bodyAsClass<OppdaterInnleggRequestDto>()
 
         val eksisterendeInnlegg = innleggService.hentById(innleggId)
-        if (eksisterendeInnlegg != null && kiValideringsService.erTekstEndret(eksisterendeInnlegg.htmlContent, dto.htmlContent)) {
-            kiValideringsService.verifiserKiValidering(
+        if (eksisterendeInnlegg != null && kiLoggService.erTekstEndret(eksisterendeInnlegg.htmlContent, dto.htmlContent)) {
+            kiLoggService.verifiserKiValidering(
                 tekst = dto.htmlContent,
                 kiLoggId = dto.innleggKiLoggId,
                 lagreLikevel = dto.lagreLikevel,

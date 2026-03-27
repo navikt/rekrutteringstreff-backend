@@ -4,7 +4,7 @@ import no.nav.toi.exception.KiValideringsException
 import no.nav.toi.log
 import java.util.UUID
 
-class KiValideringsService(
+class KiLoggService(
     private val kiLoggRepository: KiLoggRepository
 ) {
     companion object {
@@ -93,4 +93,12 @@ class KiValideringsService(
             .replace(Regex("<[^>]+>"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
+
+    fun hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet: Int): List<UUID> {
+        return kiLoggRepository.hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet)
+    }
+
+    fun slettKILogg(logg_uuid: UUID) {
+        kiLoggRepository.slettKiLogg(logg_uuid)
+    }
 }
