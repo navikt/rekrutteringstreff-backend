@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker
 
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
@@ -30,7 +31,7 @@ class JobbsøkerServiceTest {
                 .migrate()
 
             jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-            jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+            jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
         }
     }
 

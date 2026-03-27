@@ -17,6 +17,7 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
@@ -101,14 +102,15 @@ class App(
 
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
-        startJavalin(jobbsøkerRepository)
+        val jobbsøkerSokRepository = JobbsøkerSokRepository(dataSource)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, jobbsøkerSokRepository)
+        startJavalin(jobbsøkerRepository, jobbsøkerSokRepository)
         startSchedulere(jobbsøkerService, leaderElection)
         startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
 
-    private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository) {
+    private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository, jobbsøkerSokRepository: JobbsøkerSokRepository) {
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
 
@@ -138,7 +140,7 @@ class App(
         val kiLoggRepository = KiLoggRepository(dataSource)
         val kiValideringsService = KiValideringsService(kiLoggRepository)
 
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, jobbsøkerSokRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
         val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
         val rekrutteringstreffService = RekrutteringstreffService(

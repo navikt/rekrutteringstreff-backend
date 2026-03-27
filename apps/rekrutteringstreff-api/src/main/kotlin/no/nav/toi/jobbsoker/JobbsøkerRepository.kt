@@ -22,10 +22,14 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId): List<PersonTreffId> {
+    data class OpprettetJobbsøker(val personTreffId: PersonTreffId, val jobbsøkerId: Long)
+
+    fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId): List<OpprettetJobbsøker> {
         val treffDbId = connection.treffDbId(treff)
         return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere)
     }
+
+    fun hentTreffDbId(connection: Connection, treff: TreffId): Long = connection.treffDbId(treff)
 
     fun leggTilOpprettetHendelser(
         connection: Connection,
@@ -39,19 +43,20 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         treffDbId: Long,
         jobbsøkere: List<LeggTilJobbsøker>,
         maksStørrelsePerBatch: Int = 500
-    ): List<PersonTreffId> {
+    ): List<OpprettetJobbsøker> {
         val sql = """
             insert into jobbsoker
               (id, rekrutteringstreff_id,fodselsnummer,fornavn,etternavn,
                navkontor,veileder_navn,veileder_navident,status)
             values (?,?,?,?,?,?,?,?,?)
         """.trimIndent()
-        val personTreffIder = mutableListOf<PersonTreffId>()
-        prepareStatement(sql).use { stmt ->
+        val resultat = mutableListOf<OpprettetJobbsøker>()
+        prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS).use { stmt ->
             var n = 0
+            val batchPersonTreffIder = mutableListOf<PersonTreffId>()
             jobbsøkere.forEach {
                 val personTreffId = PersonTreffId(UUID.randomUUID())
-                personTreffIder += personTreffId
+                batchPersonTreffIder += personTreffId
                 stmt.setObject(1, personTreffId.somUuid)
                 stmt.setLong(2, treffDbId)
                 stmt.setString(3, it.fødselsnummer.asString)
@@ -62,12 +67,27 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 stmt.setString(8, it.veilederNavIdent?.asString)
                 stmt.setString(9, JobbsøkerStatus.LAGT_TIL.name)
                 stmt.addBatch(); if (++n == maksStørrelsePerBatch) {
-                    stmt.executeBatch(); n = 0
+                    stmt.executeBatch()
+                    stmt.generatedKeys.use { keys ->
+                        var idx = batchPersonTreffIder.size - n
+                        while (keys.next()) {
+                            resultat += OpprettetJobbsøker(batchPersonTreffIder[idx++], keys.getLong(1))
+                        }
+                    }
+                    n = 0
                 }
             }
-            if (n > 0) stmt.executeBatch()
+            if (n > 0) {
+                stmt.executeBatch()
+                stmt.generatedKeys.use { keys ->
+                    var idx = batchPersonTreffIder.size - n
+                    while (keys.next()) {
+                        resultat += OpprettetJobbsøker(batchPersonTreffIder[idx++], keys.getLong(1))
+                    }
+                }
+            }
         }
-        return personTreffIder
+        return resultat
     }
 
     fun leggTilHendelserForJobbsøkere(
@@ -281,6 +301,23 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     } else {
                         JobbsøkerTellinger(antallSkjulte = 0, antallSlettede = 0)
                     }
+                }
+            }
+        }
+
+    fun hentFodselsnumre(treff: TreffId): List<String> =
+        dataSource.connection.use { c ->
+            c.prepareStatement(
+                """
+                    SELECT js.fodselsnummer
+                    FROM jobbsoker js
+                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                    WHERE rt.id = ? AND js.status != 'SLETTET'
+                """.trimIndent()
+            ).use { ps ->
+                ps.setObject(1, treff.somUuid)
+                ps.executeQuery().use { rs ->
+                    generateSequence { if (rs.next()) rs.getString("fodselsnummer") else null }.toList()
                 }
             }
         }

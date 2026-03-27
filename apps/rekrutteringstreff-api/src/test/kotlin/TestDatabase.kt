@@ -7,6 +7,7 @@ import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -25,14 +26,24 @@ class TestDatabase {
     private val eierRepository by lazy { EierRepository(dataSource) }
     private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
     private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
+    private val jobbsøkerSokRepository by lazy { JobbsøkerSokRepository(dataSource) }
 
     /**
      * Legger til jobbsøkere med OPPRETTET-hendelse via repository.
      */
     fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson"): List<PersonTreffId> {
         return dataSource.connection.use { connection ->
-            val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
+            val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
+            val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
             jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv)
+            val treffDbId = jobbsøkerRepository.hentTreffDbId(connection, treffId)
+            jobbsøkerSokRepository.opprettSokRader(
+                connection,
+                opprettedeJobbsøkere.map { it.jobbsøkerId },
+                treffDbId,
+                jobbsøkere,
+                opprettetAv,
+            )
             personTreffIder
         }
     }
@@ -51,6 +62,7 @@ class TestDatabase {
             )
             personTreffIds.forEach { personTreffId ->
                 jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.INVITERT)
+                jobbsøkerSokRepository.oppdaterStatusOgInvitertDato(connection, personTreffId)
             }
         }
     }
@@ -218,6 +230,7 @@ class TestDatabase {
         conn.prepareStatement("DELETE FROM naringskode").executeUpdate()
         conn.prepareStatement("DELETE FROM innlegg").executeUpdate()
         conn.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
+        conn.prepareStatement("DELETE FROM jobbsoker_sok").executeUpdate()
         conn.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
         conn.prepareStatement("DELETE FROM ki_spørring_logg").executeUpdate()
         conn.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
@@ -228,6 +241,10 @@ class TestDatabase {
             setBoolean(1, erSynlig)
             setObject(2, personTreffId.somUuid)
         }.executeUpdate()
+        conn.prepareStatement("UPDATE jobbsoker_sok SET er_synlig = ? WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)").apply {
+            setBoolean(1, erSynlig)
+            setObject(2, personTreffId.somUuid)
+        }.executeUpdate()
     }
 
     fun settJobbsøkerStatus(personTreffId: PersonTreffId, status: JobbsøkerStatus) = dataSource.connection.use { conn ->
@@ -235,6 +252,23 @@ class TestDatabase {
             setString(1, status.name)
             setObject(2, personTreffId.somUuid)
         }.executeUpdate()
+        conn.prepareStatement("UPDATE jobbsoker_sok SET status = ? WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)").apply {
+            setString(1, status.name)
+            setObject(2, personTreffId.somUuid)
+        }.executeUpdate()
+    }
+
+    fun leggTilMinsideHendelse(personTreffId: PersonTreffId, hendelseData: String) {
+        dataSource.connection.use { connection ->
+            jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                connection,
+                JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE,
+                listOf(personTreffId),
+                "system",
+                AktørType.SYSTEM,
+                hendelseData
+            )
+        }
     }
 
     fun hentJobbsøkerStatus(personTreffId: PersonTreffId): JobbsøkerStatus? = dataSource.connection.use { conn ->
@@ -498,6 +532,26 @@ class TestDatabase {
                     setString(3, JobbsøkerHendelsestype.OPPRETTET.name)
                     setString(4, AktørType.ARRANGØR.name)
                     setString(5, "testperson")
+                }.executeUpdate()
+
+                // Legg til søkeradl i jobbsoker_sok
+                c.prepareStatement(
+                    """
+                    INSERT INTO jobbsoker_sok
+                      (jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
+                       fornavn, etternavn, navkontor, veileder_navident, veileder_navn)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """.trimIndent()
+                ).apply {
+                    setLong(1, jobbsøkerDbId)
+                    setLong(2, treffDbId)
+                    setString(3, js.status.name)
+                    setBoolean(4, true)
+                    setString(5, js.fornavn.asString)
+                    setString(6, js.etternavn.asString)
+                    setString(7, js.navkontor?.asString)
+                    setString(8, js.veilederNavIdent?.asString)
+                    setString(9, js.veilederNavn?.asString)
                 }.executeUpdate()
             }
         }

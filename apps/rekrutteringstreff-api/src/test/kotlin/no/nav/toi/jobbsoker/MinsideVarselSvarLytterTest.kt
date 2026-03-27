@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker
 
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.dto.MinsideVarselSvarDataDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -25,7 +26,7 @@ class MinsideVarselSvarLytterTest {
     fun beforeAll() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, objectMapper)
-        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
     }
 
     @BeforeEach

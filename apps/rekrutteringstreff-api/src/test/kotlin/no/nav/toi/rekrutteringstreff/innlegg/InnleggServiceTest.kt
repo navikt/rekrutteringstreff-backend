@@ -4,6 +4,7 @@ import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -42,7 +43,7 @@ class InnleggServiceTest {
             jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
             arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
             innleggRepository = InnleggRepository(db.dataSource)
-            jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+            jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
             rekrutteringstreffService = RekrutteringstreffService(
                 db.dataSource,
                 rekrutteringstreffRepository,

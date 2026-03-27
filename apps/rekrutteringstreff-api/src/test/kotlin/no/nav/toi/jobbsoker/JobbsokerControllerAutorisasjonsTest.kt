@@ -23,6 +23,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -73,7 +74,7 @@ class JobbsokerControllerAutorisasjonsTest {
     private val eierRepository = EierRepository(database.dataSource)
     private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
-    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
     private val eierService = EierService(eierRepository, rekrutteringstreffRepository, database.dataSource)
     private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, eierService)
 
@@ -190,7 +191,7 @@ class JobbsokerControllerAutorisasjonsTest {
                 """.trimIndent())
             )
         }),
-        hentJobbsøkere({"http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker"}, {
+        hentJobbsøkere({"http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker?side=1&antallPerSide=20"}, {
             HttpRequest.newBuilder().GET()
         }),
         hentJobbsøkerMedHendelser({ "http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker/hendelser"}, {

@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
+import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import no.nav.toi.AuditLog
@@ -15,6 +16,11 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
+import no.nav.toi.jobbsoker.sok.FødselsnummerSøkRequest
+import no.nav.toi.jobbsoker.sok.JobbsøkerFilterverdierRespons
+import no.nav.toi.jobbsoker.sok.JobbsøkerSortering
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.slf4j.Logger
@@ -36,6 +42,9 @@ class JobbsøkerController(
         private const val hendelserPath = "$jobbsøkerPath/hendelser"
         private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
         private const val inviterPath = "$jobbsøkerPath/inviter"
+        private const val fnrSokPath = "$jobbsøkerPath/sok"
+        private const val fodselsnumrePath = "$jobbsøkerPath/fodselsnumre"
+        private const val filterverdierPath = "$jobbsøkerPath/filterverdier"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
@@ -45,6 +54,9 @@ class JobbsøkerController(
         javalin.delete(slettPath, slettJobbsøkerHandler())
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
+        javalin.post(fnrSokPath, søkMedFødselsnummerHandler())
+        javalin.get(fodselsnumrePath, hentFodselsnumreHandler())
+        javalin.get(filterverdierPath, hentFilterverdierHandler())
     }
 
     @OpenApi(
@@ -98,43 +110,43 @@ class JobbsøkerController(
             required = true,
             description = "Rekrutteringstreffets unike identifikator (UUID)"
         )],
+        queryParams = [
+            OpenApiParam(name = "side", type = Int::class, required = true),
+            OpenApiParam(name = "antallPerSide", type = Int::class, required = true),
+            OpenApiParam(name = "fritekst", type = String::class, required = false),
+            OpenApiParam(name = "status", type = String::class, required = false, description = "CSV med statuser"),
+            OpenApiParam(name = "innsatsgruppe", type = String::class, required = false, description = "CSV med innsatsgrupper"),
+            OpenApiParam(name = "fylke", type = String::class, required = false),
+            OpenApiParam(name = "kommune", type = String::class, required = false),
+            OpenApiParam(name = "navkontor", type = String::class, required = false),
+            OpenApiParam(name = "veileder", type = String::class, required = false),
+            OpenApiParam(name = "sortering", type = String::class, required = false),
+        ],
         responses = [OpenApiResponse(
             status = "200",
             content = [OpenApiContent(
-                from = JobbsøkereOutboundDto::class,
+                from = JobbsøkerSøkRespons::class,
                 example = """{
-                    "jobbsøkere": [
-                        {   
-                            "personTreffId": "any-uuid",
-                            "fødselsnummer": "12345678901",
-                            "fornavn": "Ola",
-                            "etternavn": "Nordmann",
-                            "navkontor": "Oslo",
-                            "veilederNavn": "Kari Nordmann",
-                            "veilederNavIdent": "NAV123",
-                            "hendelser": [
-                                {
-                                    "id": "any-uuid",
-                                    "tidspunkt": "2025-04-14T10:38:41Z",
-                                    "hendelsestype": "OPPRETTET",
-                                    "opprettetAvAktørType": "ARRANGØR",
-                                    "aktørIdentifikasjon": "testperson"
-                                }
-                            ]
-                        },
-                        {
-                            "fødselsnummer": "10987654321",
-                            "fornavn": "Kari",
-                            "etternavn": "Nordmann",
-                            "navkontor": null,
-                            "veilederNavn": null,
-                            "veilederNavIdent": null,
-                            "hendelser": []
-                        }
-                    ],
-                    "antallSynlige": 2,
-                    "antallSkjulte": 2,
-                    "antallSlettede": 1
+                  "jobbsøkere": [
+                    {
+                      "personTreffId": "any-uuid",
+                      "fødselsnummer": "12345678901",
+                      "fornavn": "Ola",
+                      "etternavn": "Nordmann",
+                      "navkontor": "Nav Grünerløkka",
+                      "veilederNavn": "Kari Nordmann",
+                      "veilederNavident": "NAV123",
+                      "status": "LAGT_TIL",
+                      "innsatsgruppe": "STANDARD_INNSATS",
+                      "fylke": "Oslo",
+                      "kommune": "Oslo",
+                      "poststed": "Oslo",
+                      "invitertDato": null
+                    }
+                  ],
+                  "totalt": 1,
+                  "side": 1,
+                  "antallPerSide": 20
                 }"""
             )]
         )],
@@ -147,16 +159,94 @@ class JobbsøkerController(
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            val jobbsøkereMedTellinger = jobbsøkerService.hentJobbsøkereMedTellinger(treff)
+            val side = ctx.requiredQueryParamAsInt("side")
+            val antallPerSide = ctx.requiredQueryParamAsInt("antallPerSide")
+            if (side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
+            if (antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
+
+            val sortering = ctx.queryParam("sortering")?.let {
+                try { JobbsøkerSortering.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
+                    throw IllegalArgumentException("Ugyldig sortering: $it")
+                }
+            } ?: JobbsøkerSortering.NAVN
+
+            val status = ctx.csvQueryParam("status")?.map {
+                try { JobbsøkerStatus.valueOf(it) } catch (_: IllegalArgumentException) {
+                    throw IllegalArgumentException("Ugyldig status: $it")
+                }
+            }
+
+            val request = JobbsøkerSøkRequest(
+                fritekst = ctx.queryParam("fritekst"),
+                status = status,
+                innsatsgruppe = ctx.csvQueryParam("innsatsgruppe"),
+                fylke = ctx.queryParam("fylke"),
+                kommune = ctx.queryParam("kommune"),
+                navkontor = ctx.queryParam("navkontor"),
+                veileder = ctx.queryParam("veileder"),
+                sortering = sortering,
+                side = side,
+                antallPerSide = antallPerSide,
+            )
+
             AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
-            ctx.status(200).json(JobbsøkereOutboundDto(
-                jobbsøkere = jobbsøkereMedTellinger.jobbsøkere.toOutboundDto(),
-                antallSynlige = jobbsøkereMedTellinger.antallSynlige,
-                antallSkjulte = jobbsøkereMedTellinger.antallSkjulte,
-                antallSlettede = jobbsøkereMedTellinger.antallSlettede
-            ))
+            ctx.status(200).json(jobbsøkerService.søkJobbsøkere(treff, request))
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente jobbsøkere")
+        }
+    }
+
+    @OpenApi(
+        summary = "Hent tilgjengelige filterverdier for jobbsøkersøk",
+        operationId = "hentJobbsøkerFilterverdier",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        responses = [OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(from = JobbsøkerFilterverdierRespons::class)],
+        )],
+        path = filterverdierPath,
+        methods = [HttpMethod.GET],
+    )
+    private fun hentFilterverdierHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+            AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
+            ctx.status(200).json(jobbsøkerService.hentFilterverdier(treff))
+        } else {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente filterverdier")
+        }
+    }
+
+    private fun søkMedFødselsnummerHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+            val body = ctx.bodyAsClass<FødselsnummerSøkRequest>()
+            AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
+            val resultat = jobbsøkerService.søkMedFødselsnummer(treff, body.fodselsnummer)
+                ?: throw NotFoundResponse("Fant ingen jobbsøker med angitt fødselsnummer i dette treffet")
+            ctx.status(200).json(resultat)
+        } else {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke søke jobbsøkere")
+        }
+    }
+
+    private fun hentFodselsnumreHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+
+        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+            AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
+            ctx.status(200).json(jobbsøkerService.hentFodselsnumre(treff))
+        } else {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente fødselsnumre")
         }
     }
 
@@ -359,3 +449,14 @@ class JobbsøkerController(
             )
         }
 }
+
+private fun Context.csvQueryParam(name: String): List<String>? =
+    queryParam(name)?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+
+private fun Context.queryParamAsInt(name: String): Int? =
+    queryParam(name)?.let { value ->
+        value.toIntOrNull() ?: throw IllegalArgumentException("Ugyldig $name: $value")
+    }
+
+private fun Context.requiredQueryParamAsInt(name: String): Int =
+    queryParamAsInt(name) ?: throw IllegalArgumentException("Mangler påkrevd query parameter: $name")

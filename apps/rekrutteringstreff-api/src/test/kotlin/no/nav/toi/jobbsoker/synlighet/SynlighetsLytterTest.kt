@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.synlighet
 
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.JacksonConfig
 import no.nav.toi.TestRapid
 import no.nav.toi.jobbsoker.*
@@ -24,7 +25,7 @@ class SynlighetsLytterTest {
     fun beforeAll() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
         jobbsøkerRepository = JobbsøkerRepository(db.dataSource, objectMapper)
-        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
     }
 
     @BeforeEach
