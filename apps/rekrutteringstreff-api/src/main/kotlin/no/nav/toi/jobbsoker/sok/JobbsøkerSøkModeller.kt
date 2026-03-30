@@ -7,6 +7,7 @@ import java.time.Instant
 enum class JobbsøkerSortering(val sql: String, @JsonValue val jsonVerdi: String) {
     NAVN("LOWER(js_sok.fornavn) ASC, LOWER(js_sok.etternavn) ASC", "navn"),
     LAGT_TIL_DATO("js_sok.lagt_til_dato DESC NULLS LAST", "lagt_til_dato"),
+    STATUS("CASE js_sok.status WHEN 'INVITERT' THEN 1 WHEN 'SVART_JA' THEN 2 WHEN 'SVART_NEI' THEN 3 WHEN 'LAGT_TIL' THEN 4 WHEN 'SLETTET' THEN 5 ELSE 6 END ASC, LOWER(js_sok.fornavn) ASC, LOWER(js_sok.etternavn) ASC", "status"),
     ;
 
     companion object {

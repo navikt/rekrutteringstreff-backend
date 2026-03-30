@@ -50,7 +50,7 @@ SELECT
     (SELECT MIN(jh.tidspunkt)
      FROM jobbsoker_hendelse jh
      WHERE jh.jobbsoker_id = js.jobbsoker_id AND jh.hendelsestype = 'OPPRETTET'),
-    (SELECT jh.aktor_identifikasjon
+    (SELECT jh.aktøridentifikasjon
      FROM jobbsoker_hendelse jh
      WHERE jh.jobbsoker_id = js.jobbsoker_id AND jh.hendelsestype = 'OPPRETTET'
      ORDER BY jh.tidspunkt ASC LIMIT 1),

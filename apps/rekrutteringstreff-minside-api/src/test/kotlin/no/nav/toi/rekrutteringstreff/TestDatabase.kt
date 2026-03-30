@@ -252,7 +252,8 @@ class TestDatabase {
                             veilederNavIdent = js.veilederNavIdent
                         )
                     }
-                    val personTreffIder = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
+                    val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
+                    val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
                     jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, "testperson")
                 }
             }
