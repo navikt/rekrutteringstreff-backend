@@ -81,6 +81,7 @@ data class LeggTilJobbsøker(
     val fylke: String? = null,
     val kommune: String? = null,
     val poststed: String? = null,
+    val telefonnummer: String? = null,
 )
 
 enum class JobbsøkerStatus {

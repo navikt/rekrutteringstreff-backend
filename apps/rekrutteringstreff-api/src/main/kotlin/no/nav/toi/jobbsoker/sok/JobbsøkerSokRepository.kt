@@ -29,9 +29,9 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             INSERT INTO jobbsoker_sok (
                 jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
                 fornavn, etternavn, fylke, kommune, poststed,
-                navkontor, veileder_navident, veileder_navn, innsatsgruppe,
+                navkontor, veileder_navident, veileder_navn, innsatsgruppe, telefonnummer,
                 lagt_til_dato, lagt_til_av
-            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, jobbsøkerId)
@@ -45,8 +45,9 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             stmt.setString(9, jobbsøker.veilederNavIdent?.asString)
             stmt.setString(10, jobbsøker.veilederNavn?.asString)
             stmt.setString(11, jobbsøker.innsatsgruppe)
-            stmt.setTimestamp(12, Timestamp.from(Instant.now()))
-            stmt.setString(13, navIdent)
+            stmt.setString(12, jobbsøker.telefonnummer)
+            stmt.setTimestamp(13, Timestamp.from(Instant.now()))
+            stmt.setString(14, navIdent)
             stmt.executeUpdate()
         }
     }
@@ -62,9 +63,9 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             INSERT INTO jobbsoker_sok (
                 jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
                 fornavn, etternavn, fylke, kommune, poststed,
-                navkontor, veileder_navident, veileder_navn, innsatsgruppe,
+                navkontor, veileder_navident, veileder_navn, innsatsgruppe, telefonnummer,
                 lagt_til_dato, lagt_til_av
-            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
             val now = Timestamp.from(Instant.now())
@@ -80,8 +81,9 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 stmt.setString(9, js.veilederNavIdent?.asString)
                 stmt.setString(10, js.veilederNavn?.asString)
                 stmt.setString(11, js.innsatsgruppe)
-                stmt.setTimestamp(12, now)
-                stmt.setString(13, navIdent)
+                stmt.setString(12, js.telefonnummer)
+                stmt.setTimestamp(13, now)
+                stmt.setString(14, navIdent)
                 stmt.addBatch()
             }
             stmt.executeBatch()
@@ -402,6 +404,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         navkontor = getString("navkontor"),
         veilederNavn = getString("veileder_navn"),
         veilederNavident = getString("veileder_navident"),
+        telefonnummer = getString("telefonnummer"),
         status = JobbsøkerStatus.valueOf(getString("status")),
         invitertDato = getTimestamp("invitert_dato")?.toInstant(),
         lagtTilDato = getTimestamp("lagt_til_dato")?.toInstant(),

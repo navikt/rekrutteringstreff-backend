@@ -19,6 +19,7 @@ data class JobbsøkerDto(
     val fylke: String? = null,
     val kommune: String? = null,
     val poststed: String? = null,
+    val telefonnummer: String? = null,
 ) {
     fun domene() = LeggTilJobbsøker(
         Fødselsnummer(fødselsnummer),
@@ -31,5 +32,6 @@ data class JobbsøkerDto(
         fylke = fylke,
         kommune = kommune,
         poststed = poststed,
+        telefonnummer = telefonnummer,
     )
 }

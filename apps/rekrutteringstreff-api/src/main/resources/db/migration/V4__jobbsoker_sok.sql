@@ -21,6 +21,7 @@ CREATE TABLE jobbsoker_sok (
     veileder_navident      text,
     veileder_navn          text,
     innsatsgruppe          text,
+    telefonnummer          text,
 
     sok_tekst              text GENERATED ALWAYS AS (
         LOWER(
