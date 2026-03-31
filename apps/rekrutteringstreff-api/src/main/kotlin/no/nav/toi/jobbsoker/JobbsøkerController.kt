@@ -76,7 +76,12 @@ class JobbsøkerController(
                 "etternavn": "Nordmann",
                 "navkontor": "NAV Oslo",
                 "veilederNavn": "Kari Nordmann",
-                "veilederNavIdent": "NAV123"
+                                "veilederNavIdent": "NAV123",
+                                "innsatsgruppe": "STANDARD_INNSATS",
+                                "fylke": "Oslo",
+                                "kommune": "Oslo",
+                                "poststed": "Oslo",
+                                "telefonnummer": "99887766"
               },
               {
                 "fødselsnummer": "10987654321",
@@ -84,7 +89,12 @@ class JobbsøkerController(
                 "etternavn": "Nordmann",
                 "navkontor": null,
                 "veilederNavn": null,
-                "veilederNavIdent": null
+                                "veilederNavIdent": null,
+                                "innsatsgruppe": null,
+                                "fylke": null,
+                                "kommune": null,
+                                "poststed": null,
+                                "telefonnummer": null
               }
             ]"""
             )]

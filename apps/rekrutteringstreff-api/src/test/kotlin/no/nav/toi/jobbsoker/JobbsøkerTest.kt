@@ -555,6 +555,57 @@ class JobbsøkerTest {
     }
 
     @Test
+    fun `leggTilJobbsøker med søkefelter lagres og returneres i søkerespons`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        val requestBody = """
+        [{
+          "fødselsnummer": "44444444444",
+          "fornavn": "Kari",
+          "etternavn": "Nordmann",
+          "navkontor": "Nav Grünerløkka",
+          "veilederNavn": "Vera Veileder",
+          "veilederNavIdent": "Z123456",
+          "innsatsgruppe": "STANDARD_INNSATS",
+          "fylke": "Oslo",
+          "kommune": "Oslo",
+          "poststed": "Oslo",
+          "telefonnummer": "99887766"
+        }]
+        """.trimIndent()
+
+        val postResponse = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker",
+            requestBody,
+            token.serialize()
+        )
+        assertThat(postResponse.statusCode()).isEqualTo(HTTP_CREATED)
+
+        val getResponse = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
+            token.serialize()
+        )
+        assertThat(getResponse.statusCode()).isEqualTo(HTTP_OK)
+
+        val result = mapper.readValue(getResponse.body(), JobbsøkerSøkRespons::class.java)
+        assertThat(result.jobbsøkere).hasSize(1)
+
+        val jobbsøker = result.jobbsøkere.first()
+        assertThat(jobbsøker.fornavn).isEqualTo("Kari")
+        assertThat(jobbsøker.etternavn).isEqualTo("Nordmann")
+        assertThat(jobbsøker.navkontor).isEqualTo("Nav Grünerløkka")
+        assertThat(jobbsøker.veilederNavn).isEqualTo("Vera Veileder")
+        assertThat(jobbsøker.veilederNavident).isEqualTo("Z123456")
+        assertThat(jobbsøker.innsatsgruppe).isEqualTo("STANDARD_INNSATS")
+        assertThat(jobbsøker.fylke).isEqualTo("Oslo")
+        assertThat(jobbsøker.kommune).isEqualTo("Oslo")
+        assertThat(jobbsøker.poststed).isEqualTo("Oslo")
+        assertThat(jobbsøker.telefonnummer).isEqualTo("99887766")
+    }
+
+    @Test
     fun `fritekstsøk på veilederIdent returnerer riktig jobbsøker`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
