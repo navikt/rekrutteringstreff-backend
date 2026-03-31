@@ -27,9 +27,9 @@ enum class JobbsøkerSortering {
 
     fun sql(retning: JobbsøkerSorteringsretning): String =
         when (this) {
-            NAVN -> "LOWER(js_sok.etternavn) ${retning.sql}, LOWER(js_sok.fornavn) ${retning.sql}"
-            LAGT_TIL_DATO -> "js_sok.lagt_til_dato ${retning.sql} NULLS LAST, LOWER(js_sok.etternavn) ASC, LOWER(js_sok.fornavn) ASC"
-            STATUS -> "CASE js_sok.status WHEN 'INVITERT' THEN 1 WHEN 'SVART_JA' THEN 2 WHEN 'SVART_NEI' THEN 3 WHEN 'LAGT_TIL' THEN 4 WHEN 'SLETTET' THEN 5 ELSE 6 END ${retning.sql}, LOWER(js_sok.etternavn) ASC, LOWER(js_sok.fornavn) ASC"
+            NAVN -> "LOWER(js_sok.etternavn) ${retning.sql}, LOWER(js_sok.fornavn) ${retning.sql}, js_sok.lagt_til_dato DESC NULLS LAST, js_sok.jobbsoker_id DESC"
+            LAGT_TIL_DATO -> "js_sok.lagt_til_dato ${retning.sql} NULLS LAST, js_sok.jobbsoker_id ${retning.sql}"
+            STATUS -> "CASE js_sok.status WHEN 'INVITERT' THEN 1 WHEN 'SVART_JA' THEN 2 WHEN 'SVART_NEI' THEN 3 WHEN 'LAGT_TIL' THEN 4 WHEN 'SLETTET' THEN 5 ELSE 6 END ${retning.sql}, LOWER(js_sok.etternavn) ASC, LOWER(js_sok.fornavn) ASC, js_sok.lagt_til_dato DESC NULLS LAST, js_sok.jobbsoker_id DESC"
         }
 
     companion object {

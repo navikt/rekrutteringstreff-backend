@@ -321,6 +321,54 @@ class JobbsøkerSokKomponenttest {
     }
 
     @Test
+    fun `ugyldig høy side clampes til siste gyldige side`() {
+        val treffId = opprettTreffMedEier()
+        val jobbsøkere = (1..5).map { i ->
+            LeggTilJobbsøker(Fødselsnummer("${i}2222222222".take(11)), Fornavn("Person$i"), Etternavn("Etternavn$i"), null, null, null)
+        }
+        db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=4&antallPerSide=2").body()
+        )
+
+        assertThat(dto.totalt).isEqualTo(5)
+        assertThat(dto.side).isEqualTo(3)
+        assertThat(dto.jobbsøkere).hasSize(1)
+        assertThat(dto.jobbsøkere.single().fornavn).isEqualTo("Person5")
+    }
+
+    @Test
+    fun `ugyldig høy side clampes etter at skjulte og slettede er filtrert bort`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            (1..5).map { i ->
+                LeggTilJobbsøker(
+                    Fødselsnummer("${i}3333333333".take(11)),
+                    Fornavn("Person$i"),
+                    Etternavn("Etternavn$i"),
+                    null,
+                    null,
+                    null,
+                )
+            },
+            treffId,
+        )
+        db.settSynlighet(personTreffIder[3], false)
+        db.settJobbsøkerStatus(personTreffIder[4], JobbsøkerStatus.SLETTET)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=3&antallPerSide=2").body()
+        )
+
+        assertThat(dto.totalt).isEqualTo(3)
+        assertThat(dto.antallSkjulte).isEqualTo(1)
+        assertThat(dto.antallSlettede).isEqualTo(1)
+        assertThat(dto.side).isEqualTo(2)
+        assertThat(dto.jobbsøkere).hasSize(1)
+    }
+
+    @Test
     fun `sortering på navn gir alfabetisk rekkefølge`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(
@@ -364,6 +412,30 @@ class JobbsøkerSokKomponenttest {
         oppdaterLagtTilDato(personTreffIder[0], Instant.parse("2026-03-01T12:00:00Z"))
         oppdaterLagtTilDato(personTreffIder[1], Instant.parse("2026-01-01T12:00:00Z"))
         oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-02-01T12:00:00Z"))
+
+        val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "sortering=lagt-til-asc")).body()
+        )
+        val synkendeDto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "sortering=lagt-til-desc")).body()
+        )
+
+        assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
+        assertThat(synkendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
+    }
+
+    @Test
+    fun `sortering på lagt til bruker klokkeslett innenfor samme dato`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Charlie"), Etternavn("C"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("55555555555"), Fornavn("Alice"), Etternavn("A"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("66666666666"), Fornavn("Bob"), Etternavn("B"), null, null, null),
+        ), treffId)
+
+        oppdaterLagtTilDato(personTreffIder[0], Instant.parse("2026-03-01T12:00:03Z"))
+        oppdaterLagtTilDato(personTreffIder[1], Instant.parse("2026-03-01T12:00:01Z"))
+        oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-03-01T12:00:02Z"))
 
         val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
             httpGet(søkePath(treffId, "sortering=lagt-til-asc")).body()

@@ -1,6 +1,7 @@
 package no.nav.toi.jobbsoker.sok
 
 import no.nav.toi.JacksonConfig
+import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -149,20 +150,25 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
     }
 
     fun sok(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons {
-        return dataSource.connection.use { conn ->
+        return dataSource.executeInTransaction { conn ->
             val treffDbId = conn.treffDbId(treffId)
             val (where, params) = byggWhere(treffDbId, request)
             val totalt = hentTotalt(conn, where, params)
+            val gyldigSide = beregnGyldigSide(request.side, request.antallPerSide, totalt)
             val tellinger = hentTellinger(conn, treffDbId)
-            val treff = hentTreff(
-                conn,
-                where,
-                params,
-                request.sortering,
-                request.sorteringsretning,
-                request.side,
-                request.antallPerSide,
-            )
+            val treff = if (totalt == 0L) {
+                emptyList()
+            } else {
+                hentTreff(
+                    conn,
+                    where,
+                    params,
+                    request.sortering,
+                    request.sorteringsretning,
+                    gyldigSide,
+                    request.antallPerSide,
+                )
+            }
             val minsideHendelser = hentMinsideHendelser(conn, treff.map { it.personTreffId })
             val jobbsøkereMedHendelser = treff.map { t ->
                 t.copy(minsideHendelser = minsideHendelser[t.personTreffId] ?: emptyList())
@@ -171,11 +177,18 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 totalt = totalt,
                 antallSkjulte = tellinger.first,
                 antallSlettede = tellinger.second,
-                side = request.side,
+                side = gyldigSide,
                 antallPerSide = request.antallPerSide,
                 jobbsøkere = jobbsøkereMedHendelser,
             )
         }
+    }
+
+    private fun beregnGyldigSide(ønsketSide: Int, antallPerSide: Int, totalt: Long): Int {
+        if (totalt <= 0L) return 1
+
+        val sisteSide = ((totalt - 1) / antallPerSide) + 1
+        return ønsketSide.coerceIn(1, sisteSide.toInt())
     }
 
     fun søkMedFødselsnummer(treffId: TreffId, fodselsnummer: String): JobbsøkerSøkTreff? {
