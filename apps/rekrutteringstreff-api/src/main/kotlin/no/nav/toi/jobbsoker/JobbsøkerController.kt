@@ -19,6 +19,7 @@ import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.jobbsoker.sok.FødselsnummerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerFilterverdierRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSortering
+import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringValg
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -160,11 +161,11 @@ class JobbsøkerController(
             if (side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
             if (antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
 
-            val sortering = ctx.queryParam("sortering")?.let {
-                try { JobbsøkerSortering.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
+            val sorteringValg = ctx.queryParam("sortering")?.let {
+                try { JobbsøkerSortering.fraQueryParam(it) } catch (_: IllegalArgumentException) {
                     throw IllegalArgumentException("Ugyldig sortering: $it")
                 }
-            } ?: JobbsøkerSortering.NAVN
+            } ?: JobbsøkerSorteringValg(JobbsøkerSortering.NAVN, JobbsøkerSortering.NAVN.standardRetning)
 
             val status = ctx.csvQueryParam("status")?.map {
                 try { JobbsøkerStatus.valueOf(it) } catch (_: IllegalArgumentException) {
@@ -176,7 +177,8 @@ class JobbsøkerController(
                 fritekst = ctx.queryParam("fritekst"),
                 status = status,
                 innsatsgruppe = ctx.csvQueryParam("innsatsgruppe"),
-                sortering = sortering,
+                sortering = sorteringValg.sortering,
+                sorteringsretning = sorteringValg.retning,
                 side = side,
                 antallPerSide = antallPerSide,
             )

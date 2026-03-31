@@ -16,6 +16,8 @@ import org.junit.jupiter.api.*
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.sql.Timestamp
+import java.time.Instant
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -137,6 +139,22 @@ class JobbsøkerSokKomponenttest {
             }
 
         return "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?${parametre.entries.joinToString("&") { "${it.key}=${it.value}" }}"
+    }
+
+    private fun oppdaterLagtTilDato(personTreffId: PersonTreffId, lagtTilDato: Instant) {
+        db.dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                UPDATE jobbsoker_sok
+                SET lagt_til_dato = ?
+                WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setTimestamp(1, Timestamp.from(lagtTilDato))
+                stmt.setObject(2, personTreffId.somUuid)
+                stmt.executeUpdate()
+            }
+        }
     }
 
     @Test
@@ -316,6 +334,46 @@ class JobbsøkerSokKomponenttest {
         )
 
         assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
+    }
+
+    @Test
+    fun `sortering på navn støtter synkende rekkefølge`() {
+        val treffId = opprettTreffMedEier()
+        db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Charlie"), Etternavn("C"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Alice"), Etternavn("A"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Bob"), Etternavn("B"), null, null, null),
+        ), treffId)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "sortering=navn-desc")).body()
+        )
+
+        assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
+    }
+
+    @Test
+    fun `sortering på lagt til støtter stigende og synkende rekkefølge`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Charlie"), Etternavn("C"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Alice"), Etternavn("A"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Bob"), Etternavn("B"), null, null, null),
+        ), treffId)
+
+        oppdaterLagtTilDato(personTreffIder[0], Instant.parse("2026-03-01T12:00:00Z"))
+        oppdaterLagtTilDato(personTreffIder[1], Instant.parse("2026-01-01T12:00:00Z"))
+        oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-02-01T12:00:00Z"))
+
+        val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "sortering=lagt-til-asc")).body()
+        )
+        val synkendeDto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "sortering=lagt-til-desc")).body()
+        )
+
+        assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
+        assertThat(synkendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
     }
 
     @Test

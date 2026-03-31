@@ -154,7 +154,15 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             val (where, params) = byggWhere(treffDbId, request)
             val totalt = hentTotalt(conn, where, params)
             val tellinger = hentTellinger(conn, treffDbId)
-            val treff = hentTreff(conn, where, params, request.sortering, request.side, request.antallPerSide)
+            val treff = hentTreff(
+                conn,
+                where,
+                params,
+                request.sortering,
+                request.sorteringsretning,
+                request.side,
+                request.antallPerSide,
+            )
             val minsideHendelser = hentMinsideHendelser(conn, treff.map { it.personTreffId })
             val jobbsøkereMedHendelser = treff.map { t ->
                 t.copy(minsideHendelser = minsideHendelser[t.personTreffId] ?: emptyList())
@@ -235,6 +243,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         where: String,
         params: List<Any>,
         sortering: JobbsøkerSortering,
+        sorteringsretning: JobbsøkerSorteringsretning,
         side: Int,
         antallPerSide: Int,
     ): List<JobbsøkerSøkTreff> {
@@ -243,7 +252,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             FROM jobbsoker_sok js_sok
             JOIN jobbsoker j ON js_sok.jobbsoker_id = j.jobbsoker_id
             $where
-            ORDER BY ${sortering.sql}
+            ORDER BY ${sortering.sql(sorteringsretning)}
             LIMIT ? OFFSET ?
         """.trimIndent()
 
