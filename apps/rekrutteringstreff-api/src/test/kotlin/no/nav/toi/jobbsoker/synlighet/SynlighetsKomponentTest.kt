@@ -122,7 +122,7 @@ class SynlighetsKomponentTest {
     }
 
     private fun jobbsøkerPath(treffId: TreffId): String =
-        "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=1&antallPerSide=20"
+        "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker"
 
     private fun opprettTreffMedEier(): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreff")

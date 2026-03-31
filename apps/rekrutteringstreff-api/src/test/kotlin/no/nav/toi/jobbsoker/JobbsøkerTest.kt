@@ -128,7 +128,7 @@ class JobbsøkerTest {
     @MethodSource("tokenVarianter")
     fun autentiseringHentJobbsøker(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
-        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker?side=1&antallPerSide=20", authServer, authPort)
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/jobbsoker", authServer, authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
@@ -225,7 +225,7 @@ class JobbsøkerTest {
         assertThat(db.hentAlleJobbsøkere().size).isEqualTo(4)
         eierRepository.leggTil(treffId2, listOf("A123456"))
         val response = httpGet(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker?side=1&antallPerSide=20",
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker",
             token.serialize()
         )
         assertThat(response.statusCode()).isEqualTo(HTTP_OK)
@@ -262,7 +262,7 @@ class JobbsøkerTest {
         assertThat(postResponse.statusCode()).isEqualTo(HTTP_CREATED)
 
         val getResponse = httpGet(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=1&antallPerSide=20",
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
             token.serialize()
         )
         assertThat(getResponse.statusCode()).isEqualTo(HTTP_OK)
@@ -545,7 +545,7 @@ class JobbsøkerTest {
         assertThat(postResponse.statusCode()).isEqualTo(HTTP_CREATED)
 
         val getResponse = httpGet(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=1&antallPerSide=20",
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
             token.serialize()
         )
         assertThat(getResponse.statusCode()).isEqualTo(HTTP_OK)
@@ -586,7 +586,7 @@ class JobbsøkerTest {
         )
 
         val response = httpGet(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=1&antallPerSide=20&fritekst=X999888",
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?fritekst=X999888",
             token.serialize()
         )
         assertThat(response.statusCode()).isEqualTo(HTTP_OK)

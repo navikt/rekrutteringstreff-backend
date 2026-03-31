@@ -195,9 +195,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         return dataSource.connection.use { conn ->
             val treffDbId = conn.treffDbId(treffId)
             JobbsøkerFilterverdierRespons(
-                navkontor = hentTekstFilterverdier(conn, treffDbId, "navkontor"),
                 innsatsgrupper = hentTekstFilterverdier(conn, treffDbId, "innsatsgruppe"),
-                steder = hentStedFilterverdier(conn, treffDbId),
             )
         }
     }
@@ -285,26 +283,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             grupper.forEach { params.add(it) }
         }
 
-        request.fylke?.let {
-            conditions.add("js_sok.fylke = ?")
-            params.add(it)
-        }
-
-        request.kommune?.let {
-            conditions.add("js_sok.kommune = ?")
-            params.add(it)
-        }
-
-        request.navkontor?.let {
-            conditions.add("js_sok.navkontor = ?")
-            params.add(it)
-        }
-
-        request.veileder?.let {
-            conditions.add("js_sok.veileder_navident = ?")
-            params.add(it)
-        }
-
         val whereClause = "WHERE " + conditions.joinToString(" AND ")
         return Pair(whereClause, params)
     }
@@ -326,51 +304,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             stmt.setLong(1, treffDbId)
             stmt.executeQuery().use { rs ->
                 generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
-            }
-        }
-    }
-
-    private fun hentStedFilterverdier(conn: Connection, treffDbId: Long): List<JobbsøkerFilterverdiSted> {
-        val sql = """
-            SELECT navn, type
-            FROM (
-                SELECT DISTINCT kommune AS navn, 'kommune' AS type
-                FROM jobbsoker_sok
-                WHERE rekrutteringstreff_id = ?
-                  AND er_synlig = true
-                  AND status != 'SLETTET'
-                  AND kommune IS NOT NULL
-                  AND kommune != ''
-
-                UNION
-
-                SELECT DISTINCT fylke AS navn, 'fylke' AS type
-                FROM jobbsoker_sok
-                WHERE rekrutteringstreff_id = ?
-                  AND er_synlig = true
-                  AND status != 'SLETTET'
-                  AND fylke IS NOT NULL
-                  AND fylke != ''
-            ) steder
-            ORDER BY type, navn
-        """.trimIndent()
-
-        return conn.prepareStatement(sql).use { stmt ->
-            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
-            stmt.setLong(1, treffDbId)
-            stmt.setLong(2, treffDbId)
-            stmt.executeQuery().use { rs ->
-                generateSequence {
-                    if (!rs.next()) return@generateSequence null
-                    JobbsøkerFilterverdiSted(
-                        navn = rs.getString("navn"),
-                        type = when (rs.getString("type")) {
-                            "kommune" -> Stedstype.KOMMUNE
-                            "fylke" -> Stedstype.FYLKE
-                            else -> error("Ukjent stedstype")
-                        },
-                    )
-                }.toList()
             }
         }
     }

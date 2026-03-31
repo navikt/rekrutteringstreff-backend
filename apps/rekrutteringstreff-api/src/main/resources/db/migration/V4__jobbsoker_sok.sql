@@ -30,8 +30,10 @@ CREATE TABLE jobbsoker_sok (
             COALESCE(poststed, '') || ' ' ||
             COALESCE(kommune, '') || ' ' ||
             COALESCE(fylke, '') || ' ' ||
+            COALESCE(navkontor, '') || ' ' ||
             COALESCE(veileder_navn, '') || ' ' ||
-            COALESCE(veileder_navident, '')
+            COALESCE(veileder_navident, '') || ' ' ||
+            COALESCE(telefonnummer, '')
         )
     ) STORED
 );

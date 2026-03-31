@@ -188,6 +188,45 @@ class JobbsøkerSokKomponenttest {
     }
 
     @Test
+    fun `fritekst-søk filtrerer på navkontor veileder og telefonnummer`() {
+        val treffId = opprettTreffMedEier()
+        db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(
+                Fødselsnummer("11111111111"),
+                Fornavn("Ola"),
+                Etternavn("Nordmann"),
+                Navkontor("KontorAlpha"),
+                VeilederNavn("Vera Veileder"),
+                VeilederNavIdent("NAV001"),
+                telefonnummer = "12345678",
+            ),
+            LeggTilJobbsøker(
+                Fødselsnummer("22222222222"),
+                Fornavn("Kari"),
+                Etternavn("Hansen"),
+                Navkontor("KontorBeta"),
+                VeilederNavn("Per Person"),
+                VeilederNavIdent("NAV002"),
+                telefonnummer = "87654321",
+            ),
+        ), treffId)
+
+        val kontorTreff = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "fritekst=alpha")).body()
+        )
+        val veilederTreff = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "fritekst=nav002")).body()
+        )
+        val telefonTreff = mapper.readValue<JobbsøkerSøkRespons>(
+            httpGet(søkePath(treffId, "fritekst=12345678")).body()
+        )
+
+        assertThat(kontorTreff.jobbsøkere.map { it.fornavn }).containsExactly("Ola")
+        assertThat(veilederTreff.jobbsøkere.map { it.fornavn }).containsExactly("Kari")
+        assertThat(telefonTreff.jobbsøkere.map { it.fornavn }).containsExactly("Ola")
+    }
+
+    @Test
     fun `statusfilter returnerer kun jobbsøkere med gitt status`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
@@ -217,66 +256,6 @@ class JobbsøkerSokKomponenttest {
 
         assertThat(dto.totalt).isEqualTo(2)
         assertThat(dto.jobbsøkere).allMatch { it.innsatsgruppe == "STANDARD_INNSATS" }
-    }
-
-    @Test
-    fun `fylkefilter returnerer kun jobbsøkere fra gitt fylke`() {
-        val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null, fylke = "Vestland"),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null, fylke = "Oslo"),
-        ), treffId)
-
-        val response = httpGet(søkePath(treffId, "fylke=Vestland"))
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
-
-        assertThat(dto.totalt).isEqualTo(1)
-        assertThat(dto.jobbsøkere.first().fylke).isEqualTo("Vestland")
-    }
-
-    @Test
-    fun `kommunefilter returnerer kun jobbsøkere fra gitt kommune`() {
-        val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null, kommune = "Bergen"),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null, kommune = "Oslo"),
-        ), treffId)
-
-        val response = httpGet(søkePath(treffId, "kommune=Oslo"))
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
-
-        assertThat(dto.totalt).isEqualTo(1)
-        assertThat(dto.jobbsøkere.first().kommune).isEqualTo("Oslo")
-    }
-
-    @Test
-    fun `navkontorfilter returnerer kun jobbsøkere fra gitt kontor`() {
-        val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("NAV Oslo"), null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("NAV Bergen"), null, null),
-        ), treffId)
-
-        val response = httpGet(søkePath(treffId, "navkontor=NAV%20Oslo"))
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
-
-        assertThat(dto.totalt).isEqualTo(1)
-        assertThat(dto.jobbsøkere.first().navkontor).isEqualTo("NAV Oslo")
-    }
-
-    @Test
-    fun `veilederfilter returnerer kun jobbsøkere med gitt veileder`() {
-        val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, VeilederNavn("Veil1"), VeilederNavIdent("NAV001")),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, VeilederNavn("Veil2"), VeilederNavIdent("NAV002")),
-        ), treffId)
-
-        val response = httpGet(søkePath(treffId, "veileder=NAV001"))
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
-
-        assertThat(dto.totalt).isEqualTo(1)
-        assertThat(dto.jobbsøkere.first().veilederNavident).isEqualTo("NAV001")
     }
 
     @Test
@@ -464,34 +443,34 @@ class JobbsøkerSokKomponenttest {
     }
 
     @Test
-    fun `manglende side gir 400`() {
+    fun `manglende side og antallPerSide bruker standard paginering`() {
         val treffId = opprettTreffMedEier()
+        db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+        ), treffId)
 
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?antallPerSide=20")
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
 
-        assertThat(response.statusCode()).isEqualTo(400)
+        assertThat(response.statusCode()).isEqualTo(200)
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
+        assertThat(dto.side).isEqualTo(1)
+        assertThat(dto.antallPerSide).isEqualTo(20)
+        assertThat(dto.totalt).isEqualTo(1)
     }
 
     @Test
-    fun `filterverdier returnerer distinkte navkontor innsatsgrupper og steder`() {
+    fun `filterverdier returnerer distinkte innsatsgrupper`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("Nav Grünerløkka"), VeilederNavn("Veil 1"), VeilederNavIdent("NAV001"), innsatsgruppe = "STANDARD_INNSATS", fylke = "Oslo", kommune = "Oslo"),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("Nav Lerkendal"), VeilederNavn("Veil 2"), VeilederNavIdent("NAV002"), innsatsgruppe = "SITUASJONSBESTEMT_INNSATS", fylke = "Trøndelag", kommune = "Trondheim"),
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("Nav Grünerløkka"), VeilederNavn("Veil 1"), VeilederNavIdent("NAV001"), innsatsgruppe = "STANDARD_INNSATS"),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("Nav Lerkendal"), VeilederNavn("Veil 2"), VeilederNavIdent("NAV002"), innsatsgruppe = "SITUASJONSBESTEMT_INNSATS"),
         ), treffId)
 
         val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/filterverdier")
 
         assertThat(response.statusCode()).isEqualTo(200)
         val dto = mapper.readValue<JobbsøkerFilterverdierRespons>(response.body())
-        assertThat(dto.navkontor).containsExactly("Nav Grünerløkka", "Nav Lerkendal")
         assertThat(dto.innsatsgrupper).containsExactly("SITUASJONSBESTEMT_INNSATS", "STANDARD_INNSATS")
-        assertThat(dto.steder).containsExactly(
-            JobbsøkerFilterverdiSted("Oslo", Stedstype.FYLKE),
-            JobbsøkerFilterverdiSted("Trøndelag", Stedstype.FYLKE),
-            JobbsøkerFilterverdiSted("Oslo", Stedstype.KOMMUNE),
-            JobbsøkerFilterverdiSted("Trondheim", Stedstype.KOMMUNE),
-        )
     }
 
     @Test

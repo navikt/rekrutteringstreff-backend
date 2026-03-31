@@ -191,7 +191,7 @@ class JobbsokerControllerAutorisasjonsTest {
                 """.trimIndent())
             )
         }),
-        hentJobbsøkere({"http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker?side=1&antallPerSide=20"}, {
+        hentJobbsøkere({"http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker"}, {
             HttpRequest.newBuilder().GET()
         }),
         hentJobbsøkerMedHendelser({ "http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker/hendelser"}, {

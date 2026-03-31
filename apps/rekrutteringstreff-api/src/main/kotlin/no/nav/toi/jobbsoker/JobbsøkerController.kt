@@ -111,15 +111,11 @@ class JobbsøkerController(
             description = "Rekrutteringstreffets unike identifikator (UUID)"
         )],
         queryParams = [
-            OpenApiParam(name = "side", type = Int::class, required = true),
-            OpenApiParam(name = "antallPerSide", type = Int::class, required = true),
+            OpenApiParam(name = "side", type = Int::class, required = false, description = "Standardverdi 1"),
+            OpenApiParam(name = "antallPerSide", type = Int::class, required = false, description = "Standardverdi 20"),
             OpenApiParam(name = "fritekst", type = String::class, required = false),
             OpenApiParam(name = "status", type = String::class, required = false, description = "CSV med statuser"),
             OpenApiParam(name = "innsatsgruppe", type = String::class, required = false, description = "CSV med innsatsgrupper"),
-            OpenApiParam(name = "fylke", type = String::class, required = false),
-            OpenApiParam(name = "kommune", type = String::class, required = false),
-            OpenApiParam(name = "navkontor", type = String::class, required = false),
-            OpenApiParam(name = "veileder", type = String::class, required = false),
             OpenApiParam(name = "sortering", type = String::class, required = false),
         ],
         responses = [OpenApiResponse(
@@ -159,8 +155,8 @@ class JobbsøkerController(
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            val side = ctx.requiredQueryParamAsInt("side")
-            val antallPerSide = ctx.requiredQueryParamAsInt("antallPerSide")
+            val side = ctx.queryParamAsInt("side") ?: 1
+            val antallPerSide = ctx.queryParamAsInt("antallPerSide") ?: 20
             if (side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
             if (antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
 
@@ -180,10 +176,6 @@ class JobbsøkerController(
                 fritekst = ctx.queryParam("fritekst"),
                 status = status,
                 innsatsgruppe = ctx.csvQueryParam("innsatsgruppe"),
-                fylke = ctx.queryParam("fylke"),
-                kommune = ctx.queryParam("kommune"),
-                navkontor = ctx.queryParam("navkontor"),
-                veileder = ctx.queryParam("veileder"),
                 sortering = sortering,
                 side = side,
                 antallPerSide = antallPerSide,
@@ -457,6 +449,3 @@ private fun Context.queryParamAsInt(name: String): Int? =
     queryParam(name)?.let { value ->
         value.toIntOrNull() ?: throw IllegalArgumentException("Ugyldig $name: $value")
     }
-
-private fun Context.requiredQueryParamAsInt(name: String): Int =
-    queryParamAsInt(name) ?: throw IllegalArgumentException("Mangler påkrevd query parameter: $name")

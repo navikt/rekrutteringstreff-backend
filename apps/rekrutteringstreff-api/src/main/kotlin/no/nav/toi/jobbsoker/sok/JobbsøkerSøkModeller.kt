@@ -17,30 +17,14 @@ enum class JobbsøkerSortering(val sql: String, @JsonValue val jsonVerdi: String
     }
 }
 
-enum class Stedstype(@JsonValue val jsonVerdi: String) {
-    KOMMUNE("kommune"),
-    FYLKE("fylke"),
-}
-
-data class JobbsøkerFilterverdiSted(
-    val navn: String,
-    val type: Stedstype,
-)
-
 data class JobbsøkerFilterverdierRespons(
-    val navkontor: List<String>,
     val innsatsgrupper: List<String>,
-    val steder: List<JobbsøkerFilterverdiSted>,
 )
 
 data class JobbsøkerSøkRequest(
     val fritekst: String? = null,
     val status: List<JobbsøkerStatus>? = null,
     val innsatsgruppe: List<String>? = null,
-    val fylke: String? = null,
-    val kommune: String? = null,
-    val navkontor: String? = null,
-    val veileder: String? = null,
     val sortering: JobbsøkerSortering = JobbsøkerSortering.NAVN,
     val side: Int,
     val antallPerSide: Int,
