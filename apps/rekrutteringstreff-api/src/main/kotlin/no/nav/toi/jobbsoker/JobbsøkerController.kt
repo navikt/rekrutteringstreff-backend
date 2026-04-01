@@ -17,7 +17,7 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.jobbsoker.sok.FødselsnummerSøkRequest
-import no.nav.toi.jobbsoker.sok.JobbsøkerFilterverdierRespons
+import no.nav.toi.jobbsoker.sok.JobbsøkerInnsatsgrupperRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSortering
 import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringValg
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
@@ -44,7 +44,7 @@ class JobbsøkerController(
         private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
         private const val inviterPath = "$jobbsøkerPath/inviter"
         private const val fnrSokPath = "$jobbsøkerPath/sok"
-        private const val filterverdierPath = "$jobbsøkerPath/filterverdier"
+        private const val innsatsgrupperPath = "$jobbsøkerPath/innsatsgrupper"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
@@ -55,7 +55,7 @@ class JobbsøkerController(
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
         javalin.post(fnrSokPath, søkMedFødselsnummerHandler())
-        javalin.get(filterverdierPath, hentFilterverdierHandler())
+        javalin.get(innsatsgrupperPath, hentInnsatsgrupperHandler())
     }
 
     @OpenApi(
@@ -199,27 +199,27 @@ class JobbsøkerController(
     }
 
     @OpenApi(
-        summary = "Hent tilgjengelige filterverdier for jobbsøkersøk",
-        operationId = "hentJobbsøkerFilterverdier",
+        summary = "Hent tilgjengelige innsatsgrupper for jobbsøkersøk",
+        operationId = "hentJobbsøkerInnsatsgrupper",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
         responses = [OpenApiResponse(
             status = "200",
-            content = [OpenApiContent(from = JobbsøkerFilterverdierRespons::class)],
+            content = [OpenApiContent(from = JobbsøkerInnsatsgrupperRespons::class)],
         )],
-        path = filterverdierPath,
+        path = innsatsgrupperPath,
         methods = [HttpMethod.GET],
     )
-    private fun hentFilterverdierHandler(): (Context) -> Unit = { ctx ->
+    private fun hentInnsatsgrupperHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
-            ctx.status(200).json(jobbsøkerService.hentFilterverdier(treff))
+            ctx.status(200).json(jobbsøkerService.hentInnsatsgrupper(treff))
         } else {
-            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente filterverdier")
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente innsatsgrupper")
         }
     }
 

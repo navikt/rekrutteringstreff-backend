@@ -589,17 +589,17 @@ class JobbsøkerSokKomponenttest {
     }
 
     @Test
-    fun `filterverdier returnerer distinkte innsatsgrupper`() {
+    fun `innsatsgrupper returnerer distinkte innsatsgrupper`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(
             LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("Nav Grünerløkka"), VeilederNavn("Veil 1"), VeilederNavIdent("NAV001"), innsatsgruppe = "STANDARD_INNSATS"),
             LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("Nav Lerkendal"), VeilederNavn("Veil 2"), VeilederNavIdent("NAV002"), innsatsgruppe = "SITUASJONSBESTEMT_INNSATS"),
         ), treffId)
 
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/filterverdier")
+        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/innsatsgrupper")
 
         assertThat(response.statusCode()).isEqualTo(200)
-        val dto = mapper.readValue<JobbsøkerFilterverdierRespons>(response.body())
+        val dto = mapper.readValue<JobbsøkerInnsatsgrupperRespons>(response.body())
         assertThat(dto.innsatsgrupper).containsExactly("SITUASJONSBESTEMT_INNSATS", "STANDARD_INNSATS")
     }
 

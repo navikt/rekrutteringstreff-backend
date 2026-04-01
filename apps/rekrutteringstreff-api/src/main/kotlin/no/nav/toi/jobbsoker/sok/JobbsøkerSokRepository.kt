@@ -212,11 +212,11 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun hentFilterverdier(treffId: TreffId): JobbsøkerFilterverdierRespons {
+    fun hentInnsatsgrupper(treffId: TreffId): JobbsøkerInnsatsgrupperRespons {
         return dataSource.connection.use { conn ->
             val treffDbId = conn.treffDbId(treffId)
-            JobbsøkerFilterverdierRespons(
-                innsatsgrupper = hentTekstFilterverdier(conn, treffDbId, "innsatsgruppe"),
+            JobbsøkerInnsatsgrupperRespons(
+                innsatsgrupper = hentInnsatsgrupper(conn, treffDbId),
             )
         }
     }
@@ -309,16 +309,16 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         return Pair(whereClause, params)
     }
 
-    private fun hentTekstFilterverdier(conn: Connection, treffDbId: Long, kolonne: String): List<String> {
+        private fun hentInnsatsgrupper(conn: Connection, treffDbId: Long): List<String> {
         val sql = """
-            SELECT DISTINCT $kolonne
+                        SELECT DISTINCT innsatsgruppe
             FROM jobbsoker_sok
             WHERE rekrutteringstreff_id = ?
               AND er_synlig = true
               AND status != 'SLETTET'
-              AND $kolonne IS NOT NULL
-              AND $kolonne != ''
-            ORDER BY $kolonne
+                            AND innsatsgruppe IS NOT NULL
+                            AND innsatsgruppe != ''
+                        ORDER BY innsatsgruppe
         """.trimIndent()
 
         return conn.prepareStatement(sql).use { stmt ->

@@ -9,7 +9,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
-import no.nav.toi.jobbsoker.sok.JobbsøkerFilterverdierRespons
+import no.nav.toi.jobbsoker.sok.JobbsøkerInnsatsgrupperRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkTreff
@@ -170,8 +170,8 @@ class JobbsøkerService(
         return jobbsøkerRepository.hentJobbsøkerHendelser(treffId)
     }
 
-    fun hentFilterverdier(treffId: TreffId): JobbsøkerFilterverdierRespons =
-        jobbsøkerSokRepository.hentFilterverdier(treffId)
+    fun hentInnsatsgrupper(treffId: TreffId): JobbsøkerInnsatsgrupperRespons =
+        jobbsøkerSokRepository.hentInnsatsgrupper(treffId)
 
     fun registrerAktivitetskortOpprettelseFeilet(fnr: Fødselsnummer, treffId: TreffId, endretAv: String) {
         logger.info("Skal oppdatere hendelse for aktivitetskortfeil for TreffId: $treffId")

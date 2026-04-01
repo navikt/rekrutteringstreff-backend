@@ -48,7 +48,7 @@ enum class JobbsøkerSortering {
     }
 }
 
-data class JobbsøkerFilterverdierRespons(
+data class JobbsøkerInnsatsgrupperRespons(
     val innsatsgrupper: List<String>,
 )
 
