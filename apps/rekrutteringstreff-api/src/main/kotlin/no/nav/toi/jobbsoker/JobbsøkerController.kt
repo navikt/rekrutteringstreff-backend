@@ -18,8 +18,8 @@ import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.jobbsoker.sok.FødselsnummerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerInnsatsgrupperRespons
-import no.nav.toi.jobbsoker.sok.JobbsøkerSortering
-import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringValg
+import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringsfelt
+import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringsretning
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -50,7 +50,7 @@ class JobbsøkerController(
 
     init {
         javalin.post(jobbsøkerPath, leggTilJobbsøkereHandler())
-        javalin.get(jobbsøkerPath, hentJobbsøkereHandler())
+        javalin.get(jobbsøkerPath, søkJobbsøkereHandler())
         javalin.delete(slettPath, slettJobbsøkerHandler())
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
@@ -110,8 +110,8 @@ class JobbsøkerController(
     }
 
     @OpenApi(
-        summary = "Hent alle jobbsøkere for et rekrutteringstreff",
-        operationId = "hentJobbsøkere",
+        summary = "Søk etter jobbsøkere for et rekrutteringstreff",
+        operationId = "søkJobbsøkere",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(
             name = pathParamTreffId,
@@ -126,6 +126,7 @@ class JobbsøkerController(
             OpenApiParam(name = "status", type = String::class, required = false, description = "CSV med statuser"),
             OpenApiParam(name = "innsatsgruppe", type = String::class, required = false, description = "CSV med innsatsgrupper"),
             OpenApiParam(name = "sortering", type = String::class, required = false),
+            OpenApiParam(name = "retning", type = String::class, required = false),
         ],
         responses = [OpenApiResponse(
             status = "200",
@@ -158,7 +159,7 @@ class JobbsøkerController(
         path = jobbsøkerPath,
         methods = [HttpMethod.GET]
     )
-    private fun hentJobbsøkereHandler(): (Context) -> Unit = { ctx ->
+    private fun søkJobbsøkereHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
@@ -169,11 +170,17 @@ class JobbsøkerController(
             if (side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
             if (antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
 
-            val sorteringValg = ctx.queryParam("sortering")?.let {
-                try { JobbsøkerSortering.fraQueryParam(it) } catch (_: IllegalArgumentException) {
+            val sorteringsfelt = ctx.queryParam("sortering")?.let {
+                try { JobbsøkerSorteringsfelt.fraQueryParam(it) } catch (_: IllegalArgumentException) {
                     throw IllegalArgumentException("Ugyldig sortering: $it")
                 }
-            } ?: JobbsøkerSorteringValg(JobbsøkerSortering.NAVN, JobbsøkerSortering.NAVN.standardRetning)
+            } ?: JobbsøkerSorteringsfelt.NAVN
+
+            val sorteringsretning = ctx.queryParam("retning")?.let {
+                try { JobbsøkerSorteringsretning.fraQueryParam(it) } catch (_: IllegalArgumentException) {
+                    throw IllegalArgumentException("Ugyldig retning: $it")
+                }
+            } ?: sorteringsfelt.standardRetning
 
             val status = ctx.csvQueryParam("status")?.map {
                 try { JobbsøkerStatus.valueOf(it) } catch (_: IllegalArgumentException) {
@@ -185,8 +192,8 @@ class JobbsøkerController(
                 fritekst = ctx.queryParam("fritekst"),
                 status = status,
                 innsatsgruppe = ctx.csvQueryParam("innsatsgruppe"),
-                sortering = sorteringValg.sortering,
-                sorteringsretning = sorteringValg.retning,
+                sorteringsfelt = sorteringsfelt,
+                sorteringsretning = sorteringsretning,
                 side = side,
                 antallPerSide = antallPerSide,
             )
@@ -194,7 +201,7 @@ class JobbsøkerController(
             AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
             ctx.status(200).json(jobbsøkerService.søkJobbsøkere(treff, request))
         } else {
-            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente jobbsøkere")
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke søke jobbsøkere")
         }
     }
 

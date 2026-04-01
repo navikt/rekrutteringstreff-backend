@@ -163,7 +163,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                     conn,
                     where,
                     params,
-                    request.sortering,
+                    request.sorteringsfelt,
                     request.sorteringsretning,
                     gyldigSide,
                     request.antallPerSide,
@@ -255,7 +255,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         conn: Connection,
         where: String,
         params: List<Any>,
-        sortering: JobbsøkerSortering,
+        sorteringsfelt: JobbsøkerSorteringsfelt,
         sorteringsretning: JobbsøkerSorteringsretning,
         side: Int,
         antallPerSide: Int,
@@ -265,7 +265,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             FROM jobbsoker_sok js_sok
             JOIN jobbsoker j ON js_sok.jobbsoker_id = j.jobbsoker_id
             $where
-            ORDER BY ${sortering.sql(sorteringsretning)}
+            ORDER BY ${sorteringsfelt.sql(sorteringsretning)}
             LIMIT ? OFFSET ?
         """.trimIndent()
 

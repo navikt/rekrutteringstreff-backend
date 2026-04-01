@@ -6,43 +6,40 @@ import java.time.Instant
 enum class JobbsøkerSorteringsretning(val sql: String) {
     ASC("ASC"),
     DESC("DESC"),
+    ;
+
+    companion object {
+        fun fraQueryParam(verdi: String): JobbsøkerSorteringsretning =
+            when (verdi.lowercase()) {
+                "asc" -> ASC
+                "desc" -> DESC
+                else -> throw IllegalArgumentException("Ugyldig retning: $verdi")
+            }
+    }
 }
 
-data class JobbsøkerSorteringValg(
-    val sortering: JobbsøkerSortering,
-    val retning: JobbsøkerSorteringsretning,
-)
-
-enum class JobbsøkerSortering {
+enum class JobbsøkerSorteringsfelt {
     NAVN,
-    LAGT_TIL_DATO,
-    STATUS,
+    LAGT_TIL,
     ;
 
     val standardRetning: JobbsøkerSorteringsretning
         get() = when (this) {
-            LAGT_TIL_DATO -> JobbsøkerSorteringsretning.DESC
-            NAVN, STATUS -> JobbsøkerSorteringsretning.ASC
+            LAGT_TIL -> JobbsøkerSorteringsretning.DESC
+            NAVN -> JobbsøkerSorteringsretning.ASC
         }
 
     fun sql(retning: JobbsøkerSorteringsretning): String =
         when (this) {
             NAVN -> "LOWER(js_sok.etternavn) ${retning.sql}, LOWER(js_sok.fornavn) ${retning.sql}, js_sok.lagt_til_dato DESC NULLS LAST, js_sok.jobbsoker_id DESC"
-            LAGT_TIL_DATO -> "js_sok.lagt_til_dato ${retning.sql} NULLS LAST, js_sok.jobbsoker_id ${retning.sql}"
-            STATUS -> "CASE js_sok.status WHEN 'INVITERT' THEN 1 WHEN 'SVART_JA' THEN 2 WHEN 'SVART_NEI' THEN 3 WHEN 'LAGT_TIL' THEN 4 WHEN 'SLETTET' THEN 5 ELSE 6 END ${retning.sql}, LOWER(js_sok.etternavn) ASC, LOWER(js_sok.fornavn) ASC, js_sok.lagt_til_dato DESC NULLS LAST, js_sok.jobbsoker_id DESC"
+            LAGT_TIL -> "js_sok.lagt_til_dato ${retning.sql} NULLS LAST, js_sok.jobbsoker_id ${retning.sql}"
         }
 
     companion object {
-        fun fraQueryParam(verdi: String): JobbsøkerSorteringValg =
-            when (verdi) {
-                "navn", "navn-asc" -> JobbsøkerSorteringValg(NAVN, JobbsøkerSorteringsretning.ASC)
-                "navn-desc" -> JobbsøkerSorteringValg(NAVN, JobbsøkerSorteringsretning.DESC)
-                "lagt_til_dato", "lagt-til-desc", "lagt_til_dato-desc" ->
-                    JobbsøkerSorteringValg(LAGT_TIL_DATO, JobbsøkerSorteringsretning.DESC)
-                "lagt-til-asc", "lagt_til_dato-asc" ->
-                    JobbsøkerSorteringValg(LAGT_TIL_DATO, JobbsøkerSorteringsretning.ASC)
-                "status", "status-asc" -> JobbsøkerSorteringValg(STATUS, JobbsøkerSorteringsretning.ASC)
-                "status-desc" -> JobbsøkerSorteringValg(STATUS, JobbsøkerSorteringsretning.DESC)
+        fun fraQueryParam(verdi: String): JobbsøkerSorteringsfelt =
+            when (verdi.lowercase()) {
+                "navn" -> NAVN
+                "lagt-til" -> LAGT_TIL
                 else -> throw IllegalArgumentException("Ugyldig sortering: $verdi")
             }
     }
@@ -56,8 +53,8 @@ data class JobbsøkerSøkRequest(
     val fritekst: String? = null,
     val status: List<JobbsøkerStatus>? = null,
     val innsatsgruppe: List<String>? = null,
-    val sortering: JobbsøkerSortering = JobbsøkerSortering.NAVN,
-    val sorteringsretning: JobbsøkerSorteringsretning = sortering.standardRetning,
+    val sorteringsfelt: JobbsøkerSorteringsfelt = JobbsøkerSorteringsfelt.NAVN,
+    val sorteringsretning: JobbsøkerSorteringsretning = sorteringsfelt.standardRetning,
     val side: Int,
     val antallPerSide: Int,
 )

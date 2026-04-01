@@ -146,17 +146,17 @@ class JobbsøkerSokYtelsestest {
         val filteredRequest = JobbsøkerSøkRequest(
             fritekst = "fornavn42",
             status = listOf(JobbsøkerStatus.INVITERT),
-            sortering = JobbsøkerSortering.NAVN,
+            sorteringsfelt = JobbsøkerSorteringsfelt.NAVN,
             side = 1,
             antallPerSide = 20,
         )
         val sorteringRequest = JobbsøkerSøkRequest(
-            sortering = JobbsøkerSortering.LAGT_TIL_DATO,
+            sorteringsfelt = JobbsøkerSorteringsfelt.LAGT_TIL,
             side = 1,
             antallPerSide = 20,
         )
 
-        logger.info("Warmup-kall: hent alle uten filtre")
+        logger.info("Warmup-kall: søk uten filtre")
         val warmupMs = measureTimeMillis { repository.sok(treffId, warmupRequest) }
         logger.info("Warmup-kall fullførte på {} ms", warmupMs)
         assertThat(warmupMs)
@@ -170,7 +170,7 @@ class JobbsøkerSokYtelsestest {
             .withFailMessage("Filtrert søk brukte %s ms, terskel %s ms", filteredMs, MALT_TERSKEL_MS)
             .isLessThanOrEqualTo(MALT_TERSKEL_MS)
 
-        logger.info("Sorteringskall: invitert_dato")
+        logger.info("Sorteringskall: lagt_til")
         val sorteringMs = measureTimeMillis { repository.sok(treffId, sorteringRequest) }
         logger.info("Sorteringskall fullførte på {} ms", sorteringMs)
         assertThat(sorteringMs)

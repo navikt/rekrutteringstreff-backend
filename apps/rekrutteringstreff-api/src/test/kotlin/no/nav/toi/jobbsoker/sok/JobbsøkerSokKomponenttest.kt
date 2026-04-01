@@ -158,7 +158,7 @@ class JobbsøkerSokKomponenttest {
     }
 
     @Test
-    fun `hent alle uten filtre returnerer paginert respons`() {
+    fun `søk uten filtre returnerer paginert respons`() {
         val treffId = opprettTreffMedEier()
         val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
         val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
@@ -394,7 +394,7 @@ class JobbsøkerSokKomponenttest {
         ), treffId)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=navn-desc")).body()
+            httpGet(søkePath(treffId, "sortering=navn&retning=desc")).body()
         )
 
         assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
@@ -414,10 +414,10 @@ class JobbsøkerSokKomponenttest {
         oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-02-01T12:00:00Z"))
 
         val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=lagt-til-asc")).body()
+            httpGet(søkePath(treffId, "sortering=lagt-til&retning=asc")).body()
         )
         val synkendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=lagt-til-desc")).body()
+            httpGet(søkePath(treffId, "sortering=lagt-til&retning=desc")).body()
         )
 
         assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
@@ -438,32 +438,14 @@ class JobbsøkerSokKomponenttest {
         oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-03-01T12:00:02Z"))
 
         val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=lagt-til-asc")).body()
+            httpGet(søkePath(treffId, "sortering=lagt-til&retning=asc")).body()
         )
         val synkendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=lagt-til-desc")).body()
+            httpGet(søkePath(treffId, "sortering=lagt-til&retning=desc")).body()
         )
 
         assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
         assertThat(synkendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
-    }
-
-    @Test
-    fun `sortering på status fungerer`() {
-        val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("B"), null, null, null),
-        ), treffId)
-        db.inviterJobbsøkere(listOf(personTreffIder[1]), treffId)
-
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=status")).body()
-        )
-
-        assertThat(dto.jobbsøkere).hasSize(2)
-        assertThat(dto.jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.INVITERT)
-        assertThat(dto.jobbsøkere.last().status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
     }
 
     @Test
