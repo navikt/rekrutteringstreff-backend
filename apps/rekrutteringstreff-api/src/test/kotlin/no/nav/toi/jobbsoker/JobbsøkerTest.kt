@@ -3,6 +3,8 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.matching
+import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
@@ -67,13 +69,13 @@ class JobbsøkerTest {
             jobbsøkerrettet = jobbsøkerrettet,
             arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
             utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
+            kandidatsokApiUrl = wmInfo.httpBaseUrl,
+            kandidatsokScope = "api://kandidatsok/.default",
             rapidsConnection = TestRapid(),
             accessTokenClient = accessTokenClient,
             modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
+                modiaContextHolderScope = "api://modia/.default",
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
@@ -179,6 +181,71 @@ class JobbsøkerTest {
         assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
         assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
         assertThat(h.aktørIdentifikasjon).isEqualTo("A123456")
+    }
+
+    @Test
+    fun `create feiler med 422 hvis kandidat ikke finnes i kandidatsok`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+
+        stubFor(
+            post(urlPathEqualTo("/api/multiple-lookup-cv"))
+                .withHeader("Authorization", matching("Bearer .*"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"hits":{"hits":[]}}""")
+                )
+        )
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker",
+            """
+            [
+                {
+                    "fødselsnummer": "12345678901",
+                    "fornavn": "Ola",
+                    "etternavn": "Nordmann"
+                }
+            ]
+            """.trimIndent(),
+            token.serialize(),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(422)
+        assertThat(response.body()).contains("Fant ikke kandidatdata i kandidatsøk")
+        assertThat(db.hentAlleJobbsøkere()).isEmpty()
+    }
+
+    @Test
+    fun `create feiler med 502 hvis kandidatsok-oppslag ikke kan fullfores`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+
+        stubFor(
+            post(urlPathEqualTo("/api/multiple-lookup-cv"))
+                .withHeader("Authorization", matching("Bearer .*"))
+                .willReturn(aResponse().withStatus(500))
+        )
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker",
+            """
+            [
+                {
+                    "fødselsnummer": "12345678901",
+                    "fornavn": "Ola",
+                    "etternavn": "Nordmann"
+                }
+            ]
+            """.trimIndent(),
+            token.serialize(),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_BAD_GATEWAY)
+        assertThat(response.body()).contains("Klarte ikke å hente kandidatdata fra kandidatsøk")
+        assertThat(db.hentAlleJobbsøkere()).isEmpty()
     }
 
     @Test

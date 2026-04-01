@@ -105,7 +105,12 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        jobbsøkerService.leggTilJobbsøkere(dtoer.map { it.domene() }, treff, ctx.extractNavIdent())
+        jobbsøkerService.leggTilJobbsøkere(
+            dtoer.map { it.domene() },
+            treff,
+            ctx.extractNavIdent(),
+            ctx.attribute("raw_token"),
+        )
         ctx.status(201)
     }
 
