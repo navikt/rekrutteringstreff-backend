@@ -44,7 +44,6 @@ class JobbsøkerController(
         private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
         private const val inviterPath = "$jobbsøkerPath/inviter"
         private const val fnrSokPath = "$jobbsøkerPath/sok"
-        private const val fodselsnumrePath = "$jobbsøkerPath/fodselsnumre"
         private const val filterverdierPath = "$jobbsøkerPath/filterverdier"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
@@ -56,7 +55,6 @@ class JobbsøkerController(
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
         javalin.post(fnrSokPath, søkMedFødselsnummerHandler())
-        javalin.get(fodselsnumrePath, hentFodselsnumreHandler())
         javalin.get(filterverdierPath, hentFilterverdierHandler())
     }
 
@@ -238,19 +236,6 @@ class JobbsøkerController(
             ctx.status(200).json(resultat)
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke søke jobbsøkere")
-        }
-    }
-
-    private fun hentFodselsnumreHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = ctx.authenticatedUser().extractNavIdent()
-
-        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
-            ctx.status(200).json(jobbsøkerService.hentFodselsnumre(treff))
-        } else {
-            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente fødselsnumre")
         }
     }
 

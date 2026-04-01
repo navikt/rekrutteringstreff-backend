@@ -305,23 +305,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
-    fun hentFodselsnumre(treff: TreffId): List<String> =
-        dataSource.connection.use { c ->
-            c.prepareStatement(
-                """
-                    SELECT js.fodselsnummer
-                    FROM jobbsoker js
-                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                    WHERE rt.id = ? AND js.status != 'SLETTET'
-                """.trimIndent()
-            ).use { ps ->
-                ps.setObject(1, treff.somUuid)
-                ps.executeQuery().use { rs ->
-                    generateSequence { if (rs.next()) rs.getString("fodselsnummer") else null }.toList()
-                }
-            }
-        }
-
     fun hentPersonTreffId(treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
         dataSource.connection.use { c ->
             hentPersonTreffId(c, treffId, fødselsnummer)

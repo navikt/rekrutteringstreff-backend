@@ -170,10 +170,6 @@ class JobbsøkerService(
         return jobbsøkerRepository.hentJobbsøkerHendelser(treffId)
     }
 
-    fun hentFodselsnumre(treffId: TreffId): List<String> {
-        return jobbsøkerRepository.hentFodselsnumre(treffId)
-    }
-
     fun hentFilterverdier(treffId: TreffId): JobbsøkerFilterverdierRespons =
         jobbsøkerSokRepository.hentFilterverdier(treffId)
 
