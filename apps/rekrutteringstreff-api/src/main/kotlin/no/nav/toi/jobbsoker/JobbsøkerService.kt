@@ -22,6 +22,11 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
+data class LeggTilJobbsøkereResultat(
+    val antallLagtTil: Int,
+    val antallAvvist: Int,
+)
+
 class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
@@ -36,17 +41,22 @@ class JobbsøkerService(
         treffId: TreffId,
         navIdent: String,
         userToken: String? = null,
-    ) {
+    ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
         val nyeJobbsøkere = finnNyeJobbsøkere(jobbsøkere, eksisterendeJobbsøkere, slettedeJobbsøkere)
-        val berikedeNyeJobbsøkere = berikJobbsøkereFraKandidatsøk(nyeJobbsøkere, userToken)
+        val (berikedeNyeJobbsøkere, antallAvvist) = berikJobbsøkereFraKandidatsøk(nyeJobbsøkere, userToken)
         val gjenopprettedeJobbsøkere = finnGjenopprettedeJobbsøkere(jobbsøkere, slettedeJobbsøkere)
 
         dataSource.executeInTransaction { connection ->
             opprettNyeJobbsøkere(connection, berikedeNyeJobbsøkere, treffId, navIdent)
             gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId, navIdent)
         }
+
+        return LeggTilJobbsøkereResultat(
+            antallLagtTil = berikedeNyeJobbsøkere.size + gjenopprettedeJobbsøkere.size,
+            antallAvvist = antallAvvist,
+        )
     }
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
@@ -285,15 +295,19 @@ class JobbsøkerService(
     }
 
     fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
-        val raderOppdatert = jobbsøkerRepository.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, meldingTidspunkt)
-        if (raderOppdatert > 0) jobbsøkerSokRepository.oppdaterSynlighet(fodselsnummer, erSynlig)
-        return raderOppdatert
+        return dataSource.executeInTransaction { connection ->
+            val raderOppdatert = jobbsøkerRepository.oppdaterSynlighetFraEvent(connection, fodselsnummer, erSynlig, meldingTidspunkt)
+            if (raderOppdatert > 0) jobbsøkerSokRepository.oppdaterSynlighet(connection, fodselsnummer, erSynlig)
+            raderOppdatert
+        }
     }
 
     fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
-        val raderOppdatert = jobbsøkerRepository.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, meldingTidspunkt)
-        if (raderOppdatert > 0) jobbsøkerSokRepository.oppdaterSynlighet(fodselsnummer, erSynlig)
-        return raderOppdatert
+        return dataSource.executeInTransaction { connection ->
+            val raderOppdatert = jobbsøkerRepository.oppdaterSynlighetFraNeed(connection, fodselsnummer, erSynlig, meldingTidspunkt)
+            if (raderOppdatert > 0) jobbsøkerSokRepository.oppdaterSynlighet(connection, fodselsnummer, erSynlig)
+            raderOppdatert
+        }
     }
 
     fun hentFødselsnumreUtenEvaluertSynlighet(): List<String> =
@@ -327,18 +341,22 @@ class JobbsøkerService(
             .map { it.personTreffId }
     }
 
+    /**
+     * Beriker jobbsøkere med data fra kandidatsøk. Jobbsøkere som ikke finnes i kandidatsøk
+     * filtreres bort. Returnerer beriket liste og antall avviste.
+     */
     private fun berikJobbsøkereFraKandidatsøk(
         jobbsøkere: List<LeggTilJobbsøker>,
         userToken: String?,
-    ): List<LeggTilJobbsøker> {
+    ): Pair<List<LeggTilJobbsøker>, Int> {
         val kandidatsøkKlient = kandidatsøkKlient
         if (jobbsøkere.isEmpty() || kandidatsøkKlient == null || !kandidatsøkKlient.erKonfigurert()) {
-            return jobbsøkere
+            return Pair(jobbsøkere, 0)
         }
 
         val jobbsøkereSomMåBerikes = jobbsøkere.filter { it.trengerKandidatsøkBerikelse() }
         if (jobbsøkereSomMåBerikes.isEmpty()) {
-            return jobbsøkere
+            return Pair(jobbsøkere, 0)
         }
 
         val token = userToken?.takeIf { it.isNotBlank() }
@@ -349,15 +367,23 @@ class JobbsøkerService(
             token,
         )
 
-        return jobbsøkere.map { jobbsøker ->
+        var antallAvvist = 0
+        val berikede = mutableListOf<LeggTilJobbsøker>()
+
+        for (jobbsøker in jobbsøkere) {
             if (jobbsøker.trengerKandidatsøkBerikelse()) {
-                jobbsøker.medKandidatBerikelse(
-                    kandidatdataPerFødselsnummer[jobbsøker.fødselsnummer.asString]
-                )
+                val berikelse = kandidatdataPerFødselsnummer[jobbsøker.fødselsnummer.asString]
+                if (berikelse != null) {
+                    berikede.add(jobbsøker.medKandidatBerikelse(berikelse))
+                } else {
+                    antallAvvist++
+                }
             } else {
-                jobbsøker
+                berikede.add(jobbsøker)
             }
         }
+
+        return Pair(berikede, antallAvvist)
     }
 
     private fun opprettNyeJobbsøkere(

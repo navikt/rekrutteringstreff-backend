@@ -133,19 +133,17 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun oppdaterSynlighet(fodselsnummer: String, erSynlig: Boolean) {
-        dataSource.connection.use { connection ->
-            connection.prepareStatement(
-                """
-                UPDATE jobbsoker_sok
-                SET er_synlig = ?
-                WHERE jobbsoker_id IN (SELECT jobbsoker_id FROM jobbsoker WHERE fodselsnummer = ?)
-                """.trimIndent()
-            ).use { stmt ->
-                stmt.setBoolean(1, erSynlig)
-                stmt.setString(2, fodselsnummer)
-                stmt.executeUpdate()
-            }
+    fun oppdaterSynlighet(connection: Connection, fodselsnummer: String, erSynlig: Boolean) {
+        connection.prepareStatement(
+            """
+            UPDATE jobbsoker_sok
+            SET er_synlig = ?
+            WHERE jobbsoker_id IN (SELECT jobbsoker_id FROM jobbsoker WHERE fodselsnummer = ?)
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setBoolean(1, erSynlig)
+            stmt.setString(2, fodselsnummer)
+            stmt.executeUpdate()
         }
     }
 
@@ -289,8 +287,12 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         conditions.add("js_sok.status != 'SLETTET'")
 
         request.fritekst?.takeIf { it.isNotBlank() }?.let {
-            conditions.add("js_sok.sok_tekst ILIKE ?")
-            params.add("%${it.lowercase()}%")
+            conditions.add("js_sok.sok_tekst ILIKE ? ESCAPE '\\'")
+            val escaped = it.lowercase()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            params.add("%${escaped}%")
         }
 
         request.status?.takeIf { it.isNotEmpty() }?.let { statuser ->

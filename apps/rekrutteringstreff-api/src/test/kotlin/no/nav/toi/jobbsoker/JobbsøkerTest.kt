@@ -184,7 +184,7 @@ class JobbsøkerTest {
     }
 
     @Test
-    fun `create feiler med 422 hvis kandidat ikke finnes i kandidatsok`() {
+    fun `create returnerer 207 og legger ikke til kandidat som ikke finnes i kandidatsok`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
 
@@ -213,8 +213,9 @@ class JobbsøkerTest {
             token.serialize(),
         )
 
-        assertThat(response.statusCode()).isEqualTo(422)
-        assertThat(response.body()).contains("Fant ikke kandidatdata i kandidatsøk")
+        assertThat(response.statusCode()).isEqualTo(207)
+        assertThat(response.body()).contains("\"antallAvvist\":1")
+        assertThat(response.body()).contains("\"antallLagtTil\":0")
         assertThat(db.hentAlleJobbsøkere()).isEmpty()
     }
 

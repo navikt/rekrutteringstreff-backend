@@ -556,6 +556,15 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         erSynlig: Boolean,
         tidspunkt: Instant
     ): Int = dataSource.connection.use { connection ->
+        oppdaterSynlighetFraEvent(connection, fodselsnummer, erSynlig, tidspunkt)
+    }
+
+    fun oppdaterSynlighetFraEvent(
+        connection: Connection,
+        fodselsnummer: String,
+        erSynlig: Boolean,
+        tidspunkt: Instant
+    ): Int =
         connection.prepareStatement(
             """
             UPDATE jobbsoker
@@ -574,7 +583,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.setTimestamp(4, Timestamp.from(tidspunkt))
             stmt.executeUpdate()
         }
-    }
 
     /**
      * Oppdaterer synlighet fra need-svar (scheduler).
@@ -585,6 +593,15 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         erSynlig: Boolean,
         tidspunkt: Instant
     ): Int = dataSource.connection.use { connection ->
+        oppdaterSynlighetFraNeed(connection, fodselsnummer, erSynlig, tidspunkt)
+    }
+
+    fun oppdaterSynlighetFraNeed(
+        connection: Connection,
+        fodselsnummer: String,
+        erSynlig: Boolean,
+        tidspunkt: Instant
+    ): Int =
         connection.prepareStatement(
             """
             UPDATE jobbsoker
@@ -600,7 +617,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.setString(3, fodselsnummer)
             stmt.executeUpdate()
         }
-    }
 
     /**
      * Henter status for en jobbsøker basert på personTreffId med radlås.

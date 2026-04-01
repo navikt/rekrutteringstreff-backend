@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
-import no.nav.toi.exception.KandidatIkkeFunnetIKandidatsokException
 import no.nav.toi.exception.KandidatsokOppslagFeiletException
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Kandidatnummer
@@ -61,16 +60,7 @@ class KandidatsøkKlient(
         }
 
         val unikeFødselsnumre = fødselsnumre.distinct()
-        val kandidatdata = hentCvData(unikeFødselsnumre, onBehalfOfToken)
-
-        val manglendeFødselsnumre = unikeFødselsnumre.map { it.asString }.toSet() - kandidatdata.keys
-        if (manglendeFødselsnumre.isNotEmpty()) {
-            throw KandidatIkkeFunnetIKandidatsokException(
-                "Fant ikke kandidatdata i kandidatsøk for en eller flere valgte jobbsøkere.",
-            )
-        }
-
-        return kandidatdata
+        return hentCvData(unikeFødselsnumre, onBehalfOfToken)
     }
 
     private fun hentKandidatnummerMedAccessToken(

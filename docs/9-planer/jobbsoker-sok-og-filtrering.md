@@ -1,6 +1,6 @@
 # Plan: Søk og filtrering av jobbsøkere i rekrutteringstreff
 
-**Status:** Delvis implementert  
+**Status:** Implementert (MVP)  
 **Omfang:** Backend API + frontend UI for søk og filtrering av jobbsøkere innad i et treff
 
 Når eiere og markedskontakter skal administrere et rekrutteringstreff med mange jobbsøkere (opp til 10 000), må de kunne søke og filtrere deltakerne for å finne relevante kandidater.
@@ -25,16 +25,19 @@ Når en veileder legger til en jobbsøker via «Finn og legg til» (kandidatsøk
 
 ### Felt vi kopierer til søketabellen
 
-| Felt                   | Kilde i kandidatsøk    | Formål                                             |
-| ---------------------- | ---------------------- | -------------------------------------------------- |
-| `fornavn`, `etternavn` | `fornavn`, `etternavn` | Navnevisning + fritekst                            |
-| `innsatsgruppe`        | `innsatsgruppe`        | Filter (Gode muligheter, Trenger veiledning, etc.) |
-| `fylke`                | `fylkeNavn`            | Geografisk filter                                  |
-| `kommune`              | `kommuneNavn`          | Geografisk filter                                  |
-| `poststed`             | `poststed`             | Visning                                            |
-| `navkontor`            | `navkontor`            | Filter (allerede lagret)                           |
-| `veileder_navident`    | `veilederIdent`        | Filter (allerede lagret)                           |
-| `veileder_navn`        | `veilederVisningsnavn` | Visning (allerede lagret)                          |
+| Felt                   | Kilde i kandidatsøk              | Formål                                             |
+| ---------------------- | -------------------------------- | -------------------------------------------------- |
+| `fornavn`, `etternavn` | `fornavn`, `etternavn`           | Navnevisning + fritekst                            |
+| `innsatsgruppe`        | `innsatsgruppe`                  | Filter (Gode muligheter, Trenger veiledning, etc.) |
+| `fylke`                | `fylkeNavn`                      | Geografisk filter                                  |
+| `kommune`              | `kommuneNavn`                    | Geografisk filter                                  |
+| `poststed`             | `poststed`                       | Visning                                            |
+| `navkontor`            | `navkontor`                      | Filter (allerede lagret)                           |
+| `veileder_navident`    | `veilederIdent`                  | Filter (allerede lagret)                           |
+| `veileder_navn`        | `veilederVisningsnavn`           | Visning (allerede lagret)                          |
+| `telefonnummer`        | `mobiltelefon` / `telefon`       | Visning + fritekstsøk                              |
+| `lagt_til_dato`        | Settes ved opprettelse           | Sortering og visning                               |
+| `lagt_til_av`          | Nav-ident fra opprettelsesflyten | Visning (hvem som la til)                          |
 
 ### Felt vi IKKE kopierer
 
@@ -44,7 +47,7 @@ Når en veileder legger til en jobbsøker via «Finn og legg til» (kandidatsøk
 | Reisevei / reiseavstand                        | Ikke relevant for treff-konteksten                                                                                                                                                |
 | Hull i CV                                      | Kompleks algoritme (2 år uten jobb/utdanning siste 5 år) – krever enten kandidatsøk-API-endring for å eksponere flagget, eller lokal beregning fra CV-data. **Vurderes separat.** |
 | Førerkort, språk, sertifikater                 | For detaljert for listefiltring                                                                                                                                                   |
-| Kontaktinfo (telefon, e-post)                  | Ikke relevant for søk/filtrering                                                                                                                                                  |
+| E-post                                         | Ikke relevant for søk/filtrering                                                                                                                                                  |
 
 ### Prioriterte målgrupper
 
@@ -58,7 +61,9 @@ Basert på stilling sin kandidatliste, kandidatsøk-filtere, og designskisser, s
 
 ### Navn og identifikator
 
-- **Fritekst**: Søk i trigram-indeksert `sok_tekst` (navn + poststed + kommune + fylke + veiledernavn + veilederident)
+i
+
+- **Fritekst**: Søk i trigram-indeksert `sok_tekst` (navn + poststed + kommune + fylke + navkontor + veiledernavn + veilederident + telefonnummer)
 - **Fødselsnummer**: Eksakt oppslag via POST-body (ikke query-param, av sikkerhetshensyn – samme mønster som stilling sitt kandidatsøk)
 
 ### Jobbsøkers deltakerstatus
@@ -106,25 +111,22 @@ Dette er i praksis en enkel feature toggle. Den styres av opprettetdato på tref
 **Påkrevd (paginering):**
 
 - `side` (1-indeksert, integer, >= 1)
-- `antallPerSide` (integer, default 20, 1–100)
+- `antallPerSide` (integer, default 25, 1–100)
 
 Validering: `side >= 1` og `antallPerSide in 1..100`, ellers `IllegalArgumentException` → 400. Samme mønster som `RekrutteringstreffSokController`.
 
 **Valgfrie (filtre):**
 
-- `fritekst` – søk i trigram-indeksert `sok_tekst` (navn + poststed + kommune + fylke + veiledernavn + veilederident)
+- `fritekst` – søk i trigram-indeksert `sok_tekst` (navn + poststed + kommune + fylke + navkontor + veiledernavn + veilederident + telefonnummer)
 - `status` – kommaseparert liste (f.eks. `INVITERT,SVART_JA`)
 - `innsatsgruppe` – kommaseparert liste (f.eks. `STANDARD_INNSATS,SITUASJONSBESTEMT_INNSATS`)
-- `fylke` – filter på fylke
-- `kommune` – filter på kommune
-- `navkontor` – filter på kontor
-- `veileder` – filter på veileder (navident)
-- `sortering` – `navn`, `invitert_dato`, `status` (default: `navn`)
+- `sortering` – `navn`, `lagt-til` (default: `navn`)
+- `retning` – `asc`, `desc` (default: avhenger av sorteringsfelt – `asc` for navn, `desc` for lagt-til)
 
 **Eksempel uten filtre (hent alle):**
 
 ```
-GET /api/rekrutteringstreff/{treffId}/jobbsoker?side=1&antallPerSide=20
+GET /api/rekrutteringstreff/{treffId}/jobbsoker?side=1&antallPerSide=25
 ```
 
 **Eksempel med filtre:**
@@ -134,10 +136,10 @@ GET /api/rekrutteringstreff/{treffId}/jobbsoker
   ?fritekst=Ola
   &status=INVITERT,SVART_JA
   &innsatsgruppe=STANDARD_INNSATS
-  &fylke=Oslo
   &side=1
-  &antallPerSide=20
+  &antallPerSide=25
   &sortering=navn
+  &retning=asc
 ```
 
 **Eksempel fødselsnummer-oppslag (POST):**
@@ -158,32 +160,52 @@ Oppslaget er treff-skopet: backend slår opp på `rekrutteringstreff_id + fodsel
 ```
 {
   "totalt": 9996,                               // Totalt antall AKTIVE jobbsøkere (skjulte/slettede ekskludert)
+  "antallSkjulte": 3,                            // Jobbsøkere med er_synlig=false (ekskludert fra søk)
+  "antallSlettede": 1,                           // Slettede jobbsøkere (ekskludert fra søk)
   "side": 1,                                    // Nåværende side (paginering)
-  "antallPerSide": 20,                          // Jobbsøkere per side
+  "antallPerSide": 25,                           // Jobbsøkere per side (default 25)
   "jobbsøkere": [
     {
       "personTreffId": "<uuid>",
+      "fodselsnummer": "12345678901",
       "fornavn": "Ola",
       "etternavn": "Nordmann",
       "innsatsgruppe": "STANDARD_INNSATS",
       "fylke": "Oslo",
       "kommune": "Oslo",
       "poststed": "Oslo",
-      "navkontor": "0301",
+      "navkontor": "Nav Grünerløkka",
       "veilederNavn": "Per Pål",
       "veilederNavident": "B654321",
+      "telefonnummer": "99887766",
       "status": "INVITERT",
-      "invitertDato": "2026-03-20T10:00:00Z"
+      "invitertDato": "2026-03-20T10:00:00Z",
+      "lagtTilDato": "2026-03-18T09:00:00Z",
+      "lagtTilAv": "A123456",
+      "minsideHendelser": [
+        {
+          "id": "<uuid>",
+          "tidspunkt": "2026-03-20T10:05:00Z",
+          "hendelsestype": "MOTTATT_SVAR_FRA_MINSIDE",
+          "opprettetAvAktørType": "SYSTEM",
+          "aktørIdentifikasjon": null,
+          "hendelseData": { "eksternStatus": "SENDT", "minsideStatus": "AKTIV", ... }
+        }
+      ]
     }
   ]
 }
 ```
 
-**Notat:** `totalt` reflekterer kun aktive jobbsøkere (med `er_synlig = true` og `status != 'SLETTET'`). Skjulte og slettede jobbsøkere telles ikke og vises ikke, hvilket sikrer fulle sider.
+**Notat:** `totalt` reflekterer kun aktive jobbsøkere (med `er_synlig = true` og `status != 'SLETTET'`). `antallSkjulte` og `antallSlettede` returneres separat for informasjon i UI.
 
-**Notat:** `fodselsnummer` er bevisst utelatt fra response. Fødselsnummer er kun relevant som input-filter (oppslag), ikke som visningsdata.
+**Notat:** `fodselsnummer` inkluderes i respons for visning i kandidatkortet (f.nr. under navn). Fødselsnummer-oppslag gjøres via eget POST-endepunkt.
 
-**Notat:** `erSynlig` er fjernet fra response – skjulte jobbsøkere vises aldri, så feltet er alltid `true` og dermed overflødig.
+**Notat:** `telefonnummer` kopieres fra kandidatsøk (`mobiltelefon` med fallback til `telefon`) og vises i listevisningen + inngår i fritekst.
+
+**Notat:** `lagtTilDato` og `lagtTilAv` brukes for sortering og visning av hvem som la til jobbsøkeren.
+
+**Notat:** `minsideHendelser` inkluderer kun hendelser av type `MOTTATT_SVAR_FRA_MINSIDE`, brukt for leverings- og svar-status i UI.
 
 **Notat:** Kun `personTreffId` brukes som ekstern identifikator – dette er den eksisterende UUID-en (kolonnen `id` i `jobbsoker`). Den interne `jobbsoker_id` (bigserial) eksponeres aldri i API-et.
 
@@ -212,6 +234,8 @@ CREATE TABLE jobbsoker_sok (
     -- Kopiert fra jobbsøker-raden (oppdateres ved hendelser)
     status                 text NOT NULL DEFAULT 'LAGT_TIL',
     invitert_dato          timestamptz,
+    lagt_til_dato          timestamptz,
+    lagt_til_av            text,
     er_synlig              boolean NOT NULL DEFAULT TRUE,
 
     -- Personalia (kopiert fra kandidatsøk ved opprettelse)
@@ -228,6 +252,7 @@ CREATE TABLE jobbsoker_sok (
     veileder_navident      text,
     veileder_navn          text,
     innsatsgruppe          text,
+    telefonnummer          text,
 
     -- Grunnlag for trigram-indeksert fritekstsøk
     sok_tekst              text GENERATED ALWAYS AS (
@@ -237,14 +262,22 @@ CREATE TABLE jobbsoker_sok (
             COALESCE(poststed, '') || ' ' ||
             COALESCE(kommune, '') || ' ' ||
         COALESCE(fylke, '') || ' ' ||
+        COALESCE(navkontor, '') || ' ' ||
         COALESCE(veileder_navn, '') || ' ' ||
-        COALESCE(veileder_navident, '')
+        COALESCE(veileder_navident, '') || ' ' ||
+        COALESCE(telefonnummer, '')
         )
     ) STORED
 );
 ```
 
 `sok_tekst` brukes sammen med `pg_trgm`, slik at `ILIKE '%...%'` kan bruke indeks og ikke ende i full tabellskann.
+
+### Berikelse fra kandidatsøk
+
+Ved opprettelse gjør backend et oppslag mot kandidatsøk-API (`/api/multiple-lookup-cv`) med fødselsnumrene. Responsen beriker jobbsøker-raden med data som `innsatsgruppe`, `fylke`, `kommune`, `poststed`, `telefonnummer`, `navkontor`, `veileder` dersom frontend ikke allerede sendte dem. Oppslaget gjøres med brukerens on-behalf-of-token.
+
+**Viktig:** Oppslaget er all-or-nothing – hvis noen av kandidatene ikke finnes i kandidatsøk, feiler hele operasjonen med 422. Dette sikrer dataintegritet, men kan blokkere store batch-adderinger hvis enkeltpersoner er fjernet fra indeksen.
 
 ### Synkronisering
 
@@ -539,7 +572,7 @@ WHERE rekrutteringstreff_id = ?
   AND status != 'SLETTET'
   AND (øvrige filtre)
 ORDER BY (sortering)
-LIMIT 20 OFFSET (side-1)*20;
+LIMIT 25 OFFSET (side-1)*25;
 ```
 
 **Konsekvenser:**
@@ -549,7 +582,7 @@ LIMIT 20 OFFSET (side-1)*20;
 - Hver side garanteres fulle `antallPerSide` rader (bortsett fra potensielt siste side)
 - Brukeren opplever konsistent paginering
 
-**Eksempel:** Hvis 10 000 jobbsøkere totalt, 4 skjulte/slettede → totalt = 9996, side 1 = 20 aktive.
+**Eksempel:** Hvis 10 000 jobbsøkere totalt, 4 skjulte/slettede → totalt = 9996, side 1 = 25 aktive.
 
 ### 2. Volume og akseptabel ytelse
 
@@ -567,6 +600,8 @@ LIMIT 20 OFFSET (side-1)*20;
 
 - `innsatsgruppe` – for § 14 a-filtrering
 - `fylke`, `kommune`, `poststed` – for geografisk filtrering og visning
+- `telefonnummer` – for visning og fritekst
+- `lagt_til_dato`, `lagt_til_av` – for sortering og visning
 
 **Felter som IKKE kopieres:**
 
@@ -575,7 +610,7 @@ LIMIT 20 OFFSET (side-1)*20;
 - Hull i CV – tas ikke med nå
 - Reisevei – ikke relevant for treff
 
-**Begrunnelse:** Disse feltene er allerede tilgjengelige i frontend når kandidater velges via «Finn og legg til». Ingen ekstra API-kall er nødvendig; vi utvider bare opprettelses-DTO-en.
+**Begrunnelse:** Backend beriker jobbsøkere med data fra kandidatsøk-API ved opprettelse. Dersom frontend allerede sender feltene, brukes de direkte; ellers henter backend dem via `/api/multiple-lookup-cv`. Oppslaget er graceful – jobbsøkere som ikke finnes i kandidatsøk legges til uten berikelse, og frontend får beskjed om hvilke som mangler (HTTP 207, se under).
 
 ### 3. Paginering og sortering
 
@@ -583,8 +618,8 @@ LIMIT 20 OFFSET (side-1)*20;
 
 **Implementering:**
 
-- Paginering: `side` (1-indeksert) + `antallPerSide` (default 20)
-- Sortering: `sortering` med verdier `navn`, `invitert_dato`, `status`
+- Paginering: `side` (1-indeksert) + `antallPerSide` (default 25)
+- Sortering: `sortering` med verdier `navn`, `lagt-til` + `retning` (`asc`, `desc`) med standardretning per felt
 - Backend returnerer `totalt` via egen `COUNT(*)`-query med samme filtre som resultatsøket
 
 **Begrunnelse:** Samme mønster som stilling-søk. Mindre data over nettet, bedre for mobile.
@@ -598,12 +633,12 @@ MVP – Én handler for alle jobbsøkere (med eller uten filtre)
 ──────────────────────────────────
 
 Frontend uten filtre:
-  GET /api/rekrutteringstreff/{treffId}/jobbsoker?side=1&antallPerSide=20
+  GET /api/rekrutteringstreff/{treffId}/jobbsoker?side=1&antallPerSide=25
     ↓ (returnerer alle aktive jobbsøkere med paginering)
 
 Frontend med filtre:
   GET /api/rekrutteringstreff/{treffId}/jobbsoker
-    ?fritekst=Ola&status=INVITERT&side=1&antallPerSide=20
+    ?fritekst=Ola&status=INVITERT&side=1&antallPerSide=25
     ↓ (returnerer filtrert resultat med paginering)
 
 Fnr-oppslag (eget endepunkt):
@@ -658,17 +693,17 @@ Frontend viser resultater + paginering
 ✅ **Frontend:** Én custom hook `useJobbsøkerSøk()` – håndterer begge casene (filtre valgfrie)  
 ✅ **Veileder og navkontor:** Allerede lagret ved innleggelse  
 ✅ **Database-strategi:** Parallell søketabell `jobbsoker_sok` – separert fra domenetabellen `jobbsoker`  
-✅ **Kandidatdata:** `innsatsgruppe`, `fylke`, `kommune`, `poststed` kopieres fra kandidatsøk ved opprettelse  
-✅ **Trigram-indeksert fritekst:** Generert kolonne `sok_tekst` med navn + poststed + kommune + fylke, brukt med `pg_trgm`  
+✅ **Kandidatdata:** `innsatsgruppe`, `fylke`, `kommune`, `poststed`, `telefonnummer` kopieres fra kandidatsøk ved opprettelse  
+✅ **Trigram-indeksert fritekst:** Generert kolonne `sok_tekst` med navn + poststed + kommune + fylke + navkontor + veiledernavn + veilederident + telefonnummer, brukt med `pg_trgm`  
 ✅ **Indekser:** GIN på `sok_tekst` via `gin_trgm_ops`, samt B-tree på status, innsatsgruppe, fylke, kommune, navkontor, veileder og invitert_dato  
 ✅ **OpenSearch:** Utelukket – synkron PostgreSQL-løsning  
 ✅ **Filtre:** Status, innsatsgruppe, fylke/kommune, navkontor, veileder  
-✅ **Fødselsnummer:** Ikke i response, kun i request (POST body) for oppslag  
+✅ **Fødselsnummer:** Inkludert i response for visning i kandidatkort. Fødselsnummer-oppslag gjøres via eget POST-endepunkt  
 ✅ **Fødselsnummer-oppslag:** Treff-skopet via `rekrutteringstreff_id + fodselsnummer`  
 ✅ **Veileder:** NULL-felter ignoreres i filtrering  
 ✅ **Paginering:** Backend-håndtert via `side` + `antallPerSide` – **påkrevd**  
 ✅ **Paginering og totalt:** Egen `COUNT(*)`-query – skjulte/slettede er aldri med i telling eller resultat  
-✅ **Sortering:** `navn`, `invitert_dato`, `status`  
+✅ **Sortering:** `navn`, `lagt-til` med eksplisitt retning (`asc`/`desc`)  
 ✅ **Admin:** admin = utvikler, samme tilgang  
 ✅ **Ytelsestest:** Følger `RekrutteringstreffSokYtelsestest`-mønster med 10K jobbsøkere, warmup 2s, målt 500ms  
 ✅ **Ikke inkludert:** Reisevei, vis slettede, prioriterte målgrupper, hull i CV, notater/intern status

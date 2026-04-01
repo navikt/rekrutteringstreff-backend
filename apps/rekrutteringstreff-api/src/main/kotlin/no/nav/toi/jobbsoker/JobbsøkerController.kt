@@ -105,13 +105,22 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        jobbsøkerService.leggTilJobbsøkere(
+        val resultat = jobbsøkerService.leggTilJobbsøkere(
             dtoer.map { it.domene() },
             treff,
             ctx.extractNavIdent(),
             ctx.attribute("raw_token"),
         )
-        ctx.status(201)
+        if (resultat.antallAvvist > 0) {
+            ctx.status(207).json(
+                mapOf(
+                    "antallLagtTil" to resultat.antallLagtTil,
+                    "antallAvvist" to resultat.antallAvvist,
+                )
+            )
+        } else {
+            ctx.status(201)
+        }
     }
 
     @OpenApi(
@@ -126,7 +135,7 @@ class JobbsøkerController(
         )],
         queryParams = [
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Standardverdi 1"),
-            OpenApiParam(name = "antallPerSide", type = Int::class, required = false, description = "Standardverdi 20"),
+            OpenApiParam(name = "antallPerSide", type = Int::class, required = false, description = "Standardverdi 25"),
             OpenApiParam(name = "fritekst", type = String::class, required = false),
             OpenApiParam(name = "status", type = String::class, required = false, description = "CSV med statuser"),
             OpenApiParam(name = "innsatsgruppe", type = String::class, required = false, description = "CSV med innsatsgrupper"),
@@ -157,7 +166,7 @@ class JobbsøkerController(
                   ],
                   "totalt": 1,
                   "side": 1,
-                  "antallPerSide": 20
+                  "antallPerSide": 25
                 }"""
             )]
         )],
@@ -171,7 +180,7 @@ class JobbsøkerController(
 
         if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             val side = ctx.queryParamAsInt("side") ?: 1
-            val antallPerSide = ctx.queryParamAsInt("antallPerSide") ?: 20
+            val antallPerSide = ctx.queryParamAsInt("antallPerSide") ?: 25
             if (side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
             if (antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
 
