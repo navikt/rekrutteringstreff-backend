@@ -70,6 +70,7 @@ data class JobbsøkerSøkRespons(
 
 data class JobbsøkerSøkTreff(
     val personTreffId: String,
+    val fodselsnummer: String,
     val fornavn: String?,
     val etternavn: String?,
     val innsatsgruppe: String?,

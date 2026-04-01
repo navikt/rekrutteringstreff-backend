@@ -172,6 +172,7 @@ class JobbsøkerSokKomponenttest {
         assertThat(dto.side).isEqualTo(1)
         assertThat(dto.antallPerSide).isEqualTo(20)
         assertThat(dto.jobbsøkere).hasSize(2)
+        assertThat(dto.jobbsøkere.map { it.fodselsnummer }).containsExactlyInAnyOrder("11111111111", "22222222222")
     }
 
     @Test
@@ -474,6 +475,7 @@ class JobbsøkerSokKomponenttest {
 
         assertThat(response.statusCode()).isEqualTo(200)
         val treff = mapper.readValue<JobbsøkerSøkTreff>(response.body())
+        assertThat(treff.fodselsnummer).isEqualTo("11111111111")
         assertThat(treff.fornavn).isEqualTo("Ola")
         assertThat(treff.navkontor).isEqualTo("NAV Oslo")
     }

@@ -195,7 +195,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         return dataSource.connection.use { conn ->
             conn.prepareStatement(
                 """
-                SELECT js_sok.*, j.id as person_treff_id
+                SELECT js_sok.*, j.id as person_treff_id, j.fodselsnummer
                 FROM jobbsoker_sok js_sok
                 JOIN jobbsoker j ON js_sok.jobbsoker_id = j.jobbsoker_id
                 JOIN rekrutteringstreff rt ON js_sok.rekrutteringstreff_id = rt.rekrutteringstreff_id
@@ -261,7 +261,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         antallPerSide: Int,
     ): List<JobbsøkerSøkTreff> {
         val sql = """
-            SELECT js_sok.*, j.id as person_treff_id
+            SELECT js_sok.*, j.id as person_treff_id, j.fodselsnummer
             FROM jobbsoker_sok js_sok
             JOIN jobbsoker j ON js_sok.jobbsoker_id = j.jobbsoker_id
             $where
@@ -350,6 +350,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
 
     private fun ResultSet.tilTreff() = JobbsøkerSøkTreff(
         personTreffId = getString("person_treff_id"),
+        fodselsnummer = getString("fodselsnummer"),
         fornavn = getString("fornavn"),
         etternavn = getString("etternavn"),
         innsatsgruppe = getString("innsatsgruppe"),
