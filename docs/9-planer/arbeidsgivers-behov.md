@@ -6,7 +6,7 @@ Når en markedskontakt legger til en arbeidsgiver i et rekrutteringstreff, skal 
 
 | Felt                   | Type                 | Beskrivelse                                                                                                      |
 | ---------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| arbeidsoppgaver        | Tagliste (typeahead) | Oppgaver fra Janzz kompetanser + fagbrev + førerkort. Velges kun fra Janzz-forslag, uten fritekst                |
+| arbeidsoppgaver        | Tagliste (typeahead) | Oppgaver fra Janzz kompetanser + fagbrev + førerkort + yrkestittel. Velges kun fra Janzz-forslag, uten fritekst  |
 | arbeidsspråk           | Enum / Tagliste      | Språk som kreves i stillingen. Samme verdier som `workLanguage` på stilling. **Vurdering**: enum eller tagliste? |
 | antall                 | Positivt Heltall     | Antall stillinger arbeidsgiver ønsker å fylle                                                                    |
 | ansettelsesform        | Nedtrekksliste       | Fast, Vikariat, Engasjement, Prosjekt, Sesong, osv. Samme verdier som `engagementtype` på stilling               |
