@@ -39,6 +39,7 @@ class RekrutteringstreffOpprydningScheduler(
             }
         } catch (e: InterruptedException) {
             scheduler.shutdownNow()
+            Thread.currentThread().interrupt()
         }
     }
 
