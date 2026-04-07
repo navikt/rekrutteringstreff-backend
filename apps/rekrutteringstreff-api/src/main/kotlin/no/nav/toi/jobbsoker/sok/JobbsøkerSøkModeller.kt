@@ -45,14 +45,9 @@ enum class JobbsøkerSorteringsfelt {
     }
 }
 
-data class JobbsøkerInnsatsgrupperRespons(
-    val innsatsgrupper: List<String>,
-)
-
 data class JobbsøkerSøkRequest(
     val fritekst: String? = null,
     val status: List<JobbsøkerStatus>? = null,
-    val innsatsgruppe: List<String>? = null,
     val sorteringsfelt: JobbsøkerSorteringsfelt = JobbsøkerSorteringsfelt.NAVN,
     val sorteringsretning: JobbsøkerSorteringsretning = sorteringsfelt.standardRetning,
     val side: Int,
@@ -73,14 +68,9 @@ data class JobbsøkerSøkTreff(
     val fodselsnummer: String,
     val fornavn: String?,
     val etternavn: String?,
-    val innsatsgruppe: String?,
-    val fylke: String?,
-    val kommune: String?,
-    val poststed: String?,
     val navkontor: String?,
     val veilederNavn: String?,
     val veilederNavident: String?,
-    val telefonnummer: String?,
     val status: JobbsøkerStatus,
     val invitertDato: Instant?,
     val lagtTilDato: Instant?,

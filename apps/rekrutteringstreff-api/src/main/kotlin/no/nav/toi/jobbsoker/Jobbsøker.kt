@@ -77,11 +77,6 @@ data class LeggTilJobbsøker(
     val navkontor: Navkontor?,
     val veilederNavn: VeilederNavn?,
     val veilederNavIdent: VeilederNavIdent?,
-    val innsatsgruppe: String? = null,
-    val fylke: String? = null,
-    val kommune: String? = null,
-    val poststed: String? = null,
-    val telefonnummer: String? = null,
 )
 
 enum class JobbsøkerStatus {

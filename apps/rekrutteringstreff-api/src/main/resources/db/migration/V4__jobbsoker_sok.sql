@@ -13,27 +13,17 @@ CREATE TABLE jobbsoker_sok (
     fornavn                text,
     etternavn              text,
 
-    fylke                  text,
-    kommune                text,
-    poststed               text,
-
     navkontor              text,
     veileder_navident      text,
     veileder_navn          text,
-    innsatsgruppe          text,
-    telefonnummer          text,
 
     sok_tekst              text GENERATED ALWAYS AS (
         LOWER(
             COALESCE(fornavn, '') || ' ' ||
             COALESCE(etternavn, '') || ' ' ||
-            COALESCE(poststed, '') || ' ' ||
-            COALESCE(kommune, '') || ' ' ||
-            COALESCE(fylke, '') || ' ' ||
             COALESCE(navkontor, '') || ' ' ||
             COALESCE(veileder_navn, '') || ' ' ||
-            COALESCE(veileder_navident, '') || ' ' ||
-            COALESCE(telefonnummer, '')
+            COALESCE(veileder_navident, '')
         )
     ) STORED
 );

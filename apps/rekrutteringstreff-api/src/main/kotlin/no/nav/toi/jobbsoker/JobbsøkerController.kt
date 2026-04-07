@@ -17,7 +17,6 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
 import no.nav.toi.jobbsoker.sok.FødselsnummerSøkRequest
-import no.nav.toi.jobbsoker.sok.JobbsøkerInnsatsgrupperRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringsfelt
 import no.nav.toi.jobbsoker.sok.JobbsøkerSorteringsretning
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
@@ -44,7 +43,6 @@ class JobbsøkerController(
         private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
         private const val inviterPath = "$jobbsøkerPath/inviter"
         private const val fnrSokPath = "$jobbsøkerPath/sok"
-        private const val innsatsgrupperPath = "$jobbsøkerPath/innsatsgrupper"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
@@ -55,7 +53,6 @@ class JobbsøkerController(
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
         javalin.post(fnrSokPath, søkMedFødselsnummerHandler())
-        javalin.get(innsatsgrupperPath, hentInnsatsgrupperHandler())
     }
 
     @OpenApi(
@@ -64,7 +61,6 @@ class JobbsøkerController(
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
         requestBody = OpenApiRequestBody(
-            // ⬇️  merk isArray = true
             content = [OpenApiContent(
                 from = Array<JobbsøkerDto>::class,
                 example = """[
@@ -72,14 +68,9 @@ class JobbsøkerController(
                 "fødselsnummer": "12345678901",
                 "fornavn": "Ola",
                 "etternavn": "Nordmann",
-                "navkontor": "NAV Oslo",
+                "navkontor": "Nav Oslo",
                 "veilederNavn": "Kari Nordmann",
-                                "veilederNavIdent": "NAV123",
-                                "innsatsgruppe": "STANDARD_INNSATS",
-                                "fylke": "Oslo",
-                                "kommune": "Oslo",
-                                "poststed": "Oslo",
-                                "telefonnummer": "99887766"
+                                "veilederNavIdent": "NAV123"
               },
               {
                 "fødselsnummer": "10987654321",
@@ -87,12 +78,7 @@ class JobbsøkerController(
                 "etternavn": "Nordmann",
                 "navkontor": null,
                 "veilederNavn": null,
-                                "veilederNavIdent": null,
-                                "innsatsgruppe": null,
-                                "fylke": null,
-                                "kommune": null,
-                                "poststed": null,
-                                "telefonnummer": null
+                                "veilederNavIdent": null
               }
             ]"""
             )]
@@ -105,22 +91,12 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val resultat = jobbsøkerService.leggTilJobbsøkere(
+        jobbsøkerService.leggTilJobbsøkere(
             dtoer.map { it.domene() },
             treff,
             ctx.extractNavIdent(),
-            ctx.attribute("raw_token"),
         )
-        if (resultat.antallAvvist > 0) {
-            ctx.status(207).json(
-                mapOf(
-                    "antallLagtTil" to resultat.antallLagtTil,
-                    "antallAvvist" to resultat.antallAvvist,
-                )
-            )
-        } else {
-            ctx.status(201)
-        }
+        ctx.status(201)
     }
 
     @OpenApi(
@@ -138,7 +114,6 @@ class JobbsøkerController(
             OpenApiParam(name = "antallPerSide", type = Int::class, required = false, description = "Standardverdi 25"),
             OpenApiParam(name = "fritekst", type = String::class, required = false),
             OpenApiParam(name = "status", type = String::class, required = false, description = "CSV med statuser"),
-            OpenApiParam(name = "innsatsgruppe", type = String::class, required = false, description = "CSV med innsatsgrupper"),
             OpenApiParam(name = "sortering", type = String::class, required = false),
             OpenApiParam(name = "retning", type = String::class, required = false),
         ],
@@ -157,10 +132,6 @@ class JobbsøkerController(
                       "veilederNavn": "Kari Nordmann",
                       "veilederNavident": "NAV123",
                       "status": "LAGT_TIL",
-                      "innsatsgruppe": "STANDARD_INNSATS",
-                      "fylke": "Oslo",
-                      "kommune": "Oslo",
-                      "poststed": "Oslo",
                       "invitertDato": null
                     }
                   ],
@@ -205,7 +176,6 @@ class JobbsøkerController(
             val request = JobbsøkerSøkRequest(
                 fritekst = ctx.queryParam("fritekst"),
                 status = status,
-                innsatsgruppe = ctx.csvQueryParam("innsatsgruppe"),
                 sorteringsfelt = sorteringsfelt,
                 sorteringsretning = sorteringsretning,
                 side = side,
@@ -216,31 +186,6 @@ class JobbsøkerController(
             ctx.status(200).json(jobbsøkerService.søkJobbsøkere(treff, request))
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke søke jobbsøkere")
-        }
-    }
-
-    @OpenApi(
-        summary = "Hent tilgjengelige innsatsgrupper for jobbsøkersøk",
-        operationId = "hentJobbsøkerInnsatsgrupper",
-        security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
-        responses = [OpenApiResponse(
-            status = "200",
-            content = [OpenApiContent(from = JobbsøkerInnsatsgrupperRespons::class)],
-        )],
-        path = innsatsgrupperPath,
-        methods = [HttpMethod.GET],
-    )
-    private fun hentInnsatsgrupperHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = ctx.authenticatedUser().extractNavIdent()
-
-        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
-            ctx.status(200).json(jobbsøkerService.hentInnsatsgrupper(treff))
-        } else {
-            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke hente innsatsgrupper")
         }
     }
 

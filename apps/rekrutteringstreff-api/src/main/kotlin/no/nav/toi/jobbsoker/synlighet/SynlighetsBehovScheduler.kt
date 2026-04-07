@@ -24,14 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * Need-svar oppdaterer kun synlighet hvis synlighet_sist_oppdatert er NULL,
  * så event-strømmen (som setter synlighet_sist_oppdatert) har alltid prioritet.
- *
- * TODO: Vurder om denne scheduleren kan forenkles eller fjernes. Kandidater som ikke finnes i
- *  kandidatsøk avvises nå allerede ved opprettelse (berikJobbsøkereFraKandidatsøk). Siden
- *  kandidatsøk-indeksen bare inneholder synlige personer, kan er_synlig i prinsippet settes
- *  direkte ved opprettelse basert på kandidatsøk-resultatet. Event-strømmen fra
- *  toi-synlighetsmotor ville da fortsatt oppdatere synlighet løpende for endringer som skjer
- *  etter opprettelse (f.eks. kode 6/7, CV slettet). Need-flyten ville bare trengs for
- *  edge-casen der event-strømmen ikke har levert ennå – vurder om det er verdt kompleksiteten.
  */
 class SynlighetsBehovScheduler(
     private val jobbsøkerService: JobbsøkerService,

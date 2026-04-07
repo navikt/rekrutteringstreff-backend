@@ -67,10 +67,7 @@ class JobbsøkerSokYtelsestest {
                     .apply { setObject(1, treffUuid) }
                     .executeQuery().let { it.next(); it.getLong(1) }
 
-                val navkontorer = listOf("NAV Oslo", "NAV Bergen", "NAV Trondheim", "NAV Stavanger", "NAV Tromsø")
-                val innsatsgrupper = listOf("STANDARD_INNSATS", "SITUASJONSBESTEMT_INNSATS", "SPESIELT_TILPASSET_INNSATS", "VARIG_TILPASSET_INNSATS", null)
-                val fylker = listOf("Oslo", "Vestland", "Trøndelag", "Rogaland", "Troms og Finnmark")
-                val kommuner = listOf("Oslo", "Bergen", "Trondheim", "Stavanger", "Tromsø")
+                val navkontorer = listOf("Nav Oslo", "Nav Bergen", "Nav Trondheim", "Nav Stavanger", "Nav Tromsø")
                 val statuser = listOf("LAGT_TIL", "INVITERT", "SVART_JA", "SVART_NEI")
                 val baseTime = Instant.parse("2025-01-01T00:00:00Z")
 
@@ -83,8 +80,8 @@ class JobbsøkerSokYtelsestest {
                 ).use { jobbsokerStmt ->
                     conn.prepareStatement(
                         """
-                        INSERT INTO jobbsoker_sok (jobbsoker_id, rekrutteringstreff_id, status, er_synlig, fornavn, etternavn, fylke, kommune, poststed, navkontor, veileder_navident, veileder_navn, innsatsgruppe, invitert_dato)
-                        VALUES (?, ?, ?, true, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO jobbsoker_sok (jobbsoker_id, rekrutteringstreff_id, status, er_synlig, fornavn, etternavn, navkontor, veileder_navident, veileder_navn, invitert_dato)
+                        VALUES (?, ?, ?, true, ?, ?, ?, ?, ?, ?)
                         """.trimIndent()
                     ).use { sokStmt ->
                         repeat(ANTALL_JOBBSØKERE) { i ->
@@ -93,9 +90,6 @@ class JobbsøkerSokYtelsestest {
                             val fornavn = "Fornavn$i"
                             val etternavn = "Etternavn${i % 100}"
                             val navkontor = navkontorer[i % navkontorer.size]
-                            val innsatsgruppe = innsatsgrupper[i % innsatsgrupper.size]
-                            val fylke = fylker[i % fylker.size]
-                            val kommune = kommuner[i % kommuner.size]
                             val veilederIdent = "NAV${String.format("%03d", i % 50)}"
                             val veilederNavn = "Veileder ${i % 50}"
                             val invitertDato = if (status != "LAGT_TIL") Timestamp.from(baseTime.plusSeconds(i.toLong())) else null
@@ -119,14 +113,10 @@ class JobbsøkerSokYtelsestest {
                             sokStmt.setString(3, status)
                             sokStmt.setString(4, fornavn)
                             sokStmt.setString(5, etternavn)
-                            sokStmt.setString(6, fylke)
-                            sokStmt.setString(7, kommune)
-                            sokStmt.setString(8, "$kommune sentrum")
-                            sokStmt.setString(9, navkontor)
-                            sokStmt.setString(10, veilederIdent)
-                            sokStmt.setString(11, veilederNavn)
-                            sokStmt.setString(12, innsatsgruppe)
-                            sokStmt.setTimestamp(13, invitertDato)
+                            sokStmt.setString(6, navkontor)
+                            sokStmt.setString(7, veilederIdent)
+                            sokStmt.setString(8, veilederNavn)
+                            sokStmt.setTimestamp(9, invitertDato)
                             sokStmt.executeUpdate()
                         }
                     }

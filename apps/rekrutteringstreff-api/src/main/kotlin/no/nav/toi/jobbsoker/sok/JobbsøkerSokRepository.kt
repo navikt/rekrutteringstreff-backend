@@ -29,26 +29,21 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         val sql = """
             INSERT INTO jobbsoker_sok (
                 jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
-                fornavn, etternavn, fylke, kommune, poststed,
-                navkontor, veileder_navident, veileder_navn, innsatsgruppe, telefonnummer,
+                fornavn, etternavn,
+                navkontor, veileder_navident, veileder_navn,
                 lagt_til_dato, lagt_til_av
-            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, jobbsøkerId)
             stmt.setLong(2, treffDbId)
             stmt.setString(3, jobbsøker.fornavn.asString)
             stmt.setString(4, jobbsøker.etternavn.asString)
-            stmt.setString(5, jobbsøker.fylke)
-            stmt.setString(6, jobbsøker.kommune)
-            stmt.setString(7, jobbsøker.poststed)
-            stmt.setString(8, jobbsøker.navkontor?.asString)
-            stmt.setString(9, jobbsøker.veilederNavIdent?.asString)
-            stmt.setString(10, jobbsøker.veilederNavn?.asString)
-            stmt.setString(11, jobbsøker.innsatsgruppe)
-            stmt.setString(12, jobbsøker.telefonnummer)
-            stmt.setTimestamp(13, Timestamp.from(Instant.now()))
-            stmt.setString(14, navIdent)
+            stmt.setString(5, jobbsøker.navkontor?.asString)
+            stmt.setString(6, jobbsøker.veilederNavIdent?.asString)
+            stmt.setString(7, jobbsøker.veilederNavn?.asString)
+            stmt.setTimestamp(8, Timestamp.from(Instant.now()))
+            stmt.setString(9, navIdent)
             stmt.executeUpdate()
         }
     }
@@ -63,10 +58,10 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         val sql = """
             INSERT INTO jobbsoker_sok (
                 jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
-                fornavn, etternavn, fylke, kommune, poststed,
-                navkontor, veileder_navident, veileder_navn, innsatsgruppe, telefonnummer,
+                fornavn, etternavn,
+                navkontor, veileder_navident, veileder_navn,
                 lagt_til_dato, lagt_til_av
-            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?)
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
             val now = Timestamp.from(Instant.now())
@@ -75,16 +70,11 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 stmt.setLong(2, treffDbId)
                 stmt.setString(3, js.fornavn.asString)
                 stmt.setString(4, js.etternavn.asString)
-                stmt.setString(5, js.fylke)
-                stmt.setString(6, js.kommune)
-                stmt.setString(7, js.poststed)
-                stmt.setString(8, js.navkontor?.asString)
-                stmt.setString(9, js.veilederNavIdent?.asString)
-                stmt.setString(10, js.veilederNavn?.asString)
-                stmt.setString(11, js.innsatsgruppe)
-                stmt.setString(12, js.telefonnummer)
-                stmt.setTimestamp(13, now)
-                stmt.setString(14, navIdent)
+                stmt.setString(5, js.navkontor?.asString)
+                stmt.setString(6, js.veilederNavIdent?.asString)
+                stmt.setString(7, js.veilederNavn?.asString)
+                stmt.setTimestamp(8, now)
+                stmt.setString(9, navIdent)
                 stmt.addBatch()
             }
             stmt.executeBatch()
@@ -210,15 +200,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun hentInnsatsgrupper(treffId: TreffId): JobbsøkerInnsatsgrupperRespons {
-        return dataSource.connection.use { conn ->
-            val treffDbId = conn.treffDbId(treffId)
-            JobbsøkerInnsatsgrupperRespons(
-                innsatsgrupper = hentInnsatsgrupper(conn, treffDbId),
-            )
-        }
-    }
-
     private fun hentTellinger(conn: Connection, treffDbId: Long): Pair<Int, Int> {
         val sql = """
             SELECT
@@ -301,35 +282,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             statuser.forEach { params.add(it.name) }
         }
 
-        request.innsatsgruppe?.takeIf { it.isNotEmpty() }?.let { grupper ->
-            val placeholders = grupper.indices.joinToString(",") { "?" }
-            conditions.add("js_sok.innsatsgruppe IN ($placeholders)")
-            grupper.forEach { params.add(it) }
-        }
-
         val whereClause = "WHERE " + conditions.joinToString(" AND ")
         return Pair(whereClause, params)
-    }
-
-        private fun hentInnsatsgrupper(conn: Connection, treffDbId: Long): List<String> {
-        val sql = """
-                        SELECT DISTINCT innsatsgruppe
-            FROM jobbsoker_sok
-            WHERE rekrutteringstreff_id = ?
-              AND er_synlig = true
-              AND status != 'SLETTET'
-                            AND innsatsgruppe IS NOT NULL
-                            AND innsatsgruppe != ''
-                        ORDER BY innsatsgruppe
-        """.trimIndent()
-
-        return conn.prepareStatement(sql).use { stmt ->
-            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
-            stmt.setLong(1, treffDbId)
-            stmt.executeQuery().use { rs ->
-                generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
-            }
-        }
     }
 
     private fun settParam(stmt: java.sql.PreparedStatement, index: Int, value: Any) {
@@ -355,14 +309,9 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         fodselsnummer = getString("fodselsnummer"),
         fornavn = getString("fornavn"),
         etternavn = getString("etternavn"),
-        innsatsgruppe = getString("innsatsgruppe"),
-        fylke = getString("fylke"),
-        kommune = getString("kommune"),
-        poststed = getString("poststed"),
         navkontor = getString("navkontor"),
         veilederNavn = getString("veileder_navn"),
         veilederNavident = getString("veileder_navident"),
-        telefonnummer = getString("telefonnummer"),
         status = JobbsøkerStatus.valueOf(getString("status")),
         invitertDato = getTimestamp("invitert_dato")?.toInstant(),
         lagtTilDato = getTimestamp("lagt_til_dato")?.toInstant(),

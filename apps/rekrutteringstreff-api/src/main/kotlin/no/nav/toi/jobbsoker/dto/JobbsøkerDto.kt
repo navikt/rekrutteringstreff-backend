@@ -15,11 +15,6 @@ data class JobbsøkerDto(
     val navkontor: String?,
     val veilederNavn: String?,
     val veilederNavIdent: String?,
-    val innsatsgruppe: String? = null,
-    val fylke: String? = null,
-    val kommune: String? = null,
-    val poststed: String? = null,
-    val telefonnummer: String? = null,
 ) {
     fun domene() = LeggTilJobbsøker(
         Fødselsnummer(fødselsnummer),
@@ -28,10 +23,5 @@ data class JobbsøkerDto(
         navkontor?.let(::Navkontor),
         veilederNavn?.let(::VeilederNavn),
         veilederNavIdent?.let(::VeilederNavIdent),
-        innsatsgruppe = innsatsgruppe,
-        fylke = fylke,
-        kommune = kommune,
-        poststed = poststed,
-        telefonnummer = telefonnummer,
     )
 }

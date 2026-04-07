@@ -719,25 +719,4 @@ class JobbsøkerServiceTest {
         val jobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
         assertThat(jobbsøkere).hasSize(4)
     }
-
-    @Test
-    fun `søkJobbsøkere returnerer telefonnummer`() {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val jobbsøkere = listOf(
-            LeggTilJobbsøker(
-                Fødselsnummer("12345678901"),
-                Fornavn("Ola"),
-                Etternavn("Nordmann"),
-                null, null, null,
-                telefonnummer = "99887766"
-            )
-        )
-        jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
-
-        val request = no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest(side = 1, antallPerSide = 20)
-        val resultat = jobbsøkerService.søkJobbsøkere(treffId, request)
-
-        assertThat(resultat.jobbsøkere).hasSize(1)
-        assertThat(resultat.jobbsøkere.first().telefonnummer).isEqualTo("99887766")
-    }
 }

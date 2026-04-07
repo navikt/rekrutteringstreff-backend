@@ -103,7 +103,7 @@ class App(
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
         val jobbsøkerSokRepository = JobbsøkerSokRepository(dataSource)
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, jobbsøkerSokRepository, kandidatsokKlient)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, jobbsøkerSokRepository)
         startJavalin(jobbsøkerRepository, jobbsøkerSokRepository)
         startSchedulere(jobbsøkerService, leaderElection)
         startRR(jobbsøkerService)
@@ -140,7 +140,7 @@ class App(
         val kiLoggRepository = KiLoggRepository(dataSource)
         val kiValideringsService = KiValideringsService(kiLoggRepository)
 
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, jobbsøkerSokRepository, kandidatsokKlient)
+        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository, jobbsøkerSokRepository)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
         val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
         val rekrutteringstreffService = RekrutteringstreffService(

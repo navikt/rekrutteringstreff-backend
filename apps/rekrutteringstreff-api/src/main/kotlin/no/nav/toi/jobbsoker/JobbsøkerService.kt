@@ -6,12 +6,9 @@ import no.nav.toi.SecureLog
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
-import no.nav.toi.kandidatsok.KandidatBerikelse
-import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
-import no.nav.toi.jobbsoker.sok.JobbsøkerInnsatsgrupperRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkTreff
@@ -24,14 +21,12 @@ import javax.sql.DataSource
 
 data class LeggTilJobbsøkereResultat(
     val antallLagtTil: Int,
-    val antallAvvist: Int,
 )
 
 class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val jobbsøkerSokRepository: JobbsøkerSokRepository,
-    private val kandidatsøkKlient: KandidatsøkKlient? = null,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
@@ -40,22 +35,19 @@ class JobbsøkerService(
         jobbsøkere: List<LeggTilJobbsøker>,
         treffId: TreffId,
         navIdent: String,
-        userToken: String? = null,
     ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
         val nyeJobbsøkere = finnNyeJobbsøkere(jobbsøkere, eksisterendeJobbsøkere, slettedeJobbsøkere)
-        val (berikedeNyeJobbsøkere, antallAvvist) = berikJobbsøkereFraKandidatsøk(nyeJobbsøkere, userToken)
         val gjenopprettedeJobbsøkere = finnGjenopprettedeJobbsøkere(jobbsøkere, slettedeJobbsøkere)
 
         dataSource.executeInTransaction { connection ->
-            opprettNyeJobbsøkere(connection, berikedeNyeJobbsøkere, treffId, navIdent)
+            opprettNyeJobbsøkere(connection, nyeJobbsøkere, treffId, navIdent)
             gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId, navIdent)
         }
 
         return LeggTilJobbsøkereResultat(
-            antallLagtTil = berikedeNyeJobbsøkere.size + gjenopprettedeJobbsøkere.size,
-            antallAvvist = antallAvvist,
+            antallLagtTil = nyeJobbsøkere.size + gjenopprettedeJobbsøkere.size,
         )
     }
 
@@ -188,9 +180,6 @@ class JobbsøkerService(
     fun hentJobbsøkerHendelser(treffId: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {
         return jobbsøkerRepository.hentJobbsøkerHendelser(treffId)
     }
-
-    fun hentInnsatsgrupper(treffId: TreffId): JobbsøkerInnsatsgrupperRespons =
-        jobbsøkerSokRepository.hentInnsatsgrupper(treffId)
 
     fun registrerAktivitetskortOpprettelseFeilet(fnr: Fødselsnummer, treffId: TreffId, endretAv: String) {
         logger.info("Skal oppdatere hendelse for aktivitetskortfeil for TreffId: $treffId")
@@ -341,51 +330,6 @@ class JobbsøkerService(
             .map { it.personTreffId }
     }
 
-    /**
-     * Beriker jobbsøkere med data fra kandidatsøk. Jobbsøkere som ikke finnes i kandidatsøk
-     * filtreres bort. Returnerer beriket liste og antall avviste.
-     */
-    private fun berikJobbsøkereFraKandidatsøk(
-        jobbsøkere: List<LeggTilJobbsøker>,
-        userToken: String?,
-    ): Pair<List<LeggTilJobbsøker>, Int> {
-        val kandidatsøkKlient = kandidatsøkKlient
-        if (jobbsøkere.isEmpty() || kandidatsøkKlient == null || !kandidatsøkKlient.erKonfigurert()) {
-            return Pair(jobbsøkere, 0)
-        }
-
-        val jobbsøkereSomMåBerikes = jobbsøkere.filter { it.trengerKandidatsøkBerikelse() }
-        if (jobbsøkereSomMåBerikes.isEmpty()) {
-            return Pair(jobbsøkere, 0)
-        }
-
-        val token = userToken?.takeIf { it.isNotBlank() }
-            ?: throw IllegalStateException("Mangler bruker-token for kandidatsøk-oppslag.")
-
-        val kandidatdataPerFødselsnummer = kandidatsøkKlient.hentKandidatdata(
-            jobbsøkereSomMåBerikes.map { it.fødselsnummer },
-            token,
-        )
-
-        var antallAvvist = 0
-        val berikede = mutableListOf<LeggTilJobbsøker>()
-
-        for (jobbsøker in jobbsøkere) {
-            if (jobbsøker.trengerKandidatsøkBerikelse()) {
-                val berikelse = kandidatdataPerFødselsnummer[jobbsøker.fødselsnummer.asString]
-                if (berikelse != null) {
-                    berikede.add(jobbsøker.medKandidatBerikelse(berikelse))
-                } else {
-                    antallAvvist++
-                }
-            } else {
-                berikede.add(jobbsøker)
-            }
-        }
-
-        return Pair(berikede, antallAvvist)
-    }
-
     private fun opprettNyeJobbsøkere(
         connection: java.sql.Connection,
         jobbsøkere: List<LeggTilJobbsøker>,
@@ -430,38 +374,6 @@ class JobbsøkerService(
         )
         jobbsøkerSokRepository.oppdaterStatusBatch(connection, personTreffIder, JobbsøkerStatus.LAGT_TIL)
     }
-
-    private fun LeggTilJobbsøker.medKandidatBerikelse(
-        kandidatBerikelse: KandidatBerikelse?,
-    ): LeggTilJobbsøker = copy(
-        navkontor = navkontor ?: kandidatBerikelse?.navkontor.tilNavkontor(),
-        veilederNavn = veilederNavn ?: kandidatBerikelse?.veilederNavn.tilVeilederNavn(),
-        veilederNavIdent = veilederNavIdent ?: kandidatBerikelse?.veilederNavIdent.tilVeilederNavIdent(),
-        innsatsgruppe = innsatsgruppe ?: kandidatBerikelse?.innsatsgruppe,
-        fylke = fylke ?: kandidatBerikelse?.fylke,
-        kommune = kommune ?: kandidatBerikelse?.kommune,
-        poststed = poststed ?: kandidatBerikelse?.poststed,
-        telefonnummer = telefonnummer ?: kandidatBerikelse?.telefonnummer,
-    )
-
-    private fun LeggTilJobbsøker.trengerKandidatsøkBerikelse(): Boolean =
-        navkontor == null &&
-            veilederNavn == null &&
-            veilederNavIdent == null &&
-            innsatsgruppe == null &&
-            fylke == null &&
-            kommune == null &&
-            poststed == null &&
-            telefonnummer == null
-
-    private fun String?.tilNavkontor(): Navkontor? =
-        this?.trim()?.takeIf { it.isNotEmpty() }?.let(::Navkontor)
-
-    private fun String?.tilVeilederNavn(): VeilederNavn? =
-        this?.trim()?.takeIf { it.isNotEmpty() }?.let(::VeilederNavn)
-
-    private fun String?.tilVeilederNavIdent(): VeilederNavIdent? =
-        this?.trim()?.takeIf { it.isNotEmpty() }?.let(::VeilederNavIdent)
 }
 
 enum class MarkerSlettetResultat {
