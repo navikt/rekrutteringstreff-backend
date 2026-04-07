@@ -14,9 +14,12 @@ class RekrutteringstreffOpprydningScheduler(
     private val kiLoggService: KiLoggService,
     private val leaderElection: LeaderElectionInterface,
 ) {
+    companion object {
+        private const val ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING = 6
+    }
+
     private val scheduler = Executors.newScheduledThreadPool(1)
     private val isRunning = AtomicBoolean(false)
-    private val ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING = 6
 
     fun start() {
         log.info("Starter RekrutteringstreffOpprydningScheduler")
@@ -71,7 +74,7 @@ class RekrutteringstreffOpprydningScheduler(
         }
         log.info("Start opprydning/sletting av KI-logger")
 
-        kiLoggerSomSkalSlettes.forEach { log -> kiLoggService.slettKILogg(log) }
+        kiLoggerSomSkalSlettes.forEach { loggUuid -> kiLoggService.slettKILogg(loggUuid) }
 
         log.info("Alle KI-logger eldre enn ${ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING} måneder er slettet")
     }

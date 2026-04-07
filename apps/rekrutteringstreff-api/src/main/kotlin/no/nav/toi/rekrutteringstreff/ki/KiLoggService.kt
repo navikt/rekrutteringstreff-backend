@@ -98,7 +98,7 @@ class KiLoggService(
         return kiLoggRepository.hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet)
     }
 
-    fun slettKILogg(logg_uuid: UUID) {
-        kiLoggRepository.slettKiLogg(logg_uuid)
+    fun slettKILogg(loggUuid: UUID) {
+        kiLoggRepository.slettKiLogg(loggUuid)
     }
 }

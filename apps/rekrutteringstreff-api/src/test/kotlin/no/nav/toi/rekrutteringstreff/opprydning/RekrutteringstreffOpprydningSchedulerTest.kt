@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.opprydning
+package no.nav.toi.rekrutteringstreff.opprydning
 
 import no.nav.toi.LeaderElectionMock
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -6,7 +6,6 @@ import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import no.nav.toi.rekrutteringstreff.ki.KiLoggTestInsert
 import no.nav.toi.rekrutteringstreff.ki.SystemPrompt
-import no.nav.toi.rekrutteringstreff.opprydning.RekrutteringstreffOpprydningScheduler
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach

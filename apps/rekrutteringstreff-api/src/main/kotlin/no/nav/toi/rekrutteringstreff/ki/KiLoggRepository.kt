@@ -167,16 +167,17 @@ class KiLoggRepository(private val dataSource: DataSource) {
                 select 
                     k.id
                 from ki_spørring_logg k
-                where k.opprettet_tidspunkt <= current_timestamp - interval '${månederSidenLoggOpprettet} months'
+                where k.opprettet_tidspunkt <= current_timestamp - make_interval(months => ?)
                 """.trimIndent()
             ).use { ps ->
+                ps.setInt(1, månederSidenLoggOpprettet)
                 ps.executeQuery().use { rs ->
                     generateSequence { if (rs.next()) rs.getObject("id", UUID::class.java) else null }.toList()
                 }
             }
         }
 
-    fun slettKiLogg(KiLoggUuid: UUID) {
+    fun slettKiLogg(kiLoggUuid: UUID) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
@@ -185,7 +186,7 @@ class KiLoggRepository(private val dataSource: DataSource) {
                 where k.id = ?
                 """.trimIndent()
             ).use { ps ->
-                ps.setObject(1,  KiLoggUuid)
+                ps.setObject(1, kiLoggUuid)
                 ps.executeUpdate()
             }
         }
