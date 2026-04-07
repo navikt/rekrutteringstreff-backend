@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.opprydning
 
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
@@ -43,6 +44,7 @@ class RekrutteringstreffOpprydningScheduler(
         }
     }
 
+    @WithSpan
     fun rekrutteringstreffOpprydning() {
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av RekrutteringstreffOpprydningScheduler er ikke ferdig, skipper denne kjøringen.")
