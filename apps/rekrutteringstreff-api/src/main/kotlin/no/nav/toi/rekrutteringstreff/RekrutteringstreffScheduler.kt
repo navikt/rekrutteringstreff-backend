@@ -3,9 +3,6 @@ package no.nav.toi.rekrutteringstreff
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.log
-import java.time.Duration
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean

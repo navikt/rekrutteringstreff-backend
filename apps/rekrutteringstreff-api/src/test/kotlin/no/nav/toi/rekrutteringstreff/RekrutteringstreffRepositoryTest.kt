@@ -137,7 +137,7 @@ class RekrutteringstreffRepositoryTest {
         assertThat(jobbsøkerHendelser).isEmpty() // Ikke-synlig jobbsøker filtreres ut
     }
 
-        @Test
+    @Test
     fun `hentPubliserteTreffSomErFerdig skal vise riktig resultat`() {
         val ferdigPublisert = db.opprettRekrutteringstreffMedAlleFelter(
             tittel = "Ferdig og publisert",
