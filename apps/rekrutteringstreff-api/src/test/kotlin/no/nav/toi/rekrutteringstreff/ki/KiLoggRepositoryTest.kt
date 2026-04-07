@@ -398,7 +398,8 @@ class KiLoggRepositoryTest {
     """.trimIndent()
         val loggIdSomSkalHentes = testDatabase.opprettKiLogg(
             KiLoggTestInsert(
-                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_SKAL_HENTES),
+                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC)
+                    .minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_SKAL_HENTES),
                 treffId = treffId,
                 feltType = "innlegg",
                 spørringFraFrontend = "Tekst",
@@ -414,7 +415,8 @@ class KiLoggRepositoryTest {
         )
         val loggIdSomIkkeSkalHentes = testDatabase.opprettKiLogg(
             KiLoggTestInsert(
-                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_IKKE_SKAL_HENTES),
+                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC)
+                    .minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_IKKE_SKAL_HENTES),
                 treffId = treffId,
                 feltType = "innlegg",
                 spørringFraFrontend = "Tekst",

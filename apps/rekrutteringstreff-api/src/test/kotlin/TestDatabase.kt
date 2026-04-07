@@ -10,7 +10,6 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.ki.KiLoggTestInsert
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
@@ -632,3 +631,18 @@ class TestDatabase {
             }
         }
 }
+
+data class KiLoggTestInsert( //Brukes for i testene for å legge inn logger med opprettetTidspunkt tilbake i tid
+    val treffId: UUID?,
+    val opprettetTidspunkt: ZonedDateTime,
+    val feltType: String,
+    val spørringFraFrontend: String,
+    val spørringFiltrert: String,
+    val systemprompt: String?,
+    val ekstraParametreJson: String?,
+    val bryterRetningslinjer: Boolean,
+    val begrunnelse: String?,
+    val kiNavn: String,
+    val kiVersjon: String,
+    val svartidMs: Int
+)

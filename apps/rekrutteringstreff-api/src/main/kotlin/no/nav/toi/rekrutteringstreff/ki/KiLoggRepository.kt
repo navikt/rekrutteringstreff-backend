@@ -207,21 +207,6 @@ data class KiLoggInsert(
     val svartidMs: Int
 )
 
-data class KiLoggTestInsert( //Brukes for i testene for å legge inn logger med opprettetTidspunkt tilbake i tid
-    val treffId: UUID?,
-    val opprettetTidspunkt: ZonedDateTime,
-    val feltType: String,
-    val spørringFraFrontend: String,
-    val spørringFiltrert: String,
-    val systemprompt: String?,
-    val ekstraParametreJson: String?,
-    val bryterRetningslinjer: Boolean,
-    val begrunnelse: String?,
-    val kiNavn: String,
-    val kiVersjon: String,
-    val svartidMs: Int
-)
-
 data class KiLoggMedTreff(
     val id: UUID,
     val opprettetTidspunkt: ZonedDateTime,

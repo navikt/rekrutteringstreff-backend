@@ -1,10 +1,10 @@
 package no.nav.toi.rekrutteringstreff.opprydning
 
 import no.nav.toi.LeaderElectionMock
+import no.nav.toi.rekrutteringstreff.KiLoggTestInsert
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
-import no.nav.toi.rekrutteringstreff.ki.KiLoggTestInsert
 import no.nav.toi.rekrutteringstreff.ki.SystemPrompt
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
@@ -52,7 +52,8 @@ class RekrutteringstreffOpprydningSchedulerTest {
     """.trimIndent()
         val loggIdForLoggSomSkalSlettes = testDatabase.opprettKiLogg(
             KiLoggTestInsert(
-                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_SKAL_HENTES),
+                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC)
+                    .minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_SKAL_HENTES),
                 treffId = treffId,
                 feltType = "innlegg",
                 spørringFraFrontend = "Tekst",
@@ -68,7 +69,8 @@ class RekrutteringstreffOpprydningSchedulerTest {
         )
         val loggIdForLoggSomIkkeSkalSlettes = testDatabase.opprettKiLogg(
             KiLoggTestInsert(
-                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_IKKE_SKAL_HENTES),
+                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC)
+                    .minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_IKKE_SKAL_HENTES),
                 treffId = treffId,
                 feltType = "innlegg",
                 spørringFraFrontend = "Tekst",
