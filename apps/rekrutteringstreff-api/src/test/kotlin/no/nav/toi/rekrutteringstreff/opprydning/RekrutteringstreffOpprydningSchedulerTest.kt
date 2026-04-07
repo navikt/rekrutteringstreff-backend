@@ -50,7 +50,7 @@ class RekrutteringstreffOpprydningSchedulerTest {
           "promptHash": "${SystemPrompt.hash}"
         }
     """.trimIndent()
-        val loggIdForLoggSomSkalSlettes = kiLoggRepository.testInsert(
+        val loggIdForLoggSomSkalSlettes = testDatabase.opprettKiLogg(
             KiLoggTestInsert(
                 opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_SKAL_HENTES),
                 treffId = treffId,
@@ -66,7 +66,7 @@ class RekrutteringstreffOpprydningSchedulerTest {
                 svartidMs = 42
             )
         )
-        val loggIdForLoggSomIkkeSkalSlettes = kiLoggRepository.testInsert(
+        val loggIdForLoggSomIkkeSkalSlettes = testDatabase.opprettKiLogg(
             KiLoggTestInsert(
                 opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_IKKE_SKAL_HENTES),
                 treffId = treffId,

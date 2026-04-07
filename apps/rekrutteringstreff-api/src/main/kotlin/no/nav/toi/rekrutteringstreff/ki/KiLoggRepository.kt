@@ -3,7 +3,6 @@ package no.nav.toi.rekrutteringstreff.ki
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.sql.Types
-import java.time.OffsetDateTime
 import java.time.ZonedDateTime
 import java.util.UUID
 import javax.sql.DataSource
@@ -180,66 +179,18 @@ class KiLoggRepository(private val dataSource: DataSource) {
     fun slettKiLogger(kiLoggUuider: List<UUID>) {
         if (kiLoggUuider.isEmpty()) return
         dataSource.connection.use { connection ->
+            val uuidArray = connection.createArrayOf("uuid", kiLoggUuider.toTypedArray())
             connection.prepareStatement(
                 """
             delete from ki_spørring_logg
-            where id = ?
+            where id = any(?)
             """.trimIndent()
             ).use { ps ->
-                kiLoggUuider.forEach { uuid ->
-                    ps.setObject(1, uuid)
-                    ps.addBatch()
-                }
-                ps.executeBatch()
+                ps.setArray(1, uuidArray)
+                ps.executeUpdate()
             }
         }
     }
-
-    /**
-     * Brukes kun for å legge inn rader med opprettetTidspunkt tilbake i tid i testene, for å teste sletting av gamle logger.
-     */
-    fun testInsert(kiLoggTestInsert: KiLoggTestInsert): UUID =
-        dataSource.connection.use { connection ->
-            connection.prepareStatement(
-                """
-            insert into ki_spørring_logg(
-                opprettet_tidspunkt,
-                treff_id,
-                felt_type,
-                spørring_fra_frontend,
-                spørring_filtrert,
-                systemprompt,
-                ekstra_parametre,
-                bryter_retningslinjer,
-                begrunnelse,
-                ki_navn,
-                ki_versjon,
-                svartid_ms,
-                lagret
-            ) values (?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, false)
-            returning id
-            """.trimIndent()
-            ).use { preparedStatement ->
-                var i = 0
-                preparedStatement.setObject(++i, OffsetDateTime.from(kiLoggTestInsert.opprettetTidspunkt))
-                preparedStatement.setObject(++i, kiLoggTestInsert.treffId)
-                preparedStatement.setString(++i, kiLoggTestInsert.feltType)
-                preparedStatement.setString(++i, kiLoggTestInsert.spørringFraFrontend)
-                preparedStatement.setString(++i, kiLoggTestInsert.spørringFiltrert)
-                preparedStatement.setString(++i, kiLoggTestInsert.systemprompt)
-                preparedStatement.setString(++i, kiLoggTestInsert.ekstraParametreJson)
-                preparedStatement.setBoolean(++i, kiLoggTestInsert.bryterRetningslinjer)
-                preparedStatement.setString(++i, kiLoggTestInsert.begrunnelse)
-                preparedStatement.setString(++i, kiLoggTestInsert.kiNavn)
-                preparedStatement.setString(++i, kiLoggTestInsert.kiVersjon)
-                preparedStatement.setInt(++i, kiLoggTestInsert.svartidMs)
-
-                preparedStatement.executeQuery().use { resultSet ->
-                    resultSet.next()
-                    resultSet.getObject(1, UUID::class.java)
-                }
-            }
-        }
 }
 
 data class KiLoggInsert(

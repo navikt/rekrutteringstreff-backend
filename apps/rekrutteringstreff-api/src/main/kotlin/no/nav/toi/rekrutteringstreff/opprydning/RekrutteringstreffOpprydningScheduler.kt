@@ -48,13 +48,13 @@ class RekrutteringstreffOpprydningScheduler(
             return
         }
 
-        if (leaderElection.isLeader().not()) {
-            log.info("Kjøring av RekrutteringstreffOpprydningScheduler skippes, instansen er ikke leader.")
-            isRunning.set(false)
-            return
-        }
-
         try {
+            if (leaderElection.isLeader().not()) {
+                log.info("Kjøring av RekrutteringstreffOpprydningScheduler skippes, instansen er ikke leader.")
+                isRunning.set(false)
+                return
+            }
+
             log.info("Starter opprydning")
             slettKiLogger()
 

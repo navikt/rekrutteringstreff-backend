@@ -396,7 +396,7 @@ class KiLoggRepositoryTest {
           "promptHash": "${SystemPrompt.hash}"
         }
     """.trimIndent()
-        val loggIdSomSkalHentes = kiLoggRepository.testInsert(
+        val loggIdSomSkalHentes = testDatabase.opprettKiLogg(
             KiLoggTestInsert(
                 opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_SKAL_HENTES),
                 treffId = treffId,
@@ -412,7 +412,7 @@ class KiLoggRepositoryTest {
                 svartidMs = 42
             )
         )
-        val loggIdSomIkkeSkalHentes = kiLoggRepository.testInsert(
+        val loggIdSomIkkeSkalHentes = testDatabase.opprettKiLogg(
             KiLoggTestInsert(
                 opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC).minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_IKKE_SKAL_HENTES),
                 treffId = treffId,
