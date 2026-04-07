@@ -94,11 +94,11 @@ class KiLoggService(
             .replace(Regex("\\s+"), " ")
             .trim()
 
-    fun hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet: Int): List<UUID> {
+    fun hentKiLoggUuiderForScheduledSletting(månederSidenLoggOpprettet: Int): List<UUID> {
         return kiLoggRepository.hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet)
     }
 
-    fun slettKILogg(loggUuid: UUID) {
-        kiLoggRepository.slettKiLogg(loggUuid)
+    fun slettKILogger(loggUuider: List<UUID>) {
+        kiLoggRepository.slettKiLogger(loggUuider)
     }
 }

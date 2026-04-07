@@ -67,14 +67,14 @@ class RekrutteringstreffOpprydningScheduler(
     }
 
     private fun slettKiLogger() {
-        val kiLoggerSomSkalSlettes = kiLoggService.hentKiLoggIderForScheduledSletting(ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING)
+        val kiLoggerSomSkalSlettes = kiLoggService.hentKiLoggUuiderForScheduledSletting(ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING)
         if (kiLoggerSomSkalSlettes.isEmpty()) {
             log.info("Ingen KI-logger å slette")
             return
         }
         log.info("Start opprydning/sletting av KI-logger")
 
-        kiLoggerSomSkalSlettes.forEach { loggUuid -> kiLoggService.slettKILogg(loggUuid) }
+        kiLoggService.slettKILogger(kiLoggerSomSkalSlettes)
 
         log.info("Alle KI-logger eldre enn ${ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING} måneder er slettet")
     }

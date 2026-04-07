@@ -319,7 +319,7 @@ class KiLoggRepositoryTest {
     }
 
     @Test
-    fun `Ki-logg skal kunne slettes`() {
+    fun `Ki-logger skal kunne batch-slettes`() {
         val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
         val ekstraJson = """
         {
@@ -328,7 +328,7 @@ class KiLoggRepositoryTest {
           "promptHash": "${SystemPrompt.hash}"
         }
     """.trimIndent()
-        val loggId = kiLoggRepository.insert(
+        val loggId1 = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "innlegg",
@@ -343,9 +343,44 @@ class KiLoggRepositoryTest {
                 svartidMs = 42
             )
         )
-        assertThat(kiLoggRepository.findById(loggId)).isNotNull()
-        kiLoggRepository.slettKiLogg(loggId)
-        assertThat(kiLoggRepository.findById(loggId)).isNull()
+        val loggId2 = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = ekstraJson,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "toi-gpt-4.1",
+                svartidMs = 42
+            )
+        )
+        val loggId3 = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = ekstraJson,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "toi-gpt-4.1",
+                svartidMs = 42
+            )
+        )
+        val loggIdListe = listOf(loggId1, loggId2, loggId3)
+        assertThat(kiLoggRepository.findById(loggId1)).isNotNull()
+        assertThat(kiLoggRepository.findById(loggId2)).isNotNull()
+        assertThat(kiLoggRepository.findById(loggId3)).isNotNull()
+        kiLoggRepository.slettKiLogger(loggIdListe)
+        assertThat(kiLoggRepository.findById(loggId1)).isNull()
+        assertThat(kiLoggRepository.findById(loggId2)).isNull()
+        assertThat(kiLoggRepository.findById(loggId3)).isNull()
     }
 
     @Test

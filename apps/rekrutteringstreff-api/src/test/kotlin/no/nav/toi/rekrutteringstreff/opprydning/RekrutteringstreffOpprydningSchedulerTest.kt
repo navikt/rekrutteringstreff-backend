@@ -84,8 +84,8 @@ class RekrutteringstreffOpprydningSchedulerTest {
         )
         assertThat(kiLoggRepository.findById(loggIdForLoggSomSkalSlettes)).isNotNull()
         assertThat(kiLoggRepository.findById(loggIdForLoggSomIkkeSkalSlettes)).isNotNull()
-        assertThat(kiLoggService.hentKiLoggIderForScheduledSletting(ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING)).containsExactly(loggIdForLoggSomSkalSlettes)
+        assertThat(kiLoggService.hentKiLoggUuiderForScheduledSletting(ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING)).containsExactly(loggIdForLoggSomSkalSlettes)
         rekrutteringstreffOpprydningScheduler.rekrutteringstreffOpprydning()
-        assertThat(kiLoggService.hentKiLoggIderForScheduledSletting(ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING)).isEmpty()
+        assertThat(kiLoggService.hentKiLoggUuiderForScheduledSletting(ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING)).isEmpty()
     }
 }

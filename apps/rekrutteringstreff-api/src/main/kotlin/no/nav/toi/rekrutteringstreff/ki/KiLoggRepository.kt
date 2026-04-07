@@ -177,21 +177,27 @@ class KiLoggRepository(private val dataSource: DataSource) {
             }
         }
 
-    fun slettKiLogg(kiLoggUuid: UUID) {
+    fun slettKiLogger(kiLoggUuider: List<UUID>) {
+        if (kiLoggUuider.isEmpty()) return
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
-                delete
-                from ki_spørring_logg k
-                where k.id = ?
-                """.trimIndent()
+            delete from ki_spørring_logg
+            where id = ?
+            """.trimIndent()
             ).use { ps ->
-                ps.setObject(1, kiLoggUuid)
-                ps.executeUpdate()
+                kiLoggUuider.forEach { uuid ->
+                    ps.setObject(1, uuid)
+                    ps.addBatch()
+                }
+                ps.executeBatch()
             }
         }
     }
 
+    /**
+     * Brukes kun for å legge inn rader med opprettetTidspunkt tilbake i tid i testene, for å teste sletting av gamle logger.
+     */
     fun testInsert(kiLoggTestInsert: KiLoggTestInsert): UUID =
         dataSource.connection.use { connection ->
             connection.prepareStatement(
