@@ -79,6 +79,6 @@ class RekrutteringstreffOpprydningScheduler(
 
         kiLoggService.slettKILogger(kiLoggerSomSkalSlettes)
 
-        log.info("Alle KI-logger eldre enn ${ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING} måneder er slettet")
+        log.info("${kiLoggerSomSkalSlettes.size} KI-logger eldre enn ${ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING} måneder er slettet")
     }
 }
