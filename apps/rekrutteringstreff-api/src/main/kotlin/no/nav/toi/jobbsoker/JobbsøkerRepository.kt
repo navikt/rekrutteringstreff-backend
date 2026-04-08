@@ -24,6 +24,11 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
     data class OpprettetJobbsøker(val personTreffId: PersonTreffId, val jobbsøkerId: Long)
 
+    private data class JobbsøkerBatchRad(
+        val personTreffId: PersonTreffId,
+        val jobbsøker: LeggTilJobbsøker,
+    )
+
     fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId, navIdent: String, tidspunkt: Instant): List<OpprettetJobbsøker> {
         val treffDbId = connection.treffDbId(treff)
         return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere, navIdent, tidspunkt)
@@ -53,47 +58,73 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                navkontor,veileder_navn,veileder_navident,status,lagt_til_dato,lagt_til_av)
             values (?,?,?,?,?,?,?,?,?,?,?)
         """.trimIndent()
-        val resultat = mutableListOf<OpprettetJobbsøker>()
-        val ts = Timestamp.from(tidspunkt)
-        prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS).use { stmt ->
-            var n = 0
-            val batchPersonTreffIder = mutableListOf<PersonTreffId>()
-            jobbsøkere.forEach {
-                val personTreffId = PersonTreffId(UUID.randomUUID())
-                batchPersonTreffIder += personTreffId
-                stmt.setObject(1, personTreffId.somUuid)
-                stmt.setLong(2, treffDbId)
-                stmt.setString(3, it.fødselsnummer.asString)
-                stmt.setString(4, it.fornavn.asString)
-                stmt.setString(5, it.etternavn.asString)
-                stmt.setString(6, it.navkontor?.asString)
-                stmt.setString(7, it.veilederNavn?.asString)
-                stmt.setString(8, it.veilederNavIdent?.asString)
-                stmt.setString(9, JobbsøkerStatus.LAGT_TIL.name)
-                stmt.setTimestamp(10, ts)
-                stmt.setString(11, navIdent)
-                stmt.addBatch(); if (++n == maksStørrelsePerBatch) {
-                    stmt.executeBatch()
-                    stmt.generatedKeys.use { keys ->
-                        var idx = batchPersonTreffIder.size - n
-                        while (keys.next()) {
-                            resultat += OpprettetJobbsøker(batchPersonTreffIder[idx++], keys.getLong(1))
-                        }
-                    }
-                    n = 0
+        val lagtTilDato = Timestamp.from(tidspunkt)
+        val batchRader = jobbsøkere.map { jobbsøker ->
+            JobbsøkerBatchRad(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                jobbsøker = jobbsøker,
+            )
+        }
+
+        return prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
+            batchRader.chunked(maksStørrelsePerBatch).flatMap { batch ->
+                batch.forEach { rad ->
+                    stmt.addJobbsøkerTilBatch(
+                        personTreffId = rad.personTreffId,
+                        treffDbId = treffDbId,
+                        jobbsøker = rad.jobbsøker,
+                        navIdent = navIdent,
+                        lagtTilDato = lagtTilDato,
+                    )
                 }
-            }
-            if (n > 0) {
-                stmt.executeBatch()
-                stmt.generatedKeys.use { keys ->
-                    var idx = batchPersonTreffIder.size - n
-                    while (keys.next()) {
-                        resultat += OpprettetJobbsøker(batchPersonTreffIder[idx++], keys.getLong(1))
-                    }
-                }
+
+                batch.toOpprettedeJobbsøkere(stmt.execBatchReturnIds())
             }
         }
-        return resultat
+    }
+
+    private fun PreparedStatement.addJobbsøkerTilBatch(
+        personTreffId: PersonTreffId,
+        treffDbId: Long,
+        jobbsøker: LeggTilJobbsøker,
+        navIdent: String,
+        lagtTilDato: Timestamp,
+    ) {
+        setObject(1, personTreffId.somUuid)
+        setLong(2, treffDbId)
+        setString(3, jobbsøker.fødselsnummer.asString)
+        setString(4, jobbsøker.fornavn.asString)
+        setString(5, jobbsøker.etternavn.asString)
+        setString(6, jobbsøker.navkontor?.asString)
+        setString(7, jobbsøker.veilederNavn?.asString)
+        setString(8, jobbsøker.veilederNavIdent?.asString)
+        setString(9, JobbsøkerStatus.LAGT_TIL.name)
+        setTimestamp(10, lagtTilDato)
+        setString(11, navIdent)
+        addBatch()
+    }
+
+    private fun List<JobbsøkerBatchRad>.toOpprettedeJobbsøkere(generatedIds: List<Long>): List<OpprettetJobbsøker> =
+        generatedIds.mapIndexed { index, jobbsøkerId ->
+            OpprettetJobbsøker(personTreffId = this[index].personTreffId, jobbsøkerId = jobbsøkerId)
+        }
+
+    private fun PreparedStatement.addJobbsøkerHendelseTilBatch(
+        personTreffId: PersonTreffId,
+        tidspunkt: Instant,
+        hendelsestype: JobbsøkerHendelsestype,
+        aktørType: AktørType,
+        opprettetAv: String,
+        hendelseData: String?,
+    ) {
+        setObject(1, UUID.randomUUID())
+        setObject(2, personTreffId.somUuid)
+        setTimestamp(3, Timestamp.from(tidspunkt))
+        setString(4, hendelsestype.name)
+        setString(5, aktørType.name)
+        setString(6, opprettetAv)
+        setString(7, hendelseData)
+        addBatch()
     }
 
     fun leggTilHendelserForJobbsøkere(
@@ -111,22 +142,20 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?, ?::jsonb)
         """.trimIndent()
         c.prepareStatement(sql).use { stmt ->
-            var n = 0
-            personTreffIds.forEach { id ->
-                stmt.setObject(1, UUID.randomUUID())
-                stmt.setObject(2, id.somUuid)
-                stmt.setTimestamp(3, Timestamp.from(Instant.now()))
-                stmt.setString(4, hendelsestype.name)
-                stmt.setString(5, arrangørtype.name)
-                stmt.setString(6, opprettetAv)
-                stmt.setString(7, hendelseData)
-                stmt.addBatch()
-                if (++n == size) {
-                    stmt.executeBatch()
-                    n = 0
+            personTreffIds.chunked(size).forEach { batch ->
+                batch.forEach { id ->
+                    stmt.addJobbsøkerHendelseTilBatch(
+                        personTreffId = id,
+                        tidspunkt = Instant.now(),
+                        hendelsestype = hendelsestype,
+                        aktørType = arrangørtype,
+                        opprettetAv = opprettetAv,
+                        hendelseData = hendelseData,
+                    )
                 }
+
+                stmt.executeBatch()
             }
-            if (n > 0) stmt.executeBatch()
         }
     }
 
@@ -165,24 +194,24 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     ) {
         val sql = """
             insert into jobbsoker_hendelse
-              (id,jobbsoker_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon)
-            values (?,(select jobbsoker_id from jobbsoker where id = ?),?,?,?,?)
+              (id,jobbsoker_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon,hendelse_data)
+            values (?,(select jobbsoker_id from jobbsoker where id = ?),?,?,?,?,?::jsonb)
         """.trimIndent()
-        val ts = Timestamp.from(tidspunkt)
         prepareStatement(sql).use { stmt ->
-            var n = 0
-            personTreffIds.forEach { id ->
-                stmt.setObject(1, UUID.randomUUID())
-                stmt.setObject(2, id.somUuid)
-                stmt.setTimestamp(3, ts)
-                stmt.setString(4, hendelsestype.name)
-                stmt.setString(5, arrangørtype.name)
-                stmt.setString(6, opprettetAv)
-                stmt.addBatch(); if (++n == size) {
-                stmt.executeBatch(); n = 0
+            personTreffIds.chunked(size).forEach { batch ->
+                batch.forEach { id ->
+                    stmt.addJobbsøkerHendelseTilBatch(
+                        personTreffId = id,
+                        tidspunkt = tidspunkt,
+                        hendelsestype = hendelsestype,
+                        aktørType = arrangørtype,
+                        opprettetAv = opprettetAv,
+                        hendelseData = null,
+                    )
+                }
+
+                stmt.executeBatch()
             }
-            }
-            if (n > 0) stmt.executeBatch()
         }
     }
 
