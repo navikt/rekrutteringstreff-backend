@@ -39,7 +39,7 @@ flowchart TD
     subgraph Backend_Lagring[Backend: Lagring]
         LAGRE_CTRL["Controller
         PUT /api/..."]
-        KI_SVC[KiValideringsService]
+        KI_SVC[KiLoggService]
     end
 
     subgraph Database
@@ -145,7 +145,7 @@ Systemprompten definerer valideringsreglene. Se [`SystemPrompt.kt`](../../apps/r
 
 ### Verifiseringsflyt
 
-Ved lagring sjekker `KiValideringsService`:
+Ved lagring sjekker `KiLoggService`:
 
 ```mermaid
 flowchart TD
@@ -356,13 +356,13 @@ flowchart LR
 
 ### Testklasser
 
-| Testklasse                 | Beskrivelse                                              |
-| -------------------------- | -------------------------------------------------------- |
-| `KiAutorisasjonsTest`      | Tester tilgangskontroll til KI-endepunktene              |
-| `KiLoggRepositoryTest`     | Tester logging av KI-spørringer                          |
-| `KiValideringsServiceTest` | Tester verifiseringslogikken (feilkoder, normalisering)  |
-| `KiTest`                   | Integrasjonstest for KI-validering med Azure OpenAI mock |
-| `OpenAiTestClient`         | Hjelpeklasse for testing mot Azure OpenAI                |
+| Testklasse             | Beskrivelse                                              |
+|------------------------| -------------------------------------------------------- |
+| `KiAutorisasjonsTest`  | Tester tilgangskontroll til KI-endepunktene              |
+| `KiLoggRepositoryTest` | Tester logging av KI-spørringer                          |
+| `KiLoggServiceTest`    | Tester verifiseringslogikken (feilkoder, normalisering)  |
+| `KiTest`               | Integrasjonstest for KI-validering med Azure OpenAI mock |
+| `OpenAiTestClient`     | Hjelpeklasse for testing mot Azure OpenAI                |
 
 ---
 

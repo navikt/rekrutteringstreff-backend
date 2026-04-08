@@ -13,24 +13,24 @@ import com.fasterxml.jackson.module.kotlin.readValue
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiLoggRepositoryTest {
 
-    private val db = TestDatabase()
-    private lateinit var repo: KiLoggRepository
+    private val testDatabase = TestDatabase()
+    private lateinit var kiLoggRepository: KiLoggRepository
 
     @BeforeAll
     fun setup() {
-        Flyway.configure().dataSource(db.dataSource).load().migrate()
-        repo = KiLoggRepository(db.dataSource)
+        Flyway.configure().dataSource(testDatabase.dataSource).load().migrate()
+        kiLoggRepository = KiLoggRepository(testDatabase.dataSource)
     }
 
     @AfterEach
     fun cleanup() {
-        db.slettAlt()
+        testDatabase.slettAlt()
     }
 
     @Test
     fun kan_lagre_logg_og_faa_id() {
-        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
-        val id = repo.insert(
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val id = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "tittel",
@@ -51,8 +51,8 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_hente_logg_med_id() {
-        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
-        val id = repo.insert(
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val id = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "innlegg",
@@ -68,7 +68,7 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val row = repo.findById(id)!!
+        val row = kiLoggRepository.findById(id)!!
         assertThat(row.id).isEqualTo(id)
         assertThat(row.treffId).isEqualTo(treffId)
         assertThat(row.feltType).isEqualTo("innlegg")
@@ -89,8 +89,8 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_markere_logg_som_lagret() {
-        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
-        val id = repo.insert(
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val id = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "tittel",
@@ -106,17 +106,17 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val updated = repo.setLagret(id, true)
+        val updated = kiLoggRepository.setLagret(id, true)
         assertThat(updated).isEqualTo(1)
 
-        val row = repo.findById(id)!!
+        val row = kiLoggRepository.findById(id)!!
         assertThat(row.lagret).isTrue()
     }
 
     @Test
     fun kan_registrere_manuell_kontroll() {
-        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
-        val id = repo.insert(
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val id = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "tittel",
@@ -133,10 +133,10 @@ class KiLoggRepositoryTest {
         )
 
         val nå = ZonedDateTime.now(ZoneOffset.UTC)
-        val updated = repo.setManuellKontroll(id, true, "Z123456", nå)
+        val updated = kiLoggRepository.setManuellKontroll(id, true, "Z123456", nå)
         assertThat(updated).isEqualTo(1)
 
-        val row = repo.findById(id)!!
+        val row = kiLoggRepository.findById(id)!!
         assertThat(row.manuellKontrollBryterRetningslinjer).isTrue()
         assertThat(row.manuellKontrollUtfortAv).isEqualTo("Z123456")
         assertThat(row.manuellKontrollTidspunkt).isNotNull()
@@ -144,8 +144,8 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_nullstille_manuell_kontroll_til_null() {
-        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
-        val id = repo.insert(
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val id = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "tittel",
@@ -162,14 +162,14 @@ class KiLoggRepositoryTest {
         )
 
         val nå = ZonedDateTime.now(ZoneOffset.UTC)
-        assertThat(repo.setManuellKontroll(id, true, "Z123456", nå)).isEqualTo(1)
-        val s1 = repo.findById(id)!!
+        assertThat(kiLoggRepository.setManuellKontroll(id, true, "Z123456", nå)).isEqualTo(1)
+        val s1 = kiLoggRepository.findById(id)!!
         assertThat(s1.manuellKontrollBryterRetningslinjer).isTrue()
         assertThat(s1.manuellKontrollUtfortAv).isEqualTo("Z123456")
         assertThat(s1.manuellKontrollTidspunkt).isNotNull()
 
-        assertThat(repo.setManuellKontroll(id, null, null, null)).isEqualTo(1)
-        val s2 = repo.findById(id)!!
+        assertThat(kiLoggRepository.setManuellKontroll(id, null, null, null)).isEqualTo(1)
+        val s2 = kiLoggRepository.findById(id)!!
         assertThat(s2.manuellKontrollBryterRetningslinjer).isNull()
         assertThat(s2.manuellKontrollUtfortAv).isNull()
         assertThat(s2.manuellKontrollTidspunkt).isNull()
@@ -177,9 +177,9 @@ class KiLoggRepositoryTest {
 
     @Test
     fun kan_liste_logg_for_treff_med_filter_og_paginering() {
-        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
 
-        val id1 = repo.insert(
+        val id1 = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "tittel",
@@ -194,7 +194,7 @@ class KiLoggRepositoryTest {
                 svartidMs = 1
             )
         )
-        val id2 = repo.insert(
+        val id2 = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "innlegg",
@@ -209,7 +209,7 @@ class KiLoggRepositoryTest {
                 svartidMs = 2
             )
         )
-        val id3 = repo.insert(
+        val id3 = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "tittel",
@@ -225,24 +225,24 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val alle = repo.list(treffId, feltType = null, limit = 50, offset = 0)
+        val alle = kiLoggRepository.list(treffId, feltType = null, limit = 50, offset = 0)
         assertThat(alle.map { it.id }).containsExactly(id3, id2, id1)
 
-        val bareTittel = repo.list(treffId, feltType = "tittel", limit = 50, offset = 0)
+        val bareTittel = kiLoggRepository.list(treffId, feltType = "tittel", limit = 50, offset = 0)
         assertThat(bareTittel.map { it.id }).containsExactly(id3, id1)
 
-        val side1 = repo.list(treffId, feltType = null, limit = 1, offset = 0)
-        val side2 = repo.list(treffId, feltType = null, limit = 1, offset = 1)
+        val side1 = kiLoggRepository.list(treffId, feltType = null, limit = 1, offset = 0)
+        val side2 = kiLoggRepository.list(treffId, feltType = null, limit = 1, offset = 1)
         assertThat(side1.map { it.id }).containsExactly(id3)
         assertThat(side2.map { it.id }).containsExactly(id2)
     }
 
     @Test
     fun kan_liste_logg_for_alle_treff_nar_treffId_er_null() {
-        val treffId1 = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
-        val treffId2 = db.opprettRekrutteringstreffIDatabase("B654321").somUuid
+        val treffId1 = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val treffId2 = testDatabase.opprettRekrutteringstreffIDatabase("B654321").somUuid
 
-        val id1 = repo.insert(
+        val id1 = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId1,
                 feltType = "tittel",
@@ -257,7 +257,7 @@ class KiLoggRepositoryTest {
                 svartidMs = 1
             )
         )
-        val id2 = repo.insert(
+        val id2 = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId2,
                 feltType = "innlegg",
@@ -273,7 +273,7 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val alle = repo.list(treffId = null, feltType = null, limit = 50, offset = 0)
+        val alle = kiLoggRepository.list(treffId = null, feltType = null, limit = 50, offset = 0)
 
         assertThat(alle.map { it.id }).containsExactly(id2, id1)
         assertThat(alle.map { it.treffId }.toSet())
@@ -282,7 +282,7 @@ class KiLoggRepositoryTest {
 
     @Test
     fun lagrer_og_henter_ekstra_parametre_json() {
-        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
         val ekstraJson = """
         {
           "promptVersjonsnummer": "${SystemPrompt.versjonsnummer}",
@@ -291,7 +291,7 @@ class KiLoggRepositoryTest {
         }
     """.trimIndent()
 
-        val id = repo.insert(
+        val id = kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = treffId,
                 feltType = "innlegg",
@@ -307,7 +307,7 @@ class KiLoggRepositoryTest {
             )
         )
 
-        val row = repo.findById(id)!!
+        val row = kiLoggRepository.findById(id)!!
         assertThat(row.ekstraParametreJson).isNotNull()
 
         val meta: EkstraMetaDbJson = JacksonConfig.mapper.readValue(row.ekstraParametreJson!!)
@@ -316,5 +316,122 @@ class KiLoggRepositoryTest {
 
         val parsed = ZonedDateTime.parse(meta.promptEndretTidspunkt)
         assertThat(parsed.toLocalDate()).isEqualTo(SystemPrompt.endretTidspunkt.toLocalDate())
+    }
+
+    @Test
+    fun `Ki-logger skal kunne batch-slettes`() {
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val ekstraJson = """
+        {
+          "promptVersjonsnummer": "${SystemPrompt.versjonsnummer}",
+          "promptEndretTidspunkt": "${SystemPrompt.endretTidspunkt}",
+          "promptHash": "${SystemPrompt.hash}"
+        }
+    """.trimIndent()
+        val loggId1 = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = ekstraJson,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "toi-gpt-4.1",
+                svartidMs = 42
+            )
+        )
+        val loggId2 = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = ekstraJson,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "toi-gpt-4.1",
+                svartidMs = 42
+            )
+        )
+        val loggId3 = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = ekstraJson,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "toi-gpt-4.1",
+                svartidMs = 42
+            )
+        )
+        val loggIdListe = listOf(loggId1, loggId2, loggId3)
+        assertThat(kiLoggRepository.findById(loggId1)).isNotNull()
+        assertThat(kiLoggRepository.findById(loggId2)).isNotNull()
+        assertThat(kiLoggRepository.findById(loggId3)).isNotNull()
+        kiLoggRepository.slettKiLogger(loggIdListe)
+        assertThat(kiLoggRepository.findById(loggId1)).isNull()
+        assertThat(kiLoggRepository.findById(loggId2)).isNull()
+        assertThat(kiLoggRepository.findById(loggId3)).isNull()
+    }
+
+    @Test
+    fun `Skal hente KI-logger som er eldre enn 6 måneder`() {
+        val ANTALL_MÅNEDER_MINUS_LOGG_SOM_SKAL_HENTES: Long = 7
+        val ANTALL_MÅNEDER_MINUS_LOGG_SOM_IKKE_SKAL_HENTES: Long = 3
+        val ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING = 6
+        val treffId = testDatabase.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val ekstraJson = """
+        {
+          "promptVersjonsnummer": "${SystemPrompt.versjonsnummer}",
+          "promptEndretTidspunkt": "${SystemPrompt.endretTidspunkt}",
+          "promptHash": "${SystemPrompt.hash}"
+        }
+    """.trimIndent()
+        val loggIdSomSkalHentes = testDatabase.opprettKiLogg(
+            KiLoggTestInsert(
+                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC)
+                    .minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_SKAL_HENTES),
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = ekstraJson,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "toi-gpt-4.1",
+                svartidMs = 42
+            )
+        )
+        val loggIdSomIkkeSkalHentes = testDatabase.opprettKiLogg(
+            KiLoggTestInsert(
+                opprettetTidspunkt = ZonedDateTime.now(ZoneOffset.UTC)
+                    .minusMonths(ANTALL_MÅNEDER_MINUS_LOGG_SOM_IKKE_SKAL_HENTES),
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Tekst",
+                spørringFiltrert = "Tekst",
+                systemprompt = "prompt",
+                ekstraParametreJson = ekstraJson,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "toi-gpt-4.1",
+                svartidMs = 42
+            )
+        )
+        assertThat(kiLoggRepository.findById(loggIdSomSkalHentes)).isNotNull()
+        assertThat(kiLoggRepository.findById(loggIdSomIkkeSkalHentes)).isNotNull()
+        assertThat(kiLoggRepository.hentKiLoggIderForScheduledSletting(ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING)).containsExactly(loggIdSomSkalHentes)
     }
 }
