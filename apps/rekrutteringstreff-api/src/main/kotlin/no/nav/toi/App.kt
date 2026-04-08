@@ -23,6 +23,7 @@ import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffScheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.eier.EierController
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -99,6 +100,7 @@ class App(
     private lateinit var jobbsøkerhendelserScheduler: JobbsøkerhendelserScheduler
     private lateinit var synlighetsBehovScheduler: SynlighetsBehovScheduler
     private lateinit var rekrutteringstreffOpprydningScheduler: RekrutteringstreffOpprydningScheduler
+    private lateinit var rekrutteringstreffScheduler: RekrutteringstreffScheduler
     private val secureLog = SecureLog(log)
 
     fun start() {
@@ -106,13 +108,34 @@ class App(
         val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
         val kiLoggRepository = KiLoggRepository(dataSource)
         val kiLoggService = KiLoggService(kiLoggRepository)
-        startJavalin(jobbsøkerRepository, jobbsøkerService, kiLoggRepository, kiLoggService)
-        startSchedulere(jobbsøkerService, kiLoggService, leaderElection)
+        val aktivitetskortRepository = AktivitetskortRepository(dataSource)
+        val eierRepository = EierRepository(dataSource)
+        val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
+        val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
+        val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
+        val rekrutteringstreffService = RekrutteringstreffService(
+            dataSource,
+            rekrutteringstreffRepository,
+            jobbsøkerRepository,
+            arbeidsgiverRepository,
+            jobbsøkerService,
+            eierService
+        )
+
+        startJavalin(jobbsøkerRepository, rekrutteringstreffService, eierService, arbeidsgiverRepository, jobbsøkerService, kiLoggService)
+        startSchedulere(jobbsøkerService, kiLoggService, leaderElection, aktivitetskortRepository, rekrutteringstreffRepository, rekrutteringstreffService)
         startRR(jobbsøkerService)
         log.info("Hele applikasjonen er startet og klar til å motta forespørsler.")
     }
 
-    private fun startJavalin(jobbsøkerRepository: JobbsøkerRepository, jobbsøkerService: JobbsøkerService, kiLoggRepository: KiLoggRepository, kiLoggService: KiLoggService) {
+    private fun startJavalin(
+        jobbsøkerRepository: JobbsøkerRepository,
+        rekrutteringstreffService: RekrutteringstreffService,
+        eierService: EierService,
+        arbeidsgiverRepository: ArbeidsgiverRepository,
+        jobbsøkerService: JobbsøkerService,
+        kiLoggService: KiLoggService,
+    ) {
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
 
@@ -135,20 +158,12 @@ class App(
             pilotkontorer = pilotkontorer
         )
 
-        val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
-        val eierRepository = EierRepository(dataSource)
         val innleggRepository = InnleggRepository(dataSource)
+        val kiLoggRepository = KiLoggRepository(dataSource)
+
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
-        val eierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
-        val rekrutteringstreffService = RekrutteringstreffService(
-            dataSource,
-            rekrutteringstreffRepository,
-            jobbsøkerRepository,
-            arbeidsgiverRepository,
-            jobbsøkerService,
-            eierService
-        )
+
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         val sokRepository = RekrutteringstreffSokRepository(dataSource)
@@ -203,11 +218,15 @@ class App(
         javalin.start(port)
     }
 
-    private fun startSchedulere(jobbsøkerService: JobbsøkerService, kiLoggService: KiLoggService, leaderElection: LeaderElectionInterface) {
+    private fun startSchedulere(
+        jobbsøkerService: JobbsøkerService,
+        kiLoggService: KiLoggService,
+        leaderElection: LeaderElectionInterface,
+        aktivitetskortRepository: AktivitetskortRepository,
+        rekrutteringstreffRepository: RekrutteringstreffRepository,
+        rekrutteringstreffService: RekrutteringstreffService,
+    ) {
         log.info("Starting schedulers")
-
-        val aktivitetskortRepository = AktivitetskortRepository(dataSource)
-        val rekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
 
         jobbsøkerhendelserScheduler = JobbsøkerhendelserScheduler(
             dataSource = dataSource,
@@ -231,6 +250,9 @@ class App(
             leaderElection = leaderElection,
         )
         rekrutteringstreffOpprydningScheduler.start()
+
+        rekrutteringstreffScheduler = RekrutteringstreffScheduler(rekrutteringstreffService, leaderElection)
+        rekrutteringstreffScheduler.start()
     }
 
     fun startRR(jobbsøkerService: JobbsøkerService) {
@@ -254,6 +276,7 @@ class App(
         if (::jobbsøkerhendelserScheduler.isInitialized) jobbsøkerhendelserScheduler.stop()
         if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
         if (::rekrutteringstreffOpprydningScheduler.isInitialized) rekrutteringstreffOpprydningScheduler.stop()
+        if (::rekrutteringstreffScheduler.isInitialized) rekrutteringstreffScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         rapidsConnection.stop()
         (dataSource as? HikariDataSource)?.close()

@@ -14,7 +14,6 @@ import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.eier.EierService
-import java.util.ArrayList
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
@@ -74,6 +73,7 @@ class RekrutteringstreffService(
     }
 
     fun fullfør(treffId: TreffId, fullfortAv: String) {
+        log.info("Fullfører treff med id $treffId")
         val treff = rekrutteringstreffRepository.hent(treffId)
             ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId ikke funnet")
 
@@ -95,6 +95,8 @@ class RekrutteringstreffService(
             JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT,
             RekrutteringstreffStatus.FULLFØRT
         )
+
+        log.info("Fullførte treff med id $treffId")
     }
 
     fun kanSletteJobbtreff(treffId: TreffId, status: RekrutteringstreffStatus): Boolean {
@@ -310,5 +312,9 @@ class RekrutteringstreffService(
             rekrutteringstreffRepository.leggTilHendelseForTreff(connection, treffId, RekrutteringstreffHendelsestype.GJENÅPNET, navIdent)
             rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.PUBLISERT)
         }
+    }
+
+    fun hentPubliserteTreffHvorTilTidErPassert(): List<Rekrutteringstreff> {
+        return rekrutteringstreffRepository.hentPubliserteTreffHvorTilTidErPassert()
     }
 }
