@@ -158,6 +158,39 @@ class KiLoggRepository(private val dataSource: DataSource) {
         manuellKontrollUtfortAv = rs.getString("manuell_kontroll_utført_av"),
         manuellKontrollTidspunkt = rs.getTimestamp("manuell_kontroll_tidspunkt")?.toInstant()?.atZone(ZonedDateTime.now().zone)
     )
+
+    fun hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet: Int): List<UUID> =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                select 
+                    k.id
+                from ki_spørring_logg k
+                where k.opprettet_tidspunkt <= current_timestamp - make_interval(months => ?)
+                """.trimIndent()
+            ).use { ps ->
+                ps.setInt(1, månederSidenLoggOpprettet)
+                ps.executeQuery().use { rs ->
+                    generateSequence { if (rs.next()) rs.getObject("id", UUID::class.java) else null }.toList()
+                }
+            }
+        }
+
+    fun slettKiLogger(kiLoggUuider: List<UUID>) {
+        if (kiLoggUuider.isEmpty()) return
+        dataSource.connection.use { connection ->
+            val uuidArray = connection.createArrayOf("uuid", kiLoggUuider.toTypedArray())
+            connection.prepareStatement(
+                """
+            delete from ki_spørring_logg
+            where id = any(?)
+            """.trimIndent()
+            ).use { ps ->
+                ps.setArray(1, uuidArray)
+                ps.executeUpdate()
+            }
+        }
+    }
 }
 
 data class KiLoggInsert(

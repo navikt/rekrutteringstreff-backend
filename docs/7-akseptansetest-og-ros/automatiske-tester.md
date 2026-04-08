@@ -5,7 +5,7 @@ Dette dokumentet gir oversikt over teststatus og definerer oppgaver for manglend
 ### ✅ Implementerte tester
 
 | Område                                 | Testfil(er)                                                                                 | Dekning                                                                                                                                                                                                                  |
-| -------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|----------------------------------------|---------------------------------------------------------------------------------------------| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Jobbsøker svar ja/nei**              | `JobbsøkerInnloggetBorgerTest.kt`                                                           | ✅ `svar ja til invitasjon`, `svar nei til invitasjon`                                                                                                                                                                   |
 | **Endre svar**                         | `JobbsøkerInnloggetBorgerTest.kt`                                                           | ✅ `kan endre svar fra ja til nei`, `kan endre svar fra nei til ja`                                                                                                                                                      |
 | **Avlysning med hendelser**            | `RekrutteringstreffTest.kt`                                                                 | ✅ `avlys oppretter hendelse for rekrutteringstreff og alle jobbsøkere med aktivt svar ja`                                                                                                                               |
@@ -74,7 +74,7 @@ Dette dokumentet gir oversikt over teststatus og definerer oppgaver for manglend
 | **KI-logg repository**                 | `KiLoggRepositoryTest.kt`                                                                   | ✅ AT 11.4 - Lagring og henting av KI-valideringslogg                                                                                                                                                                    |
 | **KI-autorisasjon**                    | `KiAutorisasjonsTest.kt`                                                                    | ✅ AT 15.4.1 - Kun utviklere kan se KI-logg                                                                                                                                                                              |
 | **KI-integrasjon**                     | `KiTest.kt`                                                                                 | ✅ AT 11 - KI-validering av tekst                                                                                                                                                                                        |
-| **KI-valideringsservice**              | `KiValideringsServiceTest.kt`                                                               | ✅ AT 11.8 - Backend-sikring ved lagring (feilkoder, normalisering, lagreLikevel)                                                                                                                                        |
+| **KI-loggservice**                     | `KiLoggServiceTest.kt`                                                                      | ✅ AT 11.8 - Backend-sikring ved lagring (feilkoder, normalisering, lagreLikevel)                                                                                                                                        |
 
 ---
 
@@ -85,9 +85,9 @@ KI bypass-sikkerhet er nå implementert i backend. Følgende funksjonalitet er p
 ### Backend-validering ved lagring
 
 | AT-ref | Beskrivelse                                                             | Implementert i                                            | Status |
-| ------ | ----------------------------------------------------------------------- | --------------------------------------------------------- | ------ |
-| 11.8.2 | API-kall uten KI-validering avvises                                     | `KiValideringsService.kt`                                 | ✅     |
-| 11.8.3 | Lagring med `bryterRetningslinjer=true` uten `lagreLikevel` gir feil    | `KiValideringsService.kt`                                 | ✅     |
+| ------ | ----------------------------------------------------------------------- |-----------------------------------------------------------| ------ |
+| 11.8.2 | API-kall uten KI-validering avvises                                     | `KiLoggService.kt`                                        | ✅     |
+| 11.8.3 | Lagring med `bryterRetningslinjer=true` uten `lagreLikevel` gir feil    | `KiLoggService.kt`                                        | ✅     |
 | 11.8.4 | Backend krever gyldig KI-valideringsresultat for å lagre tittel/innlegg | `RekrutteringstreffController.kt`, `InnleggController.kt` | ✅     |
 
 **Feilkoder (HTTP 422):**
@@ -99,9 +99,9 @@ KI bypass-sikkerhet er nå implementert i backend. Følgende funksjonalitet er p
 
 Se [ki-tekstvalidering.md](../5-ki/ki-tekstvalidering.md) for fullstendig dokumentasjon.
 
-### Enhetstester for KiValideringsService
+### Enhetstester for KiLoggService
 
-Alle scenariene i verifiseringsflyten er dekket av `KiValideringsServiceTest.kt`:
+Alle scenariene i verifiseringsflyten er dekket av `KiLoggServiceTest.kt`:
 
 | Test                                                    | Status |
 | ------------------------------------------------------- | ------ |

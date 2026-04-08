@@ -14,6 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
 import java.sql.Timestamp
+import java.time.OffsetDateTime
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -597,4 +598,62 @@ class TestDatabase {
             rekrutteringstreffRepository.endreStatus(connection, treffId, RekrutteringstreffStatus.AVLYST)
         }
     }
+
+    fun opprettKiLogg(kiLoggTestInsert: KiLoggTestInsert): UUID =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+            insert into ki_spørring_logg(
+                opprettet_tidspunkt,
+                treff_id,
+                felt_type,
+                spørring_fra_frontend,
+                spørring_filtrert,
+                systemprompt,
+                ekstra_parametre,
+                bryter_retningslinjer,
+                begrunnelse,
+                ki_navn,
+                ki_versjon,
+                svartid_ms,
+                lagret
+            ) values (?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, false)
+            returning id
+            """.trimIndent()
+            ).use { preparedStatement ->
+                var i = 0
+                preparedStatement.setObject(++i, OffsetDateTime.from(kiLoggTestInsert.opprettetTidspunkt))
+                preparedStatement.setObject(++i, kiLoggTestInsert.treffId)
+                preparedStatement.setString(++i, kiLoggTestInsert.feltType)
+                preparedStatement.setString(++i, kiLoggTestInsert.spørringFraFrontend)
+                preparedStatement.setString(++i, kiLoggTestInsert.spørringFiltrert)
+                preparedStatement.setString(++i, kiLoggTestInsert.systemprompt)
+                preparedStatement.setString(++i, kiLoggTestInsert.ekstraParametreJson)
+                preparedStatement.setBoolean(++i, kiLoggTestInsert.bryterRetningslinjer)
+                preparedStatement.setString(++i, kiLoggTestInsert.begrunnelse)
+                preparedStatement.setString(++i, kiLoggTestInsert.kiNavn)
+                preparedStatement.setString(++i, kiLoggTestInsert.kiVersjon)
+                preparedStatement.setInt(++i, kiLoggTestInsert.svartidMs)
+
+                preparedStatement.executeQuery().use { resultSet ->
+                    resultSet.next()
+                    resultSet.getObject(1, UUID::class.java)
+                }
+            }
+        }
 }
+
+data class KiLoggTestInsert( //Brukes for i testene for å legge inn logger med opprettetTidspunkt tilbake i tid
+    val treffId: UUID?,
+    val opprettetTidspunkt: ZonedDateTime,
+    val feltType: String,
+    val spørringFraFrontend: String,
+    val spørringFiltrert: String,
+    val systemprompt: String?,
+    val ekstraParametreJson: String?,
+    val bryterRetningslinjer: Boolean,
+    val begrunnelse: String?,
+    val kiNavn: String,
+    val kiVersjon: String,
+    val svartidMs: Int
+)

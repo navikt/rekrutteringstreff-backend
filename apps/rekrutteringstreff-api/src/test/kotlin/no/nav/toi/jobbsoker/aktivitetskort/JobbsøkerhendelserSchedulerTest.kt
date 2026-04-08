@@ -51,8 +51,15 @@ class JobbsøkerhendelserSchedulerTest {
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
         arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
-        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource))
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        rekrutteringstreffService = RekrutteringstreffService(
+            db.dataSource,
+            rekrutteringstreffRepository,
+            jobbsøkerRepository,
+            arbeidsgiverRepository,
+            jobbsøkerService,
+            EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource)
+        )
     }
 
     @BeforeEach
@@ -159,7 +166,8 @@ class JobbsøkerhendelserSchedulerTest {
         assertThat(melding["svar"].asBoolean()).isTrue
         assertThat(melding.has("hendelseId")).isTrue
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
+        val usendteEtterpå =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
         assertThat(usendteEtterpå).isEmpty()
     }
 
@@ -191,7 +199,8 @@ class JobbsøkerhendelserSchedulerTest {
         assertThat(melding["svar"].asBoolean()).isFalse
         assertThat(melding.has("hendelseId")).isTrue
 
-        val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
+        val usendteEtterpå =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
         assertThat(usendteEtterpå).isEmpty()
     }
 
@@ -289,7 +298,8 @@ class JobbsøkerhendelserSchedulerTest {
         val nyFraTid = ZonedDateTime.now().plusDays(5)
         db.oppdaterRekrutteringstreff(treffId, fraTid = nyFraTid)
 
-        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.TIDSPUNKT))
+        val endringer =
+            Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.TIDSPUNKT))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
         scheduler.behandleJobbsøkerHendelser()
@@ -578,7 +588,13 @@ class JobbsøkerhendelserSchedulerTest {
         val nyGateadresse = "Malmøgata 2"
         db.oppdaterRekrutteringstreff(treffId, tittel = nyTittel, gateadresse = nyGateadresse)
 
-        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.STED, Endringsfelttype.INTRODUKSJON))
+        val endringer = Rekrutteringstreffendringer(
+            endredeFelter = setOf(
+                Endringsfelttype.NAVN,
+                Endringsfelttype.STED,
+                Endringsfelttype.INTRODUKSJON
+            )
+        )
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
         scheduler.behandleJobbsøkerHendelser()
@@ -586,7 +602,11 @@ class JobbsøkerhendelserSchedulerTest {
         assertThat(rapid.inspektør.size).isEqualTo(2)
 
         val oppdateringMelding = rapid.inspektør.message(1)
-        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactlyInAnyOrder("NAVN", "STED", "INTRODUKSJON")
+        assertThat(oppdateringMelding["endredeFelter"].map { it.asText() }).containsExactlyInAnyOrder(
+            "NAVN",
+            "STED",
+            "INTRODUKSJON"
+        )
     }
 
     // Bruker ikke feltet skalVarsle lenger, enten slette eller oppdatere testen
@@ -610,6 +630,7 @@ class JobbsøkerhendelserSchedulerTest {
 //
 //        val treff = rekrutteringstreffRepository.hent(treffId)!!
 //        val nyTittel = "Ny tittel"
+
 //        db.oppdaterRekrutteringstreff(treffId, tittel = nyTittel)
 //
 //        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
@@ -796,7 +817,8 @@ class JobbsøkerhendelserSchedulerTest {
         assertThat(melding["treffstatus"].asText()).isEqualTo("fullført")
         assertThat(melding.has("hendelseId")).isTrue
 
-        val usendteEtterpaa = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
+        val usendteEtterpaa =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
         assertThat(usendteEtterpaa).isEmpty()
     }
 
@@ -939,7 +961,8 @@ class JobbsøkerhendelserSchedulerTest {
         assertThat(hendelserForIkkeSvart[1]["treffstatus"].asText()).isEqualTo("fullført")
 
         // Verifiser at hendelsene er markert som behandlet
-        val usendteFullført = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
+        val usendteFullført =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT)
         assertThat(usendteFullført).isEmpty()
     }
 
@@ -984,7 +1007,8 @@ class JobbsøkerhendelserSchedulerTest {
             .filter { it["fnr"].asText() == fnrIkkeSvart.asString }
 
         // Person som svarte ja skal få avlyst-status med hendelseId
-        val svarOgStatusMeldingForSvartJa = hendelserForSvartJa.find { it["@event_name"].asText() == "rekrutteringstreffSvarOgStatus" && it.has("treffstatus") }
+        val svarOgStatusMeldingForSvartJa =
+            hendelserForSvartJa.find { it["@event_name"].asText() == "rekrutteringstreffSvarOgStatus" && it.has("treffstatus") }
         assertThat(svarOgStatusMeldingForSvartJa!!["treffstatus"].asText()).isEqualTo("avlyst")
         assertThat(svarOgStatusMeldingForSvartJa["svar"].asBoolean()).isTrue
         assertThat(svarOgStatusMeldingForSvartJa.has("hendelseId")).isTrue
@@ -1082,14 +1106,21 @@ class JobbsøkerhendelserSchedulerTest {
     }
 
 
-    private fun opprettPersonOgInviter(fødselsnummer: Fødselsnummer, rapid: TestRapid, scheduler: JobbsøkerhendelserScheduler): no.nav.toi.rekrutteringstreff.TreffId {
+    private fun opprettPersonOgInviter(
+        fødselsnummer: Fødselsnummer,
+        rapid: TestRapid,
+        scheduler: JobbsøkerhendelserScheduler
+    ): no.nav.toi.rekrutteringstreff.TreffId {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.behandleJobbsøkerHendelser()  // Send invitasjon
         return treffId
     }
 
-    private fun opprettOgInviterJobbsøker(treffId: no.nav.toi.rekrutteringstreff.TreffId, fødselsnummer: Fødselsnummer) {
+    private fun opprettOgInviterJobbsøker(
+        treffId: no.nav.toi.rekrutteringstreff.TreffId,
+        fødselsnummer: Fødselsnummer
+    ) {
         db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
