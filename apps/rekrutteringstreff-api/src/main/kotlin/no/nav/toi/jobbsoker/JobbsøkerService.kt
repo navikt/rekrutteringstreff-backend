@@ -158,20 +158,6 @@ class JobbsøkerService(
         return jobbsøkerRepository.hentSlettedeJobbsøkere(treffId)
     }
 
-    /**
-     * Henter jobbsøkere med tellinger i to database-kall (jobbsøkere + tellinger).
-     * Returnerer domeneobjekt med alle data samlet.
-     */
-    fun hentJobbsøkereMedTellinger(treffId: TreffId): JobbsøkereMedTellinger {
-        val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treffId)
-        val tellinger = jobbsøkerRepository.hentJobbsøkerTellinger(treffId)
-        return JobbsøkereMedTellinger(
-            jobbsøkere = jobbsøkere,
-            antallSkjulte = tellinger.antallSkjulte,
-            antallSlettede = tellinger.antallSlettede
-        )
-    }
-
     fun hentJobbsøker(treffId: TreffId, fnr: Fødselsnummer): Jobbsøker? {
         return jobbsøkerRepository.hentJobbsøker(treffId, fnr)
     }

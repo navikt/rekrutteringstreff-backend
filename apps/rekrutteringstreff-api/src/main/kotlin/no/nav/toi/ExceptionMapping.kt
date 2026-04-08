@@ -215,17 +215,6 @@ object ExceptionMapping {
             )
         }
 
-        exception(KandidatIkkeFunnetIKandidatsokException::class.java) { e, ctx ->
-            ctx.status(422).json(
-                ProblemDetails.fromThrowable(
-                    throwable = e,
-                    status = HttpStatus.UNPROCESSABLE_CONTENT,
-                    ctx = ctx,
-                    feil = e.message
-                )
-            )
-        }
-
         exception(KandidatsokOppslagFeiletException::class.java) { e, ctx ->
             ctx.status(502).json(
                 ProblemDetails.fromThrowable(
