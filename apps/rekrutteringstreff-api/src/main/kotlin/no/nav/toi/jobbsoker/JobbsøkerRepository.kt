@@ -24,9 +24,9 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
     data class OpprettetJobbsøker(val personTreffId: PersonTreffId, val jobbsøkerId: Long)
 
-    fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId): List<OpprettetJobbsøker> {
+    fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId, navIdent: String, tidspunkt: Instant): List<OpprettetJobbsøker> {
         val treffDbId = connection.treffDbId(treff)
-        return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere)
+        return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere, navIdent, tidspunkt)
     }
 
     fun hentTreffDbId(connection: Connection, treff: TreffId): Long = connection.treffDbId(treff)
@@ -34,23 +34,27 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     fun leggTilOpprettetHendelser(
         connection: Connection,
         personTreffIder: List<PersonTreffId>,
-        opprettetAv: String
+        opprettetAv: String,
+        tidspunkt: Instant,
     ) {
-        connection.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETTET, personTreffIder, opprettetAv)
+        connection.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETTET, personTreffIder, opprettetAv, tidspunkt = tidspunkt)
     }
 
     private fun Connection.batchInsertJobbsøkere(
         treffDbId: Long,
         jobbsøkere: List<LeggTilJobbsøker>,
+        navIdent: String,
+        tidspunkt: Instant,
         maksStørrelsePerBatch: Int = 500
     ): List<OpprettetJobbsøker> {
         val sql = """
             insert into jobbsoker
               (id, rekrutteringstreff_id,fodselsnummer,fornavn,etternavn,
-               navkontor,veileder_navn,veileder_navident,status)
-            values (?,?,?,?,?,?,?,?,?)
+               navkontor,veileder_navn,veileder_navident,status,lagt_til_dato,lagt_til_av)
+            values (?,?,?,?,?,?,?,?,?,?,?)
         """.trimIndent()
         val resultat = mutableListOf<OpprettetJobbsøker>()
+        val ts = Timestamp.from(tidspunkt)
         prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS).use { stmt ->
             var n = 0
             val batchPersonTreffIder = mutableListOf<PersonTreffId>()
@@ -66,6 +70,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 stmt.setString(7, it.veilederNavn?.asString)
                 stmt.setString(8, it.veilederNavIdent?.asString)
                 stmt.setString(9, JobbsøkerStatus.LAGT_TIL.name)
+                stmt.setTimestamp(10, ts)
+                stmt.setString(11, navIdent)
                 stmt.addBatch(); if (++n == maksStørrelsePerBatch) {
                     stmt.executeBatch()
                     stmt.generatedKeys.use { keys ->
@@ -154,6 +160,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         personTreffIds: List<PersonTreffId>,
         opprettetAv: String,
         arrangørtype: AktørType = AktørType.ARRANGØR,
+        tidspunkt: Instant = Instant.now(),
         size: Int = 500
     ) {
         val sql = """
@@ -161,12 +168,13 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
               (id,jobbsoker_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon)
             values (?,(select jobbsoker_id from jobbsoker where id = ?),?,?,?,?)
         """.trimIndent()
+        val ts = Timestamp.from(tidspunkt)
         prepareStatement(sql).use { stmt ->
             var n = 0
             personTreffIds.forEach { id ->
                 stmt.setObject(1, UUID.randomUUID())
                 stmt.setObject(2, id.somUuid)
-                stmt.setTimestamp(3, Timestamp.from(Instant.now()))
+                stmt.setTimestamp(3, ts)
                 stmt.setString(4, hendelsestype.name)
                 stmt.setString(5, arrangørtype.name)
                 stmt.setString(6, opprettetAv)

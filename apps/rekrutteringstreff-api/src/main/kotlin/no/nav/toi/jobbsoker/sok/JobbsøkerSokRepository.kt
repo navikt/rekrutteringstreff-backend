@@ -3,13 +3,9 @@ package no.nav.toi.jobbsoker.sok
 import no.nav.toi.JacksonConfig
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerStatus
-import no.nav.toi.jobbsoker.LeggTilJobbsøker
-import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.ResultSet
-import java.sql.Timestamp
-import java.time.Instant
 import java.util.*
 import javax.sql.DataSource
 
@@ -17,124 +13,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
 
     companion object {
         private const val QUERY_TIMEOUT_SECONDS = 10
-    }
-
-    fun opprettSokRad(
-        connection: Connection,
-        jobbsøkerId: Long,
-        treffDbId: Long,
-        jobbsøker: LeggTilJobbsøker,
-        navIdent: String,
-    ) {
-        val sql = """
-            INSERT INTO jobbsoker_sok (
-                jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
-                fornavn, etternavn,
-                navkontor, veileder_navident, veileder_navn,
-                lagt_til_dato, lagt_til_av
-            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?)
-        """.trimIndent()
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setLong(1, jobbsøkerId)
-            stmt.setLong(2, treffDbId)
-            stmt.setString(3, jobbsøker.fornavn.asString)
-            stmt.setString(4, jobbsøker.etternavn.asString)
-            stmt.setString(5, jobbsøker.navkontor?.asString)
-            stmt.setString(6, jobbsøker.veilederNavIdent?.asString)
-            stmt.setString(7, jobbsøker.veilederNavn?.asString)
-            stmt.setTimestamp(8, Timestamp.from(Instant.now()))
-            stmt.setString(9, navIdent)
-            stmt.executeUpdate()
-        }
-    }
-
-    fun opprettSokRader(
-        connection: Connection,
-        jobbsøkerIder: List<Long>,
-        treffDbId: Long,
-        jobbsøkere: List<LeggTilJobbsøker>,
-        navIdent: String,
-    ) {
-        val sql = """
-            INSERT INTO jobbsoker_sok (
-                jobbsoker_id, rekrutteringstreff_id, status, er_synlig,
-                fornavn, etternavn,
-                navkontor, veileder_navident, veileder_navn,
-                lagt_til_dato, lagt_til_av
-            ) VALUES (?, ?, 'LAGT_TIL', TRUE, ?, ?, ?, ?, ?, ?, ?)
-        """.trimIndent()
-        connection.prepareStatement(sql).use { stmt ->
-            val now = Timestamp.from(Instant.now())
-            jobbsøkerIder.zip(jobbsøkere).forEach { (id, js) ->
-                stmt.setLong(1, id)
-                stmt.setLong(2, treffDbId)
-                stmt.setString(3, js.fornavn.asString)
-                stmt.setString(4, js.etternavn.asString)
-                stmt.setString(5, js.navkontor?.asString)
-                stmt.setString(6, js.veilederNavIdent?.asString)
-                stmt.setString(7, js.veilederNavn?.asString)
-                stmt.setTimestamp(8, now)
-                stmt.setString(9, navIdent)
-                stmt.addBatch()
-            }
-            stmt.executeBatch()
-        }
-    }
-
-    fun oppdaterStatus(connection: Connection, personTreffId: PersonTreffId, status: JobbsøkerStatus) {
-        val sql = """
-            UPDATE jobbsoker_sok
-            SET status = ?
-            WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)
-        """.trimIndent()
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setString(1, status.name)
-            stmt.setObject(2, personTreffId.somUuid)
-            stmt.executeUpdate()
-        }
-    }
-
-    fun oppdaterStatusOgInvitertDato(connection: Connection, personTreffId: PersonTreffId) {
-        val sql = """
-            UPDATE jobbsoker_sok
-            SET status = 'INVITERT', invitert_dato = ?
-            WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)
-        """.trimIndent()
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setTimestamp(1, Timestamp.from(Instant.now()))
-            stmt.setObject(2, personTreffId.somUuid)
-            stmt.executeUpdate()
-        }
-    }
-
-    fun oppdaterStatusBatch(connection: Connection, personTreffIder: List<PersonTreffId>, status: JobbsøkerStatus) {
-        val sql = """
-            UPDATE jobbsoker_sok
-            SET status = ?
-            WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)
-        """.trimIndent()
-        connection.prepareStatement(sql).use { stmt ->
-            personTreffIder.forEach { id ->
-                stmt.setString(1, status.name)
-                stmt.setObject(2, id.somUuid)
-                stmt.addBatch()
-            }
-            stmt.executeBatch()
-        }
-    }
-
-    fun oppdaterSynlighet(connection: Connection, fodselsnummer: String, erSynlig: Boolean) {
-        connection.prepareStatement(
-            """
-            UPDATE jobbsoker_sok
-            SET er_synlig = ?
-            WHERE jobbsoker_id IN (SELECT jobbsoker_id FROM jobbsoker WHERE fodselsnummer = ?)
-            """.trimIndent()
-        ).use { stmt ->
-            stmt.setBoolean(1, erSynlig)
-            stmt.setString(2, fodselsnummer)
-            stmt.executeUpdate()
-        }
     }
 
     fun sok(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons {
@@ -183,12 +61,14 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         return dataSource.connection.use { conn ->
             conn.prepareStatement(
                 """
-                SELECT js_sok.*, j.id as person_treff_id, j.fodselsnummer
-                FROM jobbsoker_sok js_sok
-                JOIN jobbsoker j ON js_sok.jobbsoker_id = j.jobbsoker_id
-                JOIN rekrutteringstreff rt ON js_sok.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                SELECT j.id::text as person_treff_id, j.fodselsnummer,
+                       j.fornavn, j.etternavn, j.navkontor,
+                       j.veileder_navn, j.veileder_navident,
+                       j.status, j.lagt_til_dato, j.lagt_til_av
+                FROM jobbsoker j
+                JOIN rekrutteringstreff rt ON j.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 WHERE rt.id = ? AND j.fodselsnummer = ?
-                  AND js_sok.er_synlig = true AND js_sok.status != 'SLETTET'
+                  AND j.er_synlig = true AND j.status != 'SLETTET'
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setObject(1, treffId.somUuid)
@@ -205,7 +85,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             SELECT
                 COUNT(*) FILTER (WHERE status != 'SLETTET' AND er_synlig = FALSE) AS antall_skjulte,
                 COUNT(*) FILTER (WHERE status = 'SLETTET') AS antall_slettede
-            FROM jobbsoker_sok
+            FROM jobbsoker
             WHERE rekrutteringstreff_id = ?
         """.trimIndent()
         return conn.prepareStatement(sql).use { stmt ->
@@ -219,7 +99,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
     }
 
     private fun hentTotalt(conn: Connection, where: String, params: List<Any>): Long {
-        val sql = "SELECT count(*) FROM jobbsoker_sok js_sok JOIN jobbsoker j ON js_sok.jobbsoker_id = j.jobbsoker_id $where"
+        val sql = "SELECT count(*) FROM jobbsoker j $where"
         return conn.prepareStatement(sql).use { stmt ->
             stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
             params.forEachIndexed { index, param -> settParam(stmt, index + 1, param) }
@@ -240,9 +120,11 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         antallPerSide: Int,
     ): List<JobbsøkerSøkTreff> {
         val sql = """
-            SELECT js_sok.*, j.id as person_treff_id, j.fodselsnummer
-            FROM jobbsoker_sok js_sok
-            JOIN jobbsoker j ON js_sok.jobbsoker_id = j.jobbsoker_id
+            SELECT j.id::text as person_treff_id, j.fodselsnummer,
+                   j.fornavn, j.etternavn, j.navkontor,
+                   j.veileder_navn, j.veileder_navident,
+                   j.status, j.lagt_til_dato, j.lagt_til_av
+            FROM jobbsoker j
             $where
             ORDER BY ${sorteringsfelt.sql(sorteringsretning)}
             LIMIT ? OFFSET ?
@@ -261,24 +143,30 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
     }
 
     private fun byggWhere(treffDbId: Long, request: JobbsøkerSøkRequest): Pair<String, List<Any>> {
-        val conditions = mutableListOf("js_sok.rekrutteringstreff_id = ?")
+        val conditions = mutableListOf("j.rekrutteringstreff_id = ?")
         val params = mutableListOf<Any>(treffDbId)
 
-        conditions.add("js_sok.er_synlig = true")
-        conditions.add("js_sok.status != 'SLETTET'")
+        conditions.add("j.er_synlig = true")
+        conditions.add("j.status != 'SLETTET'")
 
         request.fritekst?.takeIf { it.isNotBlank() }?.let {
-            conditions.add("js_sok.sok_tekst ILIKE ? ESCAPE '\\'")
-            val escaped = it.lowercase()
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_")
-            params.add("%${escaped}%")
+            if (it.trim().matches(Regex("\\d{11}"))) {
+                conditions.add("j.fodselsnummer = ?")
+                params.add(it.trim())
+            } else {
+                val escaped = it.lowercase()
+                    .replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_")
+                conditions.add("(LOWER(j.fornavn) LIKE ? ESCAPE '\\' OR LOWER(j.etternavn) LIKE ? ESCAPE '\\')")
+                params.add("${escaped}%")
+                params.add("${escaped}%")
+            }
         }
 
         request.status?.takeIf { it.isNotEmpty() }?.let { statuser ->
             val placeholders = statuser.indices.joinToString(",") { "?" }
-            conditions.add("js_sok.status IN ($placeholders)")
+            conditions.add("j.status IN ($placeholders)")
             statuser.forEach { params.add(it.name) }
         }
 
@@ -313,7 +201,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         veilederNavn = getString("veileder_navn"),
         veilederNavident = getString("veileder_navident"),
         status = JobbsøkerStatus.valueOf(getString("status")),
-        invitertDato = getTimestamp("invitert_dato")?.toInstant(),
         lagtTilDato = getTimestamp("lagt_til_dato")?.toInstant(),
         lagtTilAv = getString("lagt_til_av"),
     )

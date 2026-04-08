@@ -28,6 +28,9 @@ class JobbsøkerService(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val jobbsøkerSokRepository: JobbsøkerSokRepository,
 ) {
+    constructor(dataSource: DataSource, jobbsøkerRepository: JobbsøkerRepository) : this(
+        dataSource, jobbsøkerRepository, JobbsøkerSokRepository(dataSource)
+    )
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
 
@@ -74,7 +77,6 @@ class JobbsøkerService(
                     navIdent
                 )
                 jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.INVITERT)
-                jobbsøkerSokRepository.oppdaterStatusOgInvitertDato(connection, personTreffId)
             }
         }
     }
@@ -98,7 +100,6 @@ class JobbsøkerService(
 
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
-            jobbsøkerSokRepository.oppdaterStatus(connection, personTreffId, JobbsøkerStatus.SVART_JA)
         }
     }
 
@@ -121,7 +122,6 @@ class JobbsøkerService(
 
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON, AktørType.JOBBSØKER, navIdent)
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_NEI)
-            jobbsøkerSokRepository.oppdaterStatus(connection, personTreffId, JobbsøkerStatus.SVART_NEI)
         }
     }
 
@@ -144,7 +144,6 @@ class JobbsøkerService(
                 navIdent
             )
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
-            jobbsøkerSokRepository.oppdaterStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
         }
 
         logger.info("Slettet jobbsøker $personTreffId for treff $treffId")
@@ -285,17 +284,13 @@ class JobbsøkerService(
 
     fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
         return dataSource.executeInTransaction { connection ->
-            val raderOppdatert = jobbsøkerRepository.oppdaterSynlighetFraEvent(connection, fodselsnummer, erSynlig, meldingTidspunkt)
-            if (raderOppdatert > 0) jobbsøkerSokRepository.oppdaterSynlighet(connection, fodselsnummer, erSynlig)
-            raderOppdatert
+            jobbsøkerRepository.oppdaterSynlighetFraEvent(connection, fodselsnummer, erSynlig, meldingTidspunkt)
         }
     }
 
     fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
         return dataSource.executeInTransaction { connection ->
-            val raderOppdatert = jobbsøkerRepository.oppdaterSynlighetFraNeed(connection, fodselsnummer, erSynlig, meldingTidspunkt)
-            if (raderOppdatert > 0) jobbsøkerSokRepository.oppdaterSynlighet(connection, fodselsnummer, erSynlig)
-            raderOppdatert
+            jobbsøkerRepository.oppdaterSynlighetFraNeed(connection, fodselsnummer, erSynlig, meldingTidspunkt)
         }
     }
 
@@ -339,18 +334,11 @@ class JobbsøkerService(
         if (jobbsøkere.isEmpty()) return
 
         log.info("Legger til ${jobbsøkere.size} nye jobbsøkere for treff $treffId")
-        val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
+        val now = Instant.now()
+        val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, navIdent, now)
         val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
-        val treffDbId = jobbsøkerRepository.hentTreffDbId(connection, treffId)
 
-        jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
-        jobbsøkerSokRepository.opprettSokRader(
-            connection,
-            opprettedeJobbsøkere.map { it.jobbsøkerId },
-            treffDbId,
-            jobbsøkere,
-            navIdent,
-        )
+        jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent, now)
     }
 
     private fun gjenopprettJobbsøkere(
@@ -371,8 +359,8 @@ class JobbsøkerService(
             connection = connection,
             personTreffIder = personTreffIder,
             opprettetAv = navIdent,
+            tidspunkt = Instant.now(),
         )
-        jobbsøkerSokRepository.oppdaterStatusBatch(connection, personTreffIder, JobbsøkerStatus.LAGT_TIL)
     }
 }
 

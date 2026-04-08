@@ -145,9 +145,9 @@ class JobbsøkerSokKomponenttest {
         db.dataSource.connection.use { conn ->
             conn.prepareStatement(
                 """
-                UPDATE jobbsoker_sok
+                UPDATE jobbsoker
                 SET lagt_til_dato = ?
-                WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)
+                WHERE id = ?
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setTimestamp(1, Timestamp.from(lagtTilDato))
@@ -192,7 +192,7 @@ class JobbsøkerSokKomponenttest {
     }
 
     @Test
-    fun `fritekst-søk filtrerer på navkontor og veileder`() {
+    fun `fritekst-søk filtrerer kun på navn`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(
             LeggTilJobbsøker(
@@ -220,8 +220,8 @@ class JobbsøkerSokKomponenttest {
             httpGet(søkePath(treffId, "fritekst=nav002")).body()
         )
 
-        assertThat(kontorTreff.jobbsøkere.map { it.fornavn }).containsExactly("Ola")
-        assertThat(veilederTreff.jobbsøkere.map { it.fornavn }).containsExactly("Kari")
+        assertThat(kontorTreff.jobbsøkere).isEmpty()
+        assertThat(veilederTreff.jobbsøkere).isEmpty()
     }
 
     @Test

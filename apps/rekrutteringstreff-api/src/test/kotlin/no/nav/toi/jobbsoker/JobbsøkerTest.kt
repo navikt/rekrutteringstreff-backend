@@ -524,45 +524,5 @@ class JobbsøkerTest {
         assertThat(opprettetHendelser).hasSize(1)
     }
 
-    @Test
-    fun `fritekstsøk på veilederIdent returnerer riktig jobbsøker`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
-        val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
-
-        val requestBody = """
-        [
-          {
-            "fødselsnummer": "11111111111",
-            "fornavn": "Ola",
-            "etternavn": "Nordmann",
-            "veilederNavn": "Kari Veileder",
-            "veilederNavIdent": "X999888"
-          },
-          {
-            "fødselsnummer": "22222222222",
-            "fornavn": "Per",
-            "etternavn": "Hansen",
-            "veilederNavn": "Nils Veileder",
-            "veilederNavIdent": "Y111222"
-          }
-        ]
-        """.trimIndent()
-
-        httpPost(
-            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker",
-            requestBody,
-            token.serialize()
-        )
-
-        val response = httpGet(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?fritekst=X999888",
-            token.serialize()
-        )
-        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
-        val result = mapper.readValue(response.body(), JobbsøkerSøkRespons::class.java)
-        assertThat(result.jobbsøkere).hasSize(1)
-        assertThat(result.jobbsøkere.first().fornavn).isEqualTo("Ola")
-        assertThat(result.jobbsøkere.first().veilederNavident).isEqualTo("X999888")
-    }
+    
 }

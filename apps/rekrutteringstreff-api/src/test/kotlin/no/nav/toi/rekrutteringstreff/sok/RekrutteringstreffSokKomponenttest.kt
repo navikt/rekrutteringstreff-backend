@@ -495,7 +495,7 @@ class RekrutteringstreffSokKomponenttest {
                 }
                 s.executeBatch()
             }
-            conn.prepareStatement("INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id) VALUES (?, ?, ?)").use { s ->
+            conn.prepareStatement("INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id, lagt_til_av) VALUES (?, ?, ?, 'testperson')").use { s ->
                 repeat(7) {
                     s.setLong(1, internId)
                     s.setString(2, "1234560000$it")

@@ -31,8 +31,8 @@ enum class JobbsøkerSorteringsfelt {
 
     fun sql(retning: JobbsøkerSorteringsretning): String =
         when (this) {
-            NAVN -> "LOWER(js_sok.etternavn) ${retning.sql}, LOWER(js_sok.fornavn) ${retning.sql}, js_sok.lagt_til_dato DESC NULLS LAST, js_sok.jobbsoker_id DESC"
-            LAGT_TIL -> "js_sok.lagt_til_dato ${retning.sql} NULLS LAST, js_sok.jobbsoker_id ${retning.sql}"
+            NAVN -> "LOWER(j.etternavn) ${retning.sql}, LOWER(j.fornavn) ${retning.sql}, j.lagt_til_dato DESC NULLS LAST, j.jobbsoker_id DESC"
+            LAGT_TIL -> "j.lagt_til_dato ${retning.sql} NULLS LAST, j.jobbsoker_id ${retning.sql}"
         }
 
     companion object {
@@ -72,7 +72,6 @@ data class JobbsøkerSøkTreff(
     val veilederNavn: String?,
     val veilederNavident: String?,
     val status: JobbsøkerStatus,
-    val invitertDato: Instant?,
     val lagtTilDato: Instant?,
     val lagtTilAv: String?,
     val minsideHendelser: List<MinsideHendelseSøkDto> = emptyList(),
