@@ -12,7 +12,7 @@ import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.*
 import no.nav.toi.rekrutteringstreff.eier.EierService
-import no.nav.toi.rekrutteringstreff.ki.KiValideringsService
+import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.ZonedDateTime
@@ -21,7 +21,7 @@ import java.util.*
 class RekrutteringstreffController(
     private val rekrutteringstreffService: RekrutteringstreffService,
     private val eierService: EierService,
-    private val kiValideringsService: KiValideringsService,
+    private val kiLoggService: KiLoggService,
     javalin: Javalin
 ) {
     companion object {
@@ -208,8 +208,8 @@ class RekrutteringstreffController(
             val eksisterendeTreff = rekrutteringstreffService.hentRekrutteringstreff(id) ?: throw IllegalStateException(
                 "Fant ikke rekrutteringstreff med id ${id.somString} ved oppdatering"
             )
-            if (kiValideringsService.erTekstEndret(eksisterendeTreff.tittel, dto.tittel)) {
-                kiValideringsService.verifiserKiValidering(
+            if (kiLoggService.erTekstEndret(eksisterendeTreff.tittel, dto.tittel)) {
+                kiLoggService.verifiserKiValidering(
                     tekst = dto.tittel,
                     kiLoggId = dto.tittelKiLoggId,
                     lagreLikevel = dto.lagreLikevel,
