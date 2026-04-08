@@ -20,7 +20,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             val treffDbId = conn.treffDbId(treffId)
             val (where, params) = byggWhere(treffDbId, request)
             val totalt = hentTotalt(conn, where, params)
-            val gyldigSide = beregnGyldigSide(request.side, request.antallPerSide, totalt)
+            val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val tellinger = hentTellinger(conn, treffDbId)
             val treff = if (totalt == 0L) {
                 emptyList()
@@ -31,7 +31,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                     params,
                     request.sorteringsfelt,
                     request.sorteringsretning,
-                    gyldigSide,
+                    responsSide,
                     request.antallPerSide,
                 )
             }
@@ -43,18 +43,18 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 totalt = totalt,
                 antallSkjulte = tellinger.first,
                 antallSlettede = tellinger.second,
-                side = gyldigSide,
+                side = responsSide,
                 antallPerSide = request.antallPerSide,
                 jobbsøkere = jobbsøkereMedHendelser,
             )
         }
     }
 
-    private fun beregnGyldigSide(ønsketSide: Int, antallPerSide: Int, totalt: Long): Int {
-        if (totalt <= 0L) return 1
+    private fun beregnResponsSide(forespurtSide: Int, antallPerSide: Int, totalt: Long): Int {
+        if (forespurtSide <= 1 || totalt <= 0L) return 1
 
-        val sisteSide = ((totalt - 1) / antallPerSide) + 1
-        return ønsketSide.coerceIn(1, sisteSide.toInt())
+        val sisteTilgjengeligeSide = (((totalt - 1) / antallPerSide) + 1).toInt()
+        return minOf(forespurtSide, sisteTilgjengeligeSide)
     }
 
     fun søkMedFødselsnummer(treffId: TreffId, fodselsnummer: String): JobbsøkerSøkTreff? {

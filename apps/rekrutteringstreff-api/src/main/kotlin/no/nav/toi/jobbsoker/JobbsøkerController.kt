@@ -70,7 +70,7 @@ class JobbsøkerController(
                 "etternavn": "Nordmann",
                 "navkontor": "Nav Oslo",
                 "veilederNavn": "Kari Nordmann",
-                                "veilederNavIdent": "NAV123"
+                "veilederNavIdent": "NAV123"
               },
               {
                 "fødselsnummer": "10987654321",
@@ -78,7 +78,7 @@ class JobbsøkerController(
                 "etternavn": "Nordmann",
                 "navkontor": null,
                 "veilederNavn": null,
-                                "veilederNavIdent": null
+                "veilederNavIdent": null
               }
             ]"""
             )]
