@@ -134,7 +134,7 @@ class App(
         eierService: EierService,
         arbeidsgiverRepository: ArbeidsgiverRepository,
         jobbsøkerService: JobbsøkerService,
-        kiLoggRepository: KiLoggRepository,
+        kiLoggService: KiLoggService,
     ) {
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
@@ -160,7 +160,6 @@ class App(
 
         val innleggRepository = InnleggRepository(dataSource)
         val kiLoggRepository = KiLoggRepository(dataSource)
-        val kiValideringsService = KiValideringsService(kiLoggRepository)
 
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
