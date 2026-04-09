@@ -111,10 +111,10 @@ Når en veileder legger til en jobbsøker via «Finn og legg til» (kandidatsøk
 
 | Felt                                           | Begrunnelse                                                                                                                                                                       |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CV-data (kompetanse, yrkeserfaring, utdanning) | For mye data, ikke relevant for listefiltrering                                                                                                                                    |
+| CV-data (kompetanse, yrkeserfaring, utdanning) | For mye data, ikke relevant for listefiltrering                                                                                                                                   |
 | Reisevei / reiseavstand                        | Ikke relevant for treff-konteksten                                                                                                                                                |
 | Hull i CV                                      | Kompleks algoritme (2 år uten jobb/utdanning siste 5 år) – krever enten kandidatsøk-API-endring for å eksponere flagget, eller lokal beregning fra CV-data. **Vurderes separat.** |
-| Førerkort, språk, sertifikater                 | For detaljert for listefiltrering                                                                                                                                                  |
+| Førerkort, språk, sertifikater                 | For detaljert for listefiltrering                                                                                                                                                 |
 | E-post                                         | Ikke relevant for søk/filtrering                                                                                                                                                  |
 
 ### Prioriterte målgrupper
@@ -129,10 +129,8 @@ Basert på stilling sin kandidatliste, kandidatsøk-filtere, og designskisser, s
 
 ### Navn og identifikator
 
-i
-
-- **Fritekst**: Søk i trigram-indeksert `sok_tekst` (navn + poststed + kommune + fylke + navkontor + veiledernavn + veilederident + telefonnummer)
-- **Fødselsnummer**: Eksakt oppslag via POST-body (ikke query-param, av sikkerhetshensyn – samme mønster som stilling sitt kandidatsøk)
+- **Fritekst (navn)**: Prefix-match (`LIKE 'tekst%'`) på `LOWER(fornavn)` og `LOWER(etternavn)` separat
+- **Fødselsnummer**: Eksakt match på `fodselsnummer` når fritekst-input er 11 siffer (sendes i POST-body, ikke query-param, av sikkerhetshensyn)
 
 ### Jobbsøkers deltakerstatus
 
@@ -276,7 +274,7 @@ Fødselsnummer sendes i body via `fritekst`-feltet. Når verdien er 11 siffer, g
 
 **Notat:** Kun `personTreffId` brukes som ekstern identifikator – dette er den eksisterende UUID-en (kolonnen `id` i `jobbsoker`). Den interne `jobbsoker_id` (bigserial) eksponeres aldri i API-et.
 
-**Notat:** `invitertDato` mappes til `Instant` i Kotlin (ikke `ZonedDateTime`) – den kommer fra JDBC `Timestamp.toInstant()` og er en søke-DTO (listevisning), i tråd med tidstype-prinsippene i prinsipper.md.
+**Notat:** `lagtTilDato` mappes til `Instant` i Kotlin (ikke `ZonedDateTime`) – den kommer fra JDBC `Timestamp.toInstant()` og er en søke-DTO (listevisning), i tråd med tidstype-prinsippene i prinsipper.md.
 
 ---
 
@@ -360,9 +358,9 @@ Dersom vi senere trenger trigram-fritekst over mange felter (poststed, kommune, 
 
 ## Implementering
 
-### MVP – Parallell søketabell + utvidet datainnhenting
+### MVP – View + prefix-søk på navn
 
-**Database-valg:** Egen `jobbsoker_sok`-tabell med denormalisert status, kandidatdata fra kandidatsøk, og trigram-indeksert fritekstsøk.
+**Database-valg:** Database-view (`jobbsoker_sok_view`) over `jobbsoker`-tabellen med partial indexes og prefix-søk (`text_pattern_ops`). Ingen parallell tabell, ingen pg_trgm.
 
 **Oppgaver:**
 
@@ -569,17 +567,13 @@ Poenget er at søketabellen ikke bare trenger å tenke på synlighet. Den kan og
 
 ```sql
 SELECT COUNT(*)
-FROM jobbsoker_sok
+FROM jobbsoker_sok_view
 WHERE rekrutteringstreff_id = ?
-  AND er_synlig = true
-  AND status != 'SLETTET'
   AND (øvrige filtre);
 
 SELECT *
-FROM jobbsoker_sok
+FROM jobbsoker_sok_view
 WHERE rekrutteringstreff_id = ?
-  AND er_synlig = true
-  AND status != 'SLETTET'
   AND (øvrige filtre)
 ORDER BY (sortering)
 LIMIT 25 OFFSET (side-1)*25;

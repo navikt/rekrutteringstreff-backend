@@ -145,7 +145,7 @@ class SynlighetsKomponentTest {
     }
 
     @Test
-    fun `GET jobbsøkere filtrerer ut ikke-synlige jobbsøkere`() {
+    fun `POST jobbsøkersøk filtrerer ut ikke-synlige jobbsøkere`() {
         val treffId = opprettTreffMedEier()
         
         val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
@@ -236,7 +236,7 @@ class SynlighetsKomponentTest {
     }
 
     @Test
-    fun `GET jobbsøkere returnerer kun synlige jobbsøkere i totalt og liste`() {
+    fun `POST jobbsøkersøk returnerer kun synlige jobbsøkere i totalt og liste`() {
         val treffId = opprettTreffMedEier()
         
         val synlig1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null)
@@ -259,10 +259,12 @@ class SynlighetsKomponentTest {
         
         assertThat(dto.jobbsøkere).hasSize(2)
         assertThat(dto.totalt).isEqualTo(2)
+        assertThat(dto.antallSkjulte).isEqualTo(3)
+        assertThat(dto.antallSlettede).isEqualTo(0)
     }
 
     @Test
-    fun `GET jobbsøkere ekskluderer slettede jobbsøkere fra totalt`() {
+    fun `POST jobbsøkersøk ekskluderer slettede jobbsøkere fra totalt`() {
         val treffId = opprettTreffMedEier()
         
         val synlig = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
@@ -284,10 +286,12 @@ class SynlighetsKomponentTest {
         
         assertThat(dto.jobbsøkere).hasSize(1)
         assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.antallSkjulte).isEqualTo(1)
+        assertThat(dto.antallSlettede).isEqualTo(1)
     }
 
     @Test
-    fun `GET jobbsøkere - slettet jobbsøker forblir usynlig uavhengig av senere synlighetsendring`() {
+    fun `POST jobbsøkersøk - slettet jobbsøker forblir usynlig uavhengig av senere synlighetsendring`() {
         val treffId = opprettTreffMedEier()
         
         // Opprett to synlige jobbsøkere som skal slettes
@@ -314,6 +318,7 @@ class SynlighetsKomponentTest {
         
         assertThat(dto.jobbsøkere).isEmpty()
         assertThat(dto.totalt).isEqualTo(0)
+        assertThat(dto.antallSlettede).isEqualTo(2)
     }
 
     @Test
@@ -340,7 +345,7 @@ class SynlighetsKomponentTest {
     }
 
     @Test
-    fun `GET jobbsøkere - kun synlige ikke-slettede returneres med korrekt totalt`() {
+    fun `POST jobbsøkersøk - kun synlige ikke-slettede returneres med korrekt totalt`() {
         val treffId = opprettTreffMedEier()
         
         val synlig1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null)
@@ -366,10 +371,12 @@ class SynlighetsKomponentTest {
         
         assertThat(dto.jobbsøkere).hasSize(2)
         assertThat(dto.totalt).isEqualTo(2)
+        assertThat(dto.antallSkjulte).isEqualTo(1)
+        assertThat(dto.antallSlettede).isEqualTo(2)
     }
 
     @Test
-    fun `GET jobbsøkere returnerer tomt når treffet er tomt`() {
+    fun `POST jobbsøkersøk returnerer tomt når treffet er tomt`() {
         val treffId = opprettTreffMedEier()
         
         val response = httpPostSøk(søkPath(treffId))
