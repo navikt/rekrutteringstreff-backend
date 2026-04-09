@@ -77,8 +77,8 @@ data class JobbsøkerSøkRespons(
     val antallSkjulte: Int,
     val antallSlettede: Int,
     val side: Int,
-    val antallPerSide: Int,
     val jobbsøkere: List<JobbsøkerSøkTreff>,
+    val antallPerStatus: Map<JobbsøkerStatus, Int> = emptyMap(),
 )
 
 data class JobbsøkerSøkTreff(

@@ -22,6 +22,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             val totalt = hentTotalt(conn, where, params)
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val tellinger = hentTellinger(conn, treffId)
+            val antallPerStatus = hentAntallPerStatus(conn, treffId)
             val treff = if (totalt == 0L) {
                 emptyList()
             } else {
@@ -44,8 +45,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 antallSkjulte = tellinger.first,
                 antallSlettede = tellinger.second,
                 side = responsSide,
-                antallPerSide = request.antallPerSide,
                 jobbsøkere = jobbsøkereMedHendelser,
+                antallPerStatus = antallPerStatus,
             )
         }
     }
@@ -72,6 +73,26 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             stmt.executeQuery().use { rs ->
                 if (rs.next()) Pair(rs.getInt("antall_skjulte"), rs.getInt("antall_slettede"))
                 else Pair(0, 0)
+            }
+        }
+    }
+
+    private fun hentAntallPerStatus(conn: Connection, treffId: TreffId): Map<JobbsøkerStatus, Int> {
+        val sql = """
+            SELECT v.status, COUNT(*) AS antall
+            FROM jobbsoker_sok_view v
+            WHERE v.treff_id = ?
+            GROUP BY v.status
+        """.trimIndent()
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            stmt.setObject(1, treffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                val result = mutableMapOf<JobbsøkerStatus, Int>()
+                while (rs.next()) {
+                    result[JobbsøkerStatus.valueOf(rs.getString("status"))] = rs.getInt("antall")
+                }
+                result
             }
         }
     }

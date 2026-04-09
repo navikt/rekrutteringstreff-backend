@@ -134,9 +134,14 @@ class JobbsøkerController(
                       "status": "LAGT_TIL"
                     }
                   ],
-                  "totalt": 1,
+                  "totalt": 4,
                   "side": 1,
-                  "antallPerSide": 25
+                  "antallPerStatus": {
+                    "LAGT_TIL": 1,
+                    "INVITERT": 1,
+                    "SVART_JA": 1,
+                    "SVART_NEI": 1
+                  }
                 }"""
             )]
         )],
