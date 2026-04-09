@@ -31,10 +31,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
     fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId, navIdent: String, tidspunkt: Instant): List<OpprettetJobbsøker> {
         val treffDbId = connection.treffDbId(treff)
-        return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere, navIdent, tidspunkt)
+        return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere)
     }
-
-    fun hentTreffDbId(connection: Connection, treff: TreffId): Long = connection.treffDbId(treff)
 
     fun leggTilOpprettetHendelser(
         connection: Connection,
@@ -42,14 +40,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         opprettetAv: String,
         tidspunkt: Instant,
     ) {
-        connection.batchInsertHendelser(JobbsøkerHendelsestype.OPPRETTET, personTreffIder, opprettetAv, tidspunkt = tidspunkt)
+        leggTilHendelserForJobbsøkere(connection, JobbsøkerHendelsestype.OPPRETTET, personTreffIder, opprettetAv, tidspunkt = tidspunkt)
     }
 
     private fun Connection.batchInsertJobbsøkere(
         treffDbId: Long,
         jobbsøkere: List<LeggTilJobbsøker>,
-        navIdent: String,
-        tidspunkt: Instant,
         maksStørrelsePerBatch: Int = 500
     ): List<OpprettetJobbsøker> {
         val sql = """
@@ -121,25 +117,26 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     }
 
     fun leggTilHendelserForJobbsøkere(
-        c: Connection,
+        connection: Connection,
         hendelsestype: JobbsøkerHendelsestype,
         personTreffIds: List<PersonTreffId>,
         opprettetAv: String,
         arrangørtype: AktørType = AktørType.ARRANGØR,
         hendelseData: String? = null,
-        size: Int = 500
+        tidspunkt: Instant = Instant.now(),
+        maksStørrelsePerBatch: Int = 500
     ) {
         val sql = """
             INSERT INTO jobbsoker_hendelse
               (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
             VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?, ?::jsonb)
         """.trimIndent()
-        c.prepareStatement(sql).use { stmt ->
-            personTreffIds.chunked(size).forEach { batch ->
+        connection.prepareStatement(sql).use { stmt ->
+            personTreffIds.chunked(maksStørrelsePerBatch).forEach { batch ->
                 batch.forEach { id ->
                     stmt.addJobbsøkerHendelseTilBatch(
                         personTreffId = id,
-                        tidspunkt = Instant.now(),
+                        tidspunkt = tidspunkt,
                         hendelsestype = hendelsestype,
                         aktørType = arrangørtype,
                         opprettetAv = opprettetAv,
@@ -153,7 +150,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     }
 
     fun leggTilHendelse(
-        c: Connection,
+        connection: Connection,
         personTreffId: PersonTreffId,
         hendelsestype: JobbsøkerHendelsestype,
         aktørType: AktørType,
@@ -165,7 +162,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
               (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
             VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, ?, ?, ?::jsonb)
         """.trimIndent()
-        c.prepareStatement(sql).use { stmt ->
+        connection.prepareStatement(sql).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
             stmt.setObject(2, personTreffId.somUuid)
             stmt.setTimestamp(3, Timestamp.from(Instant.now()))
@@ -177,50 +174,22 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    private fun Connection.batchInsertHendelser(
-        hendelsestype: JobbsøkerHendelsestype,
-        personTreffIds: List<PersonTreffId>,
-        opprettetAv: String,
-        arrangørtype: AktørType = AktørType.ARRANGØR,
-        tidspunkt: Instant = Instant.now(),
-        size: Int = 500
-    ) {
-        val sql = """
-            insert into jobbsoker_hendelse
-              (id,jobbsoker_id,tidspunkt,hendelsestype,opprettet_av_aktortype,aktøridentifikasjon,hendelse_data)
-            values (?,(select jobbsoker_id from jobbsoker where id = ?),?,?,?,?,?::jsonb)
-        """.trimIndent()
-        prepareStatement(sql).use { stmt ->
-            personTreffIds.chunked(size).forEach { batch ->
-                batch.forEach { id ->
-                    stmt.addJobbsøkerHendelseTilBatch(
-                        personTreffId = id,
-                        tidspunkt = tidspunkt,
-                        hendelsestype = hendelsestype,
-                        aktørType = arrangørtype,
-                        opprettetAv = opprettetAv,
-                        hendelseData = null,
-                    )
-                }
 
-                stmt.executeBatch()
-            }
-        }
-    }
 
     private fun Connection.treffDbId(treff: TreffId): Long =
-        prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?")
-            .apply { setObject(1, treff.somUuid) }
-            .executeQuery().let {
-                if (it.next()) it.getLong(1)
+        prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
+            stmt.setObject(1, treff.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.getLong(1)
                 else error("Treff ${treff.somUuid} finnes ikke")
             }
+        }
 
     fun hentJobbsøkere(treff: TreffId): List<Jobbsøker> =
-        dataSource.connection.use { c -> hentJobbsøkere(c, treff) }
+        dataSource.connection.use { conn -> hentJobbsøkere(conn, treff) }
 
-    fun hentSlettedeJobbsøkere(treff: TreffId): List<Jobbsøker> = dataSource.connection.use { connection ->
-        connection.prepareStatement(
+    fun hentSlettedeJobbsøkere(treff: TreffId): List<Jobbsøker> = dataSource.connection.use { conn ->
+        conn.prepareStatement(
             """
                 SELECT 
                     js.id,
@@ -248,7 +217,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    fun hentJobbsøkere(connection: Connection, treff: TreffId): List<Jobbsøker> {
+    fun hentJobbsøkere(conn: Connection, treff: TreffId): List<Jobbsøker> {
         val sql = """
             SELECT
                 js.id,
@@ -283,17 +252,17 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             ORDER BY js.jobbsoker_id;
         """.trimIndent()
 
-        return connection.prepareStatement(sql).use { ps ->
-            ps.setObject(1, treff.somUuid)
-            ps.executeQuery().use { rs ->
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treff.somUuid)
+            stmt.executeQuery().use { rs ->
                 generateSequence { if (rs.next()) rs.toJobbsøker() else null }.toList()
             }
         }
     }
 
     fun hentAntallJobbsøkere(treff: TreffId): Int =
-        dataSource.connection.use { c ->
-            c.prepareStatement(
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
                 """
                     SELECT
                         COUNT(1) AS antall_jobbsøkere
@@ -310,8 +279,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
 
     fun hentPersonTreffId(treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
-        dataSource.connection.use { c ->
-            hentPersonTreffId(c, treffId, fødselsnummer)
+        dataSource.connection.use { conn ->
+            hentPersonTreffId(conn, treffId, fødselsnummer)
         }
 
     fun hentPersonTreffId(connection: Connection, treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
@@ -336,10 +305,10 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     }
 
     fun hentFødselsnummer(personTreffId: PersonTreffId): Fødselsnummer? =
-        dataSource.connection.use { c ->
-            c.prepareStatement("SELECT fodselsnummer FROM jobbsoker WHERE id = ?").use { ps ->
-                ps.setObject(1, personTreffId.somUuid)
-                ps.executeQuery().use { rs ->
+        dataSource.connection.use { conn ->
+            conn.prepareStatement("SELECT fodselsnummer FROM jobbsoker WHERE id = ?").use { stmt ->
+                stmt.setObject(1, personTreffId.somUuid)
+                stmt.executeQuery().use { rs ->
                     if (rs.next()) Fødselsnummer(rs.getString("fodselsnummer")) else null
                 }
             }
@@ -387,7 +356,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
 
     fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {
-        dataSource.connection.use { connection ->
+        dataSource.connection.use { conn ->
             val sql = """
                 SELECT
                     jh.id as hendelse_id,
@@ -407,7 +376,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 ORDER BY jh.tidspunkt DESC;
             """.trimIndent()
 
-            connection.prepareStatement(sql).use { stmt ->
+            conn.prepareStatement(sql).use { stmt ->
                 stmt.setObject(1, treff.somUuid)
                 stmt.executeQuery().use { rs ->
                     val result = mutableListOf<JobbsøkerHendelseMedJobbsøkerData>()
@@ -438,8 +407,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     }
 
     fun hentJobbsøker(treff: TreffId, fødselsnummer: Fødselsnummer): Jobbsøker? =
-        dataSource.connection.use { c ->
-            c.prepareStatement(
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
                 """
                 SELECT
                     js.id,
@@ -472,10 +441,10 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
                          js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
             """
-            ).use { ps ->
-                ps.setObject(1, treff.somUuid)
-                ps.setString(2, fødselsnummer.asString)
-                ps.executeQuery().use { rs ->
+            ).use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                stmt.setString(2, fødselsnummer.asString)
+                stmt.executeQuery().use { rs ->
                     if (rs.next()) rs.toJobbsøker() else null
                 }
             }
@@ -486,32 +455,21 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         personTreffIder: List<PersonTreffId>,
         jobbsøkerStatus: JobbsøkerStatus,
         maksStørrelsePerBatch: Int = 500
-    ) = connection.batchEndreStatus(personTreffIder, jobbsøkerStatus, maksStørrelsePerBatch)
-
-    private fun Connection.batchEndreStatus(
-        personTreffIder: List<PersonTreffId>,
-        jobbsøkerStatus: JobbsøkerStatus,
-        maksStørrelsePerBatch: Int = 500
     ) {
         val sql = """
             UPDATE jobbsoker
             SET status=?
             WHERE id=?
             """
-        prepareStatement(sql).use { stmt ->
-            var n = 0
-
-            personTreffIder.forEach { personTreffId ->
-                stmt.setString(1, jobbsøkerStatus.name)
-                stmt.setObject(2, personTreffId.somUuid)
-                stmt.addBatch()
-                if (++n == maksStørrelsePerBatch) {
-                    stmt.executeBatch()
-                    n = 0
+        connection.prepareStatement(sql).use { stmt ->
+            personTreffIder.chunked(maksStørrelsePerBatch).forEach { batch ->
+                batch.forEach { personTreffId ->
+                    stmt.setString(1, jobbsøkerStatus.name)
+                    stmt.setObject(2, personTreffId.somUuid)
+                    stmt.addBatch()
                 }
+                stmt.executeBatch()
             }
-
-            if (n > 0) stmt.executeBatch()
         }
     }
 
@@ -522,19 +480,19 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             SET status=?
             WHERE id=?
             """
-        ).apply {
-            var i = 0
-            setString(++i, jobbsøkerStatus.name)
-            setObject(++i, personTreffId.somUuid)
-        }.executeUpdate()
+        ).use { stmt ->
+            stmt.setString(1, jobbsøkerStatus.name)
+            stmt.setObject(2, personTreffId.somUuid)
+            stmt.executeUpdate()
+        }
     }
 
     /**
      * Henter distinkte fødselsnumre for jobbsøkere der synlighet ikke er evaluert ennå.
      * Brukes av SynlighetsBehovScheduler for å trigge need-meldinger for de som mangler synlighetsstatus.
      */
-    fun hentFødselsnumreUtenEvaluertSynlighet(): List<String> = dataSource.connection.use { connection ->
-        connection.prepareStatement(
+    fun hentFødselsnumreUtenEvaluertSynlighet(): List<String> = dataSource.connection.use { conn ->
+        conn.prepareStatement(
             """
             SELECT DISTINCT fodselsnummer
             FROM jobbsoker
@@ -559,8 +517,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         fodselsnummer: String,
         erSynlig: Boolean,
         tidspunkt: Instant
-    ): Int = dataSource.connection.use { connection ->
-        oppdaterSynlighetFraEvent(connection, fodselsnummer, erSynlig, tidspunkt)
+    ): Int = dataSource.connection.use { conn ->
+        oppdaterSynlighetFraEvent(conn, fodselsnummer, erSynlig, tidspunkt)
     }
 
     fun oppdaterSynlighetFraEvent(
@@ -596,8 +554,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         fodselsnummer: String,
         erSynlig: Boolean,
         tidspunkt: Instant
-    ): Int = dataSource.connection.use { connection ->
-        oppdaterSynlighetFraNeed(connection, fodselsnummer, erSynlig, tidspunkt)
+    ): Int = dataSource.connection.use { conn ->
+        oppdaterSynlighetFraNeed(conn, fodselsnummer, erSynlig, tidspunkt)
     }
 
     fun oppdaterSynlighetFraNeed(
@@ -659,8 +617,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
      * Henter svarfrist for et rekrutteringstreff.
      * Returnerer null hvis treffet ikke finnes eller ikke har svarfrist.
      */
-    fun hentSvarfrist(treffId: TreffId): ZonedDateTime? = dataSource.connection.use { connection ->
-        connection.prepareStatement(
+    fun hentSvarfrist(treffId: TreffId): ZonedDateTime? = dataSource.connection.use { conn ->
+        conn.prepareStatement(
             """
             SELECT svarfrist FROM rekrutteringstreff WHERE id = ?
             """.trimIndent()
