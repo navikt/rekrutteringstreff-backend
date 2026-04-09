@@ -226,8 +226,9 @@ class JobbsøkerTest {
         assertThat(db.hentAlleRekrutteringstreff().size).isEqualTo(3)
         assertThat(db.hentAlleJobbsøkere().size).isEqualTo(4)
         eierRepository.leggTil(treffId2, listOf("A123456"))
-        val response = httpGet(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker",
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker/sok",
+            "{}",
             token.serialize()
         )
         assertThat(response.statusCode()).isEqualTo(HTTP_OK)
@@ -263,8 +264,9 @@ class JobbsøkerTest {
         )
         assertThat(postResponse.statusCode()).isEqualTo(HTTP_CREATED)
 
-        val getResponse = httpGet(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
+        val getResponse = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/sok",
+            "{}",
             token.serialize()
         )
         assertThat(getResponse.statusCode()).isEqualTo(HTTP_OK)

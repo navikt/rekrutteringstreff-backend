@@ -5,6 +5,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.*
 import javax.sql.DataSource
@@ -17,11 +18,10 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
 
     fun sok(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons {
         return dataSource.executeInTransaction { conn ->
-            val treffDbId = conn.treffDbId(treffId)
-            val (where, params) = byggWhere(treffDbId, request)
+            val (where, params) = byggWhere(treffId, request)
             val totalt = hentTotalt(conn, where, params)
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
-            val tellinger = hentTellinger(conn, treffDbId)
+            val tellinger = hentTellinger(conn, treffId)
             val treff = if (totalt == 0L) {
                 emptyList()
             } else {
@@ -57,17 +57,18 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         return minOf(forespurtSide, sisteTilgjengeligeSide)
     }
 
-    private fun hentTellinger(conn: Connection, treffDbId: Long): Pair<Int, Int> {
+    private fun hentTellinger(conn: Connection, treffId: TreffId): Pair<Int, Int> {
         val sql = """
             SELECT
-                COUNT(*) FILTER (WHERE status != 'SLETTET' AND er_synlig = FALSE) AS antall_skjulte,
-                COUNT(*) FILTER (WHERE status = 'SLETTET') AS antall_slettede
-            FROM jobbsoker
-            WHERE rekrutteringstreff_id = ?
+                COUNT(*) FILTER (WHERE j.status != 'SLETTET' AND j.er_synlig = FALSE) AS antall_skjulte,
+                COUNT(*) FILTER (WHERE j.status = 'SLETTET') AS antall_slettede
+            FROM jobbsoker j
+            JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
+            WHERE rt.id = ?
         """.trimIndent()
         return conn.prepareStatement(sql).use { stmt ->
             stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
-            stmt.setLong(1, treffDbId)
+            stmt.setObject(1, treffId.somUuid)
             stmt.executeQuery().use { rs ->
                 if (rs.next()) Pair(rs.getInt("antall_skjulte"), rs.getInt("antall_slettede"))
                 else Pair(0, 0)
@@ -76,7 +77,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
     }
 
     private fun hentTotalt(conn: Connection, where: String, params: List<Any>): Long {
-        val sql = "SELECT count(*) FROM jobbsoker j $where"
+        val sql = "SELECT count(*) FROM jobbsoker_sok_view v $where"
         return conn.prepareStatement(sql).use { stmt ->
             stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
             params.forEachIndexed { index, param -> settParam(stmt, index + 1, param) }
@@ -97,11 +98,11 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         antallPerSide: Int,
     ): List<JobbsøkerSøkTreff> {
         val sql = """
-            SELECT j.id::text as person_treff_id, j.fodselsnummer,
-                   j.fornavn, j.etternavn, j.navkontor,
-                   j.veileder_navn, j.veileder_navident,
-                   j.status, j.lagt_til_dato, j.lagt_til_av
-            FROM jobbsoker j
+            SELECT v.person_treff_id::text, v.fodselsnummer,
+                   v.fornavn, v.etternavn, v.navkontor,
+                   v.veileder_navn, v.veileder_navident,
+                   v.status, v.lagt_til_dato, v.lagt_til_av
+            FROM jobbsoker_sok_view v
             $where
             ORDER BY ${sorteringsfelt.sql(sorteringsretning)}
             LIMIT ? OFFSET ?
@@ -119,23 +120,20 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         }
     }
 
-    private fun byggWhere(treffDbId: Long, request: JobbsøkerSøkRequest): Pair<String, List<Any>> {
-        val conditions = mutableListOf("j.rekrutteringstreff_id = ?")
-        val params = mutableListOf<Any>(treffDbId)
-
-        conditions.add("j.er_synlig = true")
-        conditions.add("j.status != 'SLETTET'")
+    private fun byggWhere(treffId: TreffId, request: JobbsøkerSøkRequest): Pair<String, List<Any>> {
+        val conditions = mutableListOf("v.treff_id = ?")
+        val params = mutableListOf<Any>(treffId.somUuid)
 
         request.fritekst?.takeIf { it.isNotBlank() }?.let {
             if (it.trim().matches(Regex("\\d{11}"))) {
-                conditions.add("j.fodselsnummer = ?")
+                conditions.add("v.fodselsnummer = ?")
                 params.add(it.trim())
             } else {
                 val escaped = it.lowercase()
                     .replace("\\", "\\\\")
                     .replace("%", "\\%")
                     .replace("_", "\\_")
-                conditions.add("(LOWER(j.fornavn) LIKE ? ESCAPE '\\' OR LOWER(j.etternavn) LIKE ? ESCAPE '\\')")
+                conditions.add("(LOWER(v.fornavn) LIKE ? ESCAPE '\\' OR LOWER(v.etternavn) LIKE ? ESCAPE '\\')")
                 params.add("${escaped}%")
                 params.add("${escaped}%")
             }
@@ -143,7 +141,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
 
         request.status?.takeIf { it.isNotEmpty() }?.let { statuser ->
             val placeholders = statuser.indices.joinToString(",") { "?" }
-            conditions.add("j.status IN ($placeholders)")
+            conditions.add("v.status IN ($placeholders)")
             statuser.forEach { params.add(it.name) }
         }
 
@@ -151,8 +149,9 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         return Pair(whereClause, params)
     }
 
-    private fun settParam(stmt: java.sql.PreparedStatement, index: Int, value: Any) {
+    private fun settParam(stmt: PreparedStatement, index: Int, value: Any) {
         when (value) {
+            is UUID -> stmt.setObject(index, value)
             is Long -> stmt.setLong(index, value)
             is String -> stmt.setString(index, value)
             is Int -> stmt.setInt(index, value)
@@ -160,14 +159,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             else -> stmt.setObject(index, value)
         }
     }
-
-    private fun Connection.treffDbId(treff: TreffId): Long =
-        prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?")
-            .apply { setObject(1, treff.somUuid) }
-            .executeQuery().let {
-                if (it.next()) it.getLong(1)
-                else error("Treff ${treff.somUuid} finnes ikke")
-            }
 
     private fun ResultSet.tilTreff() = JobbsøkerSøkTreff(
         personTreffId = getString("person_treff_id"),

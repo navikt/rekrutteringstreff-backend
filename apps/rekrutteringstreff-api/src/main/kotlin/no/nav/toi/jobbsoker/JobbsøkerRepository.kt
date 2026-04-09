@@ -55,10 +55,9 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         val sql = """
             insert into jobbsoker
               (id, rekrutteringstreff_id,fodselsnummer,fornavn,etternavn,
-               navkontor,veileder_navn,veileder_navident,status,lagt_til_dato,lagt_til_av)
-            values (?,?,?,?,?,?,?,?,?,?,?)
+               navkontor,veileder_navn,veileder_navident,status)
+            values (?,?,?,?,?,?,?,?,?)
         """.trimIndent()
-        val lagtTilDato = Timestamp.from(tidspunkt)
         val batchRader = jobbsøkere.map { jobbsøker ->
             JobbsøkerBatchRad(
                 personTreffId = PersonTreffId(UUID.randomUUID()),
@@ -73,8 +72,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                         personTreffId = rad.personTreffId,
                         treffDbId = treffDbId,
                         jobbsøker = rad.jobbsøker,
-                        navIdent = navIdent,
-                        lagtTilDato = lagtTilDato,
                     )
                 }
 
@@ -87,8 +84,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         personTreffId: PersonTreffId,
         treffDbId: Long,
         jobbsøker: LeggTilJobbsøker,
-        navIdent: String,
-        lagtTilDato: Timestamp,
     ) {
         setObject(1, personTreffId.somUuid)
         setLong(2, treffDbId)
@@ -99,8 +94,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         setString(7, jobbsøker.veilederNavn?.asString)
         setString(8, jobbsøker.veilederNavIdent?.asString)
         setString(9, JobbsøkerStatus.LAGT_TIL.name)
-        setTimestamp(10, lagtTilDato)
-        setString(11, navIdent)
         addBatch()
     }
 

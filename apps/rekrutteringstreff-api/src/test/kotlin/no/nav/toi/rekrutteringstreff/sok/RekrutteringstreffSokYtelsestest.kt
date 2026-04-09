@@ -128,7 +128,7 @@ class RekrutteringstreffSokYtelsestest {
                 }
 
                 conn.prepareStatement(
-                    "INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id, lagt_til_av) VALUES (?, ?, ?, 'testperson')"
+                    "INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, id) VALUES (?, ?, ?)"
                 ).use { stmt ->
                     for (treffId in treffIds) {
                         repeat(30) {

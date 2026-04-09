@@ -191,8 +191,10 @@ class JobbsokerControllerAutorisasjonsTest {
                 """.trimIndent())
             )
         }),
-        søkJobbsøkere({"http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker"}, {
-            HttpRequest.newBuilder().GET()
+        søkJobbsøkere({"http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker/sok"}, {
+            HttpRequest.newBuilder()
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
         }),
         hentJobbsøkerMedHendelser({ "http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker/hendelser"}, {
             HttpRequest.newBuilder().GET()

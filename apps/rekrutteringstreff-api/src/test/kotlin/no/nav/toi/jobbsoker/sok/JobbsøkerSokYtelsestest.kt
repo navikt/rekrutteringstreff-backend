@@ -73,32 +73,46 @@ class JobbsøkerSokYtelsestest {
 
                 conn.prepareStatement(
                     """
-                    INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, fornavn, etternavn, navkontor, veileder_navident, veileder_navn, id, status, er_synlig, lagt_til_dato, lagt_til_av)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true, ?, 'A123456')
+                    INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, fornavn, etternavn, navkontor, veileder_navident, veileder_navn, id, status, er_synlig)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true)
+                    RETURNING jobbsoker_id
                     """.trimIndent()
                 ).use { jobbsokerStmt ->
-                    repeat(ANTALL_JOBBSØKERE) { i ->
-                        val status = statuser[i % statuser.size]
-                        val fnr = String.format("%011d", i + 1)
-                        val fornavn = "Fornavn$i"
-                        val etternavn = "Etternavn${i % 100}"
-                        val navkontor = navkontorer[i % navkontorer.size]
-                        val veilederIdent = "NAV${String.format("%03d", i % 50)}"
-                        val veilederNavn = "Veileder ${i % 50}"
-                        val lagtTilDato = Timestamp.from(baseTime.plusSeconds(i.toLong()))
-                        val uuid = UUID.randomUUID()
+                    conn.prepareStatement(
+                        """
+                        INSERT INTO jobbsoker_hendelse (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+                        VALUES (?, ?, ?, 'OPPRETTET', 'ARRANGØR', 'A123456')
+                        """.trimIndent()
+                    ).use { hendelseStmt ->
+                        repeat(ANTALL_JOBBSØKERE) { i ->
+                            val status = statuser[i % statuser.size]
+                            val fnr = String.format("%011d", i + 1)
+                            val fornavn = "Fornavn$i"
+                            val etternavn = "Etternavn${i % 100}"
+                            val navkontor = navkontorer[i % navkontorer.size]
+                            val veilederIdent = "NAV${String.format("%03d", i % 50)}"
+                            val veilederNavn = "Veileder ${i % 50}"
+                            val lagtTilDato = Timestamp.from(baseTime.plusSeconds(i.toLong()))
+                            val uuid = UUID.randomUUID()
 
-                        jobbsokerStmt.setLong(1, treffDbId)
-                        jobbsokerStmt.setString(2, fnr)
-                        jobbsokerStmt.setString(3, fornavn)
-                        jobbsokerStmt.setString(4, etternavn)
-                        jobbsokerStmt.setString(5, navkontor)
-                        jobbsokerStmt.setString(6, veilederIdent)
-                        jobbsokerStmt.setString(7, veilederNavn)
-                        jobbsokerStmt.setObject(8, uuid)
-                        jobbsokerStmt.setString(9, status)
-                        jobbsokerStmt.setTimestamp(10, lagtTilDato)
-                        jobbsokerStmt.executeUpdate()
+                            jobbsokerStmt.setLong(1, treffDbId)
+                            jobbsokerStmt.setString(2, fnr)
+                            jobbsokerStmt.setString(3, fornavn)
+                            jobbsokerStmt.setString(4, etternavn)
+                            jobbsokerStmt.setString(5, navkontor)
+                            jobbsokerStmt.setString(6, veilederIdent)
+                            jobbsokerStmt.setString(7, veilederNavn)
+                            jobbsokerStmt.setObject(8, uuid)
+                            jobbsokerStmt.setString(9, status)
+                            val rs = jobbsokerStmt.executeQuery()
+                            rs.next()
+                            val jobbsokerId = rs.getLong(1)
+
+                            hendelseStmt.setObject(1, UUID.randomUUID())
+                            hendelseStmt.setLong(2, jobbsokerId)
+                            hendelseStmt.setTimestamp(3, lagtTilDato)
+                            hendelseStmt.executeUpdate()
+                        }
                     }
                 }
                 conn.commit()

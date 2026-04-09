@@ -481,8 +481,8 @@ class TestDatabase {
                     """
                     INSERT INTO jobbsoker
                       (id, rekrutteringstreff_id, fodselsnummer, fornavn, etternavn,
-                       navkontor, veileder_navn, veileder_navident, lagt_til_av)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'testperson')
+                       navkontor, veileder_navn, veileder_navident)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     RETURNING jobbsoker_id
                     """.trimIndent()
                 ).apply {

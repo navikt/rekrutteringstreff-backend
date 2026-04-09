@@ -130,9 +130,10 @@ class JobbsøkerSokKomponenttest {
         db.dataSource.connection.use { conn ->
             conn.prepareStatement(
                 """
-                UPDATE jobbsoker
-                SET lagt_til_dato = ?
-                WHERE id = ?
+                UPDATE jobbsoker_hendelse
+                SET tidspunkt = ?
+                WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)
+                  AND hendelsestype = 'OPPRETTET'
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setTimestamp(1, Timestamp.from(lagtTilDato))
