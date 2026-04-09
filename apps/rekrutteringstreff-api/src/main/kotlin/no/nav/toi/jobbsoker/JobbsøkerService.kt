@@ -11,7 +11,6 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
-import no.nav.toi.jobbsoker.sok.JobbsøkerSøkTreff
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Instant
@@ -285,9 +284,6 @@ class JobbsøkerService(
 
     fun søkJobbsøkere(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons =
         jobbsøkerSokRepository.sok(treffId, request)
-
-    fun søkMedFødselsnummer(treffId: TreffId, fodselsnummer: String): JobbsøkerSøkTreff? =
-        jobbsøkerSokRepository.søkMedFødselsnummer(treffId, fodselsnummer)
 
     private fun finnNyeJobbsøkere(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,

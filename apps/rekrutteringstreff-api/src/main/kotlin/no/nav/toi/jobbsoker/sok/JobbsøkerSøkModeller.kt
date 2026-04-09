@@ -1,5 +1,8 @@
 package no.nav.toi.jobbsoker.sok
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonValue
 import no.nav.toi.jobbsoker.JobbsøkerStatus
 import java.time.Instant
 
@@ -8,8 +11,13 @@ enum class JobbsøkerSorteringsretning(val sql: String) {
     DESC("DESC"),
     ;
 
+    @JsonValue
+    fun jsonVerdi(): String = name.lowercase()
+
     companion object {
-        fun fraQueryParam(verdi: String): JobbsøkerSorteringsretning =
+        @JvmStatic
+        @JsonCreator
+        fun fraJson(verdi: String): JobbsøkerSorteringsretning =
             when (verdi.lowercase()) {
                 "asc" -> ASC
                 "desc" -> DESC
@@ -22,6 +30,12 @@ enum class JobbsøkerSorteringsfelt {
     NAVN,
     LAGT_TIL,
     ;
+
+    @JsonValue
+    fun jsonVerdi(): String = when (this) {
+        NAVN -> "navn"
+        LAGT_TIL -> "lagt-til"
+    }
 
     val standardRetning: JobbsøkerSorteringsretning
         get() = when (this) {
@@ -36,7 +50,9 @@ enum class JobbsøkerSorteringsfelt {
         }
 
     companion object {
-        fun fraQueryParam(verdi: String): JobbsøkerSorteringsfelt =
+        @JvmStatic
+        @JsonCreator
+        fun fraJson(verdi: String): JobbsøkerSorteringsfelt =
             when (verdi.lowercase()) {
                 "navn" -> NAVN
                 "lagt-til" -> LAGT_TIL
@@ -48,10 +64,12 @@ enum class JobbsøkerSorteringsfelt {
 data class JobbsøkerSøkRequest(
     val fritekst: String? = null,
     val status: List<JobbsøkerStatus>? = null,
+    @JsonProperty("sortering")
     val sorteringsfelt: JobbsøkerSorteringsfelt = JobbsøkerSorteringsfelt.NAVN,
+    @JsonProperty("retning")
     val sorteringsretning: JobbsøkerSorteringsretning = sorteringsfelt.standardRetning,
-    val side: Int,
-    val antallPerSide: Int,
+    val side: Int = 1,
+    val antallPerSide: Int = 25,
 )
 
 data class JobbsøkerSøkRespons(
@@ -84,8 +102,4 @@ data class MinsideHendelseSøkDto(
     val opprettetAvAktørType: String,
     val aktørIdentifikasjon: String?,
     val hendelseData: com.fasterxml.jackson.databind.JsonNode?,
-)
-
-data class FødselsnummerSøkRequest(
-    val fodselsnummer: String,
 )

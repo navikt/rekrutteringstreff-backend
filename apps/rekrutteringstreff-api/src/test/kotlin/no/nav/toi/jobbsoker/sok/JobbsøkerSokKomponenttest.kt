@@ -103,16 +103,6 @@ class JobbsøkerSokKomponenttest {
         return treffId
     }
 
-    private fun httpGet(path: String, navIdent: String = "A123456"): HttpResponse<String> {
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:$appPort$path"))
-            .header("Authorization", "Bearer ${token.serialize()}")
-            .GET()
-            .build()
-        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-    }
-
     private fun httpPost(path: String, body: String, navIdent: String = "A123456"): HttpResponse<String> {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val request = HttpRequest.newBuilder()
@@ -124,21 +114,16 @@ class JobbsøkerSokKomponenttest {
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
-    private fun søkePath(treffId: TreffId, query: String = ""): String {
-        val parametre = linkedMapOf(
-            "side" to "1",
-            "antallPerSide" to "20",
+    private fun søkPath(treffId: TreffId): String =
+        "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/sok"
+
+    private fun søkBody(vararg felter: Pair<String, Any>): String {
+        val map = mutableMapOf<String, Any>(
+            "side" to 1,
+            "antallPerSide" to 20,
         )
-
-        query.takeIf { it.isNotBlank() }
-            ?.split("&")
-            ?.filter { it.isNotBlank() }
-            ?.forEach { del ->
-                val (navn, verdi) = del.split("=", limit = 2)
-                parametre[navn] = verdi
-            }
-
-        return "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?${parametre.entries.joinToString("&") { "${it.key}=${it.value}" }}"
+        felter.forEach { (key, value) -> map[key] = value }
+        return mapper.writeValueAsString(map)
     }
 
     private fun oppdaterLagtTilDato(personTreffId: PersonTreffId, lagtTilDato: Instant) {
@@ -164,7 +149,7 @@ class JobbsøkerSokKomponenttest {
         val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
         db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
 
-        val response = httpGet(søkePath(treffId))
+        val response = httpPost(søkPath(treffId), søkBody())
         assertThat(response.statusCode()).isEqualTo(200)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
@@ -184,7 +169,7 @@ class JobbsøkerSokKomponenttest {
             LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
         ), treffId)
 
-        val response = httpGet(søkePath(treffId, "fritekst=ola"))
+        val response = httpPost(søkPath(treffId), søkBody("fritekst" to "ola"))
         val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
 
         assertThat(dto.totalt).isEqualTo(1)
@@ -214,10 +199,10 @@ class JobbsøkerSokKomponenttest {
         ), treffId)
 
         val kontorTreff = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "fritekst=alpha")).body()
+            httpPost(søkPath(treffId), søkBody("fritekst" to "alpha")).body()
         )
         val veilederTreff = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "fritekst=nav002")).body()
+            httpPost(søkPath(treffId), søkBody("fritekst" to "nav002")).body()
         )
 
         assertThat(kontorTreff.jobbsøkere).isEmpty()
@@ -233,7 +218,7 @@ class JobbsøkerSokKomponenttest {
         ), treffId)
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
-        val response = httpGet(søkePath(treffId, "status=INVITERT"))
+        val response = httpPost(søkPath(treffId), søkBody("status" to listOf("INVITERT")))
         val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
 
         assertThat(dto.totalt).isEqualTo(1)
@@ -250,7 +235,7 @@ class JobbsøkerSokKomponenttest {
         ), treffId)
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
-        val response = httpGet(søkePath(treffId, "status=INVITERT"))
+        val response = httpPost(søkPath(treffId), søkBody("status" to listOf("INVITERT")))
         val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
 
         assertThat(dto.totalt).isEqualTo(1)
@@ -266,7 +251,7 @@ class JobbsøkerSokKomponenttest {
         db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId)
 
         val side1 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=1&antallPerSide=2").body()
+            httpPost(søkPath(treffId), søkBody("side" to 1, "antallPerSide" to 2)).body()
         )
         assertThat(side1.totalt).isEqualTo(5)
         assertThat(side1.side).isEqualTo(1)
@@ -274,12 +259,12 @@ class JobbsøkerSokKomponenttest {
         assertThat(side1.jobbsøkere).hasSize(2)
 
         val side2 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=2&antallPerSide=2").body()
+            httpPost(søkPath(treffId), søkBody("side" to 2, "antallPerSide" to 2)).body()
         )
         assertThat(side2.jobbsøkere).hasSize(2)
 
         val side3 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=3&antallPerSide=2").body()
+            httpPost(søkPath(treffId), søkBody("side" to 3, "antallPerSide" to 2)).body()
         )
         assertThat(side3.jobbsøkere).hasSize(1)
     }
@@ -293,7 +278,7 @@ class JobbsøkerSokKomponenttest {
         db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=4&antallPerSide=2").body()
+            httpPost(søkPath(treffId), søkBody("side" to 4, "antallPerSide" to 2)).body()
         )
 
         assertThat(dto.totalt).isEqualTo(5)
@@ -322,7 +307,7 @@ class JobbsøkerSokKomponenttest {
         db.settJobbsøkerStatus(personTreffIder[4], JobbsøkerStatus.SLETTET)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=3&antallPerSide=2").body()
+            httpPost(søkPath(treffId), søkBody("side" to 3, "antallPerSide" to 2)).body()
         )
 
         assertThat(dto.totalt).isEqualTo(3)
@@ -342,7 +327,7 @@ class JobbsøkerSokKomponenttest {
         ), treffId)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=navn")).body()
+            httpPost(søkPath(treffId), søkBody("sortering" to "navn")).body()
         )
 
         assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
@@ -358,7 +343,7 @@ class JobbsøkerSokKomponenttest {
         ), treffId)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=navn&retning=desc")).body()
+            httpPost(søkPath(treffId), søkBody("sortering" to "navn", "retning" to "desc")).body()
         )
 
         assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
@@ -378,10 +363,10 @@ class JobbsøkerSokKomponenttest {
         oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-02-01T12:00:00Z"))
 
         val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=lagt-til&retning=asc")).body()
+            httpPost(søkPath(treffId), søkBody("sortering" to "lagt-til", "retning" to "asc")).body()
         )
         val synkendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=lagt-til&retning=desc")).body()
+            httpPost(søkPath(treffId), søkBody("sortering" to "lagt-til", "retning" to "desc")).body()
         )
 
         assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
@@ -402,10 +387,10 @@ class JobbsøkerSokKomponenttest {
         oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-03-01T12:00:02Z"))
 
         val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=lagt-til&retning=asc")).body()
+            httpPost(søkPath(treffId), søkBody("sortering" to "lagt-til", "retning" to "asc")).body()
         )
         val synkendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=lagt-til&retning=desc")).body()
+            httpPost(søkPath(treffId), søkBody("sortering" to "lagt-til", "retning" to "desc")).body()
         )
 
         assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
@@ -417,7 +402,7 @@ class JobbsøkerSokKomponenttest {
         val treffId = opprettTreffMedEier()
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "fritekst=finnesikke")).body()
+            httpPost(søkPath(treffId), søkBody("fritekst" to "finnesikke")).body()
         )
 
         assertThat(dto.totalt).isEqualTo(0)
@@ -425,54 +410,40 @@ class JobbsøkerSokKomponenttest {
     }
 
     @Test
-    fun `fnr-søk returnerer treff for eksisterende jobbsøker`() {
+    fun `fritekst-søk med fødselsnummer returnerer treff`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(
             LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("NAV Oslo"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
         ), treffId)
 
-        val response = httpPost(
-            "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/sok",
-            """{"fodselsnummer": "11111111111"}"""
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody("fritekst" to "11111111111")).body()
         )
 
-        assertThat(response.statusCode()).isEqualTo(200)
-        val treff = mapper.readValue<JobbsøkerSøkTreff>(response.body())
-        assertThat(treff.fodselsnummer).isEqualTo("11111111111")
-        assertThat(treff.fornavn).isEqualTo("Ola")
-        assertThat(treff.navkontor).isEqualTo("NAV Oslo")
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.jobbsøkere.first().fodselsnummer).isEqualTo("11111111111")
+        assertThat(dto.jobbsøkere.first().fornavn).isEqualTo("Ola")
+        assertThat(dto.jobbsøkere.first().navkontor).isEqualTo("NAV Oslo")
     }
 
     @Test
-    fun `fnr-søk returnerer 404 for ukjent fødselsnummer`() {
+    fun `fritekst-søk med ukjent fødselsnummer returnerer tomt resultat`() {
         val treffId = opprettTreffMedEier()
 
-        val response = httpPost(
-            "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/sok",
-            """{"fodselsnummer": "99999999999"}"""
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody("fritekst" to "99999999999")).body()
         )
 
-        assertThat(response.statusCode()).isEqualTo(404)
+        assertThat(dto.totalt).isEqualTo(0)
+        assertThat(dto.jobbsøkere).isEmpty()
     }
 
     @Test
     fun `ikke-eier får 403 på søk`() {
         val treffId = opprettTreffMedEier("A123456")
 
-        val response = httpGet(søkePath(treffId), navIdent = "B999999")
-
-        assertThat(response.statusCode()).isEqualTo(403)
-    }
-
-    @Test
-    fun `ikke-eier får 403 på fnr-søk`() {
-        val treffId = opprettTreffMedEier("A123456")
-
-        val response = httpPost(
-            "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/sok",
-            """{"fodselsnummer": "11111111111"}""",
-            navIdent = "B999999"
-        )
+        val response = httpPost(søkPath(treffId), søkBody(), navIdent = "B999999")
 
         assertThat(response.statusCode()).isEqualTo(403)
     }
@@ -487,7 +458,7 @@ class JobbsøkerSokKomponenttest {
         db.settJobbsøkerStatus(personTreffIder[1], JobbsøkerStatus.SLETTET)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId)).body()
+            httpPost(søkPath(treffId), søkBody()).body()
         )
 
         assertThat(dto.totalt).isEqualTo(1)
@@ -504,7 +475,7 @@ class JobbsøkerSokKomponenttest {
         db.settSynlighet(personTreffIder[1], false)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId)).body()
+            httpPost(søkPath(treffId), søkBody()).body()
         )
 
         assertThat(dto.totalt).isEqualTo(1)
@@ -515,7 +486,7 @@ class JobbsøkerSokKomponenttest {
     fun `ugyldig antallPerSide gir 400`() {
         val treffId = opprettTreffMedEier()
 
-        val response = httpGet(søkePath(treffId, "antallPerSide=200"))
+        val response = httpPost(søkPath(treffId), søkBody("antallPerSide" to 200))
         assertThat(response.statusCode()).isEqualTo(400)
     }
 
@@ -526,12 +497,12 @@ class JobbsøkerSokKomponenttest {
             LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
         ), treffId)
 
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val response = httpPost(søkPath(treffId), søkBody())
 
         assertThat(response.statusCode()).isEqualTo(200)
         val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
         assertThat(dto.side).isEqualTo(1)
-        assertThat(dto.antallPerSide).isEqualTo(25)
+        assertThat(dto.antallPerSide).isEqualTo(20)
         assertThat(dto.totalt).isEqualTo(1)
     }
 
@@ -549,13 +520,13 @@ class JobbsøkerSokKomponenttest {
         ), treff2)
 
         val dto1 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treff1)).body()
+            httpPost(søkPath(treff1), søkBody()).body()
         )
         assertThat(dto1.totalt).isEqualTo(1)
         assertThat(dto1.jobbsøkere.first().fornavn).isEqualTo("Treff1Person")
 
         val dto2 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treff2)).body()
+            httpPost(søkPath(treff2), søkBody()).body()
         )
         assertThat(dto2.totalt).isEqualTo(1)
         assertThat(dto2.jobbsøkere.first().fornavn).isEqualTo("Treff2Person")
@@ -569,7 +540,7 @@ class JobbsøkerSokKomponenttest {
         ), treffId)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId)).body()
+            httpPost(søkPath(treffId), søkBody()).body()
         )
 
         assertThat(dto.totalt).isEqualTo(1)
@@ -586,7 +557,7 @@ class JobbsøkerSokKomponenttest {
         db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId, "sortering=navn")).body()
+            httpPost(søkPath(treffId), søkBody("sortering" to "navn")).body()
         )
 
         assertThat(dto.jobbsøkere).hasSize(2)
@@ -610,7 +581,7 @@ class JobbsøkerSokKomponenttest {
         db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v2","eksternKanal":null,"eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId)).body()
+            httpPost(søkPath(treffId), søkBody()).body()
         )
 
         assertThat(dto.jobbsøkere).hasSize(1)
@@ -628,7 +599,7 @@ class JobbsøkerSokKomponenttest {
         db.leggTilMinsideHendelse(personTreffIder[0], hendelseJson)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId)).body()
+            httpPost(søkPath(treffId), søkBody()).body()
         )
 
         val hendelse = dto.jobbsøkere.first().minsideHendelser.first()
@@ -647,7 +618,7 @@ class JobbsøkerSokKomponenttest {
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
         val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet(søkePath(treffId)).body()
+            httpPost(søkPath(treffId), søkBody()).body()
         )
 
         assertThat(dto.jobbsøkere.first().minsideHendelser).isEmpty()
@@ -665,12 +636,12 @@ class JobbsøkerSokKomponenttest {
         db.leggTilMinsideHendelse(personTreffIder[2], """{"varselId":"v2","eksternKanal":null,"eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
 
         val side1 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=1&antallPerSide=2&sortering=navn").body()
+            httpPost(søkPath(treffId), søkBody("side" to 1, "antallPerSide" to 2, "sortering" to "navn")).body()
         )
         assertThat(side1.jobbsøkere).hasSize(2)
 
         val side2 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker?side=2&antallPerSide=2&sortering=navn").body()
+            httpPost(søkPath(treffId), søkBody("side" to 2, "antallPerSide" to 2, "sortering" to "navn")).body()
         )
         assertThat(side2.jobbsøkere).hasSize(1)
 

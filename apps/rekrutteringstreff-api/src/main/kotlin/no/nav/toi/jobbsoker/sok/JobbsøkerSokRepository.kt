@@ -57,29 +57,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         return minOf(forespurtSide, sisteTilgjengeligeSide)
     }
 
-    fun søkMedFødselsnummer(treffId: TreffId, fodselsnummer: String): JobbsøkerSøkTreff? {
-        return dataSource.connection.use { conn ->
-            conn.prepareStatement(
-                """
-                SELECT j.id::text as person_treff_id, j.fodselsnummer,
-                       j.fornavn, j.etternavn, j.navkontor,
-                       j.veileder_navn, j.veileder_navident,
-                       j.status, j.lagt_til_dato, j.lagt_til_av
-                FROM jobbsoker j
-                JOIN rekrutteringstreff rt ON j.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                WHERE rt.id = ? AND j.fodselsnummer = ?
-                  AND j.er_synlig = true AND j.status != 'SLETTET'
-                """.trimIndent()
-            ).use { stmt ->
-                stmt.setObject(1, treffId.somUuid)
-                stmt.setString(2, fodselsnummer)
-                stmt.executeQuery().use { rs ->
-                    if (rs.next()) rs.tilTreff() else null
-                }
-            }
-        }
-    }
-
     private fun hentTellinger(conn: Connection, treffDbId: Long): Pair<Int, Int> {
         val sql = """
             SELECT
