@@ -162,7 +162,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
 
     private fun ResultSet.tilTreff() = JobbsøkerSøkTreff(
         personTreffId = getString("person_treff_id"),
-        fodselsnummer = getString("fodselsnummer"),
+        fødselsnummer = getString("fodselsnummer"),
         fornavn = getString("fornavn"),
         etternavn = getString("etternavn"),
         navkontor = getString("navkontor"),

@@ -158,7 +158,7 @@ class JobbsøkerSokKomponenttest {
         assertThat(dto.side).isEqualTo(1)
         assertThat(dto.antallPerSide).isEqualTo(20)
         assertThat(dto.jobbsøkere).hasSize(2)
-        assertThat(dto.jobbsøkere.map { it.fodselsnummer }).containsExactlyInAnyOrder("11111111111", "22222222222")
+        assertThat(dto.jobbsøkere.map { it.fødselsnummer }).containsExactlyInAnyOrder("11111111111", "22222222222")
     }
 
     @Test
@@ -423,7 +423,7 @@ class JobbsøkerSokKomponenttest {
         )
 
         assertThat(dto.totalt).isEqualTo(1)
-        assertThat(dto.jobbsøkere.first().fodselsnummer).isEqualTo("11111111111")
+        assertThat(dto.jobbsøkere.first().fødselsnummer).isEqualTo("11111111111")
         assertThat(dto.jobbsøkere.first().fornavn).isEqualTo("Ola")
         assertThat(dto.jobbsøkere.first().navkontor).isEqualTo("NAV Oslo")
     }

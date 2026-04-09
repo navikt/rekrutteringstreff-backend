@@ -7,9 +7,77 @@ Når eiere og markedskontakter skal administrere et rekrutteringstreff med mange
 
 ---
 
+## Implementert arkitektur (MVP)
+
+MVP-en er implementert med en enklere arkitektur enn opprinnelig planlagt. Her er en oppsummering av de viktigste valgene:
+
+### Database: View i stedet for parallell tabell
+
+I stedet for en separat `jobbsoker_sok`-tabell med denormalisert data og trigram-indekser, bruker MVP-en en **database-view** (`jobbsoker_sok_view`) som joiner `jobbsoker`-tabellen med `rekrutteringstreff` og henter `lagt_til_dato`/`lagt_til_av` via korrelerte subqueries mot `jobbsoker_hendelse`. Viewet filtrerer automatisk ut skjulte (`er_synlig = false`) og slettede (`status = 'SLETTET'`).
+
+**Fordeler over parallell tabell:** Ingen synkroniseringsproblematikk, ingen ekstra writes ved hendelser, enklere kode.
+
+Flyway-migrasjoner:
+
+- `R__jobbsoker_sok_view.sql` (repeatable) – oppretter/oppdaterer viewet
+- `V4__jobbsoker_sok.sql` – oppretter partial indexes på `jobbsoker`-tabellen
+
+### API: POST med JSON body
+
+Søkeendepunktet bruker **POST** (ikke GET med query-params som opprinnelig planlagt):
+
+```
+POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
+Content-Type: application/json
+
+{
+  "fritekst": "Ola",
+  "status": ["LAGT_TIL", "INVITERT"],
+  "sortering": "navn",
+  "retning": "asc",
+  "side": 1,
+  "antallPerSide": 25
+}
+```
+
+**Begrunnelse:** Fødselsnummer sendes i body (fritekst-feltet brukes for fnr-oppslag ved 11-sifret input), og POST er konsistent med andre søkeendepunkter i Nav-plattformen.
+
+### Fritekst: Prefix-søk på navn + eksakt fnr-match
+
+I stedet for trigram-indeksert `sok_tekst` over mange felter, bruker MVP-en:
+
+- **Fødselsnummer (11 siffer):** Eksakt match på `fodselsnummer`
+- **Annen tekst:** Prefix-match (`LIKE 'tekst%'`) på `LOWER(fornavn)` og `LOWER(etternavn)` separat
+
+Enklere enn trigram, ingen pg_trgm-avhengighet. Tilstrekkelig for MVP.
+
+### Filtre implementert i MVP
+
+- **Fritekst** (navn-prefix + fnr-eksakt)
+- **Status** (`LAGT_TIL`, `INVITERT`, `SVART_JA`, `SVART_NEI`)
+- **Sortering** (`navn` med standard ASC, `lagt-til` med standard DESC)
+- **Paginering** (`side` + `antallPerSide`, 1–100)
+
+### Filtre planlagt for senere
+
+- Innsatsgruppe
+- Geografi (fylke/kommune)
+- Nav-kontor
+- Veileder
+
+### Frontend-arkitektur
+
+- **`useJobbsøkerSøk()`** – SWR-basert POST-hook med Zod-validering
+- **`useSWRPost()`** – generisk SWR-hook for POST med cache-nøkkel basert på JSON-body
+- **`JobbsøkerSøkContext`** – URL-synkronisert filtertilstand via `nuqs` (query-params i URL)
+- **`JobbsøkerFilterrad`** – søkefelt + statusfilter-popover + chips for aktive filtre
+- **MSW-mock** – komplett mock av søke-backend for lokal utvikling og Playwright-tester
+
+---
+
 ## Oversikt
 
-Planen beskriver arkitektur for søk og filtrering av jobbsøkere innad i et treff. Det nye søkeendepunktet **erstatter** det eksisterende `GET /api/rekrutteringstreff/{id}/jobbsoker` med paginering og filtre. Det eksisterende hendelsesendepunktet (`GET .../jobbsoker/hendelser`) beholdes uendret for statushistorikk.
+Planen beskriver arkitektur for søk og filtrering av jobbsøkere innad i et treff. Det nye søkeendepunktet **erstatter** det eksisterende `GET /api/rekrutteringstreff/{id}/jobbsoker` med et POST-basert søkeendepunkt med paginering og filtre. Det eksisterende hendelsesendepunktet (`GET .../jobbsoker/hendelser`) beholdes uendret for statushistorikk.
 
 1. **Tilgjengelig data fra kandidatsøk** – hva som finnes og hva vi kopierer ved opprettelse
 2. **Filterkriterier** – hvilke feltdimensjoner som kan filtreres (valgfrie)
@@ -106,80 +174,79 @@ For å unngå ujevn datakvalitet på eldre treff innføres de nye filtrene gradv
 
 Dette er i praksis en enkel feature toggle. Den styres av opprettetdato på treffet, ikke av bruker eller miljø per se.
 
-### Query-parametere (MVP)
+### Søkeendepunkt (POST med JSON body)
 
-**Påkrevd (paginering):**
+Søket bruker **POST** med JSON body. Alle parametere sendes i body, inkludert fødselsnummer via `fritekst`-feltet.
+
+**Påkrevd:**
 
 - `side` (1-indeksert, integer, >= 1)
 - `antallPerSide` (integer, default 25, 1–100)
 
-Validering: `side >= 1` og `antallPerSide in 1..100`, ellers `IllegalArgumentException` → 400. Samme mønster som `RekrutteringstreffSokController`.
+Validering: `side >= 1` og `antallPerSide in 1..100`, ellers `IllegalArgumentException` → 400.
 
-**Valgfrie (filtre):**
+**Valgfrie:**
 
-- `fritekst` – søk i trigram-indeksert `sok_tekst` (navn + poststed + kommune + fylke + navkontor + veiledernavn + veilederident + telefonnummer)
-- `status` – kommaseparert liste (f.eks. `INVITERT,SVART_JA`)
-- `innsatsgruppe` – kommaseparert liste (f.eks. `STANDARD_INNSATS,SITUASJONSBESTEMT_INNSATS`)
-- `sortering` – `navn`, `lagt-til` (default: `navn`)
-- `retning` – `asc`, `desc` (default: avhenger av sorteringsfelt – `asc` for navn, `desc` for lagt-til)
+- `fritekst` – prefix-match på fornavn/etternavn, eller eksakt match på fødselsnummer (11 siffer)
+- `status` – JSON-array av statuser (f.eks. `["INVITERT", "SVART_JA"]`)
+- `sortering` – `navn` (default), `lagt-til`
+- `retning` – `asc`, `desc` (default: `asc` for navn, `desc` for lagt-til)
 
-**Eksempel uten filtre (hent alle):**
-
-```
-GET /api/rekrutteringstreff/{treffId}/jobbsoker?side=1&antallPerSide=25
-```
-
-**Eksempel med filtre:**
-
-```
-GET /api/rekrutteringstreff/{treffId}/jobbsoker
-  ?fritekst=Ola
-  &status=INVITERT,SVART_JA
-  &innsatsgruppe=STANDARD_INNSATS
-  &side=1
-  &antallPerSide=25
-  &sortering=navn
-  &retning=asc
-```
-
-**Eksempel fødselsnummer-oppslag (POST):**
+**Eksempel uten filtre:**
 
 ```
 POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
 Content-Type: application/json
 
-{ "fodselsnummer": "12345678901" }
+{ "side": 1, "antallPerSide": 25 }
 ```
 
-Fødselsnummer sendes i body, ikke som query-param – samme mønster som `rekrutteringsbistand-kandidatsok-api` bruker for `/kandidatsok/navn` og `/kandidatsok/arena-kandidatnr`.
+**Eksempel med filtre:**
 
-Oppslaget er treff-skopet: backend slår opp på `rekrutteringstreff_id + fodselsnummer`, ikke bare `fodselsnummer` alene.
+```
+POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
+Content-Type: application/json
+
+{
+  "fritekst": "Ola",
+  "status": ["INVITERT", "SVART_JA"],
+  "sortering": "navn",
+  "retning": "asc",
+  "side": 1,
+  "antallPerSide": 25
+}
+```
+
+**Eksempel fødselsnummer-oppslag (via fritekst):**
+
+```
+POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
+Content-Type: application/json
+
+{ "fritekst": "12345678901", "side": 1, "antallPerSide": 25 }
+```
+
+Fødselsnummer sendes i body via `fritekst`-feltet. Når verdien er 11 siffer, gjør backend eksakt match på `fodselsnummer`. Ellers gjøres prefix-match på `LOWER(fornavn)` og `LOWER(etternavn)`.
 
 ### Response DTO (MVP)
 
-```
+```json
 {
-  "totalt": 9996,                               // Totalt antall AKTIVE jobbsøkere (skjulte/slettede ekskludert)
-  "antallSkjulte": 3,                            // Jobbsøkere med er_synlig=false (ekskludert fra søk)
-  "antallSlettede": 1,                           // Slettede jobbsøkere (ekskludert fra søk)
-  "side": 1,                                    // Nåværende side (paginering)
-  "antallPerSide": 25,                           // Jobbsøkere per side (default 25)
+  "totalt": 9996,
+  "antallSkjulte": 3,
+  "antallSlettede": 1,
+  "side": 1,
+  "antallPerSide": 25,
   "jobbsøkere": [
     {
       "personTreffId": "<uuid>",
       "fodselsnummer": "12345678901",
       "fornavn": "Ola",
       "etternavn": "Nordmann",
-      "innsatsgruppe": "STANDARD_INNSATS",
-      "fylke": "Oslo",
-      "kommune": "Oslo",
-      "poststed": "Oslo",
       "navkontor": "Nav Grünerløkka",
       "veilederNavn": "Per Pål",
       "veilederNavident": "B654321",
-      "telefonnummer": "99887766",
       "status": "INVITERT",
-      "invitertDato": "2026-03-20T10:00:00Z",
       "lagtTilDato": "2026-03-18T09:00:00Z",
       "lagtTilAv": "A123456",
       "minsideHendelser": [
@@ -189,7 +256,7 @@ Oppslaget er treff-skopet: backend slår opp på `rekrutteringstreff_id + fodsel
           "hendelsestype": "MOTTATT_SVAR_FRA_MINSIDE",
           "opprettetAvAktørType": "SYSTEM",
           "aktørIdentifikasjon": null,
-          "hendelseData": { "eksternStatus": "SENDT", "minsideStatus": "AKTIV", ... }
+          "hendelseData": { "eksternStatus": "SENDT", "minsideStatus": "AKTIV" }
         }
       ]
     }
@@ -213,109 +280,81 @@ Oppslaget er treff-skopet: backend slår opp på `rekrutteringstreff_id + fodsel
 
 ---
 
-## Database-strategi: Parallell søketabell `jobbsoker_sok`
+## Database-strategi: View `jobbsoker_sok_view`
 
-I stedet for å fortsette å legge søkefelter direkte på tabellen `jobbsoker`, innfører vi en dedikert søketabell. Tabellen `jobbsoker` forblir domenetabell, mens `jobbsoker_sok` er søkeprojeksjonen.
+MVP-en bruker en **database-view** i stedet for en parallell søketabell. Viewet `jobbsoker_sok_view` joiner `jobbsoker` med `rekrutteringstreff` og henter `lagt_til_dato`/`lagt_til_av` via subquery mot `jobbsoker_hendelse`.
 
-### Hvorfor egen søketabell?
+### Hvorfor view i stedet for parallell tabell?
 
-- **Separasjon:** Tabellen `jobbsoker` er domenetabell med hendelsesdrevet status. Tabellen `jobbsoker_sok` er optimert for filtrering.
-- **Ekstra felter:** Innsatsgruppe og geografi – data fra kandidatsøk som ikke er del av kjernedomenet.
-- **Trigram-indeksert fritekstsøk:** Generert kolonne `sok_tekst` + `pg_trgm` for rask `ILIKE '%...%'` over flere felter.
-- **Uavhengig evolusjon:** Nye søkbare felt kan legges til uten å endre domenetabellen.
+- **Ingen synkronisering:** Viewet leser alltid oppdatert data fra domenetabellene
+- **Enklere kode:** Ingen ekstra writes ved hendelser, ingen transaksjonssikring mellom tabeller
+- **Tilstrekkelig ytelse:** Med riktige indekser holder viewet godt for 10K jobbsøkere per treff (verifisert med ytelsestest)
 
-### Tabellen `jobbsoker_sok`
-
-```sql
-CREATE TABLE jobbsoker_sok (
-    jobbsoker_id           bigint PRIMARY KEY REFERENCES jobbsoker(jobbsoker_id),
-    rekrutteringstreff_id  bigint NOT NULL,
-
-    -- Kopiert fra jobbsøker-raden (oppdateres ved hendelser)
-    status                 text NOT NULL DEFAULT 'LAGT_TIL',
-    invitert_dato          timestamptz,
-    lagt_til_dato          timestamptz,
-    lagt_til_av            text,
-    er_synlig              boolean NOT NULL DEFAULT TRUE,
-
-    -- Personalia (kopiert fra kandidatsøk ved opprettelse)
-    fornavn                text,
-    etternavn              text,
-
-    -- Geografi (kopiert fra kandidatsøk ved opprettelse)
-    fylke                  text,
-    kommune                text,
-    poststed               text,
-
-    -- Nav-data (kopiert ved opprettelse)
-    navkontor              text,
-    veileder_navident      text,
-    veileder_navn          text,
-    innsatsgruppe          text,
-    telefonnummer          text,
-
-    -- Grunnlag for trigram-indeksert fritekstsøk
-    sok_tekst              text GENERATED ALWAYS AS (
-      LOWER(
-        COALESCE(fornavn, '') || ' ' ||
-        COALESCE(etternavn, '') || ' ' ||
-            COALESCE(poststed, '') || ' ' ||
-            COALESCE(kommune, '') || ' ' ||
-        COALESCE(fylke, '') || ' ' ||
-        COALESCE(navkontor, '') || ' ' ||
-        COALESCE(veileder_navn, '') || ' ' ||
-        COALESCE(veileder_navident, '') || ' ' ||
-        COALESCE(telefonnummer, '')
-        )
-    ) STORED
-);
-```
-
-`sok_tekst` brukes sammen med `pg_trgm`, slik at `ILIKE '%...%'` kan bruke indeks og ikke ende i full tabellskann.
-
-### Berikelse fra kandidatsøk
-
-Ved opprettelse gjør backend et oppslag mot kandidatsøk-API (`/api/multiple-lookup-cv`) med fødselsnumrene. Responsen beriker jobbsøker-raden med data som `innsatsgruppe`, `fylke`, `kommune`, `poststed`, `telefonnummer`, `navkontor`, `veileder` dersom frontend ikke allerede sendte dem. Oppslaget gjøres med brukerens on-behalf-of-token.
-
-**Viktig:** Oppslaget er all-or-nothing – hvis noen av kandidatene ikke finnes i kandidatsøk, feiler hele operasjonen med 422. Dette sikrer dataintegritet, men kan blokkere store batch-adderinger hvis enkeltpersoner er fjernet fra indeksen.
-
-### Synkronisering
-
-- **Ved opprettelse:** En rad i `jobbsoker_sok` opprettes atomisk sammen med raden i `jobbsoker`, i samme transaksjon.
-- **Ved hendelser:** Når en rad i `jobbsoker_hendelse` opprettes, oppdateres `jobbsoker.status` og `jobbsoker_sok.status` + `jobbsoker_sok.invitert_dato` atomisk.
-- **Ved synlighetsoppdatering:** `jobbsoker_sok.er_synlig` oppdateres sammen med `jobbsoker.er_synlig`.
-- **Kandidatdata (innsatsgruppe, geografi):** Settes én gang ved opprettelse, endres ikke.
-
-Dette bør eies av felles servicemetoder i service-laget, ikke spres utover flere kallesteder. Service-laget orkestrerer oppdateringene mot `jobbsoker`, `jobbsoker_sok` og eventuelt `jobbsoker_hendelse` i én transaksjon, slik at vi unngår avvik mellom domenetabell og søketabell.
-
-### Indekser
-
-Trigram-indeksert fritekstsøk forutsetter `pg_trgm`:
+### Viewet `jobbsoker_sok_view`
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_jobbsoker_sok_tekst
-  ON jobbsoker_sok USING gin (sok_tekst gin_trgm_ops);
+CREATE OR REPLACE VIEW jobbsoker_sok_view AS
+SELECT
+    j.jobbsoker_id,
+    j.id AS person_treff_id,
+    rt.id AS treff_id,
+    j.rekrutteringstreff_id,
+    j.fodselsnummer,
+    j.fornavn,
+    j.etternavn,
+    j.navkontor,
+    j.veileder_navn,
+    j.veileder_navident,
+    j.status,
+    (SELECT jh.tidspunkt
+     FROM jobbsoker_hendelse jh
+     WHERE jh.jobbsoker_id = j.jobbsoker_id
+       AND jh.hendelsestype = 'OPPRETTET'
+     ORDER BY jh.tidspunkt ASC
+     LIMIT 1) AS lagt_til_dato,
+    (SELECT jh.aktøridentifikasjon
+     FROM jobbsoker_hendelse jh
+     WHERE jh.jobbsoker_id = j.jobbsoker_id
+       AND jh.hendelsestype = 'OPPRETTET'
+     ORDER BY jh.tidspunkt ASC
+     LIMIT 1) AS lagt_til_av
+FROM jobbsoker j
+JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
+WHERE j.er_synlig = true
+  AND j.status != 'SLETTET';
 ```
 
-#### MVP-indekser (start med disse)
+Viewet filtrerer automatisk ut skjulte og slettede jobbsøkere. `lagt_til_dato` og `lagt_til_av` hentes fra den eldste `OPPRETTET`-hendelsen.
 
-1. **GIN på trigram-fritekst** – `idx_jobbsoker_sok_tekst ON jobbsoker_sok USING gin (sok_tekst gin_trgm_ops)`
-2. **Partiell indeks** – `idx_jobbsoker_sok_aktiv ON jobbsoker_sok (rekrutteringstreff_id) WHERE er_synlig = true AND status != 'SLETTET'`
-3. **Komposittindeks** – `idx_jobbsoker_sok_treff_status ON (rekrutteringstreff_id, status) WHERE er_synlig = true`
+### Indekser (V4-migrasjon)
 
-Alle spørringer er skopet til `rekrutteringstreff_id`, så enkeltstående B-tree-indekser på `status`, `fylke` osv. vil trolig ikke brukes av query planner alene. Start med de tre over, mål ytelse, og legg til komposittindekser ved behov.
+```sql
+-- Prefix-søk på fornavn/etternavn (text_pattern_ops for LIKE 'tekst%')
+CREATE INDEX idx_jobbsoker_fornavn
+    ON jobbsoker (rekrutteringstreff_id, LOWER(fornavn) text_pattern_ops)
+    WHERE er_synlig = true AND status != 'SLETTET';
 
-#### Kandidatindekser (legg til ved behov etter ytelsesmåling)
+CREATE INDEX idx_jobbsoker_etternavn
+    ON jobbsoker (rekrutteringstreff_id, LOWER(etternavn) text_pattern_ops)
+    WHERE er_synlig = true AND status != 'SLETTET';
 
-4. **B-tree** – `idx_jobbsoker_sok_treff_innsatsgruppe ON (rekrutteringstreff_id, innsatsgruppe)`
-5. **B-tree** – `idx_jobbsoker_sok_treff_fylke ON (rekrutteringstreff_id, fylke)`
-6. **B-tree** – `idx_jobbsoker_sok_treff_navkontor ON (rekrutteringstreff_id, navkontor)`
-7. **B-tree** – `idx_jobbsoker_sok_treff_invitert_dato ON (rekrutteringstreff_id, invitert_dato)`
+-- Aktive jobbsøkere per treff (partiell indeks)
+CREATE INDEX idx_jobbsoker_sok_aktiv
+    ON jobbsoker (rekrutteringstreff_id) WHERE er_synlig = true AND status != 'SLETTET';
 
-### Tabellen `jobbsoker` forblir uendret
+-- Status-filtrering
+CREATE INDEX idx_jobbsoker_sok_treff_status
+    ON jobbsoker (rekrutteringstreff_id, status) WHERE er_synlig = true AND status != 'SLETTET';
 
-`jobbsoker` beholder sine eksisterende kolonner (personalia, status, synlighet). Ingen nye kolonner legges til der – alle søkespesifikke felter går i `jobbsoker_sok`.
+-- Hendelser for lagt-til-dato (subquery i viewet)
+CREATE INDEX idx_jobbsoker_hendelse_opprettet
+    ON jobbsoker_hendelse (jobbsoker_id, tidspunkt ASC)
+    WHERE hendelsestype = 'OPPRETTET';
+```
+
+### Mulig evolusjon til parallell tabell
+
+Dersom vi senere trenger trigram-fritekst over mange felter (poststed, kommune, etc.) eller denormaliserte kandidatdata fra kandidatsøk, kan viewet erstattes med en materialisert tabell. Viewet er designet slik at repoet (`JobbsøkerSokRepository`) bare refererer til `jobbsoker_sok_view`-navnet, og kan dermed byttes ut uten endring i applikasjonskoden.
 
 ---
 
@@ -327,90 +366,61 @@ Alle spørringer er skopet til `rekrutteringstreff_id`, så enkeltstående B-tre
 
 **Oppgaver:**
 
-- [x] Flyway-migrasjon: Opprett `jobbsoker_sok`-tabell
-  - `CREATE TABLE jobbsoker_sok (...)` med alle kolonner inkl. generert `sok_tekst`
-  - `CREATE EXTENSION IF NOT EXISTS pg_trgm`
-  - Opprett GIN trigram-indeks på `sok_tekst` med `gin_trgm_ops`
-  - MVP-indekser som beskrevet i database-strategi-seksjonen (start med 3, utvid ved behov)
-  - Backfill fra eksisterende data: `INSERT INTO jobbsoker_sok SELECT ... FROM jobbsoker`
-  - Backfill `invitert_dato` fra hendelser: subquery mot `jobbsoker_hendelse`
-  - **Merk:** Eldre jobbsøkere backfilles med `NULL` for `innsatsgruppe`, `fylke`, `kommune`, `poststed` – disse feltene finnes først fra kandidatsøk og fylles kun ved nye opprettelser. Dette er bevisst og grunnen til cut-off-datoen i frontend.
-- [x] Utvid opprettelse-DTO: Frontend sender med ekstra felter fra kandidatsøk
-  - Nye felter i request: `innsatsgruppe`, `fylke`, `kommune`, `poststed`
-  - Backend validerer og lagrer i `jobbsoker_sok` atomisk sammen med raden i `jobbsoker`
-  - **Frontend-endring nødvendig:** I dag sender frontend kun `fødselsnummer`, `fornavn`, `etternavn` ved opprettelse. Dataen fra kandidatsøk (innsatsgruppe, geografi) er tilgjengelig i frontend, men sendes ikke med. Frontend må utvides til å inkludere disse feltene i request-body.
-- [x] Lag felles servicemetoder for transaksjonssikre oppdateringer
-  - Én metode for opprettelse som skriver til `jobbsoker`, `jobbsoker_sok` og `jobbsoker_hendelse` i samme transaksjon
-  - Én metode for hendelsesdrevet oppdatering som oppdaterer både domenetabell og søketabell i samme transaksjon
-  - Én metode for synlighetsoppdatering som oppdaterer `jobbsoker.er_synlig` og `jobbsoker_sok.er_synlig` i samme transaksjon
-- [x] Implementer søke-endepunkt med dynamisk SQL
-  - Controller: parser og validerer query-parametere (`side`, `antallPerSide`, filtre)
-  - Repository: bygger dynamisk SQL med parameteriserte WHERE-betingelser
-  - Response-DTO: `JobbsøkerSokOutboundDto` med paginert resultat
-- [x] Frontend: Oppdater opprettelse til å sende innsatsgruppe, fylke, kommune, poststed
-- [x] Skriv komponenttester for paginert søk med filtre
-  - Test filtrering, paginering, fritekst, søk på veiledernavn/-ident, tom resultatsett, kombinasjonsfiltre
-  - Samme mønster som eksisterende komponenttester med Testcontainers + ekte HTTP-kall
-- [ ] Legg inn dato-basert feature toggle i frontend
-  - Les opprettetdato på treffet fra treffdetaljene
-  - Skjul nye filtre for treff opprettet før cut-off-dato
-  - Vis fullt filtersett for treff opprettet etter cut-off-dato
-- [x] Oppdater hendelseslogikk: når en hendelse opprettes i `jobbsoker_hendelse`, oppdater `jobbsoker.status` og `jobbsoker_sok.status` + `jobbsoker_sok.invitert_dato` atomisk
-- [x] Lag `JobbsøkerSøkResultat` DTO med paginering + sortering
-- [x] **Erstatt `hentJobbsøkereHandler()` med én unified handler** som:
-  - Tar query-parametere: `side` (påkrevd), `antallPerSide` (påkrevd), + valgfrie filtre
-  - Hvis ingen filtre: returnerer alle aktive jobbsøkere (med paginering)
-  - Hvis filtre: returnerer filtrert resultat (med paginering)
-- [x] Implementer `JobbsøkerSokRepository.sok()` med WHERE-klausuler mot `jobbsoker_sok`:
-  - `sok_tekst ILIKE ?` (trigram-indeksert fritekst over navn + poststed + kommune + fylke + veiledernavn + veilederident, valgfritt)
-  - `status IN (?)` (status-liste, valgfritt)
-  - `innsatsgruppe IN (?)` (innsatsgruppe-liste, valgfritt)
-  - `fylke = ?` (fylke, valgfritt)
-  - `kommune = ?` (kommune, valgfritt)
-  - `navkontor = ?` (kontor, valgfritt)
-  - `veileder_navident = ?` (veileder, valgfritt)
-  - **`er_synlig = true`** (filtrere bort skjulte jobbsøkere)
-  - **`status != 'SLETTET'`** (filtrere bort slettede jobbsøkere)
-- [x] Implementer `JobbsøkerRepository.hentViaFodselsnummer()` – eget POST-endepunkt
-  - Oppslag på `rekrutteringstreff_id = ? AND fodselsnummer = ?` mot `jobbsoker`-tabellen
-  - Fødselsnummer sendes i request body, mens `rekrutteringstreff_id` kommer fra path-parametret
-- [x] Implementer paginering (LIMIT/OFFSET) og sortering
-  - **Rekkefølge:** WHERE-filtrering (inkl. `er_synlig = true AND status != 'SLETTET'`) → ORDER BY sortering → LIMIT/OFFSET paginering
-  - `totalt` = COUNT(\*) med WHERE `er_synlig = true AND status != 'SLETTET'` (+ eventuelle filtre), utført i samme query
-  - Skjulte og slettede er _aldri_ med i hverken telling eller resultatsett
-  - Garanterer fulle sider uten hull
-- [x] **Backend-tester:**
-  - Komponenttester: Full søk-flow mot Testcontainers-database inkl. autorisasjon
-    - Test: Hent alle uten filtre (no-filter case)
-    - Test: Søk med filtre (filtered case)
-    - Test: Paginering kreves (skal feile uten side/antallPerSide)
-  - Service-tester: Filtrerings-logikk, paginering, sortering
-  - Repository-tester: SQL-queries mot mock-tabell
-- [x] Frontend-UI: søkebar + filtre for status, navkontor og sted
-  - **Én custom hook `useJobbsøkerSøk()`** som håndterer både "hent alle" og "søk med filtre"
-    - Input: `{ treffId, side, antallPerSide, filtre?: {...} }`
-    - Output: `{ data, isLoading, error, mutate }`
-    - Bruker SWR med query-params (kun filtre som er satt sendes med)
-    - Eksempel uten filtre: `GET /api/rekrutteringstreff/{treffId}/jobbsoker?side=1&antallPerSide=20`
-    - Eksempel med filtre: `GET /api/rekrutteringstreff/{treffId}/jobbsoker?side=1&antallPerSide=20&fritekst=Ola&status=INVITERT&innsatsgruppe=STANDARD_INNSATS`
-  - **Utvid `leggTilJobbsøkere`-mutasjon**: Send med ekstra felter fra kandidatsøk-resultat
-    - Nye felter: `innsatsgruppe`, `fylke`, `kommune`, `poststed`
-    - Data plukkes fra kandidatsøk-resultat som allerede er tilgjengelig i frontend
-  - Dynamisk **MSW-mock-store** (som rekrutteringstreff-søk) for rask lokal utvikling
-  - Paginering-komponenter, sortering-dropdown og combobox for navkontor/sted
-  - Responsiv design for mobile/tablet/desktop
-- [x] **Frontend-tester:**
-  - Playwright e2e-tester: Søk, filtrering, paginering, sortering
-  - Responsivitet og UX-validering
+## Implementering MVP – Gjennomført
 
-### Ytelsestesting
+### Database
 
-Følger samme mønster som `RekrutteringstreffSokYtelsestest` – egne terskelkonstanter, seed-data, warmup + målt kall:
+- [x] `R__jobbsoker_sok_view.sql` – repeatable Flyway-migrasjon som oppretter viewet `jobbsoker_sok_view`
+- [x] `V4__jobbsoker_sok.sql` – partial indexes for søk, sortering og fritekst (text_pattern_ops)
+- [x] Ingen parallell tabell, ingen pg_trgm, ingen backfill nødvendig
 
-- **Seed:** Opprett ett treff med 10 000 jobbsøkere (ulike statuser, navkontorer, veiledere)
-- **Warmup-kall:** Hent alle uten filtre, terskel 2 000 ms
-- **Målt kall:** Søk med navn-fritekst + status-filter + sortering, terskel 500 ms
-- **Sorteringskall:** Sorter på `invitert_dato` (annen sortering enn naturlig rekkefølge), terskel 500 ms
+### Backend (Kotlin/Javalin)
+
+- [x] `JobbsøkerSokRepository` – søk mot viewet med dynamisk SQL og parameteriserte WHERE-klausuler
+  - Fritekst: 11-sifret → eksakt fnr-match, ellers prefix-match på `LOWER(fornavn)` / `LOWER(etternavn)`
+  - Status-filter: `IN (?)`-klausul
+  - Paginering: `LIMIT/OFFSET` med side-clamping
+  - Sortering: `navn` (etternavn + fornavn) eller `lagt-til` (dato fra hendelse)
+  - Tellinger (skjulte/slettede) i egen query
+  - Minside-hendelser hentes separat for treff på paginert side
+- [x] `JobbsøkerSøkModeller` – request/response DTOer + sorteringsenums med Jackson-serialisering
+- [x] `JobbsøkerController.søkJobbsøkereHandler()` – POST-endepunkt som erstatter `hentJobbsøkereHandler()`
+  - Validerer `side >= 1` og `antallPerSide in 1..100`
+  - Autorisasjon: kun eiere og utviklere
+- [x] `JobbsøkerService.søkJobbsøkere()` – delegerer til `JobbsøkerSokRepository`
+- [x] Refaktorert `leggTilJobbsøkere()` med hjelpemetoder for bedre lesbarhet
+
+### Frontend (Next.js/TypeScript)
+
+- [x] `useJobbsøkerSøk()` – SWR POST-hook med Zod-validert respons og body-basert cache-nøkkel
+- [x] `useSWRPost()` – generisk SWR-hook for POST-forespørsler
+- [x] `JobbsøkerSøkContext` – URL-synkronisert filter/sortering/paginering via `nuqs`
+- [x] `JobbsøkerFilterrad` – søkefelt med enter-submit + statusfilter-popover
+- [x] `StatusFilter` – checkboxgruppe for LAGT_TIL, INVITERT, SVART_JA, SVART_NEI
+- [x] `JobbsøkerSøkChips` – aktive filtre som fjernbare chips
+- [x] `JobbsøkerSortHeader` – sorteringsknapper med retningsikon
+- [x] `Jobbsøkere` – hovedkomponent med paginering, bulk-avkrysning og invitasjonsflyt
+- [x] MSW-mock (`jobbsøkereMswBackend.ts`) – komplett mock av søke-backend for lokal utvikling
+- [x] `useJobbsøkere` beholdt som kompatibilitetswrapper for andre komponenter
+
+### Tester
+
+- [x] **Backend komponenttester** (`JobbsøkerSokKomponenttest`): 27 tester
+  - Paginering, side-clamping, filtrering, kombinerte filtre, sortering (begge felt, begge retninger)
+  - Fritekst (navn-prefix og fnr-eksakt), autorisasjon (403), skjulte/slettede ekskludert
+  - Null-håndtering, minsideHendelser, treff-isolasjon
+- [x] **Backend ytelsestest** (`JobbsøkerSokYtelsestest`): 10K jobbsøkere, warmup 2s, målt 500ms
+- [x] **Frontend Playwright-tester**: Statusfiltrering, fritekst-søk, sortering, paginering, URL-synk
+- [x] **Frontend visuell snapshot-testing**: Basisvisning og filtrert visning
+
+### Ikke implementert i MVP (planlagt for senere)
+
+- [ ] Dato-basert feature toggle for utvidede filtre
+- [ ] Innsatsgruppe-filter
+- [ ] Geografi-filtre (fylke/kommune)
+- [ ] Nav-kontor-filter
+- [ ] Veileder-filter
+- [ ] Trigram-fritekst over flere felter (krever enten parallell tabell eller pg_trgm på view)
 
 Ytelsen måles ende-til-ende (SQL-query inkl. indeksbruk), ikke bare DB-tid. Med trigram-indeksert fritekstsøk, B-tree-indekser på filtreringsfelter og 10K rader bør dette holde komfortabelt.
 
@@ -629,53 +639,49 @@ LIMIT 25 OFFSET (side-1)*25;
 ## Vedlegg: Flow diagram – Søk og filtrering (MVP)
 
 ```
-MVP – Én handler for alle jobbsøkere (med eller uten filtre)
+MVP – POST-basert søk mot database-view
 ──────────────────────────────────
 
-Frontend uten filtre:
-  GET /api/rekrutteringstreff/{treffId}/jobbsoker?side=1&antallPerSide=25
+Frontend søk (POST med JSON body):
+  POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
+  body: { "side": 1, "antallPerSide": 25 }
     ↓ (returnerer alle aktive jobbsøkere med paginering)
 
-Frontend med filtre:
-  GET /api/rekrutteringstreff/{treffId}/jobbsoker
-    ?fritekst=Ola&status=INVITERT&side=1&antallPerSide=25
-    ↓ (returnerer filtrert resultat med paginering)
-
-Fnr-oppslag (eget endepunkt):
+Frontend søk med filtre (POST med JSON body):
   POST /api/rekrutteringstreff/{treffId}/jobbsoker/sok
-    body: { "fodselsnummer": "12345678901" }
-    ↓ (returnerer match eller 404)
+  body: {
+    "fritekst": "Ola",
+    "status": ["INVITERT"],
+    "sortering": "navn",
+    "retning": "asc",
+    "side": 1,
+    "antallPerSide": 25
+  }
+    ↓ (returnerer filtrert resultat med paginering)
 
 Begge søke-casene:
     ↓
-SQL mot jobbsoker_sok-tabellen (parallell søketabell):
-  SELECT COUNT(*) FROM jobbsoker_sok
-  WHERE
-    rekrutteringstreff_id = ?
-    AND er_synlig = true
-    AND status != 'SLETTET'
-    AND (samme filtre som under)
+SQL mot jobbsoker_sok_view (database-view):
+  -- Telling
+  SELECT count(*) FROM jobbsoker_sok_view v
+  WHERE v.treff_id = ?
+    AND (LOWER(v.fornavn) LIKE ? OR LOWER(v.etternavn) LIKE ?)  -- prefix-søk
+    AND (v.status IN (?))                                        -- status-filter
 
-  SELECT * FROM jobbsoker_sok
-  WHERE
-    rekrutteringstreff_id = ?
-    AND er_synlig = true
-    AND status != 'SLETTET'
-    AND (sok_tekst ILIKE ? OR fritekst IS NULL)  -- bruker pg_trgm-indeks
-    AND (status = ANY(?) OR status-liste IS NULL)
-    AND (innsatsgruppe = ANY(?) OR innsatsgruppe-liste IS NULL)
-    AND (fylke = ? OR fylke IS NULL)
-    AND (kommune = ? OR kommune IS NULL)
-    AND (navkontor = ? OR navkontor IS NULL)
-    AND (veileder_navident = ? OR veileder IS NULL)
-  ORDER BY (sortering)
-  LIMIT antallPerSide OFFSET (side-1)*antallPerSide
+  -- Treff
+  SELECT ... FROM jobbsoker_sok_view v
+  WHERE (samme filtre)
+  ORDER BY LOWER(v.etternavn) ASC, LOWER(v.fornavn) ASC
+  LIMIT ? OFFSET ?
+
+  -- Tellinger (skjulte/slettede)
+  SELECT COUNT(*) FILTER (WHERE status != 'SLETTET' AND er_synlig = FALSE) ...
     ↓
-GIN- og B-tree-indekser håndterer WHERE-klausulene raskt
+Partial indexes på jobbsoker + hendelse-indeks håndterer WHERE-klausulene
     ↓
 JSON-respons med resultater + side-info
     ↓
-Frontend viser resultater + paginering
+Frontend viser resultater + chips + paginering
 ```
 
 ---
@@ -687,23 +693,17 @@ Frontend viser resultater + paginering
 - [Database.md](../2-arkitektur/database.md) – tabell-struktur
 - [Kandidatsøk-integrasjon](../4-integrasjoner/) – Arena/kandidatsøk-API
 
-## Antagelser gjort
+## Antagelser og valg
 
-✅ **Backend:** Én handler – erstatter `hentJobbsøkereHandler()` – håndterer både "hent alle" og "søk med filtre"  
-✅ **Frontend:** Én custom hook `useJobbsøkerSøk()` – håndterer begge casene (filtre valgfrie)  
-✅ **Veileder og navkontor:** Allerede lagret ved innleggelse  
-✅ **Database-strategi:** Parallell søketabell `jobbsoker_sok` – separert fra domenetabellen `jobbsoker`  
-✅ **Kandidatdata:** `innsatsgruppe`, `fylke`, `kommune`, `poststed`, `telefonnummer` kopieres fra kandidatsøk ved opprettelse  
-✅ **Trigram-indeksert fritekst:** Generert kolonne `sok_tekst` med navn + poststed + kommune + fylke + navkontor + veiledernavn + veilederident + telefonnummer, brukt med `pg_trgm`  
-✅ **Indekser:** GIN på `sok_tekst` via `gin_trgm_ops`, samt B-tree på status, innsatsgruppe, fylke, kommune, navkontor, veileder og invitert_dato  
+✅ **Backend:** POST-basert søkeendepunkt erstatter `hentJobbsøkereHandler()` – håndterer både "hent alle" og "søk med filtre"  
+✅ **Frontend:** `useJobbsøkerSøk()` + `JobbsøkerSøkContext` med URL-synkronisert tilstand via `nuqs`  
+✅ **Database-strategi:** View `jobbsoker_sok_view` mot eksisterende tabeller – enklere enn parallell tabell  
+✅ **Fritekst:** Prefix-match på navn + eksakt match på fødselsnummer  
+✅ **Indekser:** Partial B-tree med `text_pattern_ops` for prefix-søk, partiell indeks for aktive jobbsøkere  
+✅ **Sortering:** `navn` (etternavn + fornavn) og `lagt-til` (dato) med eksplisitt retning  
+✅ **Paginering:** Backend-håndtert med `side` + `antallPerSide`, side-clamping ved for høy side  
 ✅ **OpenSearch:** Utelukket – synkron PostgreSQL-løsning  
-✅ **Filtre:** Status, innsatsgruppe, fylke/kommune, navkontor, veileder  
-✅ **Fødselsnummer:** Inkludert i response for visning i kandidatkort. Fødselsnummer-oppslag gjøres via eget POST-endepunkt  
-✅ **Fødselsnummer-oppslag:** Treff-skopet via `rekrutteringstreff_id + fodselsnummer`  
-✅ **Veileder:** NULL-felter ignoreres i filtrering  
-✅ **Paginering:** Backend-håndtert via `side` + `antallPerSide` – **påkrevd**  
-✅ **Paginering og totalt:** Egen `COUNT(*)`-query – skjulte/slettede er aldri med i telling eller resultat  
-✅ **Sortering:** `navn`, `lagt-til` med eksplisitt retning (`asc`/`desc`)  
-✅ **Admin:** admin = utvikler, samme tilgang  
-✅ **Ytelsestest:** Følger `RekrutteringstreffSokYtelsestest`-mønster med 10K jobbsøkere, warmup 2s, målt 500ms  
-✅ **Ikke inkludert:** Reisevei, vis slettede, prioriterte målgrupper, hull i CV, notater/intern status
+✅ **Autorisasjon:** Kun eiere og utviklere  
+✅ **Ytelsestest:** 10K jobbsøkere, warmup 2s, målt 500ms  
+✅ **MinsideHendelser:** Kun `MOTTATT_SVAR_FRA_MINSIDE`-hendelser, hentet separat per side  
+⬜ **Planlagt:** Innsatsgruppe, geografi, navkontor, veileder-filtre (krever evt. parallell tabell)
