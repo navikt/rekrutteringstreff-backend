@@ -111,10 +111,10 @@ Når en veileder legger til en jobbsøker via «Finn og legg til» (kandidatsøk
 
 | Felt                                           | Begrunnelse                                                                                                                                                                       |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CV-data (kompetanse, yrkeserfaring, utdanning) | For mye data, ikke relevant for listefiltring                                                                                                                                     |
+| CV-data (kompetanse, yrkeserfaring, utdanning) | For mye data, ikke relevant for listefiltrering                                                                                                                                    |
 | Reisevei / reiseavstand                        | Ikke relevant for treff-konteksten                                                                                                                                                |
 | Hull i CV                                      | Kompleks algoritme (2 år uten jobb/utdanning siste 5 år) – krever enten kandidatsøk-API-endring for å eksponere flagget, eller lokal beregning fra CV-data. **Vurderes separat.** |
-| Førerkort, språk, sertifikater                 | For detaljert for listefiltring                                                                                                                                                   |
+| Førerkort, språk, sertifikater                 | For detaljert for listefiltrering                                                                                                                                                  |
 | E-post                                         | Ikke relevant for søk/filtrering                                                                                                                                                  |
 
 ### Prioriterte målgrupper
@@ -602,7 +602,7 @@ LIMIT 25 OFFSET (side-1)*25;
 
 **Løsning:** `pg_trgm` + GIN-indeks på `sok_tekst`, B-tree-indekser på filtreringsfelter og partiell indeks på aktive håndterer disse volumene.
 
-### 2. Kandidatdata kopiert ved opprettelse
+### 3. Kandidatdata kopiert ved opprettelse
 
 **Valg:** Kopier utvalgte felt fra kandidatsøkresultatet ved opprettelse. Feltene lagres i `jobbsoker_sok`.
 
@@ -615,14 +615,14 @@ LIMIT 25 OFFSET (side-1)*25;
 
 **Felter som IKKE kopieres:**
 
-- CV-data (kompetanse, yrkeserfaring, utdanning) – for detaljert, ikke relevant for listefiltring
+- CV-data (kompetanse, yrkeserfaring, utdanning) – for detaljert, ikke relevant for listefiltrering
 - Prioriterte målgrupper – tas ikke med nå
 - Hull i CV – tas ikke med nå
 - Reisevei – ikke relevant for treff
 
 **Begrunnelse:** Backend beriker jobbsøkere med data fra kandidatsøk-API ved opprettelse. Dersom frontend allerede sender feltene, brukes de direkte; ellers henter backend dem via `/api/multiple-lookup-cv`. Oppslaget er graceful – jobbsøkere som ikke finnes i kandidatsøk legges til uten berikelse, og frontend får beskjed om hvilke som mangler (HTTP 207, se under).
 
-### 3. Paginering og sortering
+### 4. Paginering og sortering
 
 **Valg:** Backend håndterer både paginering og sortering via query-params.
 
