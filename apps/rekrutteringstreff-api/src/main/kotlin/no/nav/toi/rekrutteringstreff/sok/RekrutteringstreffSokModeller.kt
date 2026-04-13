@@ -38,7 +38,7 @@ enum class PublisertStatus(@JsonValue val jsonVerdi: String) {
 
 
         fun fraDbVerdiMedFrist(verdi: RekrutteringstreffStatus, fristUtgatt: Boolean): PublisertStatus? = when (verdi) {
-            RekrutteringstreffStatus.PUBLISERT -> if (fristUtgatt) ÅPEN_FOR_SØKERE else SØKNADSFRIST_PASSERT
+            RekrutteringstreffStatus.PUBLISERT -> if (fristUtgatt) SØKNADSFRIST_PASSERT else ÅPEN_FOR_SØKERE
             else -> return null
         }
     }

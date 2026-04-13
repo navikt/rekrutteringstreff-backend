@@ -253,9 +253,6 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                     }
                 }
             }
-
-
-
         }
 
         if (statusClauses.isEmpty()) {
