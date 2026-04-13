@@ -112,7 +112,7 @@ class RekrutteringstreffSokController(
                 throw IllegalArgumentException("Ugyldig status: $it")
             }
         }
-        val publisertStatuser =  ctx.queryParam("publisertSTatuser")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
+        val publisertStatuser =  ctx.queryParam("publisertStatuser")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
             try {
                 PublisertStatus.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
                 throw IllegalArgumentException("Ugyldig status: $it")
