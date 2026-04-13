@@ -10,7 +10,7 @@ Når en markedskontakt legger til en arbeidsgiver i et rekrutteringstreff, skal 
 | arbeidsspråk           | Enum / Tagliste      | Språk som kreves i stillingen. Samme verdier som `workLanguage` på stilling. **Vurdering**: enum eller tagliste? |
 | antall                 | Positivt Heltall     | Antall stillinger arbeidsgiver ønsker å fylle                                                                    |
 | ansettelsesform        | Nedtrekksliste       | Fast, Vikariat, Engasjement, Prosjekt, Sesong, osv. Samme verdier som `engagementtype` på stilling               |
-| personlige egenskaper? | Nedtrekksliste       | Janzz personlige egenskaper?                                                                                     |
+| personlige egenskaper? | Tagliste (typeahead) | Janzz personlige egenskaper?                                                                                     |
 
 ## Hendelser
 
