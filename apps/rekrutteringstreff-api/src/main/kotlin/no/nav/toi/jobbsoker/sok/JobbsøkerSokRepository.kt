@@ -22,7 +22,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             val totalt = hentTotalt(conn, where, params)
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val tellinger = hentTellinger(conn, treffId)
-            val antallPerStatus = hentAntallPerStatus(conn, treffId)
+            val antallPerStatus = hentAntallPerStatus(conn, treffId, request)
             val treff = if (totalt == 0L) {
                 emptyList()
             } else {
@@ -77,16 +77,17 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         }
     }
 
-    private fun hentAntallPerStatus(conn: Connection, treffId: TreffId): Map<JobbsøkerStatus, Int> {
+    private fun hentAntallPerStatus(conn: Connection, treffId: TreffId, request: JobbsøkerSøkRequest): Map<JobbsøkerStatus, Int> {
+        val (where, params) = byggWhere(treffId, request.copy(status = null))
         val sql = """
             SELECT v.status, COUNT(*) AS antall
             FROM jobbsoker_sok_view v
-            WHERE v.treff_id = ?
+            $where
             GROUP BY v.status
         """.trimIndent()
         return conn.prepareStatement(sql).use { stmt ->
             stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
-            stmt.setObject(1, treffId.somUuid)
+            params.forEachIndexed { index, param -> settParam(stmt, index + 1, param) }
             stmt.executeQuery().use { rs ->
                 val result = mutableMapOf<JobbsøkerStatus, Int>()
                 while (rs.next()) {

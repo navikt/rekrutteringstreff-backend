@@ -646,4 +646,83 @@ class JobbsøkerSokKomponenttest {
         val alleMedHendelser = (side1.jobbsøkere + side2.jobbsøkere).filter { it.minsideHendelser.isNotEmpty() }
         assertThat(alleMedHendelser).hasSize(2)
     }
+
+    @Test
+    fun `antallPerStatus returnerer riktige tall for alle statuser`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("A"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("B"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("C"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Lise"), Etternavn("D"), null, null, null),
+        ), treffId)
+        db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2]), treffId)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_JA)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody()).body()
+        )
+
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(2)
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.INVITERT]).isEqualTo(1)
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.SVART_JA]).isEqualTo(1)
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.SVART_NEI]).isNull()
+    }
+
+    @Test
+    fun `antallPerStatus er ufiltrert selv med statusfilter aktivt`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("A"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("B"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("C"), null, null, null),
+        ), treffId)
+        db.inviterJobbsøkere(listOf(personTreffIder[1]), treffId)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody("status" to listOf("INVITERT"))).body()
+        )
+
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(2)
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.INVITERT]).isEqualTo(1)
+    }
+
+    @Test
+    fun `antallPerStatus ekskluderer skjulte og slettede jobbsøkere`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("A"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Skjult"), Etternavn("B"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Slettet"), Etternavn("C"), null, null, null),
+        ), treffId)
+        db.settSynlighet(personTreffIder[1], false)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody()).body()
+        )
+
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(1)
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.SLETTET]).isNull()
+    }
+
+    @Test
+    fun `antallPerStatus filtreres av fritekst men ikke av statusfilter`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Ola"), Etternavn("Hansen"), null, null, null),
+        ), treffId)
+        db.inviterJobbsøkere(listOf(personTreffIder[2]), treffId)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody("fritekst" to "ola")).body()
+        )
+
+        assertThat(dto.totalt).isEqualTo(2)
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(1)
+        assertThat(dto.antallPerStatus[JobbsøkerStatus.INVITERT]).isEqualTo(1)
+    }
 }
