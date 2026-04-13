@@ -2,7 +2,6 @@ package no.nav.toi.rekrutteringstreff.sok
 
 import com.fasterxml.jackson.annotation.JsonValue
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
-import no.nav.toi.rekrutteringstreff.sok.SokStatus.Companion.fraDbVerdi
 import java.time.Instant
 
 enum class SokStatus(@JsonValue val jsonVerdi: String) {
@@ -34,7 +33,7 @@ enum class PublisertStatus(@JsonValue val jsonVerdi: String) {
     companion object {
         fun fraJsonVerdi(verdi: String): PublisertStatus =
             PublisertStatus.entries.find { it.jsonVerdi == verdi }
-                ?: throw IllegalArgumentException("Ugyldig status: $verdi")
+                ?: throw IllegalArgumentException("Ugyldig publisertstatus: $verdi")
 
 
         fun fraDbVerdiMedFrist(verdi: RekrutteringstreffStatus, fristUtgatt: Boolean): PublisertStatus? = when (verdi) {

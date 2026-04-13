@@ -144,8 +144,8 @@ class RekrutteringstreffSokRepositoryTest {
         assertThat(publisert.size).isEqualTo(1)
 
         assertThat(resultat.publisertstatusaggregering).hasSize(1)
-        val søknadsfristPassert = resultat.publisertstatusaggregering.filter { it.verdi == PublisertStatus.ÅPEN_FOR_SØKERE.name }
-        assertThat(søknadsfristPassert.size).isEqualTo(1)
+        val åpenForSøkere = resultat.publisertstatusaggregering.filter { it.verdi == PublisertStatus.ÅPEN_FOR_SØKERE.name }
+        assertThat(åpenForSøkere.size).isEqualTo(1)
     }
 
     @Test

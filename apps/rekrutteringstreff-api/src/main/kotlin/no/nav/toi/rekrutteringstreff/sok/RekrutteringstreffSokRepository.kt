@@ -265,16 +265,6 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         )
     }
 
-    private fun byggStatusfilter(
-        statuser: List<SokStatus>,
-        publisertStatuser: List<PublisertStatus>?,
-    ): Statusfilter {
-        return Statusfilter(
-            statuser = statuser,
-            publisertStatuser = publisertStatuser,
-        )
-    }
-
     private fun byggStatusParametere(statuser: List<SokStatus>?): List<SqlParam> {
         if (statuser.isNullOrEmpty()) {
             return emptyList()

@@ -25,7 +25,7 @@ class RekrutteringstreffSokController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
             OpenApiParam(name = "visning", type = Visning::class, required = false, description = "Filter for hvilke treff som skal vises", example = "alle"),
-            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel publisert,utkast", example = "PUBLISERT,UTKAST"),
+            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel PUBLISERT,UTKAST", example = "PUBLISERT,UTKAST"),
             OpenApiParam(name = "publisertStatuser", type = String::class, required = false, description = "Kommaseparert liste av publisert statuser", example = "ÅPEN_FOR_SØKERE,SØKNADSFRIST_PASSERT"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
@@ -85,6 +85,10 @@ class RekrutteringstreffSokController(
                         {"verdi": "UTKAST", "antall": 12},
                         {"verdi": "FULLFØRT", "antall": 3},
                         {"verdi": "AVLYST", "antall": 2}
+                    ],
+                    "publisertstatusaggregering": [
+                        {"verdi": "ÅPEN_FOR_SØKERE", "antall": 8},
+                        {"verdi": "SØKNADSFRIST_PASSERT", "antall": 4}
                     ]
                 }"""
             )]
@@ -116,7 +120,7 @@ class RekrutteringstreffSokController(
         val publisertStatuser =  ctx.queryParam("publisertStatuser")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
             try {
                 PublisertStatus.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
-                throw IllegalArgumentException("Ugyldig status: $it")
+                throw IllegalArgumentException("Ugyldig publisertstatus: $it")
             }
         }
         val publisertFristUtgatt = ctx.queryParam("publisertFristUtgatt")?.let {

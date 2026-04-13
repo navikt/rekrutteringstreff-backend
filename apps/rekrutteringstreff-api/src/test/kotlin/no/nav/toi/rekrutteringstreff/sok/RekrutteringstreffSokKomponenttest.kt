@@ -223,9 +223,9 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
-        val publisertApen = respons.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
+        val publisert = respons.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
         val utkast = respons.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
-        assertThat(publisertApen?.antall).isEqualTo(2)
+        assertThat(publisert?.antall).isEqualTo(2)
         assertThat(utkast?.antall).isEqualTo(1)
     }
 
