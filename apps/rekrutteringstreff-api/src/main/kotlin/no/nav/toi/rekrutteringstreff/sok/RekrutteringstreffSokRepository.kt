@@ -125,8 +125,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         val sqlPubliserteStatuser = """
             SELECT
                 CASE
-                    WHEN frist_utgatt = false THEN 'SØKNADSFRIST_PASSERT'
-                    WHEN frist_utgatt = true THEN 'ÅPEN_FOR_SØKERE'
+                    WHEN frist_utgatt = true THEN 'SØKNADSFRIST_PASSERT'
+                    WHEN frist_utgatt = false THEN 'ÅPEN_FOR_SØKERE'
                 END AS aggregert_status,
                 count(*) AS antall
             FROM rekrutteringstreff_sok_view
