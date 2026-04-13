@@ -192,7 +192,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Publisert treff", status = RekrutteringstreffStatus.PUBLISERT)
         opprettTreffMedEier(tittel = "Utkast treff", status = RekrutteringstreffStatus.UTKAST)
 
-        val response = sokGet("?statuser=publisert")
+        val response = sokGet("?statuser=PUBLISERT")
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
@@ -223,8 +223,8 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(response.statusCode()).isEqualTo(200)
 
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
-        val publisertApen = respons.statusaggregering.find { it.verdi == SokStatus.PUBLISERT_APEN }
-        val utkast = respons.statusaggregering.find { it.verdi == SokStatus.UTKAST }
+        val publisertApen = respons.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
+        val utkast = respons.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
         assertThat(publisertApen?.antall).isEqualTo(2)
         assertThat(utkast?.antall).isEqualTo(1)
     }
@@ -268,7 +268,7 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Utkast", status = RekrutteringstreffStatus.UTKAST)
         opprettTreffMedEier(tittel = "Avlyst", status = RekrutteringstreffStatus.AVLYST)
 
-        val response = sokGet("?statuser=publisert,utkast")
+        val response = sokGet("?statuser=PUBLISERT,UTKAST")
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).hasSize(2)
     }
@@ -331,16 +331,16 @@ class RekrutteringstreffSokKomponenttest {
         opprettTreffMedEier(tittel = "Bergen pub", status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
         opprettTreffMedEier(tittel = "Oslo utkast", status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
 
-        val response = sokGet("?statuser=publisert&kontorer=0315")
+        val response = sokGet("?statuser=PUBLISERT&kontorer=0315")
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
 
         assertThat(respons.treff).hasSize(1)
         assertThat(respons.treff.first().tittel).isEqualTo("Oslo pub")
 
         val statusAgg = respons.statusaggregering
-        val publisertApen = statusAgg.find { it.verdi == SokStatus.PUBLISERT_APEN }
-        val utkast = statusAgg.find { it.verdi == SokStatus.UTKAST }
-        assertThat(publisertApen?.antall).isEqualTo(1)
+        val publisert = statusAgg.find { it.verdi == SokStatus.PUBLISERT.name }
+        val utkast = statusAgg.find { it.verdi == SokStatus.UTKAST.name }
+        assertThat(publisert?.antall).isEqualTo(1)
         assertThat(utkast?.antall).isEqualTo(1)
     }
 
