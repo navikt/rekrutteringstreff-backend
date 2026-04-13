@@ -25,7 +25,8 @@ class RekrutteringstreffSokController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
             OpenApiParam(name = "visning", type = Visning::class, required = false, description = "Filter for hvilke treff som skal vises", example = "alle"),
-            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel publisert,utkast", example = "publisert,utkast"),
+            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel publisert,utkast", example = "PUBLISERT,UTKAST"),
+            OpenApiParam(name = "publisertStatuser", type = String::class, required = false, description = "Kommaseparert liste av publisert statuser", example = "ÅPEN_FOR_SØKERE,SØKNADSFRIST_PASSERT"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
@@ -60,7 +61,7 @@ class RekrutteringstreffSokController(
                             "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
                             "tittel": "Jobbmesse for helsesektoren",
                             "beskrivelse": null,
-                            "status": "utkast",
+                            "status": "UTKAST",
                             "fraTid": null,
                             "tilTid": null,
                             "svarfrist": null,
