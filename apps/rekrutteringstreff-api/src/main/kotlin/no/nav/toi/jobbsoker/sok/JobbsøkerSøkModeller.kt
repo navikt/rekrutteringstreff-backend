@@ -92,6 +92,7 @@ data class JobbsøkerSøkTreff(
     val status: JobbsøkerStatus,
     val lagtTilDato: Instant?,
     val lagtTilAv: String?,
+    val lagtTilAvNavn: String?,
     val minsideHendelser: List<MinsideHendelseSøkDto> = emptyList(),
 )
 

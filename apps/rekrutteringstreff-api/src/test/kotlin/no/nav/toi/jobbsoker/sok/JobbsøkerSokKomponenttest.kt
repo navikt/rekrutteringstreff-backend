@@ -725,4 +725,22 @@ class JobbsøkerSokKomponenttest {
         assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(1)
         assertThat(dto.antallPerStatus[JobbsøkerStatus.INVITERT]).isEqualTo(1)
     }
+
+    @Test
+    fun `jobbsøkersøk returnerer null lagtTilAvNavn for eldre opprettet-hendelser uten navn`() {
+        val treffId = opprettTreffMedEier()
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            treffId,
+            opprettetAv = "Z123456",
+        )
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody()).body()
+        )
+
+        assertThat(dto.jobbsøkere).hasSize(1)
+        assertThat(dto.jobbsøkere.single().lagtTilAv).isEqualTo("Z123456")
+        assertThat(dto.jobbsøkere.single().lagtTilAvNavn).isNull()
+    }
 }

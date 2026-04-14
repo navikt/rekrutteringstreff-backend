@@ -65,7 +65,8 @@ class JobbsøkerController(
                 "etternavn": "Nordmann",
                 "navkontor": "Nav Oslo",
                 "veilederNavn": "Kari Nordmann",
-                "veilederNavIdent": "NAV123"
+                "veilederNavIdent": "NAV123",
+                "lagtTilAvNavn": "Test Testesen"
               },
               {
                 "fødselsnummer": "10987654321",
@@ -73,7 +74,8 @@ class JobbsøkerController(
                 "etternavn": "Nordmann",
                 "navkontor": null,
                 "veilederNavn": null,
-                "veilederNavIdent": null
+                "veilederNavIdent": null,
+                "lagtTilAvNavn": "Test Testesen"
               }
             ]"""
             )]
@@ -86,10 +88,21 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val lagtTilAvNavn = dtoer
+            .mapNotNull { it.lagtTilAvNavn?.trim()?.takeIf(String::isNotEmpty) }
+            .distinct()
+            .let { navn ->
+                when (navn.size) {
+                    0 -> null
+                    1 -> navn.single()
+                    else -> throw IllegalArgumentException("lagtTilAvNavn må være lik for alle jobbsøkere i samme forespørsel")
+                }
+            }
         jobbsøkerService.leggTilJobbsøkere(
             dtoer.map { it.domene() },
             treff,
             ctx.extractNavIdent(),
+            lagtTilAvNavn,
         )
         ctx.status(201)
     }

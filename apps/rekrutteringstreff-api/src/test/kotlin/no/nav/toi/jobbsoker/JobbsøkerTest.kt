@@ -252,7 +252,8 @@ class JobbsøkerTest {
       "etternavn" : "Bruker",
       "navkontor" : "Oslo",
       "veilederNavn" : "Test Veileder",
-      "veilederNavIdent" : "NAV007"
+      "veilederNavIdent" : "NAV007",
+      "lagtTilAvNavn" : "Test Testesen"
     }]
 """.trimIndent()
         eierRepository.leggTil(treffId, listOf("testperson"))
@@ -281,6 +282,8 @@ class JobbsøkerTest {
         assertThat(jobbsoeker.navkontor).isEqualTo("Oslo")
         assertThat(jobbsoeker.veilederNavn).isEqualTo("Test Veileder")
         assertThat(jobbsoeker.veilederNavident).isEqualTo("NAV007")
+        assertThat(jobbsoeker.lagtTilAv).isEqualTo("testperson")
+        assertThat(jobbsoeker.lagtTilAvNavn).isEqualTo("Test Testesen")
     }
 
     @Test

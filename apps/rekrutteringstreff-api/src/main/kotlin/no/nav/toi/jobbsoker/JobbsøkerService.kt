@@ -37,6 +37,7 @@ class JobbsøkerService(
         jobbsøkere: List<LeggTilJobbsøker>,
         treffId: TreffId,
         navIdent: String,
+        lagtTilAvNavn: String? = null,
     ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
@@ -44,8 +45,8 @@ class JobbsøkerService(
         val gjenopprettedeJobbsøkere = finnGjenopprettedeJobbsøkere(jobbsøkere, slettedeJobbsøkere)
 
         dataSource.executeInTransaction { connection ->
-            opprettNyeJobbsøkere(connection, nyeJobbsøkere, treffId, navIdent)
-            gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId, navIdent)
+            opprettNyeJobbsøkere(connection, nyeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
+            gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
         }
 
         return LeggTilJobbsøkereResultat(
@@ -312,6 +313,7 @@ class JobbsøkerService(
         jobbsøkere: List<LeggTilJobbsøker>,
         treffId: TreffId,
         navIdent: String,
+        lagtTilAvNavn: String?,
     ) {
         if (jobbsøkere.isEmpty()) return
 
@@ -320,7 +322,7 @@ class JobbsøkerService(
         val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, navIdent, now)
         val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
 
-        jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent, now)
+        jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent, now, lagtTilAvNavn)
     }
 
     private fun gjenopprettJobbsøkere(
@@ -328,6 +330,7 @@ class JobbsøkerService(
         personTreffIder: List<PersonTreffId>,
         treffId: TreffId,
         navIdent: String,
+        lagtTilAvNavn: String?,
     ) {
         if (personTreffIder.isEmpty()) return
 
@@ -342,6 +345,7 @@ class JobbsøkerService(
             personTreffIder = personTreffIder,
             opprettetAv = navIdent,
             tidspunkt = Instant.now(),
+            lagtTilAvNavn = lagtTilAvNavn,
         )
     }
 }

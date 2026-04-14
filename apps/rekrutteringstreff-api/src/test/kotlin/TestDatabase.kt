@@ -31,12 +31,12 @@ class TestDatabase {
     /**
      * Legger til jobbsøkere med OPPRETTET-hendelse via repository.
      */
-    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson"): List<PersonTreffId> {
+    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson", lagtTilAvNavn: String? = null): List<PersonTreffId> {
         return dataSource.executeInTransaction { connection ->
             val now = Instant.now()
             val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, opprettetAv, now)
             val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
-            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv, now)
+            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv, now, lagtTilAvNavn)
             personTreffIder
         }
     }

@@ -123,7 +123,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             SELECT v.person_treff_id::text, v.fodselsnummer,
                    v.fornavn, v.etternavn, v.navkontor,
                    v.veileder_navn, v.veileder_navident,
-                   v.status, v.lagt_til_dato, v.lagt_til_av
+                   v.status, v.lagt_til_dato, v.lagt_til_av, v.lagt_til_av_navn
             FROM jobbsoker_sok_view v
             $where
             ORDER BY ${sorteringsfelt.sql(sorteringsretning)}
@@ -193,6 +193,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         status = JobbsøkerStatus.valueOf(getString("status")),
         lagtTilDato = getTimestamp("lagt_til_dato")?.toInstant(),
         lagtTilAv = getString("lagt_til_av"),
+        lagtTilAvNavn = getString("lagt_til_av_navn"),
     )
 
     private fun hentMinsideHendelser(

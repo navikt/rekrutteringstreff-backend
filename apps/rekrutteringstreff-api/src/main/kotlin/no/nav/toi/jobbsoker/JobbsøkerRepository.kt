@@ -39,8 +39,21 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         personTreffIder: List<PersonTreffId>,
         opprettetAv: String,
         tidspunkt: Instant,
+        lagtTilAvNavn: String? = null,
     ) {
-        leggTilHendelserForJobbsøkere(connection, JobbsøkerHendelsestype.OPPRETTET, personTreffIder, opprettetAv, tidspunkt = tidspunkt)
+        leggTilHendelserForJobbsøkere(
+            connection,
+            JobbsøkerHendelsestype.OPPRETTET,
+            personTreffIder,
+            opprettetAv,
+            hendelseData = opprettetHendelseData(lagtTilAvNavn),
+            tidspunkt = tidspunkt,
+        )
+    }
+
+    private fun opprettetHendelseData(lagtTilAvNavn: String?): String? {
+        val navn = lagtTilAvNavn?.trim()?.takeIf(String::isNotEmpty) ?: return null
+        return mapper.writeValueAsString(mapOf("lagtTilAvNavn" to navn))
     }
 
     private fun Connection.batchInsertJobbsøkere(

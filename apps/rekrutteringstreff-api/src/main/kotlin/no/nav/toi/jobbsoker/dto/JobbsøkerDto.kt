@@ -15,6 +15,7 @@ data class JobbsøkerDto(
     val navkontor: String?,
     val veilederNavn: String?,
     val veilederNavIdent: String?,
+    val lagtTilAvNavn: String? = null,
 ) {
     fun domene() = LeggTilJobbsøker(
         Fødselsnummer(fødselsnummer),
