@@ -215,6 +215,17 @@ object ExceptionMapping {
             )
         }
 
+        exception(KandidatsokOppslagFeiletException::class.java) { e, ctx ->
+            ctx.status(502).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.BAD_GATEWAY,
+                    ctx = ctx,
+                    feil = e.message
+                )
+            )
+        }
+
         exception(Exception::class.java) { e, ctx ->
             log.error("Uventet feil", e)
             ctx.status(500).json(

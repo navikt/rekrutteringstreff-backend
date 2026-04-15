@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -806,7 +807,7 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
 
         // Legg til tre jobbsøkere
         val jobbsøker1 = Jobbsøker(
@@ -888,7 +889,7 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
 
         // Legg til to jobbsøkere
         val jobbsøker1 = Jobbsøker(
@@ -1021,7 +1022,7 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
 
         // Legg til jobbsøkere
         val jobbsøker1 = Jobbsøker(
@@ -1096,7 +1097,7 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
 
         // Legg til jobbsøkere
         val jobbsøker1 = Jobbsøker(
@@ -1173,7 +1174,7 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
 
         // Legg til tre jobbsøkere
         val jobbsøker1 = Jobbsøker(
@@ -1270,7 +1271,7 @@ class RekrutteringstreffTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
-        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
 
         // Legg til jobbsøker
         val jobbsøker1 = Jobbsøker(

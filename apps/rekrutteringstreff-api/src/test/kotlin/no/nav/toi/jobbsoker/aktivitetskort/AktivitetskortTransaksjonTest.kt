@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.FailedMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
@@ -42,7 +43,7 @@ class AktivitetskortTransaksjonTest {
         aktivitetskortRepository = AktivitetskortRepository(db.dataSource)
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
         arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
         rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource))
     }
 

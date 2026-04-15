@@ -15,6 +15,7 @@ import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.OffsetDateTime
+import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.*
@@ -30,10 +31,12 @@ class TestDatabase {
     /**
      * Legger til jobbsøkere med OPPRETTET-hendelse via repository.
      */
-    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson"): List<PersonTreffId> {
-        return dataSource.connection.use { connection ->
-            val personTreffIder = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
-            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv)
+    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson", lagtTilAvNavn: String? = null): List<PersonTreffId> {
+        return dataSource.executeInTransaction { connection ->
+            val now = Instant.now()
+            val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, opprettetAv, now)
+            val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
+            jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv, now, lagtTilAvNavn)
             personTreffIder
         }
     }
@@ -236,6 +239,19 @@ class TestDatabase {
             setString(1, status.name)
             setObject(2, personTreffId.somUuid)
         }.executeUpdate()
+    }
+
+    fun leggTilMinsideHendelse(personTreffId: PersonTreffId, hendelseData: String) {
+        dataSource.connection.use { connection ->
+            jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                connection,
+                JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE,
+                listOf(personTreffId),
+                "system",
+                AktørType.SYSTEM,
+                hendelseData
+            )
+        }
     }
 
     fun hentJobbsøkerStatus(personTreffId: PersonTreffId): JobbsøkerStatus? = dataSource.connection.use { conn ->
@@ -453,18 +469,14 @@ class TestDatabase {
     }
 
     fun leggTilJobbsøkere(jobbsøkere: List<Jobbsøker>) {
-        // Kan ikke bruke jobbsøkerRepository.leggTil() her fordi testene trenger å spesifisere PersonTreffId
-        // Repository.leggTil() genererer nye UUID-er som gjør at inviter() feiler
         dataSource.connection.use { c ->
             jobbsøkere.forEach { js ->
-                // Hent treff_db_id
                 val treffDbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?")
                     .apply { setObject(1, js.treffId.somUuid) }
                     .executeQuery().let {
                         if (it.next()) it.getLong(1) else error("Treff ${js.treffId} finnes ikke")
                     }
 
-                // Legg til jobbsøker MED den spesifiserte PersonTreffId
                 val jobbsøkerDbId = c.prepareStatement(
                     """
                     INSERT INTO jobbsoker
@@ -474,7 +486,7 @@ class TestDatabase {
                     RETURNING jobbsoker_id
                     """.trimIndent()
                 ).apply {
-                    setObject(1, js.personTreffId.somUuid) // Bruk den spesifiserte UUID
+                    setObject(1, js.personTreffId.somUuid)
                     setLong(2, treffDbId)
                     setString(3, js.fødselsnummer.asString)
                     setString(4, js.fornavn.asString)
@@ -486,7 +498,6 @@ class TestDatabase {
                     if (it.next()) it.getLong(1) else error("Kunne ikke legge til jobbsøker")
                 }
 
-                // Legg til OPPRETTET hendelse
                 c.prepareStatement(
                     """
                     INSERT INTO jobbsoker_hendelse

@@ -8,6 +8,9 @@ import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Instant
@@ -15,37 +18,40 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
+data class LeggTilJobbsøkereResultat(
+    val antallLagtTil: Int,
+)
+
 class JobbsøkerService(
     private val dataSource: DataSource,
-    private val jobbsøkerRepository: JobbsøkerRepository
+    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val jobbsøkerSokRepository: JobbsøkerSokRepository,
 ) {
+    constructor(dataSource: DataSource, jobbsøkerRepository: JobbsøkerRepository) : this(
+        dataSource, jobbsøkerRepository, JobbsøkerSokRepository(dataSource)
+    )
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
 
-    fun leggTilJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, navIdent: String) {
+    fun leggTilJobbsøkere(
+        jobbsøkere: List<LeggTilJobbsøker>,
+        treffId: TreffId,
+        navIdent: String,
+        lagtTilAvNavn: String? = null,
+    ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
-
-        val nyeJobbsøkereSomIkkeHarVærtSlettet = jobbsøkere.filterNot { eksisterendeJobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } || slettedeJobbsøkere.any { slettet -> slettet.fødselsnummer == it.fødselsnummer } }
-
-        val nyeJobbsøkereSomHarVærtSlettet = slettedeJobbsøkere.filter { jobbsøkere.any { jobbsøker -> jobbsøker.fødselsnummer == it.fødselsnummer } }.map { it.personTreffId }
+        val nyeJobbsøkere = finnNyeJobbsøkere(jobbsøkere, eksisterendeJobbsøkere, slettedeJobbsøkere)
+        val gjenopprettedeJobbsøkere = finnGjenopprettedeJobbsøkere(jobbsøkere, slettedeJobbsøkere)
 
         dataSource.executeInTransaction { connection ->
-            if (nyeJobbsøkereSomIkkeHarVærtSlettet.isNotEmpty()) {
-                log.info("Legger til ${nyeJobbsøkereSomIkkeHarVærtSlettet.size} nye jobbsøkere for treff $treffId")
-                val personTreffIder = jobbsøkerRepository.leggTil(connection, nyeJobbsøkereSomIkkeHarVærtSlettet, treffId)
-                jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent)
-
-                // Synlighetsbehov publiseres av SynlighetsBehovScheduler som periodisk
-                // finner jobbsøkere uten evaluert synlighet og trigger need-meldinger.
-            }
-
-            if (nyeJobbsøkereSomHarVærtSlettet.isNotEmpty()) {
-                log.info("Gjenoppretter ${nyeJobbsøkereSomHarVærtSlettet.size} jobbsøkere for treff $treffId som tidligere har vært slettet")
-                jobbsøkerRepository.endreStatus(connection = connection, personTreffIder = nyeJobbsøkereSomHarVærtSlettet, jobbsøkerStatus = JobbsøkerStatus.LAGT_TIL)
-                jobbsøkerRepository.leggTilOpprettetHendelser(connection = connection, personTreffIder = nyeJobbsøkereSomHarVærtSlettet, opprettetAv = navIdent)
-            }
+            opprettNyeJobbsøkere(connection, nyeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
+            gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
         }
+
+        return LeggTilJobbsøkereResultat(
+            antallLagtTil = nyeJobbsøkere.size + gjenopprettedeJobbsøkere.size,
+        )
     }
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
@@ -150,20 +156,6 @@ class JobbsøkerService(
 
     fun hentSlettedeJobbsøkereUtenHendelser(treffId: TreffId): List<Jobbsøker> {
         return jobbsøkerRepository.hentSlettedeJobbsøkere(treffId)
-    }
-
-    /**
-     * Henter jobbsøkere med tellinger i to database-kall (jobbsøkere + tellinger).
-     * Returnerer domeneobjekt med alle data samlet.
-     */
-    fun hentJobbsøkereMedTellinger(treffId: TreffId): JobbsøkereMedTellinger {
-        val jobbsøkere = jobbsøkerRepository.hentJobbsøkere(treffId)
-        val tellinger = jobbsøkerRepository.hentJobbsøkerTellinger(treffId)
-        return JobbsøkereMedTellinger(
-            jobbsøkere = jobbsøkere,
-            antallSkjulte = tellinger.antallSkjulte,
-            antallSlettede = tellinger.antallSlettede
-        )
     }
 
     fun hentJobbsøker(treffId: TreffId, fnr: Fødselsnummer): Jobbsøker? {
@@ -276,14 +268,86 @@ class JobbsøkerService(
         return sisteRelevanteHendelse.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
     }
 
-    fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int =
-        jobbsøkerRepository.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, meldingTidspunkt)
+    fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
+        return dataSource.executeInTransaction { connection ->
+            jobbsøkerRepository.oppdaterSynlighetFraEvent(connection, fodselsnummer, erSynlig, meldingTidspunkt)
+        }
+    }
 
-    fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int =
-        jobbsøkerRepository.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, meldingTidspunkt)
+    fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
+        return dataSource.executeInTransaction { connection ->
+            jobbsøkerRepository.oppdaterSynlighetFraNeed(connection, fodselsnummer, erSynlig, meldingTidspunkt)
+        }
+    }
 
     fun hentFødselsnumreUtenEvaluertSynlighet(): List<String> =
         jobbsøkerRepository.hentFødselsnumreUtenEvaluertSynlighet()
+
+    fun søkJobbsøkere(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons =
+        jobbsøkerSokRepository.sok(treffId, request)
+
+    private fun finnNyeJobbsøkere(
+        ønskedeJobbsøkere: List<LeggTilJobbsøker>,
+        eksisterendeJobbsøkere: List<Jobbsøker>,
+        slettedeJobbsøkere: List<Jobbsøker>,
+    ): List<LeggTilJobbsøker> {
+        val eksisterendeFødselsnumre = eksisterendeJobbsøkere.map { it.fødselsnummer }.toSet()
+        val slettedeFødselsnumre = slettedeJobbsøkere.map { it.fødselsnummer }.toSet()
+        return ønskedeJobbsøkere.filterNot {
+            it.fødselsnummer in eksisterendeFødselsnumre || it.fødselsnummer in slettedeFødselsnumre
+        }
+    }
+
+    private fun finnGjenopprettedeJobbsøkere(
+        ønskedeJobbsøkere: List<LeggTilJobbsøker>,
+        slettedeJobbsøkere: List<Jobbsøker>,
+    ): List<PersonTreffId> {
+        val ønskedeFødselsnumre = ønskedeJobbsøkere.map { it.fødselsnummer }.toSet()
+        return slettedeJobbsøkere
+            .filter { it.fødselsnummer in ønskedeFødselsnumre }
+            .map { it.personTreffId }
+    }
+
+    private fun opprettNyeJobbsøkere(
+        connection: java.sql.Connection,
+        jobbsøkere: List<LeggTilJobbsøker>,
+        treffId: TreffId,
+        navIdent: String,
+        lagtTilAvNavn: String?,
+    ) {
+        if (jobbsøkere.isEmpty()) return
+
+        log.info("Legger til ${jobbsøkere.size} nye jobbsøkere for treff $treffId")
+        val now = Instant.now()
+        val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, navIdent, now)
+        val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
+
+        jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent, now, lagtTilAvNavn)
+    }
+
+    private fun gjenopprettJobbsøkere(
+        connection: java.sql.Connection,
+        personTreffIder: List<PersonTreffId>,
+        treffId: TreffId,
+        navIdent: String,
+        lagtTilAvNavn: String?,
+    ) {
+        if (personTreffIder.isEmpty()) return
+
+        log.info("Gjenoppretter ${personTreffIder.size} jobbsøkere for treff $treffId som tidligere har vært slettet")
+        jobbsøkerRepository.endreStatus(
+            connection = connection,
+            personTreffIder = personTreffIder,
+            jobbsøkerStatus = JobbsøkerStatus.LAGT_TIL,
+        )
+        jobbsøkerRepository.leggTilOpprettetHendelser(
+            connection = connection,
+            personTreffIder = personTreffIder,
+            opprettetAv = navIdent,
+            tidspunkt = Instant.now(),
+            lagtTilAvNavn = lagtTilAvNavn,
+        )
+    }
 }
 
 enum class MarkerSlettetResultat {

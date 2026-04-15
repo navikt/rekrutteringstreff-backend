@@ -16,6 +16,7 @@ import org.flywaydb.core.Flyway
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.sql.ResultSet
+import java.time.Instant
 import java.time.ZoneId
 import java.util.*
 import javax.sql.DataSource
@@ -252,8 +253,10 @@ class TestDatabase {
                             veilederNavIdent = js.veilederNavIdent
                         )
                     }
-                    val personTreffIder = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
-                    jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, "testperson")
+                    val tidspunkt = Instant.now()
+                    val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId, "testperson", tidspunkt)
+                    val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
+                    jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, "testperson", tidspunkt)
                 }
             }
     }

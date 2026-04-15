@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.synlighet
 
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
@@ -8,7 +9,7 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
-import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.rekrutteringstreff.HendelseRessurs
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -83,7 +84,7 @@ class SynlighetsKomponentTest {
         ).also { it.start() }
         authServer.start(port = authPort)
         
-        jobbsøkerService = JobbsøkerService(db.dataSource, JobbsøkerRepository(db.dataSource, mapper))
+        jobbsøkerService = JobbsøkerService(db.dataSource, JobbsøkerRepository(db.dataSource, mapper), JobbsøkerSokRepository(db.dataSource))
     }
 
     @BeforeEach
@@ -120,6 +121,23 @@ class SynlighetsKomponentTest {
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
+    private fun httpPostSøk(path: String): HttpResponse<String> {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:$appPort$path"))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString("{}"))
+            .build()
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+    }
+
+    private fun jobbsøkerPath(treffId: TreffId): String =
+        "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker"
+
+    private fun søkPath(treffId: TreffId): String =
+        "${jobbsøkerPath(treffId)}/sok"
+
     private fun opprettTreffMedEier(): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreff")
         eierRepository.leggTil(treffId, listOf("A123456"))
@@ -127,7 +145,7 @@ class SynlighetsKomponentTest {
     }
 
     @Test
-    fun `GET jobbsøkere filtrerer ut ikke-synlige jobbsøkere`() {
+    fun `POST jobbsøkersøk filtrerer ut ikke-synlige jobbsøkere`() {
         val treffId = opprettTreffMedEier()
         
         val synligJobbsøker = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
@@ -137,10 +155,10 @@ class SynlighetsKomponentTest {
         db.settSynlighet(personTreffIder[0], true)
         db.settSynlighet(personTreffIder[1], false)
         
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val response = httpPostSøk(søkPath(treffId))
         
         assertThat(response.statusCode()).isEqualTo(200)
-        val jobbsøkere = mapper.readValue<JobbsøkereOutboundDto>(response.body()).jobbsøkere
+        val jobbsøkere = mapper.readValue<JobbsøkerSøkRespons>(response.body()).jobbsøkere
         assertThat(jobbsøkere).hasSize(1)
         assertThat(jobbsøkere.first().fornavn).isEqualTo("Synlig")
     }
@@ -154,18 +172,18 @@ class SynlighetsKomponentTest {
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "A123456")
         
         // Jobbsøker er synlig som default (null = synlig)
-        val responseFør = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val responseFør = httpPostSøk(søkPath(treffId))
         assertThat(responseFør.statusCode()).isEqualTo(200)
-        val jobbsøkereFør = mapper.readValue<JobbsøkereOutboundDto>(responseFør.body()).jobbsøkere
+        val jobbsøkereFør = mapper.readValue<JobbsøkerSøkRespons>(responseFør.body()).jobbsøkere
         assertThat(jobbsøkereFør).hasSize(1)
         
         // Simuler at synlighetsmotor sender event om at person er kode 6/7
         jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, Instant.now())
         
         // Jobbsøker skal nå være filtrert ut fra API
-        val responseEtter = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val responseEtter = httpPostSøk(søkPath(treffId))
         assertThat(responseEtter.statusCode()).isEqualTo(200)
-        val jobbsøkereEtter = mapper.readValue<JobbsøkereOutboundDto>(responseEtter.body()).jobbsøkere
+        val jobbsøkereEtter = mapper.readValue<JobbsøkerSøkRespons>(responseEtter.body()).jobbsøkere
         assertThat(jobbsøkereEtter).isEmpty()
     }
 
@@ -179,16 +197,16 @@ class SynlighetsKomponentTest {
         db.settSynlighet(personTreffIder[0], false)
         
         // Jobbsøker er ikke synlig
-        val responseFør = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
-        val jobbsøkereFør = mapper.readValue<JobbsøkereOutboundDto>(responseFør.body()).jobbsøkere
+        val responseFør = httpPostSøk(søkPath(treffId))
+        val jobbsøkereFør = mapper.readValue<JobbsøkerSøkRespons>(responseFør.body()).jobbsøkere
         assertThat(jobbsøkereFør).isEmpty()
         
         // Simuler at synlighetsmotor sender event om at person er synlig igjen (f.eks. KVP avsluttet)
         jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, true, Instant.now())
         
         // Jobbsøker skal nå være med i API-responsen
-        val responseEtter = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
-        val jobbsøkereEtter = mapper.readValue<JobbsøkereOutboundDto>(responseEtter.body()).jobbsøkere
+        val responseEtter = httpPostSøk(søkPath(treffId))
+        val jobbsøkereEtter = mapper.readValue<JobbsøkerSøkRespons>(responseEtter.body()).jobbsøkere
         assertThat(jobbsøkereEtter).hasSize(1)
         assertThat(jobbsøkereEtter.first().fornavn).isEqualTo("Test")
     }
@@ -206,19 +224,19 @@ class SynlighetsKomponentTest {
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treff2, "A123456")
         
         // Begge treff har jobbsøkeren synlig
-        assertThat(mapper.readValue<JobbsøkereOutboundDto>(httpGet("/api/rekrutteringstreff/${treff1.somUuid}/jobbsoker").body()).jobbsøkere).hasSize(1)
-        assertThat(mapper.readValue<JobbsøkereOutboundDto>(httpGet("/api/rekrutteringstreff/${treff2.somUuid}/jobbsoker").body()).jobbsøkere).hasSize(1)
+        assertThat(mapper.readValue<JobbsøkerSøkRespons>(httpPostSøk(søkPath(treff1)).body()).jobbsøkere).hasSize(1)
+        assertThat(mapper.readValue<JobbsøkerSøkRespons>(httpPostSøk(søkPath(treff2)).body()).jobbsøkere).hasSize(1)
         
         // Synlighetsmotor markerer person som ikke-synlig
         jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, Instant.now())
         
         // Begge treff skal nå filtrere ut jobbsøkeren
-        assertThat(mapper.readValue<JobbsøkereOutboundDto>(httpGet("/api/rekrutteringstreff/${treff1.somUuid}/jobbsoker").body()).jobbsøkere).isEmpty()
-        assertThat(mapper.readValue<JobbsøkereOutboundDto>(httpGet("/api/rekrutteringstreff/${treff2.somUuid}/jobbsoker").body()).jobbsøkere).isEmpty()
+        assertThat(mapper.readValue<JobbsøkerSøkRespons>(httpPostSøk(søkPath(treff1)).body()).jobbsøkere).isEmpty()
+        assertThat(mapper.readValue<JobbsøkerSøkRespons>(httpPostSøk(søkPath(treff2)).body()).jobbsøkere).isEmpty()
     }
 
     @Test
-    fun `GET jobbsøkere returnerer korrekte telleverdier for synlige og skjulte jobbsøkere`() {
+    fun `POST jobbsøkersøk returnerer kun synlige jobbsøkere i totalt og liste`() {
         val treffId = opprettTreffMedEier()
         
         val synlig1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null)
@@ -234,19 +252,19 @@ class SynlighetsKomponentTest {
         db.settSynlighet(personTreffIder[3], false)
         db.settSynlighet(personTreffIder[4], false)
         
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val response = httpPostSøk(søkPath(treffId))
         
         assertThat(response.statusCode()).isEqualTo(200)
-        val dto = mapper.readValue<JobbsøkereOutboundDto>(response.body())
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
         
         assertThat(dto.jobbsøkere).hasSize(2)
-        assertThat(dto.antallSynlige).isEqualTo(2)
+        assertThat(dto.totalt).isEqualTo(2)
         assertThat(dto.antallSkjulte).isEqualTo(3)
         assertThat(dto.antallSlettede).isEqualTo(0)
     }
 
     @Test
-    fun `GET jobbsøkere returnerer korrekte telleverdier når det finnes slettede jobbsøkere`() {
+    fun `POST jobbsøkersøk ekskluderer slettede jobbsøkere fra totalt`() {
         val treffId = opprettTreffMedEier()
         
         val synlig = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null)
@@ -261,19 +279,19 @@ class SynlighetsKomponentTest {
         // Slett jobbsøkeren via service
         jobbsøkerService.markerSlettet(personTreffIder[2], treffId, "A123456")
         
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val response = httpPostSøk(søkPath(treffId))
         
         assertThat(response.statusCode()).isEqualTo(200)
-        val dto = mapper.readValue<JobbsøkereOutboundDto>(response.body())
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
         
         assertThat(dto.jobbsøkere).hasSize(1)
-        assertThat(dto.antallSynlige).isEqualTo(1)
+        assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.antallSkjulte).isEqualTo(1)
         assertThat(dto.antallSlettede).isEqualTo(1)
     }
 
     @Test
-    fun `GET jobbsøkere - slettet jobbsøker telles som slettet uavhengig av senere synlighetsendring`() {
+    fun `POST jobbsøkersøk - slettet jobbsøker forblir usynlig uavhengig av senere synlighetsendring`() {
         val treffId = opprettTreffMedEier()
         
         // Opprett to synlige jobbsøkere som skal slettes
@@ -293,15 +311,13 @@ class SynlighetsKomponentTest {
         // Endre synlighet til false for én av dem (simulerer synlighetsmotor-event)
         jobbsøkerService.oppdaterSynlighetFraEvent(fnr1.asString, false, Instant.now())
         
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val response = httpPostSøk(søkPath(treffId))
         
         assertThat(response.statusCode()).isEqualTo(200)
-        val dto = mapper.readValue<JobbsøkereOutboundDto>(response.body())
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
         
-        // Begge skal fortsatt telles som slettet, uavhengig av synlighetsendring
         assertThat(dto.jobbsøkere).isEmpty()
-        assertThat(dto.antallSynlige).isEqualTo(0)
-        assertThat(dto.antallSkjulte).isEqualTo(0)
+        assertThat(dto.totalt).isEqualTo(0)
         assertThat(dto.antallSlettede).isEqualTo(2)
     }
 
@@ -320,20 +336,18 @@ class SynlighetsKomponentTest {
         
         assertThat(resultat).isEqualTo(MarkerSlettetResultat.IKKE_FUNNET)
         
-        // Jobbsøkeren skal fortsatt telles som skjult, ikke slettet
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
-        val dto = mapper.readValue<JobbsøkereOutboundDto>(response.body())
+        // Jobbsøkeren er skjult så den skal ikke vises
+        val response = httpPostSøk(søkPath(treffId))
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
         
-        assertThat(dto.antallSynlige).isEqualTo(0)
-        assertThat(dto.antallSkjulte).isEqualTo(1)
-        assertThat(dto.antallSlettede).isEqualTo(0)
+        assertThat(dto.totalt).isEqualTo(0)
+        assertThat(dto.jobbsøkere).isEmpty()
     }
 
     @Test
-    fun `GET jobbsøkere - telleverdier summerer til totalt antall jobbsøkere`() {
+    fun `POST jobbsøkersøk - kun synlige ikke-slettede returneres med korrekt totalt`() {
         val treffId = opprettTreffMedEier()
         
-        // Opprett en blanding av synlige, skjulte og slettede jobbsøkere
         val synlig1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig1"), Etternavn("Person"), null, null, null)
         val synlig2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Synlig2"), Etternavn("Person"), null, null, null)
         val skjult = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Skjult"), Etternavn("Person"), null, null, null)
@@ -347,38 +361,31 @@ class SynlighetsKomponentTest {
         db.settSynlighet(personTreffIder[3], true)
         db.settSynlighet(personTreffIder[4], true)
         
-        // Slett jobbsøkerne som skal slettes
         jobbsøkerService.markerSlettet(personTreffIder[3], treffId, "A123456")
         jobbsøkerService.markerSlettet(personTreffIder[4], treffId, "A123456")
         
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val response = httpPostSøk(søkPath(treffId))
         
         assertThat(response.statusCode()).isEqualTo(200)
-        val dto = mapper.readValue<JobbsøkereOutboundDto>(response.body())
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
         
-        // Verifiser at invarianten holder: sum = totalt
-        val totalt = 5
-        assertThat(dto.antallSynlige + dto.antallSkjulte + dto.antallSlettede).isEqualTo(totalt)
-        
-        // Verifiser individuelle verdier
-        assertThat(dto.antallSynlige).isEqualTo(2)
+        assertThat(dto.jobbsøkere).hasSize(2)
+        assertThat(dto.totalt).isEqualTo(2)
         assertThat(dto.antallSkjulte).isEqualTo(1)
         assertThat(dto.antallSlettede).isEqualTo(2)
     }
 
     @Test
-    fun `GET jobbsøkere returnerer 0 for alle telleverdier når treffet er tomt`() {
+    fun `POST jobbsøkersøk returnerer tomt når treffet er tomt`() {
         val treffId = opprettTreffMedEier()
         
-        val response = httpGet("/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker")
+        val response = httpPostSøk(søkPath(treffId))
         
         assertThat(response.statusCode()).isEqualTo(200)
-        val dto = mapper.readValue<JobbsøkereOutboundDto>(response.body())
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
         
         assertThat(dto.jobbsøkere).isEmpty()
-        assertThat(dto.antallSynlige).isEqualTo(0)
-        assertThat(dto.antallSkjulte).isEqualTo(0)
-        assertThat(dto.antallSlettede).isEqualTo(0)
+        assertThat(dto.totalt).isEqualTo(0)
     }
 
     @Test

@@ -23,6 +23,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Navkontor
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -73,7 +74,7 @@ class JobbsokerControllerAutorisasjonsTest {
     private val eierRepository = EierRepository(database.dataSource)
     private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
     private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
-    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository)
+    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
     private val eierService = EierService(eierRepository, rekrutteringstreffRepository, database.dataSource)
     private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, eierService)
 
@@ -190,8 +191,10 @@ class JobbsokerControllerAutorisasjonsTest {
                 """.trimIndent())
             )
         }),
-        hentJobbsøkere({"http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker"}, {
-            HttpRequest.newBuilder().GET()
+        søkJobbsøkere({"http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker/sok"}, {
+            HttpRequest.newBuilder()
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
         }),
         hentJobbsøkerMedHendelser({ "http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff/jobbsoker/hendelser"}, {
             HttpRequest.newBuilder().GET()
@@ -225,10 +228,10 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Jobbsøkerrettet, HTTP_CREATED),
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Utvikler, HTTP_OK),
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Arbeidsgiverrettet, HTTP_OK),
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Utvikler, HTTP_OK),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Arbeidsgiverrettet, HTTP_OK),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Jobbsøkerrettet, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.ModiaGenerell, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Utvikler, HTTP_OK),
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Arbeidsgiverrettet, HTTP_OK),
@@ -258,11 +261,11 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.hentJobbsøkerMedHendelser, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
 
 
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
-        Arguments.of(Endepunkt.hentJobbsøkere, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.søkJobbsøkere, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
 
         Arguments.of(Endepunkt.SlettJobbsøker, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
         Arguments.of(Endepunkt.SlettJobbsøker, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),

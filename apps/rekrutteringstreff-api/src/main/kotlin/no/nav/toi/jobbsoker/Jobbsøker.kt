@@ -76,7 +76,7 @@ data class LeggTilJobbsøker(
     val etternavn: Etternavn,
     val navkontor: Navkontor?,
     val veilederNavn: VeilederNavn?,
-    val veilederNavIdent: VeilederNavIdent?
+    val veilederNavIdent: VeilederNavIdent?,
 )
 
 enum class JobbsøkerStatus {
