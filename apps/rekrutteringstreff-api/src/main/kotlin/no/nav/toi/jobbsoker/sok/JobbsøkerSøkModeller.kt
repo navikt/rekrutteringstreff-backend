@@ -87,8 +87,6 @@ data class JobbsøkerSøkTreff(
     val fornavn: String?,
     val etternavn: String?,
     val navkontor: String?,
-    val veilederNavn: String?,
-    val veilederNavident: String?,
     val status: JobbsøkerStatus,
     val lagtTilDato: Instant?,
     val lagtTilAv: String?,

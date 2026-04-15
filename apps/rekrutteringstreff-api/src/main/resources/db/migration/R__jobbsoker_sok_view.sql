@@ -8,8 +8,6 @@ SELECT
     j.fornavn,
     j.etternavn,
     j.navkontor,
-    j.veileder_navn,
-    j.veileder_navident,
     j.status,
     opprettet.tidspunkt AS lagt_til_dato,
     opprettet.aktøridentifikasjon AS lagt_til_av,

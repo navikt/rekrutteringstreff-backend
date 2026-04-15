@@ -122,7 +122,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         val sql = """
             SELECT v.person_treff_id::text, v.fodselsnummer,
                    v.fornavn, v.etternavn, v.navkontor,
-                   v.veileder_navn, v.veileder_navident,
                    v.status, v.lagt_til_dato, v.lagt_til_av, v.lagt_til_av_navn
             FROM jobbsoker_sok_view v
             $where
@@ -188,8 +187,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         fornavn = getString("fornavn"),
         etternavn = getString("etternavn"),
         navkontor = getString("navkontor"),
-        veilederNavn = getString("veileder_navn"),
-        veilederNavident = getString("veileder_navident"),
         status = JobbsøkerStatus.valueOf(getString("status")),
         lagtTilDato = getTimestamp("lagt_til_dato")?.toInstant(),
         lagtTilAv = getString("lagt_til_av"),

@@ -142,8 +142,6 @@ class JobbsøkerController(
                       "fornavn": "Ola",
                       "etternavn": "Nordmann",
                       "navkontor": "Nav Grünerløkka",
-                      "veilederNavn": "Kari Nordmann",
-                      "veilederNavident": "NAV123",
                       "status": "LAGT_TIL"
                     }
                   ],
