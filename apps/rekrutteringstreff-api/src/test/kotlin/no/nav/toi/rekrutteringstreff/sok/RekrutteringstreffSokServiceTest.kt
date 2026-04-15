@@ -144,8 +144,8 @@ class RekrutteringstreffSokServiceTest {
 
         assertThat(respons.treff).hasSize(1)
 
-        val statusPub = respons.statusaggregering.find { it.verdi == SokStatus.PUBLISERT_APEN }
-        val statusUtkast = respons.statusaggregering.find { it.verdi == SokStatus.UTKAST }
+        val statusPub = respons.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
+        val statusUtkast = respons.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
         assertThat(statusPub?.antall).isEqualTo(1)
         assertThat(statusUtkast?.antall).isEqualTo(1)
     }
