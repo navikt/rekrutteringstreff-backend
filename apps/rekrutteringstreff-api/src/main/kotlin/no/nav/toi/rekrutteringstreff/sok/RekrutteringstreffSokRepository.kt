@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.sok
 
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import java.sql.Connection
 import java.sql.ResultSet
 import javax.sql.DataSource
@@ -14,8 +15,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         navIdent: String?,
         kontorId: String?,
         statuser: List<SokStatus>?,
-        publisertApen: Boolean?,
-        publisertFristUtgatt: Boolean?,
+        publisertStatuser: List<PublisertStatus>?,
         kontorer: List<String>?,
         visning: Visning,
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
@@ -26,8 +26,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             navIdent = navIdent,
             kontorId = kontorId,
             statuser = null,
-            publisertApen = null,
-            publisertFristUtgatt = null,
+            publisertStatuser = null,
             kontorer = kontorer,
             visning = visning,
         )
@@ -35,8 +34,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             navIdent = navIdent,
             kontorId = kontorId,
             statuser = statuser,
-            publisertApen = publisertApen,
-            publisertFristUtgatt = publisertFristUtgatt,
+            publisertStatuser = publisertStatuser,
             kontorer = kontorer,
             visning = visning,
         )
@@ -46,6 +44,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 treff = hentTreff(conn, whereForTreffliste, paramsForTreffliste, sortering, side, antallPerSide),
                 antallTotalt = hentAntallTotalt(conn, whereForTreffliste, paramsForTreffliste),
                 statusaggregering = hentStatusaggregering(conn, whereForStatusaggregering, paramsForStatusaggregering),
+                publisertstatusaggregering = hentPublisertStatusaggregering(conn, whereForStatusaggregering, paramsForStatusaggregering),
             )
         }
     }
@@ -93,37 +92,65 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     }
 
     private fun hentStatusaggregering(conn: Connection, where: String, params: List<SqlParam>): List<FilterValg> {
-        val sql = """
+        val sqlStatuser = """
             SELECT
-                CASE
-                    WHEN status = 'PUBLISERT' AND frist_utgatt = false THEN 'publisert_apen'
-                    WHEN status = 'PUBLISERT' AND frist_utgatt = true THEN 'publisert_frist_utgatt'
-                    WHEN status = 'UTKAST' THEN 'utkast'
-                    WHEN status = 'FULLFØRT' THEN 'fullfort'
-                    WHEN status = 'AVLYST' THEN 'avlyst'
-                    ELSE lower(status)
-                END AS aggregert_status,
+                status AS aggregert_status,
                 count(*) AS antall
             FROM rekrutteringstreff_sok_view
             $where
             GROUP BY aggregert_status
             ORDER BY aggregert_status
         """.trimIndent()
-
-        return conn.prepareStatement(sql).use { stmt ->
+        val statusResultat = conn.prepareStatement(sqlStatuser).use { stmt ->
             stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
             settWhereParametere(stmt, params)
             stmt.executeQuery().use { rs ->
                 buildList {
                     while (rs.next()) {
-                        add(FilterValg(
-                            verdi = SokStatus.fraJsonVerdi(rs.getString("aggregert_status")),
-                            antall = rs.getLong("antall"),
-                        ))
+                        add(
+                            FilterValg(
+                                verdi = rs.getString("aggregert_status"),
+                                antall = rs.getLong("antall"),
+                            )
+                        )
                     }
                 }
             }
         }
+        return statusResultat
+    }
+
+    private fun hentPublisertStatusaggregering(conn: Connection, where: String, params: List<SqlParam>): List<FilterValg> {
+        val whereSeparator = if (where.isNotEmpty()) " and " else " WHERE "
+        val sqlPubliserteStatuser = """
+            SELECT
+                CASE
+                    WHEN frist_utgatt = true THEN 'SVARFRIST_PASSERT'
+                    WHEN frist_utgatt = false THEN 'ÅPEN_FOR_SØKERE'
+                END AS aggregert_status,
+                count(*) AS antall
+            FROM rekrutteringstreff_sok_view
+            $where $whereSeparator status = 'PUBLISERT'
+            GROUP BY aggregert_status
+            ORDER BY aggregert_status
+        """.trimIndent()
+         val publiserteStatusResultat = conn.prepareStatement(sqlPubliserteStatuser).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            settWhereParametere(stmt, params)
+            stmt.executeQuery().use { rs ->
+                buildList {
+                    while (rs.next()) {
+                        add(
+                            FilterValg(
+                                verdi = rs.getString("aggregert_status"),
+                                antall = rs.getLong("antall"),
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        return publiserteStatusResultat
     }
 
     private fun settWhereParametere(stmt: java.sql.PreparedStatement, params: List<SqlParam>) {
@@ -153,9 +180,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     private data class SqlParam(val value: Any, val type: ParamType)
     private data class Condition(val clause: String, val params: List<SqlParam>)
     private data class Statusfilter(
-        val eksplisitteStatuser: List<SokStatus>,
-        val taMedPublisertApen: Boolean,
-        val taMedPublisertFristUtgatt: Boolean,
+        val statuser: List<SokStatus>,
+        val publisertStatuser: List<PublisertStatus>?,
     )
     private enum class ParamType { STRING, STRING_ARRAY, STATUS_ARRAY, BOOLEAN }
 
@@ -163,14 +189,13 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         navIdent: String?,
         kontorId: String?,
         statuser: List<SokStatus>?,
-        publisertApen: Boolean?,
-        publisertFristUtgatt: Boolean?,
+        publisertStatuser: List<PublisertStatus>?,
         kontorer: List<String>?,
         visning: Visning,
     ): Pair<String, List<SqlParam>> {
         val conditions = listOfNotNull(
             byggVisningsCondition(visning, navIdent, kontorId),
-            byggStatusCondition(statuser, publisertApen, publisertFristUtgatt),
+            byggStatusCondition(statuser, publisertStatuser),
             byggKontorCondition(kontorer),
         )
 
@@ -201,21 +226,32 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         }
     }
 
+
     private fun byggStatusCondition(
         statuser: List<SokStatus>?,
-        publisertApen: Boolean?,
-        publisertFristUtgatt: Boolean?,
+        publisertStatuser: List<PublisertStatus>?,
     ): Condition? {
-        val statusfilter = byggStatusfilter(statuser, publisertApen, publisertFristUtgatt)
+        val erPublishedValgt = statuser?.contains(SokStatus.PUBLISERT) ?: false
+        val statuserUtenPublisertStatus = statuser?.filterNot { it == SokStatus.PUBLISERT }
+
         val statusClauses = buildList {
-            if (statusfilter.eksplisitteStatuser.isNotEmpty()) {
-                add("status = ANY(?)")
-            }
-            if (statusfilter.taMedPublisertApen) {
-                add("(status = 'PUBLISERT' AND frist_utgatt = false)")
-            }
-            if (statusfilter.taMedPublisertFristUtgatt) {
-                add("(status = 'PUBLISERT' AND frist_utgatt = true)")
+            if (!statuser.isNullOrEmpty()) {
+                if (!statuserUtenPublisertStatus.isNullOrEmpty()) {
+                    add("status = ANY(?)")
+                }
+
+                if (erPublishedValgt) {
+                    if (publisertStatuser.isNullOrEmpty()) {
+                        add("status = 'PUBLISERT'")
+                    } else {
+                        if (publisertStatuser.contains(PublisertStatus.ÅPEN_FOR_SØKERE)) {
+                            add("(status = 'PUBLISERT' AND frist_utgatt = false)")
+                        }
+                        if (publisertStatuser.contains(PublisertStatus.SVARFRIST_PASSERT)) {
+                            add("(status = 'PUBLISERT' AND frist_utgatt = true)")
+                        }
+                    }
+                }
             }
         }
 
@@ -225,32 +261,15 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
 
         return Condition(
             clause = "(${statusClauses.joinToString(" OR ")})",
-            params = byggStatusParametere(statusfilter),
+            params = byggStatusParametere(statuserUtenPublisertStatus),
         )
     }
 
-    private fun byggStatusfilter(
-        statuser: List<SokStatus>?,
-        publisertApen: Boolean?,
-        publisertFristUtgatt: Boolean?,
-    ): Statusfilter {
-        val eksplisitteStatuser = statuser.orEmpty().filterNot {
-            it == SokStatus.PUBLISERT_APEN || it == SokStatus.PUBLISERT_FRIST_UTGATT
-        }
-
-        return Statusfilter(
-            eksplisitteStatuser = eksplisitteStatuser,
-            taMedPublisertApen = publisertApen == true || statuser.orEmpty().contains(SokStatus.PUBLISERT_APEN),
-            taMedPublisertFristUtgatt = publisertFristUtgatt == true || statuser.orEmpty().contains(SokStatus.PUBLISERT_FRIST_UTGATT),
-        )
-    }
-
-    private fun byggStatusParametere(statusfilter: Statusfilter): List<SqlParam> {
-        if (statusfilter.eksplisitteStatuser.isEmpty()) {
+    private fun byggStatusParametere(statuser: List<SokStatus>?): List<SqlParam> {
+        if (statuser.isNullOrEmpty()) {
             return emptyList()
         }
-
-        return listOf(SqlParam(statusfilter.eksplisitteStatuser, ParamType.STATUS_ARRAY))
+        return listOf(SqlParam(statuser, ParamType.STATUS_ARRAY))
     }
 
     private fun byggKontorCondition(kontorer: List<String>?): Condition? {
@@ -284,11 +303,13 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     private fun tilTreff(rs: ResultSet): RekrutteringstreffSokTreff {
         val eiereArr = rs.getArray("eiere")?.array as? Array<*>
         val kontorerArr = rs.getArray("kontorer")?.array as? Array<*>
+        val status = RekrutteringstreffStatus.valueOf(rs.getString("status"))
         return RekrutteringstreffSokTreff(
             id = rs.getString("id"),
             tittel = rs.getString("tittel"),
             beskrivelse = rs.getString("beskrivelse"),
-            status = SokStatus.fraDbVerdiMedFrist(rs.getString("status"), rs.getBoolean("frist_utgatt")),
+            status = status,
+            publisertStatus = PublisertStatus.fraDbVerdiMedFrist(status, rs.getBoolean("frist_utgatt")),
             fraTid = rs.getTimestamp("fra_tid")?.toInstant(),
             tilTid = rs.getTimestamp("til_tid")?.toInstant(),
             svarfrist = rs.getTimestamp("svarfrist")?.toInstant(),

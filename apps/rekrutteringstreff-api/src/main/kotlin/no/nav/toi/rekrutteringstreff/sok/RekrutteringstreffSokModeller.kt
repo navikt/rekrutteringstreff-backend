@@ -1,15 +1,14 @@
 package no.nav.toi.rekrutteringstreff.sok
 
 import com.fasterxml.jackson.annotation.JsonValue
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import java.time.Instant
 
 enum class SokStatus(@JsonValue val jsonVerdi: String) {
-    UTKAST("utkast"),
-    PUBLISERT("publisert"),
-    PUBLISERT_APEN("publisert_apen"),
-    PUBLISERT_FRIST_UTGATT("publisert_frist_utgatt"),
-    FULLFØRT("fullfort"),
-    AVLYST("avlyst"),
+    UTKAST("UTKAST"),
+    PUBLISERT("PUBLISERT"),
+    FULLFØRT("FULLFØRT"),
+    AVLYST("AVLYST"),
     ;
 
     companion object {
@@ -21,14 +20,26 @@ enum class SokStatus(@JsonValue val jsonVerdi: String) {
             else -> throw IllegalArgumentException("Ugyldig status fra database: $verdi")
         }
 
-        fun fraDbVerdiMedFrist(verdi: String, fristUtgatt: Boolean): SokStatus = when (verdi) {
-            "PUBLISERT" -> if (fristUtgatt) PUBLISERT_FRIST_UTGATT else PUBLISERT_APEN
-            else -> fraDbVerdi(verdi)
-        }
-
         fun fraJsonVerdi(verdi: String): SokStatus =
             entries.find { it.jsonVerdi == verdi }
                 ?: throw IllegalArgumentException("Ugyldig status: $verdi")
+    }
+}
+
+enum class PublisertStatus(@JsonValue val jsonVerdi: String) {
+    ÅPEN_FOR_SØKERE("ÅPEN_FOR_SØKERE"),
+    SVARFRIST_PASSERT("SVARFRIST_PASSERT"),
+    ;
+    companion object {
+        fun fraJsonVerdi(verdi: String): PublisertStatus =
+            PublisertStatus.entries.find { it.jsonVerdi == verdi }
+                ?: throw IllegalArgumentException("Ugyldig publisertstatus: $verdi")
+
+
+        fun fraDbVerdiMedFrist(verdi: RekrutteringstreffStatus, fristUtgatt: Boolean): PublisertStatus? = when (verdi) {
+            RekrutteringstreffStatus.PUBLISERT -> if (fristUtgatt) SVARFRIST_PASSERT else ÅPEN_FOR_SØKERE
+            else -> return null
+        }
     }
 }
 
@@ -61,7 +72,7 @@ enum class Sortering(val sql: String, val jsonVerdi: String) {
 
 data class RekrutteringstreffSokRequest(
     val statuser: List<SokStatus>? = null,
-    val publisertApen: Boolean? = null,
+    val publisertStatuser: List<PublisertStatus>? = null,
     val publisertFristUtgatt: Boolean? = null,
     val kontorer: List<String>? = null,
     val visning: Visning = Visning.ALLE,
@@ -76,13 +87,15 @@ data class RekrutteringstreffSokRespons(
     val side: Int,
     val antallPerSide: Int,
     val statusaggregering: List<FilterValg>,
+    val publisertstatusaggregering: List<FilterValg>,
 )
 
 data class RekrutteringstreffSokTreff(
     val id: String,
     val tittel: String,
     val beskrivelse: String?,
-    val status: SokStatus,
+    val status: RekrutteringstreffStatus,
+    val publisertStatus: PublisertStatus?,
     val fraTid: Instant?,
     val tilTid: Instant?,
     val svarfrist: Instant?,
@@ -99,7 +112,7 @@ data class RekrutteringstreffSokTreff(
 )
 
 data class FilterValg(
-    val verdi: SokStatus,
+    val verdi: String,
     val antall: Long,
 )
 
@@ -107,4 +120,5 @@ data class SokMedAggregeringResultat(
     val treff: List<RekrutteringstreffSokTreff>,
     val antallTotalt: Long,
     val statusaggregering: List<FilterValg>,
+    val publisertstatusaggregering: List<FilterValg>,
 )

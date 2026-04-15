@@ -25,9 +25,8 @@ class RekrutteringstreffSokController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
             OpenApiParam(name = "visning", type = Visning::class, required = false, description = "Filter for hvilke treff som skal vises", example = "alle"),
-            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel publisert,utkast", example = "publisert,utkast"),
-            OpenApiParam(name = "publisertApen", type = Boolean::class, required = false, description = "Inkluder publiserte treff som er åpne for søkere (frist ikke utgått)", example = "true"),
-            OpenApiParam(name = "publisertFristUtgatt", type = Boolean::class, required = false, description = "Inkluder publiserte treff som er stengt for søkere (frist utgått)", example = "true"),
+            OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel PUBLISERT,UTKAST", example = "PUBLISERT,UTKAST"),
+            OpenApiParam(name = "publisertStatuser", type = String::class, required = false, description = "Kommaseparert liste av publisert statuser", example = "ÅPEN_FOR_SØKERE,SVARFRIST_PASSERT"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
@@ -43,7 +42,7 @@ class RekrutteringstreffSokController(
                             "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                             "tittel": "Rekrutteringstreff – bygg og anlegg",
                             "beskrivelse": "Treff for arbeidsgivere og jobbsøkere innen bygg og anlegg",
-                            "status": "publisert_apen",
+                            "status": "PUBLISERT",
                             "fraTid": "2026-04-15T09:00:00Z",
                             "tilTid": "2026-04-15T12:00:00Z",
                             "svarfrist": "2026-04-10T23:59:59Z",
@@ -62,7 +61,7 @@ class RekrutteringstreffSokController(
                             "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
                             "tittel": "Jobbmesse for helsesektoren",
                             "beskrivelse": null,
-                            "status": "utkast",
+                            "status": "UTKAST",
                             "fraTid": null,
                             "tilTid": null,
                             "svarfrist": null,
@@ -82,11 +81,14 @@ class RekrutteringstreffSokController(
                     "side": 1,
                     "antallPerSide": 20,
                     "statusaggregering": [
-                        {"verdi": "publisert_apen", "antall": 12},
-                        {"verdi": "publisert_frist_utgatt", "antall": 8},
-                        {"verdi": "utkast", "antall": 12},
-                        {"verdi": "fullfort", "antall": 3},
-                        {"verdi": "avlyst", "antall": 2}
+                        {"verdi": "PUBLISERT", "antall": 12},
+                        {"verdi": "UTKAST", "antall": 12},
+                        {"verdi": "FULLFØRT", "antall": 3},
+                        {"verdi": "AVLYST", "antall": 2}
+                    ],
+                    "publisertstatusaggregering": [
+                        {"verdi": "ÅPEN_FOR_SØKERE", "antall": 8},
+                        {"verdi": "SVARFRIST_PASSERT", "antall": 4}
                     ]
                 }"""
             )]
@@ -115,8 +117,11 @@ class RekrutteringstreffSokController(
                 throw IllegalArgumentException("Ugyldig status: $it")
             }
         }
-        val publisertApen = ctx.queryParam("publisertApen")?.let {
-            it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig publisertApen: $it")
+        val publisertStatuser =  ctx.queryParam("publisertStatuser")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
+            try {
+                PublisertStatus.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
+                throw IllegalArgumentException("Ugyldig publisertstatus: $it")
+            }
         }
         val publisertFristUtgatt = ctx.queryParam("publisertFristUtgatt")?.let {
             it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig publisertFristUtgatt: $it")
@@ -134,7 +139,7 @@ class RekrutteringstreffSokController(
 
         val request = RekrutteringstreffSokRequest(
             statuser = statuser,
-            publisertApen = publisertApen,
+            publisertStatuser = publisertStatuser,
             publisertFristUtgatt = publisertFristUtgatt,
             kontorer = if (visning == Visning.MITT_KONTOR) null else kontorer,
             visning = visning,
