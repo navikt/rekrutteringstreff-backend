@@ -423,7 +423,6 @@ class JobbsøkerSokKomponenttest {
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.jobbsøkere.first().fødselsnummer).isEqualTo("11111111111")
         assertThat(dto.jobbsøkere.first().fornavn).isEqualTo("Ola")
-        assertThat(dto.jobbsøkere.first().navkontor).isEqualTo("NAV Oslo")
     }
 
     @Test

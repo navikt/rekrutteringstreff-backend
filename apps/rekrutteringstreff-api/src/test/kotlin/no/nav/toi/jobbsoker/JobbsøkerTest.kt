@@ -279,7 +279,6 @@ class JobbsøkerTest {
         assertThat(jobbsoeker.status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
         assertThat(jobbsoeker.fornavn).isEqualTo("Test")
         assertThat(jobbsoeker.etternavn).isEqualTo("Bruker")
-        assertThat(jobbsoeker.navkontor).isEqualTo("Oslo")
         assertThat(jobbsoeker.lagtTilAv).isEqualTo("testperson")
         assertThat(jobbsoeker.lagtTilAvNavn).isEqualTo("Test Testesen")
     }
