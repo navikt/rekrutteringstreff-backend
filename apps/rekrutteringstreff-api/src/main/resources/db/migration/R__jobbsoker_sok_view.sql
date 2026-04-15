@@ -1,4 +1,6 @@
-CREATE OR REPLACE VIEW jobbsoker_sok_view AS
+DROP VIEW IF EXISTS jobbsoker_sok_view;
+
+CREATE VIEW jobbsoker_sok_view AS
 SELECT
     j.jobbsoker_id,
     j.id AS person_treff_id,
