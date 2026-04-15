@@ -28,7 +28,7 @@ enum class SokStatus(@JsonValue val jsonVerdi: String) {
 
 enum class PublisertStatus(@JsonValue val jsonVerdi: String) {
     ÅPEN_FOR_SØKERE("ÅPEN_FOR_SØKERE"),
-    SØKNADSFRIST_PASSERT("SØKNADSFRIST_PASSERT"),
+    SVARFRIST_PASSERT("SVARFRIST_PASSERT"),
     ;
     companion object {
         fun fraJsonVerdi(verdi: String): PublisertStatus =
@@ -37,7 +37,7 @@ enum class PublisertStatus(@JsonValue val jsonVerdi: String) {
 
 
         fun fraDbVerdiMedFrist(verdi: RekrutteringstreffStatus, fristUtgatt: Boolean): PublisertStatus? = when (verdi) {
-            RekrutteringstreffStatus.PUBLISERT -> if (fristUtgatt) SØKNADSFRIST_PASSERT else ÅPEN_FOR_SØKERE
+            RekrutteringstreffStatus.PUBLISERT -> if (fristUtgatt) SVARFRIST_PASSERT else ÅPEN_FOR_SØKERE
             else -> return null
         }
     }

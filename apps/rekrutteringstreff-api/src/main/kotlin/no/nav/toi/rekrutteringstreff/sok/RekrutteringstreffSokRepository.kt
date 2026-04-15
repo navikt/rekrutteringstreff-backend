@@ -125,7 +125,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         val sqlPubliserteStatuser = """
             SELECT
                 CASE
-                    WHEN frist_utgatt = true THEN 'SØKNADSFRIST_PASSERT'
+                    WHEN frist_utgatt = true THEN 'SVARFRIST_PASSERT'
                     WHEN frist_utgatt = false THEN 'ÅPEN_FOR_SØKERE'
                 END AS aggregert_status,
                 count(*) AS antall
@@ -247,7 +247,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                         if (publisertStatuser.contains(PublisertStatus.ÅPEN_FOR_SØKERE)) {
                             add("(status = 'PUBLISERT' AND frist_utgatt = false)")
                         }
-                        if (publisertStatuser.contains(PublisertStatus.SØKNADSFRIST_PASSERT)) {
+                        if (publisertStatuser.contains(PublisertStatus.SVARFRIST_PASSERT)) {
                             add("(status = 'PUBLISERT' AND frist_utgatt = true)")
                         }
                     }

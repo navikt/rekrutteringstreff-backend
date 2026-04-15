@@ -134,7 +134,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
-            statuser = listOf(SokStatus.PUBLISERT, SokStatus.UTKAST), publisertStatuser = listOf(PublisertStatus.SØKNADSFRIST_PASSERT, PublisertStatus.ÅPEN_FOR_SØKERE),
+            statuser = listOf(SokStatus.PUBLISERT, SokStatus.UTKAST), publisertStatuser = listOf(PublisertStatus.SVARFRIST_PASSERT, PublisertStatus.ÅPEN_FOR_SØKERE),
             kontorer = null, visning = Visning.ALLE,
             side = 1, antallPerSide = 25
         )
