@@ -141,7 +141,6 @@ class JobbsøkerController(
                       "fødselsnummer": "12345678901",
                       "fornavn": "Ola",
                       "etternavn": "Nordmann",
-                      "navkontor": "Nav Grünerløkka",
                       "status": "LAGT_TIL"
                     }
                   ],

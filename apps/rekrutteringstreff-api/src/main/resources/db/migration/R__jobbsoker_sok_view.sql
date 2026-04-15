@@ -7,7 +7,6 @@ SELECT
     j.fodselsnummer,
     j.fornavn,
     j.etternavn,
-    j.navkontor,
     j.status,
     opprettet.tidspunkt AS lagt_til_dato,
     opprettet.aktøridentifikasjon AS lagt_til_av,
