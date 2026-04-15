@@ -145,6 +145,8 @@ class JobbsøkerController(
                     }
                   ],
                   "totalt": 4,
+                  "antallSkjulte": 1,
+                  "antallSlettede": 1,
                   "side": 1,
                   "antallPerStatus": {
                     "LAGT_TIL": 1,
@@ -171,7 +173,7 @@ class JobbsøkerController(
             AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
             ctx.status(200).json(jobbsøkerService.søkJobbsøkere(treff, request))
         } else {
-            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke søke jobbsøkere")
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke søke i jobbsøkere")
         }
     }
 
