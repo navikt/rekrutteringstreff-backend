@@ -8,14 +8,14 @@ Arbeidsgiver beskriver sine behov ved å velge fra Janzz-forslag innen flere kat
 
 Typeahead-data er i dag splittet i 6 separate tabeller, alle denormaliserte utsnitt av `konsept` + `term`:
 
-| Tabell | KonseptType | Ekstra filtrering |
-|---|---|---|
-| `typeahead_stilling` | `S` | Kun `styrk08ssb` > 3 tegn |
-| `typeahead_kompetanse` | `K` | Ingen |
-| `typeahead_autorisasjon` | `A` | Ingen |
-| `typeahead_godkjenninger` | `K` | Etterkommere av konsept 567151 |
-| `typeahead_fagdokumentasjon` | `U` | Etterkommere av konsept 534435/11777/407667 |
-| `typeahead_geografi` | `LO` | Bruker `no_description` som kode |
+| Tabell                       | KonseptType | Ekstra filtrering                           |
+| ---------------------------- | ----------- | ------------------------------------------- |
+| `typeahead_stilling`         | `S`         | Kun `styrk08ssb` > 3 tegn                   |
+| `typeahead_kompetanse`       | `K`         | Ingen                                       |
+| `typeahead_autorisasjon`     | `A`         | Ingen                                       |
+| `typeahead_godkjenninger`    | `K`         | Etterkommere av konsept 567151              |
+| `typeahead_fagdokumentasjon` | `U`         | Etterkommere av konsept 534435/11777/407667 |
+| `typeahead_geografi`         | `LO`        | Bruker `no_description` som kode            |
 
 Alle har GIN trigram-indeks (`pg_trgm`) på `verdi_lc`. Førerkort finnes **ikke** i Janzz — i dag hardkodet som enum i frontend.
 
@@ -29,6 +29,8 @@ Vi vurderte UNION ALL over eksisterende tabeller (vanskelig sortering, ingen sam
 
 Ny tabell `typeahead_arbeidsgivers_behov` med kun feltene som trengs, populert under Janzz-import. Førerkort hardkodes inn.
 
+Vi bruker `FØRERKORT` som kategori-verdi i database og kode, i tråd med øvrig domenespråk i løsningen.
+
 ### Database-skjema
 
 ```sql
@@ -37,7 +39,7 @@ CREATE TABLE typeahead_arbeidsgivers_behov (
     konsept_id integer,                        -- nullable, NULL for førerkort
     label      varchar(500) NOT NULL,
     label_lc   varchar(500) NOT NULL,
-    kategori   varchar(30) NOT NULL            -- YRKESTITTEL, KOMPETANSE, AUTORISASJON, GODKJENNING, FAGDOKUMENTASJON, FORERKORT
+    kategori   varchar(30) NOT NULL            -- YRKESTITTEL, KOMPETANSE, AUTORISASJON, GODKJENNING, FAGDOKUMENTASJON, FØRERKORT
 );
 
 CREATE TABLE tmp_typeahead_arbeidsgivers_behov (LIKE typeahead_arbeidsgivers_behov INCLUDING ALL);
@@ -63,25 +65,29 @@ UNION ALL
 SELECT konsept_id, verdi, verdi_lc, 'FAGDOKUMENTASJON' FROM tmp_typeahead_fagdokumentasjon;
 ```
 
-Førerkort settes inn statisk (i migrasjonen og i import-logikken):
+Førerkort settes inn statisk (i migrasjonen og i import-logikken). Listen skal speile `gyldigeFørerkort` i CV-prosjektet:
 
 ```sql
 INSERT INTO tmp_typeahead_arbeidsgivers_behov (konsept_id, label, label_lc, kategori) VALUES
-(NULL, 'A1 - Lett motorsykkel', 'a1 - lett motorsykkel', 'FORERKORT'),
-(NULL, 'A2 - Mellomtung motorsykkel', 'a2 - mellomtung motorsykkel', 'FORERKORT'),
-(NULL, 'A - Tung motorsykkel', 'a - tung motorsykkel', 'FORERKORT'),
-(NULL, 'B - Personbil', 'b - personbil', 'FORERKORT'),
-(NULL, 'BE - Personbil med tilhenger', 'be - personbil med tilhenger', 'FORERKORT'),
-(NULL, 'C1 - Lett lastebil', 'c1 - lett lastebil', 'FORERKORT'),
-(NULL, 'C1E - Lett lastebil med tilhenger', 'c1e - lett lastebil med tilhenger', 'FORERKORT'),
-(NULL, 'C - Lastebil', 'c - lastebil', 'FORERKORT'),
-(NULL, 'CE - Lastebil med tilhenger', 'ce - lastebil med tilhenger', 'FORERKORT'),
-(NULL, 'D1 - Minibuss', 'd1 - minibuss', 'FORERKORT'),
-(NULL, 'D1E - Minibuss med tilhenger', 'd1e - minibuss med tilhenger', 'FORERKORT'),
-(NULL, 'D - Buss', 'd - buss', 'FORERKORT'),
-(NULL, 'DE - Buss med tilhenger', 'de - buss med tilhenger', 'FORERKORT'),
-(NULL, 'T - Traktor', 't - traktor', 'FORERKORT'),
-(NULL, 'S - Snøscooter', 's - snøscooter', 'FORERKORT');
+(NULL, 'A - Motorsykkel', 'a - motorsykkel', 'FØRERKORT'),
+(NULL, 'A1 - Lett motorsykkel', 'a1 - lett motorsykkel', 'FØRERKORT'),
+(NULL, 'A2 - Mellomtung motorsykkel', 'a2 - mellomtung motorsykkel', 'FØRERKORT'),
+(NULL, 'AM - Moped', 'am - moped', 'FØRERKORT'),
+(NULL, 'AM 147 - Mopedbil', 'am 147 - mopedbil', 'FØRERKORT'),
+(NULL, 'B - Personbil', 'b - personbil', 'FØRERKORT'),
+(NULL, 'B 78 - Personbil med automatgir', 'b 78 - personbil med automatgir', 'FØRERKORT'),
+(NULL, 'B 96 - Personbil med tilhenger', 'b 96 - personbil med tilhenger', 'FØRERKORT'),
+(NULL, 'BE - Personbil med tilhenger', 'be - personbil med tilhenger', 'FØRERKORT'),
+(NULL, 'C - Lastebil', 'c - lastebil', 'FØRERKORT'),
+(NULL, 'C1 - Lett lastebil', 'c1 - lett lastebil', 'FØRERKORT'),
+(NULL, 'C1E - Lett lastebil med tilhenger', 'c1e - lett lastebil med tilhenger', 'FØRERKORT'),
+(NULL, 'CE - Lastebil med tilhenger', 'ce - lastebil med tilhenger', 'FØRERKORT'),
+(NULL, 'D - Buss', 'd - buss', 'FØRERKORT'),
+(NULL, 'D1 - Minibuss', 'd1 - minibuss', 'FØRERKORT'),
+(NULL, 'D1E - Minibuss med tilhenger', 'd1e - minibuss med tilhenger', 'FØRERKORT'),
+(NULL, 'DE - Buss med tilhenger', 'de - buss med tilhenger', 'FØRERKORT'),
+(NULL, 'S - Snøscooter', 's - snøscooter', 'FØRERKORT'),
+(NULL, 'T - Traktor', 't - traktor', 'FØRERKORT');
 ```
 
 ### Søk og sortering
@@ -138,7 +144,7 @@ GET /rest/typeahead/arbeidsgivers-behov?q=sykepleier&kategorier=YRKESTITTEL,KOMP
 
 ```kotlin
 enum class BehovKategori {
-    YRKESTITTEL, KOMPETANSE, AUTORISASJON, GODKJENNING, FAGDOKUMENTASJON, FORERKORT
+  YRKESTITTEL, KOMPETANSE, AUTORISASJON, GODKJENNING, FAGDOKUMENTASJON, FØRERKORT
 }
 
 data class ArbeidsgiversBehov(
@@ -147,6 +153,8 @@ data class ArbeidsgiversBehov(
     val kategori: BehovKategori
 )
 ```
+
+Hvis vi senere ønsker egne visningstekster i responsen, kan `FØRERKORT` fortsatt mappes til `førerkort` uten å endre den tekniske modellen.
 
 ---
 
