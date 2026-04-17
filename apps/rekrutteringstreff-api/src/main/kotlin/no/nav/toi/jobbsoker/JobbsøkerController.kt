@@ -37,7 +37,7 @@ class JobbsøkerController(
         private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
         private const val hendelserPath = "$jobbsøkerPath/hendelser"
         private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
-        private const val svarPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/svar"
+        private const val svarPath = "$jobbsøkerPath/svar"
         private const val inviterPath = "$jobbsøkerPath/inviter"
         private const val søkPath = "$jobbsøkerPath/sok"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -47,7 +47,7 @@ class JobbsøkerController(
         javalin.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         javalin.post(søkPath, søkJobbsøkereHandler())
         javalin.delete(slettPath, slettJobbsøkerHandler())
-        javalin.post(svarPath, svarJobbsøkereHandler())
+        javalin.post(svarPath, svarForJobbsøkerHandler())
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
     }
@@ -369,7 +369,7 @@ class JobbsøkerController(
         path = inviterPath,
         methods = [HttpMethod.POST]
     )
-    private fun svarJobbsøkereHandler(): (Context) -> Unit = { ctx ->
+    private fun svarForJobbsøkerHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val dto = ctx.bodyAsClass<SvarForJobbsøkerDto>()
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
