@@ -37,7 +37,7 @@ class JobbsøkerController(
         private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
         private const val hendelserPath = "$jobbsøkerPath/hendelser"
         private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
-        private const val svarPath = "$jobbsøkerPath/svar"
+        private const val svarPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/svar"
         private const val inviterPath = "$jobbsøkerPath/inviter"
         private const val søkPath = "$jobbsøkerPath/sok"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -373,10 +373,11 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val dto = ctx.bodyAsClass<SvarForJobbsøkerDto>()
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+         val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
         val navIdent = ctx.extractNavIdent()
         log.info("Mottar svar på vegne av jobbsøker for $treffId med svar ${dto.svar}")
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            jobbsøkerService.svarPåVegneAvJobbsøker(dto.personTreffId, navIdent, dto.svar)
+            jobbsøkerService.svarPåVegneAvJobbsøker(jobbsøkerId, navIdent, dto.svar)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke invitere jobbsøkere")
