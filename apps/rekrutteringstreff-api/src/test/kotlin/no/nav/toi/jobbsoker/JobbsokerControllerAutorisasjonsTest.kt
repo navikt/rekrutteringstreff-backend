@@ -212,7 +212,17 @@ class JobbsokerControllerAutorisasjonsTest {
             { "http://localhost:${appPort}/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/jobbsoker/${gyldigJobbsøkerId.somString}/slett" },
             {
                 HttpRequest.newBuilder().DELETE()
-            })
+            }),
+        svarForJobbsøker(
+            { "http://localhost:${appPort}/api/rekrutteringstreff/${gyldigRekrutteringstreff.somString}/jobbsoker/${gyldigJobbsøkerId.somString}/svar" },
+            {
+                HttpRequest.newBuilder().POST(
+                    HttpRequest.BodyPublishers.ofString(
+                        """{ "personTreffId": "${gyldigJobbsøkerId.somString}", "svar": true }"""
+                    )
+                )
+            }
+        ),
     }
 
     enum class Gruppe(val somStringListe: List<UUID>) {
@@ -280,6 +290,12 @@ class JobbsokerControllerAutorisasjonsTest {
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Jobbsøkerrettet, erIkkeEier, HTTP_CREATED),
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.Jobbsøkerrettet, erEier, HTTP_CREATED),
         Arguments.of(Endepunkt.leggTilJobbsøker, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
+
+        Arguments.of(Endepunkt.svarForJobbsøker, Gruppe.Utvikler, erIkkeEier, HTTP_OK),
+        Arguments.of(Endepunkt.svarForJobbsøker, Gruppe.Arbeidsgiverrettet, erEier, HTTP_OK),
+        Arguments.of(Endepunkt.svarForJobbsøker, Gruppe.Arbeidsgiverrettet, erIkkeEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.svarForJobbsøker, Gruppe.Jobbsøkerrettet, erEier, HTTP_FORBIDDEN),
+        Arguments.of(Endepunkt.svarForJobbsøker, Gruppe.ModiaGenerell, erIkkeEier, HTTP_FORBIDDEN),
 
         ).stream()
 

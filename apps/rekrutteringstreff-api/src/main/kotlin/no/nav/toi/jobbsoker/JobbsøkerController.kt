@@ -13,8 +13,8 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseOutboundDto
 import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
-import no.nav.toi.jobbsoker.dto.JobbsøkereOutboundDto
 import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
+import no.nav.toi.jobbsoker.dto.SvarForJobbsøkerDto
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -37,6 +37,7 @@ class JobbsøkerController(
         private const val jobbsøkerPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/jobbsoker"
         private const val hendelserPath = "$jobbsøkerPath/hendelser"
         private const val slettPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/slett"
+        private const val svarPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/svar"
         private const val inviterPath = "$jobbsøkerPath/inviter"
         private const val søkPath = "$jobbsøkerPath/sok"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -46,6 +47,7 @@ class JobbsøkerController(
         javalin.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         javalin.post(søkPath, søkJobbsøkereHandler())
         javalin.delete(slettPath, slettJobbsøkerHandler())
+        javalin.post(svarPath, svarJobbsøkereHandler())
         javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
         javalin.post(inviterPath, inviterJobbsøkereHandler())
     }
@@ -346,6 +348,35 @@ class JobbsøkerController(
 
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             jobbsøkerService.inviter(personTreffIder, treffId, navIdent)
+            ctx.status(200)
+        } else {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke invitere jobbsøkere")
+        }
+    }
+
+    @OpenApi(
+        summary = "Svar på vegne av en jobbsøker",
+        operationId = "svarForJobbsøker",
+        security = [OpenApiSecurity("BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(
+            content = [OpenApiContent(
+                from = SvarForJobbsøkerDto::class,
+                example = """{ "personTreffId": "2d4dcf50-2418-4085-9c5f-1390bc49a97f", svar: true }"""
+            )]
+        ),
+        responses = [OpenApiResponse("200", description = "Invitasjonshendelser er lagt til.")],
+        path = inviterPath,
+        methods = [HttpMethod.POST]
+    )
+    private fun svarJobbsøkereHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val dto = ctx.bodyAsClass<SvarForJobbsøkerDto>()
+        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.extractNavIdent()
+        log.info("Mottar svar på vegne av jobbsøker for $treffId med svar ${dto.svar}")
+        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
+            jobbsøkerService.svarPåVegneAvJobbsøker(dto.personTreffId, navIdent, dto.svar)
             ctx.status(200)
         } else {
             throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet og kan ikke invitere jobbsøkere")
