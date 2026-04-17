@@ -320,6 +320,10 @@ Rekkefølge slik at hver commit kan kjøres og testes isolert.
 
 6. **Tester** — se egen seksjon [Testing](#testing) nedenfor.
 
+## Referanser
+
+- [pam-ontologi database.md på GitHub](https://github.com/navikt/pam-ontologi/blob/388f318be56272b036fd2ecfabf722ae56bc3928/database.md) — ER-diagram og skjemadokumentasjon.
+
 ## Relevante filer
 
 - `pam-ontologi/src/main/kotlin/no/nav/pam/ontologi/repository/JanzzRepository.kt`
