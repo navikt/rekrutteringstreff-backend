@@ -198,15 +198,15 @@ Bygger videre på alternativ 1, men legger til ordgrense-rangering slik at "syke
 ```sql
 SELECT id, konsept_id, label, kategori
 FROM typeahead_behov
-WHERE label_lc ILIKE :t1_llike
-  AND label_lc ILIKE :t2_llike                -- osv. for alle tokens, generert dynamisk
-  AND kategori = ANY(:kategorier)
+WHERE label_lc LIKE :t1_llike
+  AND label_lc LIKE :t2_llike                -- osv. for alle tokens, generert dynamisk
+  AND kategori IN (:kategorier)
 ORDER BY
   CASE
     WHEN label_lc = :q                                 THEN 0   -- eksakt
     WHEN label_lc LIKE :q_like                         THEN 1   -- starter med hele søket
     WHEN label_lc LIKE :t1_like                        THEN 2   -- starter med første token
-    WHEN label_lc LIKE '% ' || :t1 || '%'              THEN 3   -- token på ordgrense
+    WHEN label_lc LIKE '% ' || '%søketerm%' || '%'     THEN 3   -- token på ordgrense (SQL-literal interpolert)
     ELSE                                                    4   -- substring
   END,
   length(label_lc),
@@ -214,7 +214,7 @@ ORDER BY
 LIMIT 50;
 ```
 
-- **Fordeler:** Tydelig bedre relevans enn alt. 1, spesielt for sammensatte norske ord. Bruker GIN trigram-indeksen som allerede er standard på `*_lc`-kolonner. Fortsatt transparent SQL.
+- **Fordeler:** Tydelig bedre relevans enn alt. 1, spesielt for sammensatte norske ord. Bruker GIN trigram-indeksen som allerede er standard på `*_lc`-kolonner. Fortsatt transparent SQL (med SQL-literal-interpolering for ordgrense-sjekk).
 - **Ulemper:** Mer håndplukket ranking-logikk. Flere tokens → mer dynamisk SQL-bygging i Kotlin.
 
 #### Alternativ 3 — pg_trgm similarity / KNN (`<->`) med GiST
@@ -283,7 +283,7 @@ data class BehovTypeahead(
 )
 ```
 
-Intern kategori-verdi (db + enum) er `FORERKORT`. Hvis frontend ønsker `FØRERKORT` i API-responsen, kan det styres med Jackson-annotasjoner på enumen uten å påvirke intern modell eller SQL.
+Kategori-verdien i database, enum-navn og JSON-respons er `FORERKORT` (ASCII, uten æøå). Dette unngår encoding-fallgruver og gir konsistent håndtering gjennom stacken.
 
 ### Konsistens mot `arbeidsgivers-behov`-plan
 
@@ -308,7 +308,7 @@ Rekkefølge slik at hver commit kan kjøres og testes isolert.
 - `overforTypeaheadSmal(tabellnavn: String)`: ny liten variant som flytter `(id, konsept_id, label, label_lc, kategori)` fra `tmp_*` til prod-tabellen.
 
 3. **InnlastingService** — `pam-ontologi/.../service/InnlastingService.kt`:
-   - I `lastInnTypeahead()`: legg til `janzzRepository.slettOgIndekserTypeaheadBehov("tmp_")` **sist** (etter de andre `slettOgIndekser*`-kallene).
+   - I `lastInnTypeahead()`: legg til `janzzRepository.slettOgIndekserTypeaheadBehov("tmp_")` **etter** de fem andre `slettOgIndekserTypeahead*`-kallene, men før `slettOgIndekserStyrk98Oppslag("tmp_")`.
    - I `overforNedlastetOntologi()`: legg til `janzzRepository.slettTabell("typeahead_behov")` blant truncate-kallene og `janzzRepository.overforTypeaheadSmal("typeahead_behov")` blant overføringskallene.
    - I `trunkerArbeidstabeller()`: legg til `janzzRepository.slettTabell("tmp_typeahead_behov")`.
 
