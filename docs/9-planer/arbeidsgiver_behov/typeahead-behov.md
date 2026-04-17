@@ -53,7 +53,7 @@ Vi bruker `FORERKORT` (ASCII, uten æøå) som kategori-verdi i database og inte
 
 ### Database-skjema
 
-`typeahead_behov` er en prod-tabell og får GIN trigram-indeks. Staging-tabellen opprettes bevisst **uten** GIN-indeks, i tråd med mønsteret i øvrige `tmp_typeahead_*`-tabeller (indeksen bygges først når data er ferdig populert på prod-tabellen ved import).
+`typeahead_behov` er den permanente tabellen (i motsetning til staging-tabellen) og får GIN trigram-indeks. `tmp_typeahead_behov` er staging-tabellen som bare brukes under dataimport og opprettes bevisst **uten** GIN-indeks, i tråd med mønsteret i øvrige `tmp_typeahead_*`-tabeller. Grunnen er ytelse: det er mye raskere å bygge GIN-indeksen **én gang** på et fullstendig dataset enn å vedlikeholde den under insert. Begge tabeller finnes i alle miljøer (dev, test, prod).
 
 ```sql
 CREATE TABLE typeahead_behov (
@@ -78,11 +78,11 @@ CREATE INDEX idx_behov_kategori      ON typeahead_behov (kategori);
 
 ### Populering under import
 
-I `InnlastingService.lastInnTypeahead()` kalles `slettOgIndekserTypeaheadBehov("tmp_")` **etter** at alle de eksisterende `slettOgIndekserTypeaheadFor*("tmp_")`-kallene er ferdige, slik at den kan bygge på allerede filtrerte `tmp_typeahead_*`-tabeller.
+I `InnlastingService.lastInnTypeahead()` kalles `slettOgIndekserTypeaheadBehov("tmp_")` **etter** at alle de eksisterende `slettOgIndekserTypeaheadFor*("tmp_")`-kallene er ferdige, slik at den kan bygge på de allerede genererte `tmp_typeahead_*`-tabellene.
 
-Fordi vi leser fra de allerede rensede tmp_typeahead-tabellene for de fem eksisterende kategoriene, arver vi automatisk den eksisterende filtreringen (godkjenninger under 567151, fagdokumentasjon under 534435/11777/407667, stilling med styrk08ssb > 3 tegn) — og slipper å duplisere subset-logikken mot `konsept_relasjon`.
+For de fem eksisterende kategoriene gjenbruker vi disse `tmp_typeahead_*`-tabellene i stedet for å legge inn nye `konsept_relasjon`-oppslag i `slettOgIndekserTypeaheadBehov`. Det betyr at selve `typeahead_behov`-populeringen **ikke introduserer et nytt staging leak** for disse kategoriene. Den kan likevel arve feil hvis `tmp_typeahead_godkjenninger` eller `tmp_typeahead_fagdokumentasjon` allerede er bygget med leak i den eksisterende flyten.
 
-Softskills har ingen egen `tmp_typeahead_*`-tabell i dag, så de populeres direkte fra `tmp_konsept` + `tmp_term` i samme insert, filtrert på `type = 'SS'` og samme kriterier som `slettOgIndekserTypeahead` bruker ellers (`tag in ('p','l')`, `lang='no'`, `no_label is not null`, `umbrella=0`).
+Softskills har ingen egen `tmp_typeahead_*`-tabell i dag, så de populeres direkte fra `tmp_konsept` + `tmp_term` i samme insert, filtrert på `type = 'SS'` og samme kriterier som `slettOgIndekserTypeahead` bruker ellers (`tag in ('p','l')`, `lang='no'`, `no_label is not null`, `umbrella=0`). For personlige egenskaper unngår vi staging leak her fordi spørringen bare leser fra prefiksede staging-tabeller (`${prefix}konsept` og `${prefix}term`) og ikke trenger oppslag i uprefikset `konsept_relasjon`.
 
 ```sql
 -- Del 1: Yrkestittel/kompetanse/autorisasjon/godkjenning/fagdokumentasjon fra eksisterende tmp_-tabeller
@@ -134,7 +134,7 @@ INSERT INTO tmp_typeahead_behov (konsept_id, label, label_lc, kategori) VALUES
 I tillegg må tabellen bakes inn i overførings- og oppryddingsflyten i `InnlastingService`:
 
 - `trunkerArbeidstabeller()` må også droppe `tmp_typeahead_behov`.
-- `overforNedlastetOntologi()` må truncate `typeahead_behov` før overføring og kalle `janzzRepository.overforTypeahead("typeahead_behov")`.
+- `overforNedlastetOntologi()` må truncate `typeahead_behov` før overføring og kalle `janzzRepository.overforTypeaheadSmal("typeahead_behov")`.
 
 Merk: `overforTypeahead(tabellnavn)` forventer i dag kolonnene `(id, konsept_id, verdi, verdi_lc, styrk08ssb, styrk08ssb_label, isco08, esco, esco_label, undertype)`. Det passer ikke vår smalere tabell. Vi legger derfor til en liten variant:
 
@@ -302,9 +302,10 @@ Rekkefølge slik at hver commit kan kjøres og testes isolert.
    - _Ingen_ statiske førerkort-rader i migrasjonen — de settes inn under import (se punkt 3), slik at truncate-and-reload-flyten forblir kilden til alt innhold.
 
 2. **Repository** — `pam-ontologi/.../repository/JanzzRepository.kt`:
-   - `slettOgIndekserTypeaheadBehov(prefix: String = "")`: kjører UNION ALL-insert fra `${prefix}typeahead_*`-tabellene, softskill-inserten fra `${prefix}konsept` + `${prefix}term`, og den statiske førerkort-inserten mot `${prefix}typeahead_behov`. Merk at vi leser fra `tmp_typeahead_*` (rensede data) for de fem eksisterende kategoriene — vi leser **ikke** direkte fra `konsept_relasjon` der, og slipper dermed staging-leak-problemet som finnes i `slettOverflodingeGodkjenninger`/`slettOverflodigeFagdokumentasjoner`/`settUndertyperFor*`. For softskills leser vi direkte fra `${prefix}konsept`/`${prefix}term` siden det ikke finnes en pre-renset `tmp_typeahead_softskill`.
-   - `finnTypeaheadBehov(oppslagsord: String, kategorier: List<BehovKategori>): List<BehovTypeahead>`: implementerer alternativ 2 med dynamisk n-token SQL. `kategorier` er alltid ikke-null (påkrevd i API). Egen row-mapper for `(konsept_id, label, kategori)`.
-   - `overforTypeaheadSmal(tabellnavn: String)`: ny liten variant som flytter `(id, konsept_id, label, label_lc, kategori)` fra `tmp_*` til prod-tabellen.
+
+- `slettOgIndekserTypeaheadBehov(prefix: String = "")`: kjører UNION ALL-insert fra `${prefix}typeahead_*`-tabellene, softskill-inserten fra `${prefix}konsept` + `${prefix}term`, og den statiske førerkort-inserten mot `${prefix}typeahead_behov`. For de fem eksisterende kategoriene gjenbruker vi de allerede genererte `tmp_typeahead_*`-tabellene og legger ikke inn nye `konsept_relasjon`-oppslag i denne funksjonen. Dermed introduserer ikke `slettOgIndekserTypeaheadBehov` et nytt staging leak, men den kan fortsatt arve feil fra eksisterende funksjoner som bygger `tmp_typeahead_godkjenninger` og `tmp_typeahead_fagdokumentasjon`. For softskills leser vi direkte fra `${prefix}konsept`/`${prefix}term`, som er trygt mot staging leak fordi begge tabellnavnene bruker samme prefix.
+- `finnTypeaheadBehov(oppslagsord: String, kategorier: List<BehovKategori>): List<BehovTypeahead>`: implementerer alternativ 2 med dynamisk n-token SQL. `kategorier` er alltid ikke-null (påkrevd i API). Egen row-mapper for `(konsept_id, label, kategori)`.
+- `overforTypeaheadSmal(tabellnavn: String)`: ny liten variant som flytter `(id, konsept_id, label, label_lc, kategori)` fra `tmp_*` til prod-tabellen.
 
 3. **InnlastingService** — `pam-ontologi/.../service/InnlastingService.kt`:
    - I `lastInnTypeahead()`: legg til `janzzRepository.slettOgIndekserTypeaheadBehov("tmp_")` **sist** (etter de andre `slettOgIndekser*`-kallene).
@@ -347,7 +348,7 @@ Rekkefølge slik at hver commit kan kjøres og testes isolert.
 
 **Fullt dekket i denne planen: `typeahead_behov`.** Det er ny funksjonalitet, ingen legacy-brukere, og det er her risikoen ligger (dynamisk n-token SQL, korrekt populering fra `tmp_*` inkl. softskills, kategori-filter, rangering).
 
-**Ikke utvidet test-dekning for eksisterende typeahead-tabeller** (stilling, kompetanse, autorisasjon, godkjenninger, fagdokumentasjon, geografi) som del av denne planen. De har allerede kjørt i produksjon lenge og har implisitt dekning via at de allerede rensede `tmp_typeahead_*`-tabellene er input til `typeahead_behov` — hvis én av dem skulle være tom eller feil, fanges det opp av `typeahead_behov`-testen som leser fra samme kilde.
+**Ikke utvidet test-dekning for eksisterende typeahead-tabeller** (stilling, kompetanse, autorisasjon, godkjenninger, fagdokumentasjon, geografi) som del av denne planen. De har allerede kjørt i produksjon lenge og har implisitt dekning via at de allerede genererte `tmp_typeahead_*`-tabellene er input til `typeahead_behov` — hvis én av dem skulle være tom eller feil, fanges det opp av `typeahead_behov`-testen som leser fra samme kilde.
 
 Hvis det viser seg naturlig (få ekstra linjer, samme testoppsett), kan vi utvide til smoke-tester på de eksisterende tabellene i samme PR. Men det er _ikke_ et krav.
 
@@ -388,4 +389,8 @@ Hvis det viser seg naturlig (få ekstra linjer, samme testoppsett), kan vi utvid
 
 ## Kjente sideobservasjoner (ikke blokkerende)
 
-Under review kom det frem at `slettOverflodingeGodkjenninger`, `slettOverflodigeFagdokumentasjoner`, `settUndertyperForTypeahead` og `settUndertyperForKonsepter` i `JanzzRepository` leser fra `konsept_relasjon` **uten** `${prefix}`, selv når de kalles som del av staging-flyten (`"tmp_"`). Det er ikke introdusert av denne planen, men bør flagges i egen sak — denne implementasjonen er ikke avhengig av at det er fikset først, fordi vi for de fem eksisterende kategoriene leser fra allerede rensede `tmp_typeahead_*`-tabeller, og for softskills bruker vi `${prefix}konsept`/`${prefix}term` direkte uten `konsept_relasjon`-joins.
+Under review kom det frem at `slettOverflodingeGodkjenninger`, `slettOverflodigeFagdokumentasjoner`, `settUndertyperForTypeahead` og `settUndertyperForKonsepter` i `JanzzRepository` leser fra `konsept_relasjon` **uten** `${prefix}`, selv når de kalles som del av staging-flyten (`"tmp_"`). Det er ikke introdusert av denne planen, men bør flagges i egen sak. Softskill-delen i denne planen er ikke avhengig av at det er fikset først, fordi den bruker `${prefix}konsept`/`${prefix}term` direkte uten `konsept_relasjon`-joins. `typeahead_behov` vil likevel arve eventuelle feil som allerede finnes i `tmp_typeahead_godkjenninger` og `tmp_typeahead_fagdokumentasjon` inntil den eksisterende prefix-feilen er rettet.
+
+### Hvordan fikse staging leak
+
+Fiksen er mekanisk: alle tabelloppslag inne i funksjoner som kalles med `prefix = "tmp_"` må prefikses konsekvent. Konkret bytter man `from konsept_relasjon` → `from ${prefix}konsept_relasjon` (og tilsvarende for alle andre uprefiksede tabellnavn i samme spørring) i de fire funksjonene nevnt over. Etter fiksen leser staging-flyten utelukkende fra `tmp_*`-tabeller, og prod-flyten (kalt uten prefix) leser fortsatt fra prod — samme kode, styrt av parameteret. En enkel Testcontainers-test som populerer ulike rader i `konsept_relasjon` og `tmp_konsept_relasjon` og verifiserer at `tmp_typeahead_godkjenninger`/`tmp_typeahead_fagdokumentasjon` kun inneholder rader som stammer fra `tmp_`-siden, er nok til å låse oppførselen.
