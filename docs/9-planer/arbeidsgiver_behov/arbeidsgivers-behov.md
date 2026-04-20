@@ -6,13 +6,13 @@ Når en markedskontakt legger til en arbeidsgiver i et rekrutteringstreff, skal 
 
 Designet har opprinnelig to separate felter for «yrkestittel» og «kompetanse / arbeidsoppgaver». Vi slår disse sammen til **ett kombinert felt** der brukeren kan velge yrkestitler, kompetanser, fagbrev, førerkort og offentlige godkjenninger om hverandre. Dette feltet drives av typeahead-tabellen beskrevet i [typeahead-behov.md](./typeahead-behov.md).
 
-| Felt                  | Type                 | Obligatorisk | Beskrivelse                                                                                                                                                                                                                                                                                                                    |
-| --------------------- | -------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| arbeidsoppgaver       | Tagliste (typeahead) | Ja           | Kombinert felt: yrkestittel, kompetanse, autorisasjon, godkjenning, fagdokumentasjon og førerkort. Drives av `GET /rest/typeahead/behov?kategorier=YRKESTITTEL,KOMPETANSE,AUTORISASJON,GODKJENNING,FAGDOKUMENTASJON,FORERKORT` i `pam-ontologi`. Kun valg fra typeahead-forslag, ingen fritekst. Hvert element har `kategori`. |
-| arbeidssprak          | Tagliste             | Ja           | Språk som kreves i stillingen. Samme verdier som `workLanguage` på stilling. Behandles som tagliste i DTO.                                                                                                                                                                                                                     |
-| antall                | Positivt heltall     | Ja           | Antall stillinger arbeidsgiver ønsker å fylle.                                                                                                                                                                                                                                                                                 |
-| ansettelsesform       | Tagliste (nedtrekk)  | Nei          | Fast, Vikariat, Engasjement, Prosjekt, Sesong, osv. Samme verdier som `engagementtype` på stilling. Valgfritt iht. design.                                                                                                                                                                                                     |
-| personlige_egenskaper | Tagliste (typeahead) | Nei          | Softskills. Drives av samme endepunkt som arbeidsoppgaver: `GET /rest/typeahead/behov?kategorier=SOFTSKILL`. Se [typeahead-behov.md](./typeahead-behov.md). Kun valg fra typeahead-forslag, ingen fritekst. Valgfritt iht. design.                                                                                             |
+| Felt                  | Type                 | Obligatorisk | Beskrivelse                                                                                                                                                                                                                                                                                                            |
+| --------------------- | -------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| arbeidsoppgaver       | Tagliste (typeahead) | Ja           | Kombinert felt: yrkestittel, kompetanse, autorisasjon, fagdokumentasjon og førerkort. Drives av `GET /rest/typeahead/samlede_kvalifikasjoner` i `pam-ontologi` (parameterløst, returnerer hele tabellen; frontend filtrerer/søker selv). Kun valg fra typeahead-forslag, ingen fritekst. Hvert element har `kategori`. |
+| arbeidssprak          | Tagliste             | Ja           | Språk som kreves i stillingen. Samme verdier som `workLanguage` på stilling. Behandles som tagliste i DTO.                                                                                                                                                                                                             |
+| antall                | Positivt heltall     | Ja           | Antall stillinger arbeidsgiver ønsker å fylle.                                                                                                                                                                                                                                                                         |
+| ansettelsesform       | Tagliste (nedtrekk)  | Nei          | Fast, Vikariat, Engasjement, Prosjekt, Sesong, osv. Samme verdier som `engagementtype` på stilling. Valgfritt iht. design.                                                                                                                                                                                             |
+| personlige_egenskaper | Tagliste (typeahead) | Nei          | Personlige egenskaper (softskills). Drives av eget endepunkt: `GET /rest/typeahead/personlige_egenskaper?q=...`. Se [kombinert-typeahead-i-pam-ontologi.md](./kombinert-typeahead-i-pam-ontologi.md). Kun valg fra typeahead-forslag, ingen fritekst. Valgfritt iht. design.                                           |
 
 ### Lagringsformat for taglistene
 
@@ -69,7 +69,7 @@ En av årsakene til delingen er at arbeidsgiver muligens senere skal knyttes til
 ```kotlin
 data class BehovTagDto(
   val label: String,
-  val kategori: String,     // f.eks. YRKESTITTEL, KOMPETANSE, FORERKORT, SOFTSKILL, …
+  val kategori: String,     // f.eks. YRKESTITTEL, KOMPETANSE, FORERKORT, FAGDOKUMENTASJON, …
   val konseptId: Long? = null
 )
 
@@ -118,11 +118,11 @@ Brukes i:
   - Sender arbeidsgiver + behov sammen via én POST request som en atomisk operasjon
   - Samme design gjenbrukes både ved opprettelse og etter publisering
 - [ ] Behovfeltene i modalen:
-  - Arbeidsoppgaver (kombinert): `Combobox` med typeahead mot `GET /rest/typeahead/behov?kategorier=YRKESTITTEL,KOMPETANSE,AUTORISASJON,GODKJENNING,FAGDOKUMENTASJON,FORERKORT` i pam-ontologi. Viser både label og kategori i forslag. Lagrer `{label, kategori, konseptId?}`. Ingen fritekst.
+  - Arbeidsoppgaver (kombinert): `Combobox` med typeahead mot `GET /rest/typeahead/samlede_kvalifikasjoner` i pam-ontologi (parameterløs, full liste; frontend filtrerer/søker selv). Viser både label og kategori i forslag. Lagrer `{label, kategori, konseptId?}`. Ingen fritekst.
   - Arbeidsspråk: `Combobox` eller enum-select (eksisterende språkliste)
   - Antall: tallfelt (positivt heltall)
   - Ansettelsesform: `Select` med samme faste verdier som stillingens `engagementtype`. **Valgfritt.**
-  - Personlige egenskaper: `Combobox` mot `GET /rest/typeahead/behov?kategorier=SOFTSKILL` (samme endepunkt som arbeidsoppgaver, bare annet kategori-filter). **Valgfritt.** Ingen fritekst.
+  - Personlige egenskaper: `Combobox` mot `GET /rest/typeahead/personlige_egenskaper?q=...` (eget endepunkt med samme søkemønster som `/kompetanse`). **Valgfritt.** Ingen fritekst.
 - [ ] Redigeringsknapp på arbeidsgiverkortet: åpner samme `LeggTilArbeidsgiverModal` for å redigere behov. Arbeidsgiverfeltet er disabled (søkefelt låst), kun behovsfeltene er redigerbare.
 - [ ] Frontendvalidering i `LeggTilArbeidsgiverModal` (brukes både for opprettelse og redigering): `arbeidssprak` og `arbeidsoppgaver` må ha minst ett element, `antall` må være positivt heltall. `ansettelsesform` og `personlige_egenskaper` valideres ikke som obligatoriske. Vis feilmeldinger inline under hvert felt. Lagre-knappen er `disabled` inntil skjemaet er gyldig.
 - [ ] Modal viser tydelig hvilke felt som er obligatoriske og hvilke som er valgfrie (i tråd med designet: «(Valgfritt)» på de to siste).
