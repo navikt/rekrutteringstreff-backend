@@ -95,19 +95,13 @@ data class Jobbsøker(
     val status: JobbsøkerStatus,
     val hendelser: List<JobbsøkerHendelse> = emptyList()
 ) {
-
-    fun sisteSvarPåInvitasjon(): JobbsøkerHendelse? =
-        hendelser
-            .filter { it.hendelsestype.erSvarPåInvitasjon() }
-            .maxByOrNull { it.tidspunkt }
-
     fun harAktivtSvarJa(): Boolean =
-        sisteSvarPåInvitasjon()?.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
+        status == JobbsøkerStatus.SVART_JA
 
     fun erInvitert(): Boolean =
         hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT }
 
-    fun harSvart(): Boolean = sisteSvarPåInvitasjon() != null
+    fun harSvart(): Boolean = status == JobbsøkerStatus.SVART_JA || status == JobbsøkerStatus.SVART_NEI
 }
 
 data class PersonTreffId(private val id: UUID) {
