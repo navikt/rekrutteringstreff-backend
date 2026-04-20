@@ -549,7 +549,7 @@ class JobbsøkerTest {
 
         assertThat(response.statusCode()).isEqualTo(HTTP_OK)
         val hendelser = db.hentJobbsøkerHendelser(treffId)
-        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
+        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER)
         val jobbsøkere = db.hentAlleJobbsøkere()
         assertThat(jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.SVART_JA)
     }
@@ -579,7 +579,7 @@ class JobbsøkerTest {
 
         assertThat(response.statusCode()).isEqualTo(HTTP_OK)
         val hendelser = db.hentJobbsøkerHendelser(treffId)
-        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
+        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER)
         val jobbsøkere = db.hentAlleJobbsøkere()
         assertThat(jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.SVART_NEI)
     }
