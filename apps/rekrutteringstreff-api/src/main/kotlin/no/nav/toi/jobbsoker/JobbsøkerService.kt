@@ -145,9 +145,9 @@ class JobbsøkerService(
             }
 
             val hendelsesType = when (svar) {
-                true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
-                false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
-                null -> JobbsøkerHendelsestype.SVAR_FJERNET_AV_VEILEDER
+                true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER
+                false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER
+                null -> JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER
             }
 
             jobbsøkerRepository.leggTilHendelse(connection, personTreffId, hendelsesType, AktørType.ARRANGØR, navIdent)
