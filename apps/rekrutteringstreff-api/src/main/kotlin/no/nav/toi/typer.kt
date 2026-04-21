@@ -18,9 +18,6 @@ enum class JobbsøkerHendelsestype {
     TREFF_ENDRET_ETTER_PUBLISERING,
     TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
     MOTTATT_SVAR_FRA_MINSIDE;
-
-    fun erSvarPåInvitasjon(): Boolean =
-        this == SVART_JA_TIL_INVITASJON || this == SVART_NEI_TIL_INVITASJON
 }
 
 enum class ArbeidsgiverHendelsestype {
