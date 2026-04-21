@@ -125,6 +125,37 @@ class JobbsøkerService(
         }
     }
 
+    fun svarPåVegneAvJobbsøker(personTreffId: PersonTreffId, navIdent: String, svar: Boolean?) {
+        dataSource.executeInTransaction { connection ->
+            val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
+            if (erSynlig == false) {
+                throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
+            }
+
+            val nyStatus = when (svar) {
+                true -> JobbsøkerStatus.SVART_JA
+                false -> JobbsøkerStatus.SVART_NEI
+                null -> JobbsøkerStatus.INVITERT
+            }
+
+            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+            if (nåværendeStatus == nyStatus) {
+                logger.info("Jobbsøker har allerede status ${nyStatus}, ignorerer duplikat kall")
+                return@executeInTransaction
+            }
+
+            val hendelsesType = when (svar) {
+                true -> JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER
+                false -> JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER
+                null -> JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER
+            }
+
+            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, hendelsesType, AktørType.ARRANGØR, navIdent)
+            jobbsøkerRepository.endreStatus(connection, personTreffId, nyStatus)
+        }
+    }
+
+
     fun markerSlettet(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): MarkerSlettetResultat {
         val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(personTreffId)
             ?: return MarkerSlettetResultat.IKKE_FUNNET

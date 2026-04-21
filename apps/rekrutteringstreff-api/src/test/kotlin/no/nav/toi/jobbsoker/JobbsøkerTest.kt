@@ -3,8 +3,6 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
-import com.github.tomakehurst.wiremock.client.WireMock.matching
-import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
@@ -526,5 +524,92 @@ class JobbsøkerTest {
         assertThat(opprettetHendelser).hasSize(1)
     }
 
-    
+    @Test
+    fun `svarPåVegneAvJobbsøker med svar true gir status SVART_JA`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12312312312")
+
+        val jobbsøker = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, fnr,
+            Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.INVITERT
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker))
+        val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        val requestBody = """{ "personTreffId": "$personTreffId", "svar": true }"""
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/${personTreffId}/svar",
+            requestBody,
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER)
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        assertThat(jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.SVART_JA)
+    }
+
+    @Test
+    fun `svarPåVegneAvJobbsøker med svar false gir status SVART_NEI`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12312312312")
+
+        val jobbsøker = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, fnr,
+            Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.INVITERT
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker))
+        val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        val requestBody = """{ "personTreffId": "$personTreffId", "svar": false }"""
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/${personTreffId}/svar",
+            requestBody,
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val hendelser = db.hentJobbsøkerHendelser(treffId)
+        assertThat(hendelser.map { it.hendelsestype }).contains(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER)
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        assertThat(jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.SVART_NEI)
+    }
+
+    @Test
+    fun `svarPåVegneAvJobbsøker med svar null gir status INVITERT`() {
+        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        val fnr = Fødselsnummer("12312312312")
+
+        val jobbsøker = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, fnr,
+            Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.SVART_JA
+        )
+        db.leggTilJobbsøkere(listOf(jobbsøker))
+        val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
+        eierRepository.leggTil(treffId, listOf("A123456"))
+
+        val requestBody = """{ "personTreffId": "$personTreffId", "svar": null }"""
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/${personTreffId}/svar",
+            requestBody,
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+        val jobbsøkere = db.hentAlleJobbsøkere()
+        assertThat(jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.INVITERT)
+    }
+
 }
