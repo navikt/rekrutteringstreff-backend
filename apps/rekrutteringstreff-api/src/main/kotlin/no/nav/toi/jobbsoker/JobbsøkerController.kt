@@ -373,7 +373,7 @@ class JobbsøkerController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val dto = ctx.bodyAsClass<SvarForJobbsøkerDto>()
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-         val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
+        val jobbsøkerId = PersonTreffId(UUID.fromString(ctx.pathParam(pathParamJobbsøkerId)))
         val navIdent = ctx.extractNavIdent()
         log.info("Mottar svar på vegne av jobbsøker for $treffId med svar ${dto.svar}")
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
