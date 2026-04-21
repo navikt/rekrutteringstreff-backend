@@ -4,13 +4,21 @@ Når en markedskontakt legger til en arbeidsgiver i et rekrutteringstreff, skal 
 
 ## Felter
 
-| Felt                   | Type                 | Beskrivelse                                                                                                                                  |
-| ---------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| arbeidsoppgaver        | Tagliste (typeahead) | Oppgaver fra Janzz kompetanser + fagbrev + førerkort + yrkestittel + Offentlige godkjenninger. Velges kun fra Janzz-forslag, uten fritekst   |
-| arbeidsspråk           | Enum / Tagliste      | Språk som kreves i stillingen. Samme verdier som `workLanguage` på stilling. **Vurdering**: enum eller tagliste?                             |
-| antall                 | Positivt Heltall     | Antall stillinger arbeidsgiver ønsker å fylle                                                                                                |
-| ansettelsesform        | Nedtrekksliste       | Fast, Vikariat, Engasjement, Prosjekt, Sesong, osv. Samme verdier som `engagementtype` på stilling                                           |
-| personlige egenskaper? | Tagliste (typeahead) | Janzz personlige egenskaper?                                                                                                                 |
+Designet har opprinnelig to separate felter for «yrkestittel» og «kompetanse / arbeidsoppgaver». Vi slår disse sammen til **ett kombinert felt** der brukeren kan velge yrkestitler, kompetanser, fagbrev, førerkort og offentlige godkjenninger om hverandre. Dette feltet drives av typeahead-tabellen beskrevet i [typeahead-behov.md](./typeahead-behov.md).
+
+| Felt                  | Type                 | Obligatorisk | Beskrivelse                                                                                                                                                                                                                                                                                                            |
+| --------------------- | -------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| arbeidsoppgaver       | Tagliste (typeahead) | Ja           | Kombinert felt: yrkestittel, kompetanse, autorisasjon, fagdokumentasjon og førerkort. Drives av `GET /rest/typeahead/samlede_kvalifikasjoner` i `pam-ontologi` (parameterløst, returnerer hele tabellen; frontend filtrerer/søker selv). Kun valg fra typeahead-forslag, ingen fritekst. Hvert element har `kategori`. |
+| arbeidssprak          | Tagliste             | Ja           | Språk som kreves i stillingen. Samme verdier som `workLanguage` på stilling. Behandles som tagliste i DTO.                                                                                                                                                                                                             |
+| antall                | Positivt heltall     | Ja           | Antall stillinger arbeidsgiver ønsker å fylle.                                                                                                                                                                                                                                                                         |
+| ansettelsesform       | Tagliste (nedtrekk)  | Nei          | Fast, Vikariat, Engasjement, Prosjekt, Sesong, osv. Samme verdier som `engagementtype` på stilling. Valgfritt iht. design.                                                                                                                                                                                             |
+| personlige_egenskaper | Tagliste (typeahead) | Nei          | Personlige egenskaper (softskills). Drives av eget endepunkt: `GET /rest/typeahead/personlige_egenskaper?q=...`. Se [kombinert-typeahead-i-pam-ontologi.md](./kombinert-typeahead-i-pam-ontologi.md). Kun valg fra typeahead-forslag, ingen fritekst. Valgfritt iht. design.                                           |
+
+### Lagringsformat for taglistene
+
+`arbeidsoppgaver` og `personlige_egenskaper` kommer fra typeahead-APIer som leverer `{label, kategori, konseptId?}`. For å unngå at samme label i to kategorier (f.eks. «Tysk» som både `SPRAAK`/`KOMPETANSE`, eller en softskill med samme navn som en kompetanse) blir flertydig, lagres disse som **JSONB-arrays** med hele strukturen, ikke som `text[]` med kun label.
+
+`arbeidssprak` beholdes som `text[]` inntil videre (liten og velkjent verdimengde).
 
 ## Hendelser
 
@@ -28,7 +36,7 @@ Eksisterende hendelsestyper `OPPRETTET` og `SLETTET` beholdes som i dag. Når **
 - Bare eier kan legge til arbeidsgiver.
 - Arbeidsgivere legges til **én og én** via `LeggTilArbeidsgiverModal`: søk opp arbeidsgiver i et felt → modalen fylles med behovsfeltene → fylles og lagres sammen. **Behov er obligatorisk for alle arbeidsgivere.** Dette gjelder både ved opprettelse av treff og etter publisering.
 - Næringskoder følger eksisterende flyt og lagres som i dag ved opprettelse av arbeidsgiver.
-- Alle feltene i `ArbeidsgiverBehovDto` er obligatoriske ved lagring av behov. Vi legger alltid ved alle verdiene, også de som ikke er endret, ingen patching.
+- Obligatoriske felt i `ArbeidsgiverBehovDto` (`arbeidsoppgaver`, `arbeidssprak`, `antall`) må være utfylt ved lagring. `ansettelsesform` og `personligeEgenskaper` er valgfrie. Ved lagring sendes alle verdier, også de som ikke er endret — ingen patching.
 - Listefeltene `arbeidssprak` og `arbeidsoppgaver` må inneholde minst ett element ved lagring av behov.
 - Arbeidsgiver + behov lagres som en atomisk enhet via `LeggTilArbeidsgiverModal`. Arbeidsgiveren lagres IKKE uten behov ved bruk av modalen. Behov er obligatorisk input.
 - Publisering krever minst én arbeidsgiver med behovsbeskrivelse. Sjekklisten (`useSjekklisteStatus`) må oppdateres: arbeidsgiver-punktet er oppfylt når minst én arbeidsgiver har registrert behovsbeskrivelse, ikke bare når det finnes arbeidsgivere.
@@ -41,12 +49,13 @@ Eksisterende hendelsestyper `OPPRETTET` og `SLETTET` beholdes som i dag. Når **
 
 ```sql
 CREATE TABLE arbeidsgiver_behov (
-    behov_id         bigserial PRIMARY KEY,
-    arbeidsgiver_id  bigint NOT NULL REFERENCES arbeidsgiver(arbeidsgiver_id),
-    arbeidssprak    text[] NOT NULL DEFAULT '{}',
-    antall          int,
-    arbeidsoppgaver text[] NOT NULL DEFAULT '{}',
-    ansettelsesform text
+    behov_id               bigserial PRIMARY KEY,
+    arbeidsgiver_id        bigint NOT NULL REFERENCES arbeidsgiver(arbeidsgiver_id),
+    arbeidssprak           text[] NOT NULL DEFAULT '{}',
+    antall                 int NOT NULL,
+    arbeidsoppgaver        jsonb NOT NULL DEFAULT '[]'::jsonb,   -- array av {label, kategori, konseptId?}
+    ansettelsesform        text,                                 -- nullable, valgfritt felt
+    personlige_egenskaper  jsonb NOT NULL DEFAULT '[]'::jsonb    -- array av {label, kategori, konseptId?}
 );
 
 CREATE UNIQUE INDEX idx_arbeidsgiver_behov_arbeidsgiver ON arbeidsgiver_behov(arbeidsgiver_id);
@@ -58,11 +67,18 @@ En av årsakene til delingen er at arbeidsgiver muligens senere skal knyttes til
 ## DTO
 
 ```kotlin
+data class BehovTagDto(
+  val label: String,
+  val kategori: String,     // f.eks. YRKESTITTEL, KOMPETANSE, FORERKORT, FAGDOKUMENTASJON, …
+  val konseptId: Long? = null
+)
+
 data class ArbeidsgiverBehovDto(
-  val arbeidsoppgaver: List<String>,
-  val arbeidssprak: List<String>,  // Eller enum, se vurdering under Felter
-  val antall: Int,
-  val ansettelsesform: String,
+  val arbeidsoppgaver: List<BehovTagDto>,                       // min. 1
+  val arbeidssprak: List<String>,                               // min. 1
+  val antall: Int,                                              // > 0
+  val ansettelsesform: String? = null,                          // valgfritt
+  val personligeEgenskaper: List<BehovTagDto> = emptyList()     // valgfritt
 )
 ```
 
@@ -70,7 +86,7 @@ Brukes i:
 
 - Request-body for `PUT .../behov`
 - Valgfritt felt `behov` i respons fra `GET .../arbeidsgiver?include=behov` (null hvis behov ikke er registrert)
-- Alle feltene i `ArbeidsgiverBehovDto` valideres som obligatoriske ved lagring, og listefeltene (`arbeidsoppgaver`, `arbeidssprak`) må ha minst ett element.
+- Obligatoriske felt valideres ved lagring. `arbeidsoppgaver` og `arbeidssprak` må ha minst ett element. `ansettelsesform` og `personligeEgenskaper` kan utelates eller være tom.
 
 ## Plassering i backend
 
@@ -86,9 +102,9 @@ Brukes i:
 ## Backend
 
 - [ ] Flyway-migrasjon V4 (SQL over)
-- [ ] `ArbeidsgiverBehov`-modell og utvidelser i `ArbeidsgiverRepository`
+- [ ] `ArbeidsgiverBehov`-modell og utvidelser i `ArbeidsgiverRepository` (inkl. JSONB-mapping for `arbeidsoppgaver` og `personlige_egenskaper`)
 - [ ] Ny handler `leggTilArbeidsgiverMedBehovHandler()`: POST `/api/rekrutteringstreff/{id}/arbeidsgiver` som tar både arbeidsgiver og behov i request-body. Lagrer begge atomisk i én transaksjon.
-- [ ] Behov er obligatorisk input — handler avviser request hvis behovsfeltene mangler eller er ufullstendige.
+- [ ] Behov er obligatorisk input — handler avviser request hvis obligatoriske behovsfelt mangler eller er ufullstendige.
 - [ ] Utvid `GET /api/rekrutteringstreff/{id}/arbeidsgiver` med støtte for `include=behov`
 - [ ] Nytt endepunkt: `PUT /api/rekrutteringstreff/{id}/arbeidsgiver/{arbeidsgiverId}/behov` (upsert — oppdaterer behov etter opprettelse)
 - [ ] Tilgangskontroll: `leggTilArbeidsgiverMedBehovHandler` og `PUT .../behov` krever eier eller utvikler
@@ -102,21 +118,23 @@ Brukes i:
   - Sender arbeidsgiver + behov sammen via én POST request som en atomisk operasjon
   - Samme design gjenbrukes både ved opprettelse og etter publisering
 - [ ] Behovfeltene i modalen:
-  - Arbeidsoppgaver: `Combobox` med Janzz yrkesontologi-typeahead, kun valg fra Janzz-forslag
-  - Arbeidsspråk: `Combobox` eller Enum-select (**vurdering**: antall verdier og UX)
-  - Antall: tallfelt
-  - Ansettelsesform: `Select` med samme faste verdier som stillingens `engagementtype`
+  - Arbeidsoppgaver (kombinert): `Combobox` med typeahead mot `GET /rest/typeahead/samlede_kvalifikasjoner` i pam-ontologi (parameterløs, full liste; frontend filtrerer/søker selv). Viser både label og kategori i forslag. Lagrer `{label, kategori, konseptId?}`. Ingen fritekst.
+  - Arbeidsspråk: `Combobox` eller enum-select (eksisterende språkliste)
+  - Antall: tallfelt (positivt heltall)
+  - Ansettelsesform: `Select` med samme faste verdier som stillingens `engagementtype`. **Valgfritt.**
+  - Personlige egenskaper: `Combobox` mot `GET /rest/typeahead/personlige_egenskaper?q=...` (eget endepunkt med samme søkemønster som `/kompetanse`). **Valgfritt.** Ingen fritekst.
 - [ ] Redigeringsknapp på arbeidsgiverkortet: åpner samme `LeggTilArbeidsgiverModal` for å redigere behov. Arbeidsgiverfeltet er disabled (søkefelt låst), kun behovsfeltene er redigerbare.
-- [ ] Frontendvalidering i `LeggTilArbeidsgiverModal` (brukes både for opprettelse og redigering): listefeltene (`arbeidssprak`, `arbeidsoppgaver`) må ha minst ett element, `antall` må være positivt heltall, og `ansettelsesform` må være valgt. Vis feilmeldinger inline under hvert felt. Lagre-knappen er `disabled` inntil skjemaet er gyldig.
-- [ ] Modal viser tydelig at behov er obligatorisk.
-- [ ] Legg til redigeringsknapp på arbeidsgiverkortet. Knappen viser «Rediger behovsbeskrivelse». Åpner samme `LeggTilArbeidsgiverModal` med arbeidsgiverfeltet låst.
+- [ ] Frontendvalidering i `LeggTilArbeidsgiverModal` (brukes både for opprettelse og redigering): `arbeidssprak` og `arbeidsoppgaver` må ha minst ett element, `antall` må være positivt heltall. `ansettelsesform` og `personlige_egenskaper` valideres ikke som obligatoriske. Vis feilmeldinger inline under hvert felt. Lagre-knappen er `disabled` inntil skjemaet er gyldig.
+- [ ] Modal viser tydelig hvilke felt som er obligatoriske og hvilke som er valgfrie (i tråd med designet: «(Valgfritt)» på de to siste).
 - [ ] Oppdater `useSjekklisteStatus`: arbeidsgiver-punktet krever minst én arbeidsgiver med behovsbeskrivelse (ikke bare at det finnes arbeidsgivere). Frontend henter arbeidsgivere med `include=behov` for eiere.
-- [ ] Valgte `arbeidsoppgaver` kan fjernes med små kryss, etter samme mønster som andre multivalg i løsningen
+- [ ] Valgte tagger kan fjernes med små kryss, etter samme mønster som andre multivalg i løsningen.
 - [ ] Skjul behovknappen og behov for brukere som ikke eier treffet.
 
 ### UX-vurderinger
 
 **Arbeidsgiver og behov i samme operasjon — behov er obligatorisk.** Modal åpnes fra "Legg til arbeidsgiver"-knapp. Vedkommende søker opp arbeidsgiver i et felt. Modalen viser så behovsfeltene for den valgte arbeidsgiveren. Alt fylles ut, valideres og sendes som en kombinert request. Backend lagrer begge atomisk. Arbeidsgiveren lagres IKKE uten behov. Redigering av behov gjøres senere via redigeringsknapp på arbeidsgiverkortet, og bruker da separate endepunkt.
+
+**Kombinert «hva arbeidsgiver leter etter»-felt.** Designet skisserer to separate felter for yrkestittel og kompetanse, men vi slår disse sammen til ett. Kombinasjonen yrkestittel + kompetanse + fagbrev + førerkort + godkjenning dekkes av én typeahead med kategoriangivelse per rad, slik at brukeren slipper å velge «riktig» felt for et begrep som kan tolkes på flere måter. Se [typeahead-behov.md](./typeahead-behov.md).
 
 **Forholdet til stilling:** `OmVirksomheten` i stilling bruker en inline `Combobox` for å velge én arbeidsgiver direkte i skjemaet, uten modal og uten behovskonsept. Rekrutteringstreff har flere arbeidsgivere med behov koblet til hver. Det er ingen komponentkonflikt — kontekstene er helt ulike (`/stilling/` vs `/rekrutteringstreff/`), og `VelgArbeidsgiver`-komponentene er allerede separate implementasjoner.
 
@@ -127,11 +145,12 @@ Brukes i:
 ### Backend komponenttester
 
 - [ ] POST arbeidsgiver med behov oppretter både arbeidsgiver og behov atomisk
-- [ ] POST arbeidsgiver uten behov eller med ufullstendige behov gir valideringsfeil — **behov er obligatorisk**
+- [ ] POST arbeidsgiver uten behov eller med ufullstendige obligatoriske felt gir valideringsfeil — **behov er obligatorisk**
 - [ ] POST arbeidsgiver med tom `arbeidssprak` eller `arbeidsoppgaver` gir valideringsfeil
+- [ ] POST arbeidsgiver uten `ansettelsesform` eller `personligeEgenskaper` lykkes (valgfrie felt)
 - [ ] `PUT .../behov` oppdaterer eksisterende behov
 - [ ] `PUT .../behov` oppretter `BEHOV_ENDRET`-hendelse
-- [ ] `GET .../arbeidsgiver?include=behov` returnerer lagrede verdier for eier
+- [ ] `GET .../arbeidsgiver?include=behov` returnerer lagrede verdier for eier, inkl. JSONB-strukturen for `arbeidsoppgaver` og `personlige_egenskaper`
 - [ ] `GET .../arbeidsgiver?include=behov` returnerer `behov: null` for arbeidsgiver uten registrerte behov (skulle ikke forekomme hvis behov er obligatorisk)
 - [ ] Ikke-eier får `403` ved POST arbeidsgiver med behov
 - [ ] Ikke-eier med arbeidsgiverrettet rolle får `403` på `GET .../arbeidsgiver?include=behov`
@@ -143,7 +162,7 @@ Brukes i:
 
 ### Backend repositorietester
 
-- [ ] `ArbeidsgiverRepository` lagrer og henter behov korrekt
+- [ ] `ArbeidsgiverRepository` lagrer og henter behov korrekt, inkl. JSONB-strukturen for `arbeidsoppgaver` og `personlige_egenskaper`
 - [ ] `ArbeidsgiverRepository` oppdaterer eksisterende behov korrekt
 - [ ] Obligatoriske felt lagres uten `NULL`-verdier
 - [ ] `arbeidsgiver_id` er unik i `arbeidsgiver_behov`
@@ -153,7 +172,8 @@ Brukes i:
 - [ ] `ArbeidsgiverService` oppretter behov via upsert og oppretter `BEHOV_ENDRET`-hendelse
 - [ ] `ArbeidsgiverService` oppdaterer eksisterende behov via upsert og oppretter `BEHOV_ENDRET`-hendelse
 - [ ] `ArbeidsgiverService` avviser lagring når et obligatorisk felt i `behov` mangler
-- [ ] `ArbeidsgiverService` avviser lagring når et listefelt i `behov` er tomt
+- [ ] `ArbeidsgiverService` avviser lagring når et obligatorisk listefelt i `behov` er tomt
+- [ ] `ArbeidsgiverService` godtar lagring uten `ansettelsesform` og `personligeEgenskaper`
 
 ### Frontend Playwright
 
@@ -163,7 +183,8 @@ Brukes i:
 - [ ] Etter at arbeidsgiver er valgt, vises behovsfeltene i samme modal
 - [ ] Eier kan ikke lagre hvis behovsfeltene `arbeidsspråk` eller `arbeidsoppgaver` er tomme
 - [ ] Eier kan ikke lagre hvis `antall` ikke er positivt heltall
-- [ ] Eier kan ikke lagre hvis `ansettelsesform` ikke er valgt
+- [ ] Eier kan lagre uten `ansettelsesform` (valgfritt)
+- [ ] Eier kan lagre uten `personlige_egenskaper` (valgfritt)
 - [ ] Arbeidsgiver + behov sendes sammen og lagres atomisk (arbeidsgiverkortet vises hvis lagring lyktes)
 - [ ] Hvis lagring feiler, vises feilmeldinger og arbeidsgiver lagres IKKE uten behov
 - [ ] Eier kan åpne `LeggTilArbeidsgiverModal` fra redigeringsknapp på arbeidsgiverkortet (arbeidsgivervalg er låst, bare behov redigerbar)
@@ -175,5 +196,6 @@ Brukes i:
 - [ ] Ikke-eier ser arbeidsgiver uten behovknapp og uten behovsvisning
 - [ ] Utvikler ser behov på samme måte som eier
 - [ ] Ansettelsesform viser samme verdier som stillingsfeltet
-- [ ] Arbeidsoppgaver kan legges til via Janzz-typeahead uten fritekst
-- [ ] Arbeidsspråk-felt fungerer som enum eller tagliste etter design-vedtak
+- [ ] Arbeidsoppgaver kan legges til via kombinert typeahead uten fritekst, og blandede kategorier (f.eks. et yrke + et fagbrev + et førerkort) lagres og vises riktig
+- [ ] Personlige egenskaper kan legges til via egen typeahead uten fritekst
+- [ ] Arbeidsspråk-felt fungerer som tagliste
