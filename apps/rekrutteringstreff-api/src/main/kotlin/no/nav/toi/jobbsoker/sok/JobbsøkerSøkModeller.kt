@@ -60,6 +60,7 @@ enum class JobbsøkerSorteringsfelt {
             when (verdi.lowercase()) {
                 "navn" -> NAVN
                 "lagt-til" -> LAGT_TIL
+                "status" -> STATUS
                 else -> throw IllegalArgumentException("Ugyldig sortering: $verdi")
             }
     }
