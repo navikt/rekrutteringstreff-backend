@@ -29,24 +29,28 @@ enum class JobbsøkerSorteringsretning(val sql: String) {
 enum class JobbsøkerSorteringsfelt {
     NAVN,
     LAGT_TIL,
+    STATUS,
     ;
 
     @JsonValue
     fun jsonVerdi(): String = when (this) {
         NAVN -> "navn"
         LAGT_TIL -> "lagt-til"
+        STATUS -> "status"
     }
 
     val standardRetning: JobbsøkerSorteringsretning
         get() = when (this) {
             LAGT_TIL -> JobbsøkerSorteringsretning.DESC
             NAVN -> JobbsøkerSorteringsretning.ASC
+            STATUS -> JobbsøkerSorteringsretning.ASC
         }
 
     fun sql(retning: JobbsøkerSorteringsretning): String =
         when (this) {
             NAVN -> "LOWER(v.etternavn) ${retning.sql}, LOWER(v.fornavn) ${retning.sql}, v.lagt_til_dato DESC NULLS LAST, v.jobbsoker_id DESC"
             LAGT_TIL -> "v.lagt_til_dato ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
+            STATUS ->  "v.status ${retning.sql}, v.jobbsoker_id ${retning.sql}"
         }
 
     companion object {
