@@ -175,17 +175,17 @@ Brukes i:
 
 ```mermaid
 flowchart TB
-    Knapp[LeggTilArbeidsgiverKnapp] --> Modal[LeggTilArbeidsgiverModal]
-    Modal --> Søk[ArbeidsgiverSøk\nSelect/Combobox]
-    Modal --> Form[BehovForm]
-    Form --> AntallFelt[TextField: Antall stillinger]
-    Form --> KvalFelt[Combobox: Hva arbeidsgiver leter etter\nsamlede_kvalifikasjoner]
-    Form --> SpråkFelt[Combobox: Språk]
-    Form --> AnsFelt[Combobox: Ansettelsesform - valgfritt]
-    Form --> EgensFelt[Combobox: Personlige egenskaper - valgfritt]
-    KvalFelt -->|q≥2| Onto[(pam-ontologi\n/samlede_kvalifikasjoner)]
-    EgensFelt -->|q≥2| Onto
-    Modal --> Knapper[Avbryt | Legg til]
+  Knapp["LeggTilArbeidsgiverKnapp"] --> Modal["LeggTilArbeidsgiverModal"]
+  Modal --> Sok["ArbeidsgiverSøk\nSelect/Combobox"]
+  Modal --> Form["BehovForm"]
+  Form --> AntallFelt["TextField: Antall stillinger"]
+  Form --> KvalFelt["Combobox: Hva arbeidsgiver leter etter\nsamlede_kvalifikasjoner"]
+  Form --> SprakFelt["Combobox: Språk"]
+  Form --> AnsFelt["Combobox: Ansettelsesform - valgfritt"]
+  Form --> EgensFelt["Combobox: Personlige egenskaper - valgfritt"]
+  KvalFelt -->|"q >= 2"| Onto["pam-ontologi\n/samlede_kvalifikasjoner"]
+  EgensFelt -->|"q >= 2"| Onto
+  Modal --> Knapper["Avbryt / Legg til"]
 ```
 
 - [ ] `LeggTilArbeidsgiverModal`: åpnes fra "Legg til arbeidsgiver"-knapp. Inneholder:
