@@ -50,9 +50,9 @@ Vi bruker `FORERKORT` (uten æøå) som kategori-verdi i database, enum og JSON 
 
 To endepunkter, begge returnerer `ResponseEntity<List<...>>` på linje med eksisterende typeahead-endepunkter. Ingen problem details, ingen `Any`-respons.
 
-### `GET /rest/typeahead/samlede_kvalifikasjoner`
+### `GET /rest/typeahead/samlede_kvalifikasjoner?q=...`
 
-Ingen parametre. Returnerer hele tabellen som `List<SamletKvalifikasjonRespons>`. Speiler `/stillinger`-mønsteret. Frontend filtrerer/søker selv hvis ønskelig — vi har bare ett alternativ: hent alt.
+Standard typeahead-mønster. Min 2 tegn → returnerer `List<SamletKvalifikasjonRespons>` filtrert via `verdi_lc like '%q%'`. Færre enn 2 tegn → `200 OK` med tom liste, **ikke** `400`. Bruker samme rangering (eksakt → prefiks → midt-i-ord) som `/kompetanse` osv.
 
 ### `GET /rest/typeahead/personlige_egenskaper?q=...`
 
@@ -88,17 +88,17 @@ data class SamletKvalifikasjonRespons(
    - `slettOgIndekserTypeaheadPersonligeEgenskaper(prefix)` — delegerer til eksisterende `slettOgIndekserTypeahead(...)` med `KonseptType.SOFTSKILL`.
    - `slettOgIndekserTypeaheadSamledeKvalifikasjoner(prefix)` — kjører de fem `INSERT ... WHERE NOT EXISTS`-stegene over.
    - `overforTypeaheadSamledeKvalifikasjoner()` — variant av `overforTypeahead(...)` som inkluderer `kategori`.
-   - `finnAlleSamledeKvalifikasjoner()` — `select * from typeahead_samlede_kvalifikasjoner order by konsept_id`.
+   - `finnSamledeKvalifikasjoner(oppslagsord)` — speiler `finnTypeahead(...)` mot `typeahead_samlede_kvalifikasjoner` og inkluderer `kategori`-kolonnen.
    - `finnTypeaheadForPersonligeEgenskaper(oppslagsord)` — gjenbruker `finnTypeahead("typeahead_personlige_egenskaper", ...)`.
 3. **`InnlastingService`**:
    - `lastInnTypeahead()` — kall `slettOgIndekserTypeaheadPersonligeEgenskaper("tmp_")` og deretter `slettOgIndekserTypeaheadSamledeKvalifikasjoner("tmp_")` (sistnevnte må kjøre **etter** alle andre typeahead-populeringer).
    - `overforNedlastetOntologi()` — truncate prod-tabellene og kall `overforTypeahead("typeahead_personlige_egenskaper")` + `overforTypeaheadSamledeKvalifikasjoner()`.
    - `trunkerArbeidstabeller()` — droppe `tmp_typeahead_personlige_egenskaper` og `tmp_typeahead_samlede_kvalifikasjoner`.
 4. **`TypeaheadService`**:
-   - `finnAlleSamledeKvalifikasjoner()` — mapper repository-resultatet til `SamletKvalifikasjonRespons`.
+   - `finnSamledeKvalifikasjoner(q)` — mapper repository-resultatet til `SamletKvalifikasjonRespons`.
    - `finnTypeaheadForPersonligeEgenskaper(q)` — speiler `finnTypeaheadForKompetanse`.
 5. **`TypeaheadController`**:
-   - `GET /rest/typeahead/samlede_kvalifikasjoner` (parameterløs).
+   - `GET /rest/typeahead/samlede_kvalifikasjoner` (samme mønster som `/kompetanse`, 200+tom liste under 2 tegn).
    - `GET /rest/typeahead/personlige_egenskaper` (samme mønster som `/kompetanse`, 200+tom liste under 2 tegn).
 
 ## Testing
@@ -108,7 +108,7 @@ data class SamletKvalifikasjonRespons(
 - Populering fra de fire kategoriene gir riktig kategori per rad; godkjenninger gir ikke duplikater.
 - Førerkort er naturlig utelatt fra de fire ontologi-kildene (autorisasjoner i Janzz har egne (e)-koder og inneholder ikke førerkort), så ingen ekstra filtrering er nødvendig — den hardkodede FORERKORT-listen kommer i tillegg uten risiko for duplikater.
 - Den hardkodede FORERKORT-listen (19 oppføringer) populeres uten ontologi-input og har `konsept_id = null`.
-- `finnAlleSamledeKvalifikasjoner()` returnerer alle radene.
+- `finnSamledeKvalifikasjoner(q)` filtrerer på `verdi_lc` som de andre typeahead-metodene.
 - Personlige egenskaper populeres kun for `type='SS'` med samme filtrering som de andre typeaheadene.
 - `finnTypeaheadForPersonligeEgenskaper` treffer midt i ord, er case-insensitivt og håndterer norske tegn.
 - Softskills lekker ikke inn i samlede kvalifikasjoner.
@@ -125,7 +125,7 @@ data class SamletKvalifikasjonRespons(
 - [x] Indekseringsmetode helt lik de andre (btree på `konsept_id` og `verdi_lc`, GIN trgm på `verdi_lc`).
 - [x] Unngå duplikater ved insert via `where not exists` (ett rad per term-id på tvers av kategoriene).
 - [x] Bytt navn fra «softskills» til «personlige egenskaper». Egen tabell og eget typeahead-endepunkt.
-- [x] Ingen parametre på kombinert endepunkt — `GET /rest/typeahead/samlede_kvalifikasjoner` returnerer alt.
+- [x] Kombinert endepunkt bruker `q` på samme måte som de andre typeahead-endepunktene (`/kompetanse`, `/autorisasjon` …).
 - [x] Fjern godkjenninger fra kombinert tabell (subset av kompetanser, ville gitt duplikater).
 - [x] Navnebytte fra `behov` til `samlede_kvalifikasjoner`.
 - [x] `/personlige_egenskaper` bruker eksisterende `finnTypeahead`-mønster (samme som `/kompetanse`, midten-av-ord-treff).
