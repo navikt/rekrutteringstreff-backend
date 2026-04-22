@@ -10,25 +10,25 @@ Designet hentes via Figma MCP-server (`mcp_com_figma_fig_get_design_context` / `
 
 ### Feltkartlegging mot design
 
-| Designetikett                  | DTO-felt              | Aksel-komponent | Datakilde                                              |
-| ------------------------------ | --------------------- | --------------- | ------------------------------------------------------ |
-| Antall stillinger              | `antall`              | `TextField` (number) / `Select` | —                                          |
-| Hva arbeidsgiver leter etter   | `samledeKvalifikasjoner` | `Combobox` (multi) + `RemovableChips` | `GET /rest/typeahead/samlede_kvalifikasjoner?q=...` (pam-ontologi) |
-| Språk                          | `arbeidssprak`        | `Combobox` (multi) + `RemovableChips` | Statisk språkliste (samme som `workLanguage`) |
-| Ansettelsesform (Valgfritt)    | `ansettelsesform`     | `Combobox` / `Select` | Stillingens `engagementtype`-verdier             |
-| Personlige egenskaper (Valgfritt) | `personligeEgenskaper` | `Combobox` (multi) + `RemovableChips` | `GET /rest/typeahead/personlige_egenskaper?q=...` (pam-ontologi) |
+| Designetikett                     | DTO-felt                 | Aksel-komponent                       | Datakilde                                                          |
+| --------------------------------- | ------------------------ | ------------------------------------- | ------------------------------------------------------------------ |
+| Antall stillinger                 | `antall`                 | `TextField` (number) / `Select`       | —                                                                  |
+| Hva arbeidsgiver leter etter      | `samledeKvalifikasjoner` | `Combobox` (multi) + `RemovableChips` | `GET /rest/typeahead/samlede_kvalifikasjoner?q=...` (pam-ontologi) |
+| Språk                             | `arbeidssprak`           | `Combobox` (multi) + `RemovableChips` | Statisk språkliste (samme som `workLanguage`)                      |
+| Ansettelsesform (Valgfritt)       | `ansettelsesform`        | `Combobox` / `Select`                 | Stillingens `engagementtype`-verdier                               |
+| Personlige egenskaper (Valgfritt) | `personligeEgenskaper`   | `Combobox` (multi) + `RemovableChips` | `GET /rest/typeahead/personlige_egenskaper?q=...` (pam-ontologi)   |
 
 «Hva arbeidsgiver leter etter» er ett kombinert felt på tvers av yrkestittel, kompetanse, autorisasjon, fagdokumentasjon og førerkort, drevet av `samlede_kvalifikasjoner` i pam-ontologi. Se [kombinert-typeahead-i-pam-ontologi.md](./kombinert-typeahead-i-pam-ontologi.md) for typeahead-detaljer.
 
 ## Felter
 
-| Felt                   | Type                 | Obligatorisk | Beskrivelse                                                                                                                                                                                                                                          |
-| ---------------------- | -------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Felt                   | Type                 | Obligatorisk | Beskrivelse                                                                                                                                                                                                                                                      |
+| ---------------------- | -------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | samledeKvalifikasjoner | Tagliste (typeahead) | Ja           | Kombinert felt: yrkestittel, kompetanse, autorisasjon, fagdokumentasjon og førerkort. Drives av `GET /rest/typeahead/samlede_kvalifikasjoner?q=...` i `pam-ontologi` (min 2 tegn). Kun valg fra typeahead-forslag, ingen fritekst. Hvert element har `kategori`. |
-| arbeidssprak           | Tagliste             | Ja           | Språk som kreves i stillingen. Samme verdier som `workLanguage` på stilling.                                                                                                                                                                         |
-| antall                 | Positivt heltall     | Ja           | Antall stillinger arbeidsgiver ønsker å fylle.                                                                                                                                                                                                       |
-| ansettelsesform        | Tagliste (nedtrekk)  | Nei          | Fast, Vikariat, Engasjement, Prosjekt, Sesong, osv. Samme verdier som `engagementtype` på stilling.                                                                                                                                                  |
-| personligeEgenskaper   | Tagliste (typeahead) | Nei          | Personlige egenskaper (softskills). Drives av `GET /rest/typeahead/personlige_egenskaper?q=...` i pam-ontologi. Kun valg fra typeahead-forslag, ingen fritekst.                                                                                       |
+| arbeidssprak           | Tagliste             | Ja           | Språk som kreves i stillingen. Samme verdier som `workLanguage` på stilling.                                                                                                                                                                                     |
+| antall                 | Positivt heltall     | Ja           | Antall stillinger arbeidsgiver ønsker å fylle.                                                                                                                                                                                                                   |
+| ansettelsesform        | Tagliste (nedtrekk)  | Nei          | Fast, Vikariat, Engasjement, Prosjekt, Sesong, osv. Samme verdier som `engagementtype` på stilling.                                                                                                                                                              |
+| personligeEgenskaper   | Tagliste (typeahead) | Nei          | Personlige egenskaper (softskills). Drives av `GET /rest/typeahead/personlige_egenskaper?q=...` i pam-ontologi. Kun valg fra typeahead-forslag, ingen fritekst.                                                                                                  |
 
 ### Lagringsformat for taglistene
 
