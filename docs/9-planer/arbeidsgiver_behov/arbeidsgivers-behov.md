@@ -175,17 +175,20 @@ Brukes i:
 
 ```mermaid
 flowchart TB
-  Knapp["LeggTilArbeidsgiverKnapp"] --> Modal["LeggTilArbeidsgiverModal"]
-  Modal --> Sok["ArbeidsgiverSøk\nSelect/Combobox"]
-  Modal --> Form["BehovForm"]
-  Form --> AntallFelt["TextField: Antall stillinger"]
-  Form --> KvalFelt["Combobox: Hva arbeidsgiver leter etter\nsamlede_kvalifikasjoner"]
-  Form --> SprakFelt["Combobox: Språk"]
-  Form --> AnsFelt["Combobox: Ansettelsesform - valgfritt"]
-  Form --> EgensFelt["Combobox: Personlige egenskaper - valgfritt"]
-  KvalFelt -->|"q >= 2"| Onto["pam-ontologi\n/samlede_kvalifikasjoner"]
-  EgensFelt -->|"q >= 2"| Onto
-  Modal --> Knapper["Avbryt / Legg til"]
+  Knapp["LeggTilArbeidsgiverKnapp"] --> Modal
+
+  subgraph Modal["LeggTilArbeidsgiverModal"]
+    direction TB
+    Sok["ArbeidsgiverSøk\nSelect/Combobox"] --> Form["BehovForm"] --> Knapper["Avbryt / Legg til"]
+    Form --> AntallFelt["TextField: Antall stillinger"]
+    Form --> KvalFelt["Combobox: Hva arbeidsgiver leter etter\nsamlede_kvalifikasjoner"]
+    Form --> SprakFelt["Combobox: Språk"]
+    Form --> AnsFelt["Combobox: Ansettelsesform - valgfritt"]
+    Form --> EgensFelt["Combobox: Personlige egenskaper - valgfritt"]
+  end
+
+  KvalFelt -->|"q >= 2"| SamledeOnto["pam-ontologi\n/rest/typeahead/samlede_kvalifikasjoner"]
+  EgensFelt -->|"q >= 2"| PersonligeOnto["pam-ontologi\n/rest/typeahead/personlige_egenskaper"]
 ```
 
 - [ ] `LeggTilArbeidsgiverModal`: åpnes fra "Legg til arbeidsgiver"-knapp. Inneholder:
@@ -271,7 +274,6 @@ flowchart TB
 - [ ] `LeggTilArbeidsgiverModal` brukes både for opprettelse (arbeidsgivervalg aktivt) og redigering (arbeidsgivervalg låst)
 - [ ] Ikke-eier ser arbeidsgiver uten behovknapp og uten behovsvisning
 - [ ] Utvikler ser behov på samme måte som eier
-- [ ] Ansettelsesform viser samme verdier som stillingsfeltet
 - [ ] Samlede kvalifikasjoner kan legges til via kombinert typeahead uten fritekst, og blandede kategorier (f.eks. et yrke + et fagbrev + et førerkort) lagres og vises riktig
 - [ ] Personlige egenskaper kan legges til via egen typeahead uten fritekst
 - [ ] Språk-felt fungerer som tagliste

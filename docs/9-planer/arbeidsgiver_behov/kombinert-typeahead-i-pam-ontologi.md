@@ -34,6 +34,8 @@ Identisk skjema med `typeahead_kompetanse`. Populeres direkte fra `tmp_konsept` 
 
 Skjemaet er identisk med de andre `typeahead_*`-tabellene, **pluss** en `kategori varchar(30) not null`-kolonne. Primærnøkkel `id integer` (term-id, samme som i de andre tabellene). Btree-indekser på `konsept_id`, `verdi_lc`, `kategori`, samt GIN trigram på `verdi_lc`.
 
+Personlige egenskaper inngår ikke i `typeahead_samlede_kvalifikasjoner`. De eksponeres kun via `typeahead_personlige_egenskaper` og `GET /rest/typeahead/personlige_egenskaper?q=...`.
+
 Populeres ved Janzz-import som **etterkommer** av de allerede genererte `tmp_typeahead_*`-tabellene:
 
 1. `YRKESTITTEL` ← `tmp_typeahead_stilling`
