@@ -218,6 +218,7 @@ class TestDatabase {
         conn.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
         conn.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
+        conn.prepareStatement("DELETE FROM arbeidsgiver_behov").executeUpdate()
         conn.prepareStatement("DELETE FROM rekrutteringstreff_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM naringskode").executeUpdate()
         conn.prepareStatement("DELETE FROM innlegg").executeUpdate()

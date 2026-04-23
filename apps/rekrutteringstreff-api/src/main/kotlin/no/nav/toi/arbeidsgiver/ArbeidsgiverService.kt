@@ -1,7 +1,9 @@
 package no.nav.toi.arbeidsgiver
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
+import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverBehovDto
 import no.nav.toi.executeInTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
@@ -11,7 +13,8 @@ import javax.sql.DataSource
 
 class ArbeidsgiverService(
     private val dataSource: DataSource,
-    private val arbeidsgiverRepository: ArbeidsgiverRepository
+    private val arbeidsgiverRepository: ArbeidsgiverRepository,
+    private val objectMapper: ObjectMapper = ObjectMapper(),
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
@@ -23,6 +26,62 @@ class ArbeidsgiverService(
         }
         logger.info("La til arbeidsgiver ${arbeidsgiver.orgnr.asString} for treff $treffId")
     }
+
+    fun leggTilArbeidsgiverMedBehov(
+        arbeidsgiver: LeggTilArbeidsgiver,
+        behov: ArbeidsgiverBehov,
+        treffId: TreffId,
+        navIdent: String,
+    ) {
+        dataSource.executeInTransaction { connection ->
+            val reaktivert = arbeidsgiverRepository.reaktiverArbeidsgiver(connection, treffId, arbeidsgiver.orgnr)
+            val arbeidsgiverTreffId = if (reaktivert != null) {
+                arbeidsgiverRepository.leggTilHendelse(connection, reaktivert, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, navIdent)
+                reaktivert
+            } else {
+                val ny = arbeidsgiverRepository.opprettArbeidsgiver(connection, arbeidsgiver, treffId)
+                arbeidsgiverRepository.leggTilHendelse(connection, ny, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, navIdent)
+                arbeidsgiverRepository.leggTilNaringskoder(connection, ny, arbeidsgiver.næringskoder)
+                ny
+            }
+            arbeidsgiverRepository.upsertBehov(connection, arbeidsgiverTreffId, behov)
+            arbeidsgiverRepository.leggTilHendelse(
+                connection,
+                arbeidsgiverTreffId,
+                ArbeidsgiverHendelsestype.BEHOV_ENDRET,
+                AktørType.ARRANGØR,
+                navIdent,
+                hendelseData = serialiserBehov(behov),
+            )
+        }
+        logger.info("La til arbeidsgiver med behov ${arbeidsgiver.orgnr.asString} for treff $treffId")
+    }
+
+    fun oppdaterBehov(
+        arbeidsgiverTreffId: ArbeidsgiverTreffId,
+        treffId: TreffId,
+        behov: ArbeidsgiverBehov,
+        navIdent: String,
+    ): ArbeidsgiverMedBehov? {
+        return dataSource.executeInTransaction { connection ->
+            val eksisterende = arbeidsgiverRepository.hentArbeidsgivereMedBehov(treffId)
+                .firstOrNull { it.arbeidsgiver.arbeidsgiverTreffId.somString == arbeidsgiverTreffId.somString }
+                ?: return@executeInTransaction null
+            arbeidsgiverRepository.upsertBehov(connection, arbeidsgiverTreffId, behov)
+            arbeidsgiverRepository.leggTilHendelse(
+                connection,
+                arbeidsgiverTreffId,
+                ArbeidsgiverHendelsestype.BEHOV_ENDRET,
+                AktørType.ARRANGØR,
+                navIdent,
+                hendelseData = serialiserBehov(behov),
+            )
+            ArbeidsgiverMedBehov(eksisterende.arbeidsgiver, behov)
+        }
+    }
+
+    private fun serialiserBehov(behov: ArbeidsgiverBehov): String =
+        objectMapper.writeValueAsString(ArbeidsgiverBehovDto.fra(behov))
 
     fun markerArbeidsgiverSlettet(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String): Boolean {
         val resultat = dataSource.executeInTransaction { connection ->
@@ -41,6 +100,10 @@ class ArbeidsgiverService(
 
     fun hentArbeidsgivere(treffId: TreffId): List<Arbeidsgiver> {
         return arbeidsgiverRepository.hentArbeidsgivere(treffId)
+    }
+
+    fun hentArbeidsgivereMedBehov(treffId: TreffId): List<ArbeidsgiverMedBehov> {
+        return arbeidsgiverRepository.hentArbeidsgivereMedBehov(treffId)
     }
 
     fun hentArbeidsgiver(treffId: TreffId, orgnr: Orgnr): Arbeidsgiver? {
