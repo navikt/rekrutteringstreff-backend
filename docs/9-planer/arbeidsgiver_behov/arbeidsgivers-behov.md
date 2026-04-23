@@ -53,9 +53,11 @@ Alle taglister er låst til forhåndsdefinerte valg. Ingen av feltene tillater f
 
 ## Hendelser
 
-Eksisterende hendelsestyper `OPPRETTET` og `SLETTET` beholdes. Når behov opprettes eller oppdateres, opprettes `BEHOV_ENDRET`.
+Eksisterende hendelsestyper `OPPRETTET` og `SLETTET` beholdes. `ArbeidsgiverHendelsestype` utvides med `BEHOV_ENDRET`. `OPPDATERT` brukes ikke for behov.
 
 Ved vellykket `POST .../arbeidsgiver` med behov skal det derfor opprettes to hendelser i samme transaksjon: `OPPRETTET` for arbeidsgiverkoblingen og `BEHOV_ENDRET` med snapshot av det lagrede behovet. Da blir behovshistorikken komplett fra første lagring, mens senere endringer fortsatt leses som `BEHOV_ENDRET`.
+
+Ved reaktivering av en soft-slettet arbeidsgiver via ny `POST .../arbeidsgiver` brukes `behov` fra payload som ny tilstand og det emitteres `BEHOV_ENDRET`. Vi tar ikke hensyn til tidligere lagret behov.
 
 | Hendelsestype  | Trigger                      | `hendelse_data`               |
 | -------------- | ---------------------------- | ----------------------------- |
@@ -97,7 +99,7 @@ i
     }
 ```
 
-### Flyway-migrasjon (V4)
+### Flyway-migrasjon (V5)
 
 ```sql
 CREATE TABLE arbeidsgiver_behov (
@@ -112,6 +114,8 @@ CREATE TABLE arbeidsgiver_behov (
 
 CREATE UNIQUE INDEX idx_arbeidsgiver_behov_arbeidsgiver ON arbeidsgiver_behov(arbeidsgiver_id);
 ```
+
+`arbeidsgiver_hendelse.hendelse_data jsonb` finnes allerede i V1, så ingen schemaendring trengs på hendelsestabellen.
 
 Behov ligger i egen tabell, men håndteres fortsatt som del av arbeidsgiverressursen i API-et. Splittingen gjør det mulig å skjerme behov fra roller uten tilgang og å videreutvikle arbeidsgiverkoblinger uten å trekke med behovsdomenet.
 
@@ -159,12 +163,14 @@ data class ArbeidsgiverMedBehovDto(
 | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /api/rekrutteringstreff/{id}/arbeidsgiver`                       | Oppretter arbeidsgiver + behov atomisk. Reaktiverer eksisterende soft-slettet arbeidsgiver ved samme orgnr på samme treff, og skriver `OPPRETTET` + `BEHOV_ENDRET` i samme transaksjon.                                                      |
 | `GET /api/rekrutteringstreff/{id}/arbeidsgiver`                        | Forblir som i dag, uten behov i responsen.                                                                                                                                                                                                   |
-| `GET /api/rekrutteringstreff/{id}/arbeidsgiver-med-behov`              | Skjermet lesing for eier og utvikler. Returnerer `List<ArbeidsgiverMedBehovDto>` med `orgnr`, `navn` og `behov`, slik at eierflaten slipper ekstra kall når behovsbildet åpnes. `behov: null` for eldre arbeidsgivere uten registrert behov. |
-| `PUT /api/rekrutteringstreff/{id}/arbeidsgiver/{arbeidsgiverId}/behov` | Skjermet upsert for eier og utvikler av behov for eksisterende arbeidsgiver. Brukes både for første lagring i overgangsperioden og ordinær redigering.                                                                                       |
+| `GET /api/rekrutteringstreff/{id}/arbeidsgiver-med-behov`              | Skjermet lesing for eier og utvikler. Returnerer `List<ArbeidsgiverMedBehovDto>` med `orgnr`, `navn` og `behov`, sortert etter `arbeidsgiver_id` stigende (innleggingsrekkefølge), slik at eierflaten slipper ekstra kall når behovsbildet åpnes. `behov: null` for eldre arbeidsgivere uten registrert behov. |
+| `PUT /api/rekrutteringstreff/{id}/arbeidsgiver/{arbeidsgiverId}/behov` | Skjermet upsert for eier og utvikler av behov for eksisterende arbeidsgiver. Returnerer `200` med oppdatert `ArbeidsgiverMedBehovDto`, slik at frontend ikke trenger ekstra GET. Brukes både for første lagring i overgangsperioden og ordinær redigering. |
 
 - Gjenbruk `ArbeidsgiverController`, `ArbeidsgiverService` og `ArbeidsgiverRepository`.
 - `ArbeidsgiverService` eier validering, tilgangsregler, reaktivering og opprettelse av `BEHOV_ENDRET`.
 - `ArbeidsgiverRepository` eier SQL, JSONB-mapping og upsert av `arbeidsgiver_behov`.
+- `POST .../arbeidsgiver` utvides med obligatorisk `behov: ArbeidsgiverBehovDto` på `LeggTilArbeidsgiverDto`. Returnerer fortsatt `201` uten body, som i dag.
+- Skjermede endepunkter krever `Rolle.ARBEIDSGIVER_RETTET` kombinert med eier-/utviklersjekk via `EierService.erEierEllerUtvikler`, slik som dagens `GET .../arbeidsgiver/hendelser`.
 
 ## Frontend
 
@@ -193,7 +199,7 @@ flowchart TB
 | Validering  | Samme regler som i kjernebeslutningene. Inline-feil vises per felt, og lagreknappen er deaktivert til skjemaet er gyldig.                                      |
 | Typeahead   | `samledeKvalifikasjoner` og `personligeEgenskaper` bruker pam-ontologi med min. 2 tegn og uten fritekst. `samledeKvalifikasjoner` viser kategori i forslagene. |
 | Synlighet   | Ikke-eier ser arbeidsgiver uten behovsknapp eller behovsvisning. Utvikler ser behov på samme måte som eier.                                                    |
-| Publisering | `useSjekklisteStatus` må bruke skjermet `arbeidsgiver-med-behov` og kreve minst én arbeidsgiver med behov.                                                     |
+| Publisering | `useSjekklisteStatus` må bruke skjermet `arbeidsgiver-med-behov` og kreve minst én arbeidsgiver med behov. Sjekklisten gjelder dermed kun eier og utvikler, fordi ikke-eiere uansett ikke kan publisere. |
 
 ## UX-avklaringer
 
