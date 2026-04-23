@@ -55,6 +55,8 @@ Alle taglister er låst til forhåndsdefinerte valg. Ingen av feltene tillater f
 
 Eksisterende hendelsestyper `OPPRETTET` og `SLETTET` beholdes. Når behov opprettes eller oppdateres, opprettes `BEHOV_ENDRET`.
 
+Ved vellykket `POST .../arbeidsgiver` med behov skal det derfor opprettes to hendelser i samme transaksjon: `OPPRETTET` for arbeidsgiverkoblingen og `BEHOV_ENDRET` med snapshot av det lagrede behovet. Da blir behovshistorikken komplett fra første lagring, mens senere endringer fortsatt leses som `BEHOV_ENDRET`.
+
 | Hendelsestype  | Trigger                      | `hendelse_data`               |
 | -------------- | ---------------------------- | ----------------------------- |
 | `OPPRETTET`    | Arbeidsgiver legges til      | `null`                        |
@@ -148,7 +150,7 @@ data class ArbeidsgiverBehovDto(
 
 | Endepunkt / ansvar                                                     | Beskrivelse                                                                                                                                            |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `POST /api/rekrutteringstreff/{id}/arbeidsgiver`                       | Oppretter arbeidsgiver + behov atomisk. Reaktiverer eksisterende soft-slettet arbeidsgiver ved samme orgnr på samme treff.                             |
+| `POST /api/rekrutteringstreff/{id}/arbeidsgiver`                       | Oppretter arbeidsgiver + behov atomisk. Reaktiverer eksisterende soft-slettet arbeidsgiver ved samme orgnr på samme treff, og skriver `OPPRETTET` + `BEHOV_ENDRET` i samme transaksjon. |
 | `GET /api/rekrutteringstreff/{id}/arbeidsgiver`                        | Forblir som i dag, uten behov i responsen.                                                                                                             |
 | `GET /api/rekrutteringstreff/{id}/arbeidsgiver/behov`                  | Skjermet lesing for eier og utvikler. Returnerer `behov: null` for eldre arbeidsgivere uten registrert behov.                                          |
 | `PUT /api/rekrutteringstreff/{id}/arbeidsgiver/{arbeidsgiverId}/behov` | Skjermet upsert for eier og utvikler av behov for eksisterende arbeidsgiver. Brukes både for første lagring i overgangsperioden og ordinær redigering. |
@@ -196,7 +198,7 @@ flowchart TB
 
 | Lag                     | Må dekke                                                                                                                                                                                                                                                                                                                |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend komponenttest   | Atomisk opprettelse av arbeidsgiver + behov, valideringsfeil uten delvis lagring, `PUT .../behov` som upsert, `BEHOV_ENDRET` ved create/update, `403` for roller uten tilgang, `behov: null` for eldre arbeidsgiver uten behov, soft-slettet arbeidsgiver som ikke eksponerer behov, og reaktivering som bevarer behov. |
+| Backend komponenttest   | Atomisk opprettelse av arbeidsgiver + behov, valideringsfeil uten delvis lagring, `OPPRETTET` + `BEHOV_ENDRET` ved vellykket `POST`, `PUT .../behov` som upsert, `BEHOV_ENDRET` ved update, `403` for roller uten tilgang, `behov: null` for eldre arbeidsgiver uten behov, soft-slettet arbeidsgiver som ikke eksponerer behov, og reaktivering som bevarer behov. |
 | Backend repositorietest | Lagring og henting av JSONB-strukturene, unik kobling på `arbeidsgiver_id`, oppdatering av eksisterende behov, og reaktivering på samme `arbeidsgiver_id` uten tap av behov.                                                                                                                                            |
 | Backend servicetest     | Felles valideringsregler, reaktivering ved ny innlegging av samme orgnr, og korrekt opprettelse av `BEHOV_ENDRET`.                                                                                                                                                                                                      |
 | Frontend Playwright     | Legg-til-flyt i modal, redigering av eksisterende eller manglende behov, validering av obligatoriske felter, skjult behov for ikke-eier, publiseringskrav basert på behov, og kombinert typeahead uten fritekst.                                                                                                        |
