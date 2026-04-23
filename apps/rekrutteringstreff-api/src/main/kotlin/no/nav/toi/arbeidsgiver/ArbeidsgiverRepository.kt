@@ -90,13 +90,14 @@ class ArbeidsgiverRepository(
         arbeidsgiverTreffId: ArbeidsgiverTreffId,
         hendelsestype: ArbeidsgiverHendelsestype,
         opprettetAvAktørType: AktørType,
-        aktøridentifikasjon: String
+        aktøridentifikasjon: String,
+        hendelseData: String? = null,
     ) {
         connection.prepareStatement(
             """
             INSERT INTO arbeidsgiver_hendelse (
-                id, arbeidsgiver_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon
-            ) VALUES (?, (SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?), ?, ?, ?, ?)
+                id, arbeidsgiver_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data
+            ) VALUES (?, (SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?), ?, ?, ?, ?, ?::jsonb)
             """.trimIndent()
         ).use { stmt ->
             stmt.setObject(1, UUID.randomUUID())
@@ -105,7 +106,160 @@ class ArbeidsgiverRepository(
             stmt.setString(4, hendelsestype.toString())
             stmt.setString(5, opprettetAvAktørType.toString())
             stmt.setString(6, aktøridentifikasjon)
+            stmt.setString(7, hendelseData)
             stmt.executeUpdate()
+        }
+    }
+
+    fun reaktiverArbeidsgiver(connection: Connection, treff: TreffId, orgnr: Orgnr): ArbeidsgiverTreffId? {
+        val sql = """
+            SELECT ag.id
+            FROM arbeidsgiver ag
+            JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ? AND ag.orgnr = ? AND ag.status = ?
+            ORDER BY ag.arbeidsgiver_id DESC
+            LIMIT 1
+        """.trimIndent()
+        val eksisterende: UUID = connection.prepareStatement(sql).use { ps ->
+            ps.setObject(1, treff.somUuid)
+            ps.setString(2, orgnr.asString)
+            ps.setString(3, ArbeidsgiverStatus.SLETTET.name)
+            ps.executeQuery().use { rs ->
+                if (rs.next()) UUID.fromString(rs.getString("id")) else null
+            }
+        } ?: return null
+        endreStatus(connection, eksisterende, ArbeidsgiverStatus.AKTIV)
+        return ArbeidsgiverTreffId(eksisterende)
+    }
+
+    fun upsertBehov(
+        connection: Connection,
+        arbeidsgiverTreffId: ArbeidsgiverTreffId,
+        behov: ArbeidsgiverBehov,
+    ) {
+        val samledeJson = objectMapper.writeValueAsString(behov.samledeKvalifikasjoner.map {
+            mapOf("label" to it.label, "kategori" to it.kategori, "konseptId" to it.konseptId)
+        })
+        val personligeJson = objectMapper.writeValueAsString(behov.personligeEgenskaper.map {
+            mapOf("label" to it.label, "kategori" to it.kategori, "konseptId" to it.konseptId)
+        })
+        val arbeidssprakArr = connection.createArrayOf("text", behov.arbeidssprak.toTypedArray())
+        val ansettelsesformerArr = connection.createArrayOf("text", behov.ansettelsesformer.map { it.name }.toTypedArray())
+
+        val sql = """
+            INSERT INTO arbeidsgiver_behov
+                (arbeidsgiver_id, arbeidssprak, antall, samlede_kvalifikasjoner, ansettelsesformer, personlige_egenskaper)
+            VALUES (
+                (SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?),
+                ?, ?, ?::jsonb, ?, ?::jsonb
+            )
+            ON CONFLICT (arbeidsgiver_id) DO UPDATE SET
+                arbeidssprak = EXCLUDED.arbeidssprak,
+                antall = EXCLUDED.antall,
+                samlede_kvalifikasjoner = EXCLUDED.samlede_kvalifikasjoner,
+                ansettelsesformer = EXCLUDED.ansettelsesformer,
+                personlige_egenskaper = EXCLUDED.personlige_egenskaper
+        """.trimIndent()
+        connection.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, arbeidsgiverTreffId.somUuid)
+            stmt.setArray(2, arbeidssprakArr)
+            stmt.setInt(3, behov.antall)
+            stmt.setString(4, samledeJson)
+            stmt.setArray(5, ansettelsesformerArr)
+            stmt.setString(6, personligeJson)
+            val rows = stmt.executeUpdate()
+            if (rows == 0) throw IllegalArgumentException("Fant ikke arbeidsgiver med id ${arbeidsgiverTreffId.somUuid} for upsert av behov.")
+        }
+    }
+
+    fun hentBehov(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): ArbeidsgiverBehov? {
+        val sql = """
+            SELECT ab.arbeidssprak, ab.antall, ab.samlede_kvalifikasjoner, ab.ansettelsesformer, ab.personlige_egenskaper
+            FROM arbeidsgiver_behov ab
+            JOIN arbeidsgiver ag ON ag.arbeidsgiver_id = ab.arbeidsgiver_id
+            WHERE ag.id = ?
+        """.trimIndent()
+        connection.prepareStatement(sql).use { ps ->
+            ps.setObject(1, arbeidsgiverTreffId.somUuid)
+            ps.executeQuery().use { rs ->
+                if (!rs.next()) return null
+                return rs.toArbeidsgiverBehov()
+            }
+        }
+    }
+
+    fun hentArbeidsgivereMedBehov(treff: TreffId): List<ArbeidsgiverMedBehov> {
+        dataSource.connection.use { connection ->
+            if (!finnesIDb(connection, treff))
+                throw IllegalArgumentException("Kan ikke hente arbeidsgivere; treff med id $treff finnes ikke.")
+            val sql = """
+                SELECT
+                    ag.id,
+                    ag.orgnr,
+                    ag.orgnavn,
+                    ag.status,
+                    ag.gateadresse,
+                    ag.postnummer,
+                    ag.poststed,
+                    rt.id as treff_id,
+                    ab.arbeidssprak as b_arbeidssprak,
+                    ab.antall as b_antall,
+                    ab.samlede_kvalifikasjoner as b_samlede,
+                    ab.ansettelsesformer as b_ansettelsesformer,
+                    ab.personlige_egenskaper as b_personlige
+                FROM arbeidsgiver ag
+                JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                LEFT JOIN arbeidsgiver_behov ab ON ab.arbeidsgiver_id = ag.arbeidsgiver_id
+                WHERE rt.id = ? AND ag.status <> 'SLETTET'
+                ORDER BY ag.arbeidsgiver_id;
+            """.trimIndent()
+            connection.prepareStatement(sql).use { ps ->
+                ps.setObject(1, treff.somUuid)
+                ps.executeQuery().use { rs ->
+                    val result = mutableListOf<ArbeidsgiverMedBehov>()
+                    while (rs.next()) {
+                        val arbeidsgiver = rs.toArbeidsgiver()
+                        val antall = rs.getObject("b_antall") as Int?
+                        val behov = if (antall == null) null else rs.toArbeidsgiverBehov()
+                        result.add(ArbeidsgiverMedBehov(arbeidsgiver, behov))
+                    }
+                    return result
+                }
+            }
+        }
+    }
+
+    private fun java.sql.ResultSet.toArbeidsgiverBehov(): ArbeidsgiverBehov {
+        val sprakColExists = runCatching { findColumn("b_arbeidssprak") }.isSuccess
+        val arbeidssprak = if (sprakColExists) {
+            (getArray("b_arbeidssprak").array as Array<*>).map { it.toString() }
+        } else {
+            (getArray("arbeidssprak").array as Array<*>).map { it.toString() }
+        }
+        val antall = if (sprakColExists) getInt("b_antall") else getInt("antall")
+        val samledeJson = if (sprakColExists) getString("b_samlede") else getString("samlede_kvalifikasjoner")
+        val ansettelsesformerArr = if (sprakColExists) getArray("b_ansettelsesformer") else getArray("ansettelsesformer")
+        val personligeJson = if (sprakColExists) getString("b_personlige") else getString("personlige_egenskaper")
+
+        return ArbeidsgiverBehov(
+            samledeKvalifikasjoner = parseTagListe(samledeJson),
+            arbeidssprak = arbeidssprak,
+            antall = antall,
+            ansettelsesformer = (ansettelsesformerArr.array as Array<*>)
+                .map { Ansettelsesform.valueOf(it.toString()) },
+            personligeEgenskaper = parseTagListe(personligeJson),
+        )
+    }
+
+    private fun parseTagListe(json: String?): List<BehovTag> {
+        if (json.isNullOrBlank()) return emptyList()
+        val raw: List<Map<String, Any?>> = objectMapper.readValue(json, object : TypeReference<List<Map<String, Any?>>>() {})
+        return raw.map { m ->
+            BehovTag(
+                label = m["label"]?.toString() ?: throw IllegalStateException("BehovTag mangler label."),
+                kategori = m["kategori"]?.toString() ?: throw IllegalStateException("BehovTag mangler kategori."),
+                konseptId = (m["konseptId"] as? Number)?.toLong(),
+            )
         }
     }
 

@@ -8,9 +8,12 @@ import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
+import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverBehovDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
+import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverMedBehovDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
 import no.nav.toi.arbeidsgiver.dto.LeggTilArbeidsgiverDto
+import no.nav.toi.arbeidsgiver.dto.LeggTilArbeidsgiverMedBehovDto
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
@@ -26,16 +29,21 @@ class ArbeidsgiverController(
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         private const val pathParamTreffId = "id"
         private const val arbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver"
+        private const val arbeidsgiverMedBehovPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver-med-behov"
         private const val hendelserArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/hendelser"
         private const val pathParamArbeidsgiverId = "arbeidsgiverId"
         private const val arbeidsgiverItemPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/{$pathParamArbeidsgiverId}"
+        private const val arbeidsgiverBehovPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/{$pathParamArbeidsgiverId}/behov"
     }
 
     init {
         javalin.post(arbeidsgiverPath, leggTilArbeidsgiverHandler())
+        javalin.post(arbeidsgiverMedBehovPath, leggTilArbeidsgiverMedBehovHandler())
         javalin.get(arbeidsgiverPath, hentArbeidsgivereHandler())
+        javalin.get(arbeidsgiverMedBehovPath, hentArbeidsgivereMedBehovHandler())
         javalin.get(hendelserArbeidsgiverPath, hentArbeidsgiverHendelserHandler())
         javalin.delete(arbeidsgiverItemPath, slettArbeidsgiverHandler())
+        javalin.put(arbeidsgiverBehovPath, oppdaterBehovHandler())
     }
 
     @OpenApi(
@@ -205,5 +213,90 @@ class ArbeidsgiverController(
         } else {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treffId.somString}")
         }
+    }
+
+    @OpenApi(
+        summary = "Legg til arbeidsgiver med behov atomisk",
+        operationId = "leggTilArbeidsgiverMedBehov",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = LeggTilArbeidsgiverMedBehovDto::class)]),
+        responses = [OpenApiResponse(status = "201", description = "Arbeidsgiver med behov opprettet")],
+        path = arbeidsgiverMedBehovPath,
+        methods = [HttpMethod.POST]
+    )
+    private fun leggTilArbeidsgiverMedBehovHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.extractNavIdent()
+        if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
+        }
+        val dto: LeggTilArbeidsgiverMedBehovDto = ctx.bodyAsClass()
+        arbeidsgiverService.leggTilArbeidsgiverMedBehov(
+            arbeidsgiver = dto.somLeggTilArbeidsgiver(),
+            behov = dto.behov.somArbeidsgiverBehov(),
+            treffId = treff,
+            navIdent = navIdent,
+        )
+        ctx.status(201)
+    }
+
+    @OpenApi(
+        summary = "Hent alle arbeidsgivere med behov for et rekrutteringstreff (skjermet)",
+        operationId = "hentArbeidsgivereMedBehov",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        responses = [OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(from = Array<ArbeidsgiverMedBehovDto>::class)]
+        )],
+        path = arbeidsgiverMedBehovPath,
+        methods = [HttpMethod.GET]
+    )
+    private fun hentArbeidsgivereMedBehovHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.extractNavIdent()
+        if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
+        }
+        val resultat = arbeidsgiverService.hentArbeidsgivereMedBehov(treff)
+            .map { ArbeidsgiverMedBehovDto.fra(it) }
+        ctx.status(200).json(resultat)
+    }
+
+    @OpenApi(
+        summary = "Upsert behov for en eksisterende arbeidsgiver i treffet (skjermet)",
+        operationId = "oppdaterArbeidsgiverBehov",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
+            OpenApiParam(name = pathParamArbeidsgiverId, type = UUID::class, required = true)
+        ],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = ArbeidsgiverBehovDto::class)]),
+        responses = [OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(from = ArbeidsgiverMedBehovDto::class)]
+        )],
+        path = arbeidsgiverBehovPath,
+        methods = [HttpMethod.PUT]
+    )
+    private fun oppdaterBehovHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
+        val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(ctx.pathParam(pathParamArbeidsgiverId)))
+        val navIdent = ctx.extractNavIdent()
+        if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
+        }
+        val dto: ArbeidsgiverBehovDto = ctx.bodyAsClass()
+        val oppdatert = arbeidsgiverService.oppdaterBehov(
+            arbeidsgiverTreffId = arbeidsgiverTreffId,
+            treffId = treff,
+            behov = dto.somArbeidsgiverBehov(),
+            navIdent = navIdent,
+        ) ?: throw NotFoundResponse("Arbeidsgiver ${arbeidsgiverTreffId.somString} finnes ikke i treff ${treff.somString}")
+        ctx.status(200).json(ArbeidsgiverMedBehovDto.fra(oppdatert))
     }
 }
