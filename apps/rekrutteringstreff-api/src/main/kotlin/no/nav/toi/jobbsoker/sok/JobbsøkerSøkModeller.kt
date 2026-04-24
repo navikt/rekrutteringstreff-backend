@@ -58,7 +58,7 @@ enum class JobbsøkerSorteringsfelt {
             .mapIndexed { index, status -> "WHEN '${status.name}' THEN ${index + 1}" }
             .joinToString(" ")
 
-        return "CASE v.status $caseSql ELSE ${sortertStatusrekkefølge.size + 1} END ${retning.sql}, v.jobbsoker_id ${retning.sql}"
+        return "CASE v.status $caseSql ELSE 999 END ${retning.sql}, v.jobbsoker_id ${retning.sql}"
     }
 
     fun sql(retning: JobbsøkerSorteringsretning): String =
