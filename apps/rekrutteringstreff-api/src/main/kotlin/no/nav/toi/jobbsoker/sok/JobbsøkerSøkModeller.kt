@@ -46,11 +46,26 @@ enum class JobbsøkerSorteringsfelt {
             STATUS -> JobbsøkerSorteringsretning.ASC
         }
 
+    private fun statusSorteringSql(retning: JobbsøkerSorteringsretning): String {
+        val sortertStatusrekkefølge = listOf(
+            JobbsøkerStatus.SVART_JA,
+            JobbsøkerStatus.SVART_NEI,
+            JobbsøkerStatus.INVITERT,
+            JobbsøkerStatus.LAGT_TIL,
+            JobbsøkerStatus.SLETTET,
+        )
+        val caseSql = sortertStatusrekkefølge
+            .mapIndexed { index, status -> "WHEN '${status.name}' THEN ${index + 1}" }
+            .joinToString(" ")
+
+        return "CASE v.status $caseSql ELSE ${sortertStatusrekkefølge.size + 1} END ${retning.sql}, v.jobbsoker_id ${retning.sql}"
+    }
+
     fun sql(retning: JobbsøkerSorteringsretning): String =
         when (this) {
             NAVN -> "LOWER(v.etternavn) ${retning.sql}, LOWER(v.fornavn) ${retning.sql}, v.lagt_til_dato DESC NULLS LAST, v.jobbsoker_id DESC"
             LAGT_TIL -> "v.lagt_til_dato ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
-            STATUS ->  "v.status ${retning.sql}, v.jobbsoker_id ${retning.sql}"
+            STATUS -> statusSorteringSql(retning)
         }
 
     companion object {
