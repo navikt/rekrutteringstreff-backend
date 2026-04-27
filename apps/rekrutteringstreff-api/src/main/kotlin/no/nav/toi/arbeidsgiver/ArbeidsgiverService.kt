@@ -34,9 +34,9 @@ class ArbeidsgiverService(
         navIdent: String,
     ) {
         dataSource.executeInTransaction { connection ->
-            val reaktivert = arbeidsgiverRepository.reaktiverArbeidsgiver(connection, treffId, arbeidsgiver.orgnr)
+            val reaktivert = arbeidsgiverRepository.reaktiverArbeidsgiver(connection, treffId, arbeidsgiver)
             val arbeidsgiverTreffId = if (reaktivert != null) {
-                arbeidsgiverRepository.leggTilHendelse(connection, reaktivert, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, navIdent)
+                arbeidsgiverRepository.leggTilHendelse(connection, reaktivert, ArbeidsgiverHendelsestype.REAKTIVERT, AktørType.ARRANGØR, navIdent)
                 reaktivert
             } else {
                 val ny = arbeidsgiverRepository.opprettArbeidsgiver(connection, arbeidsgiver, treffId)
@@ -63,10 +63,10 @@ class ArbeidsgiverService(
         behov: ArbeidsgiverBehov,
         navIdent: String,
     ): ArbeidsgiverMedBehov? {
-        return dataSource.executeInTransaction { connection ->
-            val eksisterende = arbeidsgiverRepository.hentArbeidsgivereMedBehov(treffId)
-                .firstOrNull { it.arbeidsgiver.arbeidsgiverTreffId.somString == arbeidsgiverTreffId.somString }
-                ?: return@executeInTransaction null
+        val finnes = dataSource.executeInTransaction { connection ->
+            if (!arbeidsgiverRepository.finnesArbeidsgiverITreff(connection, treffId, arbeidsgiverTreffId)) {
+                return@executeInTransaction false
+            }
             arbeidsgiverRepository.upsertBehov(connection, arbeidsgiverTreffId, behov)
             arbeidsgiverRepository.leggTilHendelse(
                 connection,
@@ -76,8 +76,11 @@ class ArbeidsgiverService(
                 navIdent,
                 hendelseData = serialiserBehov(behov),
             )
-            ArbeidsgiverMedBehov(eksisterende.arbeidsgiver, behov)
+            true
         }
+        if (!finnes) return null
+        return arbeidsgiverRepository.hentArbeidsgivereMedBehov(treffId)
+            .firstOrNull { it.arbeidsgiver.arbeidsgiverTreffId.somString == arbeidsgiverTreffId.somString }
     }
 
     private fun serialiserBehov(behov: ArbeidsgiverBehov): String =

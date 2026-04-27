@@ -2,12 +2,13 @@ package no.nav.toi.arbeidsgiver.dto
 
 import no.nav.toi.arbeidsgiver.Ansettelsesform
 import no.nav.toi.arbeidsgiver.ArbeidsgiverBehov
+import no.nav.toi.arbeidsgiver.Arbeidssprak
 import no.nav.toi.arbeidsgiver.BehovTag
 
 data class BehovTagDto(
     val label: String,
     val kategori: String,
-    val konseptId: Long? = null,
+    val konseptId: Long,
 ) {
     fun somBehovTag() = BehovTag(label = label, kategori = kategori, konseptId = konseptId)
 
@@ -29,7 +30,7 @@ data class ArbeidsgiverBehovDto(
 ) {
     fun somArbeidsgiverBehov(): ArbeidsgiverBehov = ArbeidsgiverBehov(
         samledeKvalifikasjoner = samledeKvalifikasjoner.map { it.somBehovTag() },
-        arbeidssprak = arbeidssprak,
+        arbeidssprak = arbeidssprak.map { Arbeidssprak.fraWireValue(it) },
         antall = antall,
         ansettelsesformer = ansettelsesformer.map { Ansettelsesform.fraWireValue(it) },
         personligeEgenskaper = personligeEgenskaper.map { it.somBehovTag() },
@@ -38,7 +39,7 @@ data class ArbeidsgiverBehovDto(
     companion object {
         fun fra(behov: ArbeidsgiverBehov) = ArbeidsgiverBehovDto(
             samledeKvalifikasjoner = behov.samledeKvalifikasjoner.map { BehovTagDto.fra(it) },
-            arbeidssprak = behov.arbeidssprak,
+            arbeidssprak = behov.arbeidssprak.map { it.wireValue },
             antall = behov.antall,
             ansettelsesformer = behov.ansettelsesformer.map { it.wireValue },
             personligeEgenskaper = behov.personligeEgenskaper.map { BehovTagDto.fra(it) },

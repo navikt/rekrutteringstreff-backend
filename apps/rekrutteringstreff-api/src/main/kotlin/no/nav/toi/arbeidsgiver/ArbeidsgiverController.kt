@@ -12,6 +12,7 @@ import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverBehovDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverMedBehovDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
+import no.nav.toi.arbeidsgiver.dto.BehovMetadataDto
 import no.nav.toi.arbeidsgiver.dto.LeggTilArbeidsgiverDto
 import no.nav.toi.arbeidsgiver.dto.LeggTilArbeidsgiverMedBehovDto
 import no.nav.toi.authenticatedUser
@@ -34,6 +35,15 @@ class ArbeidsgiverController(
         private const val pathParamArbeidsgiverId = "arbeidsgiverId"
         private const val arbeidsgiverItemPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/{$pathParamArbeidsgiverId}"
         private const val arbeidsgiverBehovPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/{$pathParamArbeidsgiverId}/behov"
+        private const val behovMetadataPath = "/api/rekrutteringstreff/arbeidsgiver-behov-metadata"
+    }
+
+    private fun requireEier(ctx: Context, treff: TreffId): String {
+        val navIdent = ctx.extractNavIdent()
+        if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
+        }
+        return navIdent
     }
 
     init {
@@ -44,6 +54,7 @@ class ArbeidsgiverController(
         javalin.get(hendelserArbeidsgiverPath, hentArbeidsgiverHendelserHandler())
         javalin.delete(arbeidsgiverItemPath, slettArbeidsgiverHandler())
         javalin.put(arbeidsgiverBehovPath, oppdaterBehovHandler())
+        javalin.get(behovMetadataPath, hentBehovMetadataHandler())
     }
 
     @OpenApi(
@@ -73,15 +84,9 @@ class ArbeidsgiverController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = ctx.authenticatedUser().extractNavIdent()
-
-        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            arbeidsgiverService.leggTilArbeidsgiver(dto.somLeggTilArbeidsgiver(), treff, ctx.extractNavIdent())
-            ctx.status(201)
-        } else {
-            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
-        }
-
+        val navIdent = requireEier(ctx, treff)
+        arbeidsgiverService.leggTilArbeidsgiver(dto.somLeggTilArbeidsgiver(), treff, navIdent)
+        ctx.status(201)
     }
 
     @OpenApi(
@@ -170,24 +175,19 @@ class ArbeidsgiverController(
     private fun hentArbeidsgiverHendelserHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = ctx.authenticatedUser().extractNavIdent()
-
-        if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            val hendelser = arbeidsgiverService.hentArbeidsgiverHendelser(treff)
-            ctx.status(200).json(hendelser.map { h ->
-                ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
-                    id = h.id.toString(),
-                    tidspunkt = h.tidspunkt,
-                    hendelsestype = h.hendelsestype.toString(),
-                    opprettetAvAktørType = h.opprettetAvAktørType.toString(),
-                    aktøridentifikasjon = h.aktøridentifikasjon,
-                    orgnr = h.orgnr.asString,
-                    orgnavn = h.orgnavn.asString,
-                )
-            })
-        } else {
-            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
-        }
+        requireEier(ctx, treff)
+        val hendelser = arbeidsgiverService.hentArbeidsgiverHendelser(treff)
+        ctx.status(200).json(hendelser.map { h ->
+            ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
+                id = h.id.toString(),
+                tidspunkt = h.tidspunkt,
+                hendelsestype = h.hendelsestype.toString(),
+                opprettetAvAktørType = h.opprettetAvAktørType.toString(),
+                aktøridentifikasjon = h.aktøridentifikasjon,
+                orgnr = h.orgnr.asString,
+                orgnavn = h.orgnavn.asString,
+            )
+        })
     }
 
     @OpenApi(
@@ -205,14 +205,9 @@ class ArbeidsgiverController(
     private fun slettArbeidsgiverHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = UUID.fromString(ctx.pathParam(pathParamArbeidsgiverId))
-        val navIdent = ctx.extractNavIdent()
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-
-        if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
-            if (arbeidsgiverService.markerArbeidsgiverSlettet(id, treffId, navIdent)) ctx.status(204) else throw NotFoundResponse()
-        } else {
-            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treffId.somString}")
-        }
+        val navIdent = requireEier(ctx, treffId)
+        if (arbeidsgiverService.markerArbeidsgiverSlettet(id, treffId, navIdent)) ctx.status(204) else throw NotFoundResponse()
     }
 
     @OpenApi(
@@ -228,10 +223,7 @@ class ArbeidsgiverController(
     private fun leggTilArbeidsgiverMedBehovHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = ctx.extractNavIdent()
-        if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
-        }
+        val navIdent = requireEier(ctx, treff)
         val dto: LeggTilArbeidsgiverMedBehovDto = ctx.bodyAsClass()
         arbeidsgiverService.leggTilArbeidsgiverMedBehov(
             arbeidsgiver = dto.somLeggTilArbeidsgiver(),
@@ -257,10 +249,7 @@ class ArbeidsgiverController(
     private fun hentArbeidsgivereMedBehovHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = ctx.extractNavIdent()
-        if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
-        }
+        requireEier(ctx, treff)
         val resultat = arbeidsgiverService.hentArbeidsgivereMedBehov(treff)
             .map { ArbeidsgiverMedBehovDto.fra(it) }
         ctx.status(200).json(resultat)
@@ -286,10 +275,7 @@ class ArbeidsgiverController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(ctx.pathParam(pathParamArbeidsgiverId)))
-        val navIdent = ctx.extractNavIdent()
-        if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-            throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
-        }
+        val navIdent = requireEier(ctx, treff)
         val dto: ArbeidsgiverBehovDto = ctx.bodyAsClass()
         val oppdatert = arbeidsgiverService.oppdaterBehov(
             arbeidsgiverTreffId = arbeidsgiverTreffId,
@@ -298,5 +284,26 @@ class ArbeidsgiverController(
             navIdent = navIdent,
         ) ?: throw NotFoundResponse("Arbeidsgiver ${arbeidsgiverTreffId.somString} finnes ikke i treff ${treff.somString}")
         ctx.status(200).json(ArbeidsgiverMedBehovDto.fra(oppdatert))
+    }
+
+    @OpenApi(
+        summary = "Hent metadata for behov-feltene (lukkede lister)",
+        operationId = "hentArbeidsgiverBehovMetadata",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        responses = [OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(from = BehovMetadataDto::class)]
+        )],
+        path = behovMetadataPath,
+        methods = [HttpMethod.GET]
+    )
+    private fun hentBehovMetadataHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+        ctx.status(200).json(
+            BehovMetadataDto(
+                ansettelsesformer = Ansettelsesform.entries.map { it.wireValue },
+                arbeidssprak = Arbeidssprak.entries.map { it.wireValue },
+            )
+        )
     }
 }

@@ -109,13 +109,13 @@ class ArbeidsgiverBehovTest {
         {
           "samledeKvalifikasjoner": [
             {"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819},
-            {"label": "Førerkort klasse B", "kategori": "FORERKORT"}
+            {"label": "Førerkort klasse B", "kategori": "FORERKORT", "konseptId": 91501}
           ],
           "arbeidssprak": ["Norsk", "Engelsk"],
           "antall": $antall,
           "ansettelsesformer": ["Fast", "Vikariat"],
           "personligeEgenskaper": [
-            {"label": "Kundebehandler", "kategori": "PERSONLIG_EGENSKAP"}
+            {"label": "Kundebehandler", "kategori": "PERSONLIG_EGENSKAP", "konseptId": 700005}
           ]
         }
     """.trimIndent()
@@ -206,7 +206,7 @@ class ArbeidsgiverBehovTest {
 
         val ugyldigBehov = """
             {
-              "samledeKvalifikasjoner": [{"label": "Kokk", "kategori": "YRKESTITTEL"}],
+              "samledeKvalifikasjoner": [{"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819}],
               "arbeidssprak": ["Norsk"],
               "antall": 1,
               "ansettelsesformer": ["TullAnsettelse"]
@@ -330,7 +330,7 @@ class ArbeidsgiverBehovTest {
         // Reaktivering ved ny POST på samme orgnr
         val reaktiverBehov = """
             {
-              "samledeKvalifikasjoner": [{"label": "Servitør", "kategori": "YRKESTITTEL"}],
+              "samledeKvalifikasjoner": [{"label": "Servitør", "kategori": "YRKESTITTEL", "konseptId": 175820}],
               "arbeidssprak": ["Norsk"],
               "antall": 5,
               "ansettelsesformer": ["Sesong"]
@@ -353,5 +353,41 @@ class ArbeidsgiverBehovTest {
         // Behov er oppdatert med ny payload
         assertThat(etterReaktivering.first().behov?.antall).isEqualTo(5)
         assertThat(etterReaktivering.first().behov?.ansettelsesformer).containsExactly("Sesong")
+
+        // Reaktivering skal ha generert REAKTIVERT-hendelse i stedet for ny OPPRETTET-hendelse
+        val hendelser = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/hendelser",
+            token
+        )
+        val htype = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto::class.java)
+        val hendelseListe: List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto> = mapper.readValue(hendelser.body(), htype)
+        val typer = hendelseListe.map { it.hendelsestype }
+        assertThat(typer.count { it == ArbeidsgiverHendelsestype.OPPRETTET.name }).isEqualTo(1)
+        assertThat(typer.count { it == ArbeidsgiverHendelsestype.SLETTET.name }).isEqualTo(1)
+        assertThat(typer.count { it == ArbeidsgiverHendelsestype.REAKTIVERT.name }).isEqualTo(1)
+        assertThat(typer.count { it == ArbeidsgiverHendelsestype.BEHOV_ENDRET.name }).isEqualTo(2)
+    }
+
+    @Test
+    fun `BEHOV_ENDRET-hendelsen lagrer behov-payload som hendelse_data`() {
+        val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A111111"))
+
+        httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
+            arbeidsgiverMedBehovBody(),
+            token
+        )
+
+        val data = db.hentHendelseDataFørste("BEHOV_ENDRET")
+        assertThat(data).isNotNull()
+        val ikkeNull: String = data!!
+        // jsonb-utdrag fra Postgres bruker "key": value med mellomrom; vi kompakterer for sammenligning
+        val kompakt = ikkeNull.replace(" ", "")
+        assertThat(kompakt).contains("\"antall\":3")
+        assertThat(kompakt).contains("\"Norsk\"")
+        assertThat(kompakt).contains("\"Fast\"")
+        assertThat(kompakt).contains("\"konseptId\":175819")
     }
 }

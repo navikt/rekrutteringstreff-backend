@@ -392,6 +392,24 @@ class TestDatabase {
             .flatMap { it.hendelser }
             .sortedBy { it.tidspunkt }
 
+    fun hentHendelseDataFørste(hendelsestype: String): String? =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                SELECT hendelse_data::text
+                  FROM arbeidsgiver_hendelse
+                 WHERE hendelsestype = ?
+                 ORDER BY tidspunkt
+                 LIMIT 1
+                """.trimIndent()
+            ).use { ps ->
+                ps.setString(1, hendelsestype)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) rs.getString(1) else null
+                }
+            }
+        }
+
     fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> =
         dataSource.connection.use { connection ->
             val sql = """

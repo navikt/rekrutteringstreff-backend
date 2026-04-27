@@ -21,7 +21,7 @@ enum class JobbsøkerHendelsestype {
 }
 
 enum class ArbeidsgiverHendelsestype {
-    OPPRETTET, OPPDATERT, SLETTET, BEHOV_ENDRET
+    OPPRETTET, OPPDATERT, SLETTET, REAKTIVERT, BEHOV_ENDRET
 }
 
 enum class RekrutteringstreffHendelsestype {
