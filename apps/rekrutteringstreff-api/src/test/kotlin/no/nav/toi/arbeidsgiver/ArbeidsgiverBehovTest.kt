@@ -175,6 +175,21 @@ class ArbeidsgiverBehovTest {
     }
 
     @Test
+    fun `POST arbeidsgiver-med-behov med antall over 99 gir 400`() {
+        val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A111111"))
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
+            arbeidsgiverMedBehovBody(behovJson = gyldigBehovJson(antall = 100)),
+            token
+        )
+        assertThat(response.statusCode()).isEqualTo(HTTP_BAD_REQUEST)
+        assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+    }
+
+    @Test
     fun `POST arbeidsgiver-med-behov uten gyldig behov gir 400 og ingen lagring`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()

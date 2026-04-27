@@ -58,6 +58,7 @@ data class ArbeidsgiverBehov(
 ) {
     init {
         if (antall <= 0) throw IllegalArgumentException("Antall stillinger må være større enn 0.")
+        if (antall > 99) throw IllegalArgumentException("Antall stillinger kan ikke være større enn 99.")
         if (samledeKvalifikasjoner.isEmpty()) throw IllegalArgumentException("Minst én samlet kvalifikasjon kreves.")
         if (arbeidssprak.isEmpty()) throw IllegalArgumentException("Minst ett arbeidsspråk kreves.")
         if (ansettelsesformer.isEmpty()) throw IllegalArgumentException("Minst én ansettelsesform kreves.")
