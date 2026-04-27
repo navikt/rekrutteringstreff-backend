@@ -215,7 +215,24 @@ class ArbeidsgiverController(
         operationId = "leggTilArbeidsgiverMedBehov",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = LeggTilArbeidsgiverMedBehovDto::class)]),
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(
+            from = LeggTilArbeidsgiverMedBehovDto::class,
+            example = """{
+              "organisasjonsnummer": "123456789",
+              "navn": "Example Company",
+              "næringskoder": [{"kode": "47.111", "beskrivelse": "Detaljhandel"}],
+              "gateadresse": "Storgata 1",
+              "postnummer": "0155",
+              "poststed": "Oslo",
+              "behov": {
+                "samledeKvalifikasjoner": [{"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819}],
+                "arbeidssprak": ["Norsk", "Engelsk"],
+                "antall": 3,
+                "ansettelsesformer": ["Fast", "Vikariat"],
+                "personligeEgenskaper": [{"label": "Kundebehandler", "kategori": "PERSONLIG_EGENSKAP", "konseptId": 700005}]
+              }
+            }"""
+        )]),
         responses = [OpenApiResponse(status = "201", description = "Arbeidsgiver med behov opprettet")],
         path = arbeidsgiverMedBehovPath,
         methods = [HttpMethod.POST]
@@ -241,7 +258,23 @@ class ArbeidsgiverController(
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
         responses = [OpenApiResponse(
             status = "200",
-            content = [OpenApiContent(from = Array<ArbeidsgiverMedBehovDto>::class)]
+            content = [OpenApiContent(
+                from = Array<ArbeidsgiverMedBehovDto>::class,
+                example = """[
+  {
+    "arbeidsgiverTreffId": "any-uuid",
+    "organisasjonsnummer": "123456789",
+        "navn": "Example Company",
+        "behov": {
+          "samledeKvalifikasjoner": [{"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819}],
+          "arbeidssprak": ["Norsk"],
+          "antall": 3,
+          "ansettelsesformer": ["Fast"],
+          "personligeEgenskaper": []
+        }
+      }
+    ]"""
+            )]
         )],
         path = arbeidsgiverMedBehovPath,
         methods = [HttpMethod.GET]
@@ -263,10 +296,33 @@ class ArbeidsgiverController(
             OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
             OpenApiParam(name = pathParamArbeidsgiverId, type = UUID::class, required = true)
         ],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = ArbeidsgiverBehovDto::class)]),
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(
+            from = ArbeidsgiverBehovDto::class,
+            example = """{
+          "samledeKvalifikasjoner": [{"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819}],
+          "arbeidssprak": ["Norsk", "Engelsk"],
+          "antall": 5,
+          "ansettelsesformer": ["Fast"],
+          "personligeEgenskaper": []
+        }"""
+        )]),
         responses = [OpenApiResponse(
             status = "200",
-            content = [OpenApiContent(from = ArbeidsgiverMedBehovDto::class)]
+            content = [OpenApiContent(
+                from = ArbeidsgiverMedBehovDto::class,
+                example = """{
+              "arbeidsgiverTreffId": "any-uuid",
+              "organisasjonsnummer": "123456789",
+              "navn": "Example Company",
+              "behov": {
+                "samledeKvalifikasjoner": [{"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819}],
+                "arbeidssprak": ["Norsk", "Engelsk"],
+                "antall": 5,
+                "ansettelsesformer": ["Fast"],
+                "personligeEgenskaper": []
+              }
+            }"""
+            )]
         )],
         path = arbeidsgiverBehovPath,
         methods = [HttpMethod.PUT]
@@ -292,7 +348,13 @@ class ArbeidsgiverController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         responses = [OpenApiResponse(
             status = "200",
-            content = [OpenApiContent(from = BehovMetadataDto::class)]
+            content = [OpenApiContent(
+                from = BehovMetadataDto::class,
+                example = """{
+              "ansettelsesformer": ["Fast", "Vikariat", "Engasjement", "Prosjekt", "Åremål", "Sesong", "Feriejobb", "Trainee", "Lærling", "Selvstendig næringsdrivende", "Annet"],
+              "arbeidssprak": ["Norsk", "Engelsk", "Svensk", "Dansk", "Tysk", "Fransk", "Spansk", "Annet"]
+            }"""
+            )]
         )],
         path = behovMetadataPath,
         methods = [HttpMethod.GET]
@@ -301,8 +363,8 @@ class ArbeidsgiverController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         ctx.status(200).json(
             BehovMetadataDto(
-                ansettelsesformer = Ansettelsesform.entries.map { it.wireValue },
-                arbeidssprak = Arbeidssprak.entries.map { it.wireValue },
+                ansettelsesformer = Ansettelsesform.entries.map { it.apiNavn },
+                arbeidssprak = Arbeidssprak.entries.map { it.apiNavn },
             )
         )
     }

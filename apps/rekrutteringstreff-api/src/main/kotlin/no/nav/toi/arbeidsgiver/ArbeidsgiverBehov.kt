@@ -1,6 +1,6 @@
 package no.nav.toi.arbeidsgiver
 
-enum class Ansettelsesform(val wireValue: String) {
+enum class Ansettelsesform(val apiNavn: String) {
     FAST("Fast"),
     VIKARIAT("Vikariat"),
     ENGASJEMENT("Engasjement"),
@@ -14,13 +14,13 @@ enum class Ansettelsesform(val wireValue: String) {
     ANNET("Annet");
 
     companion object {
-        fun fraWireValue(wireValue: String): Ansettelsesform =
-            entries.firstOrNull { it.wireValue == wireValue }
-                ?: throw IllegalArgumentException("Ukjent ansettelsesform [$wireValue].")
+        fun fraApiNavn(apiNavn: String): Ansettelsesform =
+            entries.firstOrNull { it.apiNavn == apiNavn }
+                ?: throw IllegalArgumentException("Ukjent ansettelsesform [$apiNavn].")
     }
 }
 
-enum class Arbeidssprak(val wireValue: String) {
+enum class Arbeidssprak(val apiNavn: String) {
     NORSK("Norsk"),
     ENGELSK("Engelsk"),
     SVENSK("Svensk"),
@@ -31,9 +31,9 @@ enum class Arbeidssprak(val wireValue: String) {
     ANNET("Annet");
 
     companion object {
-        fun fraWireValue(wireValue: String): Arbeidssprak =
-            entries.firstOrNull { it.wireValue == wireValue }
-                ?: throw IllegalArgumentException("Ukjent arbeidsspråk [$wireValue].")
+        fun fraApiNavn(apiNavn: String): Arbeidssprak =
+            entries.firstOrNull { it.apiNavn == apiNavn }
+                ?: throw IllegalArgumentException("Ukjent arbeidsspråk [$apiNavn].")
     }
 }
 
