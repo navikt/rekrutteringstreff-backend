@@ -21,7 +21,7 @@ import java.time.Instant
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
-class JobbsøkerSokKomponenttest {
+class JobbsøkerSokKomponentTest {
 
     companion object {
         private val authServer = MockOAuth2Server()
