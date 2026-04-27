@@ -16,13 +16,13 @@ import java.util.UUID
 import kotlin.system.measureTimeMillis
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class JobbsøkerSokYtelsestest {
+class JobbsøkerSokYtelsesTest {
     companion object {
         private const val ANTALL_JOBBSØKERE = 10_000
         private const val WARMUP_TERSKEL_MS = 2_000L
         private const val MALT_TERSKEL_MS = 500L
         private const val SORTERING_TERSKEL_MS = 500L
-        private val logger = LoggerFactory.getLogger(JobbsøkerSokYtelsestest::class.java)
+        private val logger = LoggerFactory.getLogger(JobbsøkerSokYtelsesTest::class.java)
 
         private val db = TestDatabase()
         private lateinit var repository: JobbsøkerSokRepository

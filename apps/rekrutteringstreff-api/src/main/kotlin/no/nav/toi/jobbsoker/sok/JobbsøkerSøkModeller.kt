@@ -29,24 +29,43 @@ enum class JobbsøkerSorteringsretning(val sql: String) {
 enum class JobbsøkerSorteringsfelt {
     NAVN,
     LAGT_TIL,
+    STATUS,
     ;
 
     @JsonValue
     fun jsonVerdi(): String = when (this) {
         NAVN -> "navn"
         LAGT_TIL -> "lagt-til"
+        STATUS -> "status"
     }
 
     val standardRetning: JobbsøkerSorteringsretning
         get() = when (this) {
             LAGT_TIL -> JobbsøkerSorteringsretning.DESC
             NAVN -> JobbsøkerSorteringsretning.ASC
+            STATUS -> JobbsøkerSorteringsretning.ASC
         }
+
+    private fun statusSorteringSql(retning: JobbsøkerSorteringsretning): String {
+        val sortertStatusrekkefølge = listOf(
+            JobbsøkerStatus.SVART_JA,
+            JobbsøkerStatus.SVART_NEI,
+            JobbsøkerStatus.INVITERT,
+            JobbsøkerStatus.LAGT_TIL,
+            JobbsøkerStatus.SLETTET,
+        )
+        val caseSql = sortertStatusrekkefølge
+            .mapIndexed { index, status -> "WHEN '${status.name}' THEN ${index + 1}" }
+            .joinToString(" ")
+
+        return "CASE v.status $caseSql ELSE 999 END ${retning.sql}, v.jobbsoker_id ${retning.sql}"
+    }
 
     fun sql(retning: JobbsøkerSorteringsretning): String =
         when (this) {
             NAVN -> "LOWER(v.etternavn) ${retning.sql}, LOWER(v.fornavn) ${retning.sql}, v.lagt_til_dato DESC NULLS LAST, v.jobbsoker_id DESC"
             LAGT_TIL -> "v.lagt_til_dato ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
+            STATUS -> statusSorteringSql(retning)
         }
 
     companion object {
@@ -56,6 +75,7 @@ enum class JobbsøkerSorteringsfelt {
             when (verdi.lowercase()) {
                 "navn" -> NAVN
                 "lagt-til" -> LAGT_TIL
+                "status" -> STATUS
                 else -> throw IllegalArgumentException("Ugyldig sortering: $verdi")
             }
     }
