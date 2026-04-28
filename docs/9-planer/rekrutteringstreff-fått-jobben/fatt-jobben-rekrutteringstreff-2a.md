@@ -163,5 +163,4 @@ Eksisterende tester som må verifiseres mot ny enum-verdi:
 
 1. Skal `arbeidsgiverOrgnr` velges av markedskontakt i modalen, eller utledes hvis treffet kun har én arbeidsgiver?
 2. Hvor lang retry-periode og maks antall forsøk skal scheduleren ha før den gir opp og varsler?
-3. Skal frontend vise hvem og når på personkortet etter registrering, eller kun en statusbadge i v1?
-4. Når vi senere åpner for `REKRUTTERINGSTREFF`-kategori i Avro: skal eksisterende `FORMIDLING`-rader migreres, eller kun nye?
+3. Når vi senere åpner for `REKRUTTERINGSTREFF`-kategori i Avro: skal eksisterende `FORMIDLING`-rader migreres, eller kun nye?
