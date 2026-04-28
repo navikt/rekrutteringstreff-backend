@@ -21,7 +21,7 @@ import java.time.Instant
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
-class JobbsøkerSokKomponenttest {
+class JobbsøkerSokKomponentTest {
 
     companion object {
         private val authServer = MockOAuth2Server()
@@ -394,6 +394,56 @@ class JobbsøkerSokKomponenttest {
 
         assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
         assertThat(synkendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
+    }
+
+    @Test
+    fun `sortering på status støtter stigende rekkefølge`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("77777777771"), Fornavn("LagtTil"), Etternavn("A"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("77777777772"), Fornavn("Invitert"), Etternavn("B"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("77777777773"), Fornavn("SvartNei"), Etternavn("C"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("77777777774"), Fornavn("SvartJa"), Etternavn("D"), null, null, null),
+        ), treffId)
+        db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2], personTreffIder[3]), treffId)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_NEI)
+        db.settJobbsøkerStatus(personTreffIder[3], JobbsøkerStatus.SVART_JA)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody("sortering" to "status", "retning" to "asc")).body()
+        )
+
+        assertThat(dto.jobbsøkere.map { it.status }).containsExactly(
+            JobbsøkerStatus.SVART_JA,
+            JobbsøkerStatus.SVART_NEI,
+            JobbsøkerStatus.INVITERT,
+            JobbsøkerStatus.LAGT_TIL,
+        )
+    }
+
+    @Test
+    fun `sortering på status støtter synkende rekkefølge`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("77777777781"), Fornavn("LagtTil"), Etternavn("A"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("77777777782"), Fornavn("Invitert"), Etternavn("B"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("77777777783"), Fornavn("SvartNei"), Etternavn("C"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("77777777784"), Fornavn("SvartJa"), Etternavn("D"), null, null, null),
+        ), treffId)
+        db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2], personTreffIder[3]), treffId)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_NEI)
+        db.settJobbsøkerStatus(personTreffIder[3], JobbsøkerStatus.SVART_JA)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody("sortering" to "status", "retning" to "desc")).body()
+        )
+
+        assertThat(dto.jobbsøkere.map { it.status }).containsExactly(
+            JobbsøkerStatus.LAGT_TIL,
+            JobbsøkerStatus.INVITERT,
+            JobbsøkerStatus.SVART_NEI,
+            JobbsøkerStatus.SVART_JA,
+        )
     }
 
     @Test
