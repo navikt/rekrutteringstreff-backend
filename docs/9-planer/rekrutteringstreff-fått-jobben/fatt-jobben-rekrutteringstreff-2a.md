@@ -7,7 +7,7 @@ Implementasjonsplan for løsningen som er valgt i [vurdering-fatt-jobben-statist
 | Tema                       | Beslutning                                                                                                                                                         | Implementasjonskonsekvens                                                                                                                               |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Kategori i Avro            | Gjenbruke `stillingskategori = FORMIDLING` i v1. Egen `REKRUTTERINGSTREFF`-verdi vurderes senere.                                                                  | Ingen endring hos `datavarehus-statistikk` ved utrulling. Treff er ikke skillbar fra etterregistrering eksternt før migrering.                          |
-| Synlighet av treff internt | `statistikk-api` skal kunne skille treff fra ordinær etterregistrering i sine egne tabeller og aggregater.                                                         | Ny kolonne `rekrutteringstreff_id` på `kandidatutfall`. Feltet propageres fra Rapids-meldingen og lagres ved siden av eksisterende felt.                |
+| Synlighet av treff internt | `statistikk-api` skal kunne skille treff fra ordinær etterregistrering i sine egne tabeller og aggregater.                                                         | To alternativer — se «Endringer i `statistikk-api`» nedenfor. Ikke avgjort ennå.                                                                        |
 | Kandidatliste/stilling     | Det opprettes ikke noen formidlingsstilling. `stillingsId` og `kandidatlisteId` er ikke med i den nye meldingen og settes ikke i `kandidatutfall` for treff-rader. | Stilling-api og kandidat-api berøres ikke i v1. Kolonner i `kandidatutfall` for `stillingsId`/`kandidatlisteId` er allerede nullable.                   |
 | Angring                    | Ikke støttet i v1.                                                                                                                                                 | Ingen `FATT_JOBBEN_FJERNET`-hendelse i denne iterasjonen. Datamodellen designes likevel slik at det kan legges til uten migrering av eksisterende data. |
 | Idempotens                 | En jobbsøker kan ha maks én aktiv `FATT_JOBBEN`-hendelse per rekrutteringstreff.                                                                                   | Unik constraint i `rekrutteringstreff-api` + sjekk i service før hendelse skrives. Endepunktet returnerer `409` ved duplikat.                           |
@@ -62,13 +62,66 @@ CREATE UNIQUE INDEX idx_jobbsoker_fatt_jobben_utsending_hendelse
 
 ### Endringer i `statistikk-api`
 
+To alternativer. Begge bruker den samme `RekrutteringstreffFåttJobbenLytter` og endrer ikke eksisterende lyttere.
+
+#### Alt A — Ny kolonne på `kandidatutfall`
+
 ```sql
 ALTER TABLE kandidatutfall ADD COLUMN rekrutteringstreff_id uuid;
 CREATE INDEX idx_kandidatutfall_rekrutteringstreff ON kandidatutfall(rekrutteringstreff_id)
     WHERE rekrutteringstreff_id IS NOT NULL;
 ```
 
-Feltet er `NULL` for alle eksisterende rader og for utfall som ikke kommer fra et treff. Det brukes kun internt — Avro-meldingen videre til `datavarehus-statistikk` påvirkes ikke.
+Lytteren skriver én rad til `kandidatutfall` med `rekrutteringstreff_id` satt og `stilling_id`/`kandidatliste_id` som `NULL`. Eksisterende `DatavarehusKafkaProducer`-scheduler plukker raden opp uten endring og sender Avro videre til `datavarehus-statistikk`.
+
+| Fordel                                              | Ulempe                                                                                           |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Ingen endring i producer eller datavarehus-pipeline | Treff-rader bærer nullable-felt som er meningsløse for treff (`stilling_id`, `kandidatliste_id`) |
+| Eksisterende repo-kode og tester dekker nesten alt  | Samler to ulike datakontekster i én tabell                                                       |
+| Minst ny kode                                       | Partial index nødvendig for effektive treff-spesifikke spørringer                                |
+
+#### Alt B — Dedikert tabell `rekrutteringstreff_utfall`
+
+```sql
+CREATE TABLE rekrutteringstreff_utfall (
+    id                    bigserial PRIMARY KEY,
+    rekrutteringstreff_id uuid        NOT NULL,
+    aktor_id              text        NOT NULL,
+    nav_ident             text        NOT NULL,
+    nav_kontor            text        NOT NULL,
+    organisasjonsnummer   text        NOT NULL,
+    stillingskategori     text        NOT NULL,
+    tidspunkt             timestamptz NOT NULL,
+    UNIQUE (rekrutteringstreff_id, aktor_id)
+);
+
+CREATE INDEX idx_rekrutteringstreff_utfall_treff
+    ON rekrutteringstreff_utfall(rekrutteringstreff_id);
+```
+
+Lytteren skriver kun til `rekrutteringstreff_utfall`. Siden det er nøyaktig én rad per jobbsøker per treff, reflekterer den unike constrainten `(rekrutteringstreff_id, aktor_id)` forretningsmeningen direkte. Uttrekk internt er trivielt: `SELECT * FROM rekrutteringstreff_utfall WHERE rekrutteringstreff_id = ?` — ingen partial index, ingen nullable-støy.
+
+For at Avro fortsatt skal sendes til `datavarehus-statistikk` i v1 uten å endre den tjenesten, må én av to løsninger velges:
+
+- **B1**: Lytteren skriver også én rad til `kandidatutfall` (med `NULL` for stilling-felt) slik at eksisterende producer plukker det opp — to skriv i én transaksjon.
+- **B2**: Ny scheduler leser fra `rekrutteringstreff_utfall` og sender Avro separat, uavhengig av `DatavarehusKafkaProducer`.
+
+| Fordel                                                        | Ulempe                                                            |
+| ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Ren modell — kun feltene som er relevante for treff           | Krever ekstra beslutning for datavarehus-pipelinen (B1 eller B2)  |
+| Unik constraint på `(treff, aktor)` er naturlig og eksplisitt | Mer ny kode: nytt repo, ny scheduler (B2) eller dobbeltskriv (B1) |
+| Enkel og rask intern spørring uten partial index              | Eksisterende `KandidatutfallRepositoryTest` dekker ikke ny tabell |
+
+#### Sammenligning
+
+|                                | Alt A                        | Alt B                                  |
+| ------------------------------ | ---------------------------- | -------------------------------------- |
+| Endring i datavarehus-pipeline | Ingen                        | B1: dobbeltskriv · B2: ny scheduler    |
+| Intern spørring                | Partial index, nullable felt | Trivielt, ren tabell                   |
+| Ny kode i statistikk-api       | Lite (1 kolonne + lytter)    | Mer (ny tabell + repo + ev. scheduler) |
+| Modellryddighet                | Middels                      | God                                    |
+
+**Ikke avgjort.** Alt A er enklest å shippe; Alt B er renere om vi forventer mer intern rapportering på tvers av treff.
 
 ## API i `rekrutteringstreff-api`
 
@@ -115,14 +168,14 @@ Ny lytter `RekrutteringstreffFåttJobbenLytter` i `statistikk-api` leser disse f
 
 ## Endringer per system
 
-| System                   | Endring                                                                                                                            |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `frontend`               | Knapp + bekreftelsesmodal i jobbsøkerlisten. Visning av status «fått jobben» på personkortet. Kall til nytt endepunkt.             |
-| `rekrutteringstreff-api` | Ny enum-verdi, nytt endepunkt, ny tabell, ny scheduler, ny Rapids-publisering.                                                     |
-| `statistikk-api`         | Ny kolonne `rekrutteringstreff_id`, ny lytter `RekrutteringstreffFåttJobbenLytter`. Eksisterende lyttere og validering er uendret. |
-| `stilling-api`           | Ingen endring i v1.                                                                                                                |
-| `kandidat-api`           | Ingen endring i v1.                                                                                                                |
-| `datavarehus-statistikk` | Ingen endring i v1.                                                                                                                |
+| System                   | Endring                                                                                                                                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `frontend`               | Knapp + bekreftelsesmodal i jobbsøkerlisten. Visning av status «fått jobben» på personkortet. Kall til nytt endepunkt.                                                                                                            |
+| `rekrutteringstreff-api` | Ny enum-verdi, nytt endepunkt, ny tabell, ny scheduler, ny Rapids-publisering.                                                                                                                                                    |
+| `statistikk-api`         | Ny lytter `RekrutteringstreffFåttJobbenLytter`. **Alt A**: ny kolonne `rekrutteringstreff_id` på `kandidatutfall`. **Alt B**: dedikert tabell `rekrutteringstreff_utfall`. Eksisterende lyttere og validering er uendret uansett. |
+| `stilling-api`           | Ingen endring i v1.                                                                                                                                                                                                               |
+| `kandidat-api`           | Ingen endring i v1.                                                                                                                                                                                                               |
+| `datavarehus-statistikk` | Ingen endring i v1.                                                                                                                                                                                                               |
 
 ## Spec — tester som må endres eller legges til
 
@@ -148,12 +201,28 @@ Eksisterende tester som må verifiseres mot ny enum-verdi:
 
 ### `statistikk-api`
 
-| Test                                                                           | Type          | Hva den skal verifisere                                                                                                   |
-| ------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `RekrutteringstreffFåttJobbenLytterTest.skalLagreUtfallOgRekrutteringstreffId` | Komponenttest | Rapids-melding med `kandidat_v2.RekrutteringstreffFåttJobben` lagrer `kandidatutfall` med riktig `rekrutteringstreff_id`. |
-| `RekrutteringstreffFåttJobbenLytterTest.skalIgnorereMeldingUtenPåkrevdeFelt`   | Komponenttest | Meldinger som mangler obligatoriske felt ignoreres.                                                                       |
-| `KandidatutfallRepositoryTest.skalLagreOgLeseRekrutteringstreffId`             | Enhetstest    | Repo-mapping mot ny kolonne fungerer.                                                                                     |
-| `DatavarehusKafkaProducerTest`                                                 | Eksisterende  | Verifisere at `rekrutteringstreff_id` ikke lekker ut i `AvroKandidatutfall`.                                              |
+| Test | Type | Hva den skal verifisere |
+| ---- | ---- | ----------------------- |
+
+**Alt A:**
+
+| Test                                                                           | Type          | Hva den skal verifisere                                                                                                         |
+| ------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `RekrutteringstreffFåttJobbenLytterTest.skalLagreUtfallOgRekrutteringstreffId` | Komponenttest | Rapids-melding lagrer rad i `kandidatutfall` med riktig `rekrutteringstreff_id`, og `stilling_id`/`kandidatliste_id` er `NULL`. |
+| `RekrutteringstreffFåttJobbenLytterTest.skalIgnorereMeldingUtenPåkrevdeFelt`   | Komponenttest | Meldinger som mangler obligatoriske felt ignoreres.                                                                             |
+| `KandidatutfallRepositoryTest.skalLagreOgLeseRekrutteringstreffId`             | Enhetstest    | Repo-mapping mot ny kolonne fungerer.                                                                                           |
+| `DatavarehusKafkaProducerTest`                                                 | Eksisterende  | Verifisere at `rekrutteringstreff_id` ikke lekker ut i `AvroKandidatutfall`.                                                    |
+
+**Alt B:**
+
+| Test                                                                                               | Type          | Hva den skal verifisere                                                                         |
+| -------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------- |
+| `RekrutteringstreffFåttJobbenLytterTest.skalLagreIRekrutteringstreffUtfall`                        | Komponenttest | Rapids-melding lagrer rad i `rekrutteringstreff_utfall` med alle felt korrekt.                  |
+| `RekrutteringstreffFåttJobbenLytterTest.skalHåndhevUnikConstraintPerTreffOgAktor`                  | Komponenttest | Duplikatmelding for samme `(rekrutteringstreff_id, aktor_id)` lagres ikke på nytt (idempotens). |
+| `RekrutteringstreffFåttJobbenLytterTest.skalIgnorereMeldingUtenPåkrevdeFelt`                       | Komponenttest | Meldinger som mangler obligatoriske felt ignoreres.                                             |
+| `RekrutteringstreffUtfallRepositoryTest.skalLagreOgHenteUtfall`                                    | Enhetstest    | Repo-mapping mot ny tabell fungerer.                                                            |
+| _(Alt B1)_ `RekrutteringstreffFåttJobbenLytterTest.skalOgsåSkriveKandidatutfallForAvro`            | Komponenttest | Lytteren skriver atomisk til begge tabeller; `DatavarehusKafkaProducer` plukker opp raden.      |
+| _(Alt B2)_ `RekrutteringstreffAvroSchedulerTest.skalSendeAvroForUutsendteRekrutteringstreffUtfall` | Komponenttest | Dedikert scheduler sender Avro for rader uten `sendt_tidspunkt`.                                |
 
 ### `frontend`
 
