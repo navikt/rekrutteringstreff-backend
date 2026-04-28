@@ -90,7 +90,6 @@ CREATE TABLE rekrutteringstreff_utfall (
     nav_ident             text        NOT NULL,
     nav_kontor            text        NOT NULL,
     organisasjonsnummer   text        NOT NULL,
-    stillingskategori     text        NOT NULL,
     tidspunkt             timestamptz NOT NULL,
     UNIQUE (rekrutteringstreff_id, aktor_id)
 );
@@ -162,7 +161,8 @@ Eget event `kandidat_v2.RekrutteringstreffFåttJobben` som kun `rekrutteringstre
 | `tidspunkt`             | Hendelsens tidspunkt                                                      |
 | `utførtAvNavIdent`      | `registrertAvNavIdent`                                                    |
 | `utførtAvNavKontorKode` | `registrertAvNavKontor`                                                   |
-| `stillingskategori`     | `FORMIDLING` (eller `REKRUTTERINGSTREFF` om kategori-beslutningen endres) |
+
+`stillingskategori` er ikke med i meldingen. Lytteren vet at kilden alltid er et rekrutteringstreff og hardkoder `FORMIDLING` (eller `REKRUTTERINGSTREFF` når det evt. innføres) ved lagring.
 
 Ny lytter `RekrutteringstreffFåttJobbenLytter` i `statistikk-api` leser disse feltene direkte og lagrer i `kandidatutfall` + den nye `rekrutteringstreff_id`-kolonnen. Ingen endring i eksisterende lyttere eller validering.
 

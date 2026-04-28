@@ -220,7 +220,7 @@ flowchart TD
 | Brukeropplevelse                     | Ett klikk i treffet, ingen kontekstskifte         | Krever bytte til etterregistreringsflyten            |
 | Eierskap                             | Treff-domenet eier hele løpet                     | Stilling-/kandidat-domenet beholder ansvaret         |
 | Nye konsepter for veileder           | Bekreftelsesmodal er ny, ellers samme             | Nytt felt i kjent skjema                             |
-| Kobling til kandidatliste/stilling   | Brytes — statistikk får syntetisk ID              | Beholdes — ekte stilling og liste finnes             |
+| Kobling til kandidatliste/stilling   | Ingen — `stillingsId`/`kandidatlisteId` utelates fra meldingen | Beholdes — ekte stilling og liste finnes             |
 | Endringsomfang i statistikk-api      | Lite (ny lytter eller utvidet)                    | Lite (ny kolonne)                                    |
 | Endringsomfang i kandidat-api        | Ingen                                             | Må videreformidle treff-ID                           |
 | Risiko for inkonsistens              | Lav — én skriver (`rekrutteringstreff-api`)       | Middels — fire systemer berøres for én registrering  |
@@ -237,10 +237,9 @@ Alternativ **2A** gir minst risiko for inkonsistens og holder treff-domenet saml
 ## Åpne spørsmål til møtet
 
 1. Skal `datavarehus-statistikk` se rekrutteringstreff som egen `stillingskategori`, eller skal det rapporteres som `FORMIDLING`?
-2. Er det akseptabelt at `stillingsId`/`kandidatlisteId` på Avro-meldingen blir syntetiske (treff-baserte) i 2A?
-3. Skal det åpnes for angring i v1 likevel? (Påvirker hendelsesmodellen.)
-4. Hvor ligger ansvaret for «fått jobben hos hvilken arbeidsgiver» når et treff har flere arbeidsgivere?
-5. Skal statistikk-api på sikt eksponere et eget aggregat for rekrutteringstreff til frontend, eller holder dagens samlede tall?
+2. Skal det åpnes for angring i v1 likevel? (Påvirker hendelsesmodellen.)
+3. Hvor ligger ansvaret for «fått jobben hos hvilken arbeidsgiver» når et treff har flere arbeidsgivere?
+4. Skal statistikk-api på sikt eksponere et eget aggregat for rekrutteringstreff til frontend, eller holder dagens samlede tall?
 
 ## Prosjekter som er sjekket for dette dokumentet
 
