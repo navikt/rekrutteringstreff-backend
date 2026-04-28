@@ -218,6 +218,7 @@ class TestDatabase {
         conn.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
         conn.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
+        conn.prepareStatement("DELETE FROM arbeidsgiver_behov").executeUpdate()
         conn.prepareStatement("DELETE FROM rekrutteringstreff_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM naringskode").executeUpdate()
         conn.prepareStatement("DELETE FROM innlegg").executeUpdate()
@@ -390,6 +391,24 @@ class TestDatabase {
         jobbsøkerRepository.hentJobbsøkere(treff)
             .flatMap { it.hendelser }
             .sortedBy { it.tidspunkt }
+
+    fun hentHendelseDataFørste(hendelsestype: String): String? =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                SELECT hendelse_data::text
+                  FROM arbeidsgiver_hendelse
+                 WHERE hendelsestype = ?
+                 ORDER BY tidspunkt
+                 LIMIT 1
+                """.trimIndent()
+            ).use { ps ->
+                ps.setString(1, hendelsestype)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) rs.getString(1) else null
+                }
+            }
+        }
 
     fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> =
         dataSource.connection.use { connection ->

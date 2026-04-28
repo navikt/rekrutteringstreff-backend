@@ -162,7 +162,7 @@ class App(
         val kiLoggRepository = KiLoggRepository(dataSource)
 
         val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
-        val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
+        val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
 
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
