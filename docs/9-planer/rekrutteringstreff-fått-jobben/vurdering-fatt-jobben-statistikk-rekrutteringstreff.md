@@ -216,22 +216,34 @@ flowchart TD
 
 ### Sammenligning av alternativene
 
-| Tema                                 | 2A (registrering i treff)                                      | 2B (etterregistrering med flagg)                     |
-| ------------------------------------ | -------------------------------------------------------------- | ---------------------------------------------------- |
-| Brukeropplevelse                     | Ett klikk i treffet, ingen kontekstskifte                      | Krever bytte til etterregistreringsflyten            |
-| Eierskap                             | Treff-domenet eier hele løpet                                  | Stilling-/kandidat-domenet beholder ansvaret         |
-| Nye konsepter for veileder           | Bekreftelsesmodal er ny, ellers samme                          | Nytt felt i kjent skjema                             |
-| Kobling til kandidatliste/stilling   | Ingen — `stillingsId`/`kandidatlisteId` utelates fra meldingen | Beholdes — ekte stilling og liste finnes             |
-| Endringsomfang i statistikk-api      | Lite (ny lytter eller utvidet)                                 | Lite (ny kolonne)                                    |
-| Endringsomfang i kandidat-api        | Ingen                                                          | Må videreformidle treff-ID                           |
-| Risiko for inkonsistens              | Lav — én skriver (`rekrutteringstreff-api`)                    | Middels — fire systemer berøres for én registrering  |
-| Avhengighet av at stilling opprettes | Ingen                                                          | Beholdes (formidlingsstilling opprettes som «bærer») |
+| Tema                                 | 2A (registrering i treff)                                                     | 2B (etterregistrering med flagg)                                 |
+| ------------------------------------ | ----------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Brukeropplevelse                     | Ett klikk i treffet, ingen kontekstskifte                                     | Krever bytte til etterregistreringsflyten                        |
+| Eierskap                             | Treff-domenet eier hele løpet                                                 | Stilling-/kandidat-domenet beholder ansvaret                     |
+| Nye konsepter for veileder           | Bekreftelsesmodal er ny, ellers samme                                         | Nytt felt i kjent skjema                                         |
+| Kobling til kandidatliste/stilling   | Ingen — `stillingsId`/`kandidatlisteId` utelates fra meldingen                | Beholdes — ekte stilling og liste finnes                         |
+| Endringsomfang i statistikk-api      | Lite (ny lytter eller utvidet)                                                | Lite (ny kolonne)                                                |
+| Endringsomfang i kandidat-api        | Ingen                                                                         | Må videreformidle treff-ID                                       |
+| Risiko for inkonsistens              | Lav — én skriver (`rekrutteringstreff-api`)                                   | Middels — fire systemer berøres for én registrering              |
+| Avhengighet av at stilling opprettes | Ingen                                                                         | Beholdes (formidlingsstilling opprettes som «bærer»)             |
 | Angre senere                         | Egen hendelse `FATT_JOBBEN_FJERNET` i `rekrutteringstreff-api` (støttet i v1) | Gjenbruker dagens `FjernetRegistreringFåttJobben` (støttet i v1) |
-| Mulighet for fremtidig nyansering    | Stor — `rekrutteringstreff-api` eier datamodellen              | Bundet til stillings-/kandidatmodellen               |
+| Mulighet for fremtidig nyansering    | Stor — `rekrutteringstreff-api` eier datamodellen                             | Bundet til stillings-/kandidatmodellen                           |
 
 ### Anbefaling som diskusjonsutgangspunkt
 
 Alternativ **2A** gir minst risiko for inkonsistens og holder treff-domenet samlet. Kombinert med kategori-valget _«gjenbruke FORMIDLING»_ kan vi rulle ut uten å vente på `datavarehus-statistikk`, og deretter migrere til `REKRUTTERINGSTREFF`-kategori senere uten å endre veileders flyt.
+
+### Valg for v1: alternativ 2B (etterregistrering med treff-flagg)
+
+Etter diskusjon er det flere åpne spørsmål mot `datavarehus-statistikk` som ikke kan lukkes raskt:
+
+- Hvordan oversendes janzz-/stillingskategori i Avro når treffet ikke har en ekte stilling? Trolig nye felt i avromelding til datavarehus.
+- «Fått jobben»-modalen må uansett samle inn `stillingskategori` + heltid/deltid. Disse må også sendes videre.
+- Datavarehus sammenstiller utfall mot rapporter fra stillingssystemet (bl.a. for stillingskategori), og det tar tid å koordinere endringer hos dem.
+
+Vi går derfor i v1 for **alternativ 2B**: Når noen får jobben via et rekrutteringstreff, registreres det som en ordinær etterregistrering i stilling-/kandidat-domenet, men med et nytt «type»-valg som markerer at det gjelder rekrutteringstreff (ev. workop), og med `rekrutteringstreffId` lagret på `stillingsinfo`. Detaljert plan: [fatt-jobben-etterregistrering-rekrutteringstreff.md](./fatt-jobben-etterregistrering-rekrutteringstreff.md).
+
+**Alternativ 2A er fortsatt et åpent diskusjonsalternativ**, ikke en bestemt langsiktig plan ([fatt-jobben-rekrutteringstreff.md](./fatt-jobben-rekrutteringstreff.md)). Det er fullt mulig at 2B viser seg å være godt nok over tid, eller at etterregistrering på sikt blir en egen modul som er en bedre langsiktig hjem for «fått jobben» fra treff. Hvilken retning vi velger videre, avhenger blant annet av hva 2B faktisk dekker i praksis, hvordan datavarehus utvikler seg, og om vi får behov for å sende rikere data (alder, standardinnsats, arbeidsgiver i treffet) som i dag ikke fanges naturlig opp via stillingskjeden.
 
 ---
 

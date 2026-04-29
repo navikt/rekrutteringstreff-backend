@@ -1,28 +1,30 @@
-# Plan: Registrering av «fått jobben» i rekrutteringstreff (alternativ 2A)
+# Plan: Registrering av «fått jobben» i rekrutteringstreff (alternativ 2A — diskusjonsalternativ)
 
-Implementasjonsplan for løsningen som er valgt i [vurdering-fatt-jobben-statistikk-rekrutteringstreff.md](./vurdering-fatt-jobben-statistikk-rekrutteringstreff.md), alternativ 2A: markedskontakt registrerer «fått jobben» direkte fra jobbsøkerlisten i et rekrutteringstreff. `rekrutteringstreff-api` eier hele løpet og publiserer en Rapids-melding som dagens `statistikk-api` lytter på.
+> **Status:** Dette er et åpent diskusjonsalternativ, ikke en besluttet retning. For v1 er alternativ 2B valgt — se [fatt-jobben-etterregistrering-rekrutteringstreff.md](./fatt-jobben-etterregistrering-rekrutteringstreff.md). Det er fullt mulig at 2B viser seg å være godt nok over tid, eller at etterregistrering på sikt blir en egen modul som blir det naturlige langsiktige hjemmet. Denne planen beskriver hvordan 2A *kan* bygges hvis vi senere konkluderer med at treff-domenet bør eie hele utfalls-løpet — den er ikke en forpliktelse til å bygge det.
+
+Implementasjonsplan for løsningen som er beskrevet i [vurdering-fatt-jobben-statistikk-rekrutteringstreff.md](./vurdering-fatt-jobben-statistikk-rekrutteringstreff.md), alternativ 2A: markedskontakt registrerer «fått jobben» direkte fra jobbsøkerlisten i et rekrutteringstreff. `rekrutteringstreff-api` eier hele løpet og publiserer en Rapids-melding som dagens `statistikk-api` lytter på.
 
 ## Kjernebeslutninger
 
-| Tema                       | Beslutning                                                                                                                                                         | Implementasjonskonsekvens                                                                                                                               |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kategori i Avro            | Gjenbruke `stillingskategori = FORMIDLING` i v1. Egen `REKRUTTERINGSTREFF`-verdi vurderes senere.                                                                  | Ingen endring hos `datavarehus-statistikk` ved utrulling. Treff er ikke skillbar fra etterregistrering eksternt før migrering.                          |
-| Synlighet av treff internt | `statistikk-api` skal kunne skille treff fra ordinær etterregistrering i sine egne tabeller og aggregater.                                                         | To alternativer — se «Endringer i `statistikk-api`» nedenfor. Ikke avgjort ennå.                                                                        |
-| Kandidatliste/stilling     | Det opprettes ikke noen formidlingsstilling. `stillingsId` og `kandidatlisteId` er ikke med i den nye meldingen og settes ikke i `kandidatutfall` for treff-rader. | Stilling-api og kandidat-api berøres ikke i v1. Kolonner i `kandidatutfall` for `stillingsId`/`kandidatlisteId` er allerede nullable.                   |
-| Angring                    | Støttet i v1. Markedskontakt kan fjerne en feilregistrert «fått jobben».                                                                                          | Ny hendelse `FATT_JOBBEN_FJERNET` (event-sourcing, ingen sletting). Eget endepunkt + egen Rapids-melding `kandidat_v2.RekrutteringstreffFåttJobbenFjernet`. Lytter i `statistikk-api` markerer raden som angret. |
-| Idempotens                 | En jobbsøker kan ha maks én aktiv `FATT_JOBBEN`-hendelse per rekrutteringstreff.                                                                                   | Unik constraint i `rekrutteringstreff-api` + sjekk i service før hendelse skrives. Endepunktet returnerer `409` ved duplikat.                           |
-| Utsending til statistikk   | Egen scheduler i `rekrutteringstreff-api` plukker uutsendte hendelser og publiserer på Rapids. Retries med eksponentiell backoff.                                  | Ny tabell `jobbsoker_fatt_jobben_utsending` og ny scheduler. Sender via eksisterende Rapids-tilkobling.                                                 |
+| Tema                       | Beslutning                                                                                                                                                         | Implementasjonskonsekvens                                                                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kategori i Avro            | Gjenbruke `stillingskategori = FORMIDLING` i v1. Egen `REKRUTTERINGSTREFF`-verdi vurderes senere.                                                                  | Ingen endring hos `datavarehus-statistikk` ved utrulling. Treff er ikke skillbar fra etterregistrering eksternt før migrering.                                                                                   |
+| Synlighet av treff internt | `statistikk-api` skal kunne skille treff fra ordinær etterregistrering i sine egne tabeller og aggregater.                                                         | To alternativer — se «Endringer i `statistikk-api`» nedenfor. Ikke avgjort ennå.                                                                                                                                 |
+| Kandidatliste/stilling     | Det opprettes ikke noen formidlingsstilling. `stillingsId` og `kandidatlisteId` er ikke med i den nye meldingen og settes ikke i `kandidatutfall` for treff-rader. | Stilling-api og kandidat-api berøres ikke i v1. Kolonner i `kandidatutfall` for `stillingsId`/`kandidatlisteId` er allerede nullable.                                                                            |
+| Angring                    | Støttet i v1. Markedskontakt kan fjerne en feilregistrert «fått jobben».                                                                                           | Ny hendelse `FATT_JOBBEN_FJERNET` (event-sourcing, ingen sletting). Eget endepunkt + egen Rapids-melding `kandidat_v2.RekrutteringstreffFåttJobbenFjernet`. Lytter i `statistikk-api` markerer raden som angret. |
+| Idempotens                 | En jobbsøker kan ha maks én aktiv `FATT_JOBBEN`-hendelse per rekrutteringstreff.                                                                                   | Unik constraint i `rekrutteringstreff-api` + sjekk i service før hendelse skrives. Endepunktet returnerer `409` ved duplikat.                                                                                    |
+| Utsending til statistikk   | Egen scheduler i `rekrutteringstreff-api` plukker uutsendte hendelser og publiserer på Rapids. Retries med eksponentiell backoff.                                  | Ny tabell `jobbsoker_fatt_jobben_utsending` og ny scheduler. Sender via eksisterende Rapids-tilkobling.                                                                                                          |
 
 ## Hendelser
 
 `JobbsøkerHendelsestype` utvides med `FATT_JOBBEN` og `FATT_JOBBEN_FJERNET`. Eksisterende hendelsestyper er uendret.
 
-| Hendelsestype          | Trigger                                                                            | `hendelse_data`                                                                                                                              |
-| ---------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `FATT_JOBBEN`          | Markedskontakt bekrefter «Registrer fått jobben» fra jobbsøkerlisten i treffet     | JSON-snapshot: `registrertAvNavIdent`, `registrertAvNavKontor`, `tidspunkt`, `arbeidsgiverOrgnr`                                             |
-| `FATT_JOBBEN_FJERNET`  | Markedskontakt klikker «Fjern fått jobben» på en jobbsøker som har `FATT_JOBBEN`     | JSON-snapshot: `fjernetAvNavIdent`, `fjernetAvNavKontor`, `tidspunkt`, `referanseFattJobbenHendelseId` (FK til opprinnelig `FATT_JOBBEN`)    |
+| Hendelsestype         | Trigger                                                                          | `hendelse_data`                                                                                                                           |
+| --------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `FATT_JOBBEN`         | Markedskontakt bekrefter «Registrer fått jobben» fra jobbsøkerlisten i treffet   | JSON-snapshot: `registrertAvNavIdent`, `registrertAvNavKontor`, `tidspunkt`, `arbeidsgiverOrgnr`                                          |
+| `FATT_JOBBEN_FJERNET` | Markedskontakt klikker «Fjern fått jobben» på en jobbsøker som har `FATT_JOBBEN` | JSON-snapshot: `fjernetAvNavIdent`, `fjernetAvNavKontor`, `tidspunkt`, `referanseFattJobbenHendelseId` (FK til opprinnelig `FATT_JOBBEN`) |
 
-Effektiv status på jobbsøkeren utledes ved å lese siste hendelse i tidsserien: hvis siste hendelse er `FATT_JOBBEN_FJERNET`, er jobbsøkeren *ikke* lenger i «fått jobben»-tilstand. Re-registrering tillates dermed (ny `FATT_JOBBEN`-hendelse).
+Effektiv status på jobbsøkeren utledes ved å lese siste hendelse i tidsserien: hvis siste hendelse er `FATT_JOBBEN_FJERNET`, er jobbsøkeren _ikke_ lenger i «fått jobben»-tilstand. Re-registrering tillates dermed (ny `FATT_JOBBEN`-hendelse).
 
 ## Database
 
@@ -129,10 +131,10 @@ For at Avro fortsatt skal sendes til `datavarehus-statistikk` i v1 uten å endre
 
 ## API i `rekrutteringstreff-api`
 
-| Endepunkt                                                                        | Beskrivelse                                                                                                                                                                                                                              |
-| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/rekrutteringstreff/{id}/jobbsoker/{personTreffId}/fatt-jobben`        | Registrerer at jobbsøkeren har fått jobben. Krever rolle `ARBEIDSGIVER_RETTET` + eier/utvikler. Returnerer `201`. `409` ved duplikat. `409` hvis treffet ikke er i `FULLFORT`-status. `409` hvis jobbsøkeren allerede har aktiv `FATT_JOBBEN`. |
-| `DELETE /api/rekrutteringstreff/{id}/jobbsoker/{personTreffId}/fatt-jobben`      | Angrer en tidligere registrering. Krever samme rolle som POST. Returnerer `204`. `409` hvis jobbsøkeren ikke har en aktiv `FATT_JOBBEN`. Skriver `FATT_JOBBEN_FJERNET`-hendelse og køer en angre-melding for utsending.                     |
+| Endepunkt                                                                   | Beskrivelse                                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/rekrutteringstreff/{id}/jobbsoker/{personTreffId}/fatt-jobben`   | Registrerer at jobbsøkeren har fått jobben. Krever rolle `ARBEIDSGIVER_RETTET` + eier/utvikler. Returnerer `201`. `409` ved duplikat. `409` hvis treffet ikke er i `FULLFORT`-status. `409` hvis jobbsøkeren allerede har aktiv `FATT_JOBBEN`. |
+| `DELETE /api/rekrutteringstreff/{id}/jobbsoker/{personTreffId}/fatt-jobben` | Angrer en tidligere registrering. Krever samme rolle som POST. Returnerer `204`. `409` hvis jobbsøkeren ikke har en aktiv `FATT_JOBBEN`. Skriver `FATT_JOBBEN_FJERNET`-hendelse og køer en angre-melding for utsending.                        |
 
 Body (forslag):
 
@@ -163,26 +165,26 @@ To dedikerte events som kun `rekrutteringstreff-api` publiserer og `statistikk-a
 
 ### `kandidat_v2.RekrutteringstreffFåttJobben`
 
-| Felt                    | Verdi                              |
-| ----------------------- | ---------------------------------- |
+| Felt                    | Verdi                                      |
+| ----------------------- | ------------------------------------------ |
 | `@event_name`           | `kandidat_v2.RekrutteringstreffFåttJobben` |
-| `aktørId`               | Jobbsøkerens aktør-ID                |
-| `rekrutteringstreffId`  | Treffets UUID                      |
-| `organisasjonsnummer`   | `arbeidsgiverOrgnr` fra hendelsen  |
-| `tidspunkt`             | Hendelsens tidspunkt               |
-| `utførtAvNavIdent`      | `registrertAvNavIdent`             |
-| `utførtAvNavKontorKode` | `registrertAvNavKontor`            |
+| `aktørId`               | Jobbsøkerens aktør-ID                      |
+| `rekrutteringstreffId`  | Treffets UUID                              |
+| `organisasjonsnummer`   | `arbeidsgiverOrgnr` fra hendelsen          |
+| `tidspunkt`             | Hendelsens tidspunkt                       |
+| `utførtAvNavIdent`      | `registrertAvNavIdent`                     |
+| `utførtAvNavKontorKode` | `registrertAvNavKontor`                    |
 
 ### `kandidat_v2.RekrutteringstreffFåttJobbenFjernet`
 
-| Felt                    | Verdi                                                                |
-| ----------------------- | -------------------------------------------------------------------- |
-| `@event_name`           | `kandidat_v2.RekrutteringstreffFåttJobbenFjernet`                    |
-| `aktørId`               | Jobbsøkerens aktør-ID                                                  |
-| `rekrutteringstreffId`  | Treffets UUID                                                        |
-| `tidspunkt`             | Angretidspunkt                                                       |
-| `utførtAvNavIdent`      | `fjernetAvNavIdent`                                                  |
-| `utførtAvNavKontorKode` | `fjernetAvNavKontor`                                                 |
+| Felt                    | Verdi                                             |
+| ----------------------- | ------------------------------------------------- |
+| `@event_name`           | `kandidat_v2.RekrutteringstreffFåttJobbenFjernet` |
+| `aktørId`               | Jobbsøkerens aktør-ID                             |
+| `rekrutteringstreffId`  | Treffets UUID                                     |
+| `tidspunkt`             | Angretidspunkt                                    |
+| `utførtAvNavIdent`      | `fjernetAvNavIdent`                               |
+| `utførtAvNavKontorKode` | `fjernetAvNavKontor`                              |
 
 `stillingskategori` er ikke med i meldingene. Lytteren vet at kilden alltid er et rekrutteringstreff og hardkoder `FORMIDLING` (eller `REKRUTTERINGSTREFF` når det evt. innføres) ved lagring.
 
@@ -246,35 +248,35 @@ Eksisterende status-filter (`v.status = ?`) er uendret. En jobbsøker med `SVART
 
 ## Endringer per system
 
-| System                   | Endring                                                                                                                                                                                                                           |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `frontend`               | Knapp i jobbsøkerlisten + bekreftelsesmodal («Er du sikker?» — kun her, ikke i etterregistrering). «Fjern fått jobben»-knapp på jobbsøker som er registrert. Visning av status på personkortet. Nytt `FåttJobbenFilter` ved siden av status-filteret. Kall til POST/DELETE-endepunktene.                |
-| `rekrutteringstreff-api` | To nye enum-verdier (`FATT_JOBBEN`, `FATT_JOBBEN_FJERNET`), POST- og DELETE-endepunkt, ny utsendingstabell, ny scheduler, to nye Rapids-events. Utvidet `jobbsoker_sok_view` med `fatt_jobben_tidspunkt`, og `JobbsøkerSokRepository` med `fattJobben`-filter + `antallFåttJobben`-aggregering. |
+| System                   | Endring                                                                                                                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `frontend`               | Knapp i jobbsøkerlisten + bekreftelsesmodal («Er du sikker?» — kun her, ikke i etterregistrering). «Fjern fått jobben»-knapp på jobbsøker som er registrert. Visning av status på personkortet. Nytt `FåttJobbenFilter` ved siden av status-filteret. Kall til POST/DELETE-endepunktene.                                 |
+| `rekrutteringstreff-api` | To nye enum-verdier (`FATT_JOBBEN`, `FATT_JOBBEN_FJERNET`), POST- og DELETE-endepunkt, ny utsendingstabell, ny scheduler, to nye Rapids-events. Utvidet `jobbsoker_sok_view` med `fatt_jobben_tidspunkt`, og `JobbsøkerSokRepository` med `fattJobben`-filter + `antallFåttJobben`-aggregering.                          |
 | `statistikk-api`         | Ny lytter `RekrutteringstreffFåttJobbenLytter` som håndterer både fått-jobben og angre. **Alt A**: nye kolonner `rekrutteringstreff_id` og `angret_tidspunkt` på `kandidatutfall`. **Alt B**: dedikert tabell `rekrutteringstreff_utfall` med `angret_tidspunkt`. Eksisterende lyttere og validering er uendret uansett. |
-| `stilling-api`           | Ingen endring i v1.                                                                                                                                                                                                               |
-| `kandidat-api`           | Ingen endring i v1.                                                                                                                                                                                                               |
-| `datavarehus-statistikk` | Ingen endring i v1.                                                                                                                                                                                                               |
+| `stilling-api`           | Ingen endring i v1.                                                                                                                                                                                                                                                                                                      |
+| `kandidat-api`           | Ingen endring i v1.                                                                                                                                                                                                                                                                                                      |
+| `datavarehus-statistikk` | Ingen endring i v1.                                                                                                                                                                                                                                                                                                      |
 
 ## Spec — tester som må endres eller legges til
 
 ### `rekrutteringstreff-api`
 
-| Test                                                                            | Type          | Hva den skal verifisere                                                                                               |
-| ------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `JobbsøkerFattJobbenKomponenttest.skalRegistrereFattJobben`                     | Komponenttest | `POST /…/fatt-jobben` lagrer `FATT_JOBBEN`-hendelse med riktig `hendelse_data` og oppretter rad i utsendingstabellen. |
-| `JobbsøkerFattJobbenKomponenttest.skalReturnere409VedDuplikat`                  | Komponenttest | Andre kall for samme jobbsøker i samme treff returnerer `409` og oppretter ikke ny hendelse.                          |
-| `JobbsøkerFattJobbenKomponenttest.skalKreveEierEllerUtvikler`                   | Komponenttest | Andre roller får `403`.                                                                                               |
-| `JobbsøkerFattJobbenKomponenttest.skalAvviseUkjentArbeidsgiverOrgnr`            | Komponenttest | `arbeidsgiverOrgnr` må tilhøre treffet, ellers `400`.                                                                 |
-| `JobbsøkerFattJobbenKomponenttest.skalKreveTreffErFullfort`                         | Komponenttest | Endepunktet returnerer `409` hvis treffet ikke er i `FULLFORT`-status.                                                                          |
-| `JobbsøkerFattJobbenKomponenttest.skalBlokkereSlettingAvJobbsokerMedAktivFattJobben` | Komponenttest | `DELETE /…/jobbsoker/{personTreffId}` returnerer `409` hvis jobbsøkeren har aktiv `FATT_JOBBEN`. Ingen ny hendelse skrives.                    |
-| `JobbsøkerFattJobbenAngreKomponenttest.skalAngreFattJobben`                          | Komponenttest | `DELETE /…/fatt-jobben` returnerer `204`, skriver `FATT_JOBBEN_FJERNET`-hendelse og oppretter angre-utsending.                                  |
-| `JobbsøkerFattJobbenAngreKomponenttest.skalReturnere409VedAngreUtenAktivFattJobben`  | Komponenttest | Angre uten aktiv `FATT_JOBBEN` returnerer `409` og skriver ingen hendelse.                                                                       |
-| `JobbsøkerFattJobbenAngreKomponenttest.skalKunneReregistrereEtterAngring`            | Komponenttest | Etter `FATT_JOBBEN_FJERNET` kan ny `POST /…/fatt-jobben` registreres på nytt med `201`.                                                          |
-| `JobbsøkerFattJobbenAngreKomponenttest.skalKreveSammeRolleSomRegistrering`           | Komponenttest | Andre roller får `403` på DELETE.                                                                                                                |
-| `FattJobbenStatistikkSchedulerTest.skalSendeUutsendteHendelser`                 | Komponenttest | Scheduler plukker rader med `sendt_til_statistikk_tidspunkt IS NULL`, publiserer på Rapids, oppdaterer tidspunkt.     |
-| `FattJobbenStatistikkSchedulerTest.skalIkkeResendeAlleredeSendt`                | Komponenttest | Allerede sendte rader hoppes over.                                                                                    |
-| `FattJobbenStatistikkSchedulerTest.skalLagreFeilOgØkeForsok`                    | Enhetstest    | Ved feil i publisering lagres `siste_feil` og `forsok` økes; `sendt_til_statistikk_tidspunkt` forblir `NULL`.         |
-| `JobbsøkerHendelsestypeTest`                                                    | Enhetstest    | `FATT_JOBBEN` og `FATT_JOBBEN_FJERNET` finnes i enumet og er med i serialisering.                                     |
+| Test                                                                                 | Type          | Hva den skal verifisere                                                                                                     |
+| ------------------------------------------------------------------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `JobbsøkerFattJobbenKomponenttest.skalRegistrereFattJobben`                          | Komponenttest | `POST /…/fatt-jobben` lagrer `FATT_JOBBEN`-hendelse med riktig `hendelse_data` og oppretter rad i utsendingstabellen.       |
+| `JobbsøkerFattJobbenKomponenttest.skalReturnere409VedDuplikat`                       | Komponenttest | Andre kall for samme jobbsøker i samme treff returnerer `409` og oppretter ikke ny hendelse.                                |
+| `JobbsøkerFattJobbenKomponenttest.skalKreveEierEllerUtvikler`                        | Komponenttest | Andre roller får `403`.                                                                                                     |
+| `JobbsøkerFattJobbenKomponenttest.skalAvviseUkjentArbeidsgiverOrgnr`                 | Komponenttest | `arbeidsgiverOrgnr` må tilhøre treffet, ellers `400`.                                                                       |
+| `JobbsøkerFattJobbenKomponenttest.skalKreveTreffErFullfort`                          | Komponenttest | Endepunktet returnerer `409` hvis treffet ikke er i `FULLFORT`-status.                                                      |
+| `JobbsøkerFattJobbenKomponenttest.skalBlokkereSlettingAvJobbsokerMedAktivFattJobben` | Komponenttest | `DELETE /…/jobbsoker/{personTreffId}` returnerer `409` hvis jobbsøkeren har aktiv `FATT_JOBBEN`. Ingen ny hendelse skrives. |
+| `JobbsøkerFattJobbenAngreKomponenttest.skalAngreFattJobben`                          | Komponenttest | `DELETE /…/fatt-jobben` returnerer `204`, skriver `FATT_JOBBEN_FJERNET`-hendelse og oppretter angre-utsending.              |
+| `JobbsøkerFattJobbenAngreKomponenttest.skalReturnere409VedAngreUtenAktivFattJobben`  | Komponenttest | Angre uten aktiv `FATT_JOBBEN` returnerer `409` og skriver ingen hendelse.                                                  |
+| `JobbsøkerFattJobbenAngreKomponenttest.skalKunneReregistrereEtterAngring`            | Komponenttest | Etter `FATT_JOBBEN_FJERNET` kan ny `POST /…/fatt-jobben` registreres på nytt med `201`.                                     |
+| `JobbsøkerFattJobbenAngreKomponenttest.skalKreveSammeRolleSomRegistrering`           | Komponenttest | Andre roller får `403` på DELETE.                                                                                           |
+| `FattJobbenStatistikkSchedulerTest.skalSendeUutsendteHendelser`                      | Komponenttest | Scheduler plukker rader med `sendt_til_statistikk_tidspunkt IS NULL`, publiserer på Rapids, oppdaterer tidspunkt.           |
+| `FattJobbenStatistikkSchedulerTest.skalIkkeResendeAlleredeSendt`                     | Komponenttest | Allerede sendte rader hoppes over.                                                                                          |
+| `FattJobbenStatistikkSchedulerTest.skalLagreFeilOgØkeForsok`                         | Enhetstest    | Ved feil i publisering lagres `siste_feil` og `forsok` økes; `sendt_til_statistikk_tidspunkt` forblir `NULL`.               |
+| `JobbsøkerHendelsestypeTest`                                                         | Enhetstest    | `FATT_JOBBEN` og `FATT_JOBBEN_FJERNET` finnes i enumet og er med i serialisering.                                           |
 
 Eksisterende tester som må verifiseres mot ny enum-verdi:
 
@@ -283,15 +285,15 @@ Eksisterende tester som må verifiseres mot ny enum-verdi:
 
 Nye søk- og view-tester:
 
-| Test                                                                          | Type          | Hva den skal verifisere                                                                                                       |
-| ----------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `JobbsøkerSokViewTest.skalEksponereFattJobbenTidspunkt`                       | Enhetstest    | Viewet returnerer `fatt_jobben_tidspunkt` lik tidspunktet for siste `FATT_JOBBEN`-hendelse når ingen `FATT_JOBBEN_FJERNET` er nyere. |
-| `JobbsøkerSokViewTest.skalSetteFattJobbenTidspunktTilNullEtterAngring`        | Enhetstest    | Etter `FATT_JOBBEN_FJERNET` er `fatt_jobben_tidspunkt` `NULL` i viewet.                                                       |
-| `JobbsøkerSokViewTest.skalSetteFattJobbenTidspunktVedReregistrering`          | Enhetstest    | Etter `FATT_JOBBEN_FJERNET` etterfulgt av ny `FATT_JOBBEN` viser viewet det nyeste tidspunktet.                              |
-| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalFiltrereMedFattJobben`        | Enhetstest    | `fattJobben = true` returnerer kun jobbsøkere med aktivt `fatt_jobben_tidspunkt`.                                            |
-| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalFiltrereUtenFattJobben`       | Enhetstest    | `fattJobben = false` returnerer kun jobbsøkere uten aktivt `fatt_jobben_tidspunkt`.                                          |
-| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalKombinereMedStatusFilter`     | Enhetstest    | `status = SVART_JA` + `fattJobben = true` returnerer kun jobbsøkere som både har svart ja og fått jobben.                    |
-| `JobbsøkerSokKomponenttest.skalReturnereAntallFattJobben`                     | Komponenttest | Responsen inneholder `antallFåttJobben.med` og `antallFåttJobben.uten` for treffet.                                          |
+| Test                                                                      | Type          | Hva den skal verifisere                                                                                                              |
+| ------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `JobbsøkerSokViewTest.skalEksponereFattJobbenTidspunkt`                   | Enhetstest    | Viewet returnerer `fatt_jobben_tidspunkt` lik tidspunktet for siste `FATT_JOBBEN`-hendelse når ingen `FATT_JOBBEN_FJERNET` er nyere. |
+| `JobbsøkerSokViewTest.skalSetteFattJobbenTidspunktTilNullEtterAngring`    | Enhetstest    | Etter `FATT_JOBBEN_FJERNET` er `fatt_jobben_tidspunkt` `NULL` i viewet.                                                              |
+| `JobbsøkerSokViewTest.skalSetteFattJobbenTidspunktVedReregistrering`      | Enhetstest    | Etter `FATT_JOBBEN_FJERNET` etterfulgt av ny `FATT_JOBBEN` viser viewet det nyeste tidspunktet.                                      |
+| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalFiltrereMedFattJobben`    | Enhetstest    | `fattJobben = true` returnerer kun jobbsøkere med aktivt `fatt_jobben_tidspunkt`.                                                    |
+| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalFiltrereUtenFattJobben`   | Enhetstest    | `fattJobben = false` returnerer kun jobbsøkere uten aktivt `fatt_jobben_tidspunkt`.                                                  |
+| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalKombinereMedStatusFilter` | Enhetstest    | `status = SVART_JA` + `fattJobben = true` returnerer kun jobbsøkere som både har svart ja og fått jobben.                            |
+| `JobbsøkerSokKomponenttest.skalReturnereAntallFattJobben`                 | Komponenttest | Responsen inneholder `antallFåttJobben.med` og `antallFåttJobben.uten` for treffet.                                                  |
 
 ### `statistikk-api`
 
@@ -304,8 +306,8 @@ Nye søk- og view-tester:
 | ------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `RekrutteringstreffFåttJobbenLytterTest.skalLagreUtfallOgRekrutteringstreffId` | Komponenttest | Rapids-melding lagrer rad i `kandidatutfall` med riktig `rekrutteringstreff_id`, og `stilling_id`/`kandidatliste_id` er `NULL`. |
 | `RekrutteringstreffFåttJobbenLytterTest.skalIgnorereMeldingUtenPåkrevdeFelt`   | Komponenttest | Meldinger som mangler obligatoriske felt ignoreres.                                                                             |
-| `RekrutteringstreffFåttJobbenLytterTest.skalMarkereRadenSomAngretVedFjernet`   | Komponenttest | `kandidat_v2.RekrutteringstreffFåttJobbenFjernet` setter `angret_tidspunkt` på raden uten å slette den.                          |
-| `KandidatutfallRepositoryTest.skalLagreOgLeseRekrutteringstreffId`             | Enhetstest    | Repo-mapping mot nye kolonner (`rekrutteringstreff_id`, `angret_tidspunkt`) fungerer.                                            |
+| `RekrutteringstreffFåttJobbenLytterTest.skalMarkereRadenSomAngretVedFjernet`   | Komponenttest | `kandidat_v2.RekrutteringstreffFåttJobbenFjernet` setter `angret_tidspunkt` på raden uten å slette den.                         |
+| `KandidatutfallRepositoryTest.skalLagreOgLeseRekrutteringstreffId`             | Enhetstest    | Repo-mapping mot nye kolonner (`rekrutteringstreff_id`, `angret_tidspunkt`) fungerer.                                           |
 | `DatavarehusKafkaProducerTest`                                                 | Eksisterende  | Verifisere at `rekrutteringstreff_id` og `angret_tidspunkt` ikke lekker ut i `AvroKandidatutfall`.                              |
 
 **Alt B:**
@@ -315,21 +317,155 @@ Nye søk- og view-tester:
 | `RekrutteringstreffFåttJobbenLytterTest.skalLagreIRekrutteringstreffUtfall`                        | Komponenttest | Rapids-melding lagrer rad i `rekrutteringstreff_utfall` med alle felt korrekt.                  |
 | `RekrutteringstreffFåttJobbenLytterTest.skalHåndhevUnikConstraintPerTreffOgAktor`                  | Komponenttest | Duplikatmelding for samme `(rekrutteringstreff_id, aktor_id)` lagres ikke på nytt (idempotens). |
 | `RekrutteringstreffFåttJobbenLytterTest.skalIgnorereMeldingUtenPåkrevdeFelt`                       | Komponenttest | Meldinger som mangler obligatoriske felt ignoreres.                                             |
-| `RekrutteringstreffFåttJobbenLytterTest.skalMarkereAngretTidspunktVedFjernet`                      | Komponenttest | `kandidat_v2.RekrutteringstreffFåttJobbenFjernet` setter `angret_tidspunkt` på raden.            |
+| `RekrutteringstreffFåttJobbenLytterTest.skalMarkereAngretTidspunktVedFjernet`                      | Komponenttest | `kandidat_v2.RekrutteringstreffFåttJobbenFjernet` setter `angret_tidspunkt` på raden.           |
 | `RekrutteringstreffUtfallRepositoryTest.skalLagreOgHenteUtfall`                                    | Enhetstest    | Repo-mapping mot ny tabell fungerer, inkludert `angret_tidspunkt`.                              |
 | _(Alt B1)_ `RekrutteringstreffFåttJobbenLytterTest.skalOgsåSkriveKandidatutfallForAvro`            | Komponenttest | Lytteren skriver atomisk til begge tabeller; `DatavarehusKafkaProducer` plukker opp raden.      |
 | _(Alt B2)_ `RekrutteringstreffAvroSchedulerTest.skalSendeAvroForUutsendteRekrutteringstreffUtfall` | Komponenttest | Dedikert scheduler sender Avro for rader uten `sendt_tidspunkt`.                                |
 
 ### `frontend`
 
-| Test                                                                              | Type        | Hva den skal verifisere                                                                                  |
-| --------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------- |
-| `RegistrerFattJobbenKnapp.test.tsx`                                               | Enhet (RTL) | Knapp er kun synlig for eier/utvikler. Klikk åpner bekreftelsesmodal (kun her, ikke i etterregistrering). |
-| `RegistrerFattJobbenModal.test.tsx`                                               | Enhet (RTL) | Bekreftelse trigger POST. Lukking uten bekreftelse gjør ingen kall.                                      |
-| `FjernFattJobbenKnapp.test.tsx`                                                   | Enhet (RTL) | Synlig kun når jobbsøkeren har aktiv `FATT_JOBBEN`. Klikk trigger DELETE.                                 |
-| `JobbsokerListe.fatt-jobben.spec.ts`                                              | Playwright  | Hele flyten: åpne liste, velg person, bekreft, se status oppdatert.                                      |
-| `JobbsokerListe.fatt-jobben-angre.spec.ts`                                        | Playwright  | Angre-flyt: registrer fått jobben, klikk fjern, se status fjernet, mulig å registrere på nytt.            |
-| MSW-mock for `POST` og `DELETE /…/fatt-jobben` med `204`, `409` og `201`           | Mock        | Brukes av testene over og av lokal utvikling.                                                            |
+| Test                                                                     | Type        | Hva den skal verifisere                                                                                   |
+| ------------------------------------------------------------------------ | ----------- | --------------------------------------------------------------------------------------------------------- |
+| `RegistrerFattJobbenKnapp.test.tsx`                                      | Enhet (RTL) | Knapp er kun synlig for eier/utvikler. Klikk åpner bekreftelsesmodal (kun her, ikke i etterregistrering). |
+| `RegistrerFattJobbenModal.test.tsx`                                      | Enhet (RTL) | Bekreftelse trigger POST. Lukking uten bekreftelse gjør ingen kall.                                       |
+| `FjernFattJobbenKnapp.test.tsx`                                          | Enhet (RTL) | Synlig kun når jobbsøkeren har aktiv `FATT_JOBBEN`. Klikk trigger DELETE.                                 |
+| `JobbsokerListe.fatt-jobben.spec.ts`                                     | Playwright  | Hele flyten: åpne liste, velg person, bekreft, se status oppdatert.                                       |
+| `JobbsokerListe.fatt-jobben-angre.spec.ts`                               | Playwright  | Angre-flyt: registrer fått jobben, klikk fjern, se status fjernet, mulig å registrere på nytt.            |
+| MSW-mock for `POST` og `DELETE /…/fatt-jobben` med `204`, `409` og `201` | Mock        | Brukes av testene over og av lokal utvikling.                                                             |
+
+## Forsidestatistikk for rekrutteringstreff
+
+Forsiden i `rekrutteringsbistand-frontend` (`app/forside`) viser i dag aggregert utfallstatistikk per Nav-kontor og periode (`Utfallsstatistikk.tsx`: «Antall delt med arbeidsgiver», «Antall som har fått jobb», med under-30 og standardinnsats-segmentering). Vi vil utvide forsiden med tilsvarende tall for rekrutteringstreff.
+
+### Tall som skal vises
+
+For valgt periode og Nav-kontor:
+
+| Nøkkeltall                             | Kilde                                                                                  | Inkluderer fra alt 1 (workop/etterregistrering) |
+| -------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Antall rekrutteringstreff gjennomført  | `rekrutteringstreff` med status `FULLFORT` i perioden                                  | n/a                                             |
+| Antall personer som svarte ja          | Sum av jobbsøkere med status `SVART_JA` på fullførte treff i perioden                  | n/a                                             |
+| Antall arbeidsgivere i treffene totalt | Sum av distinkte `arbeidsgiver` (orgnr) på fullførte treff i perioden                  | n/a                                             |
+| Antall personer invitert               | Sum av jobbsøkere med status `INVITERT` (eller senere) på fullførte treff i perioden   | n/a                                             |
+| Antall som fikk jobben i perioden      | Sum av aktive `FATT_JOBBEN`-utfall i perioden — uavhengig av treffets status           | **Ja** — felles teller med alt 1                |
+| → herav under 30 år                    | Aggregert fra utfallsdata (krever alder på utfallsmeldingen, se neste seksjon)         | **Ja**                                          |
+| → herav utenom standardinnsats         | Aggregert fra utfallsdata (krever innsatsgruppe på utfallsmeldingen, se neste seksjon) | **Ja**                                          |
+
+«Antall som fikk jobben» inkrementerer **felles** med dagens etteregistrering- og stillings-tellere på forsiden. I praksis betyr det at `Utfallsstatistikk.tsx`-tallet «Antall som har fått jobb» allerede dekker treff-utfall så snart `statistikk-api` lagrer dem (uavhengig om kilden er stilling, etterregistrering eller treff). For samarbeid vises tall for begge kilder. De treff-spesifikke tallene i tabellen over (gjennomførte treff, svart ja, arbeidsgivere, invitert) er nye og kommer fra `rekrutteringstreff-api`.
+
+> Vurdering for senere: Skal `SVART_JA` også inkrementere «Antall delt med arbeidsgiver» (presentert) på forsiden? Dette gjøres kun hvis det også gjøres for stilling, og logikken legges i så fall i `statistikk-api` (avledet kun) — ikke i `rekrutteringstreff-api`.
+
+### Datakilder
+
+| Tall                                                    | Hentes fra                                                                                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Treff gjennomført / svart ja / invitert / arbeidsgivere | Nytt aggregat-endepunkt i `rekrutteringstreff-api`, f.eks. `GET /api/statistikk/rekrutteringstreff?navKontor=…&fraOgMed=…&tilOgMed=…` |
+| Fått jobben (totalt + segmenter)                        | Eksisterende `useStatistikk` mot `statistikk-api`, utvidet med treff-rader                                                            |
+
+### Frontend-endring
+
+Ny komponent `RekrutteringstreffStatistikk.tsx` ved siden av `Utfallsstatistikk` i `Statistikk.tsx`, som henter treff-aggregater og rendrer i samme `Infokort`-stil. Eksisterende `Utfallsstatistikk` er uendret — treff-utfallene fanges automatisk opp i totaltallet når `statistikk-api` lagrer dem.
+
+## Utvidelse: alder og standardinnsats på treff-utfall
+
+For å vise under-30 og standardinnsats-segmenter for treff-utfall (på linje med dagens stilling/etterregistrering), må `rekrutteringstreff-api` sende disse opplysningene videre til `statistikk-api` på Rapids-meldingen.
+
+### Datafelt
+
+| Felt            | Hvor det hentes fra                                                              | Avklaring                                                                                                                |
+| --------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `alder`         | Slås opp via aktørId mot person-data ved tidspunktet for «fått jobben»           | **Avklar:** sender vi konkret alder, eller kun den avledede kategorien `under30 = boolean`? `under30` er minst invasivt. |
+| `innsatsgruppe` | Slås opp via aktørId mot innsats-data (samme oppslag som for stilling/etterreg.) | Bruker eksisterende «standardinnsats / ikke standardinnsats»-skille.                                                     |
+
+Anbefaling: send `under30: Boolean` og `innsatsgruppe: String` (eller `harStandardinnsats: Boolean`) i Rapids-meldingen, slik at `statistikk-api` kan lagre dem direkte uten å gjøre nye personoppslag.
+
+### Forslag til ny / utvidet Avro mot datavarehus
+
+Hvis vi senere får utvidet `kandidatutfall.avsc` mot `datavarehus-statistikk`, kan dagens skjema utvides slik (nye felt nederst, defaultverdier for bakoverkompatibilitet):
+
+```json
+[
+  {
+    "namespace": "no.nav.rekrutteringsbistand",
+    "name": "AvroStillingskategori",
+    "type": "enum",
+    "symbols": ["STILLING", "FORMIDLING", "JOBBMESSE", "REKRUTTERINGSTREFF"]
+  },
+  {
+    "namespace": "no.nav.rekrutteringsbistand",
+    "type": "record",
+    "name": "AvroKandidatutfall",
+    "fields": [
+      { "name": "aktørId", "type": "string" },
+      { "name": "utfall", "type": "string" },
+      { "name": "navIdent", "type": "string" },
+      { "name": "navKontor", "type": "string" },
+      {
+        "name": "kandidatlisteId",
+        "type": ["null", "string"],
+        "default": null
+      },
+      { "name": "stillingsId", "type": ["null", "string"], "default": null },
+      { "name": "tidspunkt", "type": "string" },
+      { "name": "stillingskategori", "type": "AvroStillingskategori" },
+      {
+        "name": "rekrutteringstreffId",
+        "type": ["null", "string"],
+        "default": null
+      },
+      { "name": "under30", "type": ["null", "boolean"], "default": null },
+      {
+        "name": "harStandardinnsats",
+        "type": ["null", "boolean"],
+        "default": null
+      },
+      {
+        "name": "stillingskategoriJanzz",
+        "type": ["null", "string"],
+        "default": null
+      },
+      { "name": "heltidDeltid", "type": ["null", "string"], "default": null }
+    ]
+  }
+]
+```
+
+Endringer:
+
+- Ny enum-verdi `REKRUTTERINGSTREFF` (gjør `kandidatlisteId` og `stillingsId` valgfrie siden treff ikke har disse).
+- `rekrutteringstreffId` for å koble utfall tilbake til treffet på datavarehus-siden.
+- `under30` + `harStandardinnsats` slik at datavarehus kan rapportere segmenter uten egne oppslag.
+- `stillingskategoriJanzz` + `heltidDeltid` — disse samles inn i «fått jobben»-modalen i frontend (jf. åpne spørsmål under). Avklar med datavarehus om de heller vil ha dette mappet til en eksisterende stillingsdimensjon.
+
+### Vurdering: jobbmesse-kategori vs. ny kategori
+
+Et alternativ er å gjenbruke `JOBBMESSE`-symbolet i Avro-enumet. Det har lavere endringskost mot datavarehus, men gir misvisende dimensjon i rapporter (rekrutteringstreff er ikke jobbmesser, selv om de ligner). Anbefaling: innføre `REKRUTTERINGSTREFF` som egen verdi når Avro først skal endres.
+
+### «Fått jobben»-modal: stillingskategori + heltid/deltid
+
+Modalen i alt 2A må samle inn:
+
+- Janzz-stillingskategori (samme oppslag som etterregistreringsskjemaet bruker).
+- Heltid eller deltid.
+
+Disse lagres i `jobbsoker_hendelse.hendelse_data` for `FATT_JOBBEN`, sendes med på Rapids-meldingen, og videre til Avro hvis datavarehus tar imot dem (jf. utvidet skjema over).
+
+## Oppgaveinndeling
+
+For å implementere alt 2A i sin helhet:
+
+| Oppgave                                                                                                            | System(er)                    |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| 1. Backend: registrere/fjerne `FATT_JOBBEN`-hendelser med tilhørende status, validering og angring                 | `rekrutteringstreff-api`      |
+| 2. Frontend: knapp + bekreftelsesmodal (med stillingskategori + heltid/deltid) + fjern-knapp                       | `frontend`                    |
+| 3. Scheduler i treff-api som plukker uutsendte hendelser og publiserer Rapids-eventer til statistikk               | `rekrutteringstreff-api`      |
+| 4. `statistikk-api`: ny lytter + databasetabell (Alt A eller B) + propagering til Avro                             | `statistikk-api`              |
+| 5. Aggregat-endepunkt i `rekrutteringstreff-api` for forside-tall (gjennomført, svart ja, arbeidsgivere, invitert) | `rekrutteringstreff-api`      |
+| 6. Frontend: forsidekomponent som viser treff-statistikk + segmentering (under 30, standardinnsats)                | `frontend`                    |
+| 7. Berik utfallsmeldingen med `under30` + `innsatsgruppe` (oppslag i treff-api) før Rapids-publish                 | `rekrutteringstreff-api`      |
+| 8. (Når datavarehus er klar) Avro-utvidelse + producer-endring i `statistikk-api`                                  | `statistikk-api`, schema-repo |
+
+Oppgave 1–4 er kjernen i utfalls-løpet. Oppgave 5–6 er forsidesynligheten. Oppgave 7–8 er betinget av avklaringer mot datavarehus.
 
 ## Åpne spørsmål
 
@@ -337,3 +473,7 @@ Nye søk- og view-tester:
 2. Hvor lang retry-periode og maks antall forsøk skal scheduleren ha før den gir opp og varsler?
 3. Når vi senere åpner for `REKRUTTERINGSTREFF`-kategori i Avro: skal eksisterende `FORMIDLING`-rader migreres, eller kun nye?
 4. Skal angring propageres videre til `datavarehus-statistikk` i v1, eller er det nok at det håndteres internt i `statistikk-api`? (`AvroKandidatutfall` har i dag ingen «angret»-semantikk.)
+5. Hvordan oversendes Janzz-stillingskategori til datavarehus — som nytt felt i `AvroKandidatutfall` (jf. utvidet skjema over), eller mappes mot eksisterende stillingsdimensjon hos dem?
+6. «Fått jobben»-modalen samler inn `stillingskategoriJanzz` og `heltidDeltid`. Må disse faktisk videresendes til datavarehus, eller holder det at de lagres internt i treff-api for vår egen statistikk?
+7. Sender vi `under30` (avledet boolean) eller faktisk `alder` på Rapids-meldingen? Personvernhensyn taler for `under30` — bekreft at det dekker rapporteringsbehovet.
+8. Skal vi gjenbruke `JOBBMESSE`-kategorien for treff-utfall (lavere endringskost mot datavarehus), eller innføre `REKRUTTERINGSTREFF` som egen verdi (renere modell)?
