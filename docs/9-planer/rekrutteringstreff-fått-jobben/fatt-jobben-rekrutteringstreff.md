@@ -188,12 +188,68 @@ To dedikerte events som kun `rekrutteringstreff-api` publiserer og `statistikk-a
 
 Ny lytter `RekrutteringstreffFåttJobbenLytter` håndterer begge events. Fått-jobben skriver en rad; angre markerer raden som angret — se «Endringer i `statistikk-api`» for hvordan dette gjøres i Alt A vs Alt B. Ingen endring i eksisterende lyttere eller validering.
 
+## Søk og filtrering i `rekrutteringstreff-api`
+
+Jobbsøker-søket bygger på `jobbsoker_sok_view`, som flater ut én utvalgt hendelse per jobbsøker (i dag `OPPRETTET` for `lagt_til_dato`/`lagt_til_av`). Filteret på status (`SVART_JA`, `SVART_NEI`, `INVITERT`, `LAGT_TIL`) går mot `jobbsoker.status`-kolonnen som speiler current state.
+
+`FATT_JOBBEN` er **ortogonal** til `JobbsøkerStatus`-enumet — den endrer ikke om personen har svart ja/nei, men låser jobbsøkeren. Det betyr at vi ikke utvider `JobbsøkerStatus`-enumet eller `jobbsoker.status`-kolonnen. I stedet flates `FATT_JOBBEN`/`FATT_JOBBEN_FJERNET`-hendelsene ut i viewet som ny kolonne `fatt_jobben_tidspunkt`, og frontend får et eget filter på siden av status-filteret.
+
+### Endring i `R__jobbsoker_sok_view.sql`
+
+Repeatable migrasjon utvides med en `LEFT JOIN LATERAL` som henter siste relevante hendelse i tidsserien:
+
+```sql
+LEFT JOIN LATERAL (
+    SELECT jh.tidspunkt
+    FROM jobbsoker_hendelse jh
+    WHERE jh.jobbsoker_id = j.jobbsoker_id
+      AND jh.hendelsestype IN ('FATT_JOBBEN', 'FATT_JOBBEN_FJERNET')
+    ORDER BY jh.tidspunkt DESC
+    LIMIT 1
+) siste_fatt_jobben ON true
+```
+
+Ny kolonne i SELECT:
+
+```sql
+CASE
+    WHEN siste_fatt_jobben_type.hendelsestype = 'FATT_JOBBEN' THEN siste_fatt_jobben.tidspunkt
+    ELSE NULL
+END AS fatt_jobben_tidspunkt
+```
+
+(I praksis hentes både `tidspunkt` og `hendelsestype` i lateral-subqueryen og bare `FATT_JOBBEN`-rader gir verdi i kolonnen — slik at en `FATT_JOBBEN_FJERNET` blanker ut feltet og angre-flyt fungerer naturlig.)
+
+### Endring i `JobbsøkerSokRepository`
+
+`byggWhere` får en ny valgfri parameter `fattJobben: Boolean?`:
+
+| Verdi   | SQL-fragment lagt til where                |
+| ------- | ------------------------------------------ |
+| `true`  | `AND v.fatt_jobben_tidspunkt IS NOT NULL`  |
+| `false` | `AND v.fatt_jobben_tidspunkt IS NULL`      |
+| `null`  | (intet — ingen filtrering på dette feltet) |
+
+Eksisterende status-filter (`v.status = ?`) er uendret. En jobbsøker med `SVART_JA` + `FATT_JOBBEN` matcher fortsatt status-filteret `SVART_JA`, men kan i tillegg filtreres bort med `fattJobben = false` om brukeren ønsker det.
+
+`hentAntallPerStatus` er uendret. Det legges til en separat `hentAntallFåttJobben`-spørring som returnerer `{ medFåttJobben: Int, utenFåttJobben: Int }` for samme where-klausul som søket (eksklusive selve `fattJobben`-filteret), brukt til badges i frontend-filteret.
+
+`JobbsøkerSorteringsfelt` utvides ikke i v1; sortering på `fatt_jobben_tidspunkt` kan legges til senere ved behov.
+
+### Endring i søke-API-respons
+
+`JobbsøkerSøkRespons` får et nytt felt `antallFåttJobben: AntallFåttJobben` (`{ med: Int, uten: Int }`). `JobbsøkerSøkTreff` får valgfritt `fåttJobbenTidspunkt: Instant?` slik at frontend kan vise statusbadge på raden uten å hente hendelseshistorikken separat.
+
+### Endring i frontend-filter
+
+`StatusFilter.tsx` er uendret. Ny komponent `FåttJobbenFilter.tsx` viser to valg «Med fått jobben» / «Uten fått jobben» som tri-state (begge av = vis alle). Filteret sendes som `fattJobben`-query-param til søke-endepunktet.
+
 ## Endringer per system
 
 | System                   | Endring                                                                                                                                                                                                                           |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `frontend`               | Knapp i jobbsøkerlisten + bekreftelsesmodal («Er du sikker?» — kun her, ikke i etterregistrering). «Fjern fått jobben»-knapp på jobbsøker som er registrert. Visning av status på personkortet. Kall til POST/DELETE-endepunktene.                |
-| `rekrutteringstreff-api` | To nye enum-verdier (`FATT_JOBBEN`, `FATT_JOBBEN_FJERNET`), POST- og DELETE-endepunkt, ny utsendingstabell, ny scheduler, to nye Rapids-events.                                                                                              |
+| `frontend`               | Knapp i jobbsøkerlisten + bekreftelsesmodal («Er du sikker?» — kun her, ikke i etterregistrering). «Fjern fått jobben»-knapp på jobbsøker som er registrert. Visning av status på personkortet. Nytt `FåttJobbenFilter` ved siden av status-filteret. Kall til POST/DELETE-endepunktene.                |
+| `rekrutteringstreff-api` | To nye enum-verdier (`FATT_JOBBEN`, `FATT_JOBBEN_FJERNET`), POST- og DELETE-endepunkt, ny utsendingstabell, ny scheduler, to nye Rapids-events. Utvidet `jobbsoker_sok_view` med `fatt_jobben_tidspunkt`, og `JobbsøkerSokRepository` med `fattJobben`-filter + `antallFåttJobben`-aggregering. |
 | `statistikk-api`         | Ny lytter `RekrutteringstreffFåttJobbenLytter` som håndterer både fått-jobben og angre. **Alt A**: nye kolonner `rekrutteringstreff_id` og `angret_tidspunkt` på `kandidatutfall`. **Alt B**: dedikert tabell `rekrutteringstreff_utfall` med `angret_tidspunkt`. Eksisterende lyttere og validering er uendret uansett. |
 | `stilling-api`           | Ingen endring i v1.                                                                                                                                                                                                               |
 | `kandidat-api`           | Ingen endring i v1.                                                                                                                                                                                                               |
@@ -224,6 +280,18 @@ Eksisterende tester som må verifiseres mot ny enum-verdi:
 
 - `JobbsøkerSokKomponenttest` — sortering/filter må håndtere ny hendelsestype uten å feile.
 - `AktivitetskortRepositoryTest` — `FATT_JOBBEN` skal ikke trigge aktivitetskort-utsending.
+
+Nye søk- og view-tester:
+
+| Test                                                                          | Type          | Hva den skal verifisere                                                                                                       |
+| ----------------------------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `JobbsøkerSokViewTest.skalEksponereFattJobbenTidspunkt`                       | Enhetstest    | Viewet returnerer `fatt_jobben_tidspunkt` lik tidspunktet for siste `FATT_JOBBEN`-hendelse når ingen `FATT_JOBBEN_FJERNET` er nyere. |
+| `JobbsøkerSokViewTest.skalSetteFattJobbenTidspunktTilNullEtterAngring`        | Enhetstest    | Etter `FATT_JOBBEN_FJERNET` er `fatt_jobben_tidspunkt` `NULL` i viewet.                                                       |
+| `JobbsøkerSokViewTest.skalSetteFattJobbenTidspunktVedReregistrering`          | Enhetstest    | Etter `FATT_JOBBEN_FJERNET` etterfulgt av ny `FATT_JOBBEN` viser viewet det nyeste tidspunktet.                              |
+| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalFiltrereMedFattJobben`        | Enhetstest    | `fattJobben = true` returnerer kun jobbsøkere med aktivt `fatt_jobben_tidspunkt`.                                            |
+| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalFiltrereUtenFattJobben`       | Enhetstest    | `fattJobben = false` returnerer kun jobbsøkere uten aktivt `fatt_jobben_tidspunkt`.                                          |
+| `JobbsøkerSokRepositoryFattJobbenFilterTest.skalKombinereMedStatusFilter`     | Enhetstest    | `status = SVART_JA` + `fattJobben = true` returnerer kun jobbsøkere som både har svart ja og fått jobben.                    |
+| `JobbsøkerSokKomponenttest.skalReturnereAntallFattJobben`                     | Komponenttest | Responsen inneholder `antallFåttJobben.med` og `antallFåttJobben.uten` for treffet.                                          |
 
 ### `statistikk-api`
 
