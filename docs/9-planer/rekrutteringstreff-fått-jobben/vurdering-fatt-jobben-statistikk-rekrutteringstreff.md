@@ -22,7 +22,7 @@ Dokumentet er delt i to:
 
 ## Felles datakontrakt: `AvroKandidatutfall`
 
-Alle veier ender opp som én melding på `toi.kandidatutfall`. Dette er det stabile grensesnittet mot `datavarehus-statistikk`. Definisjonen ligger i [kandidatutfall.avsc](../../../rekrutteringsbistand-statistikk-api/src/main/avro/kandidatutfall.avsc).
+Alle veier ender opp som én melding på `toi.kandidatutfall`. Dette er grensesnittet mot `datavarehus-statistikk`. Definisjonen ligger i [kandidatutfall.avsc](../../../rekrutteringsbistand-statistikk-api/src/main/avro/kandidatutfall.avsc).
 
 | Felt                | Konseptuell betydning                                                   |
 | ------------------- | ----------------------------------------------------------------------- |
@@ -127,9 +127,9 @@ Begge alternativene tar utgangspunkt i at en jobbsøker allerede er lagt til på
 
 Felles funksjonelle krav:
 
-- Registrering skjer per person via en bekreftelsesmodal («Er du sikker på at du vil registrere fått jobben?»).
-- I første versjon kan det **ikke** angres.
-- Handlingen lagres som hendelse på jobbsøker (ny enum-verdi `JobbsøkerHendelsestype.FATT_JOBBEN`).
+- Bekreftelsesmodal («Er du sikker på at du vil registrere fått jobben?») brukes kun i alternativ 2A — inne i rekrutteringstreff. I 2B og dagens etterregistrering brukes ingen modal; angring skjer ved å trykke en «fjern»-knapp på raden.
+- **Angring er støttet i v1.** Markedskontakt kan fjerne en feilregistrert «fått jobben». Det lagres som en ny hendelse `FATT_JOBBEN_FJERNET` (event-sourcing — ingen sletting), og en korresponderende melding sendes til `statistikk-api`.
+- Handlingen lagres som hendelse på jobbsøker (ny enum-verdi `JobbsokerHendelsestype.FATT_JOBBEN`, og `FATT_JOBBEN_FJERNET` for angring).
 - Mot datavarehus gjenbrukes `AvroKandidatutfall`-kontrakten.
 
 ### Beslutning som er felles for begge alternativene
@@ -151,7 +151,7 @@ Markedskontakt registrerer «fått jobben» direkte fra jobbsøkerlisten i treff
 flowchart TD
     A["Markedskontakt åpner<br/>jobbsøkerlisten i et<br/>rekrutteringstreff"]
     B["Velger person<br/>klikker «Registrer<br/>fått jobben»"]
-    C["Modal:<br/>«Er du sikker?»<br/>Ingen angre"]
+    C["Modal:<br/>«Er du sikker?»<br/>(kun i 2A)"]
     D["POST rekrutteringstreff-api<br/>fatt-jobben-endepunkt<br/>på personTreffId"]
     E["rekrutteringstreff-api<br/>lagrer hendelse<br/>jobbsoker_hendelse:<br/>FATT_JOBBEN"]
     F["FattJobbenStatistikk-<br/>Scheduler plukker<br/>uutsendte hendelser"]
@@ -180,7 +180,8 @@ flowchart TD
 | `registrertAvNavKontor` | Kontorkode                                    |
 | `tidspunkt`             | Når «fått jobben» ble registrert              |
 | `arbeidsgiverOrgnr`     | Hvilken arbeidsgiver i treffet jobben gjelder |
-| `notat`                 | Valgfri tekst (vurderes — ikke i v1)          |
+
+Ved angring publiseres en separat hendelse `FATT_JOBBEN_FJERNET` med samme JSONB-felter (`registrertAvNavIdent` = den som angret, `tidspunkt` = angretidspunkt, `arbeidsgiverOrgnr` = samme som original). Lytteren i `statistikk-api` markerer raden som angret — se implementasjonsplan for detaljer.
 
 ### Alternativ 2B — Bruke dagens etterregistrering med treff-flagg
 
@@ -215,18 +216,18 @@ flowchart TD
 
 ### Sammenligning av alternativene
 
-| Tema                                 | 2A (registrering i treff)                         | 2B (etterregistrering med flagg)                     |
-| ------------------------------------ | ------------------------------------------------- | ---------------------------------------------------- |
-| Brukeropplevelse                     | Ett klikk i treffet, ingen kontekstskifte         | Krever bytte til etterregistreringsflyten            |
-| Eierskap                             | Treff-domenet eier hele løpet                     | Stilling-/kandidat-domenet beholder ansvaret         |
-| Nye konsepter for veileder           | Bekreftelsesmodal er ny, ellers samme             | Nytt felt i kjent skjema                             |
+| Tema                                 | 2A (registrering i treff)                                      | 2B (etterregistrering med flagg)                     |
+| ------------------------------------ | -------------------------------------------------------------- | ---------------------------------------------------- |
+| Brukeropplevelse                     | Ett klikk i treffet, ingen kontekstskifte                      | Krever bytte til etterregistreringsflyten            |
+| Eierskap                             | Treff-domenet eier hele løpet                                  | Stilling-/kandidat-domenet beholder ansvaret         |
+| Nye konsepter for veileder           | Bekreftelsesmodal er ny, ellers samme                          | Nytt felt i kjent skjema                             |
 | Kobling til kandidatliste/stilling   | Ingen — `stillingsId`/`kandidatlisteId` utelates fra meldingen | Beholdes — ekte stilling og liste finnes             |
-| Endringsomfang i statistikk-api      | Lite (ny lytter eller utvidet)                    | Lite (ny kolonne)                                    |
-| Endringsomfang i kandidat-api        | Ingen                                             | Må videreformidle treff-ID                           |
-| Risiko for inkonsistens              | Lav — én skriver (`rekrutteringstreff-api`)       | Middels — fire systemer berøres for én registrering  |
-| Avhengighet av at stilling opprettes | Ingen                                             | Beholdes (formidlingsstilling opprettes som «bærer») |
-| Angre senere                         | Krever ny hendelse `FATT_JOBBEN_FJERNET`          | Kan gjenbruke dagens `FjernetRegistreringFåttJobben` |
-| Mulighet for fremtidig nyansering    | Stor — `rekrutteringstreff-api` eier datamodellen | Bundet til stillings-/kandidatmodellen               |
+| Endringsomfang i statistikk-api      | Lite (ny lytter eller utvidet)                                 | Lite (ny kolonne)                                    |
+| Endringsomfang i kandidat-api        | Ingen                                                          | Må videreformidle treff-ID                           |
+| Risiko for inkonsistens              | Lav — én skriver (`rekrutteringstreff-api`)                    | Middels — fire systemer berøres for én registrering  |
+| Avhengighet av at stilling opprettes | Ingen                                                          | Beholdes (formidlingsstilling opprettes som «bærer») |
+| Angre senere                         | Egen hendelse `FATT_JOBBEN_FJERNET` i `rekrutteringstreff-api` (støttet i v1) | Gjenbruker dagens `FjernetRegistreringFåttJobben` (støttet i v1) |
+| Mulighet for fremtidig nyansering    | Stor — `rekrutteringstreff-api` eier datamodellen              | Bundet til stillings-/kandidatmodellen               |
 
 ### Anbefaling som diskusjonsutgangspunkt
 
@@ -237,9 +238,8 @@ Alternativ **2A** gir minst risiko for inkonsistens og holder treff-domenet saml
 ## Åpne spørsmål til møtet
 
 1. Skal `datavarehus-statistikk` se rekrutteringstreff som egen `stillingskategori`, eller skal det rapporteres som `FORMIDLING`?
-2. Skal det åpnes for angring i v1 likevel? (Påvirker hendelsesmodellen.)
-3. Hvor ligger ansvaret for «fått jobben hos hvilken arbeidsgiver» når et treff har flere arbeidsgivere?
-4. Skal statistikk-api på sikt eksponere et eget aggregat for rekrutteringstreff til frontend, eller holder dagens samlede tall?
+2. Hvor ligger ansvaret for «fått jobben hos hvilken arbeidsgiver» når et treff har flere arbeidsgivere?
+3. Skal statistikk-api på sikt eksponere et eget aggregat for rekrutteringstreff til frontend, eller holder dagens samlede tall?
 
 ## Prosjekter som er sjekket for dette dokumentet
 
