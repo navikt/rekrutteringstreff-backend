@@ -414,12 +414,10 @@ class ArbeidsgiverBehovTest {
 
         val data = db.hentHendelseDataFørste("BEHOV_ENDRET")
         assertThat(data).isNotNull()
-        val ikkeNull: String = data!!
-        // jsonb-utdrag fra Postgres bruker "key": value med mellomrom; vi kompakterer for sammenligning
-        val kompakt = ikkeNull.replace(" ", "")
-        assertThat(kompakt).contains("\"antall\":3")
-        assertThat(kompakt).contains("\"Norsk\"")
-        assertThat(kompakt).contains("\"Fast\"")
-        assertThat(kompakt).contains("\"konseptId\":175819")
+        val behovDto = JacksonConfig.mapper.readValue(data, no.nav.toi.arbeidsgiver.dto.ArbeidsgiverBehovDto::class.java)
+        assertThat(behovDto.antall).isEqualTo(3)
+        assertThat(behovDto.arbeidssprak).contains("Norsk")
+        assertThat(behovDto.ansettelsesformer).contains("Fast")
+        assertThat(behovDto.samledeKvalifikasjoner.map { it.konseptId }).contains(175819L)
     }
 }

@@ -14,7 +14,7 @@ import javax.sql.DataSource
 class ArbeidsgiverService(
     private val dataSource: DataSource,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
-    private val objectMapper: ObjectMapper = ObjectMapper(),
+    private val objectMapper: ObjectMapper,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
