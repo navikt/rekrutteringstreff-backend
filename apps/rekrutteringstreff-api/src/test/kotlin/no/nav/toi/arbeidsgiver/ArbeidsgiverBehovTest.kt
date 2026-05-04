@@ -27,7 +27,9 @@ import org.junit.jupiter.api.TestInstance
 import java.net.HttpURLConnection.HTTP_BAD_REQUEST
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.HttpURLConnection.HTTP_FORBIDDEN
+import java.net.HttpURLConnection.HTTP_NOT_FOUND
 import java.net.HttpURLConnection.HTTP_OK
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -288,6 +290,21 @@ class ArbeidsgiverBehovTest {
         val htype = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto::class.java)
         val hendelseListe: List<ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto> = mapper.readValue(hendelser.body(), htype)
         assertThat(hendelseListe.count { it.hendelsestype == ArbeidsgiverHendelsestype.BEHOV_ENDRET.name }).isEqualTo(2)
+    }
+
+    @Test
+    fun `PUT behov for ukjent arbeidsgiver gir 404`() {
+        val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A111111"))
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/${UUID.randomUUID()}/behov",
+            gyldigBehovJson(antall = 7),
+            token
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_NOT_FOUND)
     }
 
     @Test

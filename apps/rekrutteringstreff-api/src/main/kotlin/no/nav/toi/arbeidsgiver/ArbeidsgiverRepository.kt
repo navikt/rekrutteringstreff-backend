@@ -146,29 +146,13 @@ class ArbeidsgiverRepository(
         return ArbeidsgiverTreffId(eksisterende)
     }
 
-    fun finnesArbeidsgiverITreff(
-        connection: Connection,
-        treff: TreffId,
-        arbeidsgiverTreffId: ArbeidsgiverTreffId,
-    ): Boolean {
-        val sql = """
-            SELECT 1
-            FROM arbeidsgiver ag
-            JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
-            WHERE rt.id = ? AND ag.id = ? AND ag.status <> 'SLETTET'
-        """.trimIndent()
-        return connection.prepareStatement(sql).use { ps ->
-            ps.setObject(1, treff.somUuid)
-            ps.setObject(2, arbeidsgiverTreffId.somUuid)
-            ps.executeQuery().use { rs -> rs.next() }
-        }
-    }
 
     fun upsertBehov(
         connection: Connection,
+        treffId: TreffId,
         arbeidsgiverTreffId: ArbeidsgiverTreffId,
         behov: ArbeidsgiverBehov,
-    ) {
+    ): Boolean {
         val samledeJson = objectMapper.writeValueAsString(behov.samledeKvalifikasjoner)
         val personligeJson = objectMapper.writeValueAsString(behov.personligeEgenskaper)
         val arbeidssprakArr = connection.createArrayOf("text", behov.arbeidssprak.map { it.name }.toTypedArray())
@@ -177,10 +161,12 @@ class ArbeidsgiverRepository(
         val sql = """
             INSERT INTO arbeidsgiver_behov
                 (arbeidsgiver_id, arbeidssprak, antall, samlede_kvalifikasjoner, ansettelsesformer, personlige_egenskaper, oppdatert)
-            VALUES (
-                (SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?),
+            SELECT
+                ag.arbeidsgiver_id,
                 ?, ?, ?::jsonb, ?, ?::jsonb, now()
-            )
+            FROM arbeidsgiver ag
+            JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ? AND ag.id = ? AND ag.status <> 'SLETTET'
             ON CONFLICT (arbeidsgiver_id) DO UPDATE SET
                 arbeidssprak = EXCLUDED.arbeidssprak,
                 antall = EXCLUDED.antall,
@@ -190,14 +176,15 @@ class ArbeidsgiverRepository(
                 oppdatert = now()
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
-            stmt.setObject(1, arbeidsgiverTreffId.somUuid)
-            stmt.setArray(2, arbeidssprakArr)
-            stmt.setInt(3, behov.antall)
-            stmt.setString(4, samledeJson)
-            stmt.setArray(5, ansettelsesformerArr)
-            stmt.setString(6, personligeJson)
+            stmt.setArray(1, arbeidssprakArr)
+            stmt.setInt(2, behov.antall)
+            stmt.setString(3, samledeJson)
+            stmt.setArray(4, ansettelsesformerArr)
+            stmt.setString(5, personligeJson)
+            stmt.setObject(6, treffId.somUuid)
+            stmt.setObject(7, arbeidsgiverTreffId.somUuid)
             val rows = stmt.executeUpdate()
-            if (rows == 0) throw IllegalArgumentException("Fant ikke arbeidsgiver med id ${arbeidsgiverTreffId.somUuid} for upsert av behov.")
+            return rows > 0
         }
     }
 

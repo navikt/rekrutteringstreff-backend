@@ -44,7 +44,7 @@ class ArbeidsgiverService(
                 arbeidsgiverRepository.leggTilNaringskoder(connection, ny, arbeidsgiver.næringskoder)
                 ny
             }
-            arbeidsgiverRepository.upsertBehov(connection, arbeidsgiverTreffId, behov)
+            arbeidsgiverRepository.upsertBehov(connection, treffId, arbeidsgiverTreffId, behov)
             arbeidsgiverRepository.leggTilHendelse(
                 connection,
                 arbeidsgiverTreffId,
@@ -63,11 +63,11 @@ class ArbeidsgiverService(
         behov: ArbeidsgiverBehov,
         navIdent: String,
     ): ArbeidsgiverMedBehov? {
-        val finnes = dataSource.executeInTransaction { connection ->
-            if (!arbeidsgiverRepository.finnesArbeidsgiverITreff(connection, treffId, arbeidsgiverTreffId)) {
+        val oppdatert = dataSource.executeInTransaction { connection ->
+            val oppdatert = arbeidsgiverRepository.upsertBehov(connection, treffId, arbeidsgiverTreffId, behov)
+            if (!oppdatert) {
                 return@executeInTransaction false
             }
-            arbeidsgiverRepository.upsertBehov(connection, arbeidsgiverTreffId, behov)
             arbeidsgiverRepository.leggTilHendelse(
                 connection,
                 arbeidsgiverTreffId,
@@ -78,7 +78,9 @@ class ArbeidsgiverService(
             )
             true
         }
-        if (!finnes) return null
+
+        if (!oppdatert) return null
+
         return arbeidsgiverRepository.hentArbeidsgivereMedBehov(treffId)
             .firstOrNull { it.arbeidsgiver.arbeidsgiverTreffId.somString == arbeidsgiverTreffId.somString }
     }

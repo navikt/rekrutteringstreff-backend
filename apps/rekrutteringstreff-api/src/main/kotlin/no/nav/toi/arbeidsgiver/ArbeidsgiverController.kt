@@ -252,7 +252,7 @@ class ArbeidsgiverController(
     }
 
     @OpenApi(
-        summary = "Hent alle arbeidsgivere med behov for et rekrutteringstreff (skjermet)",
+        summary = "Hent alle arbeidsgivere med behov for et rekrutteringstreff",
         operationId = "hentArbeidsgivereMedBehov",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
@@ -289,7 +289,7 @@ class ArbeidsgiverController(
     }
 
     @OpenApi(
-        summary = "Upsert behov for en eksisterende arbeidsgiver i treffet (skjermet)",
+        summary = "Upsert behov for en eksisterende arbeidsgiver i treffet",
         operationId = "oppdaterArbeidsgiverBehov",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [
