@@ -512,7 +512,7 @@ class RekrutteringstreffSokKomponenttest {
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).hasSize(1)
         assertThat(respons.treff.first().antallArbeidsgivere).isEqualTo(3)
-        assertThat(respons.treff.first().antallJobbsokere).isEqualTo(7)
+        assertThat(respons.treff.first().antallJobbsøkere).isEqualTo(7)
     }
 
     @Test
@@ -525,7 +525,7 @@ class RekrutteringstreffSokKomponenttest {
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).hasSize(1)
         assertThat(respons.treff.first().antallArbeidsgivere).isEqualTo(0)
-        assertThat(respons.treff.first().antallJobbsokere).isEqualTo(0)
+        assertThat(respons.treff.first().antallJobbsøkere).isEqualTo(0)
     }
 
     @Test

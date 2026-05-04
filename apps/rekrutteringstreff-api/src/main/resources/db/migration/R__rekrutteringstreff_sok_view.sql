@@ -20,6 +20,7 @@ SELECT
         ELSE false
     END AS frist_utgatt,
     (SELECT count(*) FROM arbeidsgiver a WHERE a.rekrutteringstreff_id = rt.rekrutteringstreff_id) AS antall_arbeidsgivere,
-    (SELECT count(*) FROM jobbsoker j WHERE j.rekrutteringstreff_id = rt.rekrutteringstreff_id) AS antall_jobbsokere
+    (SELECT count(*) FROM jobbsoker j WHERE j.rekrutteringstreff_id = rt.rekrutteringstreff_id) AS antall_jobbsokere,
+    (SELECT count(*) FROM jobbsoker j WHERE j.rekrutteringstreff_id = rt.rekrutteringstreff_id AND j.status = 'SVART_JA') AS antall_jobbsokere_svart_ja
 FROM rekrutteringstreff rt
 WHERE rt.status != 'SLETTET';
