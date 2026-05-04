@@ -8,6 +8,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.util.UUID
 import javax.sql.DataSource
 
@@ -39,10 +40,7 @@ class ArbeidsgiverService(
                 arbeidsgiverRepository.leggTilHendelse(connection, reaktivert, ArbeidsgiverHendelsestype.REAKTIVERT, AktørType.ARRANGØR, navIdent)
                 reaktivert
             } else {
-                val ny = arbeidsgiverRepository.opprettArbeidsgiver(connection, arbeidsgiver, treffId)
-                arbeidsgiverRepository.leggTilHendelse(connection, ny, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, navIdent)
-                arbeidsgiverRepository.leggTilNaringskoder(connection, ny, arbeidsgiver.næringskoder)
-                ny
+                opprettArbeidsgiverMedNæringskoder(connection, arbeidsgiver, treffId, navIdent)
             }
             arbeidsgiverRepository.upsertBehov(connection, treffId, arbeidsgiverTreffId, behov)
             arbeidsgiverRepository.leggTilHendelse(
@@ -55,6 +53,18 @@ class ArbeidsgiverService(
             )
         }
         logger.info("La til arbeidsgiver med behov ${arbeidsgiver.orgnr.asString} for treff $treffId")
+    }
+
+    private fun opprettArbeidsgiverMedNæringskoder(
+        connection: Connection,
+        arbeidsgiver: LeggTilArbeidsgiver,
+        treffId: TreffId,
+        navIdent: String,
+    ): ArbeidsgiverTreffId {
+        val ny = arbeidsgiverRepository.opprettArbeidsgiver(connection, arbeidsgiver, treffId)
+        arbeidsgiverRepository.leggTilHendelse(connection, ny, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, navIdent)
+        arbeidsgiverRepository.leggTilNaringskoder(connection, ny, arbeidsgiver.næringskoder)
+        return ny
     }
 
     fun oppdaterBehov(

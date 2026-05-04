@@ -122,10 +122,16 @@ class ArbeidsgiverBehovTest {
         }
     """.trimIndent()
 
-    private fun arbeidsgiverMedBehovBody(orgnr: String = "555555555", navn: String = "Eksempel AS", behovJson: String = gyldigBehovJson()): String = """
+    private fun arbeidsgiverMedBehovBody(
+        orgnr: String = "555555555",
+        navn: String = "Eksempel AS",
+        næringskoderJson: String = """[{"kode": "47.111", "beskrivelse": "Detaljhandel"}]""",
+        behovJson: String = gyldigBehovJson(),
+    ): String = """
         {
           "organisasjonsnummer": "$orgnr",
           "navn": "$navn",
+          "næringskoder": $næringskoderJson,
           "behov": $behovJson
         }
     """.trimIndent()
@@ -332,6 +338,9 @@ class ArbeidsgiverBehovTest {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
         eierRepository.leggTil(treffId, listOf("A111111"))
+        val orgnr = Orgnr("555555555")
+        val opprinneligeNæringskoder = listOf(Næringskode("47.111", "Detaljhandel"))
+        val nyeNæringskoderVedReaktivering = listOf(Næringskode("56.101", "Drift av restauranter og kafeer"))
 
         // Oppretter med behov
         httpPost(
@@ -339,6 +348,7 @@ class ArbeidsgiverBehovTest {
             arbeidsgiverMedBehovBody(),
             token
         )
+        assertThat(db.hentNæringskodeForArbeidsgiverPåTreff(treffId, orgnr)).isEqualTo(opprinneligeNæringskoder)
 
         // Slett arbeidsgiver
         val mapper = JacksonConfig.mapper
@@ -370,10 +380,14 @@ class ArbeidsgiverBehovTest {
         """.trimIndent()
         val reaktiverResp = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
-            arbeidsgiverMedBehovBody(behovJson = reaktiverBehov),
+            arbeidsgiverMedBehovBody(
+                behovJson = reaktiverBehov,
+                næringskoderJson = """[{"kode": "${nyeNæringskoderVedReaktivering.first().kode}", "beskrivelse": "${nyeNæringskoderVedReaktivering.first().beskrivelse}"}]"""
+            ),
             token
         )
         assertThat(reaktiverResp.statusCode()).isEqualTo(HTTP_CREATED)
+        assertThat(db.hentNæringskodeForArbeidsgiverPåTreff(treffId, orgnr)).isEqualTo(opprinneligeNæringskoder)
 
         val etterReaktivering: List<ArbeidsgiverMedBehovDto> = mapper.readValue(
             httpGet("http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov", token).body(),
