@@ -4,7 +4,10 @@ ARG APP_NAME
 WORKDIR /$APP_NAME
 COPY build/libs/*.jar ./
 
-ENV LANG='nb_NO.UTF-8' LANGUAGE='nb_NO:nb' LC_ALL='nb_NO.UTF-8' TZ="Europe/Oslo"
+ENV LANG="nb_NO.UTF-8"
+ENV LANGUAGE="nb_NO:nb"
+ENV LC_ALL="nb_NO.UTF-8"
+ENV TZ="Europe/Oslo"
 
 # Asume that logback.xml is located in the project/app root dir.
 # The unconventional location is a signal to developers to make them aware that we use this file in an unconventional
