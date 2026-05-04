@@ -86,7 +86,7 @@ class ArbeidsgiverAutorisasjonsTest {
         eierService = EierService(EierRepository(database.dataSource), rekrutteringstreffRepository, database.dataSource)
     )
 
-    private val arbeidsgiverService = ArbeidsgiverService(database.dataSource, arbeidsgiverRepository)
+    private val arbeidsgiverService = ArbeidsgiverService(database.dataSource, arbeidsgiverRepository, objectMapper = JacksonConfig.mapper)
 
     private lateinit var app: App
 
