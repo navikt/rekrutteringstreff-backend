@@ -6,6 +6,12 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
+import no.nav.toi.jobbsoker.Etternavn
+import no.nav.toi.jobbsoker.Fornavn
+import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.Jobbsøker
+import no.nav.toi.jobbsoker.JobbsøkerStatus
+import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -526,6 +532,52 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(respons.treff).hasSize(1)
         assertThat(respons.treff.first().antallArbeidsgivere).isEqualTo(0)
         assertThat(respons.treff.first().antallJobbsøkere).isEqualTo(0)
+    }
+
+    @Test
+    fun `søk returnerer 0 antall jobbsøkere som har svart ja for treff uten deltakere`() {
+        opprettTreffMedEier(tittel = "Tomt treff")
+
+        val response = sokGet()
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().antallJobbsøkereSvartJa).isEqualTo(0)
+    }
+
+    @Test
+    fun `søk returnerer riktig antall jobbsøkere som har svart ja`() {
+        val treffId = opprettTreffMedEier(tittel = "Tomt treff")
+
+        val jobbsøkerInvitert = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678901"),
+            Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.INVITERT
+        )
+
+        val jobbsøkerSvartJa = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
+            Fornavn("Ola 2"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.SVART_JA
+        )
+
+        val jobbsøkerSvartJaIkkeSynlig = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
+            Fornavn("Ola 3"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.SVART_JA
+        )
+
+        db.settSynlighet(jobbsøkerSvartJaIkkeSynlig.personTreffId, false)
+
+        db.leggTilJobbsøkere(listOf(jobbsøkerInvitert, jobbsøkerSvartJa))
+
+        val response = sokGet()
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().antallJobbsøkereSvartJa).isEqualTo(1)
     }
 
     @Test
