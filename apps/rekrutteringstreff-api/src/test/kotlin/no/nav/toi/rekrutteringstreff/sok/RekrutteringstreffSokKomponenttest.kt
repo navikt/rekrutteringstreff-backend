@@ -535,6 +535,41 @@ class RekrutteringstreffSokKomponenttest {
     }
 
     @Test
+    fun `søk returnerer riktig antall jobbsøkere`() {
+        val treffId = opprettTreffMedEier(tittel = "Tomt treff")
+
+        val jobbsøkerInvitert = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678901"),
+            Fornavn("Ola"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.INVITERT
+        )
+
+        val jobbsøkerSlettet = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
+            Fornavn("Ola 2"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.SLETTET
+        )
+
+        val jobbsøkerSvartJaIkkeSynlig = Jobbsøker(
+            PersonTreffId(UUID.randomUUID()), treffId, Fødselsnummer("12345678902"),
+            Fornavn("Ola 3"), Etternavn("Nordmann"), null, null, null,
+            JobbsøkerStatus.SVART_JA
+        )
+
+        db.leggTilJobbsøkere(listOf(jobbsøkerInvitert, jobbsøkerSlettet, jobbsøkerSvartJaIkkeSynlig))
+
+        db.settSynlighet(jobbsøkerSvartJaIkkeSynlig.personTreffId, false)
+
+        val response = sokGet()
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().antallJobbsøkere).isEqualTo(1)
+    }
+
+
+    @Test
     fun `søk returnerer 0 antall jobbsøkere som har svart ja for treff uten deltakere`() {
         opprettTreffMedEier(tittel = "Tomt treff")
 
@@ -568,9 +603,9 @@ class RekrutteringstreffSokKomponenttest {
             JobbsøkerStatus.SVART_JA
         )
 
-        db.settSynlighet(jobbsøkerSvartJaIkkeSynlig.personTreffId, false)
+        db.leggTilJobbsøkere(listOf(jobbsøkerInvitert, jobbsøkerSvartJa, jobbsøkerSvartJaIkkeSynlig))
 
-        db.leggTilJobbsøkere(listOf(jobbsøkerInvitert, jobbsøkerSvartJa))
+        db.settSynlighet(jobbsøkerSvartJaIkkeSynlig.personTreffId, false)
 
         val response = sokGet()
         assertThat(response.statusCode()).isEqualTo(200)
