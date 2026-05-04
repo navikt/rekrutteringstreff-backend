@@ -21,54 +21,35 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.LocalDateTime
 import java.util.*
+import no.nav.toi.config.testKoinApplication
+import org.koin.core.KoinApplication
+
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
 class AppExceptionHandlingTest {
     private val port = ubruktPortnr()
     private val authServer = MockOAuth2Server()
+    private val database = TestDatabase()
     private val authPort = ubruktPortnr()
 
+    private lateinit var koinApp: KoinApplication
     private lateinit var app: App
     private lateinit var treffId: UUID
 
     @BeforeAll
     fun start(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = port,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = TestDatabase().dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
-
         authServer.start(port = authPort)
+        koinApp = testKoinApplication(
+            dataSource = database.dataSource,
+            authServer = authServer,
+            port = port,
+            authPort = authPort,
+            wireMockBaseUrl = wmInfo.httpBaseUrl,
+        )
+        app = App(koinApp.koin)
+        app.start()
+
         // Opprett et treff via API for å ha en gyldig id å PUT'e mot
 
         setupStubs()

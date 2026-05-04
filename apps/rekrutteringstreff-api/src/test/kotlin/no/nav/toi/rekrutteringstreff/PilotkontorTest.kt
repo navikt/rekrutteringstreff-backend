@@ -5,27 +5,22 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.AccessTokenClient
 import no.nav.toi.App
-import no.nav.toi.AuthenticationConfiguration
-import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
-import no.nav.toi.AzureAdRoller.jobbsøkerrettet
-import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
-import no.nav.toi.LeaderElectionMock
-import no.nav.toi.TestRapid
-import no.nav.toi.httpClient
-import no.nav.toi.lagToken
-import no.nav.toi.lagTokenBorger
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
+import no.nav.toi.config.testKoinApplication
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
+import no.nav.toi.lagToken
+import no.nav.toi.lagTokenBorger
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
+import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.httpClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -33,6 +28,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.koin.core.KoinApplication
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -56,38 +52,21 @@ class PilotkontorTest {
     private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
     private val service = RekrutteringstreffService(database.dataSource, repo, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, EierService(EierRepository(database.dataSource), repo, database.dataSource))
 
+    private lateinit var koinApp: KoinApplication
     private lateinit var app: App
 
     @BeforeAll
     fun setUp() {
         authServer.start(port = authPort)
-        app = App(
+        koinApp = testKoinApplication(
+            dataSource = database.dataSource,
+            authServer = authServer,
             port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            database.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet,
-            utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = AccessTokenClient(
-                clientId = "client-id",
-                secret = "secret",
-                azureUrl = "http://localhost:$authPort/token",
-                httpClient = httpClient
-            ),
-            modiaKlient = modiaKlient,
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
+            authPort = authPort,
+            modiaKlientOverride = modiaKlient,
+        )
+        app = App(koinApp.koin)
+        app.start()
     }
 
     @BeforeEach

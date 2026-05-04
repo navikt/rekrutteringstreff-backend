@@ -22,6 +22,9 @@ import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Instant
+import no.nav.toi.config.testKoinApplication
+import org.koin.core.KoinApplication
+
 
 /**
  * Komponenttest som verifiserer at synlighetsfiltrering fungerer korrekt
@@ -41,47 +44,25 @@ class SynlighetsKomponentTest {
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
         
-        private lateinit var app: App
         private lateinit var jobbsøkerService: JobbsøkerService
     }
+
+    private lateinit var koinApp: org.koin.core.KoinApplication
+    private lateinit var app: App
 
     private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
+        koinApp = testKoinApplication(
             dataSource = db.dataSource,
-            jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
+            authServer = authServer,
+            port = appPort,
+            authPort = authPort,
+            wireMockBaseUrl = wmInfo.httpBaseUrl,
+        )
+        app = App(koinApp.koin)
+        app.start()
         authServer.start(port = authPort)
         
         jobbsøkerService = JobbsøkerService(db.dataSource, JobbsøkerRepository(db.dataSource, mapper), JobbsøkerSokRepository(db.dataSource))

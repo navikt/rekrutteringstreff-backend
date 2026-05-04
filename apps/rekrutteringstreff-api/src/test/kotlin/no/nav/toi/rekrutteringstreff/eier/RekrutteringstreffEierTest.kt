@@ -27,6 +27,9 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
+import no.nav.toi.config.testKoinApplication
+import org.koin.core.KoinApplication
+
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -55,42 +58,23 @@ class RekrutteringstreffEierTest {
             httpClient = httpClient
         )
 
-        private lateinit var app: App
     }
+
+    private lateinit var koinApp: org.koin.core.KoinApplication
+    private lateinit var app: App
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
         authServer.start(port = authPort)
 
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
+        koinApp = testKoinApplication(
             dataSource = database.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+            authServer = authServer,
+            port = appPort,
+            authPort = authPort,
+            wireMockBaseUrl = wmInfo.httpBaseUrl,
         )
-
-
+        app = App(koinApp.koin)
         app.start()
         waitForServerToBeReady()
     }

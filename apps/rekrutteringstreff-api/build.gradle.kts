@@ -19,6 +19,8 @@ val openTelemetryVersion = "1.55.0"
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.0"
 val kotestVersion = "6.1.4"
+val koinVersion = "4.2.1"
+
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")
@@ -27,6 +29,8 @@ dependencies {
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonDatatypeJsr310Version")
     implementation("io.javalin:javalin:$javalinVersion")
+    implementation(platform("io.insert-koin:koin-bom:$koinVersion"))
+    implementation("io.insert-koin:koin-core")
 
     kapt("io.javalin.community.openapi:openapi-annotation-processor:$javalinVersion")
     implementation("io.javalin.community.openapi:javalin-openapi-plugin:$javalinVersion")
@@ -49,4 +53,6 @@ dependencies {
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
     testImplementation("io.mockk:mockk:1.13.17")
     testImplementation("io.kotest:kotest-assertions-json-jvm:$kotestVersion")
+    testImplementation("io.insert-koin:koin-test:${koinVersion}")
+    testImplementation("io.insert-koin:koin-test-junit5:${koinVersion}")
 }

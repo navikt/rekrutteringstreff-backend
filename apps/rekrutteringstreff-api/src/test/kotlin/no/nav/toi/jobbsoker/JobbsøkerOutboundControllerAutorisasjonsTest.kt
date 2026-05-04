@@ -60,6 +60,9 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.ZonedDateTime
 import java.util.UUID
+import no.nav.toi.config.testKoinApplication
+import org.koin.core.KoinApplication
+
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -87,44 +90,21 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
         eierService = EierService(EierRepository(database.dataSource), rekrutteringstreffRepository, database.dataSource)
     )
 
+    private lateinit var koinApp: KoinApplication
     private lateinit var app: App
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
         authServer.start(port = authPort)
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
+        koinApp = testKoinApplication(
             dataSource = database.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = wmInfo.httpBaseUrl,
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
+            authServer = authServer,
+            port = appPort,
+            authPort = authPort,
+            wireMockBaseUrl = wmInfo.httpBaseUrl,
+        )
+        app = App(koinApp.koin)
+        app.start()
     }
 
     @BeforeEach
