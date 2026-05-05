@@ -8,13 +8,13 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.exceptions.JWTVerificationException
 import com.auth0.jwt.interfaces.DecodedJWT
 import com.auth0.jwt.interfaces.RSAKeyProvider
-import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
+import io.javalin.http.Header
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.http.UnauthorizedResponse
+import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
-import org.eclipse.jetty.http.HttpHeader
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
 import java.util.*
@@ -119,17 +119,17 @@ private class AuthenticatedCitizenUser(
 }
 
 
-fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
+fun JavalinDefaultRoutingApi.leggTilAutensieringPåRekrutteringstreffEndepunkt(
     authConfigs: List<AuthenticationConfiguration>,
     rolleUuidSpesifikasjon: RolleUuidSpesifikasjon,
     modiaKlient: ModiaKlient,
     pilotkontorer: List<String>
-): Javalin {
+): JavalinDefaultRoutingApi {
     log.info("Starter autentiseringoppsett")
     val verifiers = authConfigs.flatMap { it.jwtVerifiers() }
     before { ctx ->
         if (ctx.path().matches(Regex("""/api/rekrutteringstreff(?:$|/.*)"""))) {
-            val token = ctx.header(HttpHeader.AUTHORIZATION.name)
+            val token = ctx.header(Header.AUTHORIZATION)
                 ?.removePrefix("Bearer ")
                 ?.trim() ?: throw UnauthorizedResponse("Missing token")
 

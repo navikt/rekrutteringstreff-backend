@@ -3,9 +3,9 @@ package no.nav.toi
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
-import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.HttpStatus
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.opentelemetry.api.trace.Span
 import no.nav.toi.exception.*
 import java.sql.SQLException
@@ -61,7 +61,7 @@ data class ProblemDetails(
 object ExceptionMapping {
     private val secureLog = SecureLog(log)
 
-    fun Javalin.exceptionMapping() {
+    fun JavalinDefaultRoutingApi.exceptionMapping() {
         // TODO exceptions kan også skje steder hvor disse feilmeldingene ikke gir mening.
         exception(JsonParseException::class.java) { e, ctx ->
             ctx.status(400).json(
