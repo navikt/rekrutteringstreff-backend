@@ -10,7 +10,7 @@ kafka_pool: nav-dev
 cluster: dev-gcp
 min_replicas: 2
 max_replicas: 2
-gcp_db_tier: db-f1-micro
+gcp_db_tier: db-g1-small
 gcp_disk_autoresize: false
 postgres: POSTGRES_17
 adGruppeUtvikler: "a1749d9a-52e0-4116-bb9f-935c38f6c74a"
