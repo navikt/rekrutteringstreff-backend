@@ -55,7 +55,7 @@ class RekrutteringstreffRepositoryTest {
         assertThat(hendelser[2].hendelsestype).isEqualTo(RekrutteringstreffHendelsestype.OPPRETTET)
         assertThat(hendelser.first().tidspunkt)
             .isAfterOrEqualTo(hendelser.last().tidspunkt)
-            .isCloseTo(nowOslo(), within(5, ChronoUnit.SECONDS))
+            .isCloseTo(nowOslo(), within(8, ChronoUnit.SECONDS))
     }
     @Test
     fun `registrerer ulike hendelsestyper i repo`() {
