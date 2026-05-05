@@ -161,7 +161,6 @@ class App(
         val innleggRepository = InnleggRepository(dataSource)
         val kiLoggRepository = KiLoggRepository(dataSource)
 
-        val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
 
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
@@ -266,7 +265,7 @@ class App(
                 rapidsConnection.start()
             } catch (e: Exception) {
                 log.error("RapidsConnection feilet, avslutter applikasjonen", e)
-                System.exit(1)
+                close()
             }
         }.start()
     }
