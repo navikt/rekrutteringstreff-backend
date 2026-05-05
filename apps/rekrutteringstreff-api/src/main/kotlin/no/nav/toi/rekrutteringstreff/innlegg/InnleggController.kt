@@ -2,7 +2,7 @@ package no.nav.toi.rekrutteringstreff.innlegg
 
 import io.javalin.openapi.*
 import io.javalin.http.Context
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
@@ -19,7 +19,7 @@ class InnleggController(
     private val innleggService: InnleggService,
     private val kiLoggService: KiLoggService,
     private val eierService: EierService,
-    javalin: Javalin
+    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
@@ -32,11 +32,11 @@ class InnleggController(
     }
 
     init {
-        javalin.get(INNLEGG_BASE_PATH, hentAlleInnleggForTreff())
-        javalin.get(INNLEGG_ITEM_PATH, hentEttInnlegg())
-        javalin.post(INNLEGG_BASE_PATH, opprettInnlegg())
-        javalin.put(INNLEGG_ITEM_PATH, oppdaterEttInnlegg())
-        javalin.delete(INNLEGG_ITEM_PATH, slettEttInnlegg())
+        routes.get(INNLEGG_BASE_PATH, hentAlleInnleggForTreff())
+        routes.get(INNLEGG_ITEM_PATH, hentEttInnlegg())
+        routes.post(INNLEGG_BASE_PATH, opprettInnlegg())
+        routes.put(INNLEGG_ITEM_PATH, oppdaterEttInnlegg())
+        routes.delete(INNLEGG_ITEM_PATH, slettEttInnlegg())
     }
 
     @OpenApi(

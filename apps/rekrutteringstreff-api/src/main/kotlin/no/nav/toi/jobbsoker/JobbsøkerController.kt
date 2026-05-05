@@ -1,6 +1,6 @@
 package no.nav.toi.jobbsoker
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.bodyAsClass
@@ -27,7 +27,7 @@ import java.util.*
 class JobbsøkerController(
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
-    javalin: Javalin
+    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamTreffId = "id"
@@ -44,12 +44,12 @@ class JobbsøkerController(
     }
 
     init {
-        javalin.post(jobbsøkerPath, leggTilJobbsøkereHandler())
-        javalin.post(søkPath, søkJobbsøkereHandler())
-        javalin.delete(slettPath, slettJobbsøkerHandler())
-        javalin.post(svarPath, svarForJobbsøkerHandler())
-        javalin.get(hendelserPath, hentJobbsøkerHendelserHandler())
-        javalin.post(inviterPath, inviterJobbsøkereHandler())
+        routes.post(jobbsøkerPath, leggTilJobbsøkereHandler())
+        routes.post(søkPath, søkJobbsøkereHandler())
+        routes.delete(slettPath, slettJobbsøkerHandler())
+        routes.post(svarPath, svarForJobbsøkerHandler())
+        routes.get(hendelserPath, hentJobbsøkerHendelserHandler())
+        routes.post(inviterPath, inviterJobbsøkereHandler())
     }
 
     @OpenApi(

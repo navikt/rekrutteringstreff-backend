@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
@@ -22,7 +22,7 @@ class RekrutteringstreffController(
     private val rekrutteringstreffService: RekrutteringstreffService,
     private val eierService: EierService,
     private val kiLoggService: KiLoggService,
-    javalin: Javalin
+    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamTreffId = "id"
@@ -42,18 +42,18 @@ class RekrutteringstreffController(
     }
 
     init {
-        javalin.post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler())
-        javalin.get("${endepunktRekrutteringstreff}/{id}", hentRekrutteringstreffHandler())
-        javalin.put("${endepunktRekrutteringstreff}/{id}", oppdaterRekrutteringstreffHandler())
-        javalin.delete("${endepunktRekrutteringstreff}/{id}", slettRekrutteringstreffHandler())
-        javalin.get(hendelserPath, hentHendelserHandler())
-        javalin.get(fellesPath, hentAlleHendelserHandler())
-        javalin.post(publiserPath, publiserRekrutteringstreffHandler())
-        javalin.post(gjenapnPath, gjenåpneRekrutteringstreffHandler())
-        javalin.post(avlysPath, avlysRekrutteringstreffHandler())
-        javalin.post(avpubliserPath, avpubliserRekrutteringstreffHandler())
-        javalin.post(fullforPath, fullforRekrutteringstreffHandler())
-        javalin.post(endringerPath, registrerEndringHandler(rekrutteringstreffService))
+        routes.post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler())
+        routes.get("${endepunktRekrutteringstreff}/{id}", hentRekrutteringstreffHandler())
+        routes.put("${endepunktRekrutteringstreff}/{id}", oppdaterRekrutteringstreffHandler())
+        routes.delete("${endepunktRekrutteringstreff}/{id}", slettRekrutteringstreffHandler())
+        routes.get(hendelserPath, hentHendelserHandler())
+        routes.get(fellesPath, hentAlleHendelserHandler())
+        routes.post(publiserPath, publiserRekrutteringstreffHandler())
+        routes.post(gjenapnPath, gjenåpneRekrutteringstreffHandler())
+        routes.post(avlysPath, avlysRekrutteringstreffHandler())
+        routes.post(avpubliserPath, avpubliserRekrutteringstreffHandler())
+        routes.post(fullforPath, fullforRekrutteringstreffHandler())
+        routes.post(endringerPath, registrerEndringHandler(rekrutteringstreffService))
     }
 
     @OpenApi(

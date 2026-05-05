@@ -1,11 +1,11 @@
 package no.nav.toi.minside
 
-import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
+import io.javalin.router.JavalinDefaultRoutingApi
 
 private const val endepunktReady = "/isready"
 private const val endepunktAlive = "/isalive"
@@ -40,7 +40,7 @@ private fun isAliveHandler(ctx: Context) {
     ctx.result("isalive")
 }
 
-fun Javalin.handleHealth() {
+fun JavalinDefaultRoutingApi.handleHealth() {
     get(endepunktReady, ::isReadyHandler)
     get(endepunktAlive, ::isAliveHandler)
 }

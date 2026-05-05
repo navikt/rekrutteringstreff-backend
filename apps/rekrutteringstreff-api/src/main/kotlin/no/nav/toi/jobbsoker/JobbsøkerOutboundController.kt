@@ -1,6 +1,6 @@
 package no.nav.toi.jobbsoker
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
@@ -19,7 +19,7 @@ class JobbsøkerOutboundController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val kandidatsøkKlient: KandidatsøkKlient,
     private val eierService: EierService,
-    javalin: Javalin
+    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamPersonTreffId = "personTreffId"
@@ -28,7 +28,7 @@ class JobbsøkerOutboundController(
         private const val eksternKandidatnummerPath = "$endepunktRekrutteringstreff/jobbsoker/{$pathParamPersonTreffId}/kandidatnummer"
     }
     init {
-        javalin.get(eksternKandidatnummerPath, hentKandidatnummerHandler())
+        routes.get(eksternKandidatnummerPath, hentKandidatnummerHandler())
     }
 
     @OpenApi(

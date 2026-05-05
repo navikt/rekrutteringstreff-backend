@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.sok
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
@@ -9,14 +9,14 @@ import no.nav.toi.authenticatedUser
 
 class RekrutteringstreffSokController(
     private val sokService: RekrutteringstreffSokService,
-    javalin: Javalin,
+    routes: JavalinDefaultRoutingApi,
 ) {
     companion object {
         private const val sokPath = "/api/rekrutteringstreff/sok"
     }
 
     init {
-        javalin.get(sokPath, sokHandler())
+        routes.get(sokPath, sokHandler())
     }
 
     @OpenApi(

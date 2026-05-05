@@ -35,7 +35,7 @@ data class MinsideVarselSvarDataDto(
 ) : HendelseDataDto
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
-@OpenApiName("Rekrutteringstreffendringer")
+@OpenApiName("RekrutteringstreffendringerHendelseData")
 data class RekrutteringstreffendringerDto(
     val endredeFelter: Set<Endringsfelttype>
 ) : HendelseDataDto
