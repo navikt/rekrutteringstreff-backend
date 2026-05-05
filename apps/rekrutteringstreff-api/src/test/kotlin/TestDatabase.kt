@@ -481,8 +481,8 @@ class TestDatabase {
                     """
                     INSERT INTO jobbsoker
                       (id, rekrutteringstreff_id, fodselsnummer, fornavn, etternavn,
-                       navkontor, veileder_navn, veileder_navident)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                       navkontor, veileder_navn, veileder_navident, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     RETURNING jobbsoker_id
                     """.trimIndent()
                 ).apply {
@@ -494,6 +494,7 @@ class TestDatabase {
                     setString(6, js.navkontor?.asString)
                     setString(7, js.veilederNavn?.asString)
                     setString(8, js.veilederNavIdent?.asString)
+                    setString(9, js.status.name)
                 }.executeQuery().let {
                     if (it.next()) it.getLong(1) else error("Kunne ikke legge til jobbsøker")
                 }

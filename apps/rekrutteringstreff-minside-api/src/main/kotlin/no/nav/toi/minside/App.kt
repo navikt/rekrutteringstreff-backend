@@ -28,19 +28,20 @@ class App(
             config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
             configureOpenApi(config)
             log.info("Javalin opprettet")
+
+            config.routes.handleHealth()
+            config.routes.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
+            val rekrutteringstreffKlient = RekrutteringstreffKlient(
+                url = rekrutteringstreffUrl,
+                tokenXKlient = tokenXKlient,
+                rekrutteringstreffAudience = rekrutteringstreffAudience,
+                httpClient = httpClient
+            )
+            val borgerKlient = BorgerKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
+            config.routes.rekrutteringstreffSvarEndepunkt(rekrutteringstreffKlient, borgerKlient)
+            config.routes.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
+            config.routes.arbeidsgiverendepunkt(rekrutteringstreffKlient)
         }
-        javalin.handleHealth()
-        javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs)
-        val rekrutteringstreffKlient = RekrutteringstreffKlient(
-            url = rekrutteringstreffUrl,
-            tokenXKlient = tokenXKlient,
-            rekrutteringstreffAudience = rekrutteringstreffAudience,
-            httpClient = httpClient
-        )
-        val borgerKlient = BorgerKlient(rekrutteringstreffUrl, tokenXKlient, rekrutteringstreffAudience)
-        javalin.rekrutteringstreffSvarEndepunkt(rekrutteringstreffKlient, borgerKlient)
-        javalin.rekrutteringstreffendepunkt(rekrutteringstreffKlient)
-        javalin.arbeidsgiverendepunkt(rekrutteringstreffKlient)
         javalin.start(port)
     }
 
@@ -55,14 +56,12 @@ class App(
 
 private fun configureOpenApi(config: JavalinConfig) {
     val openApiPlugin = OpenApiPlugin { openApiConfig ->
-        openApiConfig.withDefinitionConfiguration { _, definition ->
-            definition.withInfo { info ->
-                info.title = "Minside API"
-                info.version = "1.0.0"
+        openApiConfig.withDefinitionConfiguration { _, schema ->
+            schema.info { info ->
+                info.title("Minside API")
+                info.version("1.0.0")
             }
-            definition.withSecurity { security ->
-                security.withBearerAuth()
-            }
+            schema.withBearerAuth()
         }
     }
     config.registerPlugin(openApiPlugin)

@@ -1,6 +1,6 @@
 package no.nav.toi.minside.rekrutteringstreff
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
@@ -71,7 +71,7 @@ class RekrutteringstreffEndpoints {
     }
 }
 
-fun Javalin.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, RekrutteringstreffEndpoints().hentRekrutteringstreffHandler(treffKlient))
+fun JavalinDefaultRoutingApi.rekrutteringstreffendepunkt(treffKlient: RekrutteringstreffKlient) = get(hentRekrutteringsTreff, RekrutteringstreffEndpoints().hentRekrutteringstreffHandler(treffKlient))
 
 data class RekrutteringstreffOutboundDto(
     val id: UUID,

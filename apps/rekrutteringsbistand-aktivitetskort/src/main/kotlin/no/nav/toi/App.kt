@@ -60,9 +60,8 @@ class App(
         javalin = Javalin.create { config ->
             config.jsonMapper(JavalinJackson(jacksonObjectMapper()))
             config.registerPlugin(micrometerPlugin)
+            HelsesjekkController(prometheusMeterRegistry = meterRegistry, routes = config.routes, isReady = isReady, isRunning = isRunning)
         }
-
-        HelsesjekkController(prometheusMeterRegistry = meterRegistry, javalin = javalin, isReady = isReady, isRunning = isRunning)
 
         javalin.start(port)
     }

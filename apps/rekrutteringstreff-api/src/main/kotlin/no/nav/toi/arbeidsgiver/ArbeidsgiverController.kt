@@ -1,6 +1,6 @@
 package no.nav.toi.arbeidsgiver
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.bodyAsClass
@@ -19,7 +19,7 @@ import java.util.*
 class ArbeidsgiverController(
     private val arbeidsgiverService: ArbeidsgiverService,
     private val eierService: EierService,
-    javalin: Javalin
+    routes: JavalinDefaultRoutingApi
 ) {
 
     companion object {
@@ -32,10 +32,10 @@ class ArbeidsgiverController(
     }
 
     init {
-        javalin.post(arbeidsgiverPath, leggTilArbeidsgiverHandler())
-        javalin.get(arbeidsgiverPath, hentArbeidsgivereHandler())
-        javalin.get(hendelserArbeidsgiverPath, hentArbeidsgiverHendelserHandler())
-        javalin.delete(arbeidsgiverItemPath, slettArbeidsgiverHandler())
+        routes.post(arbeidsgiverPath, leggTilArbeidsgiverHandler())
+        routes.get(arbeidsgiverPath, hentArbeidsgivereHandler())
+        routes.get(hendelserArbeidsgiverPath, hentArbeidsgiverHendelserHandler())
+        routes.delete(arbeidsgiverItemPath, slettArbeidsgiverHandler())
     }
 
     @OpenApi(

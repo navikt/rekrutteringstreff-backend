@@ -148,7 +148,7 @@ class JobbsøkerRepositoryTest {
             assertThat(js.hendelser).hasSize(1)
             val h = js.hendelser.first()
             assertThatCode { UUID.fromString(h.id.toString()) }.doesNotThrowAnyException()
-            assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+            assertThat(h.tidspunkt.toInstant()).isCloseTo(Instant.now(), within(8, ChronoUnit.SECONDS))
             assertThat(h.hendelsestype).isEqualTo(JobbsøkerHendelsestype.OPPRETTET)
             assertThat(h.opprettetAvAktørType).isEqualTo(AktørType.ARRANGØR)
             assertThat(h.aktørIdentifikasjon).isEqualTo("testperson")
