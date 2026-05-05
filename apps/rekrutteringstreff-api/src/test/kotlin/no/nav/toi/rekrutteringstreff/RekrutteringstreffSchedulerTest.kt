@@ -54,7 +54,7 @@ class RekrutteringstreffSchedulerTest {
         )
         val scheduler = RekrutteringstreffScheduler(rekrutteringstreffService, LeaderElectionMock())
 
-        scheduler.fullførJobbtreff()
+        scheduler.kjørJobb()
 
         val treff = rekrutteringstreffRepository.hent(ferdigTreffId)
         assertThat(treff?.status).isEqualTo(RekrutteringstreffStatus.FULLFØRT)
@@ -68,7 +68,7 @@ class RekrutteringstreffSchedulerTest {
         )
         val scheduler = RekrutteringstreffScheduler(rekrutteringstreffService, LeaderElectionMock())
 
-        scheduler.fullførJobbtreff()
+        scheduler.kjørJobb()
 
         val treff = rekrutteringstreffRepository.hent(fremtidigTreffId)
         assertThat(treff?.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
@@ -83,7 +83,7 @@ class RekrutteringstreffSchedulerTest {
         val ikkeLeader = object : LeaderElectionInterface { override fun isLeader() = false }
         val scheduler = RekrutteringstreffScheduler(rekrutteringstreffService, ikkeLeader)
 
-        scheduler.fullførJobbtreff()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(ferdigTreffId)
         assertThat(treff?.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)

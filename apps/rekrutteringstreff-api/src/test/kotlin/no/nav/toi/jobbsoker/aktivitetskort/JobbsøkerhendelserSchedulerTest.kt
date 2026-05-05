@@ -84,7 +84,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         val kortMelding = rapid.inspektør.message(0)
         assertThat(kortMelding["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
@@ -109,7 +109,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(0)
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
@@ -131,8 +131,8 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
 
-        scheduler.behandleJobbsøkerHendelser()
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(1)
     }
@@ -154,7 +154,7 @@ class JobbsøkerhendelserSchedulerTest {
 
         jobbsøkerService.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 svar
         val melding = rapid.inspektør.message(1)
@@ -187,7 +187,7 @@ class JobbsøkerhendelserSchedulerTest {
 
         jobbsøkerService.svarNeiTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 svar
         val melding = rapid.inspektør.message(1)
@@ -220,8 +220,8 @@ class JobbsøkerhendelserSchedulerTest {
 
         jobbsøkerService.svarJaTilInvitasjon(fødselsnummer, treffId, fødselsnummer.asString)
 
-        scheduler.behandleJobbsøkerHendelser()
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon kort + 1 svar (ikke duplikater)
     }
@@ -243,7 +243,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()  // Send invitasjon først
+        scheduler.wrapJobbkjøring()  // Send invitasjon først
 
         val nyTittel = "Ny tittel"
 
@@ -254,7 +254,7 @@ class JobbsøkerhendelserSchedulerTest {
 
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // 1 invitasjon kort + 1 oppdatering kort + 1 varsel-kort
 
@@ -292,7 +292,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyFraTid = ZonedDateTime.now().plusDays(5)
@@ -302,7 +302,7 @@ class JobbsøkerhendelserSchedulerTest {
             Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN, Endringsfelttype.TIDSPUNKT))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
         val kortMelding = rapid.inspektør.message(1)
@@ -325,7 +325,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyGateadresse = "Ny gate 42"
@@ -341,7 +341,7 @@ class JobbsøkerhendelserSchedulerTest {
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.STED))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
         val kortMelding = rapid.inspektør.message(1)
@@ -367,12 +367,12 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.INTRODUKSJON))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // Invitasjon kort + oppdatering kort
 
@@ -401,14 +401,14 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
 
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // Skal sende oppdatering med faktiske verdier fra database, selv om verifiseringen feiler
         assertThat(rapid.inspektør.size).isEqualTo(2)  // Invitasjon kort + oppdatering kort
@@ -441,7 +441,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyTittel = "Ny tittel"
@@ -450,8 +450,8 @@ class JobbsøkerhendelserSchedulerTest {
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 oppdatering
     }
@@ -473,7 +473,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyTittel = "Ny tittel"
@@ -482,7 +482,7 @@ class JobbsøkerhendelserSchedulerTest {
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // Skal nå være 2 meldinger: invitasjon + én samlet oppdatering (med endredeFelter)
         assertThat(rapid.inspektør.size).isEqualTo(2)
@@ -515,7 +515,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyFraTid = ZonedDateTime.now().plusDays(5)
@@ -524,7 +524,7 @@ class JobbsøkerhendelserSchedulerTest {
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.TIDSPUNKT))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
 
@@ -548,7 +548,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyGateadresse = "Malmøgata 2"
@@ -557,7 +557,7 @@ class JobbsøkerhendelserSchedulerTest {
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.STED))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
 
@@ -581,7 +581,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyTittel = "Ny tittel"
@@ -597,7 +597,7 @@ class JobbsøkerhendelserSchedulerTest {
         )
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
 
@@ -626,7 +626,7 @@ class JobbsøkerhendelserSchedulerTest {
 //        val fødselsnummer = Fødselsnummer("12345678901")
 //
 //        opprettOgInviterJobbsøker(treffId, fødselsnummer)
-//        scheduler.behandleJobbsøkerHendelser()
+//        scheduler.wrapJobbkjøring()
 //
 //        val treff = rekrutteringstreffRepository.hent(treffId)!!
 //        val nyTittel = "Ny tittel"
@@ -636,7 +636,7 @@ class JobbsøkerhendelserSchedulerTest {
 //        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
 //        db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 //
-//        scheduler.behandleJobbsøkerHendelser()
+//        scheduler.wrapJobbkjøring()
 //
 //        // Skal være 2 meldinger: invitasjon + oppdatering (uten endredeFelter)
 //        assertThat(rapid.inspektør.size).isEqualTo(2)
@@ -665,7 +665,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nySvarfrist = ZonedDateTime.now().plusDays(7)
@@ -674,7 +674,7 @@ class JobbsøkerhendelserSchedulerTest {
 
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
 
@@ -698,7 +698,7 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
         val nyFraTid = ZonedDateTime.now().plusDays(5)
@@ -707,7 +707,7 @@ class JobbsøkerhendelserSchedulerTest {
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.TIDSPUNKT))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
 
@@ -732,14 +732,14 @@ class JobbsøkerhendelserSchedulerTest {
         val fødselsnummer = Fødselsnummer("12345678901")
 
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val treff = rekrutteringstreffRepository.hent(treffId)!!
 
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.STED))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
 
@@ -764,10 +764,10 @@ class JobbsøkerhendelserSchedulerTest {
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
         jobbsøkerService.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         rekrutteringstreffService.avlys(treffId, expectedFnr.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + avlyst-status
         val melding = rapid.inspektør.message(2)
@@ -799,12 +799,12 @@ class JobbsøkerhendelserSchedulerTest {
         val treffId = opprettPersonOgInviter(expectedFnr, rapid, scheduler)
 
         jobbsøkerService.svarJaTilInvitasjon(expectedFnr, treffId, expectedFnr.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         db.endreTilTidTilPassert(treffId, expectedFnr.asString)
         // Treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         rekrutteringstreffService.fullfør(treffId, expectedFnr.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status
         val melding = rapid.inspektør.message(2)
@@ -837,11 +837,11 @@ class JobbsøkerhendelserSchedulerTest {
         val treffId = opprettPersonOgInviter(fnr, rapid, scheduler)
 
         jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, fnr.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         rekrutteringstreffService.avlys(treffId, fnr.asString)
-        scheduler.behandleJobbsøkerHendelser()
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // invitasjon kort + svar + status (ikke duplikat)
     }
@@ -876,7 +876,7 @@ class JobbsøkerhendelserSchedulerTest {
         rekrutteringstreffService.fullfør(treffId, fødselsnummer.asString)  // Hendelse 4: SVART_JA_TREFF_FULLFØRT
 
         // Kjør scheduler én gang - skal behandle alle i riktig rekkefølge
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(4)
         assertThat(rapid.inspektør.message(0)["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
@@ -897,7 +897,7 @@ class JobbsøkerhendelserSchedulerTest {
             LeaderElectionMock(),
         )
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(0)
     }
@@ -926,12 +926,12 @@ class JobbsøkerhendelserSchedulerTest {
         // Person 2: Blir invitert men svarer ikke
         opprettOgInviterJobbsøker(treffId, fnrIkkeSvart)
 
-        scheduler.behandleJobbsøkerHendelser()  // Send invitasjoner og svar
+        scheduler.wrapJobbkjøring()  // Send invitasjoner og svar
 
         // Fullfør treffet - treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         db.endreTilTidTilPassert(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // Verifiser at det sendes hendelser for begge personer
         // Person 1: invitasjon kort + svar + fullført
@@ -989,11 +989,11 @@ class JobbsøkerhendelserSchedulerTest {
         // Person 2: Blir invitert men svarer ikke
         opprettOgInviterJobbsøker(treffId, fnrIkkeSvart)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // Avlys treffet
         rekrutteringstreffService.avlys(treffId, fnrSvartJa.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // 5 meldinger: invitasjon (fnr1) + svar (fnr1) + invitasjon (fnr2) + status (fnr1) + status (fnr2)
         assertThat(rapid.inspektør.size).isEqualTo(5)
@@ -1040,12 +1040,12 @@ class JobbsøkerhendelserSchedulerTest {
         opprettOgInviterJobbsøker(treffId, fnrSvartNei)
         jobbsøkerService.svarNeiTilInvitasjon(fnrSvartNei, treffId, fnrSvartNei.asString)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // Fullfør treffet - treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         db.endreTilTidTilPassert(treffId, fnrSvartNei.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartNei.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // Skal kun være invitasjon kort + svar nei (ikke noen treffstatus-endring)
         assertThat(rapid.inspektør.size).isEqualTo(2)
@@ -1079,12 +1079,12 @@ class JobbsøkerhendelserSchedulerTest {
         opprettOgInviterJobbsøker(treffId, fnrIkkeSvart1)
         opprettOgInviterJobbsøker(treffId, fnrIkkeSvart2)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // Fullfør treffet - treffet er allerede PUBLISERT via opprettRekrutteringstreffMedAlleFelter()
         db.endreTilTidTilPassert(treffId, fnrSvartJa.asString)
         rekrutteringstreffService.fullfør(treffId, fnrSvartJa.asString)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // Verifiser: 3 invitasjoner kort + 1 svar ja + 1 fullført + 2 avbrutt = 7
         assertThat(rapid.inspektør.size).isEqualTo(7)
@@ -1113,7 +1113,7 @@ class JobbsøkerhendelserSchedulerTest {
     ): no.nav.toi.rekrutteringstreff.TreffId {
         val treffId = db.opprettRekrutteringstreffMedAlleFelter()
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
-        scheduler.behandleJobbsøkerHendelser()  // Send invitasjon
+        scheduler.wrapJobbkjøring()  // Send invitasjon
         return treffId
     }
 

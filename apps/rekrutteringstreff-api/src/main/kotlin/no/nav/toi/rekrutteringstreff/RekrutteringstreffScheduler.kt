@@ -1,7 +1,10 @@
 package no.nav.toi.rekrutteringstreff
 
 import io.opentelemetry.instrumentation.annotations.WithSpan
+import no.nav.toi.DefaultScheduler
 import no.nav.toi.LeaderElectionInterface
+import no.nav.toi.ScheduledTask
+import no.nav.toi.Scheduler
 import no.nav.toi.log
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -9,58 +12,33 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class RekrutteringstreffScheduler(
     private val rekrutteringstreffService: RekrutteringstreffService,
-    private val leaderElection: LeaderElectionInterface,
-) {
+    leaderElection: LeaderElectionInterface,
+) : ScheduledTask, Scheduler {
+    private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 2, 15, TimeUnit.MINUTES)
 
-    private val scheduler = Executors.newScheduledThreadPool(1)
-    private val isRunning = AtomicBoolean(false)
-
-    fun start() {
-        log.info("Starter RekrutteringstreffScheduler")
-        scheduler.scheduleAtFixedRate(::fullførJobbtreff, 2, 15, TimeUnit.MINUTES)
+    override fun start() {
+        scheduler.start()
     }
 
-    fun stop() {
-        log.info("Stopper RekrutteringstreffScheduler")
-        scheduler.shutdown()
-        try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow()
-            }
-        } catch (e: InterruptedException) {
-            scheduler.shutdownNow()
-        }
+    override fun stop() {
+        scheduler.start()
+    }
+
+    override fun wrapJobbkjøring() {
+        scheduler.wrapJobbkjøring()
     }
 
     @WithSpan
-    fun fullførJobbtreff() {
-        log.info("Starter fullførJobbtreff i RekrutteringstreffScheduler")
-        if (isRunning.getAndSet(true)) {
-            log.info("Forrige kjøring av RekrutteringstreffScheduler er ikke ferdig, skipper denne kjøringen.")
-            return
-        }
-
-        if (leaderElection.isLeader().not()) {
-            log.info("Kjøring av RekrutteringstreffScheduler skippes, instansen er ikke leader.")
-            isRunning.set(false)
-            return
-        }
-
-        try {
-            val publiserteTreffHvorTilTidErPassert = rekrutteringstreffService.hentPubliserteTreffHvorTilTidErPassert()
-            if (publiserteTreffHvorTilTidErPassert.isNotEmpty()) {
-                log.info("RekrutteringstreffScheduler fullfører ${publiserteTreffHvorTilTidErPassert.size} rekrutteringstreff")
-                publiserteTreffHvorTilTidErPassert.forEach { treff ->
-                    rekrutteringstreffService.fullfør(treff.id, "SYSTEM")
-                }
-                log.info("RekrutteringstreffScheduler fullførte ${publiserteTreffHvorTilTidErPassert.size} treff")
-            } else {
-                log.info("RekrutteringstreffScheduler fant ingen treff å fullføre")
+    override fun kjørJobb() {
+        val publiserteTreffHvorTilTidErPassert = rekrutteringstreffService.hentPubliserteTreffHvorTilTidErPassert()
+        if (publiserteTreffHvorTilTidErPassert.isNotEmpty()) {
+            log.info("RekrutteringstreffScheduler fullfører ${publiserteTreffHvorTilTidErPassert.size} rekrutteringstreff")
+            publiserteTreffHvorTilTidErPassert.forEach { treff ->
+                rekrutteringstreffService.fullfør(treff.id, "SYSTEM")
             }
-        } catch (e: Exception) {
-            log.error("Feil under kjøring av RekrutteringstreffScheduler", e)
-        } finally {
-            isRunning.set(false)
+            log.info("RekrutteringstreffScheduler fullførte ${publiserteTreffHvorTilTidErPassert.size} treff")
+        } else {
+            log.info("RekrutteringstreffScheduler fant ingen treff å fullføre")
         }
     }
 }
