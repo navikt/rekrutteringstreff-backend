@@ -172,6 +172,11 @@ class App(
             sokService = sokService,
             javalin = javalin
         )
+        ArbeidsgiverController(
+            arbeidsgiverService = arbeidsgiverService,
+            eierService = eierService,
+            javalin = javalin
+        )
 
         RekrutteringstreffController(
             rekrutteringstreffService = rekrutteringstreffService,
@@ -186,11 +191,6 @@ class App(
             javalin = javalin
         )
         EierController(
-            eierService = eierService,
-            javalin = javalin
-        )
-        ArbeidsgiverController(
-            arbeidsgiverService = arbeidsgiverService,
             eierService = eierService,
             javalin = javalin
         )

@@ -10,9 +10,11 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
+import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverMedBehovDto
+import no.nav.toi.arbeidsgiver.dto.BehovMetadataDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -135,6 +137,35 @@ class ArbeidsgiverBehovTest {
           "behov": $behovJson
         }
     """.trimIndent()
+
+    @Test
+    fun `GET behov-metadata gir enum-verdier for arbeidsgiverrettet og jobbsøkerrettet`() {
+        listOf(arbeidsgiverrettet, jobbsøkerrettet).forEach { gruppe ->
+            val token = authServer.lagToken(authPort, groups = listOf(gruppe)).serialize()
+
+            val response = httpGet(
+                "http://localhost:$appPort/api/rekrutteringstreff/arbeidsgiver-behov-metadata",
+                token,
+            )
+
+            assertThat(response.statusCode()).isEqualTo(HTTP_OK)
+            val metadata = JacksonConfig.mapper.readValue(response.body(), BehovMetadataDto::class.java)
+            assertThat(metadata.ansettelsesformer).containsExactlyElementsOf(Ansettelsesform.entries.map { it.apiNavn })
+            assertThat(metadata.arbeidssprak).containsExactlyElementsOf(Arbeidssprak.entries.map { it.apiNavn })
+        }
+    }
+
+    @Test
+    fun `GET behov-metadata gir 403 uten tillatt rolle`() {
+        val token = authServer.lagToken(authPort, groups = listOf(modiaGenerell)).serialize()
+
+        val response = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/arbeidsgiver-behov-metadata",
+            token,
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_FORBIDDEN)
+    }
 
     @Test
     fun `POST arbeidsgiver-med-behov oppretter atomisk og emitter OPPRETTET + BEHOV_ENDRET`() {
