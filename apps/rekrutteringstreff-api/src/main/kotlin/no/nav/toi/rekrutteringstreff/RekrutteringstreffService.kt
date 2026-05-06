@@ -137,7 +137,8 @@ class RekrutteringstreffService(
         }
         val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(treffId)
         val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(treffId)
-        return rekrutteringstreff.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere)
+        val antallJobbsøkereSvartJa = jobbsøkerRepository.hentAntallJobbsøkereSvartJa(treffId)
+        return rekrutteringstreff.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere, antallJobbsøkereSvartJa)
     }
 
     fun hentRekrutteringstreffMedHendelser(treffId: TreffId): RekrutteringstreffDetaljOutboundDto? {

@@ -572,7 +572,7 @@ class TestDatabase {
         val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
             ?: throw RekrutteringstreffIkkeFunnetException("Treff $treffId finnes ikke")
         val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(
-            rekrutteringstreff.tilRekrutteringstreffDto(1,1)).copy(tilTid = nowOslo().minusDays(1)
+            rekrutteringstreff.tilRekrutteringstreffDto(1,1, 1)).copy(tilTid = nowOslo().minusDays(1)
         )
         dataSource.connection.use { connection ->
             rekrutteringstreffRepository.oppdater(connection, treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
