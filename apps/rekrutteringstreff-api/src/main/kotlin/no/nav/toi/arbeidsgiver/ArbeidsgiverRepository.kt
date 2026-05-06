@@ -155,7 +155,7 @@ class ArbeidsgiverRepository(
     ): Boolean {
         val samledeJson = objectMapper.writeValueAsString(behov.samledeKvalifikasjoner)
         val personligeJson = objectMapper.writeValueAsString(behov.personligeEgenskaper)
-        val arbeidssprakArr = connection.createArrayOf("text", behov.arbeidssprak.map { it.name }.toTypedArray())
+        val arbeidssprakArray = connection.createArrayOf("text", behov.arbeidssprak.toTypedArray())
         val ansettelsesformerArr = connection.createArrayOf("text", behov.ansettelsesformer.map { it.name }.toTypedArray())
 
         val sql = """
@@ -176,7 +176,7 @@ class ArbeidsgiverRepository(
                 oppdatert = now()
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
-            stmt.setArray(1, arbeidssprakArr)
+            stmt.setArray(1, arbeidssprakArray)
             stmt.setInt(2, behov.antall)
             stmt.setString(3, samledeJson)
             stmt.setArray(4, ansettelsesformerArr)
@@ -247,7 +247,7 @@ class ArbeidsgiverRepository(
 
     private fun java.sql.ResultSet.toBehovDirekte() = ArbeidsgiversBehov(
         samledeKvalifikasjoner = parseTagListe(getString("samlede_kvalifikasjoner")),
-        arbeidssprak = (getArray("arbeidssprak").array as Array<*>).map { Arbeidssprak.valueOf(it.toString()) },
+        arbeidssprak = Arbeidssprak.validerOgFiltrer((getArray("arbeidssprak").array as Array<*>).map { it.toString() }),
         antall = getInt("antall"),
         ansettelsesformer = (getArray("ansettelsesformer").array as Array<*>).map { Ansettelsesform.valueOf(it.toString()) },
         personligeEgenskaper = parseTagListe(getString("personlige_egenskaper")),
@@ -255,7 +255,7 @@ class ArbeidsgiverRepository(
 
     private fun java.sql.ResultSet.toBehovFraJoin() = ArbeidsgiversBehov(
         samledeKvalifikasjoner = parseTagListe(getString("b_samlede")),
-        arbeidssprak = (getArray("b_arbeidssprak").array as Array<*>).map { Arbeidssprak.valueOf(it.toString()) },
+        arbeidssprak = Arbeidssprak.validerOgFiltrer((getArray("b_arbeidssprak").array as Array<*>).map { it.toString() }),
         antall = getInt("b_antall"),
         ansettelsesformer = (getArray("b_ansettelsesformer").array as Array<*>).map { Ansettelsesform.valueOf(it.toString()) },
         personligeEgenskaper = parseTagListe(getString("b_personlige")),

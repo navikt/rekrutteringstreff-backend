@@ -352,7 +352,7 @@ class ArbeidsgiverController(
                 from = BehovMetadataDto::class,
                 example = """{
               "ansettelsesformer": ["Fast", "Vikariat", "Engasjement", "Prosjekt", "Åremål", "Sesong", "Feriejobb", "Trainee", "Lærling", "Selvstendig næringsdrivende", "Annet"],
-              "arbeidssprak": ["Norsk", "Engelsk", "Svensk", "Dansk", "Tysk", "Fransk", "Spansk", "Annet"]
+              "arbeidssprak": ["Norsk", "Engelsk", "Tysk", "Polsk", "Arabisk"]
             }"""
             )]
         )],
@@ -364,7 +364,7 @@ class ArbeidsgiverController(
         ctx.status(200).json(
             BehovMetadataDto(
                 ansettelsesformer = Ansettelsesform.entries.map { it.apiNavn },
-                arbeidssprak = Arbeidssprak.entries.map { it.apiNavn },
+                arbeidssprak = Arbeidssprak.verdier,
             )
         )
     }

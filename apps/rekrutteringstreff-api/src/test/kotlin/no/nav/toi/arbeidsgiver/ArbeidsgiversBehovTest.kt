@@ -109,13 +109,16 @@ class ArbeidsgiversBehovTest {
         db.slettAlt()
     }
 
-    private fun gyldigBehovJson(antall: Int = 3): String = """
+        private fun gyldigBehovJson(
+                antall: Int = 3,
+                arbeidssprakJson: String = """["Norsk", "Engelsk"]""",
+        ): String = """
         {
           "samledeKvalifikasjoner": [
             {"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819},
                         {"label": "B - Personbil", "kategori": "FORERKORT", "konseptId": null}
           ],
-          "arbeidssprak": ["Norsk", "Engelsk"],
+                    "arbeidssprak": $arbeidssprakJson,
           "antall": $antall,
           "ansettelsesformer": ["Fast", "Vikariat"],
           "personligeEgenskaper": [
@@ -139,7 +142,7 @@ class ArbeidsgiversBehovTest {
     """.trimIndent()
 
     @Test
-    fun `GET behov-metadata gir enum-verdier for arbeidsgiverrettet og jobbsøkerrettet`() {
+    fun `GET behov-metadata gir språkverdier for arbeidsgiverrettet og jobbsøkerrettet`() {
         listOf(arbeidsgiverrettet, jobbsøkerrettet).forEach { gruppe ->
             val token = authServer.lagToken(authPort, groups = listOf(gruppe)).serialize()
 
@@ -151,8 +154,33 @@ class ArbeidsgiversBehovTest {
             assertThat(response.statusCode()).isEqualTo(HTTP_OK)
             val metadata = JacksonConfig.mapper.readValue(response.body(), BehovMetadataDto::class.java)
             assertThat(metadata.ansettelsesformer).containsExactlyElementsOf(Ansettelsesform.entries.map { it.apiNavn })
-            assertThat(metadata.arbeidssprak).containsExactlyElementsOf(Arbeidssprak.entries.map { it.apiNavn })
+            assertThat(metadata.arbeidssprak).containsExactlyElementsOf(Arbeidssprak.verdier)
+            assertThat(metadata.arbeidssprak).contains("Tysk", "Polsk", "Arabisk")
+            assertThat(metadata.arbeidssprak).doesNotContain("Annet")
         }
+    }
+
+    @Test
+    fun `POST arbeidsgiver-med-behov tillater språk fra Spraksamling`() {
+        val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A111111"))
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
+            arbeidsgiverMedBehovBody(behovJson = gyldigBehovJson(arbeidssprakJson = """["Polsk", "Arabisk"]""")),
+            token
+        )
+
+        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
+        val arbeidsgivere = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
+            token
+        )
+        val mapper = JacksonConfig.mapper
+        val type = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverMedBehovDto::class.java)
+        val resultat: List<ArbeidsgiverMedBehovDto> = mapper.readValue(arbeidsgivere.body(), type)
+        assertThat(resultat.first().behov?.arbeidssprak).containsExactly("Polsk", "Arabisk")
     }
 
     @Test
@@ -301,6 +329,29 @@ class ArbeidsgiversBehovTest {
         )
         assertThat(response.statusCode()).isEqualTo(HTTP_BAD_REQUEST)
         assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+    }
+
+    @Test
+    fun `POST arbeidsgiver-med-behov ignorerer Annet som arbeidssprak`() {
+        val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A111111"))
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
+            arbeidsgiverMedBehovBody(behovJson = gyldigBehovJson(arbeidssprakJson = """["Norsk", "Annet"]""")),
+            token
+        )
+        assertThat(response.statusCode()).isEqualTo(HTTP_CREATED)
+
+        val arbeidsgivere = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
+            token
+        )
+        val mapper = JacksonConfig.mapper
+        val type = mapper.typeFactory.constructCollectionType(List::class.java, ArbeidsgiverMedBehovDto::class.java)
+        val resultat: List<ArbeidsgiverMedBehovDto> = mapper.readValue(arbeidsgivere.body(), type)
+        assertThat(resultat.first().behov?.arbeidssprak).containsExactly("Norsk")
     }
 
     @Test

@@ -30,7 +30,7 @@ data class ArbeidsgiversBehovDto(
 ) {
     fun somArbeidsgiversBehov(): ArbeidsgiversBehov = ArbeidsgiversBehov(
         samledeKvalifikasjoner = samledeKvalifikasjoner.map { it.somBehovTag() },
-        arbeidssprak = arbeidssprak.map { Arbeidssprak.fraApiNavn(it) },
+        arbeidssprak = Arbeidssprak.validerOgFiltrer(arbeidssprak),
         antall = antall,
         ansettelsesformer = ansettelsesformer.map { Ansettelsesform.fraApiNavn(it) },
         personligeEgenskaper = personligeEgenskaper.map { it.somBehovTag() },
@@ -39,7 +39,7 @@ data class ArbeidsgiversBehovDto(
     companion object {
         fun fra(behov: ArbeidsgiversBehov) = ArbeidsgiversBehovDto(
             samledeKvalifikasjoner = behov.samledeKvalifikasjoner.map { BehovTagDto.fra(it) },
-            arbeidssprak = behov.arbeidssprak.map { it.apiNavn },
+            arbeidssprak = behov.arbeidssprak,
             antall = behov.antall,
             ansettelsesformer = behov.ansettelsesformer.map { it.apiNavn },
             personligeEgenskaper = behov.personligeEgenskaper.map { BehovTagDto.fra(it) },
