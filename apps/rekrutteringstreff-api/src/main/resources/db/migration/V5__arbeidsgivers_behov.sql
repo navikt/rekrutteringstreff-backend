@@ -1,4 +1,4 @@
-CREATE TABLE arbeidsgiver_behov
+CREATE TABLE arbeidsgivers_behov
 (
     arbeidsgiver_id         bigint PRIMARY KEY REFERENCES arbeidsgiver (arbeidsgiver_id),
     arbeidssprak            text[]      NOT NULL DEFAULT '{}',

@@ -70,7 +70,7 @@ Ved reaktivering av en soft-slettet arbeidsgiver via ny `POST .../arbeidsgiver-m
 ```mermaid
 erDiagram
     rekrutteringstreff ||--o{ arbeidsgiver : har
-    arbeidsgiver ||--o| arbeidsgiver_behov : "har 0..1"
+    arbeidsgiver ||--o| arbeidsgivers_behov : "har 0..1"
     arbeidsgiver ||--o{ arbeidsgiver_hendelse : logger
     arbeidsgiver ||--o{ naringskode : har
     arbeidsgiver {
@@ -81,7 +81,7 @@ erDiagram
         uuid id
         text status
     }
-    arbeidsgiver_behov {
+    arbeidsgivers_behov {
         bigserial behov_id PK
         bigint arbeidsgiver_id FK "unik"
         int antall
@@ -101,7 +101,7 @@ erDiagram
 ### Flyway-migrasjon (V5)
 
 ```sql
-CREATE TABLE arbeidsgiver_behov (
+CREATE TABLE arbeidsgivers_behov (
     behov_id                 bigserial PRIMARY KEY,
     arbeidsgiver_id          bigint NOT NULL REFERENCES arbeidsgiver(arbeidsgiver_id),
     arbeidssprak             text[] NOT NULL DEFAULT '{}',
@@ -111,7 +111,7 @@ CREATE TABLE arbeidsgiver_behov (
     personlige_egenskaper    jsonb  NOT NULL DEFAULT '[]'::jsonb
 );
 
-CREATE UNIQUE INDEX idx_arbeidsgiver_behov_arbeidsgiver ON arbeidsgiver_behov(arbeidsgiver_id);
+CREATE UNIQUE INDEX idx_arbeidsgivers_behov_arbeidsgiver ON arbeidsgivers_behov(arbeidsgiver_id);
 ```
 
 `arbeidsgiver_hendelse.hendelse_data jsonb` finnes allerede i V1, så ingen schemaendring trengs på hendelsestabellen.
@@ -129,7 +129,7 @@ flowchart LR
   UI -->|typeahead| Ontologi[(pam-ontologi\n/rest/typeahead/*)]
   Ctrl --> Svc[ArbeidsgiverService]
   Svc --> Repo[ArbeidsgiverRepository]
-  Repo --> DB[(PostgreSQL\narbeidsgiver +\narbeidsgiver_behov +\narbeidsgiver_hendelse)]
+  Repo --> DB[(PostgreSQL\narbeidsgiver +\narbeidsgivers_behov +\narbeidsgiver_hendelse)]
   Svc -.BEHOV_ENDRET.-> Repo
 ```
 
@@ -184,7 +184,7 @@ API-serialisering må bruke `wireValue` eller tilsvarende, slik at feltet får s
 
 - Gjenbruk `ArbeidsgiverController`, `ArbeidsgiverService` og `ArbeidsgiverRepository`.
 - `ArbeidsgiverService` eier validering, tilgangsregler, reaktivering og opprettelse av `BEHOV_ENDRET`.
-- `ArbeidsgiverRepository` eier SQL, JSONB-mapping og upsert av `arbeidsgiver_behov`.
+- `ArbeidsgiverRepository` eier SQL, JSONB-mapping og upsert av `arbeidsgivers_behov`.
 - API-et bruker `arbeidsgiverTreffId` (UUID) som eksponert ressursidentifikator. Intern `arbeidsgiver_id` brukes kun i databasen.
 - `POST .../arbeidsgiver-med-behov` tar obligatorisk `behov: ArbeidsgiverBehovDto` sammen med arbeidsgiverdata. Returnerer fortsatt `201` uten body, som i dag.
 - Skjermede endepunkter krever `Rolle.ARBEIDSGIVER_RETTET` kombinert med eier-/utviklersjekk via `EierService.erEierEllerUtvikler`, slik som dagens `GET .../arbeidsgiver/hendelser`.

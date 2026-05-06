@@ -159,7 +159,7 @@ class ArbeidsgiverRepository(
         val ansettelsesformerArr = connection.createArrayOf("text", behov.ansettelsesformer.map { it.name }.toTypedArray())
 
         val sql = """
-            INSERT INTO arbeidsgiver_behov
+            INSERT INTO arbeidsgivers_behov
                 (arbeidsgiver_id, arbeidssprak, antall, samlede_kvalifikasjoner, ansettelsesformer, personlige_egenskaper, oppdatert)
             SELECT
                 ag.arbeidsgiver_id,
@@ -191,7 +191,7 @@ class ArbeidsgiverRepository(
     fun hentBehov(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): ArbeidsgiversBehov? {
         val sql = """
             SELECT ab.arbeidssprak, ab.antall, ab.samlede_kvalifikasjoner, ab.ansettelsesformer, ab.personlige_egenskaper
-            FROM arbeidsgiver_behov ab
+            FROM arbeidsgivers_behov ab
             JOIN arbeidsgiver ag ON ag.arbeidsgiver_id = ab.arbeidsgiver_id
             WHERE ag.id = ?
         """.trimIndent()
@@ -225,7 +225,7 @@ class ArbeidsgiverRepository(
                     ab.personlige_egenskaper as b_personlige
                 FROM arbeidsgiver ag
                 JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                LEFT JOIN arbeidsgiver_behov ab ON ab.arbeidsgiver_id = ag.arbeidsgiver_id
+                LEFT JOIN arbeidsgivers_behov ab ON ab.arbeidsgiver_id = ag.arbeidsgiver_id
                 WHERE rt.id = ? AND ag.status <> 'SLETTET'
                 ORDER BY ag.arbeidsgiver_id;
             """.trimIndent()
