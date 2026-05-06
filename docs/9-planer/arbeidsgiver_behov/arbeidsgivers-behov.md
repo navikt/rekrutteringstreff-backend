@@ -156,7 +156,7 @@ data class BehovTagDto(
   val konseptId: Long? = null
 )
 
-data class ArbeidsgiverBehovDto(
+data class ArbeidsgiversBehovDto(
   val samledeKvalifikasjoner: List<BehovTagDto>,
   val arbeidssprak: List<String>,
   val antall: Int,
@@ -168,7 +168,7 @@ data class ArbeidsgiverMedBehovDto(
   val arbeidsgiverTreffId: String,
   val organisasjonsnummer: String,
   val navn: String,
-  val behov: ArbeidsgiverBehovDto?
+  val behov: ArbeidsgiversBehovDto?
 )
 ```
 
@@ -186,7 +186,7 @@ API-serialisering må bruke `wireValue` eller tilsvarende, slik at feltet får s
 - `ArbeidsgiverService` eier validering, tilgangsregler, reaktivering og opprettelse av `BEHOV_ENDRET`.
 - `ArbeidsgiverRepository` eier SQL, JSONB-mapping og upsert av `arbeidsgivers_behov`.
 - API-et bruker `arbeidsgiverTreffId` (UUID) som eksponert ressursidentifikator. Intern `arbeidsgiver_id` brukes kun i databasen.
-- `POST .../arbeidsgiver-med-behov` tar obligatorisk `behov: ArbeidsgiverBehovDto` sammen med arbeidsgiverdata. Returnerer fortsatt `201` uten body, som i dag.
+- `POST .../arbeidsgiver-med-behov` tar obligatorisk `behov: ArbeidsgiversBehovDto` sammen med arbeidsgiverdata. Returnerer fortsatt `201` uten body, som i dag.
 - Skjermede endepunkter krever `Rolle.ARBEIDSGIVER_RETTET` kombinert med eier-/utviklersjekk via `EierService.erEierEllerUtvikler`, slik som dagens `GET .../arbeidsgiver/hendelser`.
 
 ## Frontend
