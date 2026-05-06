@@ -1,7 +1,7 @@
 package no.nav.toi.rekrutteringstreff.eier
 
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.*
 import io.javalin.openapi.*
 import no.nav.toi.Rolle
@@ -13,7 +13,7 @@ import java.util.*
 
 class EierController(
     private val eierService: EierService,
-    javalin: Javalin
+    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -23,9 +23,9 @@ class EierController(
     }
 
     init {
-        javalin.get(eiereEndepunkt, hentEiere())
-        javalin.put(megEndepunkt, leggTilMeg())
-        javalin.delete(slettEiereEndepunkt, slettEier())
+        routes.get(eiereEndepunkt, hentEiere())
+        routes.put(megEndepunkt, leggTilMeg())
+        routes.delete(slettEiereEndepunkt, slettEier())
     }
 
     @OpenApi(

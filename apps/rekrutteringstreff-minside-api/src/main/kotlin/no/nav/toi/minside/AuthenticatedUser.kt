@@ -8,12 +8,12 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.exceptions.JWTVerificationException
 import com.auth0.jwt.interfaces.DecodedJWT
 import com.auth0.jwt.interfaces.RSAKeyProvider
-import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
+import io.javalin.http.Header
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.http.UnauthorizedResponse
-import org.eclipse.jetty.http.HttpHeader
+import io.javalin.router.JavalinDefaultRoutingApi
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
 import java.util.*
@@ -52,12 +52,12 @@ class AuthenticatedUser private constructor(
 }
 
 
-fun Javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>): Javalin {
+fun JavalinDefaultRoutingApi.leggTilAutensieringPåRekrutteringstreffEndepunkt(authConfigs: List<AuthenticationConfiguration>): JavalinDefaultRoutingApi {
     log.info("Starter autentiseringoppsett")
     val verifiers = authConfigs.map { it.jwtVerifier() }
     before { ctx ->
         if (ctx.path().matches(Regex("""/api/rekrutteringstreff(?:$|/.*)"""))) {
-            val token = ctx.header(HttpHeader.AUTHORIZATION.name)
+            val token = ctx.header(Header.AUTHORIZATION)
                 ?.removePrefix("Bearer ")
                 ?.trim() ?: throw UnauthorizedResponse("Missing token")
             val decoded = verifyJwt(verifiers, token)

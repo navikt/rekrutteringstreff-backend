@@ -1,6 +1,6 @@
 package no.nav.toi.jobbsoker
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
@@ -20,7 +20,7 @@ import java.util.UUID
 
 class JobbsøkerInnloggetBorgerController(
     private val jobbsøkerService: JobbsøkerService,
-    javalin: Javalin
+    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamTreffId = "id"
@@ -33,9 +33,9 @@ class JobbsøkerInnloggetBorgerController(
     }
 
     init {
-        javalin.post(svarJaPath, svarJaHandler())
-        javalin.post(svarNeiPath, svarNeiHandler())
-        javalin.get(borgerJobbsøkerPath, hentBorgerJobbsøkerHandler())
+        routes.post(svarJaPath, svarJaHandler())
+        routes.post(svarNeiPath, svarNeiHandler())
+        routes.get(borgerJobbsøkerPath, hentBorgerJobbsøkerHandler())
     }
 
     @OpenApi(

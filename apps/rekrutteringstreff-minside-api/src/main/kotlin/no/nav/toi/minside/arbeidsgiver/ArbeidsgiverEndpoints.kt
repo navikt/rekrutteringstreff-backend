@@ -1,6 +1,6 @@
 package no.nav.toi.minside.arbeidsgiver
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.HttpMethod
@@ -53,7 +53,7 @@ private fun hentArbeidsgivereHandler(treffKlient: RekrutteringstreffKlient): (Co
         ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
 }
 
-fun Javalin.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(arbeidsgiverPath, hentArbeidsgivereHandler(treffKlient))
+fun JavalinDefaultRoutingApi.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(arbeidsgiverPath, hentArbeidsgivereHandler(treffKlient))
 
 
 data class ArbeidsgiverOutboundDto(

@@ -9,7 +9,7 @@ repositories {
     maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
 }
 
-val javalinVersion = "6.4.0"
+val javalinVersion = "7.2.0"
 val fuelVersion = "2.3.1"
 val mockOAuth2ServerVersion = "2.1.0"
 val flywayVersion = "11.3.0"

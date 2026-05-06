@@ -1,6 +1,6 @@
 package no.nav.toi.rekrutteringstreff.sok
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
@@ -9,14 +9,14 @@ import no.nav.toi.authenticatedUser
 
 class RekrutteringstreffSokController(
     private val sokService: RekrutteringstreffSokService,
-    javalin: Javalin,
+    routes: JavalinDefaultRoutingApi,
 ) {
     companion object {
         private const val sokPath = "/api/rekrutteringstreff/sok"
     }
 
     init {
-        javalin.get(sokPath, sokHandler())
+        routes.get(sokPath, sokHandler())
     }
 
     @OpenApi(
@@ -55,7 +55,8 @@ class RekrutteringstreffSokController(
                             "eiere": ["A123456"],
                             "kontorer": ["0315"],
                             "antallArbeidsgivere": 3,
-                            "antallJobbsokere": 12
+                            "antallJobbsøkere": 12,
+                            "antallJobbsøkereSvartJa": 9
                         },
                         {
                             "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
@@ -74,7 +75,8 @@ class RekrutteringstreffSokController(
                             "eiere": ["B654321"],
                             "kontorer": ["1201"],
                             "antallArbeidsgivere": 0,
-                            "antallJobbsokere": 0
+                            "antallJobbsøkere": 0,
+                            "antallJobbsøkereSvartJa": 0
                         }
                     ],
                     "antallTotalt": 42,

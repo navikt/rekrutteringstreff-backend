@@ -74,7 +74,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                    gateadresse, postnummer, poststed,
                    opprettet_av_person_navident, opprettet_av_tidspunkt, sist_endret,
                    eiere, kontorer,
-                   antall_arbeidsgivere, antall_jobbsokere
+                   antall_arbeidsgivere, antall_jobbsokere, antall_jobbsokere_svart_ja
             FROM rekrutteringstreff_sok_view
             $where
             ORDER BY ${sortering.sql}
@@ -322,7 +322,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             eiere = eiereArr?.map { it.toString() } ?: emptyList(),
             kontorer = kontorerArr?.map { it.toString() } ?: emptyList(),
             antallArbeidsgivere = rs.getLong("antall_arbeidsgivere"),
-            antallJobbsokere = rs.getLong("antall_jobbsokere"),
+            antallJobbsøkere = rs.getLong("antall_jobbsokere"),
+            antallJobbsøkereSvartJa = rs.getLong("antall_jobbsokere_svart_ja")
         )
     }
 }

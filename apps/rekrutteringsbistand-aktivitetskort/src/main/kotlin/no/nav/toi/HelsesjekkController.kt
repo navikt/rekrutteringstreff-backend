@@ -1,31 +1,31 @@
 package no.nav.toi
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import io.prometheus.client.exporter.common.TextFormat
 
 class HelsesjekkController(
     private val prometheusMeterRegistry: PrometheusMeterRegistry,
-    javalin: Javalin,
+    routes: JavalinDefaultRoutingApi,
     isReady: () -> Boolean,
     isRunning: () -> Boolean
 ) {
     init {
-        javalin.get("/isready") {
+        routes.get("/isready") {
             if(isReady()) {
                 it.status(200)
             } else {
                 it.status(500)
             }
         }
-        javalin.get("/isalive") {
+        routes.get("/isalive") {
             if(isRunning()) {
                 it.status(200)
             } else {
                 it.status(500)
             }
         }
-        javalin.get(
+        routes.get(
             "/metrics",
         ) { it.contentType(TextFormat.CONTENT_TYPE_004).result(prometheusMeterRegistry.scrape()) }
     }

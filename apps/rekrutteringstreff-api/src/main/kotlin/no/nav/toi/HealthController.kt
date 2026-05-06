@@ -1,21 +1,21 @@
 package no.nav.toi
 
-import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
+import io.javalin.router.JavalinDefaultRoutingApi
 
-class HealthController(javalin: Javalin, private val healthRepository: HealthRepository)  {
+class HealthController(routes: JavalinDefaultRoutingApi, private val healthRepository: HealthRepository)  {
     companion object {
         private const val ENDEPUNKT_READY = "/isready"
         private const val ENDEPUNKT_ALIVE = "/isalive"
     }
 
     init {
-        javalin.get(ENDEPUNKT_READY, isReadyHandler())
-        javalin.get(ENDEPUNKT_ALIVE, isAliveHandler())
+        routes.get(ENDEPUNKT_READY, isReadyHandler())
+        routes.get(ENDEPUNKT_ALIVE, isAliveHandler())
     }
 
     @OpenApi(
