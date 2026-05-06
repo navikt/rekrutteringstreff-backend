@@ -8,7 +8,7 @@ import io.javalin.http.NotFoundResponse
 import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
-import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverBehovDto
+import no.nav.toi.arbeidsgiver.dto.ArbeidsgiversBehovDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverMedBehovDto
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverOutboundDto
@@ -34,11 +34,11 @@ class ArbeidsgiverController(
         private const val hendelserArbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/hendelser"
         private const val pathParamArbeidsgiverId = "arbeidsgiverId"
         private const val arbeidsgiverItemPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/{$pathParamArbeidsgiverId}"
-        private const val arbeidsgiverBehovPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/{$pathParamArbeidsgiverId}/behov"
+        private const val arbeidsgiversBehovPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/arbeidsgiver/{$pathParamArbeidsgiverId}/behov"
         private const val behovMetadataPath = "/api/rekrutteringstreff/arbeidsgiver-behov-metadata"
     }
 
-    private fun requireEier(ctx: Context, treff: TreffId): String {
+    private fun krevEierskap(ctx: Context, treff: TreffId): String {
         val navIdent = ctx.extractNavIdent()
         if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
             throw ForbiddenResponse("Bruker er ikke eier av rekrutteringstreff med id ${treff.somString}")
@@ -53,7 +53,7 @@ class ArbeidsgiverController(
         javalin.get(arbeidsgiverMedBehovPath, hentArbeidsgivereMedBehovHandler())
         javalin.get(hendelserArbeidsgiverPath, hentArbeidsgiverHendelserHandler())
         javalin.delete(arbeidsgiverItemPath, slettArbeidsgiverHandler())
-        javalin.put(arbeidsgiverBehovPath, oppdaterBehovHandler())
+        javalin.put(arbeidsgiversBehovPath, oppdaterBehovHandler())
         javalin.get(behovMetadataPath, hentBehovMetadataHandler())
     }
 
@@ -84,7 +84,7 @@ class ArbeidsgiverController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val dto: LeggTilArbeidsgiverDto = ctx.bodyAsClass()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = requireEier(ctx, treff)
+        val navIdent = krevEierskap(ctx, treff)
         arbeidsgiverService.leggTilArbeidsgiver(dto.somLeggTilArbeidsgiver(), treff, navIdent)
         ctx.status(201)
     }
@@ -175,7 +175,7 @@ class ArbeidsgiverController(
     private fun hentArbeidsgiverHendelserHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        requireEier(ctx, treff)
+        krevEierskap(ctx, treff)
         val hendelser = arbeidsgiverService.hentArbeidsgiverHendelser(treff)
         ctx.status(200).json(hendelser.map { h ->
             ArbeidsgiverHendelseMedArbeidsgiverDataOutboundDto(
@@ -206,7 +206,7 @@ class ArbeidsgiverController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val id = UUID.fromString(ctx.pathParam(pathParamArbeidsgiverId))
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = requireEier(ctx, treffId)
+        val navIdent = krevEierskap(ctx, treffId)
         if (arbeidsgiverService.markerArbeidsgiverSlettet(id, treffId, navIdent)) ctx.status(204) else throw NotFoundResponse()
     }
 
@@ -240,11 +240,11 @@ class ArbeidsgiverController(
     private fun leggTilArbeidsgiverMedBehovHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        val navIdent = requireEier(ctx, treff)
+        val navIdent = krevEierskap(ctx, treff)
         val dto: LeggTilArbeidsgiverMedBehovDto = ctx.bodyAsClass()
         arbeidsgiverService.leggTilArbeidsgiverMedBehov(
             arbeidsgiver = dto.somLeggTilArbeidsgiver(),
-            behov = dto.behov.somArbeidsgiverBehov(),
+            behov = dto.behov.somArbeidsgiversBehov(),
             treffId = treff,
             navIdent = navIdent,
         )
@@ -282,7 +282,7 @@ class ArbeidsgiverController(
     private fun hentArbeidsgivereMedBehovHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
-        requireEier(ctx, treff)
+        krevEierskap(ctx, treff)
         val resultat = arbeidsgiverService.hentArbeidsgivereMedBehov(treff)
             .map { ArbeidsgiverMedBehovDto.fra(it) }
         ctx.status(200).json(resultat)
@@ -290,14 +290,14 @@ class ArbeidsgiverController(
 
     @OpenApi(
         summary = "Upsert behov for en eksisterende arbeidsgiver i treffet",
-        operationId = "oppdaterArbeidsgiverBehov",
+        operationId = "oppdaterArbeidsgiversBehov",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [
             OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
             OpenApiParam(name = pathParamArbeidsgiverId, type = UUID::class, required = true)
         ],
         requestBody = OpenApiRequestBody(content = [OpenApiContent(
-            from = ArbeidsgiverBehovDto::class,
+            from = ArbeidsgiversBehovDto::class,
             example = """{
           "samledeKvalifikasjoner": [{"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819}],
           "arbeidssprak": ["Norsk", "Engelsk"],
@@ -324,19 +324,19 @@ class ArbeidsgiverController(
             }"""
             )]
         )],
-        path = arbeidsgiverBehovPath,
+        path = arbeidsgiversBehovPath,
         methods = [HttpMethod.PUT]
     )
     private fun oppdaterBehovHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(ctx.pathParam(pathParamArbeidsgiverId)))
-        val navIdent = requireEier(ctx, treff)
-        val dto: ArbeidsgiverBehovDto = ctx.bodyAsClass()
+        val navIdent = krevEierskap(ctx, treff)
+        val dto: ArbeidsgiversBehovDto = ctx.bodyAsClass()
         val oppdatert = arbeidsgiverService.oppdaterBehov(
             arbeidsgiverTreffId = arbeidsgiverTreffId,
             treffId = treff,
-            behov = dto.somArbeidsgiverBehov(),
+            behov = dto.somArbeidsgiversBehov(),
             navIdent = navIdent,
         ) ?: throw NotFoundResponse("Arbeidsgiver ${arbeidsgiverTreffId.somString} finnes ikke i treff ${treff.somString}")
         ctx.status(200).json(ArbeidsgiverMedBehovDto.fra(oppdatert))
@@ -344,7 +344,7 @@ class ArbeidsgiverController(
 
     @OpenApi(
         summary = "Hent metadata for behov-feltene (lukkede lister)",
-        operationId = "hentArbeidsgiverBehovMetadata",
+        operationId = "hentArbeidsgiversBehovMetadata",
         security = [OpenApiSecurity(name = "BearerAuth")],
         responses = [OpenApiResponse(
             status = "200",

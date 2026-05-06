@@ -3,7 +3,7 @@ package no.nav.toi.arbeidsgiver
 import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
-import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverBehovDto
+import no.nav.toi.arbeidsgiver.dto.ArbeidsgiversBehovDto
 import no.nav.toi.executeInTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
@@ -30,7 +30,7 @@ class ArbeidsgiverService(
 
     fun leggTilArbeidsgiverMedBehov(
         arbeidsgiver: LeggTilArbeidsgiver,
-        behov: ArbeidsgiverBehov,
+        behov: ArbeidsgiversBehov,
         treffId: TreffId,
         navIdent: String,
     ) {
@@ -70,7 +70,7 @@ class ArbeidsgiverService(
     fun oppdaterBehov(
         arbeidsgiverTreffId: ArbeidsgiverTreffId,
         treffId: TreffId,
-        behov: ArbeidsgiverBehov,
+        behov: ArbeidsgiversBehov,
         navIdent: String,
     ): ArbeidsgiverMedBehov? {
         val oppdatert = dataSource.executeInTransaction { connection ->
@@ -95,8 +95,8 @@ class ArbeidsgiverService(
             .firstOrNull { it.arbeidsgiver.arbeidsgiverTreffId.somString == arbeidsgiverTreffId.somString }
     }
 
-    private fun serialiserBehov(behov: ArbeidsgiverBehov): String =
-        objectMapper.writeValueAsString(ArbeidsgiverBehovDto.fra(behov))
+    private fun serialiserBehov(behov: ArbeidsgiversBehov): String =
+        objectMapper.writeValueAsString(ArbeidsgiversBehovDto.fra(behov))
 
     fun markerArbeidsgiverSlettet(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String): Boolean {
         val resultat = dataSource.executeInTransaction { connection ->

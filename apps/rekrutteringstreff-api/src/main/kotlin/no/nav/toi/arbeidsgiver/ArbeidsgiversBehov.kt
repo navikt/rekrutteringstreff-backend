@@ -49,7 +49,7 @@ data class BehovTag(
     }
 }
 
-data class ArbeidsgiverBehov(
+data class ArbeidsgiversBehov(
     val samledeKvalifikasjoner: List<BehovTag>,
     val arbeidssprak: List<Arbeidssprak>,
     val antall: Int,
@@ -67,5 +67,5 @@ data class ArbeidsgiverBehov(
 
 data class ArbeidsgiverMedBehov(
     val arbeidsgiver: Arbeidsgiver,
-    val behov: ArbeidsgiverBehov?,
+    val behov: ArbeidsgiversBehov?,
 )

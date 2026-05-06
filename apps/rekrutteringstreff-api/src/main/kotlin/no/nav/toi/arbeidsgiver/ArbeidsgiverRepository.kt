@@ -151,7 +151,7 @@ class ArbeidsgiverRepository(
         connection: Connection,
         treffId: TreffId,
         arbeidsgiverTreffId: ArbeidsgiverTreffId,
-        behov: ArbeidsgiverBehov,
+        behov: ArbeidsgiversBehov,
     ): Boolean {
         val samledeJson = objectMapper.writeValueAsString(behov.samledeKvalifikasjoner)
         val personligeJson = objectMapper.writeValueAsString(behov.personligeEgenskaper)
@@ -188,7 +188,7 @@ class ArbeidsgiverRepository(
         }
     }
 
-    fun hentBehov(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): ArbeidsgiverBehov? {
+    fun hentBehov(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): ArbeidsgiversBehov? {
         val sql = """
             SELECT ab.arbeidssprak, ab.antall, ab.samlede_kvalifikasjoner, ab.ansettelsesformer, ab.personlige_egenskaper
             FROM arbeidsgiver_behov ab
@@ -245,7 +245,7 @@ class ArbeidsgiverRepository(
         }
     }
 
-    private fun java.sql.ResultSet.toBehovDirekte() = ArbeidsgiverBehov(
+    private fun java.sql.ResultSet.toBehovDirekte() = ArbeidsgiversBehov(
         samledeKvalifikasjoner = parseTagListe(getString("samlede_kvalifikasjoner")),
         arbeidssprak = (getArray("arbeidssprak").array as Array<*>).map { Arbeidssprak.valueOf(it.toString()) },
         antall = getInt("antall"),
@@ -253,7 +253,7 @@ class ArbeidsgiverRepository(
         personligeEgenskaper = parseTagListe(getString("personlige_egenskaper")),
     )
 
-    private fun java.sql.ResultSet.toBehovFraJoin() = ArbeidsgiverBehov(
+    private fun java.sql.ResultSet.toBehovFraJoin() = ArbeidsgiversBehov(
         samledeKvalifikasjoner = parseTagListe(getString("b_samlede")),
         arbeidssprak = (getArray("b_arbeidssprak").array as Array<*>).map { Arbeidssprak.valueOf(it.toString()) },
         antall = getInt("b_antall"),

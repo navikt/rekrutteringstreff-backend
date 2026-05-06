@@ -1,7 +1,7 @@
 package no.nav.toi.arbeidsgiver.dto
 
 import no.nav.toi.arbeidsgiver.Ansettelsesform
-import no.nav.toi.arbeidsgiver.ArbeidsgiverBehov
+import no.nav.toi.arbeidsgiver.ArbeidsgiversBehov
 import no.nav.toi.arbeidsgiver.Arbeidssprak
 import no.nav.toi.arbeidsgiver.BehovTag
 
@@ -21,14 +21,14 @@ data class BehovTagDto(
     }
 }
 
-data class ArbeidsgiverBehovDto(
+data class ArbeidsgiversBehovDto(
     val samledeKvalifikasjoner: List<BehovTagDto>,
     val arbeidssprak: List<String>,
     val antall: Int,
     val ansettelsesformer: List<String>,
     val personligeEgenskaper: List<BehovTagDto> = emptyList(),
 ) {
-    fun somArbeidsgiverBehov(): ArbeidsgiverBehov = ArbeidsgiverBehov(
+    fun somArbeidsgiversBehov(): ArbeidsgiversBehov = ArbeidsgiversBehov(
         samledeKvalifikasjoner = samledeKvalifikasjoner.map { it.somBehovTag() },
         arbeidssprak = arbeidssprak.map { Arbeidssprak.fraApiNavn(it) },
         antall = antall,
@@ -37,7 +37,7 @@ data class ArbeidsgiverBehovDto(
     )
 
     companion object {
-        fun fra(behov: ArbeidsgiverBehov) = ArbeidsgiverBehovDto(
+        fun fra(behov: ArbeidsgiversBehov) = ArbeidsgiversBehovDto(
             samledeKvalifikasjoner = behov.samledeKvalifikasjoner.map { BehovTagDto.fra(it) },
             arbeidssprak = behov.arbeidssprak.map { it.apiNavn },
             antall = behov.antall,

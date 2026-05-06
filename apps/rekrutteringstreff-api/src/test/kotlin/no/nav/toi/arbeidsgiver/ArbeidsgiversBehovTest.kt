@@ -35,7 +35,7 @@ import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
-class ArbeidsgiverBehovTest {
+class ArbeidsgiversBehovTest {
 
     companion object {
         private val authServer = MockOAuth2Server()
@@ -459,7 +459,7 @@ class ArbeidsgiverBehovTest {
 
         val data = db.hentHendelseDataFørste("BEHOV_ENDRET")
         assertThat(data).isNotNull()
-        val behovDto = JacksonConfig.mapper.readValue(data, no.nav.toi.arbeidsgiver.dto.ArbeidsgiverBehovDto::class.java)
+        val behovDto = JacksonConfig.mapper.readValue(data, no.nav.toi.arbeidsgiver.dto.ArbeidsgiversBehovDto::class.java)
         assertThat(behovDto.antall).isEqualTo(3)
         assertThat(behovDto.arbeidssprak).contains("Norsk")
         assertThat(behovDto.ansettelsesformer).contains("Fast")
