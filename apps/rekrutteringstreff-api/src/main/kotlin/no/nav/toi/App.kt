@@ -142,13 +142,12 @@ class App(
         val innleggRepository = InnleggRepository(dataSource)
         val kiLoggRepository = KiLoggRepository(dataSource)
 
-        val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
+        val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
 
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         val sokRepository = RekrutteringstreffSokRepository(dataSource)
         val sokService = RekrutteringstreffSokService(sokRepository)
-
         javalin = Javalin.create { config ->
             config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
             configureOpenApi(config)
@@ -172,6 +171,12 @@ class App(
                 routes = config.routes
             )
 
+            ArbeidsgiverController(
+                arbeidsgiverService = arbeidsgiverService,
+                eierService = eierService,
+                routes = config.routes
+            )
+
             RekrutteringstreffController(
                 rekrutteringstreffService = rekrutteringstreffService,
                 eierService = eierService,
@@ -185,11 +190,6 @@ class App(
                 routes = config.routes
             )
             EierController(
-                eierService = eierService,
-                routes = config.routes
-            )
-            ArbeidsgiverController(
-                arbeidsgiverService = arbeidsgiverService,
                 eierService = eierService,
                 routes = config.routes
             )

@@ -27,7 +27,7 @@ class ArbeidsgiverServiceTest {
                 .migrate()
 
             arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-            arbeidsgiverService = ArbeidsgiverService(db.dataSource, arbeidsgiverRepository)
+            arbeidsgiverService = ArbeidsgiverService(db.dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
         }
     }
 
