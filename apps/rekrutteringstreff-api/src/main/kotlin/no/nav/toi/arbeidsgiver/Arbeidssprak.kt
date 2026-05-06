@@ -292,9 +292,24 @@ object Arbeidssprak {
     private val gyldigeVerdier = verdier.toSet()
     private const val annet = "Annet"
 
+    // TODO: KAn fjernes nr gamle treff er ryddet bort
+    private val gamleEnumVerdier = mapOf(
+        "NORSK" to "Norsk",
+        "ENGELSK" to "Engelsk",
+        "SVENSK" to "Svensk",
+        "DANSK" to "Dansk",
+        "TYSK" to "Tysk",
+        "FRANSK" to "Fransk",
+        "SPANSK" to "Spansk",
+        "ANNET" to null,
+    )
+
     fun fraApiNavn(apiNavn: String): String =
         if (apiNavn in gyldigeVerdier) apiNavn else throw IllegalArgumentException("Ukjent arbeidsspråk [$apiNavn].")
 
     fun validerOgFiltrer(arbeidssprak: List<String>): List<String> =
         arbeidssprak.filterNot { it == annet }.map(::fraApiNavn)
+
+    fun fraLagretVerdi(verdi: String): String? =
+        gamleEnumVerdier.getOrElse(verdi) { if (verdi in gyldigeVerdier) verdi else null }
 }

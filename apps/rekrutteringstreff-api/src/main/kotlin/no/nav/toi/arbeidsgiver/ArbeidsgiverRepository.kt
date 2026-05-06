@@ -247,7 +247,7 @@ class ArbeidsgiverRepository(
 
     private fun java.sql.ResultSet.toBehovDirekte() = ArbeidsgiversBehov(
         samledeKvalifikasjoner = parseTagListe(getString("samlede_kvalifikasjoner")),
-        arbeidssprak = Arbeidssprak.validerOgFiltrer((getArray("arbeidssprak").array as Array<*>).map { it.toString() }),
+        arbeidssprak = (getArray("arbeidssprak").array as Array<*>).mapNotNull { Arbeidssprak.fraLagretVerdi(it.toString()) },
         antall = getInt("antall"),
         ansettelsesformer = (getArray("ansettelsesformer").array as Array<*>).map { Ansettelsesform.valueOf(it.toString()) },
         personligeEgenskaper = parseTagListe(getString("personlige_egenskaper")),
@@ -255,7 +255,7 @@ class ArbeidsgiverRepository(
 
     private fun java.sql.ResultSet.toBehovFraJoin() = ArbeidsgiversBehov(
         samledeKvalifikasjoner = parseTagListe(getString("b_samlede")),
-        arbeidssprak = Arbeidssprak.validerOgFiltrer((getArray("b_arbeidssprak").array as Array<*>).map { it.toString() }),
+        arbeidssprak = (getArray("b_arbeidssprak").array as Array<*>).mapNotNull { Arbeidssprak.fraLagretVerdi(it.toString()) },
         antall = getInt("b_antall"),
         ansettelsesformer = (getArray("b_ansettelsesformer").array as Array<*>).map { Ansettelsesform.valueOf(it.toString()) },
         personligeEgenskaper = parseTagListe(getString("b_personlige")),
