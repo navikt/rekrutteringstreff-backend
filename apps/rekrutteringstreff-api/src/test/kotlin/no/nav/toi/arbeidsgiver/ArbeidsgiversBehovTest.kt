@@ -113,7 +113,7 @@ class ArbeidsgiversBehovTest {
         {
           "samledeKvalifikasjoner": [
             {"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": 175819},
-            {"label": "Førerkort klasse B", "kategori": "FORERKORT", "konseptId": 91501}
+                        {"label": "B - Personbil", "kategori": "FORERKORT", "konseptId": null}
           ],
           "arbeidssprak": ["Norsk", "Engelsk"],
           "antall": $antall,
@@ -198,6 +198,7 @@ class ArbeidsgiversBehovTest {
         assertThat(ag.behov.ansettelsesformer).containsExactly("Fast", "Vikariat")
         assertThat(ag.behov.samledeKvalifikasjoner).hasSize(2)
         assertThat(ag.behov.samledeKvalifikasjoner.first().label).isEqualTo("Kokk")
+        assertThat(ag.behov.samledeKvalifikasjoner.last().konseptId).isNull()
         assertThat(ag.behov.personligeEgenskaper).hasSize(1)
 
         val hendelser = httpGet(
@@ -222,6 +223,32 @@ class ArbeidsgiversBehovTest {
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
             arbeidsgiverMedBehovBody(behovJson = gyldigBehovJson(antall = 100)),
+            token
+        )
+        assertThat(response.statusCode()).isEqualTo(HTTP_BAD_REQUEST)
+        assertThat(db.hentAlleArbeidsgivere()).isEmpty()
+    }
+
+    @Test
+    fun `POST arbeidsgiver-med-behov tillater bare null konseptId for førerkort`() {
+        val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        eierRepository.leggTil(treffId, listOf("A111111"))
+
+        val ugyldigBehov = """
+            {
+              "samledeKvalifikasjoner": [
+                {"label": "Kokk", "kategori": "YRKESTITTEL", "konseptId": null}
+              ],
+              "arbeidssprak": ["Norsk"],
+              "antall": 1,
+              "ansettelsesformer": ["Fast"]
+            }
+        """.trimIndent()
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
+            arbeidsgiverMedBehovBody(behovJson = ugyldigBehov),
             token
         )
         assertThat(response.statusCode()).isEqualTo(HTTP_BAD_REQUEST)

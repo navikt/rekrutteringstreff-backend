@@ -40,12 +40,13 @@ enum class Arbeidssprak(val apiNavn: String) {
 data class BehovTag(
     val label: String,
     val kategori: String,
-    val konseptId: Long,
+    val konseptId: Long?,
 ) {
     init {
         if (label.isBlank()) throw IllegalArgumentException("BehovTag.label kan ikke være tom.")
         if (kategori.isBlank()) throw IllegalArgumentException("BehovTag.kategori kan ikke være tom.")
-        if (konseptId <= 0) throw IllegalArgumentException("BehovTag.konseptId må være positiv. Tag må komme fra pam-ontologi.")
+        if (konseptId != null && konseptId <= 0) throw IllegalArgumentException("BehovTag.konseptId må være positiv. Tag må komme fra pam-ontologi.")
+        if (konseptId == null && kategori != "FORERKORT") throw IllegalArgumentException("BehovTag.konseptId må være satt for andre kategorier enn FORERKORT.")
     }
 }
 

@@ -8,7 +8,7 @@ import no.nav.toi.arbeidsgiver.BehovTag
 data class BehovTagDto(
     val label: String,
     val kategori: String,
-    val konseptId: Long,
+    val konseptId: Long?,
 ) {
     fun somBehovTag() = BehovTag(label = label, kategori = kategori, konseptId = konseptId)
 
