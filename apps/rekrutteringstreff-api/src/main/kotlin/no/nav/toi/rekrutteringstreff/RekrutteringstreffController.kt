@@ -119,7 +119,8 @@ class RekrutteringstreffController(
                     "opprettetAvNavkontorEnhetId":"0318",
                     "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
                     "antallArbeidsgivere":1,
-                    "antallJobbsøkere":1
+                    "antallJobbsøkere":1,
+                    "antallJobbsøkereSvartJa":0
                 }
                 """
             )]
@@ -190,7 +191,8 @@ class RekrutteringstreffController(
                     "opprettetAvNavkontorEnhetId": "0318",
                     "opprettetAvTidspunkt": "2025-06-01T08:00:00+02:00",
                     "antallArbeidsgivere":1,
-                    "antallJobbsøkere":1
+                    "antallJobbsøkere":1,
+                    "antallJobbsøkereSvartJa":0
                 }"""
             )]
         )],
