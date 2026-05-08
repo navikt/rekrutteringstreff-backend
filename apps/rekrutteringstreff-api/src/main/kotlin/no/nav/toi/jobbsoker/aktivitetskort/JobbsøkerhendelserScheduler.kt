@@ -97,6 +97,9 @@ class JobbsøkerhendelserScheduler(
             JobbsøkerHendelsestype.INVITERT,
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
             JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER,
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
             JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
@@ -114,8 +117,11 @@ class JobbsøkerhendelserScheduler(
     private fun behandleHendelse(hendelse: JobbsøkerHendelseForAktivitetskort) {
         when (hendelse.hendelsestype) {
             JobbsøkerHendelsestype.INVITERT -> behandleInvitasjon(hendelse)
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON -> behandleSvar(hendelse, true)
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON -> behandleSvar(hendelse, false)
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON -> behandleSvar(hendelse, svar = true, endretAvPersonbruker = true)
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON -> behandleSvar(hendelse, svar = false, endretAvPersonbruker = true)
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> behandleSvar(hendelse, svar = true, endretAvPersonbruker = false)
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> behandleSvar(hendelse, svar = false, endretAvPersonbruker = false)
+            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER -> behandleSvar(hendelse, svar = null, endretAvPersonbruker = false)
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING -> behandleTreffEndret(hendelse)
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON -> behandleTreffEndretNotifikasjon(hendelse)
             JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST -> behandleSvartJaTreffstatus(hendelse, "avlyst")
@@ -138,14 +144,19 @@ class JobbsøkerhendelserScheduler(
         }
     }
 
-    private fun behandleSvar(hendelse: JobbsøkerHendelseForAktivitetskort, svar: Boolean) {
+    private fun behandleSvar(
+        hendelse: JobbsøkerHendelseForAktivitetskort,
+        svar: Boolean?,
+        endretAvPersonbruker: Boolean,
+    ) {
         val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
         treff.aktivitetskortSvarOgStatusFor(
             fnr = hendelse.fnr,
             hendelseId = hendelse.hendelseId,
-            endretAvPersonbruker = true,
+            endretAvPersonbruker = endretAvPersonbruker,
             svar = svar,
+            endretAv = if (endretAvPersonbruker) hendelse.fnr else hendelse.aktøridentifikasjon,
         ).publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
