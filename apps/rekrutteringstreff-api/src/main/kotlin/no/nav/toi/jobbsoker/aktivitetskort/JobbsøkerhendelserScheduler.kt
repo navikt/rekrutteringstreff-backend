@@ -2,6 +2,9 @@ package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionInterface
@@ -15,7 +18,7 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -90,34 +93,44 @@ class JobbsøkerhendelserScheduler(
     }
 
     private fun hentAlleUsendteHendelser(): List<JobbsøkerHendelseForAktivitetskort> {
-        val hendelsestyper = JobbsøkerHendelsestype.entries.filter { it.tilAktivitetskortHendelseskontekst() != null }
+        val hendelsestyper = listOf(
+            JobbsøkerHendelsestype.INVITERT,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER,
+            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
+            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
+            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
+            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT,
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST,
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT
+        )
 
         return hendelsestyper.flatMap { type ->
             aktivitetskortRepository.hentUsendteHendelse(type)
-                .map {
-                    JobbsøkerHendelseForAktivitetskort(
-                        it.jobbsokerHendelseDbId,
-                        it.hendelseId,
-                        it.fnr,
-                        it.rekrutteringstreffUuid,
-                        type,
-                        it.hendelseData,
-                        it.aktøridentifikasjon
-                    )
-                }
+                .map { JobbsøkerHendelseForAktivitetskort(it.jobbsokerHendelseDbId, it.hendelseId, it.fnr, it.rekrutteringstreffUuid, type, it.hendelseData, it.aktøridentifikasjon) }
         }.sortedBy { it.jobbsokerHendelseDbId }
     }
 
     private fun behandleHendelse(hendelse: JobbsøkerHendelseForAktivitetskort) {
-        val type = hendelse.hendelsestype
-        val kontekst = type.tilAktivitetskortHendelseskontekst()
-        when (kontekst) {
-            AktivitetskortHendelseskontekst.Invitasjon -> behandleInvitasjon(hendelse)
-            is AktivitetskortHendelseskontekst.SvarOgTreffstatus -> behandleSvarOgTreffstatus(hendelse, kontekst)
-            is AktivitetskortHendelseskontekst.Treffoppdatering -> behandleTreffoppdatering(hendelse, kontekst)
-
-            null ->
-                log.warn("Ukjent hendelsestype $type for jobbsøker-hendelse ${hendelse.jobbsokerHendelseDbId}")
+        when (hendelse.hendelsestype) {
+            JobbsøkerHendelsestype.INVITERT -> behandleInvitasjon(hendelse)
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON -> behandleSvar(hendelse, true)
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> behandleSvarAvEier(hendelse, true)
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON -> behandleSvar(hendelse, false)
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> behandleSvarAvEier(hendelse, false)
+            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER -> behandleSvarAvEier(hendelse, null)
+            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING -> behandleTreffEndret(hendelse)
+            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON -> behandleTreffEndretNotifikasjon(hendelse)
+            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST -> behandleSvartJaTreffstatus(hendelse, AktivitetskortTreffstatus.AVLYST)
+            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT -> behandleSvartJaTreffstatus(hendelse, AktivitetskortTreffstatus.FULLFØRT)
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST -> behandleIkkeSvartTreffstatus(hendelse, AktivitetskortTreffstatus.AVLYST)
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT -> behandleIkkeSvartTreffstatus(hendelse, AktivitetskortTreffstatus.FULLFØRT)
+            else -> {
+                log.warn("Ukjent hendelsestype ${hendelse.hendelsestype} for jobbsøker-hendelse ${hendelse.jobbsokerHendelseDbId}")
+            }
         }
     }
 
@@ -131,45 +144,56 @@ class JobbsøkerhendelserScheduler(
         }
     }
 
-    private fun behandleSvarOgTreffstatus(
-        hendelse: JobbsøkerHendelseForAktivitetskort,
-        kontekst: AktivitetskortHendelseskontekst.SvarOgTreffstatus
-    ) {
+    private fun behandleSvar(hendelse: JobbsøkerHendelseForAktivitetskort, svar: Boolean) {
         val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
         treff.aktivitetskortSvarOgStatusFor(
             fnr = hendelse.fnr,
             hendelseId = hendelse.hendelseId,
-            endretAvPersonbruker = !kontekst.svarAvgittAvEier && kontekst.treffstatus == null,
-            svar = kontekst.svar,
-            treffstatus = kontekst.treffstatus,
-            endretAv = when {
-                kontekst.svarAvgittAvEier -> hendelse.aktøridentifikasjon
-                kontekst.svar != null -> hendelse.fnr
-                else -> null
-            },
+            endretAvPersonbruker = true,
+            svar = svar,
         ).publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
     }
 
-    private fun behandleTreffoppdatering(
-        hendelse: JobbsøkerHendelseForAktivitetskort,
-        kontekst: AktivitetskortHendelseskontekst.Treffoppdatering
-    ) {
+    private fun behandleSvarAvEier(hendelse: JobbsøkerHendelseForAktivitetskort, svar: Boolean?) {
+        val treff = hentTreff(hendelse.rekrutteringstreffUuid)
+
+        treff.aktivitetskortSvarOgStatusFor(
+            fnr = hendelse.fnr,
+            hendelseId = hendelse.hendelseId,
+            endretAvPersonbruker = false,
+            svar = svar,
+            endretAv = hendelse.aktøridentifikasjon,
+        ).publiserTilRapids(rapidsConnection)
+
+        aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
+    }
+
+    private fun behandleTreffEndret(hendelse: JobbsøkerHendelseForAktivitetskort) {
         dataSource.executeInTransaction { connection ->
             aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
 
             val treff = hentTreff(hendelse.rekrutteringstreffUuid)
 
-            val endringer = if (kontekst.inkluderEndringsnotifikasjon) {
-                objectMapper.readValue(
-                    hendelse.hendelseData,
-                    Rekrutteringstreffendringer::class.java
-                ).endredeFelter.toList()
-            } else {
-                null
-            }
+            treff.aktivitetskortOppdateringFor(
+                fnr = hendelse.fnr,
+                hendelseId = hendelse.hendelseId,
+                avsenderNavident = hendelse.aktøridentifikasjon,
+            ).publiserTilRapids(rapidsConnection)
+
+            log.info("Sendt rekrutteringstreffoppdatering for treff ${hendelse.rekrutteringstreffUuid} for jobbsøker")
+        }
+    }
+
+    private fun behandleTreffEndretNotifikasjon(hendelse: JobbsøkerHendelseForAktivitetskort) {
+        dataSource.executeInTransaction { connection ->
+            aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId, connection)
+
+            val treff = hentTreff(hendelse.rekrutteringstreffUuid)
+
+            val endringer = objectMapper.readValue(hendelse.hendelseData, Rekrutteringstreffendringer::class.java).endredeFelter.toList()
 
             treff.aktivitetskortOppdateringFor(
                 fnr = hendelse.fnr,
@@ -178,11 +202,7 @@ class JobbsøkerhendelserScheduler(
                 endredeFelter = endringer
             ).publiserTilRapids(rapidsConnection)
 
-            if (kontekst.inkluderEndringsnotifikasjon) {
-                log.info("Sendt melding om varsel for oppdatering av treff ${hendelse.rekrutteringstreffUuid} for jobbsøker")
-            } else {
-                log.info("Sendt rekrutteringstreffoppdatering for treff ${hendelse.rekrutteringstreffUuid} for jobbsøker")
-            }
+            log.info("Sendt melding om varsel for oppdatering av treff ${hendelse.rekrutteringstreffUuid} for jobbsøker")
         }
     }
 
@@ -190,57 +210,39 @@ class JobbsøkerhendelserScheduler(
         rekrutteringstreffRepository.hent(TreffId(rekrutteringstreffUuid))
             ?: throw RekrutteringstreffIkkeFunnetException("Fant ikke rekrutteringstreff med UUID $rekrutteringstreffUuid")
 
-    private fun sendAktivitetskortInvitasjon(
-        treff: Rekrutteringstreff,
-        fnr: String,
-        hendelseId: UUID,
-        avsenderNavident: String?
-    ) {
+    private fun sendAktivitetskortInvitasjon(treff: Rekrutteringstreff, fnr: String, hendelseId: UUID, avsenderNavident: String?) {
         treff.aktivitetskortInvitasjonFor(fnr, hendelseId, avsenderNavident)
             .publiserTilRapids(rapidsConnection)
     }
 
-    private fun JobbsøkerHendelsestype.tilAktivitetskortHendelseskontekst(): AktivitetskortHendelseskontekst? =
-        when (this) {
-            JobbsøkerHendelsestype.INVITERT ->
-                AktivitetskortHendelseskontekst.Invitasjon
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = true, svarAvgittAvEier = false)
-            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = true, svarAvgittAvEier = true)
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = false, svarAvgittAvEier = false)
-            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = false, svarAvgittAvEier = true)
-            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = null, svarAvgittAvEier = true)
-            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = true, svarAvgittAvEier = false, treffstatus = AktivitetskortTreffstatus.AVLYST)
-            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = true, svarAvgittAvEier = false, treffstatus = AktivitetskortTreffstatus.FULLFØRT)
-            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = null, svarAvgittAvEier = false, treffstatus = AktivitetskortTreffstatus.AVLYST)
-            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT ->
-                AktivitetskortHendelseskontekst.SvarOgTreffstatus(svar = null, svarAvgittAvEier = false, treffstatus = AktivitetskortTreffstatus.FULLFØRT)
-            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING ->
-                AktivitetskortHendelseskontekst.Treffoppdatering(inkluderEndringsnotifikasjon = false)
-            JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON ->
-                AktivitetskortHendelseskontekst.Treffoppdatering(inkluderEndringsnotifikasjon = true)
-            else -> null
-        }
+    private fun behandleSvartJaTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: AktivitetskortTreffstatus) {
+        val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
+            ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
-    private sealed interface AktivitetskortHendelseskontekst {
-        data object Invitasjon : AktivitetskortHendelseskontekst
+        treff.aktivitetskortSvarOgStatusFor(
+            fnr = hendelse.fnr,
+            hendelseId = hendelse.hendelseId,
+            endretAvPersonbruker = false,
+            svar = true,
+            treffstatus = treffstatus,
+            endretAv = hendelse.fnr,
+        ).publiserTilRapids(rapidsConnection)
 
-        data class SvarOgTreffstatus(
-            val svar: Boolean?,
-            val svarAvgittAvEier: Boolean,
-            val treffstatus: AktivitetskortTreffstatus? = null,
-        ) : AktivitetskortHendelseskontekst
+        aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
+    }
 
-        data class Treffoppdatering(
-            val inkluderEndringsnotifikasjon: Boolean,
-        ) : AktivitetskortHendelseskontekst
+    private fun behandleIkkeSvartTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: AktivitetskortTreffstatus) {
+        val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
+            ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
+
+        treff.aktivitetskortSvarOgStatusFor(
+            fnr = hendelse.fnr,
+            hendelseId = hendelse.hendelseId,
+            endretAvPersonbruker = false,
+            treffstatus = treffstatus,
+        ).publiserTilRapids(rapidsConnection)
+
+        aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
     }
 
     private data class JobbsøkerHendelseForAktivitetskort(
