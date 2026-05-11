@@ -96,7 +96,10 @@ class JobbsøkerhendelserScheduler(
         val hendelsestyper = listOf(
             JobbsøkerHendelsestype.INVITERT,
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER,
             JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER,
+            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER,
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING,
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
             JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST,
@@ -115,13 +118,16 @@ class JobbsøkerhendelserScheduler(
         when (hendelse.hendelsestype) {
             JobbsøkerHendelsestype.INVITERT -> behandleInvitasjon(hendelse)
             JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON -> behandleSvar(hendelse, true)
+            JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> behandleSvarAvEier(hendelse, true)
             JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON -> behandleSvar(hendelse, false)
+            JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> behandleSvarAvEier(hendelse, false)
+            JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER -> behandleSvarAvEier(hendelse, null)
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING -> behandleTreffEndret(hendelse)
             JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON -> behandleTreffEndretNotifikasjon(hendelse)
-            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST -> behandleSvartJaTreffstatus(hendelse, "avlyst")
-            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT -> behandleSvartJaTreffstatus(hendelse, "fullført")
-            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST -> behandleIkkeSvartTreffstatus(hendelse, "avlyst")
-            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT -> behandleIkkeSvartTreffstatus(hendelse, "fullført")
+            JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST -> behandleSvartJaTreffstatus(hendelse, AktivitetskortTreffstatus.AVLYST)
+            JobbsøkerHendelsestype.SVART_JA_TREFF_FULLFØRT -> behandleSvartJaTreffstatus(hendelse, AktivitetskortTreffstatus.FULLFØRT)
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST -> behandleIkkeSvartTreffstatus(hendelse, AktivitetskortTreffstatus.AVLYST)
+            JobbsøkerHendelsestype.IKKE_SVART_TREFF_FULLFØRT -> behandleIkkeSvartTreffstatus(hendelse, AktivitetskortTreffstatus.FULLFØRT)
             else -> {
                 log.warn("Ukjent hendelsestype ${hendelse.hendelsestype} for jobbsøker-hendelse ${hendelse.jobbsokerHendelseDbId}")
             }
@@ -146,6 +152,20 @@ class JobbsøkerhendelserScheduler(
             hendelseId = hendelse.hendelseId,
             endretAvPersonbruker = true,
             svar = svar,
+        ).publiserTilRapids(rapidsConnection)
+
+        aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
+    }
+
+    private fun behandleSvarAvEier(hendelse: JobbsøkerHendelseForAktivitetskort, svar: Boolean?) {
+        val treff = hentTreff(hendelse.rekrutteringstreffUuid)
+
+        treff.aktivitetskortSvarOgStatusFor(
+            fnr = hendelse.fnr,
+            hendelseId = hendelse.hendelseId,
+            endretAvPersonbruker = false,
+            svar = svar,
+            endretAv = hendelse.aktøridentifikasjon,
         ).publiserTilRapids(rapidsConnection)
 
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
@@ -195,7 +215,7 @@ class JobbsøkerhendelserScheduler(
             .publiserTilRapids(rapidsConnection)
     }
 
-    private fun behandleSvartJaTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: String) {
+    private fun behandleSvartJaTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: AktivitetskortTreffstatus) {
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
@@ -211,7 +231,7 @@ class JobbsøkerhendelserScheduler(
         aktivitetskortRepository.lagrePollingstatus(hendelse.jobbsokerHendelseDbId)
     }
 
-    private fun behandleIkkeSvartTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: String) {
+    private fun behandleIkkeSvartTreffstatus(hendelse: JobbsøkerHendelseForAktivitetskort, treffstatus: AktivitetskortTreffstatus) {
         val treff = rekrutteringstreffRepository.hent(TreffId(hendelse.rekrutteringstreffUuid))
             ?: throw IllegalStateException("Fant ikke rekrutteringstreff med UUID ${hendelse.rekrutteringstreffUuid}")
 
