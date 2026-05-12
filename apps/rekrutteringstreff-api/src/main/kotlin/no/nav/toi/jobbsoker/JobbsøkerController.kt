@@ -42,7 +42,8 @@ class JobbsøkerController(
         private const val svarPath = "$jobbsøkerPath/{$pathParamJobbsøkerId}/svar"
         private const val inviterPath = "$jobbsøkerPath/inviter"
         private const val søkPath = "$jobbsøkerPath/sok"
-        private const val formidlingPath = "$jobbsøkerPath/formidling"
+        private const val formidlingEgnePath = "$jobbsøkerPath/formidling/egne"
+        private const val formidlingAllePath = "$jobbsøkerPath/formidling/alle"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
@@ -53,7 +54,8 @@ class JobbsøkerController(
         routes.post(svarPath, svarForJobbsøkerHandler())
         routes.get(hendelserPath, hentJobbsøkerHendelserHandler())
         routes.post(inviterPath, inviterJobbsøkereHandler())
-        routes.post(formidlingPath, hentJobbsøkereForFormidlingHandler())
+        routes.post(formidlingEgnePath, hentEgneJobbsøkereForFormidlingHandler())
+        routes.post(formidlingAllePath, hentAlleJobbsøkereForFormidlingHandler())
     }
 
     @OpenApi(
@@ -184,50 +186,74 @@ class JobbsøkerController(
     }
 
     @OpenApi(
-        summary = "Hent jobbsøkere for formidling-modal",
-        description = "Returnerer minimal jobbsøker-info for å velge personer i Opprett formidling-modal. " +
+        summary = "Hent egne jobbsøkere for formidling-modal",
+        description = "Returnerer jobbsøkere på treffet der innlogget bruker er registrert som veileder. " +
             "Inkluderer skjulte jobbsøkere (er_synlig=false), men ikke slettede. " +
-            "Eier av treffet (eller utvikler) ser alle. Veileder med JOBBSØKER_RETTET-rolle ser kun jobbsøkere " +
-            "der lagret veileder_navident matcher egen NAV-ident. Støtter paginering og fritekst-søk på navn eller fødselsnummer.",
-        operationId = "hentJobbsøkereForFormidling",
+            "Krever ingen eier-status — brukes for å avgjøre om innlogget bruker har egne jobbsøkere på treffet. " +
+            "Støtter paginering og fritekst-søk på navn eller fødselsnummer.",
+        operationId = "hentEgneJobbsøkereForFormidling",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
         requestBody = OpenApiRequestBody(
-            content = [OpenApiContent(
-                from = JobbsøkerFormidlingRequest::class,
-                example = """{
-                  "fritekst": "Ola",
-                  "side": 1,
-                  "antallPerSide": 25
-                }"""
-            )]
+            content = [OpenApiContent(from = JobbsøkerFormidlingRequest::class)]
         ),
         responses = [OpenApiResponse(
             status = "200",
             content = [OpenApiContent(from = JobbsøkerFormidlingRespons::class)]
         )],
-        path = formidlingPath,
+        path = formidlingEgnePath,
         methods = [HttpMethod.POST]
     )
-    private fun hentJobbsøkereForFormidlingHandler(): (Context) -> Unit = { ctx ->
+    private fun hentEgneJobbsøkereForFormidlingHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
-        val request = ctx.bodyAsClass<JobbsøkerFormidlingRequest>()
-        if (request.side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
-        if (request.antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
-
-        val kunForVeilederNavIdent =
-            if (eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
-                null
-            } else {
-                navIdent
-            }
+        val request = lesFormidlingRequest(ctx)
 
         AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
         ctx.status(200).json(
-            jobbsøkerService.hentJobbsøkereForFormidling(treff, request, kunForVeilederNavIdent)
+            jobbsøkerService.hentJobbsøkereForFormidling(treff, request, kunForVeilederNavIdent = navIdent)
         )
+    }
+
+    @OpenApi(
+        summary = "Hent alle jobbsøkere for formidling-modal",
+        description = "Returnerer alle ikke-slettede jobbsøkere på treffet (inkludert skjulte). " +
+            "Krever at innlogget bruker er eier av treffet eller utvikler. " +
+            "Støtter paginering og fritekst-søk på navn eller fødselsnummer.",
+        operationId = "hentAlleJobbsøkereForFormidling",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(
+            content = [OpenApiContent(from = JobbsøkerFormidlingRequest::class)]
+        ),
+        responses = [OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(from = JobbsøkerFormidlingRespons::class)]
+        )],
+        path = formidlingAllePath,
+        methods = [HttpMethod.POST]
+    )
+    private fun hentAlleJobbsøkereForFormidlingHandler(): (Context) -> Unit = { ctx ->
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+        val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.authenticatedUser().extractNavIdent()
+        if (!eierService.erEierEllerUtvikler(treffId = treff, navIdent = navIdent, context = ctx)) {
+            throw ForbiddenResponse("Personen er ikke eier av rekrutteringstreffet")
+        }
+        val request = lesFormidlingRequest(ctx)
+
+        AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
+        ctx.status(200).json(
+            jobbsøkerService.hentJobbsøkereForFormidling(treff, request, kunForVeilederNavIdent = null)
+        )
+    }
+
+    private fun lesFormidlingRequest(ctx: Context): JobbsøkerFormidlingRequest {
+        val request = ctx.bodyAsClass<JobbsøkerFormidlingRequest>()
+        if (request.side < 1) throw IllegalArgumentException("side må være 1 eller høyere")
+        if (request.antallPerSide !in 1..100) throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
+        return request
     }
 
     @OpenApi(

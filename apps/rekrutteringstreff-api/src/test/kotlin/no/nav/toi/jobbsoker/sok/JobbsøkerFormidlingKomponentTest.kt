@@ -102,8 +102,11 @@ class JobbsøkerFormidlingKomponentTest {
         return treffId
     }
 
-    private fun formidlingPath(treffId: TreffId): String =
-        "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/formidling"
+    private fun formidlingEgnePath(treffId: TreffId): String =
+        "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/formidling/egne"
+
+    private fun formidlingAllePath(treffId: TreffId): String =
+        "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/formidling/alle"
 
     private fun formidlingBody(vararg felter: Pair<String, Any>): String {
         val map = mutableMapOf<String, Any>("side" to 1, "antallPerSide" to 25)
@@ -140,7 +143,7 @@ class JobbsøkerFormidlingKomponentTest {
         db.settSynlighet(ider[1], false)
         db.settJobbsøkerStatus(ider[2], JobbsøkerStatus.SLETTET)
 
-        val response = httpPost(formidlingPath(treffId), formidlingBody(), eierIdent)
+        val response = httpPost(formidlingAllePath(treffId), formidlingBody(), eierIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
@@ -165,7 +168,7 @@ class JobbsøkerFormidlingKomponentTest {
         db.settSynlighet(ider[1], false)
 
         val response = httpPost(
-            formidlingPath(treffId),
+            formidlingEgnePath(treffId),
             formidlingBody(),
             navIdent = veilederIdent,
             groups = listOf(AzureAdRoller.jobbsøkerrettet),
@@ -188,7 +191,7 @@ class JobbsøkerFormidlingKomponentTest {
         val ider = db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
         db.settJobbsøkerStatus(ider[1], JobbsøkerStatus.SLETTET)
 
-        val response = httpPost(formidlingPath(treffId), formidlingBody(), eierIdent)
+        val response = httpPost(formidlingAllePath(treffId), formidlingBody(), eierIdent)
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
 
         assertThat(resultat.totalt).isEqualTo(1)
@@ -199,10 +202,25 @@ class JobbsøkerFormidlingKomponentTest {
     fun `bruker uten relevante roller får 403`() {
         val treffId = opprettTreffMedEier("A123456")
         val response = httpPost(
-            formidlingPath(treffId),
+            formidlingAllePath(treffId),
             formidlingBody(),
             navIdent = "B999999",
             groups = emptyList(),
+        )
+        assertThat(response.statusCode()).isEqualTo(403)
+    }
+
+    @Test
+    fun `veileder som ikke er eier får 403 på formidling-alle`() {
+        val eierIdent = "A123456"
+        val veilederIdent = "V200002"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        val response = httpPost(
+            formidlingAllePath(treffId),
+            formidlingBody(),
+            navIdent = veilederIdent,
+            groups = listOf(AzureAdRoller.jobbsøkerrettet),
         )
         assertThat(response.statusCode()).isEqualTo(403)
     }
@@ -223,13 +241,13 @@ class JobbsøkerFormidlingKomponentTest {
         db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId)
 
         val side1 = mapper.readValue<JobbsøkerFormidlingRespons>(
-            httpPost(formidlingPath(treffId), formidlingBody("antallPerSide" to 3, "side" to 1), eierIdent).body()
+            httpPost(formidlingAllePath(treffId), formidlingBody("antallPerSide" to 3, "side" to 1), eierIdent).body()
         )
         val side2 = mapper.readValue<JobbsøkerFormidlingRespons>(
-            httpPost(formidlingPath(treffId), formidlingBody("antallPerSide" to 3, "side" to 2), eierIdent).body()
+            httpPost(formidlingAllePath(treffId), formidlingBody("antallPerSide" to 3, "side" to 2), eierIdent).body()
         )
         val side3 = mapper.readValue<JobbsøkerFormidlingRespons>(
-            httpPost(formidlingPath(treffId), formidlingBody("antallPerSide" to 3, "side" to 3), eierIdent).body()
+            httpPost(formidlingAllePath(treffId), formidlingBody("antallPerSide" to 3, "side" to 3), eierIdent).body()
         )
 
         assertThat(side1.totalt).isEqualTo(7)
@@ -256,7 +274,7 @@ class JobbsøkerFormidlingKomponentTest {
         )
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(
-            httpPost(formidlingPath(treffId), formidlingBody("fritekst" to "ola"), eierIdent).body()
+            httpPost(formidlingAllePath(treffId), formidlingBody("fritekst" to "ola"), eierIdent).body()
         )
         assertThat(resultat.totalt).isEqualTo(1)
         assertThat(resultat.jobbsøkere.single().fornavn).isEqualTo("Ola")
@@ -275,7 +293,7 @@ class JobbsøkerFormidlingKomponentTest {
         )
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(
-            httpPost(formidlingPath(treffId), formidlingBody("fritekst" to "22222222222"), eierIdent).body()
+            httpPost(formidlingAllePath(treffId), formidlingBody("fritekst" to "22222222222"), eierIdent).body()
         )
         assertThat(resultat.totalt).isEqualTo(1)
         assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("22222222222")
