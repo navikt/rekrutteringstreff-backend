@@ -8,6 +8,9 @@ import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRequest
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
@@ -26,9 +29,14 @@ class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val jobbsøkerSokRepository: JobbsøkerSokRepository,
+    private val jobbsøkerFormidlingRepository: JobbsøkerFormidlingRepository =
+        JobbsøkerFormidlingRepository(dataSource),
 ) {
     constructor(dataSource: DataSource, jobbsøkerRepository: JobbsøkerRepository) : this(
-        dataSource, jobbsøkerRepository, JobbsøkerSokRepository(dataSource)
+        dataSource,
+        jobbsøkerRepository,
+        JobbsøkerSokRepository(dataSource),
+        JobbsøkerFormidlingRepository(dataSource),
     )
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
@@ -281,6 +289,13 @@ class JobbsøkerService(
 
     fun søkJobbsøkere(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons =
         jobbsøkerSokRepository.sok(treffId, request)
+
+    fun hentJobbsøkereForFormidling(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        kunForVeilederNavIdent: String? = null,
+    ): JobbsøkerFormidlingRespons =
+        jobbsøkerFormidlingRepository.hentForFormidling(treffId, request, kunForVeilederNavIdent)
 
     private fun finnNyeJobbsøkere(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,
