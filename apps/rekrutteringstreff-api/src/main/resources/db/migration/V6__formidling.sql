@@ -5,6 +5,7 @@ CREATE TABLE formidling
     rekrutteringstreff_id bigint      NOT NULL REFERENCES rekrutteringstreff (rekrutteringstreff_id),
     jobbsoker_id          bigint      NOT NULL REFERENCES jobbsoker (jobbsoker_id),
     arbeidsgiver_id       bigint      NOT NULL REFERENCES arbeidsgiver (arbeidsgiver_id),
+    stilling_id           uuid        NOT NULL,
     opprettet_tidspunkt   timestamptz NOT NULL DEFAULT now(),
     slettet_tidspunkt     timestamptz
 );
