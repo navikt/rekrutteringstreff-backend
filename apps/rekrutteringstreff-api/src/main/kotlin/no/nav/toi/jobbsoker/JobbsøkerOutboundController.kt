@@ -19,7 +19,6 @@ class JobbsøkerOutboundController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val kandidatsøkKlient: KandidatsøkKlient,
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamPersonTreffId = "personTreffId"
@@ -27,7 +26,7 @@ class JobbsøkerOutboundController(
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff/{$pathParamTreffId}"
         private const val eksternKandidatnummerPath = "$endepunktRekrutteringstreff/jobbsoker/{$pathParamPersonTreffId}/kandidatnummer"
     }
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.get(eksternKandidatnummerPath, hentKandidatnummerHandler())
     }
 

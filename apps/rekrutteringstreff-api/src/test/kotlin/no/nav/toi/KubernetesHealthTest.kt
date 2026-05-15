@@ -22,30 +22,10 @@ class KubernetesHealthTest {
         httpClient = httpClient
     )
     private val app = App(
+        ctx = testApplicationContext(
+            dataSource = TestDatabase().dataSource,
+        ),
         port = appPort,
-        authConfigs = emptyList<AuthenticationConfiguration>(),
-        dataSource = TestDatabase().dataSource,
-        jobbsøkerrettet = jobbsøkerrettet,
-        arbeidsgiverrettet = arbeidsgiverrettet,
-        utvikler = utvikler,
-        kandidatsokApiUrl = "",
-        kandidatsokScope = "",
-        rapidsConnection = TestRapid(),
-        accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "",
-            httpClient = httpClient
-        ),
-        modiaKlient = ModiaKlient(
-            modiaContextHolderUrl = "",
-            modiaContextHolderScope = "",
-            accessTokenClient = accessTokenClient,
-            httpClient = httpClient
-        ),
-        pilotkontorer = emptyList<String>(),
-        httpClient = httpClient,
-        leaderElection = LeaderElectionMock(),
     )
 
     @BeforeAll

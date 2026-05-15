@@ -25,6 +25,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
+import no.nav.toi.testApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -51,31 +52,24 @@ class RekrutteringstreffTest {
             httpClient = httpClient
         )
         app = App(
-            port = appPort,
-            authConfigs = listOf(
+            ctx = testApplicationContext(
+                    dataSource = db.dataSource,
+                    authConfigs = listOf(
                 AuthenticationConfiguration(
                     issuer = "http://localhost:$authPort/default",
                     jwksUri = "http://localhost:$authPort/default/jwks",
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
+                    modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,
                 modiaContextHolderScope = "",
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+                    pilotkontorer = listOf("1234"),
+            ),
+            port = appPort,
         ).also { it.start() }
 
     }

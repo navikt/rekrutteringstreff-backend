@@ -23,6 +23,7 @@ import java.net.http.HttpResponse
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
+import no.nav.toi.testApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -47,31 +48,24 @@ class RekrutteringstreffSokKomponenttest {
             httpClient = httpClient
         )
         app = App(
-            port = appPort,
-            authConfigs = listOf(
+            ctx = testApplicationContext(
+                    dataSource = db.dataSource,
+                    authConfigs = listOf(
                 AuthenticationConfiguration(
                     issuer = "http://localhost:$authPort/default",
                     jwksUri = "http://localhost:$authPort/default/jwks",
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
+                    modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,
                 modiaContextHolderScope = "",
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("0315"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+                    pilotkontorer = listOf("0315"),
+            ),
+            port = appPort,
         ).also { it.start() }
         authServer.start(port = authPort)
     }

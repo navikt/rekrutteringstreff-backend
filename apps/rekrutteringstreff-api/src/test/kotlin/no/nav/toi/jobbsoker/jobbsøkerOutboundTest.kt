@@ -13,6 +13,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.HttpURLConnection
 import java.util.*
+import no.nav.toi.testApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -43,31 +44,30 @@ class JobbsøkerOutboundTest {
         )
 
         app = App(
-            port = appPort,
-            authConfigs = listOf(
+            ctx = testApplicationContext(
+                    dataSource = db.dataSource,
+                    authConfigs = listOf(
                 AuthenticationConfiguration(
                     audience = audience,
                     issuer = issuerId,
                     jwksUri = jwksUri
                 )
             ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = wmInfo.httpBaseUrl,
-            kandidatsokScope = "scope",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
+                    modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,
                 modiaContextHolderScope = "",
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+                    pilotkontorer = listOf("1234"),
+                    kandidatsøkKlient = no.nav.toi.kandidatsok.KandidatsøkKlient(
+                kandidatsokApiUrl = wmInfo.httpBaseUrl,
+                kandidatsokScope = "scope",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            ),
+            port = appPort,
         ).also { it.start() }
     }
 

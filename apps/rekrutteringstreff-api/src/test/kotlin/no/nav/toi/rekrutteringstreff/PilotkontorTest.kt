@@ -37,6 +37,7 @@ import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.ZonedDateTime
+import no.nav.toi.testApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PilotkontorTest {
@@ -62,31 +63,19 @@ class PilotkontorTest {
     fun setUp() {
         authServer.start(port = authPort)
         app = App(
-            port = appPort,
-            authConfigs = listOf(
+            ctx = testApplicationContext(
+                    dataSource = database.dataSource,
+                    authConfigs = listOf(
                 AuthenticationConfiguration(
                     issuer = "http://localhost:$authPort/default",
                     jwksUri = "http://localhost:$authPort/default/jwks",
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            database.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet,
-            utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = AccessTokenClient(
-                clientId = "client-id",
-                secret = "secret",
-                azureUrl = "http://localhost:$authPort/token",
-                httpClient = httpClient
+                    modiaKlient = modiaKlient,
+                    pilotkontorer = listOf("1234"),
             ),
-            modiaKlient = modiaKlient,
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+            port = appPort,
         ).also { it.start() }
     }
 

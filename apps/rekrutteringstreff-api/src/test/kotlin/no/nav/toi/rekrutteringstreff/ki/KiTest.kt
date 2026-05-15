@@ -27,6 +27,7 @@ import java.sql.Types
 import java.time.ZonedDateTime
 import java.util.*
 import java.util.stream.Stream
+import no.nav.toi.testApplicationContext
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -62,31 +63,24 @@ class KiTest {
         )
 
         app = App(
-            port = appPort,
-            authConfigs = listOf(
+            ctx = testApplicationContext(
+                    dataSource = db.dataSource,
+                    authConfigs = listOf(
                 AuthenticationConfiguration(
                     issuer = "http://localhost:$authPort/default",
                     jwksUri = "http://localhost:$authPort/default/jwks",
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            db.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet,
-            utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
+                    modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,
                 modiaContextHolderScope = "",
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+                    pilotkontorer = listOf("1234"),
+            ),
+            port = appPort,
         ).also { it.start() }
     }
 

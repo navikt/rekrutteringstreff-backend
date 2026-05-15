@@ -29,7 +29,6 @@ import java.util.*
 class JobbsøkerController(
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamTreffId = "id"
@@ -47,7 +46,7 @@ class JobbsøkerController(
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         routes.post(søkPath, søkJobbsøkereHandler())
         routes.delete(slettPath, slettJobbsøkerHandler())

@@ -28,6 +28,7 @@ import java.net.HttpURLConnection.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
+import no.nav.toi.testApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -55,31 +56,30 @@ class JobbsøkerTest {
             httpClient = httpClient
         )
         app = App(
-            port = appPort,
-            authConfigs = listOf(
+            ctx = testApplicationContext(
+                    dataSource = db.dataSource,
+                    authConfigs = listOf(
                 AuthenticationConfiguration(
                     issuer = "http://localhost:$authPort/default",
                     jwksUri = "http://localhost:$authPort/default/jwks",
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = wmInfo.httpBaseUrl,
-            kandidatsokScope = "api://kandidatsok/.default",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
+                    modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,
                 modiaContextHolderScope = "api://modia/.default",
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+                    pilotkontorer = listOf("1234"),
+                    kandidatsøkKlient = no.nav.toi.kandidatsok.KandidatsøkKlient(
+                kandidatsokApiUrl = wmInfo.httpBaseUrl,
+                kandidatsokScope = "api://kandidatsok/.default",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            ),
+            port = appPort,
         ).also { it.start() }
         authServer.start(port = authPort)
     }

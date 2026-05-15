@@ -25,25 +25,10 @@ class SwaggerEndpointsTest {
         httpClient = httpClient
     )
     private val app = App(
-        port = appPort,
-        authConfigs = emptyList(),
-        dataSource = TestDatabase().dataSource,
-        jobbsøkerrettet = jobbsøkerrettet,
-        arbeidsgiverrettet = arbeidsgiverrettet,
-        utvikler = utvikler,
-        kandidatsokApiUrl = "",
-        kandidatsokScope = "",
-        rapidsConnection = TestRapid(),
-        accessTokenClient = accessTokenClient,
-        modiaKlient = ModiaKlient(
-            modiaContextHolderUrl = "",
-            modiaContextHolderScope = "",
-            accessTokenClient = accessTokenClient,
-            httpClient = httpClient
+        ctx = testApplicationContext(
+            dataSource = TestDatabase().dataSource,
         ),
-        pilotkontorer = emptyList(),
-        httpClient = httpClient,
-        leaderElection = LeaderElectionMock(),
+        port = appPort,
     )
 
     @BeforeAll

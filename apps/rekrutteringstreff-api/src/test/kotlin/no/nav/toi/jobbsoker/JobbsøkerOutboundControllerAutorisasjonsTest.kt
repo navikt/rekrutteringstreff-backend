@@ -60,6 +60,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.ZonedDateTime
 import java.util.UUID
+import no.nav.toi.testApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -99,31 +100,30 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
             httpClient = httpClient
         )
         app = App(
-            port = appPort,
-            authConfigs = listOf(
+            ctx = testApplicationContext(
+                    dataSource = database.dataSource,
+                    authConfigs = listOf(
                 AuthenticationConfiguration(
                     issuer = "http://localhost:$authPort/default",
                     jwksUri = "http://localhost:$authPort/default/jwks",
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-            dataSource = database.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = wmInfo.httpBaseUrl,
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
+                    modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,
                 modiaContextHolderScope = "",
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+                    pilotkontorer = listOf("1234"),
+                    kandidatsøkKlient = no.nav.toi.kandidatsok.KandidatsøkKlient(
+                kandidatsokApiUrl = wmInfo.httpBaseUrl,
+                kandidatsokScope = "",
+                accessTokenClient = accessTokenClient,
+                httpClient = httpClient
+            ),
+            ),
+            port = appPort,
         ).also { it.start() }
     }
 

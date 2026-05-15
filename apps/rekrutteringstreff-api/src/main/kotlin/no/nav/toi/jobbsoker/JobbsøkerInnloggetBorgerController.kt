@@ -20,7 +20,6 @@ import java.util.UUID
 
 class JobbsøkerInnloggetBorgerController(
     private val jobbsøkerService: JobbsøkerService,
-    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamTreffId = "id"
@@ -32,7 +31,7 @@ class JobbsøkerInnloggetBorgerController(
         private val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.post(svarJaPath, svarJaHandler())
         routes.post(svarNeiPath, svarNeiHandler())
         routes.get(borgerJobbsøkerPath, hentBorgerJobbsøkerHandler())

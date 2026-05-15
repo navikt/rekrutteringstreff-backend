@@ -9,13 +9,12 @@ import no.nav.toi.authenticatedUser
 
 class RekrutteringstreffSokController(
     private val sokService: RekrutteringstreffSokService,
-    routes: JavalinDefaultRoutingApi,
 ) {
     companion object {
         private const val sokPath = "/api/rekrutteringstreff/sok"
     }
 
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.get(sokPath, sokHandler())
     }
 

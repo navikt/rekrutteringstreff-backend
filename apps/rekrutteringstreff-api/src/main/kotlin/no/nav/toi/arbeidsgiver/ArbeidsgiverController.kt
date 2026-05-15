@@ -23,7 +23,6 @@ import java.util.*
 class ArbeidsgiverController(
     private val arbeidsgiverService: ArbeidsgiverService,
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
 ) {
 
     companion object {
@@ -46,7 +45,7 @@ class ArbeidsgiverController(
         return navIdent
     }
 
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.post(arbeidsgiverPath, leggTilArbeidsgiverHandler())
         routes.post(arbeidsgiverMedBehovPath, leggTilArbeidsgiverMedBehovHandler())
         routes.get(arbeidsgiverPath, hentArbeidsgivereHandler())

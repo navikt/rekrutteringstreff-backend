@@ -41,31 +41,24 @@ class AppExceptionHandlingTest {
             httpClient = httpClient
         )
         app = App(
+            ctx = testApplicationContext(
+                dataSource = TestDatabase().dataSource,
+                authConfigs = listOf(
+                    AuthenticationConfiguration(
+                        issuer = "http://localhost:$authPort/default",
+                        jwksUri = "http://localhost:$authPort/default/jwks",
+                        audience = "rekrutteringstreff-audience"
+                    )
+                ),
+                modiaKlient = ModiaKlient(
+                    modiaContextHolderUrl = wmInfo.httpBaseUrl,
+                    modiaContextHolderScope = "",
+                    accessTokenClient = accessTokenClient,
+                    httpClient = httpClient
+                ),
+                pilotkontorer = listOf("1234"),
+            ),
             port = port,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = TestDatabase().dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
         ).also { it.start() }
 
         authServer.start(port = authPort)

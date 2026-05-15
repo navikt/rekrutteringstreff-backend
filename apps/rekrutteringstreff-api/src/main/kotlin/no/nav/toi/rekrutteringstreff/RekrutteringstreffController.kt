@@ -22,7 +22,6 @@ class RekrutteringstreffController(
     private val rekrutteringstreffService: RekrutteringstreffService,
     private val eierService: EierService,
     private val kiLoggService: KiLoggService,
-    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamTreffId = "id"
@@ -41,7 +40,7 @@ class RekrutteringstreffController(
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler())
         routes.get("${endepunktRekrutteringstreff}/{id}", hentRekrutteringstreffHandler())
         routes.put("${endepunktRekrutteringstreff}/{id}", oppdaterRekrutteringstreffHandler())

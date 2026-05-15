@@ -19,7 +19,6 @@ class InnleggController(
     private val innleggService: InnleggService,
     private val kiLoggService: KiLoggService,
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
@@ -31,7 +30,7 @@ class InnleggController(
         private const val INNLEGG_ITEM_PATH = "$INNLEGG_BASE_PATH/{$INNLEGG_ID_PARAM}"
     }
 
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.get(INNLEGG_BASE_PATH, hentAlleInnleggForTreff())
         routes.get(INNLEGG_ITEM_PATH, hentEttInnlegg())
         routes.post(INNLEGG_BASE_PATH, opprettInnlegg())

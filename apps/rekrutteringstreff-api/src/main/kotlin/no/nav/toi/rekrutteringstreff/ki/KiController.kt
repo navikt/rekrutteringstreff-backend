@@ -18,14 +18,13 @@ import java.util.*
 class KiController (
     private val kiLoggRepository: KiLoggRepository,
     private val openAiClient: OpenAiClient,
-    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamTreffId = "id"
         private const val baseUrl = "/api/rekrutteringstreff/{$pathParamTreffId}/ki"
     }
 
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.post("$baseUrl/valider", validerOgLoggHandler())
         routes.put("$baseUrl/logg/{loggId}/lagret", oppdaterLagretHandler())
         routes.put("$baseUrl/logg/{loggId}/manuell", oppdaterManuellHandler())

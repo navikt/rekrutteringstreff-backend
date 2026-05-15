@@ -13,7 +13,6 @@ import java.util.*
 
 class EierController(
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -22,7 +21,7 @@ class EierController(
         private const val slettEiereEndepunkt = "$eiereEndepunkt/{navIdent}"
     }
 
-    init {
+    fun register(routes: JavalinDefaultRoutingApi) {
         routes.get(eiereEndepunkt, hentEiere())
         routes.put(megEndepunkt, leggTilMeg())
         routes.delete(slettEiereEndepunkt, slettEier())
