@@ -170,7 +170,9 @@ fun testApplicationContext(
         accessTokenClient = AccessTokenClient(clientId = "test", secret = "test", azureUrl = "", httpClient = httpClient),
         httpClient = httpClient
     ),
-): ApplicationContext = object : ApplicationContext(dataSource, rapidsConnection) {
+): ApplicationContext = object : ApplicationContext() {
+    override val dataSource = dataSource
+    override val rapidsConnection = rapidsConnection
     override val authConfigs = authConfigs
     override val rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
         jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,

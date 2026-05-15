@@ -1,13 +1,11 @@
 package no.nav.toi
 
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.javalin.Javalin
 import io.javalin.config.JavalinConfig
 import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
-import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.ExceptionMapping.exceptionMapping
 import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
@@ -105,9 +103,7 @@ class App(
 }
 
 fun main() {
-    val dataSource = createDataSource()
-    val rapidsConnection = RapidApplication.create(System.getenv(), builder = { withHttpPort(9000) })
-    val ctx = ApplicationContext(dataSource, rapidsConnection)
+    val ctx = ApplicationContext()
     val app = App(ctx)
     Runtime.getRuntime().addShutdownHook(Thread { app.close() })
     app.start()
@@ -145,27 +141,3 @@ fun nowOslo(): ZonedDateTime = ZonedDateTime.now().atOslo()
 fun ZonedDateTime.atOslo(): ZonedDateTime = this.withZoneSameInstant(of("Europe/Oslo")).truncatedTo(MILLIS)
 
 fun Instant.atOslo(): ZonedDateTime = this.atZone(of("Europe/Oslo")).truncatedTo(MILLIS)
-
-
-private fun getenv(key: String): String =
-    System.getenv(key) ?: throw NullPointerException("Det finnes ingen miljøvariabel med navn [$key]")
-
-private fun createDataSource(): DataSource =
-    HikariConfig().apply {
-        val base = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_JDBC_URL")
-        jdbcUrl = "$base&reWriteBatchedInserts=true"
-        username = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_USERNAME")
-        password = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_PASSWORD")
-        driverClassName = "org.postgresql.Driver"  // PostgreSQL driver
-        maximumPoolSize = 15  // Maks 15 samtidige tilkoblinger
-        minimumIdle = 3       // Behold minst 3 ledige tilkoblinger
-        isAutoCommit = true   // Auto-commit hver SQL-operasjon
-        transactionIsolation = "TRANSACTION_REPEATABLE_READ"  // PostgreSQL standard
-        initializationFailTimeout = 10_000  // Vent maks 10 sekunder ved oppstart feil
-        connectionTimeout = 30_000  // Vent maks 30 sekunder på ny tilkobling
-        idleTimeout = 600_000  // 10 minutter - lukk ledige tilkoblinger etter dette
-        maxLifetime = 1_800_000  // 30 minutter - lukk og erstatt tilkoblinger etter dette
-        leakDetectionThreshold = 60_000  // Logg advarsel hvis tilkobling holdes > 60 sekunder
-        poolName = "RekrutteringstreffPool"  // Navn for logging/debugging
-        validate()
-    }.let(::HikariDataSource)

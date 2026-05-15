@@ -1,6 +1,9 @@
 package no.nav.toi
 
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
@@ -34,12 +37,36 @@ import javax.sql.DataSource
 
 @Suppress("MemberVisibilityCanBePrivate")
 open class ApplicationContext(
-    val dataSource: DataSource,
-    val rapidsConnection: RapidsConnection,
     private val env: Map<String, String> = System.getenv()
 ) {
     private fun getenv(key: String): String =
         env[key] ?: throw NullPointerException("Det finnes ingen miljøvariabel med navn [$key]")
+
+    // Infrastruktur
+    open val dataSource: DataSource by lazy {
+        HikariConfig().apply {
+            val base = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_JDBC_URL")
+            jdbcUrl = "$base&reWriteBatchedInserts=true"
+            username = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_USERNAME")
+            password = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_PASSWORD")
+            driverClassName = "org.postgresql.Driver"
+            maximumPoolSize = 15
+            minimumIdle = 3
+            isAutoCommit = true
+            transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+            initializationFailTimeout = 10_000
+            connectionTimeout = 30_000
+            idleTimeout = 600_000
+            maxLifetime = 1_800_000
+            leakDetectionThreshold = 60_000
+            poolName = "RekrutteringstreffPool"
+            validate()
+        }.let(::HikariDataSource)
+    }
+
+    open val rapidsConnection: RapidsConnection by lazy {
+        RapidApplication.create(env, builder = { withHttpPort(9000) })
+    }
 
     // Konfigurasjon (lazy slik at tester kan override uten at env-oppslag trigges)
     open val authConfigs: List<AuthenticationConfiguration> by lazy {
@@ -110,32 +137,34 @@ open class ApplicationContext(
         )
     }
 
-    // Repositories
-    open val jobbsøkerRepository: JobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
-    open val arbeidsgiverRepository: ArbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
-    open val rekrutteringstreffRepository: RekrutteringstreffRepository = RekrutteringstreffRepository(dataSource)
-    open val eierRepository: EierRepository = EierRepository(dataSource)
-    open val innleggRepository: InnleggRepository = InnleggRepository(dataSource)
-    open val aktivitetskortRepository: AktivitetskortRepository = AktivitetskortRepository(dataSource)
-    open val kiLoggRepository: KiLoggRepository = KiLoggRepository(dataSource)
-    open val sokRepository: RekrutteringstreffSokRepository = RekrutteringstreffSokRepository(dataSource)
-    open val healthRepository: HealthRepository = HealthRepository(dataSource)
+    // Repositories (lazy fordi dataSource er lazy)
+    open val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
+    open val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
+    open val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
+    open val eierRepository by lazy { EierRepository(dataSource) }
+    open val innleggRepository by lazy { InnleggRepository(dataSource) }
+    open val aktivitetskortRepository by lazy { AktivitetskortRepository(dataSource) }
+    open val kiLoggRepository by lazy { KiLoggRepository(dataSource) }
+    open val sokRepository by lazy { RekrutteringstreffSokRepository(dataSource) }
+    open val healthRepository by lazy { HealthRepository(dataSource) }
 
-    // Services
-    open val jobbsøkerService: JobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
-    open val arbeidsgiverService: ArbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
-    open val eierService: EierService = EierService(eierRepository, rekrutteringstreffRepository, dataSource)
-    open val rekrutteringstreffService: RekrutteringstreffService = RekrutteringstreffService(
-        dataSource,
-        rekrutteringstreffRepository,
-        jobbsøkerRepository,
-        arbeidsgiverRepository,
-        jobbsøkerService,
-        eierService
-    )
-    open val innleggService: InnleggService = InnleggService(innleggRepository, rekrutteringstreffService)
-    open val kiLoggService: KiLoggService = KiLoggService(kiLoggRepository)
-    open val sokService: RekrutteringstreffSokService = RekrutteringstreffSokService(sokRepository)
+    // Services (lazy fordi repositories er lazy)
+    open val jobbsøkerService by lazy { JobbsøkerService(dataSource, jobbsøkerRepository) }
+    open val arbeidsgiverService by lazy { ArbeidsgiverService(dataSource, arbeidsgiverRepository, JacksonConfig.mapper) }
+    open val eierService by lazy { EierService(eierRepository, rekrutteringstreffRepository, dataSource) }
+    open val rekrutteringstreffService by lazy {
+        RekrutteringstreffService(
+            dataSource,
+            rekrutteringstreffRepository,
+            jobbsøkerRepository,
+            arbeidsgiverRepository,
+            jobbsøkerService,
+            eierService
+        )
+    }
+    open val innleggService by lazy { InnleggService(innleggRepository, rekrutteringstreffService) }
+    open val kiLoggService by lazy { KiLoggService(kiLoggRepository) }
+    open val sokService by lazy { RekrutteringstreffSokService(sokRepository) }
 
     // Controllere (lazy fordi de avhenger av services)
     open val arbeidsgiverController by lazy { ArbeidsgiverController(arbeidsgiverService, eierService) }

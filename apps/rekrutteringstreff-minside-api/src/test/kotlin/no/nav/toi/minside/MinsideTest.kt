@@ -62,7 +62,9 @@ class MinsideTest {
         )
 
         private val rekrutteringsTreffApiApp = no.nav.toi.App(
-            ctx = object : ApplicationContext(db.dataSource, TestRapid()) {
+            ctx = object : ApplicationContext() {
+                override val dataSource = db.dataSource
+                override val rapidsConnection = TestRapid()
                 override val authConfigs = listOf(
                     AuthenticationConfiguration(
                         issuer = "http://localhost:$authPort/default",
