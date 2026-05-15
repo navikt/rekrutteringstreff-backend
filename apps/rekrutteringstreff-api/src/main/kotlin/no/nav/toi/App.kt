@@ -48,6 +48,7 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MILLIS
 import java.util.*
 import javax.sql.DataSource
+import kotlin.system.exitProcess
 
 class App(
     private val port: Int,
@@ -266,7 +267,8 @@ class App(
                 rapidsConnection.start()
             } catch (e: Exception) {
                 log.error("RapidsConnection feilet, avslutter applikasjonen", e)
-                System.exit(1)
+                close()
+                exitProcess(1)
             }
         }.start()
     }
