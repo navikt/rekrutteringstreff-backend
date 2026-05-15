@@ -25,7 +25,7 @@ class RekrutteringstreffOpprydningScheduler(
         private const val ANTALL_MÅNEDER_ETTER_KI_LOGG_OPPRETTET_FOR_SLETTING = 6
     }
 
-    private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 60, 60, TimeUnit.DAYS)
+    private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 1, 1, TimeUnit.DAYS)
 
     override fun start() {
         scheduler.start()
