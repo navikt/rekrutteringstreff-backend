@@ -3,7 +3,10 @@ package no.nav.toi.jobbsoker.synlighet
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.opentelemetry.instrumentation.annotations.WithSpan
+import no.nav.toi.DefaultScheduler
 import no.nav.toi.LeaderElectionInterface
+import no.nav.toi.ScheduledTask
+import no.nav.toi.Scheduler
 import no.nav.toi.SecureLog
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.log
@@ -28,72 +31,44 @@ import java.util.concurrent.atomic.AtomicBoolean
 class SynlighetsBehovScheduler(
     private val jobbsøkerService: JobbsøkerService,
     private val rapidsConnection: RapidsConnection,
-    private val leaderElection: LeaderElectionInterface,
-) {
-    private val scheduler = Executors.newScheduledThreadPool(1)
-    private val isRunning = AtomicBoolean(false)
+    leaderElection: LeaderElectionInterface,
+) : ScheduledTask, Scheduler {
+
     private val secureLogger: Logger = SecureLog(log)
+    private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 60, 60, TimeUnit.SECONDS)
 
-    fun start() {
-        log.info("Starter SynlighetsBehovScheduler")
-
-        val now = LocalDateTime.now()
-        val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
-
-        // Kjører hvert minutt
-        scheduler.scheduleAtFixedRate(::behandleJobbsøkereUtenSynlighet, initialDelay, 60, TimeUnit.SECONDS)
+    override fun start() {
+        scheduler.start()
     }
 
-    fun stop() {
-        log.info("Stopper SynlighetsBehovScheduler")
-        scheduler.shutdown()
-        try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow()
-            }
-        } catch (e: InterruptedException) {
-            scheduler.shutdownNow()
-        }
+    override fun stop() {
+        scheduler.stop()
+    }
+
+    override fun wrapJobbkjøring() {
+        scheduler.wrapJobbkjøring()
     }
 
     @WithSpan
-    fun behandleJobbsøkereUtenSynlighet() {
-        log.info("Kjører SynlighetsBehovScheduler for å finne jobbsøkere uten evaluert synlighet")
-        if (isRunning.getAndSet(true)) {
-            log.info("Forrige kjøring av SynlighetsBehovScheduler er ikke ferdig, skipper denne kjøringen.")
+    override fun kjørJobb() {
+        val fødselsnumreUtenSynlighet = jobbsøkerService.hentFødselsnumreUtenEvaluertSynlighet()
+
+        if (fødselsnumreUtenSynlighet.isEmpty()) {
+            log.debug("Ingen jobbsøkere uten evaluert synlighet.")
             return
         }
 
-        if (leaderElection.isLeader().not()) {
-            log.info("Kjøring av SynlighetsBehovScheduler skippes, instansen er ikke leader.")
-            isRunning.set(false)
-            return
+        log.info("Fant ${fødselsnumreUtenSynlighet.size} jobbsøkere uten evaluert synlighet - trigger need-meldinger")
+
+        fødselsnumreUtenSynlighet.forEach { fnr ->
+            try {
+                publiserSynlighetsBehov(fnr)
+            } catch (e: Exception) {
+                log.error("Kunne ikke publisere synlighetsbehov fra scheduler", e)
+            }
         }
 
-        try {
-            val fødselsnumreUtenSynlighet = jobbsøkerService.hentFødselsnumreUtenEvaluertSynlighet()
-
-            if (fødselsnumreUtenSynlighet.isEmpty()) {
-                log.debug("Ingen jobbsøkere uten evaluert synlighet.")
-                return
-            }
-
-            log.info("Fant ${fødselsnumreUtenSynlighet.size} jobbsøkere uten evaluert synlighet - trigger need-meldinger")
-
-            fødselsnumreUtenSynlighet.forEach { fnr ->
-                try {
-                    publiserSynlighetsBehov(fnr)
-                } catch (e: Exception) {
-                    log.error("Kunne ikke publisere synlighetsbehov fra scheduler", e)
-                }
-            }
-
-            log.info("Ferdig med å trigge need-meldinger for ${fødselsnumreUtenSynlighet.size} jobbsøkere")
-        } catch (e: Exception) {
-            log.error("Feil under kjøring av SynlighetsBehovScheduler", e)
-        } finally {
-            isRunning.set(false)
-        }
+        log.info("Ferdig med å trigge need-meldinger for ${fødselsnumreUtenSynlighet.size} jobbsøkere")
     }
 
     private fun publiserSynlighetsBehov(fodselsnummer: String) {

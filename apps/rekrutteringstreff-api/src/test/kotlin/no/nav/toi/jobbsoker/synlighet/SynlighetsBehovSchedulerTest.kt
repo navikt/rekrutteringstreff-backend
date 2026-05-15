@@ -60,7 +60,7 @@ class SynlighetsBehovSchedulerTest {
         assertThat(utenSynlighet).contains(fnr)
 
         // Kjør scheduler
-        scheduler.behandleJobbsøkereUtenSynlighet()
+        scheduler.kjørJobb()
 
         // Verifiser at need-melding ble publisert
         assertThat(rapid.inspektør.size).isEqualTo(1)
@@ -90,7 +90,7 @@ class SynlighetsBehovSchedulerTest {
         assertThat(utenSynlighet).doesNotContain(fnr)
 
         // Kjør scheduler
-        scheduler.behandleJobbsøkereUtenSynlighet()
+        scheduler.kjørJobb()
 
         // Verifiser at ingen need-melding ble publisert
         assertThat(rapid.inspektør.size).isEqualTo(0)
@@ -112,7 +112,7 @@ class SynlighetsBehovSchedulerTest {
         jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
 
         // Kjør scheduler
-        scheduler.behandleJobbsøkereUtenSynlighet()
+        scheduler.kjørJobb()
 
         // Verifiser at need-meldinger ble publisert for begge
         assertThat(rapid.inspektør.size).isEqualTo(2)
@@ -139,7 +139,7 @@ class SynlighetsBehovSchedulerTest {
         jobbsøkerService.oppdaterSynlighetFraEvent(fnrMedSynlighet, true, Instant.now())
 
         // Kjør scheduler
-        scheduler.behandleJobbsøkereUtenSynlighet()
+        scheduler.kjørJobb()
 
         // Verifiser at kun jobbsøker uten synlighet fikk need-melding
         assertThat(rapid.inspektør.size).isEqualTo(1)
@@ -154,7 +154,7 @@ class SynlighetsBehovSchedulerTest {
         // Ingen jobbsøkere i databasen
 
         // Kjør scheduler
-        scheduler.behandleJobbsøkereUtenSynlighet()
+        scheduler.kjørJobb()
 
         // Verifiser at ingen meldinger ble publisert
         assertThat(rapid.inspektør.size).isEqualTo(0)
@@ -176,7 +176,7 @@ class SynlighetsBehovSchedulerTest {
         jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker), treffId2, "testperson")
 
         // Kjør scheduler
-        scheduler.behandleJobbsøkereUtenSynlighet()
+        scheduler.kjørJobb()
 
         // Verifiser at kun én need-melding ble publisert (DISTINCT fødselsnummer)
         assertThat(rapid.inspektør.size).isEqualTo(1)
@@ -199,7 +199,7 @@ class SynlighetsBehovSchedulerTest {
         jobbsøkerService.markerSlettet(personTreffId, treffId, "testperson")
 
         // Kjør scheduler
-        scheduler.behandleJobbsøkereUtenSynlighet()
+        scheduler.kjørJobb()
 
         // Verifiser at ingen need-melding ble publisert (slettet jobbsøker skal ignoreres)
         assertThat(rapid.inspektør.size).isEqualTo(0)

@@ -81,7 +81,7 @@ class AktivitetskortTransaksjonTest {
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerService.inviter(listOf(personTreffId), treffId, "Z123456")
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.INVITERT)
         assertThat(usendteEtterpå).isNotEmpty()
@@ -124,7 +124,7 @@ class AktivitetskortTransaksjonTest {
         val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
         db.registrerTreffEndretHendelse(treffId, fødselsnummer, endringer)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         val usendteEtterpå = aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON)
         assertThat(usendteEtterpå).isNotEmpty()

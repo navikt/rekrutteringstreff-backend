@@ -6,8 +6,11 @@ import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.instrumentation.annotations.WithSpan
+import no.nav.toi.DefaultScheduler
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionInterface
+import no.nav.toi.ScheduledTask
+import no.nav.toi.Scheduler
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.log
@@ -30,66 +33,39 @@ class JobbsøkerhendelserScheduler(
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val rapidsConnection: RapidsConnection,
     private val objectMapper: ObjectMapper,
-    private val leaderElection: LeaderElectionInterface,
-) {
+    leaderElection: LeaderElectionInterface,
+) : ScheduledTask, Scheduler {
 
-    private val scheduler = Executors.newScheduledThreadPool(1)
-    private val isRunning = AtomicBoolean(false)
+    private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 60, 10, TimeUnit.SECONDS)
 
-    fun start() {
-        log.info("Starter JobbsøkerhendelserScheduler")
-
-        val now = LocalDateTime.now()
-        val initialDelay = Duration.between(now, now.plusMinutes(1).truncatedTo(ChronoUnit.MINUTES)).toSeconds()
-
-        scheduler.scheduleAtFixedRate(::behandleJobbsøkerHendelser, initialDelay, 10, TimeUnit.SECONDS)
+    override fun start() {
+        scheduler.start()
     }
 
-    fun stop() {
-        log.info("Stopper JobbsøkerhendelserScheduler")
-        scheduler.shutdown()
-        try {
-            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                scheduler.shutdownNow()
-            }
-        } catch (e: InterruptedException) {
-            scheduler.shutdownNow()
-        }
+    override fun stop() {
+        scheduler.stop()
+    }
+
+    override fun wrapJobbkjøring() {
+        scheduler.wrapJobbkjøring()
     }
 
     @WithSpan
-    fun behandleJobbsøkerHendelser() {
-        if (isRunning.getAndSet(true)) {
-            log.info("Forrige kjøring av JobbsøkerhendelserScheduler er ikke ferdig, skipper denne kjøringen.")
+    override fun kjørJobb() {
+        val alleUsendteHendelser = hentAlleUsendteHendelser()
+
+        if (alleUsendteHendelser.isEmpty()) {
+            log.info("Ingen usendte jobbsøker-hendelser å behandle for aktivitetskort.")
             return
         }
 
-        if (leaderElection.isLeader().not()) {
-            log.info("Kjøring av JobbsøkerhendelserScheduler skippes, instansen er ikke leader.")
-            isRunning.set(false)
-            return
+        log.info("Starter behandling av ${alleUsendteHendelser.size} usendte jobbsøker-hendelser for aktivitetskort")
+
+        alleUsendteHendelser.forEach { hendelse ->
+            behandleHendelse(hendelse)
         }
 
-        try {
-            val alleUsendteHendelser = hentAlleUsendteHendelser()
-
-            if (alleUsendteHendelser.isEmpty()) {
-                log.info("Ingen usendte jobbsøker-hendelser å behandle for aktivitetskort.")
-                return
-            }
-
-            log.info("Starter behandling av ${alleUsendteHendelser.size} usendte jobbsøker-hendelser for aktivitetskort")
-
-            alleUsendteHendelser.forEach { hendelse ->
-                behandleHendelse(hendelse)
-            }
-
-            log.info("Ferdig med behandling av usendte jobbsøker-hendelser for aktivitetskort")
-        } catch (e: Exception) {
-            log.error("Feil under kjøring av JobbsøkerhendelserScheduler", e)
-        } finally {
-            isRunning.set(false)
-        }
+        log.info("Ferdig med behandling av usendte jobbsøker-hendelser for aktivitetskort")
     }
 
     private fun hentAlleUsendteHendelser(): List<JobbsøkerHendelseForAktivitetskort> {
