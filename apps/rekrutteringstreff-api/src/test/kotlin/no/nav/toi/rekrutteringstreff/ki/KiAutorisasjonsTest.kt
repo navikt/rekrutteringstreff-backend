@@ -11,19 +11,10 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
-import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
-import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.ki.KiLoggInsert
-import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.TEST_OPENAI_PATH
 import no.nav.toi.rekrutteringstreff.ki.ValiderMedLoggRequestUtenTreffIdDto
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -61,21 +52,7 @@ class KiAutorisasjonsTest {
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
     private val database = TestDatabase()
-    private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
-    private val kiLoggRepository = KiLoggRepository(database.dataSource)
-    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
-    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
-    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
-
-    private val rekrutteringstreffService = RekrutteringstreffService(
-        database.dataSource,
-        rekrutteringstreffRepository = rekrutteringstreffRepository,
-        jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper),
-        arbeidsgiverRepository = arbeidsgiverRepository,
-        jobbsøkerService = jobbsøkerService,
-        eierService = EierService(EierRepository(database.dataSource), rekrutteringstreffRepository, database.dataSource)
-    )
-
+    private lateinit var ctx: ApplicationContext
     private lateinit var app: App
 
     @BeforeAll
@@ -87,8 +64,7 @@ class KiAutorisasjonsTest {
             azureUrl = "http://localhost:$authPort/token",
             httpClient = httpClient
         )
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = database.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -104,9 +80,8 @@ class KiAutorisasjonsTest {
                 httpClient = httpClient
             ),
                     pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -162,10 +137,10 @@ class KiAutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
+        ctx.rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
 
-        kiLoggRepository.insert(
+        ctx.kiLoggRepository.insert(
             KiLoggInsert(
                 treffId = gyldigRekrutteringstreff.somUuid,
                 feltType = "tittel",
@@ -180,7 +155,7 @@ class KiAutorisasjonsTest {
                 svartidMs = 10,
             )
         )
-        gyldigLoggId = kiLoggRepository.list(gyldigRekrutteringstreff.somUuid, "tittel", 10, 0).first().id
+        gyldigLoggId = ctx.kiLoggRepository.list(gyldigRekrutteringstreff.somUuid, "tittel", 10, 0).first().id
     }
 
     @AfterEach

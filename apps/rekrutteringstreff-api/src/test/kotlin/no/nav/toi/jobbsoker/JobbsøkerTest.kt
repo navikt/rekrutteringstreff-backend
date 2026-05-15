@@ -18,7 +18,6 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreffendringer
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
@@ -40,12 +39,11 @@ class JobbsøkerTest {
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
 
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
 
         val mapper = JacksonConfig.mapper
     }
-
-    private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo)  {
@@ -55,8 +53,7 @@ class JobbsøkerTest {
             azureUrl = "http://localhost:$authPort/token",
             httpClient = httpClient
         )
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = db.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -78,9 +75,8 @@ class JobbsøkerTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
         authServer.start(port = authPort)
     }
 
@@ -223,7 +219,7 @@ class JobbsøkerTest {
         db.leggTilJobbsøkere(jobbsøkere3)
         assertThat(db.hentAlleRekrutteringstreff().size).isEqualTo(3)
         assertThat(db.hentAlleJobbsøkere().size).isEqualTo(4)
-        eierRepository.leggTil(treffId2, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId2, listOf("A123456"))
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId2.somUuid}/jobbsoker/sok",
             "{}",
@@ -254,7 +250,7 @@ class JobbsøkerTest {
       "lagtTilAvNavn" : "Test Testesen"
     }]
 """.trimIndent()
-        eierRepository.leggTil(treffId, listOf("testperson"))
+        ctx.eierRepository.leggTil(treffId, listOf("testperson"))
 
         val postResponse = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker",
@@ -311,7 +307,7 @@ class JobbsøkerTest {
                 Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent,JobbsøkerStatus.LAGT_TIL)
             )
         )
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val response = httpGet(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/hendelser",
@@ -361,7 +357,7 @@ class JobbsøkerTest {
         { "personTreffIder": ["${personTreffIder.first()}", "${personTreffIder.last()}"] }
     """.trimIndent()
 
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/$treffId/jobbsoker/inviter",
@@ -394,7 +390,7 @@ class JobbsøkerTest {
         val service = JobbsøkerService(db.dataSource, repository, JobbsøkerSokRepository(db.dataSource))
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
         val fødselsnummer = Fødselsnummer("12345678901")
 
         // Legg til jobbsøker
@@ -437,7 +433,7 @@ class JobbsøkerTest {
     fun `hentJobbsøker skal inkludere RekrutteringstreffendringerDto som hendelseData i responsen`() {
         val token = authServer.lagToken(authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
         val fødselsnummer = Fødselsnummer("12345678901")
 
         val jobbsøker = Jobbsøker(
@@ -537,7 +533,7 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
         val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val requestBody = """{ "personTreffId": "$personTreffId", "svar": true }"""
 
@@ -567,7 +563,7 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
         val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val requestBody = """{ "personTreffId": "$personTreffId", "svar": false }"""
 
@@ -597,7 +593,7 @@ class JobbsøkerTest {
         )
         db.leggTilJobbsøkere(listOf(jobbsøker))
         val personTreffId = db.hentAlleJobbsøkere().first().personTreffId
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val requestBody = """{ "personTreffId": "$personTreffId", "svar": null }"""
 

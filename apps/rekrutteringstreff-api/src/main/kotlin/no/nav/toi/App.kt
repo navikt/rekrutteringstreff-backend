@@ -72,11 +72,7 @@ class App(
 
     fun startRR() {
         log.info("Starting RapidsConnection")
-        // Trigger opprettelse av lyttere (de registrerer seg selv mot rapidsConnection i init)
-        ctx.aktivitetskortFeilLytter
-        ctx.minsideVarselSvarLytter
-        ctx.synlighetsLytter
-        ctx.synlighetsBehovLytter
+        ctx.registerLyttere()
         Thread {
             try {
                 ctx.rapidsConnection.start()

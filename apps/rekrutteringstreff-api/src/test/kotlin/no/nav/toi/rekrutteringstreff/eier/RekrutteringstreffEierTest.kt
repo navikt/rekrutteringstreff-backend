@@ -12,15 +12,9 @@ import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
-import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
-import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -41,13 +35,6 @@ class RekrutteringstreffEierTest {
         private val authPort = 18018
         private val database = TestDatabase()
         private val appPort = ubruktPortnr()
-        private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
-        private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
-        private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
-        private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
-        private val eierRepository = EierRepository(database.dataSource)
-        private val eierService = EierService(eierRepository, rekrutteringstreffRepository, database.dataSource)
-        private val rekrutteringstreffService = RekrutteringstreffService(database.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, eierService)
 
         private val accessTokenClient = AccessTokenClient(
             clientId = "clientId",
@@ -56,6 +43,7 @@ class RekrutteringstreffEierTest {
             httpClient = httpClient
         )
 
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
     }
 
@@ -63,27 +51,24 @@ class RekrutteringstreffEierTest {
     fun setUp(wmInfo: WireMockRuntimeInfo) {
         authServer.start(port = authPort)
 
-        app = App(
-            ctx = testApplicationContext(
-                    dataSource = database.dataSource,
-                    authConfigs = listOf(
+        ctx = testApplicationContext(
+            dataSource = database.dataSource,
+            authConfigs = listOf(
                 AuthenticationConfiguration(
                     issuer = "http://localhost:$authPort/default",
                     jwksUri = "http://localhost:$authPort/default/jwks",
                     audience = "rekrutteringstreff-audience"
                 )
             ),
-                    modiaKlient = ModiaKlient(
+            modiaKlient = ModiaKlient(
                 modiaContextHolderUrl = wmInfo.httpBaseUrl,
                 modiaContextHolderScope = "",
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-                    pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
+            pilotkontorer = listOf("1234"),
         )
-
+        app = App(ctx = ctx, port = appPort)
 
         app.start()
         waitForServerToBeReady()
@@ -143,7 +128,7 @@ class RekrutteringstreffEierTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"))
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"))
 
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
@@ -177,7 +162,7 @@ class RekrutteringstreffEierTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
             token.serialize()
@@ -238,7 +223,7 @@ class RekrutteringstreffEierTest {
             token.serialize()
         )
 
-        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        val hendelser = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
         assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_LAGT_TIL" && it.aktørIdentifikasjon == navIdent }
     }
 
@@ -260,7 +245,7 @@ class RekrutteringstreffEierTest {
         val oppdatertTreff = database.hentAlleRekrutteringstreff().first()
         assertThat(oppdatertTreff.kontorer).contains("1234")
 
-        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        val hendelser = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
         assertThat(hendelser).anyMatch {
             it.hendelsestype == "KONTOR_LAGT_TIL" && it.subjektId == "1234" && it.aktørIdentifikasjon == navIdent
         }
@@ -284,7 +269,7 @@ class RekrutteringstreffEierTest {
         val oppdatertTreff = database.hentAlleRekrutteringstreff().first()
         assertThat(oppdatertTreff.kontorer.count { it == "1234" }).isEqualTo(1)
 
-        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        val hendelser = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
         assertThat(hendelser.filter { it.hendelsestype == "KONTOR_LAGT_TIL" && it.subjektId == "1234" && it.aktørIdentifikasjon == navIdent })
             .isEmpty()
     }
@@ -296,14 +281,14 @@ class RekrutteringstreffEierTest {
         val token = authServer.lagToken(authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val treff = database.hentAlleRekrutteringstreff().first()
-        eierRepository.leggTil(treff.id, listOf(skalSlettes))
+        ctx.eierRepository.leggTil(treff.id, listOf(skalSlettes))
 
         httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/$skalSlettes",
             token.serialize()
         )
 
-        val hendelser = rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        val hendelser = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
         assertThat(hendelser).anyMatch { it.hendelsestype == "EIER_FJERNET" && it.aktørIdentifikasjon == navIdent }
     }
 
@@ -314,7 +299,7 @@ class RekrutteringstreffEierTest {
         val token = authServer.lagToken(authPort, navIdent = ikkeEier)
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
-        eierRepository.leggTil(treff.id, listOf("B654321"))
+        ctx.eierRepository.leggTil(treff.id, listOf("B654321"))
 
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/B654321",
@@ -354,7 +339,7 @@ class RekrutteringstreffEierTest {
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),
         )
-        rekrutteringstreffService.opprett(originalDto)
+        ctx.rekrutteringstreffService.opprett(originalDto)
     }
 
     private fun waitForServerToBeReady() {

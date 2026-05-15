@@ -7,23 +7,16 @@ import io.mockk.verify
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.App
+import no.nav.toi.ApplicationContext
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
-import no.nav.toi.LeaderElectionMock
-import no.nav.toi.TestRapid
 import no.nav.toi.httpClient
 import no.nav.toi.lagToken
 import no.nav.toi.lagTokenBorger
-import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
-import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
@@ -51,19 +44,13 @@ class PilotkontorTest {
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
     private val database = TestDatabase()
-    private val repo = RekrutteringstreffRepository(database.dataSource)
-    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
-    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
-    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
-    private val service = RekrutteringstreffService(database.dataSource, repo, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, EierService(EierRepository(database.dataSource), repo, database.dataSource))
-
+    private lateinit var ctx: ApplicationContext
     private lateinit var app: App
 
     @BeforeAll
     fun setUp() {
         authServer.start(port = authPort)
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = database.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -74,14 +61,13 @@ class PilotkontorTest {
             ),
                     modiaKlient = modiaKlient,
                     pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
     fun setup() {
-        gyldigRekrutteringstreff = service.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
+        gyldigRekrutteringstreff = ctx.rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
         clearMocks(modiaKlient)
     }
 

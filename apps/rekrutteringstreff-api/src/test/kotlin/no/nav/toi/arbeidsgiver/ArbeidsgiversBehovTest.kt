@@ -16,7 +16,6 @@ import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverHendelseMedArbeidsgiverDataOutbou
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiverMedBehovDto
 import no.nav.toi.arbeidsgiver.dto.BehovMetadataDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
@@ -43,10 +42,9 @@ class ArbeidsgiversBehovTest {
         private val authPort = 18021
         private val db = TestDatabase()
         private val appPort = ubruktPortnr()
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
     }
-
-    private val eierRepository = EierRepository(dataSource = db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
@@ -57,8 +55,7 @@ class ArbeidsgiversBehovTest {
             azureUrl = "http://localhost:$authPort/token",
             httpClient = httpClient
         )
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = db.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -74,9 +71,8 @@ class ArbeidsgiversBehovTest {
                 httpClient = httpClient
             ),
                     pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -158,7 +154,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov tillater språk fra Spraksamling`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -193,7 +189,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov oppretter atomisk og emitter OPPRETTET + BEHOV_ENDRET`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -240,7 +236,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov med antall over 99 gir 400`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -255,7 +251,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov tillater bare null konseptId for førerkort`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         val ugyldigBehov = """
             {
@@ -281,7 +277,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov uten gyldig behov gir 400 og ingen lagring`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         val ugyldigBehov = """
             {
@@ -305,7 +301,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov med ukjent ansettelsesform gir 400`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         val ugyldigBehov = """
             {
@@ -329,7 +325,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov ignorerer Annet som arbeidssprak`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -352,7 +348,7 @@ class ArbeidsgiversBehovTest {
     fun `PUT behov upserter og emitter BEHOV_ENDRET, returnerer oppdatert DTO`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         // Først legg til arbeidsgiver uten behov via gammelt POST-endepunkt for å simulere "eldre data"
         val opprettResp = httpPost(
@@ -405,7 +401,7 @@ class ArbeidsgiversBehovTest {
     fun `PUT behov for ukjent arbeidsgiver gir 404`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         val response = httpPut(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/${UUID.randomUUID()}/behov",
@@ -421,7 +417,7 @@ class ArbeidsgiversBehovTest {
         val tokenEier = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val tokenAnnen = authServer.lagToken(authPort, navIdent = "B222222").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -440,7 +436,7 @@ class ArbeidsgiversBehovTest {
     fun `Soft-slettet arbeidsgiver skjuler behov, reaktivering bevarer behov`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
         val orgnr = Orgnr("555555555")
         val opprinneligeNæringskoder = listOf(Næringskode("47.111", "Detaljhandel"))
         val nyeNæringskoderVedReaktivering = listOf(Næringskode("56.101", "Drift av restauranter og kafeer"))
@@ -521,7 +517,7 @@ class ArbeidsgiversBehovTest {
     fun `BEHOV_ENDRET-hendelsen lagrer behov-payload som hendelse_data`() {
         val token = authServer.lagToken(authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A111111"))
+        ctx.eierRepository.leggTil(treffId, listOf("A111111"))
 
         httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",

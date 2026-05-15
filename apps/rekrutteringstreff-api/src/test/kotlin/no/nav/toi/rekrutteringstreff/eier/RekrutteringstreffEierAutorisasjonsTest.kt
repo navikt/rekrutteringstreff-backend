@@ -9,27 +9,18 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.App
+import no.nav.toi.ApplicationContext
 import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
-import no.nav.toi.LeaderElectionMock
-import no.nav.toi.TestRapid
-import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.httpClient
-import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.lagToken
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.AfterAll
@@ -63,22 +54,7 @@ class RekrutteringstreffEierAutorisasjonsTest {
     private val authServer = MockOAuth2Server()
     private val authPort = 18012
     private val database = TestDatabase()
-    private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
-    private val eierRepository = EierRepository(database.dataSource)
-    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
-    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
-    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
-
-    private val eierService = EierService(eierRepository, rekrutteringstreffRepository, database.dataSource)
-    private val rekrutteringstreffService = RekrutteringstreffService(
-        database.dataSource,
-        rekrutteringstreffRepository = rekrutteringstreffRepository,
-        jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper),
-        arbeidsgiverRepository = arbeidsgiverRepository,
-        jobbsøkerService = jobbsøkerService,
-        eierService = eierService
-    )
-
+    private lateinit var ctx: ApplicationContext
     private lateinit var app: App
 
     @BeforeAll
@@ -90,8 +66,7 @@ class RekrutteringstreffEierAutorisasjonsTest {
             azureUrl = "http://localhost:$authPort/token",
             httpClient = httpClient
         )
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = database.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -107,9 +82,8 @@ class RekrutteringstreffEierAutorisasjonsTest {
                 httpClient = httpClient
             ),
                     pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -139,7 +113,7 @@ class RekrutteringstreffEierAutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        rekrutteringstreffService.opprett(
+        ctx.rekrutteringstreffService.opprett(
             OpprettRekrutteringstreffInternalDto(
                 "Tittel",
                 "A000001",
@@ -148,7 +122,7 @@ class RekrutteringstreffEierAutorisasjonsTest {
             )
         )
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
-        eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A1234"))
+        ctx.eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A1234"))
 
     }
 

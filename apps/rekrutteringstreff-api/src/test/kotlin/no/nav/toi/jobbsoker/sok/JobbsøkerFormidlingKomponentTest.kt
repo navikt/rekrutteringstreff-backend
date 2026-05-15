@@ -9,7 +9,6 @@ import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -30,10 +29,9 @@ class JobbsøkerFormidlingKomponentTest {
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
 
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
     }
-
-    private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
@@ -43,8 +41,7 @@ class JobbsøkerFormidlingKomponentTest {
             azureUrl = "http://localhost:$authPort/token",
             httpClient = httpClient
         )
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = db.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -60,9 +57,8 @@ class JobbsøkerFormidlingKomponentTest {
                 httpClient = httpClient
             ),
                     pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
         authServer.start(port = authPort)
     }
 
@@ -92,7 +88,7 @@ class JobbsøkerFormidlingKomponentTest {
 
     private fun opprettTreffMedEier(eierIdent: String): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = eierIdent, tittel = "TestTreff")
-        eierRepository.leggTil(treffId, listOf(eierIdent))
+        ctx.eierRepository.leggTil(treffId, listOf(eierIdent))
         return treffId
     }
 

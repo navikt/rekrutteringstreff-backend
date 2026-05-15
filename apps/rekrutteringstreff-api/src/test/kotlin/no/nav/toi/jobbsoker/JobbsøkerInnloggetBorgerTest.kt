@@ -13,7 +13,6 @@ import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
@@ -36,15 +35,13 @@ class JobbsøkerInnloggetBorgerTest {
         private val authServer = MockOAuth2Server()
         private val authPort = 18012
         private val db = TestDatabase()
-        private var jobbsøkerRepository: JobbsøkerRepository = JobbsøkerRepository(db.dataSource, JacksonConfig.mapper)
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
 
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
 
         val mapper = JacksonConfig.mapper
     }
-
-    private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
@@ -56,8 +53,7 @@ class JobbsøkerInnloggetBorgerTest {
             httpClient = httpClient
         )
 
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = db.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -73,9 +69,8 @@ class JobbsøkerInnloggetBorgerTest {
                 httpClient = httpClient
             ),
                     pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
         authServer.start(port = authPort)
     }
 
@@ -148,7 +143,7 @@ class JobbsøkerInnloggetBorgerTest {
         val svarJaFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarJaHendelse.id)
         assertThat(svarJaFødselsnummer).isEqualTo(fnr)
 
-        jobbsøkerRepository.hentJobbsøker(treffId, fnr).also {
+        ctx.jobbsøkerRepository.hentJobbsøker(treffId, fnr).also {
             assertThat(it).isNotNull
             assertThat(it!!.status).isEqualTo(JobbsøkerStatus.SVART_JA)
         }
@@ -193,7 +188,7 @@ class JobbsøkerInnloggetBorgerTest {
         val svarNeiFødselsnummer = db.hentFødselsnummerForJobbsøkerHendelse(svarNeiHendelse.id)
         assertThat(svarNeiFødselsnummer).isEqualTo(fnr)
 
-        jobbsøkerRepository.hentJobbsøker(treffId, fnr).also {
+        ctx.jobbsøkerRepository.hentJobbsøker(treffId, fnr).also {
             assertThat(it).isNotNull
             assertThat(it!!.status).isEqualTo(JobbsøkerStatus.SVART_NEI)
         }
@@ -213,7 +208,7 @@ class JobbsøkerInnloggetBorgerTest {
         )
 
         val jobbsøkere = db.hentAlleJobbsøkere()
-        eierRepository.leggTil(treffId, listOf("testperson"))
+        ctx.eierRepository.leggTil(treffId, listOf("testperson"))
 
         inviter(jobbsøkere, treffId, token)
 
@@ -245,7 +240,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.LAGT_TIL)))
-        eierRepository.leggTil(treffId, listOf("test"))
+        ctx.eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
@@ -291,7 +286,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.LAGT_TIL)))
-        eierRepository.leggTil(treffId, listOf("test"))
+        ctx.eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
@@ -315,7 +310,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = authServer.lagTokenBorger(authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.LAGT_TIL)))
-        eierRepository.leggTil(treffId, listOf("test"))
+        ctx.eierRepository.leggTil(treffId, listOf("test"))
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)

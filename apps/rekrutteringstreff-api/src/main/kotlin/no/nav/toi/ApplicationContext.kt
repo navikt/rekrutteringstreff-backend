@@ -214,4 +214,11 @@ open class ApplicationContext(
     open val minsideVarselSvarLytter by lazy { MinsideVarselSvarLytter(rapidsConnection, jobbsøkerService, JacksonConfig.mapper) }
     open val synlighetsLytter by lazy { SynlighetsLytter(rapidsConnection, jobbsøkerService) }
     open val synlighetsBehovLytter by lazy { SynlighetsBehovLytter(rapidsConnection, jobbsøkerService) }
+
+    open fun registerLyttere() {
+        aktivitetskortFeilLytter
+        minsideVarselSvarLytter
+        synlighetsLytter
+        synlighetsBehovLytter
+    }
 }

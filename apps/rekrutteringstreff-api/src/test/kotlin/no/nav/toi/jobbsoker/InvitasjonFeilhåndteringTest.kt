@@ -11,7 +11,6 @@ import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
@@ -36,12 +35,11 @@ class InvitasjonFeilhåndteringTest {
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
 
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
 
         val mapper = JacksonConfig.mapper
     }
-
-    private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
@@ -52,8 +50,7 @@ class InvitasjonFeilhåndteringTest {
             httpClient = httpClient
         )
 
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = db.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -69,9 +66,8 @@ class InvitasjonFeilhåndteringTest {
                 httpClient = httpClient
             ),
                     pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
         authServer.start(port = authPort)
     }
 
@@ -127,7 +123,7 @@ class InvitasjonFeilhåndteringTest {
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         val personTreffId = jobbsøkere.first().personTreffId
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
 
@@ -202,7 +198,7 @@ class InvitasjonFeilhåndteringTest {
         // Sett én jobbsøker til ikke-synlig (simulerer at CV ikke lenger er delt)
         db.settSynlighet(personTreffIdUsynlig, erSynlig = false)
 
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         // Forsøk å invitere begge jobbsøkere
         val requestBody = """{ "personTreffIder": ["$personTreffIdUsynlig", "$personTreffIdSynlig"] }"""
@@ -248,7 +244,7 @@ class InvitasjonFeilhåndteringTest {
             )
         )
 
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
 

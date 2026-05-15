@@ -9,7 +9,6 @@ import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -31,10 +30,9 @@ class JobbsøkerSokKomponentTest {
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
 
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
     }
-
-    private val eierRepository = EierRepository(db.dataSource)
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
@@ -44,8 +42,7 @@ class JobbsøkerSokKomponentTest {
             azureUrl = "http://localhost:$authPort/token",
             httpClient = httpClient
         )
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = db.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -61,9 +58,8 @@ class JobbsøkerSokKomponentTest {
                 httpClient = httpClient
             ),
                     pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
         authServer.start(port = authPort)
     }
 
@@ -93,7 +89,7 @@ class JobbsøkerSokKomponentTest {
 
     private fun opprettTreffMedEier(navIdent: String = "A123456"): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
-        eierRepository.leggTil(treffId, listOf(navIdent))
+        ctx.eierRepository.leggTil(treffId, listOf(navIdent))
         return treffId
     }
 
@@ -551,7 +547,7 @@ class JobbsøkerSokKomponentTest {
     fun `søk returnerer kun jobbsøkere for riktig treff`() {
         val treff1 = opprettTreffMedEier()
         val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "AnnetTreff")
-        eierRepository.leggTil(treff2, listOf("A123456"))
+        ctx.eierRepository.leggTil(treff2, listOf("A123456"))
 
         db.leggTilJobbsøkereMedHendelse(listOf(
             LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Treff1Person"), Etternavn("A"), null, null, null),

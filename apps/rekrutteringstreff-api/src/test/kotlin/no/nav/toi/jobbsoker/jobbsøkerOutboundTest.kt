@@ -7,7 +7,6 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -29,8 +28,7 @@ class JobbsøkerOutboundTest {
     private val audience = "rekrutteringstreff-audience"
     private val jwksUri = "http://localhost:$authPort/default/jwks"
 
-    private val eierRepository = EierRepository(db.dataSource)
-
+    private lateinit var ctx: ApplicationContext
     private lateinit var app: App
 
     @BeforeAll
@@ -43,8 +41,7 @@ class JobbsøkerOutboundTest {
             httpClient = httpClient
         )
 
-        app = App(
-            ctx = testApplicationContext(
+        ctx = testApplicationContext(
                     dataSource = db.dataSource,
                     authConfigs = listOf(
                 AuthenticationConfiguration(
@@ -66,9 +63,8 @@ class JobbsøkerOutboundTest {
                 accessTokenClient = accessTokenClient,
                 httpClient = httpClient
             ),
-            ),
-            port = appPort,
-        ).also { it.start() }
+            )
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -109,7 +105,7 @@ class JobbsøkerOutboundTest {
         val fnr = Fødselsnummer("12345678910")
         val forventetKandidatnummer = "K123456"
 
-        eierRepository.leggTil(treffId, listOf("A000001"))
+        ctx.eierRepository.leggTil(treffId, listOf("A000001"))
 
         db.leggTilJobbsøkere(
             listOf(
