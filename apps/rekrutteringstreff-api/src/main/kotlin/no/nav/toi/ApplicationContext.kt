@@ -8,9 +8,12 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
 import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
+import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -205,4 +208,10 @@ open class ApplicationContext(
     open val rekrutteringstreffScheduler by lazy {
         RekrutteringstreffScheduler(rekrutteringstreffService, leaderElection)
     }
+
+    // Rapids & Rivers-lyttere (lazy — registrerer seg selv mot rapidsConnection ved opprettelse)
+    open val aktivitetskortFeilLytter by lazy { AktivitetskortFeilLytter(rapidsConnection, jobbsøkerService) }
+    open val minsideVarselSvarLytter by lazy { MinsideVarselSvarLytter(rapidsConnection, jobbsøkerService, JacksonConfig.mapper) }
+    open val synlighetsLytter by lazy { SynlighetsLytter(rapidsConnection, jobbsøkerService) }
+    open val synlighetsBehovLytter by lazy { SynlighetsBehovLytter(rapidsConnection, jobbsøkerService) }
 }

@@ -7,10 +7,6 @@ import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
 import no.nav.toi.ExceptionMapping.exceptionMapping
-import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
-import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
-import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
-import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
@@ -74,10 +70,11 @@ class App(
 
     fun startRR() {
         log.info("Starting RapidsConnection")
-        AktivitetskortFeilLytter(ctx.rapidsConnection, ctx.jobbsøkerService)
-        MinsideVarselSvarLytter(ctx.rapidsConnection, ctx.jobbsøkerService, JacksonConfig.mapper)
-        SynlighetsLytter(ctx.rapidsConnection, ctx.jobbsøkerService)
-        SynlighetsBehovLytter(ctx.rapidsConnection, ctx.jobbsøkerService)
+        // Trigger opprettelse av lyttere (de registrerer seg selv mot rapidsConnection i init)
+        ctx.aktivitetskortFeilLytter
+        ctx.minsideVarselSvarLytter
+        ctx.synlighetsLytter
+        ctx.synlighetsBehovLytter
         Thread {
             try {
                 ctx.rapidsConnection.start()
