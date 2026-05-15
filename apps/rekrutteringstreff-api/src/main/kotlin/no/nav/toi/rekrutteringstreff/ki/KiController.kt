@@ -1,7 +1,7 @@
 package no.nav.toi.rekrutteringstreff.ki
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
@@ -18,7 +18,7 @@ import java.util.*
 class KiController (
     private val kiLoggRepository: KiLoggRepository,
     private val openAiClient: OpenAiClient,
-    javalin: Javalin
+    routes: JavalinDefaultRoutingApi
 ) {
     companion object {
         private const val pathParamTreffId = "id"
@@ -26,11 +26,11 @@ class KiController (
     }
 
     init {
-        javalin.post("$baseUrl/valider", validerOgLoggHandler())
-        javalin.put("$baseUrl/logg/{loggId}/lagret", oppdaterLagretHandler())
-        javalin.put("$baseUrl/logg/{loggId}/manuell", oppdaterManuellHandler())
-        javalin.get("$baseUrl/logg", listHandler())
-        javalin.get("$baseUrl/logg/{loggId}", getHandler())
+        routes.post("$baseUrl/valider", validerOgLoggHandler())
+        routes.put("$baseUrl/logg/{loggId}/lagret", oppdaterLagretHandler())
+        routes.put("$baseUrl/logg/{loggId}/manuell", oppdaterManuellHandler())
+        routes.get("$baseUrl/logg", listHandler())
+        routes.get("$baseUrl/logg/{loggId}", getHandler())
     }
 
     @OpenApi(

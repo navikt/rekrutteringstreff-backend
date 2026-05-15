@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdatering
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffstatus
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffSvarOgStatus
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
@@ -30,7 +31,7 @@ class Rekrutteringstreff(
     val sistEndret: ZonedDateTime,
     val sistEndretAv: String,
 ) {
-    fun tilRekrutteringstreffDto(antallArbeidsgivere: Int, antallJobsøkere: Int) = RekrutteringstreffDto(
+    fun tilRekrutteringstreffDto(antallArbeidsgivere: Int, antallJobbsøkere: Int, antallJobbsøkereSvartJa: Int) = RekrutteringstreffDto(
         tittel = tittel,
         beskrivelse = beskrivelse,
         fraTid = fraTid,
@@ -49,7 +50,8 @@ class Rekrutteringstreff(
         opprettetAvTidspunkt = opprettetAvTidspunkt,
         id = id.somUuid,
         antallArbeidsgivere = antallArbeidsgivere,
-        antallJobbsøkere = antallJobsøkere,
+        antallJobbsøkere = antallJobbsøkere,
+        antallJobbsøkereSvartJa = antallJobbsøkereSvartJa,
         eiere = eiere,
         kontorer = kontorer,
         sistEndret = sistEndret,
@@ -74,7 +76,7 @@ class Rekrutteringstreff(
         hendelseId: UUID,
         endretAvPersonbruker: Boolean,
         svar: Boolean? = null,
-        treffstatus: String? = null,
+        treffstatus: AktivitetskortTreffstatus? = null,
         endretAv: String? = null,
     ) = RekrutteringstreffSvarOgStatus(
         fnr = fnr,

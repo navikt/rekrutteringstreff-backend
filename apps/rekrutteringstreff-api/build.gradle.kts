@@ -3,7 +3,7 @@ plugins {
     kotlin("kapt")
 }
 
-val javalinVersion = "6.4.0"
+val javalinVersion = "7.2.0"
 val mockOAuth2ServerVersion = "2.1.0"
 val flywayVersion = "11.3.0"
 val postgresVersion = "42.7.5"

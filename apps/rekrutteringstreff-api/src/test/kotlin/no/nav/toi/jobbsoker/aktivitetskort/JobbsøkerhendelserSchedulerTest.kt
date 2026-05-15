@@ -205,6 +205,146 @@ class JobbsøkerhendelserSchedulerTest {
     }
 
     @Test
+    fun `skal sende ja-svar avgitt av eier på rapid og markere som pollet`() {
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val arrangørNavIdent = "Z999111"
+        val rapid = TestRapid()
+        val scheduler = JobbsøkerhendelserScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            rapid,
+            mapper,
+            LeaderElectionMock(),
+        )
+        val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
+
+        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 svar av eier
+        val melding = rapid.inspektør.message(1)
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(melding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
+        assertThat(melding["rekrutteringstreffId"].asText()).isEqualTo(treffId.somString)
+        assertThat(melding["endretAv"].asText()).isEqualTo(arrangørNavIdent)
+        assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
+        assertThat(melding["svar"].asBoolean()).isTrue
+        assertThat(melding.has("hendelseId")).isTrue
+
+        val usendteEtterpå =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER)
+        assertThat(usendteEtterpå).isEmpty()
+    }
+
+    @Test
+    fun `skal sende nei-svar avgitt av eier på rapid og markere som pollet`() {
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val arrangørNavIdent = "Z999222"
+        val rapid = TestRapid()
+        val scheduler = JobbsøkerhendelserScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            rapid,
+            mapper,
+            LeaderElectionMock(),
+        )
+        val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
+
+        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, false)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+        val melding = rapid.inspektør.message(1)
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(melding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
+        assertThat(melding["endretAv"].asText()).isEqualTo(arrangørNavIdent)
+        assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
+        assertThat(melding["svar"].asBoolean()).isFalse
+        assertThat(melding.has("hendelseId")).isTrue
+
+        val usendteEtterpå =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER)
+        assertThat(usendteEtterpå).isEmpty()
+    }
+
+    @Test
+    fun `skal sende fjernet svar avgitt av eier på rapid og markere som pollet`() {
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val arrangørNavIdent = "Z999333"
+        val rapid = TestRapid()
+        val scheduler = JobbsøkerhendelserScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            rapid,
+            mapper,
+            LeaderElectionMock(),
+        )
+        val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
+
+        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, null)
+
+        scheduler.behandleJobbsøkerHendelser()
+
+        assertThat(rapid.inspektør.size).isEqualTo(3)  // 1 invitasjon + 1 ja-svar + 1 fjernet svar
+        val melding = rapid.inspektør.message(2)
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(melding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
+        assertThat(melding["endretAv"].asText()).isEqualTo(arrangørNavIdent)
+        assertThat(melding["endretAvPersonbruker"].asBoolean()).isFalse
+        assertThat(melding.has("svar")).isFalse
+        assertThat(melding.has("hendelseId")).isTrue
+
+        val usendteEtterpå =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER)
+        assertThat(usendteEtterpå).isEmpty()
+    }
+
+    @Test
+    fun `avlyst treff - svart-ja via eier skal utløse minside-varsel (regresjonstest for bug der eier-svar manglet varsel)`() {
+        val fødselsnummer = Fødselsnummer("12345678901")
+        val arrangørNavIdent = "Z999444"
+        val rapid = TestRapid()
+        val scheduler = JobbsøkerhendelserScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            rapid,
+            mapper,
+            LeaderElectionMock(),
+        )
+        val treffId = opprettPersonOgInviter(fødselsnummer, rapid, scheduler)
+
+        val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
+        jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
+        scheduler.behandleJobbsøkerHendelser()
+
+        rekrutteringstreffService.avlys(treffId, arrangørNavIdent)
+        scheduler.behandleJobbsøkerHendelser()
+
+        // 1 invitasjon + 1 ja-svar av eier + 1 avlyst-status
+        assertThat(rapid.inspektør.size).isEqualTo(3)
+        val avlystMelding = rapid.inspektør.message(2)
+        assertThat(avlystMelding["fnr"].asText()).isEqualTo(fødselsnummer.asString)
+        assertVilUtløseMinsideVarselVedAvlysning(avlystMelding)
+
+        val usendteSvartJaAvlyst =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.SVART_JA_TREFF_AVLYST)
+        assertThat(usendteSvartJaAvlyst).isEmpty()
+        val usendteIkkeSvartAvlyst =
+            aktivitetskortRepository.hentUsendteHendelse(JobbsøkerHendelsestype.IKKE_SVART_TREFF_AVLYST)
+        assertThat(usendteIkkeSvartAvlyst).isEmpty()
+    }
+
+    @Test
     fun `skal ikke sende samme svar to ganger`() {
         val fødselsnummer = Fødselsnummer("12345678901")
         val rapid = TestRapid()
@@ -967,7 +1107,7 @@ class JobbsøkerhendelserSchedulerTest {
     }
 
     @Test
-    fun `skal sende avlyst-status til alle jobbsøkere med hendelseId`() {
+    fun `avlyst treff - svart-ja får aktivitetskort-status OG minside-varsel, kun-invitert får kun aktivitetskort-status uten varsel`() {
         val fnrSvartJa = Fødselsnummer("12345678901")
         val fnrIkkeSvart = Fødselsnummer("12345678902")
         val rapid = TestRapid()
@@ -1006,19 +1146,18 @@ class JobbsøkerhendelserSchedulerTest {
             .map { rapid.inspektør.message(it) }
             .filter { it["fnr"].asText() == fnrIkkeSvart.asString }
 
-        // Person som svarte ja skal få avlyst-status med hendelseId
-        val svarOgStatusMeldingForSvartJa =
-            hendelserForSvartJa.find { it["@event_name"].asText() == "rekrutteringstreffSvarOgStatus" && it.has("treffstatus") }
-        assertThat(svarOgStatusMeldingForSvartJa!!["treffstatus"].asText()).isEqualTo("avlyst")
-        assertThat(svarOgStatusMeldingForSvartJa["svar"].asBoolean()).isTrue
-        assertThat(svarOgStatusMeldingForSvartJa.has("hendelseId")).isTrue
+        // Svart ja: aktivitetskort flyttes til AVBRUTT (treffstatus=avlyst) OG minside-varsel sendes (svar=true)
+        val avlystMeldingSvartJa =
+            hendelserForSvartJa.find { it["@event_name"].asText() == "rekrutteringstreffSvarOgStatus" && it.has("treffstatus") }!!
+        assertVilUtløseMinsideVarselVedAvlysning(avlystMeldingSvartJa)
 
-        // Person som ikke svarte skal også få avlyst-status med hendelseId
-        val statusMeldingForIkkeSvart = hendelserForIkkeSvart.last()
-        assertThat(statusMeldingForIkkeSvart["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
-        assertThat(statusMeldingForIkkeSvart.has("svar")).isFalse
-        assertThat(statusMeldingForIkkeSvart["treffstatus"].asText()).isEqualTo("avlyst")
-        assertThat(statusMeldingForIkkeSvart.has("hendelseId")).isTrue
+        // Kun invitert: aktivitetskort flyttes til AVBRUTT (treffstatus=avlyst), men INGEN minside-varsel (mangler svar=true)
+        val avlystMeldingIkkeSvart = hendelserForIkkeSvart.last()
+        assertThat(avlystMeldingIkkeSvart["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(avlystMeldingIkkeSvart["treffstatus"].asText()).isEqualTo("avlyst")
+        assertThat(avlystMeldingIkkeSvart.has("svar")).isFalse
+        assertThat(avlystMeldingIkkeSvart.has("hendelseId")).isTrue
+        assertVilIkkeUtløseMinsideVarselVedAvlysning(avlystMeldingIkkeSvart)
     }
 
     @Test
@@ -1115,6 +1254,34 @@ class JobbsøkerhendelserSchedulerTest {
         opprettOgInviterJobbsøker(treffId, fødselsnummer)
         scheduler.wrapJobbkjøring()  // Send invitasjon
         return treffId
+    }
+
+    /**
+     * Speiler precondition i KandidatTreffAvlystLytter (rekrutteringsbistand-kandidatvarsel-api):
+     * `@event_name=rekrutteringstreffSvarOgStatus` AND `svar=true` AND `treffstatus=avlyst`.
+     * Bare jobbsøkere som har takket ja skal få minside-varsel når treffet avlyses.
+     */
+    private fun assertVilUtløseMinsideVarselVedAvlysning(melding: com.fasterxml.jackson.databind.JsonNode) {
+        assertThat(melding["@event_name"].asText()).isEqualTo("rekrutteringstreffSvarOgStatus")
+        assertThat(melding["treffstatus"].asText()).isEqualTo("avlyst")
+        assertThat(melding["svar"].asBoolean()).isTrue
+        assertThat(melding.has("hendelseId")).isTrue
+        assertThat(melding.has("fnr")).isTrue
+        assertThat(melding.has("rekrutteringstreffId")).isTrue
+    }
+
+    /**
+     * Negativ kontrakt for KandidatTreffAvlystLytter: meldingen skal IKKE matche varsel-precondition.
+     * Brukes for jobbsøkere som ikke svarte eller svarte nei — de skal få aktivitetskortet flyttet,
+     * men ingen minside-varsel.
+     */
+    private fun assertVilIkkeUtløseMinsideVarselVedAvlysning(melding: com.fasterxml.jackson.databind.JsonNode) {
+        val erVarselPrecondition = melding["@event_name"]?.asText() == "rekrutteringstreffSvarOgStatus" &&
+            melding["treffstatus"]?.asText() == "avlyst" &&
+            melding["svar"]?.asBoolean() == true
+        assertThat(erVarselPrecondition)
+            .`as`("meldingen skal ikke matche KandidatTreffAvlystLytter sin precondition")
+            .isFalse
     }
 
     private fun opprettOgInviterJobbsøker(

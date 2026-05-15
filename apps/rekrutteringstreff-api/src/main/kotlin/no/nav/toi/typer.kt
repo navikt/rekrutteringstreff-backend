@@ -17,11 +17,11 @@ enum class JobbsøkerHendelsestype {
     IKKE_SVART_TREFF_FULLFØRT,
     TREFF_ENDRET_ETTER_PUBLISERING,
     TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
-    MOTTATT_SVAR_FRA_MINSIDE;
+    MOTTATT_SVAR_FRA_MINSIDE
 }
 
 enum class ArbeidsgiverHendelsestype {
-    OPPRETTET, OPPDATERT, SLETTET
+    OPPRETTET, OPPDATERT, SLETTET, REAKTIVERT, BEHOV_ENDRET
 }
 
 enum class RekrutteringstreffHendelsestype {

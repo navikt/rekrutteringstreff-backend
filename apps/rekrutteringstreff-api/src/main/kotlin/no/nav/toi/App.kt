@@ -139,81 +139,81 @@ class App(
         log.info("Starting Javalin on port $port")
         kjørFlywayMigreringer(dataSource)
 
-        javalin = Javalin.create { config ->
-            config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
-            configureOpenApi(config)
-        }
-
-        javalin.exceptionMapping()
-
-        HealthController(javalin, HealthRepository(dataSource))
-        javalin.leggTilAutensieringPåRekrutteringstreffEndepunkt(
-            authConfigs = authConfigs,
-            rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
-                jobbsøkerrettet = jobbsøkerrettet,
-                arbeidsgiverrettet = arbeidsgiverrettet,
-                utvikler = utvikler
-            ),
-            modiaKlient = modiaKlient,
-            pilotkontorer = pilotkontorer
-        )
-
         val innleggRepository = InnleggRepository(dataSource)
         val kiLoggRepository = KiLoggRepository(dataSource)
 
-        val arbeidsgiverRepository = ArbeidsgiverRepository(dataSource, JacksonConfig.mapper)
-        val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository)
+        val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
 
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         val sokRepository = RekrutteringstreffSokRepository(dataSource)
         val sokService = RekrutteringstreffSokService(sokRepository)
-        RekrutteringstreffSokController(
-            sokService = sokService,
-            javalin = javalin
-        )
+        javalin = Javalin.create { config ->
+            config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
+            configureOpenApi(config)
 
-        RekrutteringstreffController(
-            rekrutteringstreffService = rekrutteringstreffService,
-            eierService = eierService,
-            kiLoggService = kiLoggService,
-            javalin = javalin
-        )
-        InnleggController(
-            innleggService = innleggService,
-            kiLoggService = kiLoggService,
-            eierService = eierService,
-            javalin = javalin
-        )
-        EierController(
-            eierService = eierService,
-            javalin = javalin
-        )
-        ArbeidsgiverController(
-            arbeidsgiverService = arbeidsgiverService,
-            eierService = eierService,
-            javalin = javalin
-        )
-        JobbsøkerController(
-            jobbsøkerService = jobbsøkerService,
-            eierService = eierService,
-            javalin = javalin
-        )
-        JobbsøkerInnloggetBorgerController(
-            jobbsøkerService = jobbsøkerService,
-            javalin = javalin
-        )
-        JobbsøkerOutboundController(
-            jobbsøkerRepository = jobbsøkerRepository,
-            kandidatsøkKlient = kandidatsokKlient,
-            eierService = eierService,
-            javalin = javalin
-        )
-        KiController(
-            kiLoggRepository = kiLoggRepository,
-            openAiClient = OpenAiClient(repo = kiLoggRepository),
-            javalin = javalin
-        )
+            config.routes.exceptionMapping()
+
+            HealthController(config.routes, HealthRepository(dataSource))
+            config.routes.leggTilAutensieringPåRekrutteringstreffEndepunkt(
+                authConfigs = authConfigs,
+                rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
+                    jobbsøkerrettet = jobbsøkerrettet,
+                    arbeidsgiverrettet = arbeidsgiverrettet,
+                    utvikler = utvikler
+                ),
+                modiaKlient = modiaKlient,
+                pilotkontorer = pilotkontorer
+            )
+
+            RekrutteringstreffSokController(
+                sokService = sokService,
+                routes = config.routes
+            )
+
+            ArbeidsgiverController(
+                arbeidsgiverService = arbeidsgiverService,
+                eierService = eierService,
+                routes = config.routes
+            )
+
+            RekrutteringstreffController(
+                rekrutteringstreffService = rekrutteringstreffService,
+                eierService = eierService,
+                kiLoggService = kiLoggService,
+                routes = config.routes
+            )
+            InnleggController(
+                innleggService = innleggService,
+                kiLoggService = kiLoggService,
+                eierService = eierService,
+                routes = config.routes
+            )
+            EierController(
+                eierService = eierService,
+                routes = config.routes
+            )
+            JobbsøkerController(
+                jobbsøkerService = jobbsøkerService,
+                eierService = eierService,
+                routes = config.routes
+            )
+            JobbsøkerInnloggetBorgerController(
+                jobbsøkerService = jobbsøkerService,
+                routes = config.routes
+            )
+            JobbsøkerOutboundController(
+                jobbsøkerRepository = jobbsøkerRepository,
+                kandidatsøkKlient = kandidatsokKlient,
+                eierService = eierService,
+                routes = config.routes
+            )
+            KiController(
+                kiLoggRepository = kiLoggRepository,
+                openAiClient = OpenAiClient(repo = kiLoggRepository),
+                routes = config.routes
+            )
+        }
 
         javalin.start(port)
     }
@@ -359,14 +359,12 @@ private fun kjørFlywayMigreringer(dataSource: DataSource) {
 
 private fun configureOpenApi(config: JavalinConfig) {
     val openApiPlugin = OpenApiPlugin { openApiConfig ->
-        openApiConfig.withDefinitionConfiguration { _, definition ->
-            definition.withInfo { info ->
-                info.title = "Rekrutteringstreff API"
-                info.version = "1.0.0"
+        openApiConfig.withDefinitionConfiguration { _, schema ->
+            schema.info { info ->
+                info.title("Rekrutteringstreff API")
+                info.version("1.0.0")
             }
-            definition.withSecurity { security ->
-                security.withBearerAuth()
-            }
+            schema.withBearerAuth()
         }
     }
     config.registerPlugin(openApiPlugin)

@@ -218,6 +218,7 @@ class TestDatabase {
         conn.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
         conn.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
+        conn.prepareStatement("DELETE FROM arbeidsgivers_behov").executeUpdate()
         conn.prepareStatement("DELETE FROM rekrutteringstreff_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM naringskode").executeUpdate()
         conn.prepareStatement("DELETE FROM innlegg").executeUpdate()
@@ -390,6 +391,24 @@ class TestDatabase {
         jobbsøkerRepository.hentJobbsøkere(treff)
             .flatMap { it.hendelser }
             .sortedBy { it.tidspunkt }
+
+    fun hentHendelseDataFørste(hendelsestype: String): String? =
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                SELECT hendelse_data::text
+                  FROM arbeidsgiver_hendelse
+                 WHERE hendelsestype = ?
+                 ORDER BY tidspunkt
+                 LIMIT 1
+                """.trimIndent()
+            ).use { ps ->
+                ps.setString(1, hendelsestype)
+                ps.executeQuery().use { rs ->
+                    if (rs.next()) rs.getString(1) else null
+                }
+            }
+        }
 
     fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> =
         dataSource.connection.use { connection ->
@@ -572,7 +591,7 @@ class TestDatabase {
         val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
             ?: throw RekrutteringstreffIkkeFunnetException("Treff $treffId finnes ikke")
         val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(
-            rekrutteringstreff.tilRekrutteringstreffDto(1,1)).copy(tilTid = nowOslo().minusDays(1)
+            rekrutteringstreff.tilRekrutteringstreffDto(1,1, 1)).copy(tilTid = nowOslo().minusDays(1)
         )
         dataSource.connection.use { connection ->
             rekrutteringstreffRepository.oppdater(connection, treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
