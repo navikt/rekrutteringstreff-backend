@@ -291,6 +291,24 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
 
+    fun hentAntallJobbsøkereSvartJa(treff: TreffId): Int =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                    SELECT
+                        COUNT(1) AS antall_jobbsøkere_svart_ja
+                    FROM jobbsoker js
+                    JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                    WHERE rt.id = ? AND js.status = 'SVART_JA' AND js.er_synlig = TRUE
+                """
+            ).use { ps ->
+                ps.setObject(1, treff.somUuid)
+                ps.executeQuery().use { rs ->
+                    return if (rs.next()) rs.getInt("antall_jobbsøkere_svart_ja") else 0
+                }
+            }
+        }
+
     fun hentPersonTreffId(treffId: TreffId, fødselsnummer: Fødselsnummer): PersonTreffId? =
         dataSource.connection.use { conn ->
             hentPersonTreffId(conn, treffId, fødselsnummer)

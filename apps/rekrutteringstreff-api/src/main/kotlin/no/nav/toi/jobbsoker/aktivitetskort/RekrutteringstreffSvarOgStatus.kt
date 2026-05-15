@@ -5,6 +5,15 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.util.UUID
 
+enum class AktivitetskortTreffstatus(val rapidVerdi: String) {
+    AVLYST("avlyst"),
+    FULLFØRT("fullført")
+}
+
+/**
+ * Meldinger med svar=true og treffstatus=avlyst utløser Minside-varsel via KandidatTreffAvlystLytter
+ * i rekrutteringsbistand-kandidatvarsel-api.
+ */
 class RekrutteringstreffSvarOgStatus(
     private val fnr: String,
     private val rekrutteringstreffId: TreffId,
@@ -12,7 +21,7 @@ class RekrutteringstreffSvarOgStatus(
     private val endretAvPersonbruker: Boolean,
     private val hendelseId: UUID,
     private val svar: Boolean? = null,
-    private val treffstatus: String? = null,
+    private val treffstatus: AktivitetskortTreffstatus? = null,
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
         val messageMap = mutableMapOf<String, Any>(
@@ -24,7 +33,7 @@ class RekrutteringstreffSvarOgStatus(
         )
 
         svar?.let { messageMap["svar"] = it }
-        treffstatus?.let { messageMap["treffstatus"] = it }
+        treffstatus?.let { messageMap["treffstatus"] = it.rapidVerdi }
 
         val message = JsonMessage.newMessage(
             eventName = "rekrutteringstreffSvarOgStatus",

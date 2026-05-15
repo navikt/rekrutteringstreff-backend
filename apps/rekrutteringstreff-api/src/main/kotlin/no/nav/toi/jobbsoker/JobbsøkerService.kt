@@ -8,6 +8,9 @@ import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRequest
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
@@ -26,9 +29,14 @@ class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val jobbsøkerSokRepository: JobbsøkerSokRepository,
+    private val jobbsøkerFormidlingRepository: JobbsøkerFormidlingRepository =
+        JobbsøkerFormidlingRepository(dataSource),
 ) {
     constructor(dataSource: DataSource, jobbsøkerRepository: JobbsøkerRepository) : this(
-        dataSource, jobbsøkerRepository, JobbsøkerSokRepository(dataSource)
+        dataSource,
+        jobbsøkerRepository,
+        JobbsøkerSokRepository(dataSource),
+        JobbsøkerFormidlingRepository(dataSource),
     )
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
@@ -245,59 +253,24 @@ class JobbsøkerService(
     }
 
     /**
-     * Filtrerer jobbsøkere som har aktivt svar ja (dvs. har svart ja og ikke svart nei etterpå)
+     * Filtrerer jobbsøkere som har aktivt svar ja, basert på gjeldende status.
+     * Dekker både svar fra jobbsøker selv og svar lagt inn av eier på vegne av jobbsøker.
      */
     fun finnJobbsøkereMedAktivtSvarJa(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { jobbsøker ->
-            val hendelsestyper = jobbsøker.hendelser.map { it.hendelsestype }
-            // Hendelser er sortert DESC (nyeste først), så indexOf finner den nyeste
-            val nyesteJaIndex = hendelsestyper.indexOf(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON)
-            val nyesteNeiIndex = hendelsestyper.indexOf(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
-
-            // Har svart ja, og ja er nyere enn eventuell nei (lavere index = nyere)
-            nyesteJaIndex != -1 && (nyesteNeiIndex == -1 || nyesteJaIndex < nyesteNeiIndex)
-        }
+        return jobbsøkere.filter { it.status == JobbsøkerStatus.SVART_JA }
     }
 
     /**
-     * Filtrerer jobbsøkere som har blitt invitert men ikke har svart
+     * Filtrerer jobbsøkere som er invitert men ikke har svart, basert på gjeldende status.
+     * Status overskrives av svar (også svar via eier), så `INVITERT` representerer
+     * nettopp jobbsøkere som er invitert og ennå ikke har svart.
      */
     fun finnJobbsøkereSomIkkeSvart(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { jobbsøker ->
-            val hendelsestyper = jobbsøker.hendelser.map { it.hendelsestype }.toSet()
-
-            // Har INVITERT, men ikke svart ja eller nei
-            hendelsestyper.contains(JobbsøkerHendelsestype.INVITERT) &&
-            !hendelsestyper.contains(JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON) &&
-            !hendelsestyper.contains(JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON)
-        }
+        return jobbsøkere.filter { it.status == JobbsøkerStatus.INVITERT }
     }
 
-    /**
-     * Avgjør om en jobbsøker skal varsles om endringer basert på hendelseshistorikk.
-     * Varsler kun hvis siste relevante hendelse er SVART_JA_TIL_INVITASJON.
-     * Jobbsøkere som kun er invitert (ikke svart) eller har svart nei, får ikke varsel.
-     */
-    fun skalVarslesOmEndringer(hendelser: List<JobbsøkerHendelse>): Boolean {
-        if (hendelser.isEmpty()) return false
-
-        // Filtrer kun invitasjons- og svar-hendelser
-        val relevanteHendelser = hendelser.filter {
-            it.hendelsestype in setOf(
-                JobbsøkerHendelsestype.INVITERT,
-                JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
-                JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON
-            )
-        }.sortedByDescending { it.tidspunkt }
-
-        if (relevanteHendelser.isEmpty()) return false
-
-        // Ta den nyeste hendelsen
-        val sisteRelevanteHendelse = relevanteHendelser.first()
-
-        // Varsle kun hvis siste relevante hendelse er SVART_JA_TIL_INVITASJON
-        return sisteRelevanteHendelse.hendelsestype == JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON
-    }
+    fun skalVarslesOmEndringer(jobbsøker: Jobbsøker): Boolean =
+        jobbsøker.status == JobbsøkerStatus.SVART_JA
 
     fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
         return dataSource.executeInTransaction { connection ->
@@ -316,6 +289,13 @@ class JobbsøkerService(
 
     fun søkJobbsøkere(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons =
         jobbsøkerSokRepository.sok(treffId, request)
+
+    fun hentJobbsøkereForFormidling(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        kunForVeilederNavIdent: String? = null,
+    ): JobbsøkerFormidlingRespons =
+        jobbsøkerFormidlingRepository.hentForFormidling(treffId, request, kunForVeilederNavIdent)
 
     private fun finnNyeJobbsøkere(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,

@@ -1,6 +1,6 @@
 package no.nav.toi.minside.svar
 
-import io.javalin.Javalin
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
@@ -126,7 +126,7 @@ class SvarEndpoints {
     }
 }
 
-fun Javalin.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient) {
+fun JavalinDefaultRoutingApi.rekrutteringstreffSvarEndepunkt(treffKlient: RekrutteringstreffKlient, borgerKlient: BorgerKlient) {
     put(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().putRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
     get(REKRUTTERINGSTREFF_SVAR_URL, SvarEndpoints().hentRekrutteringstreffSvarHandler(treffKlient, borgerKlient))
 }

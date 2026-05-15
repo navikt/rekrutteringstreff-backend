@@ -137,7 +137,8 @@ class RekrutteringstreffService(
         }
         val antallArbeidsgivere = arbeidsgiverRepository.hentAntallArbeidsgivere(treffId)
         val antallJobbsøkere = jobbsøkerRepository.hentAntallJobbsøkere(treffId)
-        return rekrutteringstreff.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere)
+        val antallJobbsøkereSvartJa = jobbsøkerRepository.hentAntallJobbsøkereSvartJa(treffId)
+        return rekrutteringstreff.tilRekrutteringstreffDto(antallArbeidsgivere, antallJobbsøkere, antallJobbsøkereSvartJa)
     }
 
     fun hentRekrutteringstreffMedHendelser(treffId: TreffId): RekrutteringstreffDetaljOutboundDto? {
@@ -235,7 +236,7 @@ class RekrutteringstreffService(
             }
 
             val jobbsøkereSomSkalVarsles = alleJobbsøkere
-                .filter { jobbsøkerService.skalVarslesOmEndringer(it.hendelser) }
+                .filter { jobbsøkerService.skalVarslesOmEndringer(it) }
                 .map { it.personTreffId }
 
             if (jobbsøkereSomSkalVarsles.isNotEmpty()) {

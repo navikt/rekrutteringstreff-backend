@@ -223,6 +223,50 @@ class JobbsøkerRepositoryTest {
     }
 
     @Test
+    fun `Hent antall jobbsøkere som har svart ja`() {
+        val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val jobbsøkere = listOf(
+            Jobbsøker(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                treffId = treffId,
+                fødselsnummer = Fødselsnummer("12345678901"),
+                fornavn = Fornavn("Ola"),
+                etternavn = Etternavn("Nordmann"),
+                navkontor = Navkontor("Nav Oslo"),
+                veilederNavn = VeilederNavn("Kari Nordmann"),
+                veilederNavIdent = VeilederNavIdent("NAV123"),
+                status = JobbsøkerStatus.INVITERT,
+            ),
+            Jobbsøker(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                treffId = treffId,
+                fødselsnummer = Fødselsnummer("12345678902"),
+                fornavn = Fornavn("Ole"),
+                etternavn = Etternavn("Nordmann"),
+                navkontor = Navkontor("Nav Oslo"),
+                veilederNavn = VeilederNavn("Kari Nordmann"),
+                veilederNavIdent = VeilederNavIdent("NAV123"),
+                status = JobbsøkerStatus.SVART_JA,
+            ),
+            Jobbsøker(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                treffId = treffId,
+                fødselsnummer = Fødselsnummer("12345678903"),
+                fornavn = Fornavn("Dole"),
+                etternavn = Etternavn("Nordmann"),
+                navkontor = Navkontor("Nav Oslo"),
+                veilederNavn = VeilederNavn("Kari Nordmann"),
+                veilederNavIdent = VeilederNavIdent("NAV123"),
+                status = JobbsøkerStatus.SVART_JA,
+            )
+        )
+        db.leggTilJobbsøkere(jobbsøkere)
+        db.settSynlighet(jobbsøkere[2].personTreffId, false)
+        val antallJobbsøkereSvartJa = repository.hentAntallJobbsøkereSvartJa(treffId)
+        assertThat(antallJobbsøkereSvartJa == 1)
+    }
+
+    @Test
     fun hentJobbsøkerHendelserTest() {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreffHendelser")
 
