@@ -13,14 +13,14 @@ import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import java.net.HttpURLConnection.*
 import java.util.UUID
+import no.nav.toi.Registrable
 
 
 class InnleggController(
     private val innleggService: InnleggService,
     private val kiLoggService: KiLoggService,
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
-) {
+) : Registrable {
     companion object {
         private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
         private const val INNLEGG_ID_PARAM            = "innleggId"
@@ -31,7 +31,7 @@ class InnleggController(
         private const val INNLEGG_ITEM_PATH = "$INNLEGG_BASE_PATH/{$INNLEGG_ID_PARAM}"
     }
 
-    init {
+    override fun register(routes: JavalinDefaultRoutingApi) {
         routes.get(INNLEGG_BASE_PATH, hentAlleInnleggForTreff())
         routes.get(INNLEGG_ITEM_PATH, hentEttInnlegg())
         routes.post(INNLEGG_BASE_PATH, opprettInnlegg())

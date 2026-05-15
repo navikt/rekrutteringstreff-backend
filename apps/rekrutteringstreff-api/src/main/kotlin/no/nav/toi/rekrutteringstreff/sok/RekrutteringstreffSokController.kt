@@ -6,16 +6,16 @@ import io.javalin.openapi.*
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
+import no.nav.toi.Registrable
 
 class RekrutteringstreffSokController(
     private val sokService: RekrutteringstreffSokService,
-    routes: JavalinDefaultRoutingApi,
-) {
+) : Registrable {
     companion object {
         private const val sokPath = "/api/rekrutteringstreff/sok"
     }
 
-    init {
+    override fun register(routes: JavalinDefaultRoutingApi) {
         routes.get(sokPath, sokHandler())
     }
 

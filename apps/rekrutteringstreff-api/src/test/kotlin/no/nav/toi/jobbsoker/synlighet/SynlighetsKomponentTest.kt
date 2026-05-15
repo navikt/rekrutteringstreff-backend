@@ -5,7 +5,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
@@ -22,6 +21,8 @@ import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Instant
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 /**
  * Komponenttest som verifiserer at synlighetsfiltrering fungerer korrekt
@@ -35,11 +36,11 @@ import java.time.Instant
 class SynlighetsKomponentTest {
 
     companion object {
-        private val authServer = MockOAuth2Server()
-        private val authPort = 18015
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
+        
+        private lateinit var infra: TestInfrastructureContext
         
         private lateinit var app: App
         private lateinit var jobbsøkerService: JobbsøkerService
@@ -49,40 +50,11 @@ class SynlighetsKomponentTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
-        authServer.start(port = authPort)
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+
+        infra.start()
+
+        app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
         
         jobbsøkerService = JobbsøkerService(db.dataSource, JobbsøkerRepository(db.dataSource, mapper), JobbsøkerSokRepository(db.dataSource))
     }
@@ -102,7 +74,7 @@ class SynlighetsKomponentTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -112,7 +84,7 @@ class SynlighetsKomponentTest {
     }
 
     private fun httpGet(path: String): HttpResponse<String> {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val request = HttpRequest.newBuilder()
             .uri(URI.create("http://localhost:$appPort$path"))
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -122,7 +94,7 @@ class SynlighetsKomponentTest {
     }
 
     private fun httpPostSøk(path: String): HttpResponse<String> {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val request = HttpRequest.newBuilder()
             .uri(URI.create("http://localhost:$appPort$path"))
             .header("Authorization", "Bearer ${token.serialize()}")

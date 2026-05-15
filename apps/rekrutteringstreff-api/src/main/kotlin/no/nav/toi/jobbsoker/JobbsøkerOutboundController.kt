@@ -12,6 +12,7 @@ import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.*
+import no.nav.toi.Registrable
 
 data class KandidatnummerDto(val kandidatnummer: String)
 
@@ -19,15 +20,14 @@ class JobbsøkerOutboundController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val kandidatsøkKlient: KandidatsøkKlient,
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
-) {
+) : Registrable {
     companion object {
         private const val pathParamPersonTreffId = "personTreffId"
         private const val pathParamTreffId = "treffId"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff/{$pathParamTreffId}"
         private const val eksternKandidatnummerPath = "$endepunktRekrutteringstreff/jobbsoker/{$pathParamPersonTreffId}/kandidatnummer"
     }
-    init {
+    override fun register(routes: JavalinDefaultRoutingApi) {
         routes.get(eksternKandidatnummerPath, hentKandidatnummerHandler())
     }
 

@@ -19,12 +19,12 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.*
+import no.nav.toi.Registrable
 
 class ArbeidsgiverController(
     private val arbeidsgiverService: ArbeidsgiverService,
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
-) {
+) : Registrable {
 
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -46,7 +46,7 @@ class ArbeidsgiverController(
         return navIdent
     }
 
-    init {
+    override fun register(routes: JavalinDefaultRoutingApi) {
         routes.post(arbeidsgiverPath, leggTilArbeidsgiverHandler())
         routes.post(arbeidsgiverMedBehovPath, leggTilArbeidsgiverMedBehovHandler())
         routes.get(arbeidsgiverPath, hentArbeidsgivereHandler())

@@ -14,18 +14,18 @@ import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
 import java.time.ZonedDateTime
 import java.util.*
+import no.nav.toi.Registrable
 
 class KiController (
     private val kiLoggRepository: KiLoggRepository,
     private val openAiClient: OpenAiClient,
-    routes: JavalinDefaultRoutingApi
-) {
+) : Registrable {
     companion object {
         private const val pathParamTreffId = "id"
         private const val baseUrl = "/api/rekrutteringstreff/{$pathParamTreffId}/ki"
     }
 
-    init {
+    override fun register(routes: JavalinDefaultRoutingApi) {
         routes.post("$baseUrl/valider", validerOgLoggHandler())
         routes.put("$baseUrl/logg/{loggId}/lagret", oppdaterLagretHandler())
         routes.put("$baseUrl/logg/{loggId}/manuell", oppdaterManuellHandler())

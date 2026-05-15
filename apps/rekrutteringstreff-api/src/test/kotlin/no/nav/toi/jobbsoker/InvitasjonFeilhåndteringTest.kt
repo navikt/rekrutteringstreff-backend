@@ -6,12 +6,10 @@ import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.*
 import org.junit.jupiter.api.*
@@ -21,6 +19,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 /**
  * Tester for feilhåndtering ved invitasjon av jobbsøkere.
@@ -30,55 +30,24 @@ import java.util.concurrent.atomic.AtomicInteger
 class InvitasjonFeilhåndteringTest {
 
     companion object {
-        private val authServer = MockOAuth2Server()
-        private val authPort = 18016
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
 
+        private lateinit var infra: TestInfrastructureContext
+
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
 
         val mapper = JacksonConfig.mapper
     }
 
-    private val eierRepository = EierRepository(db.dataSource)
-
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
 
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
-        authServer.start(port = authPort)
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        ctx = ApplicationContext(infra)
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -96,7 +65,7 @@ class InvitasjonFeilhåndteringTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -113,7 +82,7 @@ class InvitasjonFeilhåndteringTest {
      */
     @Test
     fun `samtidige invitasjoner registrerer kun én INVITERT-hendelse`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
 
@@ -133,7 +102,7 @@ class InvitasjonFeilhåndteringTest {
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         val personTreffId = jobbsøkere.first().personTreffId
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
 
@@ -173,7 +142,7 @@ class InvitasjonFeilhåndteringTest {
 
     @Test
     fun `invitasjon av ikke-synlig jobbsøker hoppes over mens synlige inviteres`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         
         val fnrUsynlig = Fødselsnummer("12345678901")
@@ -208,7 +177,7 @@ class InvitasjonFeilhåndteringTest {
         // Sett én jobbsøker til ikke-synlig (simulerer at CV ikke lenger er delt)
         db.settSynlighet(personTreffIdUsynlig, erSynlig = false)
 
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         // Forsøk å invitere begge jobbsøkere
         val requestBody = """{ "personTreffIder": ["$personTreffIdUsynlig", "$personTreffIdSynlig"] }"""
@@ -235,7 +204,7 @@ class InvitasjonFeilhåndteringTest {
      */
     @Test
     fun `re-invitasjon av allerede invitert jobbsøker håndteres idempotent`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
         val personTreffId = PersonTreffId(UUID.randomUUID())
@@ -254,7 +223,7 @@ class InvitasjonFeilhåndteringTest {
             )
         )
 
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
 
         val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
 

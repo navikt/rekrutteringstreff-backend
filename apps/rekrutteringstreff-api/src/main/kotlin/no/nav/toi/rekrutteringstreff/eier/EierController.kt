@@ -9,12 +9,12 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilJson
 import java.util.*
+import no.nav.toi.Registrable
 
 
 class EierController(
     private val eierService: EierService,
-    routes: JavalinDefaultRoutingApi
-) {
+) : Registrable {
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"
@@ -22,7 +22,7 @@ class EierController(
         private const val slettEiereEndepunkt = "$eiereEndepunkt/{navIdent}"
     }
 
-    init {
+    override fun register(routes: JavalinDefaultRoutingApi) {
         routes.get(eiereEndepunkt, hentEiere())
         routes.put(megEndepunkt, leggTilMeg())
         routes.delete(slettEiereEndepunkt, slettEier())
