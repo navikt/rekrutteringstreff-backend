@@ -21,7 +21,7 @@ class RekrutteringstreffScheduler(
     }
 
     override fun stop() {
-        scheduler.start()
+        scheduler.stop()
     }
 
     override fun wrapJobbkjøring() {

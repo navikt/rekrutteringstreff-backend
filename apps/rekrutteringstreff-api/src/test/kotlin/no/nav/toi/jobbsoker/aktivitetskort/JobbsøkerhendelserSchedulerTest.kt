@@ -222,7 +222,7 @@ class JobbsøkerhendelserSchedulerTest {
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)  // 1 invitasjon + 1 svar av eier
         val melding = rapid.inspektør.message(1)
@@ -257,7 +257,7 @@ class JobbsøkerhendelserSchedulerTest {
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, false)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(2)
         val melding = rapid.inspektør.message(1)
@@ -292,7 +292,7 @@ class JobbsøkerhendelserSchedulerTest {
         jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
         jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, null)
 
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         assertThat(rapid.inspektør.size).isEqualTo(3)  // 1 invitasjon + 1 ja-svar + 1 fjernet svar
         val melding = rapid.inspektør.message(2)
@@ -325,10 +325,10 @@ class JobbsøkerhendelserSchedulerTest {
 
         val personTreffId = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)!!.personTreffId
         jobbsøkerService.svarPåVegneAvJobbsøker(personTreffId, arrangørNavIdent, true)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         rekrutteringstreffService.avlys(treffId, arrangørNavIdent)
-        scheduler.behandleJobbsøkerHendelser()
+        scheduler.wrapJobbkjøring()
 
         // 1 invitasjon + 1 ja-svar av eier + 1 avlyst-status
         assertThat(rapid.inspektør.size).isEqualTo(3)

@@ -26,12 +26,12 @@ class DefaultScheduler (
         private val isRunning = AtomicBoolean(false)
 
         override fun start() {
-            log.info("Starter JobbsøkerhendelserScheduler")
+            log.info("Starter ${scheduledTask::class.simpleName}")
             scheduler.scheduleAtFixedRate(::wrapJobbkjøring, initialDelay, period, timeUnit)
         }
 
         override fun stop() {
-            log.info("Stopper JobbsøkerhendelserScheduler")
+            log.info("Stopper ${scheduledTask::class.simpleName}")
             scheduler.shutdown()
             try {
                 if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -43,7 +43,7 @@ class DefaultScheduler (
         }
 
     override fun wrapJobbkjøring() {
-        log.info("Starter task ${scheduledTask::class.simpleName} ")
+        log.info("Vurderer oppstart av task ${scheduledTask::class.simpleName} ")
         if (isRunning.getAndSet(true)) {
             log.info("Forrige kjøring av task ${scheduledTask::class.simpleName} er ikke ferdig, skipper denne kjøringen.")
             return
@@ -55,6 +55,7 @@ class DefaultScheduler (
             return
         }
         try {
+            log.info("Starter task ${scheduledTask::class.simpleName} ")
             scheduledTask.kjørJobb()
         } catch (e: Exception) {
             log.error("Feil under kjøring av task ${scheduledTask::class.simpleName}", e)
