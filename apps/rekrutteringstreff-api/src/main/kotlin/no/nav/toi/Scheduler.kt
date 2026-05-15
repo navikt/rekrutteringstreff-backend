@@ -48,13 +48,12 @@ class DefaultScheduler (
             log.info("Forrige kjøring av task ${scheduledTask::class.simpleName} er ikke ferdig, skipper denne kjøringen.")
             return
         }
-
-        if (leaderElection.isLeader().not()) {
-            log.info("Kjøring av task ${scheduledTask::class.simpleName} skippes, instansen er ikke leader.")
-            isRunning.set(false)
-            return
-        }
         try {
+            if (leaderElection.isLeader().not()) {
+                log.info("Kjøring av task ${scheduledTask::class.simpleName} skippes, instansen er ikke leader.")
+                isRunning.set(false)
+                return
+            }
             log.info("Starter task ${scheduledTask::class.simpleName} ")
             scheduledTask.kjørJobb()
         } catch (e: Exception) {
