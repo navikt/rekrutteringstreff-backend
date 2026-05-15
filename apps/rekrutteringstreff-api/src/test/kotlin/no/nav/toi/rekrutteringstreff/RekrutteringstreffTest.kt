@@ -7,7 +7,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
@@ -25,7 +24,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
-import no.nav.toi.testApplicationContext
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -34,49 +34,26 @@ class RekrutteringstreffTest {
     val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
 
     private val mapper = JacksonConfig.mapper
-
-    private val authServer = MockOAuth2Server()
-    private val authPort = 18012
     private val db = TestDatabase()
     private val appPort = ubruktPortnr()
+
+    private lateinit var infra: TestInfrastructureContext
 
     private lateinit var app: App
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        authServer.start(port = authPort)
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            ctx = testApplicationContext(
-                    dataSource = db.dataSource,
-                    authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-                    modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-                    pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+
+        infra.start()
+
+        app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
 
     }
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -107,7 +84,7 @@ class RekrutteringstreffTest {
     @Test
     fun opprettRekrutteringstreff() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val gyldigStatus = RekrutteringstreffStatus.UTKAST
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
@@ -138,7 +115,7 @@ class RekrutteringstreffTest {
     @Test
     fun `opprett rekrutteringstreff med ugyldig request body gir 400`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
@@ -152,7 +129,7 @@ class RekrutteringstreffTest {
     @Test
     fun `opprett rekrutteringstreff med ugyldig JSON gir 400`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff",
@@ -166,7 +143,7 @@ class RekrutteringstreffTest {
     @Test
     fun hentRekrutteringstreff() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val originalTittel = "Spesifikk Tittel"
 
         db.opprettRekrutteringstreffIDatabase(
@@ -186,7 +163,7 @@ class RekrutteringstreffTest {
     @Test
     fun oppdaterRekrutteringstreff() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent)
         val created = db.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
@@ -225,7 +202,7 @@ class RekrutteringstreffTest {
     @Test
     fun `oppdater rekrutteringstreff med endret tittel uten kiLoggId gir 422`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
         val created = db.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
@@ -254,7 +231,7 @@ class RekrutteringstreffTest {
     @Test
     fun `oppdater rekrutteringstreff med endret tittel og gyldig kiLoggId gir 200`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
         val created = db.hentAlleRekrutteringstreff().first()
 
@@ -304,7 +281,7 @@ class RekrutteringstreffTest {
     @Test
     fun `oppdater rekrutteringstreff med kiLoggId for feil treff gir 422`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
         val annetTreffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Annet treff")
         val created = db.hentAlleRekrutteringstreff().first { it.tittel == "Gammel tittel" }
@@ -354,7 +331,7 @@ class RekrutteringstreffTest {
     @Test
     fun `oppdater rekrutteringstreff med bryterRetningslinjer og uten lagreLikevel gir 422 KI_KREVER_BEKREFTELSE`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
         val created = db.hentAlleRekrutteringstreff().first()
         val kiLoggRepository = no.nav.toi.rekrutteringstreff.ki.KiLoggRepository(db.dataSource)
@@ -401,7 +378,7 @@ class RekrutteringstreffTest {
     @Test
     fun `oppdater rekrutteringstreff med ukjent kiLoggId gir 422 KI_LOGG_ID_UGYLDIG`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
         val created = db.hentAlleRekrutteringstreff().first()
         val updateDto = OppdaterRekrutteringstreffDto(
@@ -431,7 +408,7 @@ class RekrutteringstreffTest {
     @Test
     fun `oppdater rekrutteringstreff med endret tekst etter validering gir 422 KI_TEKST_ENDRET`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent, tittel = "Gammel tittel")
         val created = db.hentAlleRekrutteringstreff().first()
         val kiLoggRepository = no.nav.toi.rekrutteringstreff.ki.KiLoggRepository(db.dataSource)
@@ -477,7 +454,7 @@ class RekrutteringstreffTest {
     @Test
     fun slettRekrutteringstreffMedUpublisertedata() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = db.hentAlleRekrutteringstreff().first()
         val response = httpDelete(
@@ -492,7 +469,7 @@ class RekrutteringstreffTest {
     @Test
     fun `slett rekrutteringstreff feiler (409) hvis treffet er publisert og har jobbsøkerinformasjon`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
 
         db.opprettRekrutteringstreffIDatabase(navIdent)
         val treff = db.hentAlleRekrutteringstreff().first()
@@ -545,7 +522,7 @@ class RekrutteringstreffTest {
     @Test
     fun `publiser rekrutteringstreff endrer status fra UTKAST til PUBLISERT`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
 
         // Opprett treff - opprettes automatisk med UTKAST-status
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
@@ -586,7 +563,7 @@ class RekrutteringstreffTest {
     @Test
     fun `slett rekrutteringstreff feiler (409) etter publisering uansett hvilke data den har`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         db.opprettRekrutteringstreffIDatabase(navIdent)
         val treff = db.hentAlleRekrutteringstreff().first()
 
@@ -613,7 +590,7 @@ class RekrutteringstreffTest {
 
     @Test
     fun `GET hendelser gir 200 og sortert liste`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val id = db.opprettRekrutteringstreffIDatabase("A123456")
         httpPut(
             "http://localhost:$appPort/api/rekrutteringstreff/${id.somUuid}",
@@ -639,7 +616,7 @@ class RekrutteringstreffTest {
 
     @Test
     fun `hent alle hendelser returnerer sortert kombinert liste`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treff = db.opprettRekrutteringstreffIDatabase("A123456")
 
         db.leggTilJobbsøkere(
@@ -717,7 +694,7 @@ class RekrutteringstreffTest {
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringOpprett(autentiseringstest: UautentifiserendeTestCase) {
-        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff", "", authServer, authPort)
+        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff", "", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
@@ -725,7 +702,7 @@ class RekrutteringstreffTest {
     @MethodSource("tokenVarianter")
     fun autentiseringHentEnkelt(autentiseringstest: UautentifiserendeTestCase) {
         val anyId = UUID.randomUUID()
-        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", authServer, authPort)
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
@@ -733,7 +710,7 @@ class RekrutteringstreffTest {
     @MethodSource("tokenVarianter")
     fun autentiseringOppdater(autentiseringstest: UautentifiserendeTestCase) {
         val anyId = UUID.randomUUID()
-        val response = autentiseringstest.utførPut("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", "", authServer, authPort)
+        val response = autentiseringstest.utførPut("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", "", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
@@ -741,7 +718,7 @@ class RekrutteringstreffTest {
     @MethodSource("tokenVarianter")
     fun autentiseringSlett(autentiseringstest: UautentifiserendeTestCase) {
         val anyId = UUID.randomUUID()
-        val response = autentiseringstest.utførDelete("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", authServer, authPort)
+        val response = autentiseringstest.utførDelete("http://localhost:${appPort}/api/rekrutteringstreff/$anyId", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
@@ -760,7 +737,7 @@ class RekrutteringstreffTest {
         forventetHendelsestype: RekrutteringstreffHendelsestype
     ) {
         val navIdent = "Z999999"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent)
 
         if (path == "fullfor") {
@@ -798,7 +775,7 @@ class RekrutteringstreffTest {
     @Test
     fun `avlys oppretter hendelse for rekrutteringstreff og alle jobbsøkere med aktivt svar ja`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
@@ -880,7 +857,7 @@ class RekrutteringstreffTest {
     @Test
     fun `fullfor oppretter hendelse for rekrutteringstreff og alle jobbsøkere med aktivt svar ja`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
@@ -947,7 +924,7 @@ class RekrutteringstreffTest {
     @Test
     fun `avlys oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere har aktivt svar ja`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Legg til en jobbsøker som ikke svarer
@@ -988,7 +965,7 @@ class RekrutteringstreffTest {
     @Test
     fun `fullfor oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere har aktivt svar ja`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Publiser treffet
@@ -1013,7 +990,7 @@ class RekrutteringstreffTest {
     @Test
     fun `registrer endring oppretter hendelser for publisert treff med inviterte jobbsøkere`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
@@ -1088,7 +1065,7 @@ class RekrutteringstreffTest {
     @Test
     fun `registrer endring oppretter hendelser for publisert treff med jobbsøkere som har svart ja`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
@@ -1165,7 +1142,7 @@ class RekrutteringstreffTest {
     @Test
     fun `registrer endring varsler ikke jobbsøkere som har svart nei`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
@@ -1262,7 +1239,7 @@ class RekrutteringstreffTest {
     @Test
     fun `registrer endring avvises for upubliserte treff`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
         val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
@@ -1302,7 +1279,7 @@ class RekrutteringstreffTest {
     @Test
     fun `registrer endring avvises for fullførte treff`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         db.endreTilTidTilPassert(treffId, navIdent)
 
@@ -1338,7 +1315,7 @@ class RekrutteringstreffTest {
     @Test
     fun `registrer endring avvises for avlyste treff`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Publiser og avlys treffet
@@ -1373,7 +1350,7 @@ class RekrutteringstreffTest {
     @Test
     fun `registrer endring oppretter kun rekrutteringstreff-hendelse når ingen jobbsøkere skal varsles`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         httpPost(
@@ -1408,7 +1385,7 @@ class RekrutteringstreffTest {
     @Test
     fun `fullfor feiler når treffet ikke er passert i tid`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Publiser treffet (men ikke sett tilTid til passert)
@@ -1432,7 +1409,7 @@ class RekrutteringstreffTest {
     @Test
     fun `fullfor feiler for AVLYST treff`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         db.endreTilTidTilPassert(treffId, navIdent)
 
@@ -1462,7 +1439,7 @@ class RekrutteringstreffTest {
     @Test
     fun `avlys feiler for FULLFØRT treff`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
         db.endreTilTidTilPassert(treffId, navIdent)
 
@@ -1492,7 +1469,7 @@ class RekrutteringstreffTest {
     @Test
     fun `gjenapn feiler for UTKAST treff`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Forsøk å gjenåpne et utkast-treff (som aldri har vært avlyst)
@@ -1509,7 +1486,7 @@ class RekrutteringstreffTest {
     @Test
     fun `gjenapn feiler for PUBLISERT treff som ikke er avlyst`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Publiser treffet
@@ -1533,7 +1510,7 @@ class RekrutteringstreffTest {
     @Test
     fun `gjenapn fungerer for AVLYST treff`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Publiser og avlys treffet
@@ -1565,7 +1542,7 @@ class RekrutteringstreffTest {
     @Test
     fun `publiser feiler for allerede PUBLISERT treff`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent)
 
         // Publiser treffet

@@ -3,7 +3,6 @@ package no.nav.toi.jobbsoker
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -12,58 +11,28 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.HttpURLConnection
 import java.util.*
-import no.nav.toi.testApplicationContext
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
 class JobbsøkerOutboundTest {
 
     private val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
-
-    private val authServer = MockOAuth2Server()
     private val db = TestDatabase()
-    private val authPort = ubruktPortnrFra10000.ubruktPortnr()
     private val appPort = ubruktPortnrFra10000.ubruktPortnr()
-    private val issuerId = "http://localhost:$authPort/default"
-    private val audience = "rekrutteringstreff-audience"
-    private val jwksUri = "http://localhost:$authPort/default/jwks"
+
+    private lateinit var infra: TestInfrastructureContext
 
     private lateinit var ctx: ApplicationContext
     private lateinit var app: App
 
     @BeforeAll
     fun startApp(wmInfo: WireMockRuntimeInfo) {
-        authServer.start(authPort)
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
 
-        ctx = testApplicationContext(
-                    dataSource = db.dataSource,
-                    authConfigs = listOf(
-                AuthenticationConfiguration(
-                    audience = audience,
-                    issuer = issuerId,
-                    jwksUri = jwksUri
-                )
-            ),
-                    modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-                    pilotkontorer = listOf("1234"),
-                    kandidatsøkKlient = no.nav.toi.kandidatsok.KandidatsøkKlient(
-                kandidatsokApiUrl = wmInfo.httpBaseUrl,
-                kandidatsokScope = "scope",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            )
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl, kandidatsøkKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
@@ -89,7 +58,7 @@ class JobbsøkerOutboundTest {
     @AfterAll
     fun tearDown() {
         app.close()
-        authServer.shutdown()
+        infra.stop()
     }
 
     @AfterEach
@@ -134,11 +103,9 @@ class JobbsøkerOutboundTest {
                 )
         )
 
-        val token = authServer
+        val token = infra.authServer
             .lagToken(
-                authPort = authPort,
-                issuerId = issuerId,
-                audience = audience,
+                authPort = infra.authPort,
                 groups = listOf(AzureAdRoller.arbeidsgiverrettet)
             )
             .serialize()

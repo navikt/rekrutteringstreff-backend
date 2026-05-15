@@ -4,7 +4,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
@@ -23,51 +22,28 @@ import java.net.http.HttpResponse
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
-import no.nav.toi.testApplicationContext
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
 class RekrutteringstreffSokKomponenttest {
 
     companion object {
-        private val authServer = MockOAuth2Server()
-        private val authPort = ubruktPortnrFra10000.ubruktPortnr()
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
+
+        private lateinit var infra: TestInfrastructureContext
 
         private lateinit var app: App
     }
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            ctx = testApplicationContext(
-                    dataSource = db.dataSource,
-                    authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-                    modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-                    pilotkontorer = listOf("0315"),
-            ),
-            port = appPort,
-        ).also { it.start() }
-        authServer.start(port = authPort)
+        infra = TestInfrastructureContext(dataSource = db.dataSource, pilotkontorer = listOf("0315"), modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -85,7 +61,7 @@ class RekrutteringstreffSokKomponenttest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -99,7 +75,7 @@ class RekrutteringstreffSokKomponenttest {
         navIdent: String = "A123456",
         grupper: List<UUID> = listOf(AzureAdRoller.arbeidsgiverrettet),
     ): HttpResponse<String> {
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = grupper)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = grupper)
         val request = HttpRequest.newBuilder()
             .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/sok$queryParams"))
             .header("Authorization", "Bearer ${token.serialize()}")

@@ -6,7 +6,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -20,7 +19,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import no.nav.toi.testApplicationContext
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 /**
  * Tester for feilhåndtering ved invitasjon av jobbsøkere.
@@ -30,10 +30,10 @@ import no.nav.toi.testApplicationContext
 class InvitasjonFeilhåndteringTest {
 
     companion object {
-        private val authServer = MockOAuth2Server()
-        private val authPort = 18016
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
+
+        private lateinit var infra: TestInfrastructureContext
 
         private lateinit var ctx: ApplicationContext
         private lateinit var app: App
@@ -43,32 +43,11 @@ class InvitasjonFeilhåndteringTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
 
-        ctx = testApplicationContext(
-                    dataSource = db.dataSource,
-                    authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-                    modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-                    pilotkontorer = listOf("1234"),
-            )
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
-        authServer.start(port = authPort)
     }
 
     @BeforeEach
@@ -86,7 +65,7 @@ class InvitasjonFeilhåndteringTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -103,7 +82,7 @@ class InvitasjonFeilhåndteringTest {
      */
     @Test
     fun `samtidige invitasjoner registrerer kun én INVITERT-hendelse`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
 
@@ -163,7 +142,7 @@ class InvitasjonFeilhåndteringTest {
 
     @Test
     fun `invitasjon av ikke-synlig jobbsøker hoppes over mens synlige inviteres`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         
         val fnrUsynlig = Fødselsnummer("12345678901")
@@ -225,7 +204,7 @@ class InvitasjonFeilhåndteringTest {
      */
     @Test
     fun `re-invitasjon av allerede invitert jobbsøker håndteres idempotent`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         val fnr = Fødselsnummer("12345678901")
         val personTreffId = PersonTreffId(UUID.randomUUID())

@@ -7,7 +7,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
@@ -21,7 +20,8 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
-import no.nav.toi.testApplicationContext
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -31,17 +31,10 @@ class RekrutteringstreffEierTest {
     val mapper = JacksonConfig.mapper
 
     companion object {
-        private val authServer = MockOAuth2Server()
-        private val authPort = 18018
         private val database = TestDatabase()
         private val appPort = ubruktPortnr()
 
-        private val accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
+        private lateinit var infra: TestInfrastructureContext
 
         private lateinit var ctx: ApplicationContext
         private lateinit var app: App
@@ -49,25 +42,10 @@ class RekrutteringstreffEierTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        authServer.start(port = authPort)
 
-        ctx = testApplicationContext(
-            dataSource = database.dataSource,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-        )
+        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort)
 
         app.start()
@@ -95,7 +73,7 @@ class RekrutteringstreffEierTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -108,7 +86,7 @@ class RekrutteringstreffEierTest {
     fun hentEiere() {
         val navIdent = "A123456"
         val eiere = ('0'..'9').map { "Z99999$it" }
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
 
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
@@ -125,7 +103,7 @@ class RekrutteringstreffEierTest {
     @Test
     fun `Slett eier er lov hvis det er flere eiere`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"))
@@ -142,7 +120,7 @@ class RekrutteringstreffEierTest {
     @Test
     fun `Slett eier hvis det bare er 1 eier skal gi bad request`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         val response = httpDelete(
@@ -159,7 +137,7 @@ class RekrutteringstreffEierTest {
     fun slettEierBeholderAndreEiere() {
         val navIdent = "A123456"
         val beholdIdent = "B987654"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
         ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
@@ -176,7 +154,7 @@ class RekrutteringstreffEierTest {
     fun `leggTilEierMedKontor gir 200 og legger til bruker som eier`() {
         val navIdent = "Z999001"
         val oppretter = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
         assertThat(database.hentEiere(treff.id)).doesNotContain(navIdent)
@@ -194,7 +172,7 @@ class RekrutteringstreffEierTest {
     @Test
     fun `leggTilEierMedKontor er idempotent og gir 200 når bruker allerede er eier`() {
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val treff = database.hentAlleRekrutteringstreff().first()
         assertThat(database.hentEiere(treff.id)).contains(navIdent)
@@ -213,7 +191,7 @@ class RekrutteringstreffEierTest {
     fun `leggTilEierMedKontor logger EIER_LAGT_TIL-hendelse`() {
         val navIdent = "Z999002"
         val oppretter = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
 
@@ -231,7 +209,7 @@ class RekrutteringstreffEierTest {
     fun `leggTilEierMedKontor legger til kontor fra Modia og logger KONTOR_LAGT_TIL-hendelse`() {
         val navIdent = "Z999003"
         val oppretter = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
         assertThat(treff.kontorer).doesNotContain("1234")
@@ -255,7 +233,7 @@ class RekrutteringstreffEierTest {
     fun `leggTilEierMedKontor legger ikke til duplikat kontor`() {
         val navIdent = "Z999004"
         val oppretter = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(oppretter, kontor = "1234")
         val treff = database.hentAlleRekrutteringstreff().first()
         assertThat(treff.kontorer).contains("1234")
@@ -278,7 +256,7 @@ class RekrutteringstreffEierTest {
     fun `slettEier logger EIER_FJERNET-hendelse`() {
         val navIdent = "A123456"
         val skalSlettes = "B654321"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val treff = database.hentAlleRekrutteringstreff().first()
         ctx.eierRepository.leggTil(treff.id, listOf(skalSlettes))
@@ -296,7 +274,7 @@ class RekrutteringstreffEierTest {
     fun `DELETE eier gir 403 når bruker ikke er eier`() {
         val oppretter = "A123456"
         val ikkeEier = "X000000"
-        val token = authServer.lagToken(authPort, navIdent = ikkeEier)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = ikkeEier)
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
         ctx.eierRepository.leggTil(treff.id, listOf("B654321"))
@@ -314,7 +292,7 @@ class RekrutteringstreffEierTest {
     fun `PUT eiere meg gir 403 for jobbsøkerrettet rolle`() {
         val oppretter = "A123456"
         val jobbsøkerRettetBruker = "J000001"
-        val token = authServer.lagToken(authPort, navIdent = jobbsøkerRettetBruker, groups = listOf(jobbsøkerrettet))
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = jobbsøkerRettetBruker, groups = listOf(jobbsøkerrettet))
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
 
@@ -368,7 +346,7 @@ class RekrutteringstreffEierTest {
     @MethodSource("tokenVarianter")
     fun autentiseringHentEiere(autentiseringstest: UautentifiserendeTestCase) {
         val dummyId = UUID.randomUUID().toString()
-        val response = autentiseringstest.utførGet("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", authServer, authPort)
+        val response = autentiseringstest.utførGet("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 
@@ -377,7 +355,7 @@ class RekrutteringstreffEierTest {
     fun autentiseringSlettEier(autentiseringstest: UautentifiserendeTestCase) {
         val dummyId = UUID.randomUUID().toString()
         val navIdent = "A123456"
-        val response = autentiseringstest.utførDelete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent", authServer, authPort)
+        val response = autentiseringstest.utførDelete("http://localhost:$appPort/api/rekrutteringstreff/$dummyId/eiere/$navIdent", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(401)
     }
 }

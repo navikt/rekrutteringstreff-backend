@@ -4,11 +4,8 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.AccessTokenClient
 import no.nav.toi.App
 import no.nav.toi.ApplicationContext
-import no.nav.toi.AuthenticationConfiguration
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
@@ -30,7 +27,7 @@ import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.ZonedDateTime
-import no.nav.toi.testApplicationContext
+import no.nav.toi.TestInfrastructureContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PilotkontorTest {
@@ -40,28 +37,16 @@ class PilotkontorTest {
     }
 
     private val modiaKlient = mockk<ModiaKlient>()
-
-    private val authServer = MockOAuth2Server()
-    private val authPort = 18012
     private val database = TestDatabase()
+    private lateinit var infra: TestInfrastructureContext
     private lateinit var ctx: ApplicationContext
     private lateinit var app: App
 
     @BeforeAll
     fun setUp() {
-        authServer.start(port = authPort)
-        ctx = testApplicationContext(
-                    dataSource = database.dataSource,
-                    authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-                    modiaKlient = modiaKlient,
-                    pilotkontorer = listOf("1234"),
-            )
+        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlient = modiaKlient)
+        infra.start()
+        ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
@@ -78,7 +63,7 @@ class PilotkontorTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -88,7 +73,7 @@ class PilotkontorTest {
 
         val request = HttpRequest.newBuilder()
             .uri(URI("http://localhost:$appPort/api/rekrutteringstreff/sok"))
-            .header("Authorization", "Bearer ${authServer.lagToken(authPort, groups = listOf(arbeidsgiverrettet)).serialize()}")
+            .header("Authorization", "Bearer ${infra.authServer.lagToken(infra.authPort, groups = listOf(arbeidsgiverrettet)).serialize()}")
             .GET().build()
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
@@ -105,7 +90,7 @@ class PilotkontorTest {
 
         val request = HttpRequest.newBuilder()
             .uri(URI("http://localhost:$appPort/api/rekrutteringstreff/sok"))
-            .header("Authorization", "Bearer ${authServer.lagToken(authPort, groups = listOf(arbeidsgiverrettet)).serialize()}")
+            .header("Authorization", "Bearer ${infra.authServer.lagToken(infra.authPort, groups = listOf(arbeidsgiverrettet)).serialize()}")
             .GET().build()
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
@@ -119,7 +104,7 @@ class PilotkontorTest {
     fun `ModiaKlient blir bare kalt når token er et veileder-token`() {
         val request = HttpRequest.newBuilder()
             .uri(URI("http://localhost:$appPort/api/rekrutteringstreff/$gyldigRekrutteringstreff"))
-            .header("Authorization", "Bearer ${authServer.lagTokenBorger(authPort = authPort).serialize()}")
+            .header("Authorization", "Bearer ${infra.authServer.lagTokenBorger(authPort = infra.authPort).serialize()}")
             .GET().build()
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())

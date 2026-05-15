@@ -1,10 +1,6 @@
 package no.nav.toi
 
-import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
-import no.nav.toi.AzureAdRoller.jobbsøkerrettet
-import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -15,16 +11,9 @@ import org.junit.jupiter.api.TestInstance
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KubernetesHealthTest {
     private val appPort = ubruktPortnr()
-    private val accessTokenClient = AccessTokenClient(
-        clientId = "clientId",
-        secret = "clientSecret",
-        azureUrl = "",
-        httpClient = httpClient
-    )
+    private val infra = TestInfrastructureContext(dataSource = TestDatabase().dataSource)
     private val app = App(
-        ctx = testApplicationContext(
-            dataSource = TestDatabase().dataSource,
-        ),
+        ctx = ApplicationContext(infra),
         port = appPort,
     )
 

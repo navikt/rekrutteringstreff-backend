@@ -7,6 +7,7 @@ import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.ApplicationContext
 import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.InfrastructureContext
 import no.nav.toi.RolleUuidSpesifikasjon
 import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
@@ -62,7 +63,7 @@ class MinsideTest {
         )
 
         private val rekrutteringsTreffApiApp = no.nav.toi.App(
-            ctx = object : ApplicationContext() {
+            ctx = ApplicationContext(object : InfrastructureContext() {
                 override val dataSource = db.dataSource
                 override val rapidsConnection = TestRapid()
                 override val authConfigs = listOf(
@@ -93,7 +94,7 @@ class MinsideTest {
                     accessTokenClient = Companion.accessTokenClient,
                     httpClient = Companion.httpClient
                 )
-            },
+            }),
             port = rekrutteringsTreffApiPort,
         )
 

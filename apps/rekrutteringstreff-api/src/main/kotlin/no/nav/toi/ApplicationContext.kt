@@ -1,9 +1,5 @@
 package no.nav.toi
 
-import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
-import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
@@ -14,7 +10,6 @@ import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
-import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffScheduler
@@ -33,189 +28,94 @@ import no.nav.toi.rekrutteringstreff.opprydning.RekrutteringstreffOpprydningSche
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokController
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokRepository
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokService
-import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
-import java.net.http.HttpClient
-import java.util.*
-import javax.sql.DataSource
 
 @Suppress("MemberVisibilityCanBePrivate")
-open class ApplicationContext(
-    private val env: Map<String, String> = System.getenv()
-) {
-    private fun getenv(key: String): String =
-        env[key] ?: throw NullPointerException("Det finnes ingen miljøvariabel med navn [$key]")
+class ApplicationContext(val infra: InfrastructureContext = InfrastructureContext()) {
 
-    // Infrastruktur
-    open val dataSource: DataSource by lazy {
-        HikariConfig().apply {
-            val base = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_JDBC_URL")
-            jdbcUrl = "$base&reWriteBatchedInserts=true"
-            username = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_USERNAME")
-            password = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_PASSWORD")
-            driverClassName = "org.postgresql.Driver"
-            maximumPoolSize = 15
-            minimumIdle = 3
-            isAutoCommit = true
-            transactionIsolation = "TRANSACTION_REPEATABLE_READ"
-            initializationFailTimeout = 10_000
-            connectionTimeout = 30_000
-            idleTimeout = 600_000
-            maxLifetime = 1_800_000
-            leakDetectionThreshold = 60_000
-            poolName = "RekrutteringstreffPool"
-            validate()
-        }.let(::HikariDataSource)
-    }
+    // Infrastruktur (delegert fra InfrastructureContext)
+    val dataSource get() = infra.dataSource
+    val rapidsConnection get() = infra.rapidsConnection
+    val authConfigs get() = infra.authConfigs
+    val rolleUuidSpesifikasjon get() = infra.rolleUuidSpesifikasjon
+    val pilotkontorer get() = infra.pilotkontorer
+    val leaderElection get() = infra.leaderElection
+    val modiaKlient get() = infra.modiaKlient
+    val kandidatsøkKlient get() = infra.kandidatsøkKlient
 
-    open val rapidsConnection: RapidsConnection by lazy {
-        RapidApplication.create(env, builder = { withHttpPort(9000) })
-    }
+    // Repositories
+    val jobbsøkerRepository = JobbsøkerRepository(infra.dataSource, JacksonConfig.mapper)
+    val arbeidsgiverRepository = ArbeidsgiverRepository(infra.dataSource, JacksonConfig.mapper)
+    val rekrutteringstreffRepository = RekrutteringstreffRepository(infra.dataSource)
+    val eierRepository = EierRepository(infra.dataSource)
+    val innleggRepository = InnleggRepository(infra.dataSource)
+    val aktivitetskortRepository = AktivitetskortRepository(infra.dataSource)
+    val kiLoggRepository = KiLoggRepository(infra.dataSource)
+    val sokRepository = RekrutteringstreffSokRepository(infra.dataSource)
+    val healthRepository = HealthRepository(infra.dataSource)
 
-    // Konfigurasjon (lazy slik at tester kan override uten at env-oppslag trigges)
-    open val authConfigs: List<AuthenticationConfiguration> by lazy {
-        listOfNotNull(
-            AuthenticationConfiguration(
-                audience = getenv("AZURE_APP_CLIENT_ID"),
-                issuer = getenv("AZURE_OPENID_CONFIG_ISSUER"),
-                jwksUri = getenv("AZURE_OPENID_CONFIG_JWKS_URI")
-            ),
-            AuthenticationConfiguration(
-                audience = getenv("TOKEN_X_CLIENT_ID"),
-                issuer = getenv("TOKEN_X_ISSUER"),
-                jwksUri = getenv("TOKEN_X_JWKS_URI")
-            ),
-            if (env["NAIS_CLUSTER_NAME"] == "dev-gcp")
-                AuthenticationConfiguration(
-                    audience = "dev-gcp:toi:rekrutteringstreff-api",
-                    issuer = "https://fakedings.intern.dev.nav.no/fake",
-                    jwksUri = "https://fakedings.intern.dev.nav.no/fake/jwks",
-                ) else null
-        )
-    }
+    // Services
+    val jobbsøkerService = JobbsøkerService(infra.dataSource, jobbsøkerRepository)
+    val arbeidsgiverService = ArbeidsgiverService(infra.dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
+    val eierService = EierService(eierRepository, rekrutteringstreffRepository, infra.dataSource)
+    val rekrutteringstreffService = RekrutteringstreffService(
+        infra.dataSource,
+        rekrutteringstreffRepository,
+        jobbsøkerRepository,
+        arbeidsgiverRepository,
+        jobbsøkerService,
+        eierService
+    )
+    val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
+    val kiLoggService = KiLoggService(kiLoggRepository)
+    val sokService = RekrutteringstreffSokService(sokRepository)
 
-    open val rolleUuidSpesifikasjon: RolleUuidSpesifikasjon by lazy {
-        RolleUuidSpesifikasjon(
-            jobbsøkerrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_JOBBSOKERRETTET")),
-            arbeidsgiverrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET")),
-            utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER"))
-        )
-    }
+    // Controllere
+    val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService)
+    val rekrutteringstreffController = RekrutteringstreffController(rekrutteringstreffService, eierService, kiLoggService)
+    val eierController = EierController(eierService)
+    val jobbsøkerController = JobbsøkerController(jobbsøkerService, eierService)
+    val jobbsøkerInnloggetBorgerController = JobbsøkerInnloggetBorgerController(jobbsøkerService)
+    val jobbsøkerOutboundController = JobbsøkerOutboundController(jobbsøkerRepository, infra.kandidatsøkKlient, eierService)
+    val innleggController = InnleggController(innleggService, kiLoggService, eierService)
+    val kiController = KiController(kiLoggRepository, OpenAiClient(repo = kiLoggRepository))
+    val sokController = RekrutteringstreffSokController(sokService)
+    val healthController = HealthController(healthRepository)
 
-    open val pilotkontorer: List<String> by lazy { getenv("PILOTKONTORER").split(",").map { it.trim() } }
-
-    open val leaderElection: LeaderElectionInterface by lazy { LeaderElection() }
-
-    // Infrastruktur (lazy for å unngå env-oppslag i tester)
-    open val httpClient: HttpClient by lazy {
-        HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.ALWAYS)
-            .build()
-    }
-
-    open val accessTokenClient: AccessTokenClient by lazy {
-        AccessTokenClient(
-            secret = getenv("AZURE_APP_CLIENT_SECRET"),
-            clientId = getenv("AZURE_APP_CLIENT_ID"),
-            azureUrl = getenv("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT"),
-            httpClient = httpClient
-        )
-    }
-
-    // Klienter
-    open val modiaKlient: ModiaKlient by lazy {
-        ModiaKlient(
-            modiaContextHolderUrl = getenv("MODIACONTEXTHOLDER_URL"),
-            modiaContextHolderScope = getenv("MODIACONTEXTHOLDER_SCOPE"),
-            accessTokenClient = accessTokenClient,
-            httpClient = httpClient,
-        )
-    }
-
-    open val kandidatsøkKlient: KandidatsøkKlient by lazy {
-        KandidatsøkKlient(
-            kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
-            kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
-            accessTokenClient = accessTokenClient,
-            httpClient = httpClient
-        )
-    }
-
-    // Repositories (lazy fordi dataSource er lazy)
-    open val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
-    open val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
-    open val rekrutteringstreffRepository by lazy { RekrutteringstreffRepository(dataSource) }
-    open val eierRepository by lazy { EierRepository(dataSource) }
-    open val innleggRepository by lazy { InnleggRepository(dataSource) }
-    open val aktivitetskortRepository by lazy { AktivitetskortRepository(dataSource) }
-    open val kiLoggRepository by lazy { KiLoggRepository(dataSource) }
-    open val sokRepository by lazy { RekrutteringstreffSokRepository(dataSource) }
-    open val healthRepository by lazy { HealthRepository(dataSource) }
-
-    // Services (lazy fordi repositories er lazy)
-    open val jobbsøkerService by lazy { JobbsøkerService(dataSource, jobbsøkerRepository) }
-    open val arbeidsgiverService by lazy { ArbeidsgiverService(dataSource, arbeidsgiverRepository, JacksonConfig.mapper) }
-    open val eierService by lazy { EierService(eierRepository, rekrutteringstreffRepository, dataSource) }
-    open val rekrutteringstreffService by lazy {
-        RekrutteringstreffService(
-            dataSource,
-            rekrutteringstreffRepository,
-            jobbsøkerRepository,
-            arbeidsgiverRepository,
-            jobbsøkerService,
-            eierService
-        )
-    }
-    open val innleggService by lazy { InnleggService(innleggRepository, rekrutteringstreffService) }
-    open val kiLoggService by lazy { KiLoggService(kiLoggRepository) }
-    open val sokService by lazy { RekrutteringstreffSokService(sokRepository) }
-
-    // Controllere (lazy fordi de avhenger av services)
-    open val arbeidsgiverController by lazy { ArbeidsgiverController(arbeidsgiverService, eierService) }
-    open val rekrutteringstreffController by lazy { RekrutteringstreffController(rekrutteringstreffService, eierService, kiLoggService) }
-    open val eierController by lazy { EierController(eierService) }
-    open val jobbsøkerController by lazy { JobbsøkerController(jobbsøkerService, eierService) }
-    open val jobbsøkerInnloggetBorgerController by lazy { JobbsøkerInnloggetBorgerController(jobbsøkerService) }
-    open val jobbsøkerOutboundController by lazy { JobbsøkerOutboundController(jobbsøkerRepository, kandidatsøkKlient, eierService) }
-    open val innleggController by lazy { InnleggController(innleggService, kiLoggService, eierService) }
-    open val kiController by lazy { KiController(kiLoggRepository, OpenAiClient(repo = kiLoggRepository)) }
-    open val sokController by lazy { RekrutteringstreffSokController(sokService) }
-    open val healthController by lazy { HealthController(healthRepository) }
-
-    // Schedulere (lazy fordi de avhenger av services og infrastruktur)
-    open val jobbsøkerhendelserScheduler by lazy {
+    // Schedulere (lazy — har sideeffekter ved start, brukes kun i produksjon)
+    val jobbsøkerhendelserScheduler by lazy {
         JobbsøkerhendelserScheduler(
-            dataSource = dataSource,
+            dataSource = infra.dataSource,
             aktivitetskortRepository = aktivitetskortRepository,
             rekrutteringstreffRepository = rekrutteringstreffRepository,
-            rapidsConnection = rapidsConnection,
+            rapidsConnection = infra.rapidsConnection,
             objectMapper = JacksonConfig.mapper,
-            leaderElection = leaderElection,
+            leaderElection = infra.leaderElection,
         )
     }
-    open val synlighetsBehovScheduler by lazy {
+    val synlighetsBehovScheduler by lazy {
         SynlighetsBehovScheduler(
             jobbsøkerService = jobbsøkerService,
-            rapidsConnection = rapidsConnection,
-            leaderElection = leaderElection,
+            rapidsConnection = infra.rapidsConnection,
+            leaderElection = infra.leaderElection,
         )
     }
-    open val rekrutteringstreffOpprydningScheduler by lazy {
+    val rekrutteringstreffOpprydningScheduler by lazy {
         RekrutteringstreffOpprydningScheduler(
             kiLoggService = kiLoggService,
-            leaderElection = leaderElection,
+            leaderElection = infra.leaderElection,
         )
     }
-    open val rekrutteringstreffScheduler by lazy {
-        RekrutteringstreffScheduler(rekrutteringstreffService, leaderElection)
+    val rekrutteringstreffScheduler by lazy {
+        RekrutteringstreffScheduler(rekrutteringstreffService, infra.leaderElection)
     }
 
     // Rapids & Rivers-lyttere (lazy — registrerer seg selv mot rapidsConnection ved opprettelse)
-    open val aktivitetskortFeilLytter by lazy { AktivitetskortFeilLytter(rapidsConnection, jobbsøkerService) }
-    open val minsideVarselSvarLytter by lazy { MinsideVarselSvarLytter(rapidsConnection, jobbsøkerService, JacksonConfig.mapper) }
-    open val synlighetsLytter by lazy { SynlighetsLytter(rapidsConnection, jobbsøkerService) }
-    open val synlighetsBehovLytter by lazy { SynlighetsBehovLytter(rapidsConnection, jobbsøkerService) }
+    private val aktivitetskortFeilLytter by lazy { AktivitetskortFeilLytter(infra.rapidsConnection, jobbsøkerService) }
+    private val minsideVarselSvarLytter by lazy { MinsideVarselSvarLytter(infra.rapidsConnection, jobbsøkerService, JacksonConfig.mapper) }
+    private val synlighetsLytter by lazy { SynlighetsLytter(infra.rapidsConnection, jobbsøkerService) }
+    private val synlighetsBehovLytter by lazy { SynlighetsBehovLytter(infra.rapidsConnection, jobbsøkerService) }
 
-    open fun registerLyttere() {
+    fun registerLyttere() {
         aktivitetskortFeilLytter
         minsideVarselSvarLytter
         synlighetsLytter

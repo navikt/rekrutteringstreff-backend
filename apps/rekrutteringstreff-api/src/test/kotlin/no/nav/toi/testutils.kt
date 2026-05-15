@@ -151,37 +151,3 @@ object ubruktPortnrFra10000 {
     private val portnr = AtomicInteger(10000)
     fun ubruktPortnr(): Int = portnr.andIncrement
 }
-
-fun testApplicationContext(
-    dataSource: javax.sql.DataSource,
-    rapidsConnection: com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection = TestRapid(),
-    authConfigs: List<AuthenticationConfiguration> = emptyList(),
-    modiaKlient: no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient = no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient(
-        modiaContextHolderUrl = "",
-        modiaContextHolderScope = "",
-        accessTokenClient = AccessTokenClient(clientId = "test", secret = "test", azureUrl = "", httpClient = httpClient),
-        httpClient = httpClient
-    ),
-    pilotkontorer: List<String> = emptyList(),
-    leaderElection: LeaderElectionInterface = LeaderElectionMock(),
-    kandidatsøkKlient: no.nav.toi.kandidatsok.KandidatsøkKlient = no.nav.toi.kandidatsok.KandidatsøkKlient(
-        kandidatsokApiUrl = "",
-        kandidatsokScope = "",
-        accessTokenClient = AccessTokenClient(clientId = "test", secret = "test", azureUrl = "", httpClient = httpClient),
-        httpClient = httpClient
-    ),
-): ApplicationContext = object : ApplicationContext() {
-    override val dataSource = dataSource
-    override val rapidsConnection = rapidsConnection
-    override val authConfigs = authConfigs
-    override val rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
-        jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,
-        arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-        utvikler = AzureAdRoller.utvikler
-    )
-    override val pilotkontorer = pilotkontorer
-    override val leaderElection = leaderElection
-    override val modiaKlient = modiaKlient
-    override val kandidatsøkKlient = kandidatsøkKlient
-    override val httpClient = no.nav.toi.httpClient
-}

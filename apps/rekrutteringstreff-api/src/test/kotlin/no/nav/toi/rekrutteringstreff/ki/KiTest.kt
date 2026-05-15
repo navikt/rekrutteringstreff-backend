@@ -7,7 +7,6 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import com.nimbusds.jwt.SignedJWT
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
@@ -27,7 +26,8 @@ import java.sql.Types
 import java.time.ZonedDateTime
 import java.util.*
 import java.util.stream.Stream
-import no.nav.toi.testApplicationContext
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -43,45 +43,24 @@ class KiTest {
     }
 
     private val mapper = JacksonConfig.mapper
-    private val authServer = MockOAuth2Server()
-    private val authPort = 18013
     private val db = TestDatabase()
     private val appPort = ubruktPortnr()
     private val baseTemplate = "/api/rekrutteringstreff/%s/ki"
+
+    private lateinit var infra: TestInfrastructureContext
 
     private lateinit var app: App
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        authServer.start(port = authPort)
 
-        val accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
 
-        app = App(
-            ctx = testApplicationContext(
-                    dataSource = db.dataSource,
-                    authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-                    modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-                    pilotkontorer = listOf("1234"),
-            ),
-            port = appPort,
-        ).also { it.start() }
+
+        infra.start()
+
+
+        app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -105,7 +84,7 @@ class KiTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -118,7 +97,7 @@ class KiTest {
     fun validerer_tekst_og_returnerer_logg_id() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val base = baseTemplate.format(treffId)
         val requestBody = """
@@ -170,7 +149,7 @@ class KiTest {
         )
 
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val base = baseTemplate.format(treffId)
 
@@ -239,7 +218,7 @@ class KiTest {
     fun returnerer_opprettet_logglinje_med_id__og_lagret_promptmeta() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val loggId = opprettLogg(treffId, token)
         val base = baseTemplate.format(treffId)
@@ -271,7 +250,7 @@ class KiTest {
     fun markerer_logglinje_som_lagret() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val base = baseTemplate.format(treffId)
         val loggId = opprettLogg(treffId, token)
@@ -284,7 +263,7 @@ class KiTest {
     fun registrerer_resultat_av_manuell_kontroll_for_logglinje() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val base = baseTemplate.format(treffId)
         val loggId = opprettLogg(treffId, token)
@@ -300,7 +279,7 @@ class KiTest {
     fun lister_logglinjer_for_valgt_treff__null_promptmeta_for_eldre_rad() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = listOf(utvikler))
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val loggId = opprettLogg(treffId, token)
         val base = baseTemplate.format(treffId)
@@ -322,7 +301,7 @@ class KiTest {
     fun lister_kun_logglinjer_for_det_angitte_treffet__ikke_fra_andre_treff() {
         stubOpenAi()
         val navIdent = "A123456"
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = listOf(utvikler))
 
         val treffA = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
         val treffB = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
@@ -351,7 +330,7 @@ class KiTest {
     fun arbeidsgiverrettet_faar_403_pa_ki_logg_endepunkt(method: String, path: String) {
         val base = "/api/rekrutteringstreff/123455/ki"
 
-        val token = authServer.lagToken(authPort, navIdent = "A123456", groups = listOf(arbeidsgiverrettet))
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456", groups = listOf(arbeidsgiverrettet))
         val url = "http://localhost:$appPort$base$path"
 
         val res = when (method) {
@@ -367,7 +346,7 @@ class KiTest {
         fun validerer_tekst_med_nytt_endepunkt_og_returnerer_logg_id() {
             stubOpenAi()
             val navIdent = "A123456"
-            val token = authServer.lagToken(authPort, navIdent = navIdent)
+            val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
             val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
             val requestBody = """
                 {
@@ -386,7 +365,7 @@ class KiTest {
         fun lister_logglinjer_med_nytt_endepunkt() {
             stubOpenAi()
             val navIdent = "A123456"
-            val token = authServer.lagToken(authPort, navIdent = navIdent, groups = listOf(utvikler))
+            val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = listOf(utvikler))
             val treffId = db.opprettRekrutteringstreffIDatabase(navIdent).somUuid
             val loggId = opprettLogg(treffId, token)
             val base = baseTemplate.format(treffId)
