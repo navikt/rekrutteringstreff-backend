@@ -17,12 +17,13 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.ZonedDateTime
 import java.util.*
+import no.nav.toi.Registrable
 
 class RekrutteringstreffController(
     private val rekrutteringstreffService: RekrutteringstreffService,
     private val eierService: EierService,
     private val kiLoggService: KiLoggService,
-) {
+) : Registrable {
     companion object {
         private const val pathParamTreffId = "id"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -40,7 +41,7 @@ class RekrutteringstreffController(
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    fun register(routes: JavalinDefaultRoutingApi) {
+    override fun register(routes: JavalinDefaultRoutingApi) {
         routes.post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler())
         routes.get("${endepunktRekrutteringstreff}/{id}", hentRekrutteringstreffHandler())
         routes.put("${endepunktRekrutteringstreff}/{id}", oppdaterRekrutteringstreffHandler())

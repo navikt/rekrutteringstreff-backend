@@ -17,10 +17,11 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.UUID
+import no.nav.toi.Registrable
 
 class JobbsøkerInnloggetBorgerController(
     private val jobbsøkerService: JobbsøkerService,
-) {
+) : Registrable {
     companion object {
         private const val pathParamTreffId = "id"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -31,7 +32,7 @@ class JobbsøkerInnloggetBorgerController(
         private val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    fun register(routes: JavalinDefaultRoutingApi) {
+    override fun register(routes: JavalinDefaultRoutingApi) {
         routes.post(svarJaPath, svarJaHandler())
         routes.post(svarNeiPath, svarNeiHandler())
         routes.get(borgerJobbsøkerPath, hentBorgerJobbsøkerHandler())

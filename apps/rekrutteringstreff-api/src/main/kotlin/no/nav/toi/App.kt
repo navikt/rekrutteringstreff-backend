@@ -36,25 +36,27 @@ class App(
             config.jsonMapper(JavalinJackson(JacksonConfig.mapper))
             configureOpenApi(config)
 
-            config.routes.exceptionMapping()
+            config.routes.apply {
+                exceptionMapping()
 
-            ctx.healthController.register(config.routes)
-            config.routes.leggTilAutensieringPåRekrutteringstreffEndepunkt(
-                authConfigs = ctx.authConfigs,
-                rolleUuidSpesifikasjon = ctx.rolleUuidSpesifikasjon,
-                modiaKlient = ctx.modiaKlient,
-                pilotkontorer = ctx.pilotkontorer
-            )
+                register(ctx.healthController)
+                leggTilAutensieringPåRekrutteringstreffEndepunkt(
+                    authConfigs = ctx.authConfigs,
+                    rolleUuidSpesifikasjon = ctx.rolleUuidSpesifikasjon,
+                    modiaKlient = ctx.modiaKlient,
+                    pilotkontorer = ctx.pilotkontorer
+                )
 
-            ctx.sokController.register(config.routes)
-            ctx.arbeidsgiverController.register(config.routes)
-            ctx.rekrutteringstreffController.register(config.routes)
-            ctx.innleggController.register(config.routes)
-            ctx.eierController.register(config.routes)
-            ctx.jobbsøkerController.register(config.routes)
-            ctx.jobbsøkerInnloggetBorgerController.register(config.routes)
-            ctx.jobbsøkerOutboundController.register(config.routes)
-            ctx.kiController.register(config.routes)
+                register(ctx.sokController)
+                register(ctx.arbeidsgiverController)
+                register(ctx.rekrutteringstreffController)
+                register(ctx.innleggController)
+                register(ctx.eierController)
+                register(ctx.jobbsøkerController)
+                register(ctx.jobbsøkerInnloggetBorgerController)
+                register(ctx.jobbsøkerOutboundController)
+                register(ctx.kiController)
+            }
         }
 
         javalin.start(port)
