@@ -11,12 +11,8 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.ExceptionMapping.exceptionMapping
 import no.nav.toi.jobbsoker.MinsideVarselSvarLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
-import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
-import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffScheduler
-import no.nav.toi.rekrutteringstreff.opprydning.RekrutteringstreffOpprydningScheduler
 import org.flywaydb.core.Flyway
 import java.time.Instant
 import java.time.ZoneId.of
@@ -30,10 +26,6 @@ class App(
     private val port: Int = 8080,
 ) {
     private lateinit var javalin: Javalin
-    private lateinit var jobbsøkerhendelserScheduler: JobbsøkerhendelserScheduler
-    private lateinit var synlighetsBehovScheduler: SynlighetsBehovScheduler
-    private lateinit var rekrutteringstreffOpprydningScheduler: RekrutteringstreffOpprydningScheduler
-    private lateinit var rekrutteringstreffScheduler: RekrutteringstreffScheduler
 
     fun start() {
         startJavalin()
@@ -76,32 +68,10 @@ class App(
 
     private fun startSchedulere() {
         log.info("Starting schedulers")
-
-        jobbsøkerhendelserScheduler = JobbsøkerhendelserScheduler(
-            dataSource = ctx.dataSource,
-            aktivitetskortRepository = ctx.aktivitetskortRepository,
-            rekrutteringstreffRepository = ctx.rekrutteringstreffRepository,
-            rapidsConnection = ctx.rapidsConnection,
-            objectMapper = JacksonConfig.mapper,
-            leaderElection = ctx.leaderElection,
-        )
-        jobbsøkerhendelserScheduler.start()
-
-        synlighetsBehovScheduler = SynlighetsBehovScheduler(
-            jobbsøkerService = ctx.jobbsøkerService,
-            rapidsConnection = ctx.rapidsConnection,
-            leaderElection = ctx.leaderElection,
-        )
-        synlighetsBehovScheduler.start()
-
-        rekrutteringstreffOpprydningScheduler = RekrutteringstreffOpprydningScheduler(
-            kiLoggService = ctx.kiLoggService,
-            leaderElection = ctx.leaderElection,
-        )
-        rekrutteringstreffOpprydningScheduler.start()
-
-        rekrutteringstreffScheduler = RekrutteringstreffScheduler(ctx.rekrutteringstreffService, ctx.leaderElection)
-        rekrutteringstreffScheduler.start()
+        ctx.jobbsøkerhendelserScheduler.start()
+        ctx.synlighetsBehovScheduler.start()
+        ctx.rekrutteringstreffOpprydningScheduler.start()
+        ctx.rekrutteringstreffScheduler.start()
     }
 
     fun startRR() {
@@ -123,10 +93,10 @@ class App(
 
     fun close() {
         log.info("Shutting down application")
-        if (::jobbsøkerhendelserScheduler.isInitialized) jobbsøkerhendelserScheduler.stop()
-        if (::synlighetsBehovScheduler.isInitialized) synlighetsBehovScheduler.stop()
-        if (::rekrutteringstreffOpprydningScheduler.isInitialized) rekrutteringstreffOpprydningScheduler.stop()
-        if (::rekrutteringstreffScheduler.isInitialized) rekrutteringstreffScheduler.stop()
+        ctx.jobbsøkerhendelserScheduler.stop()
+        ctx.synlighetsBehovScheduler.stop()
+        ctx.rekrutteringstreffOpprydningScheduler.stop()
+        ctx.rekrutteringstreffScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         ctx.rapidsConnection.stop()
         (ctx.dataSource as? HikariDataSource)?.close()

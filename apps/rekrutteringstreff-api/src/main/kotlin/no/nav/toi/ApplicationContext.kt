@@ -6,9 +6,12 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
+import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
+import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffScheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.eier.EierController
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
@@ -20,6 +23,7 @@ import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
+import no.nav.toi.rekrutteringstreff.opprydning.RekrutteringstreffOpprydningScheduler
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokController
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokRepository
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokService
@@ -144,4 +148,32 @@ open class ApplicationContext(
     open val kiController by lazy { KiController(kiLoggRepository, OpenAiClient(repo = kiLoggRepository)) }
     open val sokController by lazy { RekrutteringstreffSokController(sokService) }
     open val healthController by lazy { HealthController(healthRepository) }
+
+    // Schedulere (lazy fordi de avhenger av services og infrastruktur)
+    open val jobbsøkerhendelserScheduler by lazy {
+        JobbsøkerhendelserScheduler(
+            dataSource = dataSource,
+            aktivitetskortRepository = aktivitetskortRepository,
+            rekrutteringstreffRepository = rekrutteringstreffRepository,
+            rapidsConnection = rapidsConnection,
+            objectMapper = JacksonConfig.mapper,
+            leaderElection = leaderElection,
+        )
+    }
+    open val synlighetsBehovScheduler by lazy {
+        SynlighetsBehovScheduler(
+            jobbsøkerService = jobbsøkerService,
+            rapidsConnection = rapidsConnection,
+            leaderElection = leaderElection,
+        )
+    }
+    open val rekrutteringstreffOpprydningScheduler by lazy {
+        RekrutteringstreffOpprydningScheduler(
+            kiLoggService = kiLoggService,
+            leaderElection = leaderElection,
+        )
+    }
+    open val rekrutteringstreffScheduler by lazy {
+        RekrutteringstreffScheduler(rekrutteringstreffService, leaderElection)
+    }
 }
