@@ -24,13 +24,13 @@ import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
-import no.nav.toi.Registrable
+import no.nav.toi.RuteRegistrerer
 
 
 class JobbsøkerController(
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
-) : Registrable {
+) : RuteRegistrerer {
     companion object {
         private const val pathParamTreffId = "id"
         private const val pathParamJobbsøkerId = "jobbsokerid"
@@ -47,7 +47,7 @@ class JobbsøkerController(
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         routes.post(søkPath, søkJobbsøkereHandler())
         routes.delete(slettPath, slettJobbsøkerHandler())

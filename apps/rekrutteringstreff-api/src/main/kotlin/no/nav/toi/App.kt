@@ -39,7 +39,7 @@ class App(
             config.routes.apply {
                 exceptionMapping()
 
-                register(ctx.healthController)
+                registrer(ctx.healthController)
                 leggTilAutensieringPåRekrutteringstreffEndepunkt(
                     authConfigs = ctx.authConfigs,
                     rolleUuidSpesifikasjon = ctx.rolleUuidSpesifikasjon,
@@ -47,15 +47,15 @@ class App(
                     pilotkontorer = ctx.pilotkontorer
                 )
 
-                register(ctx.sokController)
-                register(ctx.arbeidsgiverController)
-                register(ctx.rekrutteringstreffController)
-                register(ctx.innleggController)
-                register(ctx.eierController)
-                register(ctx.jobbsøkerController)
-                register(ctx.jobbsøkerInnloggetBorgerController)
-                register(ctx.jobbsøkerOutboundController)
-                register(ctx.kiController)
+                registrer(ctx.sokController)
+                registrer(ctx.arbeidsgiverController)
+                registrer(ctx.rekrutteringstreffController)
+                registrer(ctx.innleggController)
+                registrer(ctx.eierController)
+                registrer(ctx.jobbsøkerController)
+                registrer(ctx.jobbsøkerInnloggetBorgerController)
+                registrer(ctx.jobbsøkerOutboundController)
+                registrer(ctx.kiController)
             }
         }
 

@@ -7,13 +7,13 @@ import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.router.JavalinDefaultRoutingApi
 
-class HealthController(private val healthRepository: HealthRepository)  : Registrable {
+class HealthController(private val healthRepository: HealthRepository)  : RuteRegistrerer {
     companion object {
         private const val ENDEPUNKT_READY = "/isready"
         private const val ENDEPUNKT_ALIVE = "/isalive"
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.get(ENDEPUNKT_READY, isReadyHandler())
         routes.get(ENDEPUNKT_ALIVE, isAliveHandler())
     }
