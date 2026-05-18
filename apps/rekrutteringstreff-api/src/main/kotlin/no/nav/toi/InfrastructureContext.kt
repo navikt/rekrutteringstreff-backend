@@ -18,7 +18,7 @@ open class InfrastructureContext(
     private val env: Map<String, String> = System.getenv()
 ) {
     private fun getenv(key: String): String =
-        env[key] ?: throw NullPointerException("Det finnes ingen miljøvariabel med navn [$key]")
+        env[key] ?: throw IllegalStateException("Det finnes ingen miljøvariabel med navn [$key]")
 
     open val dataSource: DataSource by lazy {
         HikariConfig().apply {
