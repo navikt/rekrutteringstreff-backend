@@ -17,10 +17,10 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
-import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffController
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -161,7 +161,7 @@ class App(
 
             config.routes.exceptionMapping()
 
-            HealthController(config.routes, HealthRepository(dataSource))
+            config.routes.registrer(HealthController(HealthRepository(dataSource)))
             config.routes.leggTilAutensieringPåRekrutteringstreffEndepunkt(
                 authConfigs = authConfigs,
                 rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
@@ -173,52 +173,49 @@ class App(
                 pilotkontorer = pilotkontorer
             )
 
-            RekrutteringstreffSokController(
-                sokService = sokService,
-                routes = config.routes
+            config.routes.registrer(RekrutteringstreffSokController(sokService = sokService))
+
+            config.routes.registrer(
+                ArbeidsgiverController(
+                    arbeidsgiverService = arbeidsgiverService,
+                    eierService = eierService,
+                )
             )
 
-            ArbeidsgiverController(
-                arbeidsgiverService = arbeidsgiverService,
-                eierService = eierService,
-                routes = config.routes
+            config.routes.registrer(
+                RekrutteringstreffController(
+                    rekrutteringstreffService = rekrutteringstreffService,
+                    eierService = eierService,
+                    kiLoggService = kiLoggService,
+                )
             )
-
-            RekrutteringstreffController(
-                rekrutteringstreffService = rekrutteringstreffService,
-                eierService = eierService,
-                kiLoggService = kiLoggService,
-                routes = config.routes
+            config.routes.registrer(
+                InnleggController(
+                    innleggService = innleggService,
+                    kiLoggService = kiLoggService,
+                    eierService = eierService,
+                )
             )
-            InnleggController(
-                innleggService = innleggService,
-                kiLoggService = kiLoggService,
-                eierService = eierService,
-                routes = config.routes
+            config.routes.registrer(EierController(eierService = eierService))
+            config.routes.registrer(
+                JobbsøkerController(
+                    jobbsøkerService = jobbsøkerService,
+                    eierService = eierService,
+                )
             )
-            EierController(
-                eierService = eierService,
-                routes = config.routes
+            config.routes.registrer(JobbsøkerInnloggetBorgerController(jobbsøkerService = jobbsøkerService))
+            config.routes.registrer(
+                JobbsøkerOutboundController(
+                    jobbsøkerRepository = jobbsøkerRepository,
+                    kandidatsøkKlient = kandidatsokKlient,
+                    eierService = eierService,
+                )
             )
-            JobbsøkerController(
-                jobbsøkerService = jobbsøkerService,
-                eierService = eierService,
-                routes = config.routes
-            )
-            JobbsøkerInnloggetBorgerController(
-                jobbsøkerService = jobbsøkerService,
-                routes = config.routes
-            )
-            JobbsøkerOutboundController(
-                jobbsøkerRepository = jobbsøkerRepository,
-                kandidatsøkKlient = kandidatsokKlient,
-                eierService = eierService,
-                routes = config.routes
-            )
-            KiController(
-                kiLoggRepository = kiLoggRepository,
-                openAiClient = OpenAiClient(repo = kiLoggRepository),
-                routes = config.routes
+            config.routes.registrer(
+                KiController(
+                    kiLoggRepository = kiLoggRepository,
+                    openAiClient = OpenAiClient(repo = kiLoggRepository),
+                )
             )
         }
 

@@ -3,7 +3,6 @@ package no.nav.toi.rekrutteringstreff.innlegg
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -18,55 +17,25 @@ import java.net.HttpURLConnection.*
 import java.net.ServerSocket
 import java.time.ZonedDateTime
 import java.util.*
-
-
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 @WireMockTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InnleggTest {
 
-    private val auth = MockOAuth2Server()
-    private val authPort = 18013
+    
     private val db = TestDatabase()
     private val appPort = TestUtils.getFreePort()
+    private lateinit var infra: TestInfrastructureContext
     private lateinit var app: App
 
     @BeforeAll
     fun start(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
 
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
-        auth.start(port = authPort)
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
+
     }
 
     @BeforeEach
@@ -90,7 +59,7 @@ class InnleggTest {
 
     @AfterAll
     fun stop() {
-        auth.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -103,32 +72,32 @@ class InnleggTest {
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token GET alle`(tc: UautentifiserendeTestCase) {
-        val response = tc.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg", auth, authPort)
+        val response = tc.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token GET ett`(tc: UautentifiserendeTestCase) {
-        val response = tc.utførGet("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", auth, authPort)
+        val response = tc.utførGet("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token PUT`(tc: UautentifiserendeTestCase) {
         val body = OppdaterInnleggRequestDto("T", "", "", null, "")
-        val response = tc.utførPut("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", JacksonConfig.mapper.writeValueAsString(body), auth, authPort)
+        val response = tc.utførPut("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", JacksonConfig.mapper.writeValueAsString(body), infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @ParameterizedTest @MethodSource("tokenVarianter")
     fun `ukorrekt token DELETE`(tc: UautentifiserendeTestCase) {
-        val response = tc.utførDelete("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", auth, authPort)
+        val response = tc.utførDelete("http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @Test
     fun `PUT oppdaterer innlegg`() {
-        val token  = auth.lagToken(authPort, navIdent = "C123456")
+        val token  = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff  = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val repo   = InnleggRepository(db.dataSource)
         val id     = repo.opprett(treff, sampleOpprett(), "C123456").id
@@ -156,7 +125,7 @@ class InnleggTest {
 
     @Test
     fun `GET liste returnerer innlegg for treff`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase()
         val repo = InnleggRepository(db.dataSource)
         val id = repo.opprett(treff, sampleOpprett(), "C123456").id
@@ -174,7 +143,7 @@ class InnleggTest {
 
     @Test
     fun `GET ett returnerer innlegg`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase()
         val repo = InnleggRepository(db.dataSource)
         val id = repo.opprett(treff, sampleOpprett(), "C123456").id
@@ -191,7 +160,7 @@ class InnleggTest {
 
     @Test
     fun `POST oppretter innlegg`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val kiLoggRepository = KiLoggRepository(db.dataSource)
         val htmlContent = "<p>x</p>"
@@ -232,7 +201,7 @@ class InnleggTest {
 
     @Test
     fun `DELETE fjerner innlegg`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val repo = InnleggRepository(db.dataSource)
         val id = repo.opprett(treff, sampleOpprett(), "C123456").id
@@ -248,7 +217,7 @@ class InnleggTest {
 
     @Test
     fun `PUT mot ukjent treff gir 404`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456") // Use a valid navIdent
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456") // Use a valid navIdent
         val resp = httpPut(
             "http://localhost:$appPort/api/rekrutteringstreff/${UUID.randomUUID()}/innlegg/${UUID.randomUUID()}",
             JacksonConfig.mapper.writeValueAsString(OppdaterInnleggRequestDto("t", "", "", null, "")),
@@ -259,7 +228,7 @@ class InnleggTest {
 
     @Test
     fun `POST uten KI-validering gir 422`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val body = OpprettInnleggRequestDto(
             tittel = "Tittel",
@@ -282,7 +251,7 @@ class InnleggTest {
 
     @Test
     fun `POST med bryterRetningslinjer og uten lagreLikevel gir 422 KI_KREVER_BEKREFTELSE`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val kiLoggRepository = KiLoggRepository(db.dataSource)
         val htmlContent = "<p>Diskriminerende innhold</p>"
@@ -321,7 +290,7 @@ class InnleggTest {
 
     @Test
     fun `POST med ukjent innleggKiLoggId gir 422 KI_LOGG_ID_UGYLDIG`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val body = OpprettInnleggRequestDto(
             tittel = "Tittel",
@@ -342,7 +311,7 @@ class InnleggTest {
 
     @Test
     fun `POST med endret tekst etter validering gir 422 KI_TEKST_ENDRET`() {
-        val token = auth.lagToken(authPort, navIdent = "C123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "C123456")
         val treff = db.opprettRekrutteringstreffIDatabase(navIdent = "C123456")
         val kiLoggRepository = KiLoggRepository(db.dataSource)
         val loggId = kiLoggRepository.insert(

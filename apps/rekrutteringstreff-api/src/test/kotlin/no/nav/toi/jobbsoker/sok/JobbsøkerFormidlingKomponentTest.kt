@@ -4,12 +4,10 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -17,59 +15,30 @@ import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.UUID
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
 class JobbsøkerFormidlingKomponentTest {
 
     companion object {
-        private val authServer = MockOAuth2Server()
-        private val authPort = ubruktPortnrFra10000.ubruktPortnr()
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
 
+        private lateinit var infra: TestInfrastructureContext
+
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
     }
 
-    private val eierRepository = EierRepository(db.dataSource)
-
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
-        authServer.start(port = authPort)
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        ctx = ApplicationContext(infra)
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -87,7 +56,7 @@ class JobbsøkerFormidlingKomponentTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -98,7 +67,7 @@ class JobbsøkerFormidlingKomponentTest {
 
     private fun opprettTreffMedEier(eierIdent: String): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = eierIdent, tittel = "TestTreff")
-        eierRepository.leggTil(treffId, listOf(eierIdent))
+        ctx.eierRepository.leggTil(treffId, listOf(eierIdent))
         return treffId
     }
 
@@ -120,7 +89,7 @@ class JobbsøkerFormidlingKomponentTest {
         navIdent: String,
         groups: List<UUID> = listOf(AzureAdRoller.arbeidsgiverrettet),
     ): HttpResponse<String> {
-        val token = authServer.lagToken(authPort, navIdent = navIdent, groups = groups)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = groups)
         val request = HttpRequest.newBuilder()
             .uri(URI.create("http://localhost:$appPort$path"))
             .header("Authorization", "Bearer ${token.serialize()}")
