@@ -52,13 +52,7 @@ class KiTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-
-        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
-
-
-        infra.start()
-
-
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
         app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
     }
 

@@ -17,13 +17,9 @@ import java.time.Duration
 import java.time.format.DateTimeFormatter
 import kotlin.system.measureTimeMillis
 
-
-
-
 class DefaultOpenAiClient(
-    private val httpClient: HttpClient = HttpClient.newBuilder().build(),
-    private val apiUrl: String = System.getenv("OPENAI_API_URL") ?: "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
-    private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key",
+    private val httpClient: HttpClient,
+    private val openAiProperties: OpenAiProperties,
 ) : OpenAiClient {
     private val mapper = JacksonConfig.mapper
     private val secureLogger = SecureLog(log)
@@ -67,8 +63,8 @@ class DefaultOpenAiClient(
             )
 
             val request = HttpRequest.newBuilder()
-                .uri(URI(apiUrl))
-                .headers("api-key", apiKey, "Content-Type", "application/json")
+                .uri(URI(openAiProperties.apiUrl))
+                .headers("api-key", openAiProperties.apiKey, "Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .timeout(Duration.ofSeconds(30))
                 .build()

@@ -4,11 +4,9 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
-import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.ki.KiLoggInsert
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
-import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -17,8 +15,7 @@ import java.net.HttpURLConnection.*
 import java.net.ServerSocket
 import java.time.ZonedDateTime
 import java.util.*
-import no.nav.toi.TestInfrastructureContext
-import no.nav.toi.ApplicationContext
+
 @WireMockTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InnleggTest {
@@ -31,11 +28,8 @@ class InnleggTest {
 
     @BeforeAll
     fun start(wmInfo: WireMockRuntimeInfo) {
-
-        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
-        infra.start()
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
         app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
-
     }
 
     @BeforeEach

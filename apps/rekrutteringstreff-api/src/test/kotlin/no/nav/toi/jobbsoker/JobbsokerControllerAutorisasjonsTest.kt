@@ -1,51 +1,29 @@
 package no.nav.toi.rekrutteringstreff.no.nav.toi.jobbsoker
 
-import com.github.tomakehurst.wiremock.client.WireMock.aResponse
-import com.github.tomakehurst.wiremock.client.WireMock.get
-import com.github.tomakehurst.wiremock.client.WireMock.stubFor
-import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.toi.App
-import no.nav.toi.ApplicationContext
+import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
-import no.nav.toi.JacksonConfig
-import no.nav.toi.httpClient
-import no.nav.toi.jobbsoker.Etternavn
-import no.nav.toi.jobbsoker.Fornavn
-import no.nav.toi.jobbsoker.Fødselsnummer
-import no.nav.toi.jobbsoker.LeggTilJobbsøker
-import no.nav.toi.jobbsoker.Navkontor
-import no.nav.toi.jobbsoker.PersonTreffId
-import no.nav.toi.jobbsoker.VeilederNavIdent
-import no.nav.toi.jobbsoker.VeilederNavn
-import no.nav.toi.lagToken
+import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.net.HttpURLConnection.HTTP_CREATED
-import java.net.HttpURLConnection.HTTP_FORBIDDEN
-import java.net.HttpURLConnection.HTTP_OK
+import java.net.HttpURLConnection.*
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.ZonedDateTime
-import java.util.UUID
-import no.nav.toi.TestInfrastructureContext
+import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -60,14 +38,12 @@ class JobbsokerControllerAutorisasjonsTest {
     private val erIkkeEier = false
 
     private lateinit var infra: TestInfrastructureContext
-
     private lateinit var ctx: ApplicationContext
     private lateinit var app: App
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
-        infra.start()
+        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
     }

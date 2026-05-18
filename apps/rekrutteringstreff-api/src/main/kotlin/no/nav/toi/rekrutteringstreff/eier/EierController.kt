@@ -1,15 +1,16 @@
 package no.nav.toi.rekrutteringstreff.eier
 
 
-import io.javalin.router.JavalinDefaultRoutingApi
-import io.javalin.http.*
+import io.javalin.http.Context
+import io.javalin.http.ForbiddenResponse
 import io.javalin.openapi.*
+import io.javalin.router.JavalinDefaultRoutingApi
+import no.nav.toi.Registrable
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilJson
 import java.util.*
-import no.nav.toi.Registrable
 
 
 class EierController(

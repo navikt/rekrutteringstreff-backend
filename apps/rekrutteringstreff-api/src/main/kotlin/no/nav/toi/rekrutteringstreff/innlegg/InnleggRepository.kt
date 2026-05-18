@@ -4,7 +4,7 @@ import no.nav.toi.atOslo
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.ResultSet
 import java.sql.Types
-import java.util.UUID
+import java.util.*
 import javax.sql.DataSource
 
 class InnleggRepository(private val dataSource: DataSource) {

@@ -23,7 +23,6 @@ import no.nav.toi.rekrutteringstreff.innlegg.InnleggService
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
-import no.nav.toi.rekrutteringstreff.ki.client.DefaultOpenAiClient
 import no.nav.toi.rekrutteringstreff.ki.OpenAiService
 import no.nav.toi.rekrutteringstreff.opprydning.RekrutteringstreffOpprydningScheduler
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokController
@@ -37,11 +36,14 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val dataSource get() = infra.dataSource
     val rapidsConnection get() = infra.rapidsConnection
     val authConfigs get() = infra.authConfigs
+    val httpClient get() = infra.httpClient
+    val openAiProperties get() = infra.openAiProperties
     val rolleUuidSpesifikasjon get() = infra.rolleUuidSpesifikasjon
     val pilotkontorer get() = infra.pilotkontorer
     val leaderElection get() = infra.leaderElection
     val modiaKlient get() = infra.modiaKlient
     val kandidatsøkKlient get() = infra.kandidatsøkKlient
+    val openAiKlient get() = infra.openAiKlient
 
     // Repositories
     val jobbsøkerRepository = JobbsøkerRepository(infra.dataSource, JacksonConfig.mapper)
@@ -67,6 +69,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         eierService
     )
     val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
+    val openAiService = OpenAiService(openAiKlient, kiLoggRepository, openAiProperties)
     val kiLoggService = KiLoggService(kiLoggRepository)
     val sokService = RekrutteringstreffSokService(sokRepository)
 
@@ -78,7 +81,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val jobbsøkerInnloggetBorgerController = JobbsøkerInnloggetBorgerController(jobbsøkerService)
     val jobbsøkerOutboundController = JobbsøkerOutboundController(jobbsøkerRepository, infra.kandidatsøkKlient, eierService)
     val innleggController = InnleggController(innleggService, kiLoggService, eierService)
-    val kiController = KiController(kiLoggRepository, OpenAiService(DefaultOpenAiClient(), kiLoggRepository))
+    val kiController = KiController(kiLoggRepository, openAiService)
     val sokController = RekrutteringstreffSokController(sokService)
     val healthController = HealthController(healthRepository)
 
@@ -121,5 +124,20 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         minsideVarselSvarLytter
         synlighetsLytter
         synlighetsBehovLytter
+    }
+
+    fun startSchedulere() {
+        log.info("Starting schedulers")
+        jobbsøkerhendelserScheduler.start()
+        synlighetsBehovScheduler.start()
+        rekrutteringstreffOpprydningScheduler.start()
+        rekrutteringstreffScheduler.start()
+    }
+
+    fun stopSchedulere() {
+        jobbsøkerhendelserScheduler.stop()
+        synlighetsBehovScheduler.stop()
+        rekrutteringstreffOpprydningScheduler.stop()
+        rekrutteringstreffScheduler.stop()
     }
 }

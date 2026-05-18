@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff.ki
 import no.nav.toi.JacksonConfig
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import no.nav.toi.rekrutteringstreff.ki.client.DefaultOpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.client.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.ki.client.SystemPrompt
 import java.util.UUID
 
@@ -13,9 +14,9 @@ data class EkstraMetaDbJson(
 )
 
 class OpenAiService(
-    private val openAiClient: DefaultOpenAiClient,
+    private val openAiClient: OpenAiClient,
     private val repo: KiLoggRepository,
-    private val kiVersjon: String = System.getenv("OPENAI_DEPLOYMENT") ?: "toi-gpt-4.1"
+    private val openAiProperties: OpenAiProperties
 ) {
     private val mapper = JacksonConfig.mapper
 
@@ -41,7 +42,7 @@ class OpenAiService(
                 bryterRetningslinjer = result.bryterRetningslinjer,
                 begrunnelse = result.begrunnelse,
                 kiNavn = KI_NAVN,
-                kiVersjon = kiVersjon,
+                kiVersjon = openAiProperties.kiVersjon,
                 svartidMs = elapsedMs.toInt()
             )
         )

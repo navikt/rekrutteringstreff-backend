@@ -1,7 +1,7 @@
 package no.nav.toi.arbeidsgiver
 
 import no.nav.toi.rekrutteringstreff.TreffId
-import java.util.UUID
+import java.util.*
 
 data class Orgnr(private val orgnr: String) {
     init {
