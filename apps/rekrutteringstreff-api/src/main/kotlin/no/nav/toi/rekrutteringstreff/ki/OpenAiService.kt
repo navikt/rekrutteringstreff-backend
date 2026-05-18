@@ -2,7 +2,6 @@ package no.nav.toi.rekrutteringstreff.ki
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
-import no.nav.toi.rekrutteringstreff.ki.client.DefaultOpenAiClient
 import no.nav.toi.rekrutteringstreff.ki.client.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.ki.client.SystemPrompt
 import java.util.UUID

@@ -93,6 +93,7 @@ class DefaultOpenAiClient(
                     filtered = userMessageFiltered
                 } else {
                     secureLogger.error("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
+                    throw RuntimeException("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
                 }
 
             } else if (response.statusCode() == 200) {
