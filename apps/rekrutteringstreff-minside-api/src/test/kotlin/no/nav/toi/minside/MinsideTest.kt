@@ -5,7 +5,10 @@ import com.github.kittinunf.result.Result.Failure
 import com.github.kittinunf.result.Result.Success
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AccessTokenClient
+import no.nav.toi.ApplicationContext
 import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.InfrastructureContext
+import no.nav.toi.RolleUuidSpesifikasjon
 import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
@@ -60,31 +63,39 @@ class MinsideTest {
         )
 
         private val rekrutteringsTreffApiApp = no.nav.toi.App(
-            port = rekrutteringsTreffApiPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = rekrutteringsTreffAudience
+            ctx = ApplicationContext(object : InfrastructureContext() {
+                override val dataSource = db.dataSource
+                override val rapidsConnection = TestRapid()
+                override val authConfigs = listOf(
+                    AuthenticationConfiguration(
+                        issuer = "http://localhost:$authPort/default",
+                        jwksUri = "http://localhost:$authPort/default/jwks",
+                        audience = rekrutteringsTreffAudience
+                    )
                 )
-            ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = UUID.randomUUID(),
-            arbeidsgiverrettet = UUID.randomUUID(),
-            utvikler = UUID.randomUUID(),
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = "",
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = emptyList<String>(),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
+                override val rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
+                    jobbsøkerrettet = UUID.randomUUID(),
+                    arbeidsgiverrettet = UUID.randomUUID(),
+                    utvikler = UUID.randomUUID()
+                )
+                override val pilotkontorer = emptyList<String>()
+                override val leaderElection = LeaderElectionMock()
+                override val accessTokenClient = Companion.accessTokenClient
+                override val httpClient = Companion.httpClient
+                override val modiaKlient = ModiaKlient(
+                    modiaContextHolderUrl = "",
+                    modiaContextHolderScope = "",
+                    accessTokenClient = Companion.accessTokenClient,
+                    httpClient = Companion.httpClient
+                )
+                override val kandidatsøkKlient = no.nav.toi.kandidatsok.KandidatsøkKlient(
+                    kandidatsokApiUrl = "",
+                    kandidatsokScope = "",
+                    accessTokenClient = Companion.accessTokenClient,
+                    httpClient = Companion.httpClient
+                )
+            }),
+            port = rekrutteringsTreffApiPort,
         )
 
         private val appPort = ubruktPortnr()

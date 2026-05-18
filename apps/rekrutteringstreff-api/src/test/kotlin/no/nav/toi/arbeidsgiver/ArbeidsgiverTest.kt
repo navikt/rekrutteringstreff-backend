@@ -6,7 +6,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
@@ -35,16 +34,18 @@ import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.UUID
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
 class ArbeidsgiverTest {
 
     companion object {
-        private val authServer = MockOAuth2Server()
-        private val authPort = 18012
         private val db = TestDatabase()
         private val appPort = ubruktPortnr()
+
+        private lateinit var infra: TestInfrastructureContext
 
         private lateinit var app: App
     }
@@ -53,40 +54,11 @@ class ArbeidsgiverTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        authServer.start(port = authPort)
-        val accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection =  TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+
+        infra.start()
+
+        app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -110,7 +82,7 @@ class ArbeidsgiverTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -125,7 +97,7 @@ class ArbeidsgiverTest {
     @MethodSource("tokenVarianter")
     fun autentiseringLeggTilArbeidsgiver(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
-        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver", "", authServer, authPort)
+        val response = autentiseringstest.utførPost("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver", "", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
@@ -133,13 +105,13 @@ class ArbeidsgiverTest {
     @MethodSource("tokenVarianter")
     fun autentiseringHentArbeidsgivere(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
-        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver", authServer, authPort)
+        val response = autentiseringstest.utførGet("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @Test
     fun leggTilArbeidsgiverMedTomListeForNæringskoder() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
@@ -182,7 +154,7 @@ class ArbeidsgiverTest {
 
     @Test
     fun leggTilArbeidsgiverMedListeForNæringskoder() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
@@ -229,7 +201,7 @@ class ArbeidsgiverTest {
 
     @Test
     fun hentArbeidsgivere() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId1 = db.opprettRekrutteringstreffIDatabase()
         val treffId2 = db.opprettRekrutteringstreffIDatabase()
         val treffId3 = db.opprettRekrutteringstreffIDatabase()
@@ -275,7 +247,7 @@ class ArbeidsgiverTest {
 
     @Test
     fun hentArbeidsgiverHendelser() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreffHendelser")
         val requestBody = """
             {
@@ -304,13 +276,13 @@ class ArbeidsgiverTest {
     fun autentiseringSlettArbeidsgiver(autentiseringstest: UautentifiserendeTestCase) {
         val anyTreffId = "anyTreffID"
         val anyArbeidsgiverId = UUID.randomUUID()
-        val response = autentiseringstest.utførDelete("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver/$anyArbeidsgiverId", authServer, authPort)
+        val response = autentiseringstest.utførDelete("http://localhost:${appPort}/api/rekrutteringstreff/$anyTreffId/arbeidsgiver/$anyArbeidsgiverId", infra.authServer, infra.authPort)
         assertThat(response.statusCode()).isEqualTo(HTTP_UNAUTHORIZED)
     }
 
     @Test
     fun slettArbeidsgiver() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         eierRepository.leggTil(treffId, listOf("A123456"))
         val requestBody = """
@@ -351,7 +323,7 @@ class ArbeidsgiverTest {
 
     @Test
     fun `legg til arbeidsgiver med ugyldig orgnummer gir 400`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         eierRepository.leggTil(treffId, listOf("A123456"))
 
@@ -371,7 +343,7 @@ class ArbeidsgiverTest {
 
     @Test
     fun `legg til arbeidsgiver med orgnummer med bokstaver gir 400`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         eierRepository.leggTil(treffId, listOf("A123456"))
 
@@ -391,7 +363,7 @@ class ArbeidsgiverTest {
 
     @Test
     fun `legg til arbeidsgiver uten orgnummer gir 400`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         eierRepository.leggTil(treffId, listOf("A123456"))
 
@@ -410,7 +382,7 @@ class ArbeidsgiverTest {
 
     @Test
     fun `legg til arbeidsgiver uten navn gir 400`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         eierRepository.leggTil(treffId, listOf("A123456"))
 
@@ -429,7 +401,7 @@ class ArbeidsgiverTest {
 
     @Test
     fun `legg til arbeidsgiver med tomt orgnummer gir 400`() {
-        val token = authServer.lagToken(authPort, navIdent = "A123456")
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
         eierRepository.leggTil(treffId, listOf("A123456"))
 
