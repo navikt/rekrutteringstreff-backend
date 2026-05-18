@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
@@ -101,6 +102,27 @@ class JobbsøkerTest {
                         )
                 )
         )
+        stubFor(
+            post(urlPathEqualTo("/api/jobbsoker-info"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"jobbsokerInfo":[]}""")
+                )
+        )
+    }
+
+    private fun stubAzureToken() {
+        stubFor(
+            post(urlPathEqualTo("/token"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"access_token":"fake-token","token_type":"Bearer","expires_in":3600}""")
+                )
+        )
     }
 
     @AfterAll
@@ -141,15 +163,38 @@ class JobbsøkerTest {
         val navkontor = Navkontor("Oslo")
         val veilederNavn = VeilederNavn("Test Veileder")
         val veilederNavIdent = VeilederNavIdent("NAV001")
+        val alder = 35
+        val innsatsgruppe = Innsatsgruppe("SITUASJONSBESTEMT_INNSATS")
         val treffId = db.opprettRekrutteringstreffIDatabase()
+
+        stubFor(
+            post(urlPathEqualTo("/api/jobbsoker-info"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {"jobbsokerInfo":[
+                              {
+                                "fodselsnummer": "${fnr.asString}",
+                                "navkontor": "${navkontor.asString}",
+                                "veilederNavn": "${veilederNavn.asString}",
+                                "veilederNavIdent": "${veilederNavIdent.asString}",
+                                                                "alder": $alder,
+                                "innsatsgruppe": "${innsatsgruppe.asString}"
+                              }
+                            ]}
+                            """.trimIndent()
+                        )
+                )
+        )
+
         val requestBody = """
         [{
           "fødselsnummer" : "${fnr.asString}",
           "fornavn" : "${fornavn.asString}",
-          "etternavn" : "${etternavn.asString}",
-          "navkontor" : "${navkontor.asString}",
-          "veilederNavn" : "${veilederNavn.asString}",
-          "veilederNavIdent" : "${veilederNavIdent.asString}"
+          "etternavn" : "${etternavn.asString}"
         }]
         """.trimIndent()
         assertThat(db.hentAlleJobbsøkere()).isEmpty()
@@ -172,6 +217,8 @@ class JobbsøkerTest {
             assertThat(actual.navkontor).isEqualTo(navkontor)
             assertThat(actual.veilederNavn).isEqualTo(veilederNavn)
             assertThat(actual.veilederNavIdent).isEqualTo(veilederNavIdent)
+            assertThat(actual.alder).isEqualTo(alder)
+            assertThat(actual.innsatsgruppe).isEqualTo(innsatsgruppe)
         }
         val hendelser = db.hentJobbsøkerHendelser(treffId)
         assertThat(hendelser).hasSize(1)

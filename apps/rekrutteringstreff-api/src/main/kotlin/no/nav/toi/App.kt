@@ -17,6 +17,7 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovLytter
 import no.nav.toi.jobbsoker.synlighet.SynlighetsBehovScheduler
 import no.nav.toi.jobbsoker.synlighet.SynlighetsLytter
@@ -106,7 +107,12 @@ class App(
 
     fun start() {
         val jobbsøkerRepository = JobbsøkerRepository(dataSource, JacksonConfig.mapper)
-        val jobbsøkerService = JobbsøkerService(dataSource, jobbsøkerRepository)
+        val jobbsøkerService = JobbsøkerService(
+            dataSource = dataSource,
+            jobbsøkerRepository = jobbsøkerRepository,
+            jobbsøkerSokRepository = JobbsøkerSokRepository(dataSource),
+            kandidatsøkKlient = kandidatsokKlient,
+        )
         val kiLoggRepository = KiLoggRepository(dataSource)
         val kiLoggService = KiLoggService(kiLoggRepository)
         val aktivitetskortRepository = AktivitetskortRepository(dataSource)

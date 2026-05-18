@@ -4,7 +4,6 @@ import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
-import io.javalin.http.InternalServerErrorResponse
 import io.javalin.openapi.*
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
@@ -55,17 +54,17 @@ class JobbsøkerOutboundController(
         methods = [HttpMethod.GET]
     )
     private fun hentKandidatnummerHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
+        val innloggetBruker = ctx.authenticatedUser()
+        innloggetBruker.verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
 
         val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-        val userToken = ctx.attribute<String>("raw_token")
-            ?: throw InternalServerErrorResponse("Raw token ikke funnet i context")
-        val navIdent = ctx.authenticatedUser().extractNavIdent()
+        val innkommendeToken = innloggetBruker.innkommendeToken()
+        val navIdent = innloggetBruker.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             jobbsøkerRepository.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->
-                kandidatsøkKlient.hentKandidatnummer(fødselsnummer, userToken)?.let { kandidatnummer ->
+                kandidatsøkKlient.hentKandidatnummer(fødselsnummer, innkommendeToken)?.let { kandidatnummer ->
                     ctx.json(KandidatnummerDto(kandidatnummer.asString))
                 } ?: ctx.status(HttpStatus.NOT_FOUND)
             } ?: ctx.status(HttpStatus.NOT_FOUND)

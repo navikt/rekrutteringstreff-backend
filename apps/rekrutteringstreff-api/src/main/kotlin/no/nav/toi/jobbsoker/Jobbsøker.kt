@@ -61,6 +61,16 @@ data class VeilederNavIdent(private val ident: String) {
     override fun toString(): String = asString
 }
 
+data class Innsatsgruppe(private val verdi: String) {
+    init {
+        if (verdi.isEmpty()) {
+            throw IllegalArgumentException("Innsatsgruppe kan ikke være tom.")
+        }
+    }
+    val asString: String = verdi
+    override fun toString(): String = asString
+}
+
 /**
  * Kandidatnummer brukes kun for on-demand henting fra ekstern API (kandidatsøk-api).
  * Det lagres ikke lenger i databasen, men brukes som type-sikker wrapper for API-respons.
@@ -74,9 +84,11 @@ data class LeggTilJobbsøker(
     val fødselsnummer: Fødselsnummer,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
-    val navkontor: Navkontor?,
-    val veilederNavn: VeilederNavn?,
-    val veilederNavIdent: VeilederNavIdent?,
+    val navkontor: Navkontor? = null,
+    val veilederNavn: VeilederNavn? = null,
+    val veilederNavIdent: VeilederNavIdent? = null,
+    val alder: Int? = null,
+    val innsatsgruppe: Innsatsgruppe? = null,
 )
 
 enum class JobbsøkerStatus {
@@ -93,7 +105,9 @@ data class Jobbsøker(
     val veilederNavn: VeilederNavn?,
     val veilederNavIdent: VeilederNavIdent?,
     val status: JobbsøkerStatus,
-    val hendelser: List<JobbsøkerHendelse> = emptyList()
+    val hendelser: List<JobbsøkerHendelse> = emptyList(),
+    val alder: Int? = null,
+    val innsatsgruppe: Innsatsgruppe? = null,
 ) {
     fun harAktivtSvarJa(): Boolean =
         status == JobbsøkerStatus.SVART_JA

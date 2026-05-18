@@ -5,7 +5,11 @@ import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
 import no.nav.toi.exception.KandidatsokOppslagFeiletException
 import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.Innsatsgruppe
 import no.nav.toi.jobbsoker.Kandidatnummer
+import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.VeilederNavIdent
+import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.log
 import java.net.URI
 import java.net.http.HttpClient
@@ -14,6 +18,29 @@ import java.net.http.HttpResponse
 
 private data class KandidatKandidatnrRequestDto(val fodselsnummer: String)
 private data class KandidatKandidatnrResponsDto(val arenaKandidatnr: String)
+
+private data class JobbsokerInfoRequestDto(val fodselsnumre: List<String>)
+private data class JobbsokerInfoDto(
+    val fodselsnummer: String,
+    val navkontor: String?,
+    val veilederNavn: String?,
+    val veilederNavIdent: String?,
+    val alder: Int?,
+    val innsatsgruppe: String?,
+)
+private data class JobbsokerInfoResponsDto(val jobbsokerInfo: List<JobbsokerInfoDto>)
+
+data class JobbsokerInfo(
+    val navkontor: Navkontor?,
+    val veilederNavn: VeilederNavn?,
+    val veilederNavIdent: VeilederNavIdent?,
+    val alder: Int?,
+    val innsatsgruppe: Innsatsgruppe?,
+) {
+    companion object {
+        val tom = JobbsokerInfo(null, null, null, null, null)
+    }
+}
 class KandidatsøkKlient(
     private val kandidatsokApiUrl: String,
     private val kandidatsokScope: String,
@@ -21,10 +48,14 @@ class KandidatsøkKlient(
     private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val objectMapper: ObjectMapper = JacksonConfig.mapper
 ) {
+    companion object {
+        private const val MAKS_FØDSELSNUMRE_PER_JOBBSØKERINFO_KALL = 200
+    }
+
     fun erKonfigurert(): Boolean = kandidatsokApiUrl.isNotBlank() && kandidatsokScope.isNotBlank()
 
-    fun hentKandidatnummer(fødselsnummer: Fødselsnummer, userToken: String): Kandidatnummer? {
-        val onBehalfOfToken = hentOnBehalfOfToken(userToken)
+    fun hentKandidatnummer(fødselsnummer: Fødselsnummer, innkommendeToken: String): Kandidatnummer? {
+        val onBehalfOfToken = hentOnBehalfOfToken(innkommendeToken)
         return hentKandidatnummerMedAccessToken(fødselsnummer, onBehalfOfToken)
     }
 
@@ -63,6 +94,67 @@ class KandidatsøkKlient(
         }
     }
 
-    private fun hentOnBehalfOfToken(userToken: String): String =
-        accessTokenClient.hentAccessToken(innkommendeToken = userToken, scope = kandidatsokScope)
+    private fun hentOnBehalfOfToken(innkommendeToken: String): String =
+        accessTokenClient.hentAccessToken(innkommendeToken = innkommendeToken, scope = kandidatsokScope)
+
+    /**
+     * Henter jobbsøkerinfo for en liste fødselsnumre.
+     * Returnerer kart fra fødselsnummer til [JobbsokerInfo]. Fnr som ikke finnes i kandidatsøk
+     * mappes til [JobbsokerInfo.tom].
+     */
+    fun hentJobbsokerInfo(
+        fødselsnumre: List<Fødselsnummer>,
+        innkommendeToken: String,
+    ): Map<Fødselsnummer, JobbsokerInfo> {
+        val unikeFødselsnumre = fødselsnumre.distinct()
+        if (unikeFødselsnumre.isEmpty()) return emptyMap()
+
+        val onBehalfOfToken = hentOnBehalfOfToken(innkommendeToken)
+        return unikeFødselsnumre
+            .chunked(MAKS_FØDSELSNUMRE_PER_JOBBSØKERINFO_KALL)
+            .flatMap { hentJobbsokerInfoMedAccessToken(it, onBehalfOfToken).entries }
+            .associate { it.key to it.value }
+    }
+
+    private fun hentJobbsokerInfoMedAccessToken(
+        fødselsnumre: List<Fødselsnummer>,
+        onBehalfOfToken: String,
+    ): Map<Fødselsnummer, JobbsokerInfo> {
+        log.info("Henter jobbsøkerinfo fra kandidatsøk-api for ${fødselsnumre.size} fødselsnummer")
+        val url = "$kandidatsokApiUrl/api/jobbsoker-info"
+        val requestBodyJson = objectMapper.writeValueAsString(
+            JobbsokerInfoRequestDto(fødselsnumre.map { it.asString }.distinct())
+        )
+
+        try {
+            val request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer $onBehalfOfToken")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
+                .build()
+
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            if (response.statusCode() != 200) {
+                log.error("Feil ved henting av jobbsøkerinfo fra kandidatsøk-api. status: ${response.statusCode()}")
+                throw KandidatsokOppslagFeiletException("Klarte ikke å hente jobbsøkerinfo fra kandidatsøk.")
+            }
+
+            val respons = objectMapper.readValue(response.body(), JobbsokerInfoResponsDto::class.java)
+            return respons.jobbsokerInfo.associate { dto ->
+                Fødselsnummer(dto.fodselsnummer) to JobbsokerInfo(
+                    navkontor = dto.navkontor?.takeIf(String::isNotBlank)?.let(::Navkontor),
+                    veilederNavn = dto.veilederNavn?.takeIf(String::isNotBlank)?.let(::VeilederNavn),
+                    veilederNavIdent = dto.veilederNavIdent?.takeIf(String::isNotBlank)?.let(::VeilederNavIdent),
+                    alder = dto.alder?.takeIf { it >= 0 },
+                    innsatsgruppe = dto.innsatsgruppe?.takeIf(String::isNotBlank)?.let(::Innsatsgruppe),
+                )
+            }
+        } catch (e: KandidatsokOppslagFeiletException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("Det skjedde en feil ved henting av jobbsøkerinfo fra kandidatsøk-api", e)
+            throw KandidatsokOppslagFeiletException("Klarte ikke å hente jobbsøkerinfo fra kandidatsøk.", e)
+        }
+    }
 }

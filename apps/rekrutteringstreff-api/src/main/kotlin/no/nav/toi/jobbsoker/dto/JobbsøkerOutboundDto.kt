@@ -7,9 +7,6 @@ data class JobbsøkerOutboundDto(
     val fødselsnummer: String,
     val fornavn: String,
     val etternavn: String,
-    val navkontor: String?,
-    val veilederNavn: String?,
-    val veilederNavIdent: String?,
     val status: JobbsøkerStatus,
     val hendelser: List<JobbsøkerHendelseOutboundDto>
 )

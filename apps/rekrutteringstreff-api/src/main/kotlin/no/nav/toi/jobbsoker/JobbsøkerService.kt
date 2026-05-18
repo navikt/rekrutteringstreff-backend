@@ -14,6 +14,8 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
+import no.nav.toi.kandidatsok.JobbsokerInfo
+import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Instant
@@ -31,12 +33,14 @@ class JobbsøkerService(
     private val jobbsøkerSokRepository: JobbsøkerSokRepository,
     private val jobbsøkerFormidlingRepository: JobbsøkerFormidlingRepository =
         JobbsøkerFormidlingRepository(dataSource),
+    private val kandidatsøkKlient: KandidatsøkKlient? = null,
 ) {
     constructor(dataSource: DataSource, jobbsøkerRepository: JobbsøkerRepository) : this(
         dataSource,
         jobbsøkerRepository,
         JobbsøkerSokRepository(dataSource),
         JobbsøkerFormidlingRepository(dataSource),
+        null,
     )
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
@@ -46,20 +50,41 @@ class JobbsøkerService(
         treffId: TreffId,
         navIdent: String,
         lagtTilAvNavn: String? = null,
+        innkommendeToken: String? = null,
     ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
         val nyeJobbsøkere = finnNyeJobbsøkere(jobbsøkere, eksisterendeJobbsøkere, slettedeJobbsøkere)
         val gjenopprettedeJobbsøkere = finnGjenopprettedeJobbsøkere(jobbsøkere, slettedeJobbsøkere)
+        val berikedeNyeJobbsøkere = berikJobbsøkere(nyeJobbsøkere, innkommendeToken)
 
         dataSource.executeInTransaction { connection ->
-            opprettNyeJobbsøkere(connection, nyeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
+            opprettNyeJobbsøkere(connection, berikedeNyeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
             gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
         }
 
         return LeggTilJobbsøkereResultat(
             antallLagtTil = nyeJobbsøkere.size + gjenopprettedeJobbsøkere.size,
         )
+    }
+
+    private fun berikJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, innkommendeToken: String?): List<LeggTilJobbsøker> {
+        val klient = kandidatsøkKlient?.takeIf { it.erKonfigurert() } ?: return jobbsøkere
+        if (jobbsøkere.isEmpty()) return jobbsøkere
+
+        val token = innkommendeToken ?: error("Innkommende token mangler for berikning av jobbsøkere")
+        val jobbsokerInfoPerFnr = klient.hentJobbsokerInfo(jobbsøkere.map { it.fødselsnummer }.distinct(), token)
+
+        return jobbsøkere.map { jobbsøker ->
+            val info = jobbsokerInfoPerFnr[jobbsøker.fødselsnummer] ?: JobbsokerInfo.tom
+            jobbsøker.copy(
+                navkontor = info.navkontor ?: jobbsøker.navkontor,
+                veilederNavn = info.veilederNavn ?: jobbsøker.veilederNavn,
+                veilederNavIdent = info.veilederNavIdent ?: jobbsøker.veilederNavIdent,
+                alder = info.alder,
+                innsatsgruppe = info.innsatsgruppe ?: jobbsøker.innsatsgruppe,
+            )
+        }
     }
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {

@@ -64,8 +64,9 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         val sql = """
             insert into jobbsoker
               (id, rekrutteringstreff_id,fodselsnummer,fornavn,etternavn,
-               navkontor,veileder_navn,veileder_navident,status)
-            values (?,?,?,?,?,?,?,?,?)
+               navkontor,veileder_navn,veileder_navident,status,
+                    alder,innsatsgruppe)
+            values (?,?,?,?,?,?,?,?,?,?,?)
         """.trimIndent()
         val batchRader = jobbsøkere.map { jobbsøker ->
             JobbsøkerBatchRad(
@@ -103,6 +104,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         setString(7, jobbsøker.veilederNavn?.asString)
         setString(8, jobbsøker.veilederNavIdent?.asString)
         setString(9, JobbsøkerStatus.LAGT_TIL.name)
+        setObject(10, jobbsøker.alder)
+        setString(11, jobbsøker.innsatsgruppe?.asString)
         addBatch()
     }
 
@@ -213,13 +216,15 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.navkontor,
                     js.veileder_navn,
                     js.veileder_navident,
+                    js.alder,
+                    js.innsatsgruppe,
                     js.status,
                     rt.id as treff_id
                 FROM jobbsoker js
                 JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 WHERE rt.id = ? AND js.status = 'SLETTET' AND js.er_synlig = TRUE
                 GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
-                     js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+                     js.navkontor, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, rt.id
             ORDER BY js.jobbsoker_id;
                 """.trimIndent()
         ).use { stmt ->
@@ -241,6 +246,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 js.navkontor,
                 js.veileder_navn,
                 js.veileder_navident,
+                js.alder,
+                js.innsatsgruppe,
                 js.status,
                 rt.id as treff_id,
                 COALESCE(
@@ -261,7 +268,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
             WHERE rt.id = ? AND js.status != 'SLETTET' AND js.er_synlig = TRUE
             GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
-                     js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+                     js.navkontor, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, rt.id
             ORDER BY js.jobbsoker_id;
         """.trimIndent()
 
@@ -370,7 +377,9 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.valueOf(getString("status")),
-        hendelser = parseHendelser(getString("hendelser"))
+        hendelser = parseHendelser(getString("hendelser")),
+        alder = nullableInt("alder"),
+        innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
     )
 
     private fun ResultSet.toJobbsøkerUtenHendelser() = Jobbsøker(
@@ -383,7 +392,14 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.valueOf(getString("status")),
+        alder = nullableInt("alder"),
+        innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
     )
+
+    private fun ResultSet.nullableInt(kolonne: String): Int? {
+        val verdi = getInt(kolonne)
+        return if (wasNull()) null else verdi
+    }
 
 
     fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {
@@ -450,6 +466,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.navkontor,
                     js.veileder_navn,
                     js.veileder_navident,
+                    js.alder,
+                    js.innsatsgruppe,
                     js.status,
                     rt.id as treff_id,
                     COALESCE(
@@ -470,7 +488,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
                 WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET' AND js.er_synlig = TRUE
                 GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
-                         js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+                         js.navkontor, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, rt.id
             """
             ).use { stmt ->
                 stmt.setObject(1, treff.somUuid)
