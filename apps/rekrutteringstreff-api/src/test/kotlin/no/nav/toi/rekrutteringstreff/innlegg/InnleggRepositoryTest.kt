@@ -5,8 +5,9 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.assertThrows
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InnleggRepositoryTest {

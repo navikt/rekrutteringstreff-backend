@@ -62,6 +62,14 @@ class App(
         javalin.start(port)
     }
 
+    private fun startSchedulere() {
+        log.info("Starting schedulers")
+        ctx.jobbsøkerhendelserScheduler.start()
+        ctx.synlighetsBehovScheduler.start()
+        ctx.rekrutteringstreffOpprydningScheduler.start()
+        ctx.rekrutteringstreffScheduler.start()
+    }
+
     fun startRR() {
         log.info("Starting RapidsConnection")
         ctx.registerLyttere()
@@ -76,13 +84,12 @@ class App(
         }.start()
     }
 
-    fun startSchedulere() {
-        ctx.startSchedulere()
-    }
-
     fun close() {
         log.info("Shutting down application")
-        ctx.stopSchedulere()
+        ctx.jobbsøkerhendelserScheduler.stop()
+        ctx.synlighetsBehovScheduler.stop()
+        ctx.rekrutteringstreffOpprydningScheduler.stop()
+        ctx.rekrutteringstreffScheduler.stop()
         if (::javalin.isInitialized) javalin.stop()
         ctx.rapidsConnection.stop()
         (ctx.dataSource as? HikariDataSource)?.close()

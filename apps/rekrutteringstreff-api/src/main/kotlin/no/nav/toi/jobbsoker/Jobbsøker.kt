@@ -3,7 +3,7 @@ package no.nav.toi.jobbsoker
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.TreffId
-import java.util.*
+import java.util.UUID
 
 data class Fødselsnummer(private val fødselsnummer: String) {
     init {

@@ -4,17 +4,30 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import no.nav.toi.*
+import no.nav.toi.App
+import no.nav.toi.ApplicationContext
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
+import no.nav.toi.AzureAdRoller.jobbsøkerrettet
+import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.JacksonConfig
+import no.nav.toi.httpClient
+import no.nav.toi.lagToken
+import no.nav.toi.lagTokenBorger
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.ZonedDateTime
+import no.nav.toi.TestInfrastructureContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PilotkontorTest {
@@ -31,7 +44,8 @@ class PilotkontorTest {
 
     @BeforeAll
     fun setUp() {
-        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlient = modiaKlient).also { it.start() }
+        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlient = modiaKlient)
+        infra.start()
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
     }

@@ -4,7 +4,7 @@ import java.sql.ResultSet
 import java.sql.Timestamp
 import java.sql.Types
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.UUID
 import javax.sql.DataSource
 
 class KiLoggRepository(private val dataSource: DataSource) {

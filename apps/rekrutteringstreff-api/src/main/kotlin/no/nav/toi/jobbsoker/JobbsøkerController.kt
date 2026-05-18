@@ -1,16 +1,20 @@
 package no.nav.toi.jobbsoker
 
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
-import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuditLog
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
-import no.nav.toi.Registrable
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.jobbsoker.dto.*
+import no.nav.toi.jobbsoker.dto.JobbsøkerDto
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerDataOutboundDto
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseOutboundDto
+import no.nav.toi.jobbsoker.dto.JobbsøkerOutboundDto
+import no.nav.toi.jobbsoker.dto.PersonTreffIderDto
+import no.nav.toi.jobbsoker.dto.SvarForJobbsøkerDto
 import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
@@ -20,6 +24,7 @@ import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
+import no.nav.toi.Registrable
 
 
 class JobbsøkerController(

@@ -1,18 +1,18 @@
 package no.nav.toi.jobbsoker
 
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.openapi.*
-import io.javalin.router.JavalinDefaultRoutingApi
-import no.nav.toi.Registrable
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import java.util.*
+import no.nav.toi.Registrable
 
 data class KandidatnummerDto(val kandidatnummer: String)
 

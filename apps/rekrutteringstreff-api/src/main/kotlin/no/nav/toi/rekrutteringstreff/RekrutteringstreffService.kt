@@ -1,17 +1,23 @@
 package no.nav.toi.rekrutteringstreff
 
-import no.nav.toi.*
+import no.nav.toi.AktørType
+import no.nav.toi.ArbeidsgiverHendelsestype
+import no.nav.toi.JacksonConfig
+import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.exception.UlovligOppdateringException
+import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.eier.EierService
+import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.slf4j.Logger
 import java.time.ZoneId
 import java.time.ZonedDateTime

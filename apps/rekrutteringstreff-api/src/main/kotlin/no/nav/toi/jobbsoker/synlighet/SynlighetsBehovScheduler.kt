@@ -3,10 +3,20 @@ package no.nav.toi.jobbsoker.synlighet
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.opentelemetry.instrumentation.annotations.WithSpan
-import no.nav.toi.*
+import no.nav.toi.DefaultScheduler
+import no.nav.toi.LeaderElectionInterface
+import no.nav.toi.ScheduledTask
+import no.nav.toi.Scheduler
+import no.nav.toi.SecureLog
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.log
 import org.slf4j.Logger
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Scheduler som periodisk sjekker etter jobbsøkere der synlighet ikke er evaluert,

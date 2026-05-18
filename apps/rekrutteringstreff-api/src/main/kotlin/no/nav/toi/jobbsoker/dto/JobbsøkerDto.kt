@@ -1,6 +1,12 @@
 package no.nav.toi.jobbsoker.dto
 
-import no.nav.toi.jobbsoker.*
+import no.nav.toi.jobbsoker.Etternavn
+import no.nav.toi.jobbsoker.Fornavn
+import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.LeggTilJobbsøker
+import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.VeilederNavIdent
+import no.nav.toi.jobbsoker.VeilederNavn
 
 data class JobbsøkerDto(
     val fødselsnummer: String,

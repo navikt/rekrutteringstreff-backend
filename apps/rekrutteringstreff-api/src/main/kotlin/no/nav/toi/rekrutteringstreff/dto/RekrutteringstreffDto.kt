@@ -2,7 +2,7 @@ package no.nav.toi.rekrutteringstreff.dto
 
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.UUID
 
 data class RekrutteringstreffDto(
     val id: UUID,

@@ -1,11 +1,6 @@
 package no.nav.toi.rekrutteringstreff
-import no.nav.toi.RekrutteringstreffHendelsestype
-import no.nav.toi.executeInTransaction
-import no.nav.toi.jobbsoker.Etternavn
-import no.nav.toi.jobbsoker.Fornavn
-import no.nav.toi.jobbsoker.Fødselsnummer
-import no.nav.toi.jobbsoker.LeggTilJobbsøker
-import no.nav.toi.nowOslo
+import no.nav.toi.*
+import no.nav.toi.jobbsoker.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
@@ -14,7 +9,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.time.temporal.ChronoUnit
-
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffRepositoryTest {
     companion object {

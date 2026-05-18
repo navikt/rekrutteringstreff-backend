@@ -13,7 +13,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.format.DateTimeFormatter
-import java.util.*
+import java.util.UUID
 import kotlin.system.measureTimeMillis
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -42,16 +42,12 @@ data class EkstraMetaDbJson(
     val promptHash: String
 )
 
-data class OpenAiProperties(
-    val apiUrl: String = System.getenv("OPENAI_API_URL") ?: "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
-    val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key",
-    val kiVersjon: String = System.getenv("OPENAI_DEPLOYMENT") ?: "toi-gpt-4.1"
-)
-
 class OpenAiClient(
-    private val httpClient: HttpClient,
+    private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val repo: KiLoggRepository,
-    private val openAiProperties: OpenAiProperties
+    private val apiUrl: String = System.getenv("OPENAI_API_URL") ?: "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
+    private val apiKey: String = System.getenv("OPENAI_API_KEY") ?: "test-key",
+    private val kiVersjon: String = System.getenv("OPENAI_DEPLOYMENT") ?: "toi-gpt-4.1"
 ) {
     private val mapper = JacksonConfig.mapper
     private val zdtFormatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
@@ -100,8 +96,8 @@ class OpenAiClient(
             )
 
             val request = HttpRequest.newBuilder()
-                .uri(URI(openAiProperties.apiUrl))
-                .headers("api-key", openAiProperties.apiKey, "Content-Type", "application/json")
+                .uri(URI(apiUrl))
+                .headers("api-key", apiKey, "Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .timeout(Duration.ofSeconds(30))
                 .build()
@@ -175,7 +171,7 @@ class OpenAiClient(
                 bryterRetningslinjer = result.bryterRetningslinjer,
                 begrunnelse = result.begrunnelse,
                 kiNavn = kiNavn,
-                kiVersjon = openAiProperties.kiVersjon,
+                kiVersjon = kiVersjon,
                 svartidMs = elapsedMs.toInt()
             )
         )

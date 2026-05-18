@@ -1,14 +1,10 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
-import no.nav.toi.AktørType
-import no.nav.toi.JacksonConfig
-import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.TestRapid
-import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
+import no.nav.toi.*
+import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -16,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import org.assertj.core.api.Assertions.within
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AktivitetskortFeilLytterTest {

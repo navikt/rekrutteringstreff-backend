@@ -1,14 +1,24 @@
 package no.nav.toi.jobbsoker
 
-import no.nav.toi.*
+import no.nav.toi.AktørType
+import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.SecureLog
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
+import no.nav.toi.executeInTransaction
+import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
-import no.nav.toi.jobbsoker.sok.*
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRequest
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
+import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
+import java.time.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.time.Instant
 import javax.sql.DataSource
 
 data class LeggTilJobbsøkereResultat(

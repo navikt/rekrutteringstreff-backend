@@ -3,7 +3,7 @@ package no.nav.toi.jobbsoker.dto
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.UUID
 
 data class JobbsøkerHendelse(
     val id: UUID,

@@ -1,20 +1,20 @@
 package no.nav.toi.rekrutteringstreff.ki
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
-import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
-import no.nav.toi.Registrable
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
 import java.time.ZonedDateTime
 import java.util.*
+import no.nav.toi.Registrable
 
 class KiController (
     private val kiLoggRepository: KiLoggRepository,
@@ -63,7 +63,6 @@ class KiController (
         path = "$baseUrl/valider",
         methods = [HttpMethod.POST]
     )
-
     private fun validerOgLoggHandler(): (Context) -> Unit = { ctx ->
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val req = ctx.bodyAsClass<ValiderMedLoggRequestUtenTreffIdDto>()

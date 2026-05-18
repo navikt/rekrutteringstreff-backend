@@ -5,7 +5,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.Endringsfelttype
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.UUID
 
 /**
  * Representerer en oppdatering av et rekrutteringstreff som sendes på rapid.

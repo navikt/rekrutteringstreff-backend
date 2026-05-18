@@ -1,9 +1,20 @@
 package no.nav.toi.rekrutteringstreff.opprydning
 
 import io.opentelemetry.instrumentation.annotations.WithSpan
-import no.nav.toi.*
+import no.nav.toi.DefaultScheduler
+import no.nav.toi.LeaderElectionInterface
+import no.nav.toi.ScheduledTask
+import no.nav.toi.Scheduler
+import no.nav.toi.SecureLog
+import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
+import org.slf4j.Logger
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class RekrutteringstreffOpprydningScheduler(
     private val kiLoggService: KiLoggService,

@@ -6,7 +6,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
-import java.util.*
+import java.util.UUID
 
 class InnleggService(
     private val innleggRepository: InnleggRepository,

@@ -7,7 +7,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.PersonTreffId
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.UUID
 
 data class JobbsøkerHendelseMedJobbsøkerData(
     val id: UUID,

@@ -1,9 +1,13 @@
 package no.nav.toi.jobbsoker
 
-import io.javalin.http.Context
-import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
-import no.nav.toi.Registrable
+import io.javalin.http.Context
+import io.javalin.openapi.HttpMethod
+import io.javalin.openapi.OpenApi
+import io.javalin.openapi.OpenApiContent
+import io.javalin.openapi.OpenApiParam
+import io.javalin.openapi.OpenApiResponse
+import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
@@ -12,7 +16,8 @@ import no.nav.toi.jobbsoker.dto.toOutboundDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.*
+import java.util.UUID
+import no.nav.toi.Registrable
 
 class JobbsøkerInnloggetBorgerController(
     private val jobbsøkerService: JobbsøkerService,

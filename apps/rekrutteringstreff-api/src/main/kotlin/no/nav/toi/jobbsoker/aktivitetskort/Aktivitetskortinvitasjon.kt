@@ -4,7 +4,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.ZonedDateTime
-import java.util.*
+import java.util.UUID
 
 class Aktivitetskortinvitasjon private constructor(
     private val fnr: String,

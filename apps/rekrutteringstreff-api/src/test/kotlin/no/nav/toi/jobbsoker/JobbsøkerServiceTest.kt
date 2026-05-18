@@ -1,9 +1,9 @@
 package no.nav.toi.jobbsoker
 
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.AktørType
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
