@@ -3,7 +3,7 @@ package no.nav.toi.jobbsoker.aktivitetskort
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.TreffId
-import java.util.UUID
+import java.util.*
 
 enum class AktivitetskortTreffstatus(val rapidVerdi: String) {
     AVLYST("avlyst"),

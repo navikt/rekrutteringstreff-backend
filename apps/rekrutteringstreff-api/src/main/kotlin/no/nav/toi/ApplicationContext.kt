@@ -36,6 +36,8 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val dataSource get() = infra.dataSource
     val rapidsConnection get() = infra.rapidsConnection
     val authConfigs get() = infra.authConfigs
+    val httpClient get() = infra.httpClient
+    val openAiProperties get() = infra.openAiProperties
     val rolleUuidSpesifikasjon get() = infra.rolleUuidSpesifikasjon
     val pilotkontorer get() = infra.pilotkontorer
     val leaderElection get() = infra.leaderElection
@@ -66,6 +68,11 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         eierService
     )
     val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
+    val openAiClient = OpenAiClient(
+        httpClient = httpClient,
+        repo = kiLoggRepository,
+        openAiProperties = openAiProperties
+    )
     val kiLoggService = KiLoggService(kiLoggRepository)
     val sokService = RekrutteringstreffSokService(sokRepository)
 
@@ -77,7 +84,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val jobbsøkerInnloggetBorgerController = JobbsøkerInnloggetBorgerController(jobbsøkerService)
     val jobbsøkerOutboundController = JobbsøkerOutboundController(jobbsøkerRepository, infra.kandidatsøkKlient, eierService)
     val innleggController = InnleggController(innleggService, kiLoggService, eierService)
-    val kiController = KiController(kiLoggRepository, OpenAiClient(repo = kiLoggRepository))
+    val kiController = KiController(kiLoggRepository, openAiClient)
     val sokController = RekrutteringstreffSokController(sokService)
     val healthController = HealthController(healthRepository)
 
@@ -120,5 +127,20 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         minsideVarselSvarLytter
         synlighetsLytter
         synlighetsBehovLytter
+    }
+
+    fun startSchedulere() {
+        log.info("Starting schedulers")
+        jobbsøkerhendelserScheduler.start()
+        synlighetsBehovScheduler.start()
+        rekrutteringstreffOpprydningScheduler.start()
+        rekrutteringstreffScheduler.start()
+    }
+
+    fun stopSchedulere() {
+        jobbsøkerhendelserScheduler.stop()
+        synlighetsBehovScheduler.stop()
+        rekrutteringstreffOpprydningScheduler.stop()
+        rekrutteringstreffScheduler.stop()
     }
 }

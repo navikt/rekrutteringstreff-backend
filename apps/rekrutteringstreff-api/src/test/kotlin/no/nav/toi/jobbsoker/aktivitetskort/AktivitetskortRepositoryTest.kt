@@ -1,7 +1,10 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.jobbsoker.*
+import no.nav.toi.jobbsoker.Etternavn
+import no.nav.toi.jobbsoker.Fornavn
+import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway

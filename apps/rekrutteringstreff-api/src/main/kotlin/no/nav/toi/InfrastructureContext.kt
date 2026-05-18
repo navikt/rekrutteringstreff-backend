@@ -5,10 +5,13 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.kandidatsok.KandidatsøkKlient
+import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import java.net.http.HttpClient
 import java.util.*
 import javax.sql.DataSource
+import kotlin.getValue
 
 @Suppress("MemberVisibilityCanBePrivate")
 open class InfrastructureContext(
@@ -105,6 +108,14 @@ open class InfrastructureContext(
             kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
             accessTokenClient = accessTokenClient,
             httpClient = httpClient
+        )
+    }
+
+    open val openAiProperties: OpenAiProperties by lazy {
+        OpenAiProperties(
+            apiUrl = System.getenv("OPENAI_API_URL"),
+            apiKey = System.getenv("OPENAI_API_KEY"),
+            kiVersjon = System.getenv("OPENAI_DEPLOYMENT")
         )
     }
 }
