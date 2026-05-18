@@ -236,7 +236,7 @@ class RekrutteringstreffService(
             }
 
             val jobbsøkereSomSkalVarsles = alleJobbsøkere
-                .filter { jobbsøkerService.skalVarslesOmEndringer(it.hendelser) }
+                .filter { jobbsøkerService.skalVarslesOmEndringer(it) }
                 .map { it.personTreffId }
 
             if (jobbsøkereSomSkalVarsles.isNotEmpty()) {

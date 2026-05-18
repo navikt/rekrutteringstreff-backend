@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdatering
+import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffstatus
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffSvarOgStatus
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
@@ -75,7 +76,7 @@ class Rekrutteringstreff(
         hendelseId: UUID,
         endretAvPersonbruker: Boolean,
         svar: Boolean? = null,
-        treffstatus: String? = null,
+        treffstatus: AktivitetskortTreffstatus? = null,
         endretAv: String? = null,
     ) = RekrutteringstreffSvarOgStatus(
         fnr = fnr,

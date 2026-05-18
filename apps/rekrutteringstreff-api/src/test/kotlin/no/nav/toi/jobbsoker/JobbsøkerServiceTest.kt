@@ -336,7 +336,7 @@ class JobbsøkerServiceTest {
         jobbsøkerService.inviter(personTreffIds, treffId, "testperson")
 
         val jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fnr)
-        val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker!!.hendelser)
+        val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker!!)
 
         assertThat(skalVarsles).isFalse()
     }
@@ -354,7 +354,7 @@ class JobbsøkerServiceTest {
         jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, fnr.asString)
 
         val jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fnr)
-        val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker!!.hendelser)
+        val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker!!)
 
         assertThat(skalVarsles).isTrue()
     }
@@ -377,7 +377,7 @@ class JobbsøkerServiceTest {
         assertThat(jobbsøker!!.status).isEqualTo(JobbsøkerStatus.SVART_NEI)
         assertThat(jobbsøker.hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON }).isTrue()
 
-        val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker.hendelser)
+        val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker)
         assertThat(skalVarsles).isFalse()
     }
 
@@ -391,7 +391,7 @@ class JobbsøkerServiceTest {
         jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
 
         val jobbsøker = jobbsøkerService.hentJobbsøker(treffId, fnr)
-        val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker!!.hendelser)
+        val skalVarsles = jobbsøkerService.skalVarslesOmEndringer(jobbsøker!!)
 
         assertThat(skalVarsles).isFalse()
     }
