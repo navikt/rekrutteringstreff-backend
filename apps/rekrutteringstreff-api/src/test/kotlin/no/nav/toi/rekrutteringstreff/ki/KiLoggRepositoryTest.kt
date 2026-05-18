@@ -8,6 +8,7 @@ import org.junit.jupiter.api.*
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import com.fasterxml.jackson.module.kotlin.readValue
+import no.nav.toi.rekrutteringstreff.ki.client.SystemPrompt
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

@@ -18,7 +18,7 @@ import no.nav.toi.Registrable
 
 class KiController (
     private val kiLoggRepository: KiLoggRepository,
-    private val openAiClient: OpenAiClient,
+    private val openAiService: OpenAiService,
 ) : Registrable {
     companion object {
         private const val pathParamTreffId = "id"
@@ -68,7 +68,7 @@ class KiController (
         val req = ctx.bodyAsClass<ValiderMedLoggRequestUtenTreffIdDto>()
         val treffId = UUID.fromString(ctx.pathParam(pathParamTreffId))
         val (result: ValiderRekrutteringstreffResponsDto, loggId: UUID?, validertTekst: String) =
-            openAiClient.validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
+            openAiService.validateRekrutteringstreffOgLogg(treffId, req.feltType, req.tekst)
         ctx.status(200).json(
             ValiderMedLoggResponseDto(
                 loggId = loggId?.toString() ?: "",

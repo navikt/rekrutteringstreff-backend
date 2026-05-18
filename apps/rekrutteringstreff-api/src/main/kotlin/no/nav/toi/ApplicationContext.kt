@@ -23,7 +23,8 @@ import no.nav.toi.rekrutteringstreff.innlegg.InnleggService
 import no.nav.toi.rekrutteringstreff.ki.KiController
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
-import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.client.DefaultOpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.OpenAiService
 import no.nav.toi.rekrutteringstreff.opprydning.RekrutteringstreffOpprydningScheduler
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokController
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokRepository
@@ -77,7 +78,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val jobbsøkerInnloggetBorgerController = JobbsøkerInnloggetBorgerController(jobbsøkerService)
     val jobbsøkerOutboundController = JobbsøkerOutboundController(jobbsøkerRepository, infra.kandidatsøkKlient, eierService)
     val innleggController = InnleggController(innleggService, kiLoggService, eierService)
-    val kiController = KiController(kiLoggRepository, OpenAiClient(repo = kiLoggRepository))
+    val kiController = KiController(kiLoggRepository, OpenAiService(DefaultOpenAiClient(), kiLoggRepository))
     val sokController = RekrutteringstreffSokController(sokService)
     val healthController = HealthController(healthRepository)
 
