@@ -113,9 +113,9 @@ open class InfrastructureContext(
 
     open val openAiProperties: OpenAiProperties by lazy {
         OpenAiProperties(
-            apiUrl = System.getenv("OPENAI_API_URL"),
-            apiKey = System.getenv("OPENAI_API_KEY"),
-            kiVersjon = System.getenv("OPENAI_DEPLOYMENT")
+            apiUrl = getenv("OPENAI_API_URL"),
+            apiKey = getenv("OPENAI_API_KEY"),
+            kiVersjon = getenv("OPENAI_DEPLOYMENT")
         )
     }
 }
