@@ -5,17 +5,16 @@ import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
-import no.nav.toi.Registrable
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.Eier.Companion.tilJson
 import java.util.*
 
-
 class EierController(
     private val eierService: EierService,
-) : Registrable {
+) : RuteRegistrerer {
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         private const val eiereEndepunkt = "$endepunktRekrutteringstreff/{id}/eiere"
@@ -23,7 +22,7 @@ class EierController(
         private const val slettEiereEndepunkt = "$eiereEndepunkt/{navIdent}"
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.get(eiereEndepunkt, hentEiere())
         routes.put(megEndepunkt, leggTilMeg())
         routes.delete(slettEiereEndepunkt, slettEier())

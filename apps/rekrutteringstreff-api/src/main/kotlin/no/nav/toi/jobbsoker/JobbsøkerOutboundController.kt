@@ -6,7 +6,7 @@ import io.javalin.http.HttpStatus
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
-import no.nav.toi.Registrable
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.kandidatsok.KandidatsøkKlient
@@ -20,14 +20,14 @@ class JobbsøkerOutboundController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val kandidatsøkKlient: KandidatsøkKlient,
     private val eierService: EierService,
-) : Registrable {
+) : RuteRegistrerer {
     companion object {
         private const val pathParamPersonTreffId = "personTreffId"
         private const val pathParamTreffId = "treffId"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff/{$pathParamTreffId}"
         private const val eksternKandidatnummerPath = "$endepunktRekrutteringstreff/jobbsoker/{$pathParamPersonTreffId}/kandidatnummer"
     }
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.get(eksternKandidatnummerPath, hentKandidatnummerHandler())
     }
 

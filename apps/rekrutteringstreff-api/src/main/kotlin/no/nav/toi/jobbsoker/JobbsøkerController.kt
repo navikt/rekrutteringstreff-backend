@@ -7,7 +7,7 @@ import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuditLog
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
-import no.nav.toi.Registrable
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.dto.*
@@ -21,11 +21,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 
-
 class JobbsøkerController(
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
-) : Registrable {
+) : RuteRegistrerer {
     companion object {
         private const val pathParamTreffId = "id"
         private const val pathParamJobbsøkerId = "jobbsokerid"
@@ -42,7 +41,7 @@ class JobbsøkerController(
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post(jobbsøkerPath, leggTilJobbsøkereHandler())
         routes.post(søkPath, søkJobbsøkereHandler())
         routes.delete(slettPath, slettJobbsøkerHandler())

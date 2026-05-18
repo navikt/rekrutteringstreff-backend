@@ -8,24 +8,25 @@ import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
-import no.nav.toi.Registrable
 import no.nav.toi.Rolle
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import no.nav.toi.rekrutteringstreff.ki.dto.KiLoggOutboundDto
 import java.time.ZonedDateTime
 import java.util.*
 
+
 class KiController (
     private val kiLoggRepository: KiLoggRepository,
     private val openAiService: OpenAiService,
-) : Registrable {
+) : RuteRegistrerer {
     companion object {
         private const val pathParamTreffId = "id"
         private const val baseUrl = "/api/rekrutteringstreff/{$pathParamTreffId}/ki"
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post("$baseUrl/valider", validerOgLoggHandler())
         routes.put("$baseUrl/logg/{loggId}/lagret", oppdaterLagretHandler())
         routes.put("$baseUrl/logg/{loggId}/manuell", oppdaterManuellHandler())

@@ -3,7 +3,7 @@ package no.nav.toi.jobbsoker
 import io.javalin.http.Context
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
-import no.nav.toi.Registrable
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
@@ -12,11 +12,11 @@ import no.nav.toi.jobbsoker.dto.toOutboundDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.*
+import java.util.UUID
 
 class JobbsøkerInnloggetBorgerController(
     private val jobbsøkerService: JobbsøkerService,
-) : Registrable {
+) : RuteRegistrerer {
     companion object {
         private const val pathParamTreffId = "id"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -27,7 +27,7 @@ class JobbsøkerInnloggetBorgerController(
         private val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post(svarJaPath, svarJaHandler())
         routes.post(svarNeiPath, svarNeiHandler())
         routes.get(borgerJobbsøkerPath, hentBorgerJobbsøkerHandler())

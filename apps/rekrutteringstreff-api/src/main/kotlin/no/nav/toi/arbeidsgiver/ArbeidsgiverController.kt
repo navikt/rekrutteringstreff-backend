@@ -7,7 +7,7 @@ import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
-import no.nav.toi.Registrable
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.arbeidsgiver.dto.*
 import no.nav.toi.authenticatedUser
@@ -18,7 +18,7 @@ import java.util.*
 class ArbeidsgiverController(
     private val arbeidsgiverService: ArbeidsgiverService,
     private val eierService: EierService,
-) : Registrable {
+) : RuteRegistrerer {
 
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -40,7 +40,7 @@ class ArbeidsgiverController(
         return navIdent
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post(arbeidsgiverPath, leggTilArbeidsgiverHandler())
         routes.post(arbeidsgiverMedBehovPath, leggTilArbeidsgiverMedBehovHandler())
         routes.get(arbeidsgiverPath, hentArbeidsgivereHandler())

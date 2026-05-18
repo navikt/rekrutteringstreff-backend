@@ -8,7 +8,7 @@ import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
-import no.nav.toi.Registrable
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.*
@@ -23,7 +23,7 @@ class RekrutteringstreffController(
     private val rekrutteringstreffService: RekrutteringstreffService,
     private val eierService: EierService,
     private val kiLoggService: KiLoggService,
-) : Registrable {
+) : RuteRegistrerer {
     companion object {
         private const val pathParamTreffId = "id"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -41,7 +41,7 @@ class RekrutteringstreffController(
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post(endepunktRekrutteringstreff, opprettRekrutteringstreffHandler())
         routes.get("${endepunktRekrutteringstreff}/{id}", hentRekrutteringstreffHandler())
         routes.put("${endepunktRekrutteringstreff}/{id}", oppdaterRekrutteringstreffHandler())

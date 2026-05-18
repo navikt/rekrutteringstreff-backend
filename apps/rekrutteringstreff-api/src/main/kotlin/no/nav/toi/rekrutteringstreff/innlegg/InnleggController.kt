@@ -6,21 +6,20 @@ import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
-import no.nav.toi.Registrable
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import java.net.HttpURLConnection.*
-import java.util.*
-
+import java.util.UUID
 
 class InnleggController(
     private val innleggService: InnleggService,
     private val kiLoggService: KiLoggService,
     private val eierService: EierService,
-) : Registrable {
+) : RuteRegistrerer {
     companion object {
         private const val REKRUTTERINGSTREFF_ID_PARAM = "rekrutteringstreffId"
         private const val INNLEGG_ID_PARAM            = "innleggId"
@@ -31,7 +30,7 @@ class InnleggController(
         private const val INNLEGG_ITEM_PATH = "$INNLEGG_BASE_PATH/{$INNLEGG_ID_PARAM}"
     }
 
-    override fun register(routes: JavalinDefaultRoutingApi) {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.get(INNLEGG_BASE_PATH, hentAlleInnleggForTreff())
         routes.get(INNLEGG_ITEM_PATH, hentEttInnlegg())
         routes.post(INNLEGG_BASE_PATH, opprettInnlegg())
