@@ -89,11 +89,6 @@ class KandidatsøkKlient(
     private fun hentOnBehalfOfToken(innkommendeToken: String): String =
         accessTokenClient.hentAccessToken(innkommendeToken = innkommendeToken, scope = kandidatsokScope)
 
-    /**
-     * Henter jobbsøkerinfo for en liste fødselsnumre.
-     * Returnerer kart fra fødselsnummer til [JobbsokerInfo]. Fnr som ikke finnes i kandidatsøk
-     * mappes til [JobbsokerInfo.tom].
-     */
     fun hentJobbsokerInfo(
         fødselsnumre: List<Fødselsnummer>,
         innkommendeToken: String,
