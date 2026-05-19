@@ -27,11 +27,6 @@ data class LeggTilJobbsøkereResultat(
     val antallLagtTil: Int,
 )
 
-private data class JobbsøkerSomSkalLeggesTil(
-    val jobbsøker: LeggTilJobbsøker,
-    val slettetPersonTreffId: PersonTreffId? = null,
-)
-
 private const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
 
 class JobbsøkerService(
@@ -61,53 +56,70 @@ class JobbsøkerService(
     ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
-        val jobbsøkereSomSkalLeggesTil = finnJobbsøkereSomSkalLeggesTil(jobbsøkere, eksisterendeJobbsøkere, slettedeJobbsøkere)
-        val berikedeJobbsøkerBatcher = jobbsøkereSomSkalLeggesTil
+        val personTreffIdForGjenoppretting = slettedeJobbsøkere.associate { it.fødselsnummer to it.personTreffId }
+        val jobbsøkereSomSkalLagres = finnJobbsøkereSomSkalLagres(
+            ønskedeJobbsøkere = jobbsøkere,
+            eksisterendeJobbsøkere = eksisterendeJobbsøkere,
+            personTreffIdForGjenoppretting = personTreffIdForGjenoppretting,
+        )
+        val berikedeJobbsøkerBatcher = jobbsøkereSomSkalLagres
             .chunked(MAKS_ANTALL_JOBBSØKERE_PER_BATCH)
             .map { batch -> berikJobbsøkerBatch(batch, innkommendeToken) }
 
         dataSource.executeInTransaction { connection ->
             berikedeJobbsøkerBatcher.forEach { batch ->
-                leggTilJobbsøkerBatch(connection, batch, treffId, navIdent, lagtTilAvNavn)
+                leggTilJobbsøkerBatch(
+                    connection = connection,
+                    batch = batch,
+                    personTreffIdForGjenoppretting = personTreffIdForGjenoppretting,
+                    treffId = treffId,
+                    navIdent = navIdent,
+                    lagtTilAvNavn = lagtTilAvNavn,
+                )
             }
         }
 
         return LeggTilJobbsøkereResultat(
-            antallLagtTil = jobbsøkereSomSkalLeggesTil.size,
+            antallLagtTil = jobbsøkereSomSkalLagres.size,
         )
     }
 
     private fun berikJobbsøkerBatch(
-        batch: List<JobbsøkerSomSkalLeggesTil>,
+        batch: List<LeggTilJobbsøker>,
         innkommendeToken: String?,
-    ): List<JobbsøkerSomSkalLeggesTil> {
-        val berikedeJobbsøkere = berikJobbsøkere(batch.map { it.jobbsøker }, innkommendeToken)
-        return batch.zip(berikedeJobbsøkere).map { (jobbsøkerSomSkalLeggesTil, beriketJobbsøker) ->
-            jobbsøkerSomSkalLeggesTil.copy(jobbsøker = beriketJobbsøker)
+    ): List<LeggTilJobbsøker> {
+        val kandidatsøkdataPerFødselsnummer = hentKandidatsøkdataPerFødselsnummer(batch, innkommendeToken)
+        if (kandidatsøkdataPerFødselsnummer.isEmpty()) return batch
+
+        return batch.map { jobbsøker ->
+            val kandidatsøkdata = kandidatsøkdataPerFødselsnummer[jobbsøker.fødselsnummer] ?: JobbsokerInfo.tom
+            berikJobbsøker(jobbsøker, kandidatsøkdata)
         }
     }
 
-    private fun berikJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, innkommendeToken: String?): List<LeggTilJobbsøker> {
-        val klient = kandidatsøkKlient?.takeIf { it.erKonfigurert() } ?: return jobbsøkere
-        if (jobbsøkere.isEmpty()) return jobbsøkere
+    private fun hentKandidatsøkdataPerFødselsnummer(
+        batch: List<LeggTilJobbsøker>,
+        innkommendeToken: String?,
+    ): Map<Fødselsnummer, JobbsokerInfo> {
+        if (batch.isEmpty()) return emptyMap()
+
+        val konfigurertKandidatsøkKlient = kandidatsøkKlient?.takeIf { it.erKonfigurert() } ?: return emptyMap()
 
         val token = innkommendeToken ?: error("Innkommende token mangler for berikning av jobbsøkere")
-        val jobbsokerInfoPerFnr = klient.hentJobbsokerInfo(
-            fødselsnumre = jobbsøkere.map { it.fødselsnummer }.distinct(),
+        return konfigurertKandidatsøkKlient.hentJobbsokerInfo(
+            fødselsnumre = batch.map { it.fødselsnummer }.distinct(),
             innkommendeToken = token,
         )
-
-        return jobbsøkere.map { jobbsøker ->
-            val info = jobbsokerInfoPerFnr[jobbsøker.fødselsnummer] ?: JobbsokerInfo.tom
-            jobbsøker.copy(
-                navkontor = info.navkontor ?: jobbsøker.navkontor,
-                veilederNavn = info.veilederNavn ?: jobbsøker.veilederNavn,
-                veilederNavIdent = info.veilederNavIdent ?: jobbsøker.veilederNavIdent,
-                alder = info.alder ?: jobbsøker.alder,
-                innsatsgruppe = info.innsatsgruppe ?: jobbsøker.innsatsgruppe,
-            )
-        }
     }
+
+    private fun berikJobbsøker(jobbsøker: LeggTilJobbsøker, kandidatsøkdata: JobbsokerInfo): LeggTilJobbsøker =
+        jobbsøker.copy(
+            navkontor = kandidatsøkdata.navkontor ?: jobbsøker.navkontor,
+            veilederNavn = kandidatsøkdata.veilederNavn ?: jobbsøker.veilederNavn,
+            veilederNavIdent = kandidatsøkdata.veilederNavIdent ?: jobbsøker.veilederNavIdent,
+            alder = kandidatsøkdata.alder ?: jobbsøker.alder,
+            innsatsgruppe = kandidatsøkdata.innsatsgruppe ?: jobbsøker.innsatsgruppe,
+        )
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
@@ -344,51 +356,47 @@ class JobbsøkerService(
     ): JobbsøkerFormidlingRespons =
         jobbsøkerFormidlingRepository.hentForFormidling(treffId, request, kunForVeilederNavIdent)
 
-    private fun finnJobbsøkereSomSkalLeggesTil(
+    private fun finnJobbsøkereSomSkalLagres(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,
         eksisterendeJobbsøkere: List<Jobbsøker>,
-        slettedeJobbsøkere: List<Jobbsøker>,
-    ): List<JobbsøkerSomSkalLeggesTil> {
+        personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,
+    ): List<LeggTilJobbsøker> {
         val eksisterendeFødselsnumre = eksisterendeJobbsøkere.map { it.fødselsnummer }.toSet()
-        val slettedeJobbsøkerePerFødselsnummer = slettedeJobbsøkere.associateBy { it.fødselsnummer }
         val ønskedeJobbsøkereUtenEksisterende = ønskedeJobbsøkere.filterNot { it.fødselsnummer in eksisterendeFødselsnumre }
         val førsteGjenopprettingsindekser = ønskedeJobbsøkereUtenEksisterende
             .withIndex()
             .filter { (_, ønsketJobbsøker) ->
-                ønsketJobbsøker.fødselsnummer in slettedeJobbsøkerePerFødselsnummer
+                ønsketJobbsøker.fødselsnummer in personTreffIdForGjenoppretting
             }
             .distinctBy { (_, ønsketJobbsøker) -> ønsketJobbsøker.fødselsnummer }
             .map { it.index }
             .toSet()
 
         return ønskedeJobbsøkereUtenEksisterende.withIndex().mapNotNull { (index, ønsketJobbsøker) ->
-            val slettetJobbsøker = slettedeJobbsøkerePerFødselsnummer[ønsketJobbsøker.fødselsnummer]
-            if (slettetJobbsøker != null && index !in førsteGjenopprettingsindekser) {
+            val erTidligereSlettet = ønsketJobbsøker.fødselsnummer in personTreffIdForGjenoppretting
+            if (erTidligereSlettet && index !in førsteGjenopprettingsindekser) {
                 return@mapNotNull null
             }
 
-            JobbsøkerSomSkalLeggesTil(
-                jobbsøker = ønsketJobbsøker,
-                slettetPersonTreffId = slettetJobbsøker?.personTreffId,
-            )
+            ønsketJobbsøker
         }
     }
 
     private fun leggTilJobbsøkerBatch(
         connection: java.sql.Connection,
-        batch: List<JobbsøkerSomSkalLeggesTil>,
+        batch: List<LeggTilJobbsøker>,
+        personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,
         treffId: TreffId,
         navIdent: String,
         lagtTilAvNavn: String?,
     ) {
         val nyeJobbsøkere = batch
-            .filter { it.slettetPersonTreffId == null }
-            .map { it.jobbsøker }
-        val gjenopprettedeJobbsøkere = batch.mapNotNull { jobbsøkerSomSkalLeggesTil ->
-            jobbsøkerSomSkalLeggesTil.slettetPersonTreffId?.let { personTreffId ->
+            .filterNot { it.fødselsnummer in personTreffIdForGjenoppretting }
+        val gjenopprettedeJobbsøkere = batch.mapNotNull { jobbsøker ->
+            personTreffIdForGjenoppretting[jobbsøker.fødselsnummer]?.let { personTreffId ->
                 JobbsøkerRepository.GjenopprettetJobbsøker(
                     personTreffId = personTreffId,
-                    jobbsøker = jobbsøkerSomSkalLeggesTil.jobbsøker,
+                    jobbsøker = jobbsøker,
                 )
             }
         }
