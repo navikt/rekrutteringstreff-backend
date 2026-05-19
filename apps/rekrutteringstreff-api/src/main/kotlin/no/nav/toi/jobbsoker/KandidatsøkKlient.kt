@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
 import no.nav.toi.exception.KandidatsokOppslagFeiletException
+import no.nav.toi.exception.KandidatsokTilgangAvvistException
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Innsatsgruppe
 import no.nav.toi.jobbsoker.Kandidatnummer
@@ -120,6 +121,9 @@ class KandidatsøkKlient(
 
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
             if (response.statusCode() != 200) {
+                if (response.statusCode() == 403) {
+                    throw KandidatsokTilgangAvvistException("Bruker har ikke tilgang til en eller flere jobbsøkere i kandidatsøk.")
+                }
                 log.error("Feil ved henting av jobbsøkerinfo fra kandidatsøk-api. status: ${response.statusCode()}")
                 throw KandidatsokOppslagFeiletException("Klarte ikke å hente jobbsøkerinfo fra kandidatsøk.")
             }
@@ -134,6 +138,8 @@ class KandidatsøkKlient(
                     innsatsgruppe = dto.innsatsgruppe?.takeIf(String::isNotBlank)?.let(::Innsatsgruppe),
                 )
             }
+        } catch (e: KandidatsokTilgangAvvistException) {
+            throw e
         } catch (e: KandidatsokOppslagFeiletException) {
             throw e
         } catch (e: Exception) {
