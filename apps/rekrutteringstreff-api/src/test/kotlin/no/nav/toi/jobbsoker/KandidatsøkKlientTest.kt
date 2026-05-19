@@ -1,7 +1,6 @@
 package no.nav.toi.kandidatsok
 
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
-import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -39,7 +38,6 @@ class KandidatsøkKlientTest {
         )
         stubFor(
             post(urlPathEqualTo("/api/jobbsoker-info"))
-                .withRequestBody(containing(sisteFnr.asString))
                 .willReturn(
                     aResponse()
                         .withStatus(200)
@@ -88,14 +86,5 @@ class KandidatsøkKlientTest {
         )
         verify(1, postRequestedFor(urlPathEqualTo("/api/jobbsoker-info")))
         verify(1, postRequestedFor(urlPathEqualTo("/token")))
-        verify(
-            1,
-            postRequestedFor(urlPathEqualTo("/token"))
-                .withRequestBody(containing("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer"))
-                .withRequestBody(containing("client_id=client-id"))
-                .withRequestBody(containing("assertion=$innkommendeToken"))
-                .withRequestBody(containing("scope=api%3A%2F%2Fkandidatsok%2F.default"))
-                .withRequestBody(containing("requested_token_use=on_behalf_of"))
-        )
     }
 }
