@@ -99,7 +99,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         setString(offset + 1, jobbsøker.etternavn.asString)
         setString(offset + 2, jobbsøker.navkontor?.asString)
         setString(offset + 3, jobbsøker.veilederNavn?.asString)
-        setString(offset + 4, jobbsøker.veilederNavIdent?.asString)
+        setString(offset + 4, jobbsøker.veilederNavIdent?.asString?.uppercase())
         setObject(offset + 5, jobbsøker.alder)
         setString(offset + 6, jobbsøker.innsatsgruppe?.asString)
     }

@@ -133,7 +133,9 @@ class KandidatsøkKlient(
                 Fødselsnummer(dto.fodselsnummer) to JobbsokerInfo(
                     navkontor = dto.navkontor?.takeIf(String::isNotBlank)?.let(::Navkontor),
                     veilederNavn = dto.veilederNavn?.takeIf(String::isNotBlank)?.let(::VeilederNavn),
-                    veilederNavIdent = dto.veilederNavIdent?.takeIf(String::isNotBlank)?.let(::VeilederNavIdent),
+                    veilederNavIdent = dto.veilederNavIdent
+                        ?.takeIf(String::isNotBlank)
+                        ?.let(::VeilederNavIdent),
                     alder = dto.alder,
                     innsatsgruppe = dto.innsatsgruppe?.takeIf(String::isNotBlank)?.let(::Innsatsgruppe),
                 )

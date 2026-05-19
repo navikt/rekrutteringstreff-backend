@@ -75,8 +75,8 @@ class JobbsøkerFormidlingRepository(private val dataSource: DataSource) {
         }
 
         if (kunForVeilederNavIdent != null) {
-            conditions += "j.veileder_navident = ?"
-            params += kunForVeilederNavIdent
+            conditions += "UPPER(j.veileder_navident) = ?"
+            params += kunForVeilederNavIdent.trim().uppercase()
         }
 
         val whereClause = "WHERE " + conditions.joinToString(" AND ")

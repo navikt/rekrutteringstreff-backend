@@ -151,6 +151,47 @@ class JobbsøkerFormidlingKomponentTest {
     }
 
     @Test
+    fun `veileder finner egne jobbsøkere selv om ident er lagret med lowercase`() {
+        val eierIdent = "A123456"
+        val veilederIdent = "Z993798"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        val personTreffId = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    Fødselsnummer("11111111111"),
+                    Fornavn("Ola"),
+                    Etternavn("Nordmann"),
+                    null,
+                    null,
+                    VeilederNavIdent(veilederIdent),
+                )
+            ),
+            treffId,
+        ).single()
+
+        db.dataSource.connection.use { conn ->
+            conn.prepareStatement("UPDATE jobbsoker SET veileder_navident = ? WHERE id = ?").use { stmt ->
+                stmt.setString(1, veilederIdent.lowercase())
+                stmt.setObject(2, personTreffId.somUuid)
+                stmt.executeUpdate()
+            }
+        }
+
+        val response = httpPost(
+            formidlingEgnePath(treffId),
+            formidlingBody(),
+            navIdent = veilederIdent,
+            groups = listOf(AzureAdRoller.jobbsøkerrettet),
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.totalt).isEqualTo(1)
+        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("11111111111")
+    }
+
+    @Test
     fun `slettede jobbsøkere returneres aldri`() {
         val eierIdent = "A123456"
         val treffId = opprettTreffMedEier(eierIdent)

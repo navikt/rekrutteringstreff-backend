@@ -51,14 +51,19 @@ data class VeilederNavn(private val navn: String) {
     override fun toString(): String = asString
 }
 
-data class VeilederNavIdent(private val ident: String) {
-    init {
-        if (ident.isEmpty()) {
+class VeilederNavIdent(ident: String) {
+    val asString: String = ident.trim().uppercase().also {
+        if (it.isEmpty()) {
             throw IllegalArgumentException("VeilederNavIdent kan ikke være tom.")
         }
     }
-    val asString: String = ident
+
     override fun toString(): String = asString
+
+    override fun equals(other: Any?): Boolean =
+        other is VeilederNavIdent && asString == other.asString
+
+    override fun hashCode(): Int = asString.hashCode()
 }
 
 data class Innsatsgruppe(private val verdi: String) {

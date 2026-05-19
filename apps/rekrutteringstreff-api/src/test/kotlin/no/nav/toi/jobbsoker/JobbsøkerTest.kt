@@ -124,6 +124,12 @@ class JobbsøkerTest {
     }
 
     @Test
+    fun `veilederNavIdent normaliseres til uppercase`() {
+        assertThat(VeilederNavIdent(" z993798 ").asString).isEqualTo("Z993798")
+        assertThat(VeilederNavIdent("z993798")).isEqualTo(VeilederNavIdent("Z993798"))
+    }
+
+    @Test
     fun leggTilJobbsøkerTest() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val fnr = Fødselsnummer("55555555555")
