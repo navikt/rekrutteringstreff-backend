@@ -19,13 +19,15 @@ class ArbeidsgiverService(
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
-    fun leggTilArbeidsgiver(arbeidsgiver: LeggTilArbeidsgiver, treffId: TreffId, navIdent: String) {
+    fun leggTilArbeidsgiver(arbeidsgiver: LeggTilArbeidsgiver, treffId: TreffId, navIdent: String): ArbeidsgiverTreffId {
+        var arbeidsgiverTreffId: ArbeidsgiverTreffId? = null
         dataSource.executeInTransaction { connection ->
-            val arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(connection, arbeidsgiver, treffId)
+            arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(connection, arbeidsgiver, treffId)
             arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, navIdent)
             arbeidsgiverRepository.leggTilNaringskoder(connection, arbeidsgiverTreffId, arbeidsgiver.næringskoder)
+            logger.info("La til arbeidsgiver ${arbeidsgiver.orgnr.asString} for treff $treffId")
         }
-        logger.info("La til arbeidsgiver ${arbeidsgiver.orgnr.asString} for treff $treffId")
+        return arbeidsgiverTreffId!!
     }
 
     fun leggTilArbeidsgiverMedBehov(

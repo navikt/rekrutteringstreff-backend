@@ -5,6 +5,8 @@ import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
+import no.nav.toi.formidling.FormidlingRepository
+import no.nav.toi.formidling.Formidling
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
@@ -27,6 +29,7 @@ class TestDatabase {
     private val eierRepository by lazy { EierRepository(dataSource) }
     private val jobbsøkerRepository by lazy { JobbsøkerRepository(dataSource, JacksonConfig.mapper) }
     private val arbeidsgiverRepository by lazy { ArbeidsgiverRepository(dataSource, JacksonConfig.mapper) }
+    private val formidlingRepository by lazy { FormidlingRepository(dataSource) }
 
     /**
      * Legger til jobbsøkere med OPPRETTET-hendelse via repository.
@@ -87,7 +90,7 @@ class TestDatabase {
     /**
      * Legger til arbeidsgiver med OPPRETTET-hendelse via repository.
      */
-    fun leggTilArbeidsgiverMedHendelse(input: LeggTilArbeidsgiver, treffId: TreffId, opprettetAv: String = "testperson") {
+    fun leggTilArbeidsgiverMedHendelse(input: LeggTilArbeidsgiver, treffId: TreffId, opprettetAv: String = "testperson"): ArbeidsgiverTreffId {
         dataSource.connection.use { connection ->
             val arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(connection, input, treffId)
             arbeidsgiverRepository.leggTilNaringskoder(connection, arbeidsgiverTreffId, input.næringskoder)
@@ -98,6 +101,7 @@ class TestDatabase {
                 AktørType.ARRANGØR,
                 opprettetAv
             )
+            return arbeidsgiverTreffId
         }
     }
 
@@ -215,6 +219,7 @@ class TestDatabase {
     }
 
     fun slettAlt() = dataSource.connection.use { conn ->
+        conn.prepareStatement("DELETE FROM formidling").executeUpdate()
         conn.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
         conn.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
@@ -661,6 +666,22 @@ class TestDatabase {
                 }
             }
         }
+
+    /**
+     * Oppretter en formidling via repository.
+     */
+    fun opprettFormidling(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId, stillingId: UUID): Long {
+        return dataSource.executeInTransaction { connection ->
+            formidlingRepository.opprett(connection, treffId, personTreffId, arbeidsgiverTreffId, stillingId)
+        }
+    }
+
+    /**
+     * Henter formidling via repository.
+     */
+    fun hentFormidling(formidlingId: Long): Formidling? {
+        return formidlingRepository.hent(formidlingId)
+    }
 }
 
 data class KiLoggTestInsert( //Brukes for i testene for å legge inn logger med opprettetTidspunkt tilbake i tid

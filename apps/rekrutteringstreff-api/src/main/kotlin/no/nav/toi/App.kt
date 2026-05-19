@@ -13,6 +13,9 @@ import no.nav.toi.ExceptionMapping.exceptionMapping
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
+import no.nav.toi.formidling.FormidlingController
+import no.nav.toi.formidling.FormidlingRepository
+import no.nav.toi.formidling.FormidlingService
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
@@ -145,6 +148,10 @@ class App(
 
         val arbeidsgiverService = ArbeidsgiverService(dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
 
+        val formidlingRepository = FormidlingRepository(dataSource)
+        val rekrutteringstreffRepo = RekrutteringstreffRepository(dataSource)
+        val formidlingService = FormidlingService(dataSource, formidlingRepository, arbeidsgiverService, jobbsøkerService, rekrutteringstreffRepo)
+
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
         val sokRepository = RekrutteringstreffSokRepository(dataSource)
@@ -197,6 +204,10 @@ class App(
             JobbsøkerController(
                 jobbsøkerService = jobbsøkerService,
                 eierService = eierService,
+                routes = config.routes
+            )
+            FormidlingController(
+                formidlingService = formidlingService,
                 routes = config.routes
             )
             JobbsøkerInnloggetBorgerController(
