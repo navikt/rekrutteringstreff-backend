@@ -451,10 +451,7 @@ class JobbsøkerRepositoryTest {
         )
 
         db.dataSource.connection.use { connection ->
-            repository.gjenopprett(
-                connection,
-                listOf(JobbsøkerRepository.GjenopprettetJobbsøker(personTreffId, oppdatertJobbsøker)),
-            )
+            repository.gjenopprett(connection, mapOf(personTreffId to oppdatertJobbsøker))
         }
 
         val gjenopprettetJobbsøker = repository.hentJobbsøker(treffId, oppdatertJobbsøker.fødselsnummer)

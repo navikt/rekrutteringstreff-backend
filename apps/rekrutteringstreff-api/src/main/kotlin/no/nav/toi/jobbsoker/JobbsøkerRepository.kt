@@ -26,8 +26,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
     data class OpprettetJobbsøker(val personTreffId: PersonTreffId, val jobbsøkerId: Long)
 
-    data class GjenopprettetJobbsøker(val personTreffId: PersonTreffId, val jobbsøker: LeggTilJobbsøker)
-
     private data class JobbsøkerBatchRad(
         val personTreffId: PersonTreffId,
         val jobbsøker: LeggTilJobbsøker,
@@ -96,10 +94,6 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    /**
-     * Setter de syv jobbsøker-feltene fornavn, etternavn, navkontor, veileder_navn,
-     * veileder_navident, alder, innsatsgruppe fra og med kolonneindeks [offset].
-     */
     private fun PreparedStatement.setJobbsøkerData(offset: Int, jobbsøker: LeggTilJobbsøker) {
         setString(offset, jobbsøker.fornavn.asString)
         setString(offset + 1, jobbsøker.etternavn.asString)
@@ -525,7 +519,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
     fun gjenopprett(
         connection: Connection,
-        jobbsøkere: List<GjenopprettetJobbsøker>,
+        jobbsøkere: Map<PersonTreffId, LeggTilJobbsøker>,
     ) {
         if (jobbsøkere.isEmpty()) return
         val sql = """
@@ -541,10 +535,10 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             WHERE id = ?
             """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
-            jobbsøkere.forEach { gjenopprettetJobbsøker ->
-                stmt.setJobbsøkerData(offset = 1, jobbsøker = gjenopprettetJobbsøker.jobbsøker)
+            jobbsøkere.forEach { (personTreffId, jobbsøker) ->
+                stmt.setJobbsøkerData(offset = 1, jobbsøker = jobbsøker)
                 stmt.setString(8, JobbsøkerStatus.LAGT_TIL.name)
-                stmt.setObject(9, gjenopprettetJobbsøker.personTreffId.somUuid)
+                stmt.setObject(9, personTreffId.somUuid)
                 stmt.addBatch()
             }
             stmt.executeBatch()

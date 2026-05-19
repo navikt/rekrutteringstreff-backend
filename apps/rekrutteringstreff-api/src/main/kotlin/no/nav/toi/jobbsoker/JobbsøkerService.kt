@@ -15,7 +15,6 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
 import no.nav.toi.kandidatsok.KandidatsøkKlient
-import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.Instant
 import org.slf4j.Logger
@@ -348,20 +347,12 @@ class JobbsøkerService(
         navIdent: String,
         lagtTilAvNavn: String?,
     ) {
-        val nyeJobbsøkere = batch
-            .filterNot { it.fødselsnummer in personTreffIdForGjenoppretting }
-        val gjenopprettedeJobbsøkere = batch.mapNotNull { jobbsøker ->
-            personTreffIdForGjenoppretting[jobbsøker.fødselsnummer]?.let { personTreffId ->
-                JobbsøkerRepository.GjenopprettetJobbsøker(
-                    personTreffId = personTreffId,
-                    jobbsøker = jobbsøker,
-                )
-            }
-        }
-
-        val opprettedePersonTreffIder = opprettNyeJobbsøkere(connection, nyeJobbsøkere, treffId)
-        val gjenopprettedePersonTreffIder = gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId)
-        val personTreffIder = opprettedePersonTreffIder + gjenopprettedePersonTreffIder
+        val personTreffIder = leggTilEllerGjenopprett(
+            connection = connection,
+            batch = batch,
+            treffId = treffId,
+            personTreffIdForGjenoppretting = personTreffIdForGjenoppretting,
+        )
         if (personTreffIder.isNotEmpty()) {
             jobbsøkerRepository.leggTilOpprettetHendelser(
                 connection = connection,
@@ -373,33 +364,30 @@ class JobbsøkerService(
         }
     }
 
-    private fun opprettNyeJobbsøkere(
+    private fun leggTilEllerGjenopprett(
         connection: java.sql.Connection,
-        jobbsøkere: List<LeggTilJobbsøker>,
+        batch: List<LeggTilJobbsøker>,
         treffId: TreffId,
+        personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,
     ): List<PersonTreffId> {
-        if (jobbsøkere.isEmpty()) return emptyList()
-
-        log.info("Legger til ${jobbsøkere.size} nye jobbsøkere for treff $treffId")
-        val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(
-            connection = connection,
-            jobbsøkere = jobbsøkere,
-            treff = treffId,
+        val (jobbsøkereSomSkalGjenopprettes, nyeJobbsøkere) = batch
+            .partition { it.fødselsnummer in personTreffIdForGjenoppretting }
+        val opprettedePersonTreffIder = if (nyeJobbsøkere.isEmpty()) {
+            emptyList()
+        } else {
+            jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId).map { it.personTreffId }
+        }
+        val jobbsøkereForGjenoppretting = jobbsøkereSomSkalGjenopprettes.associateBy(
+            keySelector = { personTreffIdForGjenoppretting.getValue(it.fødselsnummer) },
+            valueTransform = { it },
         )
-        return opprettedeJobbsøkere.map { it.personTreffId }
-    }
-
-    private fun gjenopprettJobbsøkere(
-        connection: java.sql.Connection,
-        jobbsøkere: List<JobbsøkerRepository.GjenopprettetJobbsøker>,
-        treffId: TreffId,
-    ): List<PersonTreffId> {
-        if (jobbsøkere.isEmpty()) return emptyList()
-
-        log.info("Gjenoppretter ${jobbsøkere.size} jobbsøkere for treff $treffId som tidligere har vært slettet")
-        val personTreffIder = jobbsøkere.map { it.personTreffId }
-        jobbsøkerRepository.gjenopprett(connection, jobbsøkere)
-        return personTreffIder
+        val gjenopprettedePersonTreffIder = if (jobbsøkereForGjenoppretting.isEmpty()) {
+            emptyList()
+        } else {
+            jobbsøkerRepository.gjenopprett(connection, jobbsøkereForGjenoppretting)
+            jobbsøkereForGjenoppretting.keys.toList()
+        }
+        return opprettedePersonTreffIder + gjenopprettedePersonTreffIder
     }
 }
 
