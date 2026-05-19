@@ -316,7 +316,7 @@ class JobbsøkerService(
      * Dekker både svar fra jobbsøker selv og svar lagt inn av eier på vegne av jobbsøker.
      */
     fun finnJobbsøkereMedAktivtSvarJa(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { it.status == JobbsøkerStatus.SVART_JA }
+        return jobbsøkere.filter { it.harAktivtSvarJa() }
     }
 
     /**
@@ -329,7 +329,7 @@ class JobbsøkerService(
     }
 
     fun skalVarslesOmEndringer(jobbsøker: Jobbsøker): Boolean =
-        jobbsøker.status == JobbsøkerStatus.SVART_JA
+        jobbsøker.harAktivtSvarJa()
 
     fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
         return dataSource.executeInTransaction { connection ->
