@@ -420,6 +420,56 @@ class JobbsøkerRepositoryTest {
         assertThat(alleJobbsøkereEtterSletting).hasSize(0)
     }
 
+    @Test
+    fun `gjenopprett oppdaterer status og fersk jobbsøkerdata`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+        val opprinneligJobbsøker = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Fornavn("Gammelt"),
+            Etternavn("Navn"),
+            Navkontor("Nav Gammel"),
+            VeilederNavn("Gammel Veileder"),
+            VeilederNavIdent("Z000001"),
+            alder = 35,
+            innsatsgruppe = Innsatsgruppe("STANDARD_INNSATS"),
+        )
+        val personTreffId = db.leggTilJobbsøkereMedHendelse(listOf(opprinneligJobbsøker), treffId, navIdent).first()
+        db.dataSource.connection.use { connection ->
+            repository.endreStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
+        }
+
+        val oppdatertJobbsøker = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Fornavn("Oppdatert"),
+            Etternavn("Person"),
+            Navkontor("Nav Oppdatert"),
+            VeilederNavn("Oppdatert Veileder"),
+            VeilederNavIdent("Z999999"),
+            alder = 42,
+            innsatsgruppe = Innsatsgruppe("SITUASJONSBESTEMT_INNSATS"),
+        )
+
+        db.dataSource.connection.use { connection ->
+            repository.gjenopprett(
+                connection,
+                listOf(JobbsøkerRepository.GjenopprettetJobbsøker(personTreffId, oppdatertJobbsøker)),
+            )
+        }
+
+        val gjenopprettetJobbsøker = repository.hentJobbsøker(treffId, oppdatertJobbsøker.fødselsnummer)
+        assertThat(gjenopprettetJobbsøker).isNotNull
+        assertThat(gjenopprettetJobbsøker!!.personTreffId).isEqualTo(personTreffId)
+        assertThat(gjenopprettetJobbsøker.status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
+        assertThat(gjenopprettetJobbsøker.fornavn).isEqualTo(Fornavn("Oppdatert"))
+        assertThat(gjenopprettetJobbsøker.etternavn).isEqualTo(Etternavn("Person"))
+        assertThat(gjenopprettetJobbsøker.navkontor).isEqualTo(Navkontor("Nav Oppdatert"))
+        assertThat(gjenopprettetJobbsøker.veilederNavn).isEqualTo(VeilederNavn("Oppdatert Veileder"))
+        assertThat(gjenopprettetJobbsøker.veilederNavIdent).isEqualTo(VeilederNavIdent("Z999999"))
+        assertThat(gjenopprettetJobbsøker.alder).isEqualTo(42)
+        assertThat(gjenopprettetJobbsøker.innsatsgruppe).isEqualTo(Innsatsgruppe("SITUASJONSBESTEMT_INNSATS"))
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Synlighets-tester
     // ─────────────────────────────────────────────────────────────────────────────

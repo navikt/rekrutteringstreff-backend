@@ -34,7 +34,7 @@ class TestDatabase {
     fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson", lagtTilAvNavn: String? = null): List<PersonTreffId> {
         return dataSource.executeInTransaction { connection ->
             val now = Instant.now()
-            val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, opprettetAv, now)
+            val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
             val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
             jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv, now, lagtTilAvNavn)
             personTreffIder

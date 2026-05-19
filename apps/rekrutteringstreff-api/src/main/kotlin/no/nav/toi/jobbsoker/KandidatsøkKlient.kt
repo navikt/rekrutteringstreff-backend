@@ -48,10 +48,6 @@ class KandidatsøkKlient(
     private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val objectMapper: ObjectMapper = JacksonConfig.mapper
 ) {
-    companion object {
-        private const val MAKS_FØDSELSNUMRE_PER_JOBBSØKERINFO_KALL = 200
-    }
-
     fun erKonfigurert(): Boolean = kandidatsokApiUrl.isNotBlank() && kandidatsokScope.isNotBlank()
 
     fun hentKandidatnummer(fødselsnummer: Fødselsnummer, innkommendeToken: String): Kandidatnummer? {
@@ -110,10 +106,7 @@ class KandidatsøkKlient(
         if (unikeFødselsnumre.isEmpty()) return emptyMap()
 
         val onBehalfOfToken = hentOnBehalfOfToken(innkommendeToken)
-        return unikeFødselsnumre
-            .chunked(MAKS_FØDSELSNUMRE_PER_JOBBSØKERINFO_KALL)
-            .flatMap { hentJobbsokerInfoMedAccessToken(it, onBehalfOfToken).entries }
-            .associate { it.key to it.value }
+        return hentJobbsokerInfoMedAccessToken(unikeFødselsnumre, onBehalfOfToken)
     }
 
     private fun hentJobbsokerInfoMedAccessToken(
@@ -141,7 +134,7 @@ class KandidatsøkKlient(
             }
 
             val respons = objectMapper.readValue(response.body(), JobbsokerInfoResponsDto::class.java)
-            return respons.jobbsokerInfo.associate { dto ->
+            val jobbsokerInfoPerFødselsnummer = respons.jobbsokerInfo.associate { dto ->
                 Fødselsnummer(dto.fodselsnummer) to JobbsokerInfo(
                     navkontor = dto.navkontor?.takeIf(String::isNotBlank)?.let(::Navkontor),
                     veilederNavn = dto.veilederNavn?.takeIf(String::isNotBlank)?.let(::VeilederNavn),
@@ -149,6 +142,9 @@ class KandidatsøkKlient(
                     alder = dto.alder?.takeIf { it >= 0 },
                     innsatsgruppe = dto.innsatsgruppe?.takeIf(String::isNotBlank)?.let(::Innsatsgruppe),
                 )
+            }
+            return fødselsnumre.associateWith { fødselsnummer ->
+                jobbsokerInfoPerFødselsnummer[fødselsnummer] ?: JobbsokerInfo.tom
             }
         } catch (e: KandidatsokOppslagFeiletException) {
             throw e

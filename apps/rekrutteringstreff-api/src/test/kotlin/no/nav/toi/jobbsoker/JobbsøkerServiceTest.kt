@@ -690,6 +690,24 @@ class JobbsøkerServiceTest {
     }
 
     @Test
+    fun `leggTilJobbsøkere gjenoppretter slettet jobbsøker kun én gang ved duplikat i samme kall`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = Fødselsnummer("12345678901")
+        val jobbsøkerData = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøkerData), treffId, "testperson")
+        val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
+        jobbsøkerService.markerSlettet(personTreffId, treffId, "testperson")
+
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøkerData, jobbsøkerData.copy()), treffId, "testperson")
+
+        val jobbsøkereListe = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkereListe).hasSize(1)
+        assertThat(jobbsøkereListe.first().personTreffId).isEqualTo(personTreffId)
+        assertThat(jobbsøkereListe.first().fødselsnummer).isEqualTo(fnr)
+    }
+
+    @Test
     fun `kan legge til både nye og tidligere slettede jobbsøkere og status blir riktig`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
 

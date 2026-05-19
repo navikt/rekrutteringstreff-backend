@@ -23,10 +23,9 @@ import org.junit.jupiter.api.Test
 class KandidatsøkKlientTest {
 
     @Test
-    fun `henter jobbsøkerinfo i batcher på maks 200 fødselsnumre`(wireMock: WireMockRuntimeInfo) {
-        val fødselsnumre = (1..201).map { Fødselsnummer(it.toString().padStart(11, '0')) }
-        val sisteFnrIFørsteBatch = fødselsnumre[199]
-        val førsteFnrIAndreBatch = fødselsnumre[200]
+    fun `henter jobbsøkerinfo og mapper manglende rader til tom info`(wireMock: WireMockRuntimeInfo) {
+        val fødselsnumre = (1..2).map { Fødselsnummer(it.toString().padStart(11, '0')) }
+        val sisteFnr = fødselsnumre.last()
         val innkommendeToken = "innkommende-token"
 
         stubFor(
@@ -40,7 +39,7 @@ class KandidatsøkKlientTest {
         )
         stubFor(
             post(urlPathEqualTo("/api/jobbsoker-info"))
-                .withRequestBody(containing(sisteFnrIFørsteBatch.asString))
+                .withRequestBody(containing(sisteFnr.asString))
                 .willReturn(
                     aResponse()
                         .withStatus(200)
@@ -49,35 +48,12 @@ class KandidatsøkKlientTest {
                             """
                             {"jobbsokerInfo":[
                               {
-                                "fodselsnummer": "${sisteFnrIFørsteBatch.asString}",
+                                                                "fodselsnummer": "${sisteFnr.asString}",
                                 "navkontor": "Nav Oslo",
                                 "veilederNavn": "Test Veileder",
                                 "veilederNavIdent": "Z000001",
                                 "alder": 35,
                                 "innsatsgruppe": "SITUASJONSBESTEMT_INNSATS"
-                              }
-                            ]}
-                            """.trimIndent()
-                        )
-                )
-        )
-        stubFor(
-            post(urlPathEqualTo("/api/jobbsoker-info"))
-                .withRequestBody(containing(førsteFnrIAndreBatch.asString))
-                .willReturn(
-                    aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody(
-                            """
-                            {"jobbsokerInfo":[
-                              {
-                                "fodselsnummer": "${førsteFnrIAndreBatch.asString}",
-                                "navkontor": "Nav Bergen",
-                                "veilederNavn": "Annen Veileder",
-                                "veilederNavIdent": "Z000002",
-                                "alder": 42,
-                                "innsatsgruppe": "STANDARD_INNSATS"
                               }
                             ]}
                             """.trimIndent()
@@ -99,7 +75,9 @@ class KandidatsøkKlientTest {
 
         val resultat = klient.hentJobbsokerInfo(fødselsnumre, innkommendeToken)
 
-        assertThat(resultat[sisteFnrIFørsteBatch]).isEqualTo(
+        assertThat(resultat).hasSize(2)
+        assertThat(resultat[fødselsnumre.first()]).isEqualTo(JobbsokerInfo.tom)
+        assertThat(resultat[sisteFnr]).isEqualTo(
             JobbsokerInfo(
                 navkontor = Navkontor("Nav Oslo"),
                 veilederNavn = VeilederNavn("Test Veileder"),
@@ -108,16 +86,7 @@ class KandidatsøkKlientTest {
                 innsatsgruppe = Innsatsgruppe("SITUASJONSBESTEMT_INNSATS"),
             )
         )
-        assertThat(resultat[førsteFnrIAndreBatch]).isEqualTo(
-            JobbsokerInfo(
-                navkontor = Navkontor("Nav Bergen"),
-                veilederNavn = VeilederNavn("Annen Veileder"),
-                veilederNavIdent = VeilederNavIdent("Z000002"),
-                alder = 42,
-                innsatsgruppe = Innsatsgruppe("STANDARD_INNSATS"),
-            )
-        )
-        verify(2, postRequestedFor(urlPathEqualTo("/api/jobbsoker-info")))
+        verify(1, postRequestedFor(urlPathEqualTo("/api/jobbsoker-info")))
         verify(1, postRequestedFor(urlPathEqualTo("/token")))
         verify(
             1,

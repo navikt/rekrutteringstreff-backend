@@ -55,9 +55,7 @@ class App(
     private val port: Int,
     private val authConfigs: List<AuthenticationConfiguration>,
     private val dataSource: DataSource,
-    private val jobbsøkerrettet: UUID,
-    private val arbeidsgiverrettet: UUID,
-    private val utvikler: UUID,
+    private val rolleUuidSpesifikasjon: RolleUuidSpesifikasjon,
     private val kandidatsokKlient: KandidatsøkKlient,
     private val rapidsConnection: RapidsConnection,
     private val modiaKlient: ModiaKlient,
@@ -83,9 +81,11 @@ class App(
         port = port,
         authConfigs = authConfigs,
         dataSource = dataSource,
-        jobbsøkerrettet = jobbsøkerrettet,
-        arbeidsgiverrettet = arbeidsgiverrettet,
-        utvikler = utvikler,
+        rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
+            jobbsøkerrettet = jobbsøkerrettet,
+            arbeidsgiverrettet = arbeidsgiverrettet,
+            utvikler = utvikler,
+        ),
         kandidatsokKlient = KandidatsøkKlient(
             kandidatsokApiUrl = kandidatsokApiUrl,
             kandidatsokScope = kandidatsokScope,
@@ -96,6 +96,18 @@ class App(
         modiaKlient = modiaKlient,
         pilotkontorer = pilotkontorer,
         leaderElection = leaderElection,
+    )
+
+    constructor(ctx: ApplicationContext, port: Int) : this(
+        port = port,
+        authConfigs = ctx.authConfigs,
+        dataSource = ctx.dataSource,
+        rolleUuidSpesifikasjon = ctx.rolleUuidSpesifikasjon,
+        kandidatsokKlient = ctx.kandidatsøkKlient,
+        rapidsConnection = ctx.rapidsConnection,
+        modiaKlient = ctx.modiaKlient,
+        pilotkontorer = ctx.pilotkontorer,
+        leaderElection = ctx.leaderElection,
     )
 
     private lateinit var javalin: Javalin
@@ -164,11 +176,7 @@ class App(
             config.routes.registrer(HealthController(HealthRepository(dataSource)))
             config.routes.leggTilAutensieringPåRekrutteringstreffEndepunkt(
                 authConfigs = authConfigs,
-                rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
-                    jobbsøkerrettet = jobbsøkerrettet,
-                    arbeidsgiverrettet = arbeidsgiverrettet,
-                    utvikler = utvikler
-                ),
+                rolleUuidSpesifikasjon = rolleUuidSpesifikasjon,
                 modiaKlient = modiaKlient,
                 pilotkontorer = pilotkontorer
             )

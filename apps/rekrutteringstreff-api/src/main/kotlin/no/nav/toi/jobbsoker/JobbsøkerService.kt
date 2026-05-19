@@ -27,6 +27,13 @@ data class LeggTilJobbsøkereResultat(
     val antallLagtTil: Int,
 )
 
+private data class JobbsøkerSomSkalLeggesTil(
+    val jobbsøker: LeggTilJobbsøker,
+    val slettetPersonTreffId: PersonTreffId? = null,
+)
+
+private const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
+
 class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
@@ -54,18 +61,30 @@ class JobbsøkerService(
     ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
-        val nyeJobbsøkere = finnNyeJobbsøkere(jobbsøkere, eksisterendeJobbsøkere, slettedeJobbsøkere)
-        val gjenopprettedeJobbsøkere = finnGjenopprettedeJobbsøkere(jobbsøkere, slettedeJobbsøkere)
-        val berikedeNyeJobbsøkere = berikJobbsøkere(nyeJobbsøkere, innkommendeToken)
+        val jobbsøkereSomSkalLeggesTil = finnJobbsøkereSomSkalLeggesTil(jobbsøkere, eksisterendeJobbsøkere, slettedeJobbsøkere)
+        val berikedeJobbsøkerBatcher = jobbsøkereSomSkalLeggesTil
+            .chunked(MAKS_ANTALL_JOBBSØKERE_PER_BATCH)
+            .map { batch -> berikJobbsøkerBatch(batch, innkommendeToken) }
 
         dataSource.executeInTransaction { connection ->
-            opprettNyeJobbsøkere(connection, berikedeNyeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
-            gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
+            berikedeJobbsøkerBatcher.forEach { batch ->
+                leggTilJobbsøkerBatch(connection, batch, treffId, navIdent, lagtTilAvNavn)
+            }
         }
 
         return LeggTilJobbsøkereResultat(
-            antallLagtTil = nyeJobbsøkere.size + gjenopprettedeJobbsøkere.size,
+            antallLagtTil = jobbsøkereSomSkalLeggesTil.size,
         )
+    }
+
+    private fun berikJobbsøkerBatch(
+        batch: List<JobbsøkerSomSkalLeggesTil>,
+        innkommendeToken: String?,
+    ): List<JobbsøkerSomSkalLeggesTil> {
+        val berikedeJobbsøkere = berikJobbsøkere(batch.map { it.jobbsøker }, innkommendeToken)
+        return batch.zip(berikedeJobbsøkere).map { (jobbsøkerSomSkalLeggesTil, beriketJobbsøker) ->
+            jobbsøkerSomSkalLeggesTil.copy(jobbsøker = beriketJobbsøker)
+        }
     }
 
     private fun berikJobbsøkere(jobbsøkere: List<LeggTilJobbsøker>, innkommendeToken: String?): List<LeggTilJobbsøker> {
@@ -73,7 +92,10 @@ class JobbsøkerService(
         if (jobbsøkere.isEmpty()) return jobbsøkere
 
         val token = innkommendeToken ?: error("Innkommende token mangler for berikning av jobbsøkere")
-        val jobbsokerInfoPerFnr = klient.hentJobbsokerInfo(jobbsøkere.map { it.fødselsnummer }.distinct(), token)
+        val jobbsokerInfoPerFnr = klient.hentJobbsokerInfo(
+            fødselsnumre = jobbsøkere.map { it.fødselsnummer }.distinct(),
+            innkommendeToken = token,
+        )
 
         return jobbsøkere.map { jobbsøker ->
             val info = jobbsokerInfoPerFnr[jobbsøker.fødselsnummer] ?: JobbsokerInfo.tom
@@ -81,7 +103,7 @@ class JobbsøkerService(
                 navkontor = info.navkontor ?: jobbsøker.navkontor,
                 veilederNavn = info.veilederNavn ?: jobbsøker.veilederNavn,
                 veilederNavIdent = info.veilederNavIdent ?: jobbsøker.veilederNavIdent,
-                alder = info.alder,
+                alder = info.alder ?: jobbsøker.alder,
                 innsatsgruppe = info.innsatsgruppe ?: jobbsøker.innsatsgruppe,
             )
         }
@@ -322,67 +344,96 @@ class JobbsøkerService(
     ): JobbsøkerFormidlingRespons =
         jobbsøkerFormidlingRepository.hentForFormidling(treffId, request, kunForVeilederNavIdent)
 
-    private fun finnNyeJobbsøkere(
+    private fun finnJobbsøkereSomSkalLeggesTil(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,
         eksisterendeJobbsøkere: List<Jobbsøker>,
         slettedeJobbsøkere: List<Jobbsøker>,
-    ): List<LeggTilJobbsøker> {
+    ): List<JobbsøkerSomSkalLeggesTil> {
         val eksisterendeFødselsnumre = eksisterendeJobbsøkere.map { it.fødselsnummer }.toSet()
-        val slettedeFødselsnumre = slettedeJobbsøkere.map { it.fødselsnummer }.toSet()
-        return ønskedeJobbsøkere.filterNot {
-            it.fødselsnummer in eksisterendeFødselsnumre || it.fødselsnummer in slettedeFødselsnumre
+        val slettedeJobbsøkerePerFødselsnummer = slettedeJobbsøkere.associateBy { it.fødselsnummer }
+        val ønskedeJobbsøkereUtenEksisterende = ønskedeJobbsøkere.filterNot { it.fødselsnummer in eksisterendeFødselsnumre }
+        val førsteGjenopprettingsindekser = ønskedeJobbsøkereUtenEksisterende
+            .withIndex()
+            .filter { (_, ønsketJobbsøker) ->
+                ønsketJobbsøker.fødselsnummer in slettedeJobbsøkerePerFødselsnummer
+            }
+            .distinctBy { (_, ønsketJobbsøker) -> ønsketJobbsøker.fødselsnummer }
+            .map { it.index }
+            .toSet()
+
+        return ønskedeJobbsøkereUtenEksisterende.withIndex().mapNotNull { (index, ønsketJobbsøker) ->
+            val slettetJobbsøker = slettedeJobbsøkerePerFødselsnummer[ønsketJobbsøker.fødselsnummer]
+            if (slettetJobbsøker != null && index !in førsteGjenopprettingsindekser) {
+                return@mapNotNull null
+            }
+
+            JobbsøkerSomSkalLeggesTil(
+                jobbsøker = ønsketJobbsøker,
+                slettetPersonTreffId = slettetJobbsøker?.personTreffId,
+            )
         }
     }
 
-    private fun finnGjenopprettedeJobbsøkere(
-        ønskedeJobbsøkere: List<LeggTilJobbsøker>,
-        slettedeJobbsøkere: List<Jobbsøker>,
-    ): List<PersonTreffId> {
-        val ønskedeFødselsnumre = ønskedeJobbsøkere.map { it.fødselsnummer }.toSet()
-        return slettedeJobbsøkere
-            .filter { it.fødselsnummer in ønskedeFødselsnumre }
-            .map { it.personTreffId }
+    private fun leggTilJobbsøkerBatch(
+        connection: java.sql.Connection,
+        batch: List<JobbsøkerSomSkalLeggesTil>,
+        treffId: TreffId,
+        navIdent: String,
+        lagtTilAvNavn: String?,
+    ) {
+        val nyeJobbsøkere = batch
+            .filter { it.slettetPersonTreffId == null }
+            .map { it.jobbsøker }
+        val gjenopprettedeJobbsøkere = batch.mapNotNull { jobbsøkerSomSkalLeggesTil ->
+            jobbsøkerSomSkalLeggesTil.slettetPersonTreffId?.let { personTreffId ->
+                JobbsøkerRepository.GjenopprettetJobbsøker(
+                    personTreffId = personTreffId,
+                    jobbsøker = jobbsøkerSomSkalLeggesTil.jobbsøker,
+                )
+            }
+        }
+
+        val opprettedePersonTreffIder = opprettNyeJobbsøkere(connection, nyeJobbsøkere, treffId)
+        val gjenopprettedePersonTreffIder = gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId)
+        val personTreffIder = opprettedePersonTreffIder + gjenopprettedePersonTreffIder
+        if (personTreffIder.isNotEmpty()) {
+            jobbsøkerRepository.leggTilOpprettetHendelser(
+                connection = connection,
+                personTreffIder = personTreffIder,
+                opprettetAv = navIdent,
+                tidspunkt = Instant.now(),
+                lagtTilAvNavn = lagtTilAvNavn,
+            )
+        }
     }
 
     private fun opprettNyeJobbsøkere(
         connection: java.sql.Connection,
         jobbsøkere: List<LeggTilJobbsøker>,
         treffId: TreffId,
-        navIdent: String,
-        lagtTilAvNavn: String?,
-    ) {
-        if (jobbsøkere.isEmpty()) return
+    ): List<PersonTreffId> {
+        if (jobbsøkere.isEmpty()) return emptyList()
 
         log.info("Legger til ${jobbsøkere.size} nye jobbsøkere for treff $treffId")
-        val now = Instant.now()
-        val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, navIdent, now)
-        val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
-
-        jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent, now, lagtTilAvNavn)
+        val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(
+            connection = connection,
+            jobbsøkere = jobbsøkere,
+            treff = treffId,
+        )
+        return opprettedeJobbsøkere.map { it.personTreffId }
     }
 
     private fun gjenopprettJobbsøkere(
         connection: java.sql.Connection,
-        personTreffIder: List<PersonTreffId>,
+        jobbsøkere: List<JobbsøkerRepository.GjenopprettetJobbsøker>,
         treffId: TreffId,
-        navIdent: String,
-        lagtTilAvNavn: String?,
-    ) {
-        if (personTreffIder.isEmpty()) return
+    ): List<PersonTreffId> {
+        if (jobbsøkere.isEmpty()) return emptyList()
 
-        log.info("Gjenoppretter ${personTreffIder.size} jobbsøkere for treff $treffId som tidligere har vært slettet")
-        jobbsøkerRepository.endreStatus(
-            connection = connection,
-            personTreffIder = personTreffIder,
-            jobbsøkerStatus = JobbsøkerStatus.LAGT_TIL,
-        )
-        jobbsøkerRepository.leggTilOpprettetHendelser(
-            connection = connection,
-            personTreffIder = personTreffIder,
-            opprettetAv = navIdent,
-            tidspunkt = Instant.now(),
-            lagtTilAvNavn = lagtTilAvNavn,
-        )
+        log.info("Gjenoppretter ${jobbsøkere.size} jobbsøkere for treff $treffId som tidligere har vært slettet")
+        val personTreffIder = jobbsøkere.map { it.personTreffId }
+        jobbsøkerRepository.gjenopprett(connection, jobbsøkere)
+        return personTreffIder
     }
 }
 
