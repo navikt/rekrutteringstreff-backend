@@ -14,7 +14,6 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
-import no.nav.toi.kandidatsok.JobbsokerInfo
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -30,18 +29,10 @@ data class LeggTilJobbsøkereResultat(
 class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
-    private val jobbsøkerSokRepository: JobbsøkerSokRepository,
-    private val jobbsøkerFormidlingRepository: JobbsøkerFormidlingRepository =
-        JobbsøkerFormidlingRepository(dataSource),
+    private val jobbsøkerSokRepository: JobbsøkerSokRepository = JobbsøkerSokRepository(dataSource),
+    private val jobbsøkerFormidlingRepository: JobbsøkerFormidlingRepository = JobbsøkerFormidlingRepository(dataSource),
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
 ) {
-    constructor(dataSource: DataSource, jobbsøkerRepository: JobbsøkerRepository) : this(
-        dataSource,
-        jobbsøkerRepository,
-        JobbsøkerSokRepository(dataSource),
-        JobbsøkerFormidlingRepository(dataSource),
-        null,
-    )
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
 
@@ -58,7 +49,6 @@ class JobbsøkerService(
         val jobbsøkereSomSkalLagres = finnJobbsøkereSomSkalLagres(
             ønskedeJobbsøkere = jobbsøkere,
             eksisterendeJobbsøkere = eksisterendeJobbsøkere,
-            personTreffIdForGjenoppretting = personTreffIdForGjenoppretting,
         )
         val berikedeJobbsøkerBatcher = jobbsøkereSomSkalLagres
             .chunked(MAKS_ANTALL_JOBBSØKERE_PER_BATCH)
@@ -86,38 +76,24 @@ class JobbsøkerService(
         batch: List<LeggTilJobbsøker>,
         innkommendeToken: String?,
     ): List<LeggTilJobbsøker> {
-        val kandidatsøkdataPerFødselsnummer = hentKandidatsøkdataPerFødselsnummer(batch, innkommendeToken)
-        if (kandidatsøkdataPerFødselsnummer.isEmpty()) return batch
+        if (batch.isEmpty() || innkommendeToken == null) return batch
+        val klient = kandidatsøkKlient?.takeIf { it.erKonfigurert() } ?: return batch
 
+        val kandidatsøkdataPerFødselsnummer = klient.hentJobbsokerInfo(
+            fødselsnumre = batch.map { it.fødselsnummer },
+            innkommendeToken = innkommendeToken,
+        )
         return batch.map { jobbsøker ->
-            val kandidatsøkdata = kandidatsøkdataPerFødselsnummer[jobbsøker.fødselsnummer] ?: JobbsokerInfo.tom
-            berikJobbsøker(jobbsøker, kandidatsøkdata)
+            val kandidatsøkdata = kandidatsøkdataPerFødselsnummer[jobbsøker.fødselsnummer] ?: return@map jobbsøker
+            jobbsøker.copy(
+                navkontor = kandidatsøkdata.navkontor,
+                veilederNavn = kandidatsøkdata.veilederNavn,
+                veilederNavIdent = kandidatsøkdata.veilederNavIdent,
+                alder = kandidatsøkdata.alder,
+                innsatsgruppe = kandidatsøkdata.innsatsgruppe,
+            )
         }
     }
-
-    private fun hentKandidatsøkdataPerFødselsnummer(
-        batch: List<LeggTilJobbsøker>,
-        innkommendeToken: String?,
-    ): Map<Fødselsnummer, JobbsokerInfo> {
-        if (batch.isEmpty()) return emptyMap()
-
-        val konfigurertKandidatsøkKlient = kandidatsøkKlient?.takeIf { it.erKonfigurert() } ?: return emptyMap()
-
-        val token = innkommendeToken ?: error("Innkommende token mangler for berikning av jobbsøkere")
-        return konfigurertKandidatsøkKlient.hentJobbsokerInfo(
-            fødselsnumre = batch.map { it.fødselsnummer }.distinct(),
-            innkommendeToken = token,
-        )
-    }
-
-    private fun berikJobbsøker(jobbsøker: LeggTilJobbsøker, kandidatsøkdata: JobbsokerInfo): LeggTilJobbsøker =
-        jobbsøker.copy(
-            navkontor = kandidatsøkdata.navkontor ?: jobbsøker.navkontor,
-            veilederNavn = kandidatsøkdata.veilederNavn ?: jobbsøker.veilederNavn,
-            veilederNavIdent = kandidatsøkdata.veilederNavIdent ?: jobbsøker.veilederNavIdent,
-            alder = kandidatsøkdata.alder ?: jobbsøker.alder,
-            innsatsgruppe = kandidatsøkdata.innsatsgruppe ?: jobbsøker.innsatsgruppe,
-        )
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
@@ -357,27 +333,11 @@ class JobbsøkerService(
     private fun finnJobbsøkereSomSkalLagres(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,
         eksisterendeJobbsøkere: List<Jobbsøker>,
-        personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,
     ): List<LeggTilJobbsøker> {
         val eksisterendeFødselsnumre = eksisterendeJobbsøkere.map { it.fødselsnummer }.toSet()
-        val ønskedeJobbsøkereUtenEksisterende = ønskedeJobbsøkere.filterNot { it.fødselsnummer in eksisterendeFødselsnumre }
-        val førsteGjenopprettingsindekser = ønskedeJobbsøkereUtenEksisterende
-            .withIndex()
-            .filter { (_, ønsketJobbsøker) ->
-                ønsketJobbsøker.fødselsnummer in personTreffIdForGjenoppretting
-            }
-            .distinctBy { (_, ønsketJobbsøker) -> ønsketJobbsøker.fødselsnummer }
-            .map { it.index }
-            .toSet()
-
-        return ønskedeJobbsøkereUtenEksisterende.withIndex().mapNotNull { (index, ønsketJobbsøker) ->
-            val erTidligereSlettet = ønsketJobbsøker.fødselsnummer in personTreffIdForGjenoppretting
-            if (erTidligereSlettet && index !in førsteGjenopprettingsindekser) {
-                return@mapNotNull null
-            }
-
-            ønsketJobbsøker
-        }
+        return ønskedeJobbsøkere
+            .filterNot { it.fødselsnummer in eksisterendeFødselsnumre }
+            .distinctBy { it.fødselsnummer }
     }
 
     private fun leggTilJobbsøkerBatch(

@@ -37,12 +37,9 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         connection: Connection,
         jobbsøkere: List<LeggTilJobbsøker>,
         treff: TreffId,
-        maksStørrelsePerBatch: Int = MAKS_ANTALL_JOBBSØKERE_PER_BATCH,
     ): List<OpprettetJobbsøker> {
         val treffDbId = connection.treffDbId(treff)
-        return jobbsøkere
-            .chunked(maksStørrelsePerBatch)
-            .flatMap { batch -> connection.batchInsertJobbsøkere(treffDbId, batch) }
+        return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere)
     }
 
     fun leggTilOpprettetHendelser(
@@ -73,10 +70,10 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     ): List<OpprettetJobbsøker> {
         val sql = """
             insert into jobbsoker
-              (id, rekrutteringstreff_id,fodselsnummer,fornavn,etternavn,
-               navkontor,veileder_navn,veileder_navident,status,
-                    alder,innsatsgruppe)
-            values (?,?,?,?,?,?,?,?,?,?,?)
+              (id, rekrutteringstreff_id, fodselsnummer,
+               fornavn, etternavn, navkontor, veileder_navn, veileder_navident, alder, innsatsgruppe,
+               status)
+            values (?,?,?, ?,?,?,?,?,?,?, ?)
         """.trimIndent()
         val batchRader = jobbsøkere.map { jobbsøker ->
             JobbsøkerBatchRad(
@@ -87,34 +84,30 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
 
         return prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
             batchRader.forEach { rad ->
-                stmt.addJobbsøkerTilBatch(
-                    personTreffId = rad.personTreffId,
-                    treffDbId = treffDbId,
-                    jobbsøker = rad.jobbsøker,
-                )
+                stmt.setObject(1, rad.personTreffId.somUuid)
+                stmt.setLong(2, treffDbId)
+                stmt.setString(3, rad.jobbsøker.fødselsnummer.asString)
+                stmt.setJobbsøkerData(offset = 4, jobbsøker = rad.jobbsøker)
+                stmt.setString(11, JobbsøkerStatus.LAGT_TIL.name)
+                stmt.addBatch()
             }
 
             batchRader.toOpprettedeJobbsøkere(stmt.execBatchReturnIds())
         }
     }
 
-    private fun PreparedStatement.addJobbsøkerTilBatch(
-        personTreffId: PersonTreffId,
-        treffDbId: Long,
-        jobbsøker: LeggTilJobbsøker,
-    ) {
-        setObject(1, personTreffId.somUuid)
-        setLong(2, treffDbId)
-        setString(3, jobbsøker.fødselsnummer.asString)
-        setString(4, jobbsøker.fornavn.asString)
-        setString(5, jobbsøker.etternavn.asString)
-        setString(6, jobbsøker.navkontor?.asString)
-        setString(7, jobbsøker.veilederNavn?.asString)
-        setString(8, jobbsøker.veilederNavIdent?.asString)
-        setString(9, JobbsøkerStatus.LAGT_TIL.name)
-        setObject(10, jobbsøker.alder)
-        setString(11, jobbsøker.innsatsgruppe?.asString)
-        addBatch()
+    /**
+     * Setter de syv jobbsøker-feltene fornavn, etternavn, navkontor, veileder_navn,
+     * veileder_navident, alder, innsatsgruppe fra og med kolonneindeks [offset].
+     */
+    private fun PreparedStatement.setJobbsøkerData(offset: Int, jobbsøker: LeggTilJobbsøker) {
+        setString(offset, jobbsøker.fornavn.asString)
+        setString(offset + 1, jobbsøker.etternavn.asString)
+        setString(offset + 2, jobbsøker.navkontor?.asString)
+        setString(offset + 3, jobbsøker.veilederNavn?.asString)
+        setString(offset + 4, jobbsøker.veilederNavIdent?.asString)
+        setObject(offset + 5, jobbsøker.alder)
+        setString(offset + 6, jobbsøker.innsatsgruppe?.asString)
     }
 
     private fun List<JobbsøkerBatchRad>.toOpprettedeJobbsøkere(generatedIds: List<Long>): List<OpprettetJobbsøker> =
@@ -533,8 +526,8 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     fun gjenopprett(
         connection: Connection,
         jobbsøkere: List<GjenopprettetJobbsøker>,
-        maksStørrelsePerBatch: Int = MAKS_ANTALL_JOBBSØKERE_PER_BATCH,
     ) {
+        if (jobbsøkere.isEmpty()) return
         val sql = """
             UPDATE jobbsoker
             SET fornavn = ?,
@@ -548,27 +541,14 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             WHERE id = ?
             """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
-            jobbsøkere.chunked(maksStørrelsePerBatch).forEach { batch ->
-                batch.forEach { gjenopprettetJobbsøker ->
-                    stmt.addGjenopprettetJobbsøkerTilBatch(gjenopprettetJobbsøker)
-                }
-                stmt.executeBatch()
+            jobbsøkere.forEach { gjenopprettetJobbsøker ->
+                stmt.setJobbsøkerData(offset = 1, jobbsøker = gjenopprettetJobbsøker.jobbsøker)
+                stmt.setString(8, JobbsøkerStatus.LAGT_TIL.name)
+                stmt.setObject(9, gjenopprettetJobbsøker.personTreffId.somUuid)
+                stmt.addBatch()
             }
+            stmt.executeBatch()
         }
-    }
-
-    private fun PreparedStatement.addGjenopprettetJobbsøkerTilBatch(gjenopprettetJobbsøker: GjenopprettetJobbsøker) {
-        val jobbsøker = gjenopprettetJobbsøker.jobbsøker
-        setString(1, jobbsøker.fornavn.asString)
-        setString(2, jobbsøker.etternavn.asString)
-        setString(3, jobbsøker.navkontor?.asString)
-        setString(4, jobbsøker.veilederNavn?.asString)
-        setString(5, jobbsøker.veilederNavIdent?.asString)
-        setObject(6, jobbsøker.alder)
-        setString(7, jobbsøker.innsatsgruppe?.asString)
-        setString(8, JobbsøkerStatus.LAGT_TIL.name)
-        setObject(9, gjenopprettetJobbsøker.personTreffId.somUuid)
-        addBatch()
     }
 
     fun endreStatus(connection: Connection, personTreffId: PersonTreffId, jobbsøkerStatus: JobbsøkerStatus) {

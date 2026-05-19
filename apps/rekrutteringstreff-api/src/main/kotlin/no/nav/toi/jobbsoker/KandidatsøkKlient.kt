@@ -36,11 +36,7 @@ data class JobbsokerInfo(
     val veilederNavIdent: VeilederNavIdent?,
     val alder: Int?,
     val innsatsgruppe: Innsatsgruppe?,
-) {
-    companion object {
-        val tom = JobbsokerInfo(null, null, null, null, null)
-    }
-}
+)
 class KandidatsøkKlient(
     private val kandidatsokApiUrl: String,
     private val kandidatsokScope: String,
@@ -116,7 +112,7 @@ class KandidatsøkKlient(
         log.info("Henter jobbsøkerinfo fra kandidatsøk-api for ${fødselsnumre.size} fødselsnummer")
         val url = "$kandidatsokApiUrl/api/jobbsoker-info"
         val requestBodyJson = objectMapper.writeValueAsString(
-            JobbsokerInfoRequestDto(fødselsnumre.map { it.asString }.distinct())
+            JobbsokerInfoRequestDto(fødselsnumre.map { it.asString })
         )
 
         try {
@@ -134,17 +130,14 @@ class KandidatsøkKlient(
             }
 
             val respons = objectMapper.readValue(response.body(), JobbsokerInfoResponsDto::class.java)
-            val jobbsokerInfoPerFødselsnummer = respons.jobbsokerInfo.associate { dto ->
+            return respons.jobbsokerInfo.associate { dto ->
                 Fødselsnummer(dto.fodselsnummer) to JobbsokerInfo(
                     navkontor = dto.navkontor?.takeIf(String::isNotBlank)?.let(::Navkontor),
                     veilederNavn = dto.veilederNavn?.takeIf(String::isNotBlank)?.let(::VeilederNavn),
                     veilederNavIdent = dto.veilederNavIdent?.takeIf(String::isNotBlank)?.let(::VeilederNavIdent),
-                    alder = dto.alder?.takeIf { it >= 0 },
+                    alder = dto.alder,
                     innsatsgruppe = dto.innsatsgruppe?.takeIf(String::isNotBlank)?.let(::Innsatsgruppe),
                 )
-            }
-            return fødselsnumre.associateWith { fødselsnummer ->
-                jobbsokerInfoPerFødselsnummer[fødselsnummer] ?: JobbsokerInfo.tom
             }
         } catch (e: KandidatsokOppslagFeiletException) {
             throw e

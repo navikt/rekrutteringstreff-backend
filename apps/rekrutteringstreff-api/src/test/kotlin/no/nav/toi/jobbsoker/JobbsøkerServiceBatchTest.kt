@@ -6,7 +6,6 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
-import no.nav.toi.kandidatsok.JobbsokerInfo
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.assertThat
@@ -32,10 +31,8 @@ class JobbsøkerServiceBatchTest {
         every { jobbsøkerRepository.hentJobbsøkere(treffId) } returns emptyList()
         every { jobbsøkerRepository.hentSlettedeJobbsøkere(treffId) } returns emptyList()
         every { kandidatsøkKlient.erKonfigurert() } returns true
-        every { kandidatsøkKlient.hentJobbsokerInfo(førsteBatch.map { it.fødselsnummer }, "innkommende-token") } returns
-            førsteBatch.associate { it.fødselsnummer to JobbsokerInfo.tom }
-        every { kandidatsøkKlient.hentJobbsokerInfo(andreBatch.map { it.fødselsnummer }, "innkommende-token") } returns
-            andreBatch.associate { it.fødselsnummer to JobbsokerInfo.tom }
+        every { kandidatsøkKlient.hentJobbsokerInfo(førsteBatch.map { it.fødselsnummer }, "innkommende-token") } returns emptyMap()
+        every { kandidatsøkKlient.hentJobbsokerInfo(andreBatch.map { it.fødselsnummer }, "innkommende-token") } returns emptyMap()
         every { jobbsøkerRepository.leggTil(connection, førsteBatch, treffId) } returns opprettedeJobbsøkere(førsteBatch.size)
         every { jobbsøkerRepository.leggTil(connection, andreBatch, treffId) } returns opprettedeJobbsøkere(andreBatch.size)
         every {

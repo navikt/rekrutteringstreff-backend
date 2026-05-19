@@ -52,7 +52,7 @@ class TestInfrastructureContext(
 
     override val kandidatsøkKlient: KandidatsøkKlient = kandidatsøkKlient ?: KandidatsøkKlient(
         kandidatsokApiUrl = kandidatsøkKlientUrl,
-        kandidatsokScope = "",
+        kandidatsokScope = if (kandidatsøkKlientUrl.isNotBlank()) "api://test/kandidatsok/.default" else "",
         accessTokenClient = accessTokenClient,
         httpClient = httpClient,
     )

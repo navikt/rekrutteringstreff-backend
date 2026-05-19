@@ -75,8 +75,8 @@ class KandidatsøkKlientTest {
 
         val resultat = klient.hentJobbsokerInfo(fødselsnumre, innkommendeToken)
 
-        assertThat(resultat).hasSize(2)
-        assertThat(resultat[fødselsnumre.first()]).isEqualTo(JobbsokerInfo.tom)
+        assertThat(resultat).hasSize(1)
+        assertThat(resultat[fødselsnumre.first()]).isNull()
         assertThat(resultat[sisteFnr]).isEqualTo(
             JobbsokerInfo(
                 navkontor = Navkontor("Nav Oslo"),
