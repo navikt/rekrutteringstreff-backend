@@ -55,9 +55,9 @@ class JobbsøkerService(
         innkommendeToken: String? = null,
     ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
-        val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
-        val personTreffIdForGjenoppretting = slettedeJobbsøkere.associate { it.fødselsnummer to it.personTreffId }
-        val jobbsøkereSomSkalLagres = finnJobbsøkereSomSkalLagres(
+        val personTreffIdForGjenoppretting = hentSlettedeJobbsøkereUtenHendelser(treffId)
+            .associate { it.fødselsnummer to it.personTreffId }
+        val jobbsøkereSomSkalLagres:List<LeggTilJobbsøker>  = finnJobbsøkereSomSkalLagres(
             ønskedeJobbsøkere = jobbsøkere,
             eksisterendeJobbsøkere = eksisterendeJobbsøkere,
             personTreffIdForGjenoppretting = personTreffIdForGjenoppretting,
