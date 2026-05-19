@@ -27,8 +27,6 @@ data class LeggTilJobbsøkereResultat(
     val antallLagtTil: Int,
 )
 
-private const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
-
 class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
@@ -57,7 +55,7 @@ class JobbsøkerService(
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
         val personTreffIdForGjenoppretting = hentSlettedeJobbsøkereUtenHendelser(treffId)
             .associate { it.fødselsnummer to it.personTreffId }
-        val jobbsøkereSomSkalLagres:List<LeggTilJobbsøker>  = finnJobbsøkereSomSkalLagres(
+        val jobbsøkereSomSkalLagres = finnJobbsøkereSomSkalLagres(
             ønskedeJobbsøkere = jobbsøkere,
             eksisterendeJobbsøkere = eksisterendeJobbsøkere,
             personTreffIdForGjenoppretting = personTreffIdForGjenoppretting,

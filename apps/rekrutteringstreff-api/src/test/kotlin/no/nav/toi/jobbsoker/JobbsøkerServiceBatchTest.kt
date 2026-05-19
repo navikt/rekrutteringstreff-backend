@@ -23,7 +23,7 @@ class JobbsøkerServiceBatchTest {
         val jobbsøkerRepository = mockk<JobbsøkerRepository>()
         val kandidatsøkKlient = mockk<KandidatsøkKlient>()
         val treffId = TreffId(UUID.randomUUID())
-        val batchStørrelse = 500
+        val batchStørrelse = MAKS_ANTALL_JOBBSØKERE_PER_BATCH
         val jobbsøkere = (1..(batchStørrelse + 1)).map(::lagJobbsøker)
         val førsteBatch = jobbsøkere.take(batchStørrelse)
         val andreBatch = jobbsøkere.drop(batchStørrelse)

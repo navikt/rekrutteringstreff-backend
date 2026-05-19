@@ -13,6 +13,8 @@ import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
 
+internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
+
 class JobbsøkerRepository(private val dataSource: DataSource, private val mapper: ObjectMapper) {
 
     private fun PreparedStatement.execBatchReturnIds(): List<Long> =
@@ -35,7 +37,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         connection: Connection,
         jobbsøkere: List<LeggTilJobbsøker>,
         treff: TreffId,
-        maksStørrelsePerBatch: Int = 500,
+        maksStørrelsePerBatch: Int = MAKS_ANTALL_JOBBSØKERE_PER_BATCH,
     ): List<OpprettetJobbsøker> {
         val treffDbId = connection.treffDbId(treff)
         return jobbsøkere
@@ -146,7 +148,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         arrangørtype: AktørType = AktørType.ARRANGØR,
         hendelseData: String? = null,
         tidspunkt: Instant = Instant.now(),
-        maksStørrelsePerBatch: Int = 500
+        maksStørrelsePerBatch: Int = MAKS_ANTALL_JOBBSØKERE_PER_BATCH
     ) {
         val sql = """
             INSERT INTO jobbsoker_hendelse
@@ -509,7 +511,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         connection: Connection,
         personTreffIder: List<PersonTreffId>,
         jobbsøkerStatus: JobbsøkerStatus,
-        maksStørrelsePerBatch: Int = 500
+        maksStørrelsePerBatch: Int = MAKS_ANTALL_JOBBSØKERE_PER_BATCH
     ) {
         val sql = """
             UPDATE jobbsoker
@@ -531,7 +533,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     fun gjenopprett(
         connection: Connection,
         jobbsøkere: List<GjenopprettetJobbsøker>,
-        maksStørrelsePerBatch: Int = 500,
+        maksStørrelsePerBatch: Int = MAKS_ANTALL_JOBBSØKERE_PER_BATCH,
     ) {
         val sql = """
             UPDATE jobbsoker
