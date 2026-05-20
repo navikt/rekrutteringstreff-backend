@@ -5,6 +5,7 @@ FROM
             '''
             SELECT rt.opprettet_av_kontor_enhetid,
                v.status,
+               v.fra_tid,
                v.kontorer,
                v.frist_utgatt,
                v.antall_arbeidsgivere,
