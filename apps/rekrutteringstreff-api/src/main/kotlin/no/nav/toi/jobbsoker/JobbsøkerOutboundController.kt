@@ -15,6 +15,9 @@ import no.nav.toi.RuteRegistrerer
 
 data class KandidatnummerDto(val kandidatnummer: String)
 
+/**
+ * Denne controlleren henter data om personene utenom rekrutteirngstreff, foreløpig fra kandidatsøket.
+ */
 class JobbsøkerOutboundController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val kandidatsøkKlient: KandidatsøkKlient,
@@ -55,6 +58,8 @@ class JobbsøkerOutboundController(
     )
     private fun hentKandidatnummerHandler(): (Context) -> Unit = { ctx ->
         val innloggetBruker = ctx.authenticatedUser()
+        // Om vi legger til veiledertilganger her, må vi huske å sjekke at at veileder skal ha tilgang til den enkelte kandidaten, ikke bare at veileder har tilgang til treffet. Det er enklere å legge til veiledertilganger i frontend og sjekke at veileder har tilgang til treffet, enn å legge til logikk i backend for å sjekke at veileder har tilgang til den enkelte kandidaten.
+        // Foreløpig brukes den bare et sted som kun trenger arbeidsgiverrettet tilgang, så vi har bare droppet veiledertilgangen.
         innloggetBruker.verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
 
         val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))

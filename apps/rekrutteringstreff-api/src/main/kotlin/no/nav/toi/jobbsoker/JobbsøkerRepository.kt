@@ -71,7 +71,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
               (id, rekrutteringstreff_id, fodselsnummer,
                fornavn, etternavn, navkontor, veileder_navn, veileder_navident, alder, innsatsgruppe,
                status)
-            values (?,?,?, ?,?,?,?,?,?,?, ?)
+            values (?,?,?,?,?,?,?,?,?,?,?)
         """.trimIndent()
         val batchRader = jobbsøkere.map { jobbsøker ->
             JobbsøkerBatchRad(
