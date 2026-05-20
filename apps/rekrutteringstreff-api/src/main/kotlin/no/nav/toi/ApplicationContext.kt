@@ -54,7 +54,11 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val healthRepository = HealthRepository(infra.dataSource)
 
     // Services
-    val jobbsøkerService = JobbsøkerService(infra.dataSource, jobbsøkerRepository)
+    val jobbsøkerService = JobbsøkerService(
+        dataSource = infra.dataSource,
+        jobbsøkerRepository = jobbsøkerRepository,
+        kandidatsøkKlient = infra.kandidatsøkKlient,
+    )
     val arbeidsgiverService = ArbeidsgiverService(infra.dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
     val eierService = EierService(eierRepository, rekrutteringstreffRepository, infra.dataSource)
     val rekrutteringstreffService = RekrutteringstreffService(

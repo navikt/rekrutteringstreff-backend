@@ -71,18 +71,12 @@ class JobbsøkerController(
                 "fødselsnummer": "12345678901",
                 "fornavn": "Ola",
                 "etternavn": "Nordmann",
-                "navkontor": "Nav Oslo",
-                "veilederNavn": "Kari Nordmann",
-                "veilederNavIdent": "NAV123",
                 "lagtTilAvNavn": "Test Testesen"
               },
               {
                 "fødselsnummer": "10987654321",
                 "fornavn": "Kari",
                 "etternavn": "Nordmann",
-                "navkontor": null,
-                "veilederNavn": null,
-                "veilederNavIdent": null,
                 "lagtTilAvNavn": "Test Testesen"
               }
             ]"""
@@ -93,7 +87,8 @@ class JobbsøkerController(
         methods = [HttpMethod.POST]
     )
     private fun leggTilJobbsøkereHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+        val innloggetBruker = ctx.authenticatedUser()
+        innloggetBruker.verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val dtoer = ctx.bodyAsClass<Array<JobbsøkerDto>>()
         val treff = TreffId(ctx.pathParam(pathParamTreffId))
         val lagtTilAvNavn = dtoer
@@ -106,11 +101,13 @@ class JobbsøkerController(
                     else -> throw IllegalArgumentException("lagtTilAvNavn må være lik for alle jobbsøkere i samme forespørsel")
                 }
             }
+        val basisJobbsøkere = dtoer.map { it.domene() }
         jobbsøkerService.leggTilJobbsøkere(
-            dtoer.map { it.domene() },
+            basisJobbsøkere,
             treff,
-            ctx.extractNavIdent(),
+            innloggetBruker.extractNavIdent(),
             lagtTilAvNavn,
+            innkommendeToken = innloggetBruker.innkommendeToken(),
         )
         ctx.status(201)
     }
@@ -468,9 +465,6 @@ class JobbsøkerController(
                 fødselsnummer = it.fødselsnummer.asString,
                 fornavn = it.fornavn.asString,
                 etternavn = it.etternavn.asString,
-                navkontor = it.navkontor?.asString,
-                veilederNavn = it.veilederNavn?.asString,
-                veilederNavIdent = it.veilederNavIdent?.asString,
                 status = it.status,
                 hendelser = it.hendelser.map { h ->
                     JobbsøkerHendelseOutboundDto(

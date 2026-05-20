@@ -18,7 +18,7 @@ val navCommonVersion = "3.2024.11.26_16.35-432a29107830"
 val openTelemetryVersion = "1.55.0"
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.0"
-val kotestVersion = "6.1.4"
+val kotestVersion = "6.1.4" 
 
 dependencies {
     implementation("org.flywaydb:flyway-core:$flywayVersion")

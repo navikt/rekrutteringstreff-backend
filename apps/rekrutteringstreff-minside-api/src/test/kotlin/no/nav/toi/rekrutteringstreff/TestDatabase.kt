@@ -254,7 +254,7 @@ class TestDatabase {
                         )
                     }
                     val tidspunkt = Instant.now()
-                    val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId, "testperson", tidspunkt)
+                    val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, leggTilJobbsøkere, treffId)
                     val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
                     jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, "testperson", tidspunkt)
                 }
