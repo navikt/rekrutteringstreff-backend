@@ -80,7 +80,7 @@ data class LeggTilJobbsøker(
 )
 
 enum class JobbsøkerStatus {
-    LAGT_TIL, INVITERT, SVART_JA, SVART_NEI, SLETTET
+    LAGT_TIL, INVITERT, SVART_JA, SVART_NEI, FÅTT_JOBB, SLETTET
 }
 
 data class Jobbsøker(

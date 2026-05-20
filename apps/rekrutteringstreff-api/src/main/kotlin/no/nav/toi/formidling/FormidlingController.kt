@@ -5,6 +5,7 @@ import io.javalin.http.Context
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
+import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.formidling.dto.FormidlingOutboundDto
@@ -56,9 +57,9 @@ class FormidlingController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val dto = ctx.bodyAsClass<OpprettFormidlingDto>()
-
+        val navIdent = ctx.extractNavIdent()
         try {
-            val opprettede = formidlingService.opprettFormidling(dto)
+            val opprettede = formidlingService.opprettFormidling(dto, navIdent)
             logger.info("Opprettet ${opprettede.size} formidlinger for treff $treffId")
             ctx.status(201).json(opprettede.map { it.toOutboundDto() })
         } catch (e: ArbeidsgiverIkkeFunnetException) {

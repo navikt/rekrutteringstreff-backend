@@ -6,7 +6,6 @@ import no.nav.toi.SecureLog
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
-import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRequest
@@ -163,6 +162,17 @@ class JobbsøkerService(
         }
     }
 
+    fun registrerFåttJobb(personTreffId: PersonTreffId, navIdent: String) {
+        dataSource.executeInTransaction { connection ->
+            val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+            if (nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
+                logger.info("Jobbsøker har allerede fått jobb, ignorerer duplikat kall")
+                return@executeInTransaction
+            }
+            jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
+            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.FÅTT_JOBB)
+        }
+    }
 
     fun markerSlettet(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): MarkerSlettetResultat {
         val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(personTreffId)

@@ -26,12 +26,12 @@ class FormidlingService(
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    fun opprettFormidling(opprettFormidling: OpprettFormidlingDto): List<Formidling> {
+    fun opprettFormidling(opprettFormidling: OpprettFormidlingDto, navIdent: String): List<Formidling> {
         val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(opprettFormidling)
         val stillingId = opprettStillingOgKandidatliste()
         val formidlinger = lagreFormidlinger(TreffId(opprettFormidling.rekrutteringstreffId), jobbsøkere, arbeidsgiver, stillingId)
         leggKandidaterPåListenOgSendTilStatistikk(stillingId, jobbsøkere)
-        endreJobbsøkerStatusOgLeggTilHendelser(formidlinger)
+        endreJobbsøkerStatusOgLeggTilHendelser(formidlinger, navIdent)
         return formidlinger
     }
 
@@ -82,8 +82,10 @@ class FormidlingService(
         return formidlingIder.mapNotNull { formidlingRepository.hent(it) }
     }
 
-    private fun endreJobbsøkerStatusOgLeggTilHendelser(formidlinger: List<Formidling>) {
-        TODO("Not yet implemented")
+    private fun endreJobbsøkerStatusOgLeggTilHendelser(formidlinger: List<Formidling>, navIdent: String) {
+        formidlinger.forEach { formidling ->
+            jobbsøkerService.registrerFåttJobb(formidling.jobbsøkerPersonTreffId, navIdent)
+        }
     }
 
     fun hent(formidlingId: Long): Formidling? {
