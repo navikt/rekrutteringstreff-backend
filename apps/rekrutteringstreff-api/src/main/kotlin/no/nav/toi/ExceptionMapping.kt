@@ -45,7 +45,7 @@ data class ProblemDetails(
                 type = type,
                 title = throwable.javaClass.simpleName, // Tas fra exceptionen eller statusen??
                 status = status.code,
-                detail = melding ?: status.message, 
+                detail = melding ?: status.message,
                 instance = ctx.req().requestURI.toString(),
                 timestamp = timestamp,
                 traceid = traceid,
@@ -155,7 +155,6 @@ object ExceptionMapping {
                     throwable = e,
                     status = HttpStatus.BAD_REQUEST,
                     ctx = ctx,
-                    melding = e.message ?: "Ugyldig input",
                     feil = e.message ?: "Ugyldig input"
                 )
             )

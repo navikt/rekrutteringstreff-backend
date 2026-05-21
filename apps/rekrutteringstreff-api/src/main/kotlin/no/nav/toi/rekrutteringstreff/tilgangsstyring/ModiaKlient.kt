@@ -51,7 +51,7 @@ class ModiaKlient(
             return if (respons.statusCode() in 200..299) {
                 objectMapper.readValue(respons.body(), AktivEnhet::class.java).aktivEnhet
             } else {
-                log.error("Det skjedde en feil ved henting av aktiv enhet fra Modia. Status: ${respons.statusCode()}, body: ${respons.body()}")
+                log.error("Det skjedde en feil ved henting av aktiv enhet fra Modia. Status: ${respons.statusCode()}")
                 null
             }
 
@@ -66,7 +66,7 @@ class ModiaKlient(
      * via modiacontextholder `/api/decorator`. Brukes til tilgangsstyring på
      * jobbsøkere som er tilknyttet samme kontor som veileder.
      *
-    * Returnerer tom liste hvis veileder ikke er tilknyttet noen enheter.
+     * Returnerer tom liste hvis veileder ikke er tilknyttet noen enheter.
      */
     fun hentMineEnheter(innkommendeToken: String): List<String> {
         return try {
@@ -90,7 +90,7 @@ class ModiaKlient(
             } else if (respons.statusCode() == 404) {
                 emptyList()
             } else {
-                log.error("Feil ved henting av Modia-enheter. Status: ${respons.statusCode()}, body: ${respons.body()}")
+                log.error("Feil ved henting av Modia-enheter. Status: ${respons.statusCode()}")
                 throw ModiaOppslagFeiletException("Klarte ikke å hente Modia-enheter. Prøv igjen senere.")
             }
         } catch (e: Exception) {
