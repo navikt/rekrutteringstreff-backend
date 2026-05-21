@@ -37,7 +37,8 @@ class EierService(
     fun harTilgangViaTreffkontor(treffId: TreffId, tilknyttedeEnheter: List<String>): Boolean {
         if (tilknyttedeEnheter.isEmpty()) return false
         val treff = rekrutteringstreffRepository.hent(treffId) ?: return false
-        return treff.kontorer.any { it in tilknyttedeEnheter.toSet() }
+        val tilknyttedeEnheterSet = tilknyttedeEnheter.toSet()
+        return treff.kontorer.any { it in tilknyttedeEnheterSet }
     }
 
     fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String? = null) {
