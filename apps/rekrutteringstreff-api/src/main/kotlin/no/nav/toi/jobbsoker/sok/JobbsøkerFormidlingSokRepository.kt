@@ -1,38 +1,47 @@
 package no.nav.toi.jobbsoker.sok
 
 import no.nav.toi.executeInTransaction
-import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.PreparedStatement
 import javax.sql.DataSource
 
-class JobbsøkerFormidlingRepository(private val dataSource: DataSource) {
+class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
 
     companion object {
         private const val QUERY_TIMEOUT_SECONDS = 10
     }
 
-    /**
-     * Henter jobbsøkere for formidling-modalen, paginert.
-     * Inkluderer skjulte jobbsøkere (er_synlig = false), men ikke slettede.
-     *
-     * @param kunForVeilederNavIdent hvis satt, returneres bare jobbsøkere der
-     * lagret veileder_navident matcher denne identen.
-     */
-    fun hentForFormidling(
+    fun hentAlleForFormidling(
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,
-        kunForVeilederNavIdent: String? = null,
     ): JobbsøkerFormidlingRespons {
-        val (where, params) = byggWhere(treffId, request, kunForVeilederNavIdent)
+        val (where, params) = byggJobbsøkerWhereForAlle(treffId, request)
+        return hentJobbsøkereMedWhere(where, params, request)
+    }
+
+    fun hentEgneForFormidling(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): JobbsøkerFormidlingRespons {
+        val (where, params) = byggJobbsøkerWhereForEgne(treffId, request, veilederNavIdent, tilknyttedeEnheter)
+        return hentJobbsøkereMedWhere(where, params, request)
+    }
+
+    private fun hentJobbsøkereMedWhere(
+        where: String,
+        params: List<Any>,
+        request: JobbsøkerFormidlingRequest,
+    ): JobbsøkerFormidlingRespons {
         return dataSource.executeInTransaction { conn ->
-            val totalt = hentTotalt(conn, where, params)
+            val totalt = hentTotaltAntallJobbsøkere(conn, where, params)
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val jobbsøkere = if (totalt == 0L) {
                 emptyList()
             } else {
-                hentTreff(conn, where, params, responsSide, request.antallPerSide)
+                hentJobbsøkere(conn, where, params, responsSide, request.antallPerSide)
             }
             JobbsøkerFormidlingRespons(
                 totalt = totalt,
@@ -48,11 +57,18 @@ class JobbsøkerFormidlingRepository(private val dataSource: DataSource) {
         return minOf(forespurtSide, sisteTilgjengeligeSide)
     }
 
-    private fun byggWhere(
+    private fun byggJobbsøkerWhereForAlle(
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,
-        kunForVeilederNavIdent: String?,
     ): Pair<String, List<Any>> {
+        val (conditions, params) = byggJobbsøkerBasisFilter(treffId, request)
+        return tilWhereClause(conditions, params)
+    }
+
+    private fun byggJobbsøkerBasisFilter(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+    ): Pair<MutableList<String>, MutableList<Any>> {
         val conditions = mutableListOf(
             "rt.id = ?",
             "j.status != 'SLETTET'",
@@ -60,30 +76,47 @@ class JobbsøkerFormidlingRepository(private val dataSource: DataSource) {
         val params = mutableListOf<Any>(treffId.somUuid)
 
         request.fritekst?.takeIf { it.isNotBlank() }?.let {
-            if (it.trim().matches(Regex("\\d{11}"))) {
+            val trimmed = it.trim()
+            if (trimmed.matches(Regex("\\d{11}"))) {
                 conditions += "j.fodselsnummer = ?"
-                params += it.trim()
+                params += trimmed
             } else {
-                val escaped = it.lowercase()
-                    .replace("\\", "\\\\")
-                    .replace("%", "\\%")
-                    .replace("_", "\\_")
-                conditions += "(LOWER(j.fornavn) LIKE ? ESCAPE '\\' OR LOWER(j.etternavn) LIKE ? ESCAPE '\\')"
-                params += "${escaped}%"
-                params += "${escaped}%"
+                conditions += "(LOWER(j.fornavn) LIKE ? OR LOWER(j.etternavn) LIKE ?)"
+                params += "${trimmed.lowercase()}%"
+                params += "${trimmed.lowercase()}%"
             }
         }
 
-        if (kunForVeilederNavIdent != null) {
-            conditions += "UPPER(j.veileder_navident) = ?"
-            params += kunForVeilederNavIdent.trim().uppercase()
-        }
-
-        val whereClause = "WHERE " + conditions.joinToString(" AND ")
-        return whereClause to params
+        return conditions to params
     }
 
-    private fun hentTotalt(conn: Connection, where: String, params: List<Any>): Long {
+    private fun byggJobbsøkerWhereForEgne(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): Pair<String, List<Any>> {
+        val (conditions, params) = byggJobbsøkerBasisFilter(treffId, request)
+        val rensedeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+
+        if (rensedeEnheter.isEmpty()) {
+            conditions += "UPPER(j.veileder_navident) = ?"
+        } else {
+            val placeholders = rensedeEnheter.joinToString(",") { "?" }
+            conditions += "(UPPER(j.veileder_navident) = ? OR j.orgenhet IN ($placeholders))"
+        }
+
+        params += veilederNavIdent.trim().uppercase()
+        rensedeEnheter.forEach { params += it }
+
+        return tilWhereClause(conditions, params)
+    }
+
+    private fun tilWhereClause(conditions: List<String>, params: List<Any>): Pair<String, List<Any>> {
+        return "WHERE " + conditions.joinToString(" AND ") to params
+    }
+
+    private fun hentTotaltAntallJobbsøkere(conn: Connection, where: String, params: List<Any>): Long {
         val sql = """
             SELECT count(*)
             FROM jobbsoker j
@@ -100,7 +133,7 @@ class JobbsøkerFormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    private fun hentTreff(
+    private fun hentJobbsøkere(
         conn: Connection,
         where: String,
         params: List<Any>,
@@ -111,8 +144,7 @@ class JobbsøkerFormidlingRepository(private val dataSource: DataSource) {
             SELECT j.id::text AS person_treff_id,
                    j.fodselsnummer,
                    j.fornavn,
-                   j.etternavn,
-                   j.status
+                   j.etternavn
             FROM jobbsoker j
             JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
             $where
@@ -134,7 +166,6 @@ class JobbsøkerFormidlingRepository(private val dataSource: DataSource) {
                         fødselsnummer = rs.getString("fodselsnummer"),
                         fornavn = rs.getString("fornavn"),
                         etternavn = rs.getString("etternavn"),
-                        status = JobbsøkerStatus.valueOf(rs.getString("status")),
                     )
                 }
                 resultater

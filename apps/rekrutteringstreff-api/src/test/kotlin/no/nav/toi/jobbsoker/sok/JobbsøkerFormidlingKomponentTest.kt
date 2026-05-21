@@ -65,8 +65,12 @@ class JobbsøkerFormidlingKomponentTest {
         db.slettAlt()
     }
 
-    private fun opprettTreffMedEier(eierIdent: String): TreffId {
-        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = eierIdent, tittel = "TestTreff")
+    private fun opprettTreffMedEier(eierIdent: String, opprettetAvKontor: String = "Original Kontor"): TreffId {
+        val treffId = db.opprettRekrutteringstreffIDatabase(
+            navIdent = eierIdent,
+            tittel = "TestTreff",
+            opprettetAvNavkontorEnhetId = opprettetAvKontor,
+        )
         ctx.eierRepository.leggTil(treffId, listOf(eierIdent))
         return treffId
     }
@@ -236,6 +240,153 @@ class JobbsøkerFormidlingKomponentTest {
     }
 
     @Test
+    fun `arbeidsgiverrettet ikke-eier får alle dersom treffet er tilknyttet veileders kontor`() {
+        val eierIdent = "A123456"
+        val ikkeEierIdent = "B200002"
+        val felleskontor = "0314"
+        val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"enheter":[{"enhetId":"$felleskontor","navn":"Nav Testkontor"}]}""")
+                )
+        )
+
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aase"), Etternavn("Testesen"), null, null, VeilederNavIdent("V999998")),
+                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Bo"), Etternavn("Testesen"), null, null, VeilederNavIdent("V999997")),
+            ),
+            treffId,
+        )
+
+        val response = httpPost(
+            formidlingAllePath(treffId),
+            formidlingBody(),
+            navIdent = ikkeEierIdent,
+            groups = listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.totalt).isEqualTo(2)
+        assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
+            .containsExactlyInAnyOrder("11111111111", "22222222222")
+    }
+
+    @Test
+    fun `arbeidsgiverrettet ikke-eier får 403 dersom veileders kontor ikke er tilknyttet treffet`() {
+        val eierIdent = "A123456"
+        val ikkeEierIdent = "B200002"
+        val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = "0101")
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"enheter":[{"enhetId":"0202","navn":"Nav Annet Kontor"}]}""")
+                )
+        )
+
+        val response = httpPost(
+            formidlingAllePath(treffId),
+            formidlingBody(),
+            navIdent = ikkeEierIdent,
+            groups = listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+        assertThat(response.statusCode()).isEqualTo(403)
+    }
+
+    @Test
+    fun `arbeidsgiverrettet ikke-eier får ikke tilgang via jobbsøkers kontor`() {
+        val eierIdent = "A123456"
+        val ikkeEierIdent = "B200002"
+        val jobbsøkersKontor = "0314"
+        val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = "0101")
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"enheter":[{"enhetId":"$jobbsøkersKontor","navn":"Nav Testkontor"}]}""")
+                )
+        )
+
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    Fødselsnummer("11111111111"),
+                    Fornavn("Aase"),
+                    Etternavn("Testesen"),
+                    null,
+                    null,
+                    VeilederNavIdent("V999998"),
+                    orgenhet = Orgenhet(jobbsøkersKontor),
+                ),
+            ),
+            treffId,
+        )
+
+        val response = httpPost(
+            formidlingAllePath(treffId),
+            formidlingBody(),
+            navIdent = ikkeEierIdent,
+            groups = listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+    }
+
+    @Test
+    fun `arbeidsgiverrettet får ikke bruke formidling-egne selv om jobbsøkers kontor matcher`() {
+        val eierIdent = "A123456"
+        val arbeidsgiverrettetIdent = "B200002"
+        val jobbsøkersKontor = "0314"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"enheter":[{"enhetId":"$jobbsøkersKontor","navn":"Nav Testkontor"}]}""")
+                )
+        )
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(
+                    Fødselsnummer("11111111111"),
+                    Fornavn("Aase"),
+                    Etternavn("Testesen"),
+                    null,
+                    null,
+                    VeilederNavIdent("V999998"),
+                    orgenhet = Orgenhet(jobbsøkersKontor),
+                ),
+            ),
+            treffId,
+        )
+
+        val response = httpPost(
+            formidlingEgnePath(treffId),
+            formidlingBody(),
+            navIdent = arbeidsgiverrettetIdent,
+            groups = listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+    }
+
+    @Test
     fun `paginering returnerer riktig side og totalt`() {
         val eierIdent = "A123456"
         val treffId = opprettTreffMedEier(eierIdent)
@@ -308,4 +459,116 @@ class JobbsøkerFormidlingKomponentTest {
         assertThat(resultat.totalt).isEqualTo(1)
         assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("22222222222")
     }
+
+    @Test
+    fun `ikke-eier får se jobbsøker tilknyttet samme orgenhet som veileder`() {
+        val eierIdent = "A123456"
+        val veilederIdent = "V300003"
+        val felleskontor = "0314"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """{"enheter":[{"enhetId":"$felleskontor","navn":"Nav Testkontor"}]}"""
+                        )
+                )
+        )
+
+        val sammeKontor = LeggTilJobbsøker(
+            Fødselsnummer("11111111111"),
+            Fornavn("Aase"),
+            Etternavn("Testesen"),
+            null,
+            null,
+            VeilederNavIdent("V999998"),
+            orgenhet = Orgenhet(felleskontor),
+        )
+        val annetKontor = LeggTilJobbsøker(
+            Fødselsnummer("22222222222"),
+            Fornavn("Bo"),
+            Etternavn("Testesen"),
+            null,
+            null,
+            VeilederNavIdent("V999997"),
+            orgenhet = Orgenhet("9999"),
+        )
+        val utenKontor = LeggTilJobbsøker(
+            Fødselsnummer("33333333333"),
+            Fornavn("Ce"),
+            Etternavn("Testesen"),
+            null,
+            null,
+            VeilederNavIdent("V999996"),
+        )
+        db.leggTilJobbsøkereMedHendelse(listOf(sammeKontor, annetKontor, utenKontor), treffId)
+
+        val response = httpPost(
+            formidlingEgnePath(treffId),
+            formidlingBody(),
+            navIdent = veilederIdent,
+            groups = listOf(AzureAdRoller.jobbsøkerrettet),
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
+            .containsExactly("11111111111")
+    }
+
+    @Test
+    fun `utvikler som ikke er eier får alle jobbsøkere uten å sjekke treffkontor`() {
+        val eierIdent = "A123456"
+        val utviklerIdent = "U900001"
+        val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = "0101")
+
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aase"), Etternavn("Testesen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Bo"), Etternavn("Testesen"), null, null, null),
+            ),
+            treffId,
+        )
+
+        val response = httpPost(
+            formidlingAllePath(treffId),
+            formidlingBody(),
+            navIdent = utviklerIdent,
+            groups = listOf(AzureAdRoller.arbeidsgiverrettet, AzureAdRoller.utvikler),
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.totalt).isEqualTo(2)
+
+        verify(0, getRequestedFor(urlPathEqualTo("/api/decorator")))
+    }
+
+    @Test
+    fun `arbeidsgiverrettet ikke-eier får 502 dersom Modia-decorator feiler`() {
+        val eierIdent = "A123456"
+        val ikkeEierIdent = "B200002"
+        val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = "0101")
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(aResponse().withStatus(500).withBody("Modia ute"))
+        )
+
+        val response = httpPost(
+            formidlingAllePath(treffId),
+            formidlingBody(),
+            navIdent = ikkeEierIdent,
+            groups = listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+        assertThat(response.statusCode()).isEqualTo(502)
+
+        val problemDetails = mapper.readValue<ProblemDetails>(response.body())
+        assertThat(problemDetails.feil).isEqualTo("Klarte ikke å hente Modia-enheter. Prøv igjen senere.")
+    }
+
 }

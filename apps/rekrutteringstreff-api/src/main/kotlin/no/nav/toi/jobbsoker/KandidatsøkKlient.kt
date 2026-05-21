@@ -9,6 +9,7 @@ import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Innsatsgruppe
 import no.nav.toi.jobbsoker.Kandidatnummer
 import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.Orgenhet
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.log
@@ -28,6 +29,7 @@ private data class JobbsokerInfoDto(
     val veilederNavIdent: String?,
     val alder: Int?,
     val innsatsgruppe: String?,
+    val orgenhet: String? = null,
 )
 private data class JobbsokerInfoResponsDto(val jobbsokerInfo: List<JobbsokerInfoDto>)
 
@@ -37,6 +39,7 @@ data class JobbsokerInfo(
     val veilederNavIdent: VeilederNavIdent?,
     val alder: Int?,
     val innsatsgruppe: Innsatsgruppe?,
+    val orgenhet: Orgenhet? = null,
 )
 class KandidatsøkKlient(
     private val kandidatsokApiUrl: String,
@@ -138,6 +141,7 @@ class KandidatsøkKlient(
                         ?.let(::VeilederNavIdent),
                     alder = dto.alder,
                     innsatsgruppe = dto.innsatsgruppe?.takeIf(String::isNotBlank)?.let(::Innsatsgruppe),
+                    orgenhet = dto.orgenhet?.takeIf(String::isNotBlank)?.let(::Orgenhet),
                 )
             }
         } catch (e: KandidatsokTilgangAvvistException) {

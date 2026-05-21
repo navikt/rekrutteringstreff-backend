@@ -77,6 +77,20 @@ data class Innsatsgruppe(private val verdi: String) {
 }
 
 /**
+ * Enhetsidentifikator for Nav-kontoret jobbsøkeren er tilknyttet (orgenhet),
+ * f.eks. "1234". Brukes til tilgangsstyring for veiledere.
+ */
+data class Orgenhet(private val verdi: String) {
+    init {
+        if (verdi.isEmpty()) {
+            throw IllegalArgumentException("Orgenhet kan ikke være tom.")
+        }
+    }
+    val asString: String = verdi
+    override fun toString(): String = asString
+}
+
+/**
  * Kandidatnummer brukes kun for on-demand henting fra ekstern API (kandidatsøk-api).
  * Det lagres ikke lenger i databasen, men brukes som type-sikker wrapper for API-respons.
  */
@@ -94,6 +108,7 @@ data class LeggTilJobbsøker(
     val veilederNavIdent: VeilederNavIdent? = null,
     val alder: Int? = null,
     val innsatsgruppe: Innsatsgruppe? = null,
+    val orgenhet: Orgenhet? = null,
 )
 
 enum class JobbsøkerStatus {
@@ -113,6 +128,7 @@ data class Jobbsøker(
     val hendelser: List<JobbsøkerHendelse> = emptyList(),
     val alder: Int? = null,
     val innsatsgruppe: Innsatsgruppe? = null,
+    val orgenhet: Orgenhet? = null,
 ) {
     fun harAktivtSvarJa(): Boolean =
         status == JobbsøkerStatus.SVART_JA
