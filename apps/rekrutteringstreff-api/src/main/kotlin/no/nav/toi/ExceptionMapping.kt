@@ -155,6 +155,7 @@ object ExceptionMapping {
                     throwable = e,
                     status = HttpStatus.BAD_REQUEST,
                     ctx = ctx,
+                    melding = e.message ?: "Ugyldig input",
                     feil = e.message ?: "Ugyldig input"
                 )
             )
