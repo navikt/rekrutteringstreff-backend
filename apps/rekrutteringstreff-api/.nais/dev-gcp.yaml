@@ -21,6 +21,8 @@ openai_deployment: "toi-gpt-4.1"
 openai_api_version: "2025-01-01-preview"
 kandidatsok_api_url: "http://rekrutteringsbistand-kandidatsok-api"
 kandidatsok_api_scope: "api://dev-gcp.toi.rekrutteringsbistand-kandidatsok-api/.default"
+stilling_api_url: "http://rekrutteringsbistand-stilling-api"
+stilling_api_scope: "api://dev-gcp.toi.rekrutteringsbistand-stilling-api/.default"
 kafka_consumer_group_id: rekrutteringstreff-rapid-1
 modiacontextholder_url: "http://modiacontextholder.personoversikt"
 modiacontextholder_scope: "api://dev-gcp.personoversikt.modiacontextholder/.default"

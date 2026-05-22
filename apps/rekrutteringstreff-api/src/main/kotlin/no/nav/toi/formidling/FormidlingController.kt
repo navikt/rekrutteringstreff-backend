@@ -58,8 +58,10 @@ class FormidlingController(
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val dto = ctx.bodyAsClass<OpprettFormidlingDto>()
         val navIdent = ctx.extractNavIdent()
+        val userToken = ctx.attribute<String>("raw_token")
+            ?: throw io.javalin.http.UnauthorizedResponse("Missing token")
         try {
-            val opprettede = formidlingService.opprettFormidling(dto, navIdent)
+            val opprettede = formidlingService.opprettFormidling(dto, navIdent, userToken)
             logger.info("Opprettet ${opprettede.size} formidlinger for treff $treffId")
             ctx.status(201).json(opprettede.map { it.toOutboundDto() })
         } catch (e: ArbeidsgiverIkkeFunnetException) {

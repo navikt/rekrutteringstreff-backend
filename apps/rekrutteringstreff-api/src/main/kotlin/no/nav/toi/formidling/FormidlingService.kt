@@ -23,14 +23,15 @@ class FormidlingService(
     private val arbeidsgiverService: ArbeidsgiverService,
     private val jobbsøkerService: JobbsøkerService,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
+    private val stillingKlient: StillingKlient,
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    fun opprettFormidling(opprettFormidling: OpprettFormidlingDto, navIdent: String): List<Formidling> {
+    fun opprettFormidling(opprettFormidling: OpprettFormidlingDto, navIdent: String, userToken: String): List<Formidling> {
         val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(opprettFormidling)
-        val stillingId = opprettStillingOgKandidatliste()
-        val formidlinger = lagreFormidlinger(TreffId(opprettFormidling.rekrutteringstreffId), jobbsøkere, arbeidsgiver, stillingId)
-        leggKandidaterPåListenOgSendTilStatistikk(stillingId, jobbsøkere)
+        val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(opprettFormidling, userToken)
+        val formidlinger = lagreFormidlinger(TreffId(opprettFormidling.rekrutteringstreffId), jobbsøkere, arbeidsgiver, stillingIdOgKandidatlisteId.stillingId)
+        leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøkere)
         endreJobbsøkerStatusOgLeggTilHendelser(formidlinger, navIdent)
         return formidlinger
     }
@@ -50,15 +51,20 @@ class FormidlingService(
         return Pair(arbeidsgiver, jobbsøkere)
     }
 
-    private fun opprettStillingOgKandidatliste(): UUID {
-        TODO("Not yet implemented")
+    private fun opprettStillingOgKandidatliste(opprettFormidling: OpprettFormidlingDto, userToken: String): OpprettFormidlingStillingRespons {
+        val request = OpprettRekrutteringstreffFormidling(
+            eierNavKontorEnhetId = opprettFormidling.eierNavKontorEnhetId,
+            rekrutteringstreffId = UUID.fromString(opprettFormidling.rekrutteringstreffId),
+            stilling = opprettFormidling.stilling,
+        )
+        return stillingKlient.opprettFormidlingStillingOgKandidatliste(request, userToken)
     }
 
     private fun leggKandidaterPåListenOgSendTilStatistikk(
-        stillingId: UUID,
+        stillingId: OpprettFormidlingStillingRespons,
         jobbsøkere: List<Jobbsøker>
     ) {
-        TODO("Not yet implemented")
+//       TODO("Not yet implemented")
     }
 
     private fun lagreFormidlinger(

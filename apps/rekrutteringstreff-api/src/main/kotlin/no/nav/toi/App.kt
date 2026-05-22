@@ -14,6 +14,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.formidling.FormidlingController
+import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.formidling.FormidlingRepository
 import no.nav.toi.formidling.FormidlingService
 import no.nav.toi.jobbsoker.*
@@ -61,6 +62,7 @@ class App(
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
     private val kandidatsokKlient: KandidatsøkKlient,
+    private val stillingKlient: StillingKlient,
     private val rapidsConnection: RapidsConnection,
     private val modiaKlient: ModiaKlient,
     private val pilotkontorer: List<String>,
@@ -75,6 +77,8 @@ class App(
         utvikler: UUID,
         kandidatsokApiUrl: String,
         kandidatsokScope: String,
+        stillingApiUrl: String,
+        stillingApiScope: String,
         rapidsConnection: RapidsConnection,
         accessTokenClient: AccessTokenClient,
         modiaKlient: ModiaKlient,
@@ -91,6 +95,12 @@ class App(
         kandidatsokKlient = KandidatsøkKlient(
             kandidatsokApiUrl = kandidatsokApiUrl,
             kandidatsokScope = kandidatsokScope,
+            accessTokenClient = accessTokenClient,
+            httpClient = httpClient
+        ),
+        stillingKlient = StillingKlient(
+            stillingApiUrl = stillingApiUrl,
+            stillingScope = stillingApiScope,
             accessTokenClient = accessTokenClient,
             httpClient = httpClient
         ),
@@ -150,7 +160,7 @@ class App(
 
         val formidlingRepository = FormidlingRepository(dataSource)
         val rekrutteringstreffRepo = RekrutteringstreffRepository(dataSource)
-        val formidlingService = FormidlingService(dataSource, formidlingRepository, arbeidsgiverService, jobbsøkerService, rekrutteringstreffRepo)
+        val formidlingService = FormidlingService(dataSource, formidlingRepository, arbeidsgiverService, jobbsøkerService, rekrutteringstreffRepo, stillingKlient)
 
         val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
 
@@ -349,6 +359,8 @@ fun main() {
         utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER")),
         kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
         kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
+        stillingApiUrl = getenv("STILLING_API_URL"),
+        stillingApiScope = getenv("STILLING_API_SCOPE"),
         rapidsConnection = rapidsConnection,
         accessTokenClient = accessTokenClient,
         modiaKlient = modiaKlient,
