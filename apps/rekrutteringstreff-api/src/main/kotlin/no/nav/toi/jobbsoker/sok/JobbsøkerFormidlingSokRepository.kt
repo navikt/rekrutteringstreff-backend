@@ -103,7 +103,7 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
             conditions += "UPPER(j.veileder_navident) = ?"
         } else {
             val placeholders = rensedeEnheter.joinToString(",") { "?" }
-            conditions += "(UPPER(j.veileder_navident) = ? OR j.orgenhet IN ($placeholders))"
+            conditions += "(UPPER(j.veileder_navident) = ? OR j.kontornummer IN ($placeholders))"
         }
 
         params += veilederNavIdent.trim().uppercase()

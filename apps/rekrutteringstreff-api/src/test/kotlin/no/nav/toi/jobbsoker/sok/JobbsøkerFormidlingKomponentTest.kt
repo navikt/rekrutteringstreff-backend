@@ -323,13 +323,11 @@ class JobbsøkerFormidlingKomponentTest {
         db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
-                    Fødselsnummer("11111111111"),
-                    Fornavn("Aase"),
-                    Etternavn("Testesen"),
-                    null,
-                    null,
-                    VeilederNavIdent("V999998"),
-                    orgenhet = Orgenhet(jobbsøkersKontor),
+                    fødselsnummer = Fødselsnummer("11111111111"),
+                    fornavn = Fornavn("Aase"),
+                    etternavn = Etternavn("Testesen"),
+                    veilederNavIdent = VeilederNavIdent("V999998"),
+                    kontor = Kontor(kontornummer = jobbsøkersKontor, kontornavn = null),
                 ),
             ),
             treffId,
@@ -364,13 +362,11 @@ class JobbsøkerFormidlingKomponentTest {
         db.leggTilJobbsøkereMedHendelse(
             listOf(
                 LeggTilJobbsøker(
-                    Fødselsnummer("11111111111"),
-                    Fornavn("Aase"),
-                    Etternavn("Testesen"),
-                    null,
-                    null,
-                    VeilederNavIdent("V999998"),
-                    orgenhet = Orgenhet(jobbsøkersKontor),
+                    fødselsnummer = Fødselsnummer("11111111111"),
+                    fornavn = Fornavn("Aase"),
+                    etternavn = Etternavn("Testesen"),
+                    veilederNavIdent = VeilederNavIdent("V999998"),
+                    kontor = Kontor(kontornummer = jobbsøkersKontor, kontornavn = null),
                 ),
             ),
             treffId,
@@ -461,7 +457,7 @@ class JobbsøkerFormidlingKomponentTest {
     }
 
     @Test
-    fun `ikke-eier får se jobbsøker tilknyttet samme orgenhet som veileder`() {
+    fun `ikke-eier får se jobbsøker tilknyttet samme kontornummer som veileder`() {
         val eierIdent = "A123456"
         val veilederIdent = "V300003"
         val felleskontor = "0314"
@@ -480,22 +476,18 @@ class JobbsøkerFormidlingKomponentTest {
         )
 
         val sammeKontor = LeggTilJobbsøker(
-            Fødselsnummer("11111111111"),
-            Fornavn("Aase"),
-            Etternavn("Testesen"),
-            null,
-            null,
-            VeilederNavIdent("V999998"),
-            orgenhet = Orgenhet(felleskontor),
+            fødselsnummer = Fødselsnummer("11111111111"),
+            fornavn = Fornavn("Aase"),
+            etternavn = Etternavn("Testesen"),
+            veilederNavIdent = VeilederNavIdent("V999998"),
+            kontor = Kontor(kontornummer = felleskontor, kontornavn = null),
         )
         val annetKontor = LeggTilJobbsøker(
-            Fødselsnummer("22222222222"),
-            Fornavn("Bo"),
-            Etternavn("Testesen"),
-            null,
-            null,
-            VeilederNavIdent("V999997"),
-            orgenhet = Orgenhet("9999"),
+            fødselsnummer = Fødselsnummer("22222222222"),
+            fornavn = Fornavn("Bo"),
+            etternavn = Etternavn("Testesen"),
+            veilederNavIdent = VeilederNavIdent("V999997"),
+            kontor = Kontor(kontornummer = "9999", kontornavn = null),
         )
         val utenKontor = LeggTilJobbsøker(
             Fødselsnummer("33333333333"),

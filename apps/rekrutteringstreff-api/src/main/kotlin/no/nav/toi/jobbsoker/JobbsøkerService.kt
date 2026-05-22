@@ -85,12 +85,11 @@ class JobbsøkerService(
         return batch.map { jobbsøker ->
             val kandidatsøkdata = kandidatsøkdataPerFødselsnummer[jobbsøker.fødselsnummer] ?: return@map jobbsøker
             jobbsøker.copy(
-                navkontor = kandidatsøkdata.navkontor,
+                kontor = kandidatsøkdata.kontor,
                 veilederNavn = kandidatsøkdata.veilederNavn,
                 veilederNavIdent = kandidatsøkdata.veilederNavIdent,
                 alder = kandidatsøkdata.alder,
                 innsatsgruppe = kandidatsøkdata.innsatsgruppe,
-                orgenhet = kandidatsøkdata.orgenhet,
             )
         }
     }

@@ -31,15 +31,10 @@ data class Etternavn(private val etternavn: String) {
     override fun toString(): String = asString
 }
 
-data class Navkontor(private val navkontor: String) {
-    init {
-        if (navkontor.isEmpty()) {
-            throw IllegalArgumentException("Navkontor kan ikke være tomt.")
-        }
-    }
-    val asString: String = navkontor
-    override fun toString(): String = asString
-}
+data class Kontor(
+    val kontornummer: String,
+    val kontornavn: String?,
+)
 
 data class VeilederNavn(private val navn: String) {
     init {
@@ -77,20 +72,6 @@ data class Innsatsgruppe(private val verdi: String) {
 }
 
 /**
- * Enhetsidentifikator for Nav-kontoret jobbsøkeren er tilknyttet (orgenhet),
- * f.eks. "1234". Brukes til tilgangsstyring for veiledere.
- */
-data class Orgenhet(private val verdi: String) {
-    init {
-        if (verdi.isEmpty()) {
-            throw IllegalArgumentException("Orgenhet kan ikke være tom.")
-        }
-    }
-    val asString: String = verdi
-    override fun toString(): String = asString
-}
-
-/**
  * Kandidatnummer brukes kun for on-demand henting fra ekstern API (kandidatsøk-api).
  * Det lagres ikke lenger i databasen, men brukes som type-sikker wrapper for API-respons.
  */
@@ -103,12 +84,11 @@ data class LeggTilJobbsøker(
     val fødselsnummer: Fødselsnummer,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
-    val navkontor: Navkontor? = null,
+    val kontor: Kontor? = null,
     val veilederNavn: VeilederNavn? = null,
     val veilederNavIdent: VeilederNavIdent? = null,
     val alder: Int? = null,
     val innsatsgruppe: Innsatsgruppe? = null,
-    val orgenhet: Orgenhet? = null,
 )
 
 enum class JobbsøkerStatus {
@@ -121,14 +101,13 @@ data class Jobbsøker(
     val fødselsnummer: Fødselsnummer,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
-    val navkontor: Navkontor?,
+    val kontor: Kontor?,
     val veilederNavn: VeilederNavn?,
     val veilederNavIdent: VeilederNavIdent?,
     val status: JobbsøkerStatus,
     val hendelser: List<JobbsøkerHendelse> = emptyList(),
     val alder: Int? = null,
     val innsatsgruppe: Innsatsgruppe? = null,
-    val orgenhet: Orgenhet? = null,
 ) {
     fun harAktivtSvarJa(): Boolean =
         status == JobbsøkerStatus.SVART_JA

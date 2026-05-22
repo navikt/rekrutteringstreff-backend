@@ -13,7 +13,7 @@ import no.nav.toi.exception.KandidatsokTilgangAvvistException
 import no.nav.toi.httpClient
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Innsatsgruppe
-import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.Kontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import org.assertj.core.api.Assertions.assertThat
@@ -49,7 +49,8 @@ class KandidatsøkKlientTest {
                             {"jobbsokerInfo":[
                               {
                                                                 "fodselsnummer": "${sisteFnr.asString}",
-                                "navkontor": "Nav Oslo",
+                                "kontornavn": "Nav Oslo",
+                                "kontornummer": "1000",
                                 "veilederNavn": "Test Veileder",
                                 "veilederNavIdent": "Z000001",
                                 "alder": 35,
@@ -79,7 +80,7 @@ class KandidatsøkKlientTest {
         assertThat(resultat[fødselsnumre.first()]).isNull()
         assertThat(resultat[sisteFnr]).isEqualTo(
             JobbsokerInfo(
-                navkontor = Navkontor("Nav Oslo"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
                 veilederNavn = VeilederNavn("Test Veileder"),
                 veilederNavIdent = VeilederNavIdent("Z000001"),
                 alder = 35,
@@ -115,7 +116,8 @@ class KandidatsøkKlientTest {
                             {"jobbsokerInfo":[
                               {
                                 "fodselsnummer": "${fødselsnummer.asString}",
-                                "navkontor": "Nav Oslo",
+                                "kontornavn": "Nav Oslo",
+                                "kontornummer": "1000",
                                 "veilederNavn": "Test Veileder",
                                 "veilederNavIdent": "z993798",
                                 "alder": 35,

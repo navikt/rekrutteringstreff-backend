@@ -53,7 +53,7 @@ class JobbsøkerServiceTest {
                 Fødselsnummer("12345678901"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
-                Navkontor("NAV Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
                 VeilederNavn("Kari Veileder"),
                 VeilederNavIdent("V123")
             ),
@@ -89,7 +89,7 @@ class JobbsøkerServiceTest {
                 Fødselsnummer("12345678901"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
-                Navkontor("NAV Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
                 VeilederNavn("Kari Veileder"),
                 VeilederNavIdent("V123")
             ),
@@ -112,7 +112,7 @@ class JobbsøkerServiceTest {
                 Fødselsnummer("12345678902"),
                 Fornavn("Geir"),
                 Etternavn("Nordmann"),
-                Navkontor("NAV Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
                 VeilederNavn("Kari Veileder"),
                 VeilederNavIdent("V123")
             ),

@@ -62,7 +62,7 @@ class ModiaKlient(
     }
 
     /**
-     * Henter alle Nav-enheter (orgenheter) som innlogget veileder er tilknyttet
+     * Henter alle Nav-enheter som innlogget veileder er tilknyttet
      * via modiacontextholder `/api/decorator`. Brukes til tilgangsstyring på
      * jobbsøkere som er tilknyttet samme kontor som veileder.
      *
