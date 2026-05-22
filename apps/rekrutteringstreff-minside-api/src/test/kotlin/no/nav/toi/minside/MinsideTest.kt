@@ -20,7 +20,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Jobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerStatus
-import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.Kontor
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
@@ -147,7 +147,7 @@ class MinsideTest {
                     fødselsnummer = Fødselsnummer(jobbsøkerFnr),
                     fornavn = Fornavn("Fornavn"),
                     etternavn = Etternavn("Etternavn"),
-                    navkontor = Navkontor("NAV Kontor"),
+                    kontor = Kontor(kontornummer = "0000", kontornavn = "Nav Kontor"),
                     veilederNavn = VeilederNavn("Veileder"),
                     veilederNavIdent = VeilederNavIdent("navIdent"),
                     status = JobbsøkerStatus.LAGT_TIL,

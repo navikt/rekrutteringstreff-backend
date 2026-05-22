@@ -11,7 +11,7 @@ import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
-import no.nav.toi.jobbsoker.dto.KontorDto
+import no.nav.toi.jobbsoker.dto.KontorOutboundDto
 import no.nav.toi.jobbsoker.dto.StatuserOutboundDto
 import no.nav.toi.jobbsoker.dto.toOutboundDto
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -163,7 +163,7 @@ class JobbsøkerInnloggetBorgerController(
             fødselsnummer = fødselsnummer.asString,
             fornavn = fornavn.asString,
             etternavn = etternavn.asString,
-            kontor = kontor?.let { KontorDto(kontornummer = it.kontornummer, kontornavn = it.kontornavn) },
+            kontor = kontor?.let { KontorOutboundDto(kontornummer = it.kontornummer, kontornavn = it.kontornavn) },
             veilederNavn = veilederNavn?.asString,
             veilederNavIdent = veilederNavIdent?.asString,
             statuser = StatuserOutboundDto(
