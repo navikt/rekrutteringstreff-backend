@@ -31,15 +31,10 @@ data class Etternavn(private val etternavn: String) {
     override fun toString(): String = asString
 }
 
-data class Navkontor(private val navkontor: String) {
-    init {
-        if (navkontor.isEmpty()) {
-            throw IllegalArgumentException("Navkontor kan ikke være tomt.")
-        }
-    }
-    val asString: String = navkontor
-    override fun toString(): String = asString
-}
+data class Kontor(
+    val kontornummer: String,
+    val kontornavn: String?,
+)
 
 data class VeilederNavn(private val navn: String) {
     init {
@@ -89,7 +84,7 @@ data class LeggTilJobbsøker(
     val fødselsnummer: Fødselsnummer,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
-    val navkontor: Navkontor? = null,
+    val kontor: Kontor? = null,
     val veilederNavn: VeilederNavn? = null,
     val veilederNavIdent: VeilederNavIdent? = null,
     val alder: Int? = null,
@@ -106,7 +101,7 @@ data class Jobbsøker(
     val fødselsnummer: Fødselsnummer,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
-    val navkontor: Navkontor?,
+    val kontor: Kontor?,
     val veilederNavn: VeilederNavn?,
     val veilederNavIdent: VeilederNavIdent?,
     val status: JobbsøkerStatus,

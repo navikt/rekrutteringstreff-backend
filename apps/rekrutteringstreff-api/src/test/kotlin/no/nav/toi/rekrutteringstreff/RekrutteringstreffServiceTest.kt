@@ -17,7 +17,7 @@ import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
-import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.Kontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.nowOslo
@@ -562,7 +562,7 @@ class RekrutteringstreffServiceTest {
                     fødselsnummer = fnr,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(navIdent),
                 )

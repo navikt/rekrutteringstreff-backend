@@ -135,7 +135,7 @@ class JobbsøkerTest {
         val fnr = Fødselsnummer("55555555555")
         val fornavn = Fornavn("Foooornavn")
         val etternavn = Etternavn("Eeeetternavn")
-        val navkontor = Navkontor("Oslo")
+        val kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo")
         val veilederNavn = VeilederNavn("Test Veileder")
         val veilederNavIdent = VeilederNavIdent("NAV001")
         val alder = 35
@@ -153,7 +153,8 @@ class JobbsøkerTest {
                             {"jobbsokerInfo":[
                               {
                                 "fodselsnummer": "${fnr.asString}",
-                                "navkontor": "${navkontor.asString}",
+                                "kontornavn": "${kontor.kontornavn}",
+                                "kontornummer": "${kontor.kontornummer}",
                                 "veilederNavn": "${veilederNavn.asString}",
                                 "veilederNavIdent": "${veilederNavIdent.asString}",
                                                                 "alder": $alder,
@@ -189,7 +190,7 @@ class JobbsøkerTest {
             assertThat(actual.fødselsnummer).isEqualTo(fnr)
             assertThat(actual.fornavn).isEqualTo(fornavn)
             assertThat(actual.etternavn).isEqualTo(etternavn)
-            assertThat(actual.navkontor).isEqualTo(navkontor)
+            assertThat(actual.kontor).isEqualTo(kontor)
             assertThat(actual.veilederNavn).isEqualTo(veilederNavn)
             assertThat(actual.veilederNavIdent).isEqualTo(veilederNavIdent)
             assertThat(actual.alder).isEqualTo(alder)
@@ -221,9 +222,9 @@ class JobbsøkerTest {
         val etternavn2 = Etternavn("Etternavn2")
         val etternavn3 = Etternavn("Etternavn3")
         val etternavn4 = Etternavn("Etternavn4")
-        val navkontor1 = Navkontor("Oslo")
-        val navkontor2 = Navkontor("Bergen")
-        val navkontor3 = Navkontor("Trondheim")
+        val kontor1 = Kontor(kontornummer = "1000", kontornavn = "Oslo")
+        val kontor2 = Kontor(kontornummer = "1000", kontornavn = "Bergen")
+        val kontor3 = Kontor(kontornummer = "1000", kontornavn = "Trondheim")
         val veilederNavn1 = VeilederNavn("Veileder1")
         val veilederNavn2 = VeilederNavn("Veileder2")
         val veilederNavn3 = VeilederNavn("Veileder3")
@@ -231,14 +232,14 @@ class JobbsøkerTest {
         val veilederNavIdent2 = VeilederNavIdent("NAV002")
         val veilederNavIdent3 = VeilederNavIdent("NAV003")
         val jobbsøkere1 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId1, fnr1, fornavn1, etternavn1, navkontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId1, fnr1, fornavn1, etternavn1, kontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL)
         )
         val jobbsøkere2 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr2, fornavn2, etternavn2, navkontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL),
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr3, fornavn3, etternavn3, navkontor2, veilederNavn2, veilederNavIdent2, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr2, fornavn2, etternavn2, kontor1, veilederNavn1, veilederNavIdent1, JobbsøkerStatus.LAGT_TIL),
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId2, fnr3, fornavn3, etternavn3, kontor2, veilederNavn2, veilederNavIdent2, JobbsøkerStatus.LAGT_TIL)
         )
         val jobbsøkere3 = listOf(
-            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId3, fnr4, fornavn4, etternavn4, navkontor3, veilederNavn3, veilederNavIdent3, JobbsøkerStatus.LAGT_TIL)
+            Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId3, fnr4, fornavn4, etternavn4, kontor3, veilederNavn3, veilederNavIdent3, JobbsøkerStatus.LAGT_TIL)
         )
         db.leggTilJobbsøkere(jobbsøkere1)
         db.leggTilJobbsøkere(jobbsøkere2)
@@ -270,7 +271,7 @@ class JobbsøkerTest {
       "fødselsnummer" : "77777777777",
       "fornavn" : "Test",
       "etternavn" : "Bruker",
-      "navkontor" : "Oslo",
+      "kontornavn" : "Oslo",
       "veilederNavn" : "Test Veileder",
       "veilederNavIdent" : "NAV007",
       "lagtTilAvNavn" : "Test Testesen"
@@ -311,7 +312,7 @@ class JobbsøkerTest {
             Fødselsnummer("11111111111"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
-            Navkontor("NAV Oslo"),
+            Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
             VeilederNavn("Veileder1"),
             VeilederNavIdent("NAV111")
         )
@@ -319,18 +320,18 @@ class JobbsøkerTest {
             Fødselsnummer("22222222222"),
             Fornavn("Kari"),
             Etternavn("Nordmann"),
-            Navkontor("NAV Bergen"),
+            Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"),
             VeilederNavn("Veileder2"),
             VeilederNavIdent("NAV222")
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.fornavn, input1.etternavn, input1.navkontor, input1.veilederNavn, input1.veilederNavIdent, JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input1.fødselsnummer, input1.fornavn, input1.etternavn, input1.kontor, input1.veilederNavn, input1.veilederNavIdent, JobbsøkerStatus.LAGT_TIL)
             )
         )
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.fornavn, input2.etternavn, input2.navkontor, input2.veilederNavn, input2.veilederNavIdent,JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, input2.fødselsnummer, input2.fornavn, input2.etternavn, input2.kontor, input2.veilederNavn, input2.veilederNavIdent,JobbsøkerStatus.LAGT_TIL)
             )
         )
         ctx.eierRepository.leggTil(treffId, listOf("A123456"))
@@ -500,7 +501,7 @@ class JobbsøkerTest {
         val fnr = Fødselsnummer("55555555555")
         val fornavn = Fornavn("Test")
         val etternavn = Etternavn("Person")
-        val navkontor = Navkontor("Oslo")
+        val kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo")
         val veilederNavn = VeilederNavn("Test Veileder")
         val veilederNavIdent = VeilederNavIdent("NAV001")
         val treffId = db.opprettRekrutteringstreffIDatabase()
@@ -510,7 +511,8 @@ class JobbsøkerTest {
           "fødselsnummer" : "${fnr.asString}",
           "fornavn" : "${fornavn.asString}",
           "etternavn" : "${etternavn.asString}",
-          "navkontor" : "${navkontor.asString}",
+          "kontornavn" : "${kontor.kontornavn}",
+          "kontornummer" : "${kontor.kontornummer}",
           "veilederNavn" : "${veilederNavn.asString}",
           "veilederNavIdent" : "${veilederNavIdent.asString}"
         }]

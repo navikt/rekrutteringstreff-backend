@@ -18,7 +18,7 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
-import no.nav.toi.jobbsoker.Navkontor
+import no.nav.toi.jobbsoker.Kontor
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
@@ -104,7 +104,7 @@ class JobbsokerControllerAutorisasjonsTest {
             fødselsnummer = Fødselsnummer("12345678902"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
-            navkontor = Navkontor("NAV Oslo"),
+            kontor = Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
             veilederNavn = VeilederNavn("Espen Askeladd"),
             veilederNavIdent = VeilederNavIdent("NAV456")
         )
@@ -134,7 +134,7 @@ class JobbsokerControllerAutorisasjonsTest {
                         "fødselsnummer": "12345678901",
                         "fornavn": "Ola",
                         "etternavn": "Nordmann",
-                        "navkontor": "NAV Oslo",
+                        "kontornavn": "NAV Oslo",
                         "veilederNavn": "Kari Nordmann",
                         "veilederNavIdent": "NAV123"
                     }

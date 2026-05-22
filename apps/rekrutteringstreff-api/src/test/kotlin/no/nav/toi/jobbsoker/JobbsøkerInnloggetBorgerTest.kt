@@ -181,7 +181,7 @@ class JobbsøkerInnloggetBorgerTest {
 
         db.leggTilJobbsøkere(
             listOf(
-                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), Navkontor("NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"), JobbsøkerStatus.LAGT_TIL)
+                Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), Kontor(kontornummer = "1000", kontornavn = "NAV En"), VeilederNavn("Veileder En"), VeilederNavIdent("V1"), JobbsøkerStatus.LAGT_TIL)
             )
         )
 
@@ -204,7 +204,7 @@ class JobbsøkerInnloggetBorgerTest {
         assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer.asString)
         assertThat(jobbsøker.fornavn).isEqualTo("Test")
         assertThat(jobbsøker.etternavn).isEqualTo("Person")
-        assertThat(jobbsøker.navkontor).isEqualTo("NAV En")
+        assertThat(jobbsøker.kontor?.kontornavn).isEqualTo("NAV En")
         assertThat(jobbsøker.veilederNavn).isEqualTo("Veileder En")
         assertThat(jobbsøker.veilederNavIdent).isEqualTo("V1")
         assertThat(jobbsøker.hendelser).hasSize(3)

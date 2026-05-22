@@ -34,7 +34,7 @@ class BorgerKlient(private val url: String, private val tokenXKlient: TokenXKlie
                 fødselsnummer = "",
                 fornavn = "",
                 etternavn = "",
-                navkontor = null,
+                kontor = null,
                 veilederNavn = null,
                 veilederNavIdent = null,
                 statuser = StatuserOutboundDto(
@@ -76,10 +76,15 @@ data class JobbsøkerMedStatuserOutboundDto(
     val fødselsnummer: String,
     val fornavn: String,
     val etternavn: String,
-    val navkontor: String?,
+    val kontor: KontorOutboundDto?,
     val veilederNavn: String?,
     val veilederNavIdent: String?,
     val statuser: StatuserOutboundDto,
+)
+
+data class KontorOutboundDto(
+    val kontornummer: String,
+    val kontornavn: String?,
 )
 
 data class StatuserOutboundDto(

@@ -84,7 +84,7 @@ class JobbsøkerOutboundTest {
                     fødselsnummer = fnr,
                     fornavn = Fornavn("Test"),
                     etternavn = Etternavn("Bruker"),
-                    navkontor = null,
+                    kontor = null,
                     veilederNavn = null,
                     veilederNavIdent = null,
                     status = JobbsøkerStatus.LAGT_TIL,

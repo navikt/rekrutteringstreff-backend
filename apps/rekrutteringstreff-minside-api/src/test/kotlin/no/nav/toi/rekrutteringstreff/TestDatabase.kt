@@ -160,7 +160,8 @@ class TestDatabase {
             SELECT js.fodselsnummer,
                    js.fornavn,
                    js.etternavn,
-                   js.navkontor,
+                   js.kontornummer,
+                   js.kontornavn,
                    js.veileder_navn,
                    js.veileder_navident,
                    rt.id as treff_id
@@ -213,7 +214,7 @@ class TestDatabase {
         fødselsnummer  = Fødselsnummer(rs.getString("fodselsnummer")),
         fornavn        = Fornavn(rs.getString("fornavn")),
         etternavn      = Etternavn(rs.getString("etternavn")),
-        navkontor      = rs.getString("navkontor")?.let(::Navkontor),
+        kontor         = rs.getString("kontornummer")?.let { nr -> Kontor(nr, rs.getString("kontornavn")) },
         veilederNavn   = rs.getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.LAGT_TIL,
@@ -248,7 +249,7 @@ class TestDatabase {
                             fødselsnummer = js.fødselsnummer,
                             fornavn = js.fornavn,
                             etternavn = js.etternavn,
-                            navkontor = js.navkontor,
+                            kontor = js.kontor,
                             veilederNavn = js.veilederNavn,
                             veilederNavIdent = js.veilederNavIdent
                         )

@@ -8,7 +8,7 @@ import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
-import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRequest
 import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
@@ -29,7 +29,7 @@ class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val jobbsøkerSokRepository: JobbsøkerSokRepository = JobbsøkerSokRepository(dataSource),
-    private val jobbsøkerFormidlingRepository: JobbsøkerFormidlingRepository = JobbsøkerFormidlingRepository(dataSource),
+    private val jobbsøkerFormidlingSokRepository: JobbsøkerFormidlingSokRepository = JobbsøkerFormidlingSokRepository(dataSource),
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
@@ -85,7 +85,7 @@ class JobbsøkerService(
         return batch.map { jobbsøker ->
             val kandidatsøkdata = kandidatsøkdataPerFødselsnummer[jobbsøker.fødselsnummer] ?: return@map jobbsøker
             jobbsøker.copy(
-                navkontor = kandidatsøkdata.navkontor,
+                kontor = kandidatsøkdata.kontor,
                 veilederNavn = kandidatsøkdata.veilederNavn,
                 veilederNavIdent = kandidatsøkdata.veilederNavIdent,
                 alder = kandidatsøkdata.alder,
@@ -322,12 +322,24 @@ class JobbsøkerService(
     fun søkJobbsøkere(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons =
         jobbsøkerSokRepository.sok(treffId, request)
 
-    fun hentJobbsøkereForFormidling(
+    fun hentAlleJobbsøkereForFormidling(
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,
-        kunForVeilederNavIdent: String? = null,
     ): JobbsøkerFormidlingRespons =
-        jobbsøkerFormidlingRepository.hentForFormidling(treffId, request, kunForVeilederNavIdent)
+        jobbsøkerFormidlingSokRepository.hentAlleForFormidling(treffId, request)
+
+    fun hentEgneJobbsøkereForFormidling(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): JobbsøkerFormidlingRespons =
+        jobbsøkerFormidlingSokRepository.hentEgneForFormidling(
+            treffId,
+            request,
+            veilederNavIdent,
+            tilknyttedeEnheter,
+        )
 
     private fun finnJobbsøkereSomSkalLagres(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,
