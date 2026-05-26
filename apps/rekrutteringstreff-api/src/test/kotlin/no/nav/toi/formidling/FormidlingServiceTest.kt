@@ -26,7 +26,7 @@ class FormidlingServiceTest {
         private lateinit var arbeidsgiverService: ArbeidsgiverService
         private lateinit var jobbsøkerService: JobbsøkerService
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
-        private lateinit var stillingKlient: StillingKlientStub
+        private lateinit var stillingKlient: StillingKlient
 
         @BeforeAll
         @JvmStatic
@@ -45,7 +45,16 @@ class FormidlingServiceTest {
             formidlingRepository = FormidlingRepository(db.dataSource)
             rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
 
-            stillingKlient = StillingKlientStub()
+            stillingKlient = StillingKlient(
+                stillingApiUrl = "",
+                stillingScope = "",
+                accessTokenClient = no.nav.toi.AccessTokenClient(
+                    clientId = "test",
+                    secret = "test",
+                    azureUrl = "http://localhost:0/token",
+                    httpClient = java.net.http.HttpClient.newBuilder().build()
+                ),
+            )
 
             formidlingService = FormidlingService(
                 db.dataSource,

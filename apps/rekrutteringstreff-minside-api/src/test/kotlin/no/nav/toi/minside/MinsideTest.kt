@@ -15,6 +15,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
@@ -91,6 +92,12 @@ class MinsideTest {
                 override val kandidatsøkKlient = no.nav.toi.kandidatsok.KandidatsøkKlient(
                     kandidatsokApiUrl = "",
                     kandidatsokScope = "",
+                    accessTokenClient = Companion.accessTokenClient,
+                    httpClient = Companion.httpClient
+                )
+               override val stillingKlient = StillingKlient(
+                    stillingApiUrl = "",
+                    stillingScope = "",
                     accessTokenClient = Companion.accessTokenClient,
                     httpClient = Companion.httpClient
                 )

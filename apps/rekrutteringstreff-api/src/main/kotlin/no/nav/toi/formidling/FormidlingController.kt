@@ -7,6 +7,7 @@ import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.authenticatedUser
 import no.nav.toi.formidling.dto.FormidlingOutboundDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
@@ -16,19 +17,18 @@ import java.util.*
 
 class FormidlingController(
     private val formidlingService: FormidlingService,
-    routes: JavalinDefaultRoutingApi,
-) {
+) : RuteRegistrerer {
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         private const val pathParamTreffId = "id"
         private const val formidlingPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/formidling"
     }
 
-    private val logger = LoggerFactory.getLogger(this::class.java)
-
-    init {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post(formidlingPath, opprettFormidlingHandler())
     }
+
+    private val logger = LoggerFactory.getLogger(this::class.java)
 
     @OpenApi(
         summary = "Opprett en formidling for et rekrutteringstreff",

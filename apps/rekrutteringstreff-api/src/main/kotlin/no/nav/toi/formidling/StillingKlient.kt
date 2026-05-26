@@ -28,23 +28,16 @@ data class OpprettFormidlingStillingRespons(
     val kandidatlisteId: UUID,
 )
 
-interface StillingKlient {
-    fun opprettFormidlingStillingOgKandidatliste(
-        opprettFormidling: OpprettRekrutteringstreffFormidling,
-        userToken: String,
-    ): OpprettFormidlingStillingRespons
-}
-
-class StillingKlientImpl(
+class StillingKlient(
     private val stillingApiUrl: String,
     private val stillingScope: String,
     private val accessTokenClient: AccessTokenClient,
     private val httpClient: HttpClient = HttpClient.newBuilder().build(),
     private val objectMapper: ObjectMapper = JacksonConfig.mapper,
-) : StillingKlient {
+) {
     fun erKonfigurert(): Boolean = stillingApiUrl.isNotBlank() && stillingScope.isNotBlank()
 
-    override fun opprettFormidlingStillingOgKandidatliste(
+    fun opprettFormidlingStillingOgKandidatliste(
         opprettFormidling: OpprettRekrutteringstreffFormidling,
         userToken: String,
     ): OpprettFormidlingStillingRespons {

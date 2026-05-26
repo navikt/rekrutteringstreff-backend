@@ -4,6 +4,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.helse.rapids_rivers.RapidApplication
+import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import java.net.http.HttpClient
@@ -103,6 +104,15 @@ open class InfrastructureContext(
         KandidatsøkKlient(
             kandidatsokApiUrl = getenv("KANDIDATSOK_API_URL"),
             kandidatsokScope = getenv("KANDIDATSOK_API_SCOPE"),
+            accessTokenClient = accessTokenClient,
+            httpClient = httpClient
+        )
+    }
+
+    open val stillingKlient: StillingKlient by lazy {
+        StillingKlient(
+            stillingApiUrl = getenv("STILLING_API_URL"),
+            stillingScope = getenv("STILLING_API_SCOPE"),
             accessTokenClient = accessTokenClient,
             httpClient = httpClient
         )
