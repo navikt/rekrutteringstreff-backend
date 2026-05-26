@@ -39,6 +39,8 @@ spec:
     outbound:
       rules:
         - application: rekrutteringsbistand-kandidatsok-api
+        - application: rekrutteringsbistand-stilling-api
+        - application: rekrutteringsbistand-kandidat-api
         - application: modiacontextholder
           namespace: personoversikt
         - application: logging
