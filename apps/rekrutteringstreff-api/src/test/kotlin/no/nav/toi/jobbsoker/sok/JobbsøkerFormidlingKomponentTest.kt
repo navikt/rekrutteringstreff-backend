@@ -457,6 +457,80 @@ class JobbsøkerFormidlingKomponentTest {
     }
 
     @Test
+    fun `formidling-egne returnerer jobbsøkere som matcher veilederident eller veileders kontor`() {
+        val eierIdent = "TESTEIER"
+        val veilederIdent = "TESTVEILEDER"
+        val annenVeilederIdent = "ANNENVEILEDER"
+        val veiledersKontor = "KONTOR-A"
+        val annetKontor = "KONTOR-B"
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"enheter":[{"enhetId":"$veiledersKontor","navn":"Kontor Test"}]}""")
+                )
+        )
+
+        fun jobbsøker(fødselsnummer: String, veilederNavIdent: String, kontornummer: String) =
+            LeggTilJobbsøker(
+                fødselsnummer = Fødselsnummer(fødselsnummer),
+                fornavn = Fornavn("Filter"),
+                etternavn = Etternavn("Rad${fødselsnummer.takeLast(2)}"),
+                veilederNavIdent = VeilederNavIdent(veilederNavIdent),
+                kontor = Kontor(kontornummer = kontornummer, kontornavn = null),
+            )
+
+        fun hentEgneFødselsnumre(treffId: TreffId): List<String> {
+            val response = httpPost(
+                formidlingEgnePath(treffId),
+                formidlingBody(),
+                navIdent = veilederIdent,
+                groups = listOf(AzureAdRoller.jobbsøkerrettet),
+            )
+            assertThat(response.statusCode()).isEqualTo(200)
+            return mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+                .jobbsøkere
+                .map { it.fødselsnummer }
+        }
+
+        val treffUtenMatch = opprettTreffMedEier(eierIdent)
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(jobbsøker("11111111111", annenVeilederIdent, annetKontor)),
+            treffUtenMatch,
+        )
+        assertThat(hentEgneFødselsnumre(treffUtenMatch)).isEmpty()
+
+        val treffMedIdentmatch = opprettTreffMedEier(eierIdent)
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(jobbsøker("22222222222", veilederIdent, annetKontor)),
+            treffMedIdentmatch,
+        )
+        assertThat(hentEgneFødselsnumre(treffMedIdentmatch)).containsExactly("22222222222")
+
+        val treffMedKontormatch = opprettTreffMedEier(eierIdent)
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(jobbsøker("33333333333", annenVeilederIdent, veiledersKontor)),
+            treffMedKontormatch,
+        )
+        assertThat(hentEgneFødselsnumre(treffMedKontormatch)).containsExactly("33333333333")
+
+        val treffMedIdentOgKontormatch = opprettTreffMedEier(eierIdent)
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                jobbsøker("44444444444", annenVeilederIdent, veiledersKontor),
+                jobbsøker("55555555555", veilederIdent, annetKontor),
+                jobbsøker("66666666666", annenVeilederIdent, annetKontor),
+            ),
+            treffMedIdentOgKontormatch,
+        )
+        assertThat(hentEgneFødselsnumre(treffMedIdentOgKontormatch))
+            .containsExactlyInAnyOrder("44444444444", "55555555555")
+    }
+
+    @Test
     fun `ikke-eier får se jobbsøker tilknyttet samme kontornummer som veileder`() {
         val eierIdent = "A123456"
         val veilederIdent = "V300003"

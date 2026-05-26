@@ -4,6 +4,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.PreparedStatement
+import java.util.UUID
 import javax.sql.DataSource
 
 class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
@@ -16,8 +17,8 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,
     ): JobbsøkerFormidlingRespons {
-        val (where, params) = byggJobbsøkerWhereForAlle(treffId, request)
-        return hentJobbsøkereMedWhere(where, params, request)
+        val where = byggJobbsøkerWhereForAlle(treffId, request)
+        return hentJobbsøkereMedWhere(where, request)
     }
 
     fun hentEgneForFormidling(
@@ -26,22 +27,21 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         veilederNavIdent: String,
         tilknyttedeEnheter: List<String>,
     ): JobbsøkerFormidlingRespons {
-        val (where, params) = byggJobbsøkerWhereForEgne(treffId, request, veilederNavIdent, tilknyttedeEnheter)
-        return hentJobbsøkereMedWhere(where, params, request)
+        val where = byggJobbsøkerWhereForEgne(treffId, request, veilederNavIdent, tilknyttedeEnheter)
+        return hentJobbsøkereMedWhere(where, request)
     }
 
     private fun hentJobbsøkereMedWhere(
-        where: String,
-        params: List<Any>,
+        where: WhereClause,
         request: JobbsøkerFormidlingRequest,
     ): JobbsøkerFormidlingRespons {
         return dataSource.executeInTransaction { conn ->
-            val totalt = hentTotaltAntallJobbsøkere(conn, where, params)
+            val totalt = hentTotaltAntallJobbsøkere(conn, where)
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val jobbsøkere = if (totalt == 0L) {
                 emptyList()
             } else {
-                hentJobbsøkere(conn, where, params, responsSide, request.antallPerSide)
+                hentJobbsøkere(conn, where, responsSide, request.antallPerSide)
             }
             JobbsøkerFormidlingRespons(
                 totalt = totalt,
@@ -60,72 +60,91 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
     private fun byggJobbsøkerWhereForAlle(
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,
-    ): Pair<String, List<Any>> {
-        val (conditions, params) = byggJobbsøkerBasisFilter(treffId, request)
-        return tilWhereClause(conditions, params)
-    }
-
-    private fun byggJobbsøkerBasisFilter(
-        treffId: TreffId,
-        request: JobbsøkerFormidlingRequest,
-    ): Pair<MutableList<String>, MutableList<Any>> {
-        val conditions = mutableListOf(
-            "rt.id = ?",
-            "j.status != 'SLETTET'",
-        )
-        val params = mutableListOf<Any>(treffId.somUuid)
-
-        request.fritekst?.takeIf { it.isNotBlank() }?.let {
-            val trimmed = it.trim()
-            if (trimmed.matches(Regex("\\d{11}"))) {
-                conditions += "j.fodselsnummer = ?"
-                params += trimmed
-            } else {
-                conditions += "(LOWER(j.fornavn) LIKE ? OR LOWER(j.etternavn) LIKE ?)"
-                params += "${trimmed.lowercase()}%"
-                params += "${trimmed.lowercase()}%"
-            }
-        }
-
-        return conditions to params
-    }
+    ): WhereClause = tilWhereClause(byggJobbsøkerBasisFilter(treffId, request))
 
     private fun byggJobbsøkerWhereForEgne(
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,
         veilederNavIdent: String,
         tilknyttedeEnheter: List<String>,
-    ): Pair<String, List<Any>> {
-        val (conditions, params) = byggJobbsøkerBasisFilter(treffId, request)
-        val rensedeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+    ): WhereClause {
+        val conditions = byggJobbsøkerBasisFilter(treffId, request) +
+            byggVeilederEllerEnhetFilter(veilederNavIdent, tilknyttedeEnheter)
 
-        if (rensedeEnheter.isEmpty()) {
-            conditions += "UPPER(j.veileder_navident) = ?"
+        return tilWhereClause(conditions)
+    }
+
+    private fun byggJobbsøkerBasisFilter(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+    ): List<Condition> = buildList {
+        add(Condition("rt.id = ?", SqlParam.Uuid(treffId.somUuid)))
+        add(Condition("j.status != 'SLETTET'"))
+        byggFritekstFilter(request.fritekst)?.let(::add)
+    }
+
+    private fun byggFritekstFilter(fritekst: String?): Condition? {
+        val trimmed = fritekst?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return if (trimmed.matches(Regex("\\d{11}"))) {
+            Condition("j.fodselsnummer = ?", SqlParam.Text(trimmed))
         } else {
-            val placeholders = rensedeEnheter.joinToString(",") { "?" }
-            conditions += "(UPPER(j.veileder_navident) = ? OR j.kontornummer IN ($placeholders))"
+            val søkeord = "${trimmed.lowercase()}%"
+            Condition(
+                "(LOWER(j.fornavn) LIKE ? OR LOWER(j.etternavn) LIKE ?)",
+                SqlParam.Text(søkeord),
+                SqlParam.Text(søkeord),
+            )
         }
-
-        params += veilederNavIdent.trim().uppercase()
-        rensedeEnheter.forEach { params += it }
-
-        return tilWhereClause(conditions, params)
     }
 
-    private fun tilWhereClause(conditions: List<String>, params: List<Any>): Pair<String, List<Any>> {
-        return "WHERE " + conditions.joinToString(" AND ") to params
+    private fun byggVeilederEllerEnhetFilter(
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): Condition {
+        val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+
+        return Condition(
+            "(UPPER(j.veileder_navident) = ? OR j.kontornummer = ANY (?::text[]))",
+            SqlParam.Text(veilederNavIdent.trim().uppercase()),
+            SqlParam.TextArray(unikeEnheter),
+        )
     }
 
-    private fun hentTotaltAntallJobbsøkere(conn: Connection, where: String, params: List<Any>): Long {
+    private fun tilWhereClause(conditions: List<Condition>): WhereClause {
+        return WhereClause(
+            sql = "WHERE " + conditions.joinToString(" AND ") { it.sql },
+            params = conditions.flatMap { it.params },
+        )
+    }
+
+    private data class WhereClause(
+        val sql: String,
+        val params: List<SqlParam>,
+    )
+
+    private data class Condition(
+        val sql: String,
+        val params: List<SqlParam> = emptyList(),
+    ) {
+        constructor(sql: String, vararg params: SqlParam) : this(sql, params.toList())
+    }
+
+    private sealed interface SqlParam {
+        data class Uuid(val value: UUID) : SqlParam
+        data class Text(val value: String) : SqlParam
+        data class TextArray(val value: List<String>) : SqlParam
+    }
+
+    private fun hentTotaltAntallJobbsøkere(conn: Connection, where: WhereClause): Long {
         val sql = """
             SELECT count(*)
             FROM jobbsoker j
             JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
-            $where
+            ${where.sql}
         """.trimIndent()
         return conn.prepareStatement(sql).use { stmt ->
             stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
-            params.forEachIndexed { i, p -> settParam(stmt, i + 1, p) }
+            settWhereParametere(stmt, where.params)
             stmt.executeQuery().use { rs ->
                 rs.next()
                 rs.getLong(1)
@@ -135,8 +154,7 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
 
     private fun hentJobbsøkere(
         conn: Connection,
-        where: String,
-        params: List<Any>,
+        where: WhereClause,
         side: Int,
         antallPerSide: Int,
     ): List<JobbsøkerFormidlingTreff> {
@@ -147,15 +165,15 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
                    j.etternavn
             FROM jobbsoker j
             JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
-            $where
+            ${where.sql}
             ORDER BY LOWER(j.etternavn), LOWER(j.fornavn), j.id
             LIMIT ? OFFSET ?
         """.trimIndent()
 
         return conn.prepareStatement(sql).use { stmt ->
             stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
-            params.forEachIndexed { i, p -> settParam(stmt, i + 1, p) }
-            val pagIdx = params.size
+            settWhereParametere(stmt, where.params)
+            val pagIdx = where.params.size
             stmt.setInt(pagIdx + 1, antallPerSide)
             stmt.setLong(pagIdx + 2, (side - 1).toLong() * antallPerSide.toLong())
             stmt.executeQuery().use { rs ->
@@ -173,14 +191,19 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         }
     }
 
-    private fun settParam(stmt: PreparedStatement, index: Int, value: Any) {
-        when (value) {
-            is java.util.UUID -> stmt.setObject(index, value)
-            is String -> stmt.setString(index, value)
-            is Int -> stmt.setInt(index, value)
-            is Long -> stmt.setLong(index, value)
-            is Boolean -> stmt.setBoolean(index, value)
-            else -> stmt.setObject(index, value)
+    private fun settWhereParametere(stmt: PreparedStatement, params: List<SqlParam>) {
+        params.forEachIndexed { index, param ->
+            settParam(stmt, index + 1, param)
+        }
+    }
+
+    private fun settParam(stmt: PreparedStatement, index: Int, param: SqlParam) {
+        when (param) {
+            is SqlParam.Uuid -> stmt.setObject(index, param.value)
+            is SqlParam.Text -> stmt.setString(index, param.value)
+            is SqlParam.TextArray -> {
+                stmt.setArray(index, stmt.connection.createArrayOf("text", param.value.toTypedArray()))
+            }
         }
     }
 }
