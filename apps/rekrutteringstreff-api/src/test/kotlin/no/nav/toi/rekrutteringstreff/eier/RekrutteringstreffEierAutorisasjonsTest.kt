@@ -6,30 +6,18 @@ import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.toi.AccessTokenClient
 import no.nav.toi.App
-import no.nav.toi.AuthenticationConfiguration
+import no.nav.toi.ApplicationContext
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.JacksonConfig
-import no.nav.toi.LeaderElectionMock
-import no.nav.toi.TestRapid
-import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.httpClient
-import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.lagToken
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.junit.jupiter.api.AfterAll
@@ -49,6 +37,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.ZonedDateTime
 import java.util.UUID
+import no.nav.toi.TestInfrastructureContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -58,64 +47,17 @@ class RekrutteringstreffEierAutorisasjonsTest {
         private val appPort = ubruktPortnr()
         private lateinit var gyldigRekrutteringstreff: TreffId
     }
-
-    private val authServer = MockOAuth2Server()
-    private val authPort = 18012
     private val database = TestDatabase()
-    private val rekrutteringstreffRepository = RekrutteringstreffRepository(database.dataSource)
-    private val eierRepository = EierRepository(database.dataSource)
-    private val jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper)
-    private val arbeidsgiverRepository = ArbeidsgiverRepository(database.dataSource, JacksonConfig.mapper)
-    private val jobbsøkerService = JobbsøkerService(database.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(database.dataSource))
-
-    private val eierService = EierService(eierRepository, rekrutteringstreffRepository, database.dataSource)
-    private val rekrutteringstreffService = RekrutteringstreffService(
-        database.dataSource,
-        rekrutteringstreffRepository = rekrutteringstreffRepository,
-        jobbsøkerRepository = JobbsøkerRepository(database.dataSource, JacksonConfig.mapper),
-        arbeidsgiverRepository = arbeidsgiverRepository,
-        jobbsøkerService = jobbsøkerService,
-        eierService = eierService
-    )
-
+    private lateinit var infra: TestInfrastructureContext
+    private lateinit var ctx: ApplicationContext
     private lateinit var app: App
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        authServer.start(port = authPort)
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = database.dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
+        infra = TestInfrastructureContext(dataSource = database.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        ctx = ApplicationContext(infra)
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -139,13 +81,13 @@ class RekrutteringstreffEierAutorisasjonsTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
     @BeforeEach
     fun setup() {
-        rekrutteringstreffService.opprett(
+        ctx.rekrutteringstreffService.opprett(
             OpprettRekrutteringstreffInternalDto(
                 "Tittel",
                 "A000001",
@@ -154,7 +96,7 @@ class RekrutteringstreffEierAutorisasjonsTest {
             )
         )
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
-        eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A1234"))
+        ctx.eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A1234"))
 
     }
 
@@ -205,7 +147,7 @@ class RekrutteringstreffEierAutorisasjonsTest {
             .uri(URI(endepunkt.url()))
             .header(
                 "Authorization",
-                "Bearer ${authServer.lagToken(authPort, groups = gruppetilhørighet.somStringListe).serialize()}"
+                "Bearer ${infra.authServer.lagToken(infra.authPort, groups = gruppetilhørighet.somStringListe).serialize()}"
             )
             .build()
 

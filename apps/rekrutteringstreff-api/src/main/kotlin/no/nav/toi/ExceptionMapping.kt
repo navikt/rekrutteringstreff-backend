@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import io.javalin.http.Context
+import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
 import io.javalin.router.JavalinDefaultRoutingApi
 import io.opentelemetry.api.trace.Span
@@ -44,7 +45,7 @@ data class ProblemDetails(
                 type = type,
                 title = throwable.javaClass.simpleName, // Tas fra exceptionen eller statusen??
                 status = status.code,
-                detail = melding ?: throwable.message ?: "Ukjent feil",
+                detail = melding ?: status.message,
                 instance = ctx.req().requestURI.toString(),
                 timestamp = timestamp,
                 traceid = traceid,
@@ -222,6 +223,39 @@ object ExceptionMapping {
                     status = HttpStatus.BAD_GATEWAY,
                     ctx = ctx,
                     feil = e.message
+                )
+            )
+        }
+
+        exception(KandidatsokTilgangAvvistException::class.java) { e, ctx ->
+            ctx.status(403).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.FORBIDDEN,
+                    ctx = ctx,
+                    feil = e.message
+                )
+            )
+        }
+
+        exception(ModiaOppslagFeiletException::class.java) { e, ctx ->
+            ctx.status(502).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.BAD_GATEWAY,
+                    ctx = ctx,
+                    feil = e.message
+                )
+            )
+        }
+
+        exception(ForbiddenResponse::class.java) { e, ctx ->
+            ctx.status(403).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.FORBIDDEN,
+                    ctx = ctx,
+                    feil = e.message ?: "Ingen tilgang"
                 )
             )
         }

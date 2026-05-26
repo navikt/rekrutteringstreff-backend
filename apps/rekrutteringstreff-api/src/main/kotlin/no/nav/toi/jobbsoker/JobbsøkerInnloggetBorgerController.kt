@@ -11,17 +11,18 @@ import io.javalin.openapi.OpenApiSecurity
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.dto.JobbsøkerMedStatuserOutboundDto
+import no.nav.toi.jobbsoker.dto.KontorOutboundDto
 import no.nav.toi.jobbsoker.dto.StatuserOutboundDto
 import no.nav.toi.jobbsoker.dto.toOutboundDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.UUID
+import no.nav.toi.RuteRegistrerer
 
 class JobbsøkerInnloggetBorgerController(
     private val jobbsøkerService: JobbsøkerService,
-    routes: JavalinDefaultRoutingApi
-) {
+) : RuteRegistrerer {
     companion object {
         private const val pathParamTreffId = "id"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -32,7 +33,7 @@ class JobbsøkerInnloggetBorgerController(
         private val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
 
-    init {
+    override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post(svarJaPath, svarJaHandler())
         routes.post(svarNeiPath, svarNeiHandler())
         routes.get(borgerJobbsøkerPath, hentBorgerJobbsøkerHandler())
@@ -97,7 +98,10 @@ class JobbsøkerInnloggetBorgerController(
               "fødselsnummer": "12345678901",
               "fornavn": "Ola",
               "etternavn": "Nordmann",
-              "navkontor": "NAV Grünerløkka",
+              "kontor": {
+                "kontornummer": "1000",
+                "kontornavn": "Nav Grünerløkka"
+              },
               "veilederNavn": "Vera Veileder",
               "veilederNavIdent": "V123456",
               "statuser": {
@@ -159,7 +163,7 @@ class JobbsøkerInnloggetBorgerController(
             fødselsnummer = fødselsnummer.asString,
             fornavn = fornavn.asString,
             etternavn = etternavn.asString,
-            navkontor = navkontor?.asString,
+            kontor = kontor?.let { KontorOutboundDto(kontornummer = it.kontornummer, kontornavn = it.kontornavn) },
             veilederNavn = veilederNavn?.asString,
             veilederNavIdent = veilederNavIdent?.asString,
             statuser = StatuserOutboundDto(

@@ -1,7 +1,5 @@
 package no.nav.toi.jobbsoker.sok
 
-import no.nav.toi.jobbsoker.JobbsøkerStatus
-
 data class JobbsøkerFormidlingRequest(
     val fritekst: String? = null,
     val side: Int = 1,
@@ -13,7 +11,6 @@ data class JobbsøkerFormidlingTreff(
     val fødselsnummer: String,
     val fornavn: String?,
     val etternavn: String?,
-    val status: JobbsøkerStatus,
 )
 
 data class JobbsøkerFormidlingRespons(

@@ -31,15 +31,10 @@ data class Etternavn(private val etternavn: String) {
     override fun toString(): String = asString
 }
 
-data class Navkontor(private val navkontor: String) {
-    init {
-        if (navkontor.isEmpty()) {
-            throw IllegalArgumentException("Navkontor kan ikke være tomt.")
-        }
-    }
-    val asString: String = navkontor
-    override fun toString(): String = asString
-}
+data class Kontor(
+    val kontornummer: String,
+    val kontornavn: String?,
+)
 
 data class VeilederNavn(private val navn: String) {
     init {
@@ -51,13 +46,28 @@ data class VeilederNavn(private val navn: String) {
     override fun toString(): String = asString
 }
 
-data class VeilederNavIdent(private val ident: String) {
-    init {
-        if (ident.isEmpty()) {
+class VeilederNavIdent(ident: String) {
+    val asString: String = ident.trim().uppercase().also {
+        if (it.isEmpty()) {
             throw IllegalArgumentException("VeilederNavIdent kan ikke være tom.")
         }
     }
-    val asString: String = ident
+
+    override fun toString(): String = asString
+
+    override fun equals(other: Any?): Boolean =
+        other is VeilederNavIdent && asString == other.asString
+
+    override fun hashCode(): Int = asString.hashCode()
+}
+
+data class Innsatsgruppe(private val verdi: String) {
+    init {
+        if (verdi.isEmpty()) {
+            throw IllegalArgumentException("Innsatsgruppe kan ikke være tom.")
+        }
+    }
+    val asString: String = verdi
     override fun toString(): String = asString
 }
 
@@ -74,9 +84,11 @@ data class LeggTilJobbsøker(
     val fødselsnummer: Fødselsnummer,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
-    val navkontor: Navkontor?,
-    val veilederNavn: VeilederNavn?,
-    val veilederNavIdent: VeilederNavIdent?,
+    val kontor: Kontor? = null,
+    val veilederNavn: VeilederNavn? = null,
+    val veilederNavIdent: VeilederNavIdent? = null,
+    val alder: Int? = null,
+    val innsatsgruppe: Innsatsgruppe? = null,
 )
 
 enum class JobbsøkerStatus {
@@ -89,11 +101,13 @@ data class Jobbsøker(
     val fødselsnummer: Fødselsnummer,
     val fornavn: Fornavn,
     val etternavn: Etternavn,
-    val navkontor: Navkontor?,
+    val kontor: Kontor?,
     val veilederNavn: VeilederNavn?,
     val veilederNavIdent: VeilederNavIdent?,
     val status: JobbsøkerStatus,
-    val hendelser: List<JobbsøkerHendelse> = emptyList()
+    val hendelser: List<JobbsøkerHendelse> = emptyList(),
+    val alder: Int? = null,
+    val innsatsgruppe: Innsatsgruppe? = null,
 ) {
     fun harAktivtSvarJa(): Boolean =
         status == JobbsøkerStatus.SVART_JA

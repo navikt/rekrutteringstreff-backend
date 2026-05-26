@@ -27,6 +27,20 @@ class EierService(
         return context.authenticatedUser().erUtvikler() || eiere.contains(navIdent)
     }
 
+    /**
+     * Sjekker om innlogget bruker har tilgang til treffet via et av kontorene
+     * treffet er tilknyttet.
+     *
+     * Brukes for arbeidsgiverrettet tilgang til formidlingslisten — gir
+     * alt-eller-ingenting-tilgang basert på treffets kontorer.
+     */
+    fun harTilgangViaTreffkontor(treffId: TreffId, tilknyttedeEnheter: List<String>): Boolean {
+        if (tilknyttedeEnheter.isEmpty()) return false
+        val treff = rekrutteringstreffRepository.hent(treffId) ?: return false
+        val tilknyttedeEnheterSet = tilknyttedeEnheter.toSet()
+        return treff.kontorer.any { it in tilknyttedeEnheterSet }
+    }
+
     fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String? = null) {
         val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")

@@ -7,7 +7,6 @@ import io.kotest.assertions.json.shouldBeJsonObject
 import io.kotest.assertions.json.shouldBeValidJson
 import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.assertions.json.shouldContainJsonKeyValue
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.utvikler
@@ -21,58 +20,30 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.LocalDateTime
 import java.util.*
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
 class AppExceptionHandlingTest {
     private val port = ubruktPortnr()
-    private val authServer = MockOAuth2Server()
-    private val authPort = ubruktPortnr()
+
+    private lateinit var infra: TestInfrastructureContext
 
     private lateinit var app: App
     private lateinit var treffId: UUID
 
     @BeforeAll
     fun start(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "clientId",
-            secret = "clientSecret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = port,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = TestDatabase().dataSource,
-            jobbsøkerrettet = jobbsøkerrettet,
-            arbeidsgiverrettet = arbeidsgiverrettet,
-            utvikler = utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
+        infra = TestInfrastructureContext(dataSource = TestDatabase().dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
 
-        authServer.start(port = authPort)
+        infra.start()
+
+        app = App(ctx = ApplicationContext(infra), port = port).also { it.start() }
         // Opprett et treff via API for å ha en gyldig id å PUT'e mot
 
         setupStubs()
-        val token = authServer.lagToken(authPort).serialize()
+        val token = infra.authServer.lagToken(infra.authPort).serialize()
         val response = httpPost(
             "http://localhost:$port/api/rekrutteringstreff",
             """{"opprettetAvNavkontorEnhetId":"0313"}""",
@@ -106,13 +77,13 @@ class AppExceptionHandlingTest {
     }
 
     @AfterAll
-    fun stop() { authServer.shutdown(); app.close() }
+    fun stop() { infra.stop(); app.close() }
 
     @Test
     fun `ugyldig JSON (JsonParseException) gir 400`() {
         val request = HttpRequest.newBuilder()
             .uri(URI("http://localhost:$port/api/rekrutteringstreff/$treffId"))
-            .header("Authorization", "Bearer ${authServer.lagToken(authPort).serialize()}")
+            .header("Authorization", "Bearer ${infra.authServer.lagToken(infra.authPort).serialize()}")
             .header("Content-Type", "application/json")
             .PUT(HttpRequest.BodyPublishers.ofString("{tittel: uten quotes}"))
             .build()
@@ -152,7 +123,7 @@ class AppExceptionHandlingTest {
 
         val request = HttpRequest.newBuilder()
             .uri(URI("http://localhost:$port/api/rekrutteringstreff/$treffId"))
-            .header("Authorization", "Bearer ${authServer.lagToken(authPort).serialize()}")
+            .header("Authorization", "Bearer ${infra.authServer.lagToken(infra.authPort).serialize()}")
             .header("Content-Type", "application/json")
             .PUT(HttpRequest.BodyPublishers.ofString(json))
             .build()
@@ -180,7 +151,7 @@ class AppExceptionHandlingTest {
 
         val request = HttpRequest.newBuilder()
             .uri(URI("http://localhost:$port/api/rekrutteringstreff/$ikkeEksisterendeId"))
-            .header("Authorization", "Bearer ${authServer.lagToken(authPort).serialize()}")
+            .header("Authorization", "Bearer ${infra.authServer.lagToken(infra.authPort).serialize()}")
             .header("Content-Type", "application/json")
             .PUT(HttpRequest.BodyPublishers.ofString(json))
             .build()

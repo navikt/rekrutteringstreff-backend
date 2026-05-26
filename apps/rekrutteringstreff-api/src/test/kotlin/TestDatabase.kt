@@ -37,7 +37,7 @@ class TestDatabase {
     fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson", lagtTilAvNavn: String? = null): List<PersonTreffId> {
         return dataSource.executeInTransaction { connection ->
             val now = Instant.now()
-            val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, opprettetAv, now)
+            val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
             val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
             jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, opprettetAv, now, lagtTilAvNavn)
             personTreffIder
@@ -505,8 +505,9 @@ class TestDatabase {
                     """
                     INSERT INTO jobbsoker
                       (id, rekrutteringstreff_id, fodselsnummer, fornavn, etternavn,
-                       navkontor, veileder_navn, veileder_navident, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       kontornavn, veileder_navn, veileder_navident, status,
+                       alder, innsatsgruppe, kontornummer)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     RETURNING jobbsoker_id
                     """.trimIndent()
                 ).apply {
@@ -515,10 +516,13 @@ class TestDatabase {
                     setString(3, js.fødselsnummer.asString)
                     setString(4, js.fornavn.asString)
                     setString(5, js.etternavn.asString)
-                    setString(6, js.navkontor?.asString)
+                    setString(6, js.kontor?.kontornavn)
                     setString(7, js.veilederNavn?.asString)
                     setString(8, js.veilederNavIdent?.asString)
                     setString(9, js.status.name)
+                    setObject(10, js.alder)
+                    setString(11, js.innsatsgruppe?.asString)
+                    setString(12, js.kontor?.kontornummer)
                 }.executeQuery().let {
                     if (it.next()) it.getLong(1) else error("Kunne ikke legge til jobbsøker")
                 }

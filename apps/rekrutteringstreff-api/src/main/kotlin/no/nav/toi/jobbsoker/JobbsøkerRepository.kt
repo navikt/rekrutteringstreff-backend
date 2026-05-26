@@ -13,6 +13,8 @@ import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
 
+internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
+
 class JobbsøkerRepository(private val dataSource: DataSource, private val mapper: ObjectMapper) {
 
     private fun PreparedStatement.execBatchReturnIds(): List<Long> =
@@ -29,7 +31,11 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         val jobbsøker: LeggTilJobbsøker,
     )
 
-    fun leggTil(connection: Connection, jobbsøkere: List<LeggTilJobbsøker>, treff: TreffId, navIdent: String, tidspunkt: Instant): List<OpprettetJobbsøker> {
+    fun leggTil(
+        connection: Connection,
+        jobbsøkere: List<LeggTilJobbsøker>,
+        treff: TreffId,
+    ): List<OpprettetJobbsøker> {
         val treffDbId = connection.treffDbId(treff)
         return connection.batchInsertJobbsøkere(treffDbId, jobbsøkere)
     }
@@ -59,13 +65,13 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     private fun Connection.batchInsertJobbsøkere(
         treffDbId: Long,
         jobbsøkere: List<LeggTilJobbsøker>,
-        maksStørrelsePerBatch: Int = 500
     ): List<OpprettetJobbsøker> {
         val sql = """
             insert into jobbsoker
-              (id, rekrutteringstreff_id,fodselsnummer,fornavn,etternavn,
-               navkontor,veileder_navn,veileder_navident,status)
-            values (?,?,?,?,?,?,?,?,?)
+              (id, rekrutteringstreff_id, fodselsnummer,
+               fornavn, etternavn, kontornavn, veileder_navn, veileder_navident, alder, innsatsgruppe,
+               kontornummer, status)
+            values (?,?,?,?,?,?,?,?,?,?,?,?)
         """.trimIndent()
         val batchRader = jobbsøkere.map { jobbsøker ->
             JobbsøkerBatchRad(
@@ -75,35 +81,28 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
 
         return prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
-            batchRader.chunked(maksStørrelsePerBatch).flatMap { batch ->
-                batch.forEach { rad ->
-                    stmt.addJobbsøkerTilBatch(
-                        personTreffId = rad.personTreffId,
-                        treffDbId = treffDbId,
-                        jobbsøker = rad.jobbsøker,
-                    )
-                }
-
-                batch.toOpprettedeJobbsøkere(stmt.execBatchReturnIds())
+            batchRader.forEach { rad ->
+                stmt.setObject(1, rad.personTreffId.somUuid)
+                stmt.setLong(2, treffDbId)
+                stmt.setString(3, rad.jobbsøker.fødselsnummer.asString)
+                stmt.setJobbsøkerData(offset = 4, jobbsøker = rad.jobbsøker)
+                stmt.setString(12, JobbsøkerStatus.LAGT_TIL.name)
+                stmt.addBatch()
             }
+
+            batchRader.toOpprettedeJobbsøkere(stmt.execBatchReturnIds())
         }
     }
 
-    private fun PreparedStatement.addJobbsøkerTilBatch(
-        personTreffId: PersonTreffId,
-        treffDbId: Long,
-        jobbsøker: LeggTilJobbsøker,
-    ) {
-        setObject(1, personTreffId.somUuid)
-        setLong(2, treffDbId)
-        setString(3, jobbsøker.fødselsnummer.asString)
-        setString(4, jobbsøker.fornavn.asString)
-        setString(5, jobbsøker.etternavn.asString)
-        setString(6, jobbsøker.navkontor?.asString)
-        setString(7, jobbsøker.veilederNavn?.asString)
-        setString(8, jobbsøker.veilederNavIdent?.asString)
-        setString(9, JobbsøkerStatus.LAGT_TIL.name)
-        addBatch()
+    private fun PreparedStatement.setJobbsøkerData(offset: Int, jobbsøker: LeggTilJobbsøker) {
+        setString(offset, jobbsøker.fornavn.asString)
+        setString(offset + 1, jobbsøker.etternavn.asString)
+        setString(offset + 2, jobbsøker.kontor?.kontornavn)
+        setString(offset + 3, jobbsøker.veilederNavn?.asString)
+        setString(offset + 4, jobbsøker.veilederNavIdent?.asString?.uppercase())
+        setObject(offset + 5, jobbsøker.alder)
+        setString(offset + 6, jobbsøker.innsatsgruppe?.asString)
+        setString(offset + 7, jobbsøker.kontor?.kontornummer)
     }
 
     private fun List<JobbsøkerBatchRad>.toOpprettedeJobbsøkere(generatedIds: List<Long>): List<OpprettetJobbsøker> =
@@ -137,7 +136,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         arrangørtype: AktørType = AktørType.ARRANGØR,
         hendelseData: String? = null,
         tidspunkt: Instant = Instant.now(),
-        maksStørrelsePerBatch: Int = 500
+        maksStørrelsePerBatch: Int = MAKS_ANTALL_JOBBSØKERE_PER_BATCH
     ) {
         val sql = """
             INSERT INTO jobbsoker_hendelse
@@ -210,16 +209,19 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.fodselsnummer,
                     js.fornavn,
                     js.etternavn,
-                    js.navkontor,
+                    js.kontornavn,
                     js.veileder_navn,
                     js.veileder_navident,
+                    js.alder,
+                    js.innsatsgruppe,
+                    js.kontornummer,
                     js.status,
                     rt.id as treff_id
                 FROM jobbsoker js
                 JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 WHERE rt.id = ? AND js.status = 'SLETTET' AND js.er_synlig = TRUE
                 GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
-                     js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+                     js.kontornavn, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, js.kontornummer, rt.id
             ORDER BY js.jobbsoker_id;
                 """.trimIndent()
         ).use { stmt ->
@@ -238,9 +240,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 js.fodselsnummer,
                 js.fornavn,
                 js.etternavn,
-                js.navkontor,
+                js.kontornavn,
                 js.veileder_navn,
                 js.veileder_navident,
+                js.alder,
+                js.innsatsgruppe,
+                js.kontornummer,
                 js.status,
                 rt.id as treff_id,
                 COALESCE(
@@ -261,7 +266,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
             WHERE rt.id = ? AND js.status != 'SLETTET' AND js.er_synlig = TRUE
             GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
-                     js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+                     js.kontornavn, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, js.kontornummer, rt.id
             ORDER BY js.jobbsoker_id;
         """.trimIndent()
 
@@ -366,11 +371,13 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         fødselsnummer = Fødselsnummer(getString("fodselsnummer")),
         fornavn = Fornavn(getString("fornavn")),
         etternavn = Etternavn(getString("etternavn")),
-        navkontor = getString("navkontor")?.let(::Navkontor),
+        kontor = toKontor(),
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.valueOf(getString("status")),
-        hendelser = parseHendelser(getString("hendelser"))
+        hendelser = parseHendelser(getString("hendelser")),
+        alder = nullableInt("alder"),
+        innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
     )
 
     private fun ResultSet.toJobbsøkerUtenHendelser() = Jobbsøker(
@@ -379,11 +386,24 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         fødselsnummer = Fødselsnummer(getString("fodselsnummer")),
         fornavn = Fornavn(getString("fornavn")),
         etternavn = Etternavn(getString("etternavn")),
-        navkontor = getString("navkontor")?.let(::Navkontor),
+        kontor = toKontor(),
         veilederNavn = getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.valueOf(getString("status")),
+        alder = nullableInt("alder"),
+        innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
     )
+
+    private fun ResultSet.toKontor(): Kontor? {
+        val kontornummer = getString("kontornummer")
+        val kontornavn = getString("kontornavn")
+        return if (kontornummer != null) Kontor(kontornummer, kontornavn) else null
+    }
+
+    private fun ResultSet.nullableInt(kolonne: String): Int? {
+        val verdi = getInt(kolonne)
+        return if (wasNull()) null else verdi
+    }
 
 
     fun hentJobbsøkerHendelser(treff: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {
@@ -447,9 +467,12 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.fodselsnummer,
                     js.fornavn,
                     js.etternavn,
-                    js.navkontor,
+                    js.kontornavn,
                     js.veileder_navn,
                     js.veileder_navident,
+                    js.alder,
+                    js.innsatsgruppe,
+                    js.kontornummer,
                     js.status,
                     rt.id as treff_id,
                     COALESCE(
@@ -470,7 +493,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
                 WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET' AND js.er_synlig = TRUE
                 GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
-                         js.navkontor, js.veileder_navn, js.veileder_navident, rt.id
+                         js.kontornavn, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, js.kontornummer, rt.id
             """
             ).use { stmt ->
                 stmt.setObject(1, treff.somUuid)
@@ -485,7 +508,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         connection: Connection,
         personTreffIder: List<PersonTreffId>,
         jobbsøkerStatus: JobbsøkerStatus,
-        maksStørrelsePerBatch: Int = 500
+        maksStørrelsePerBatch: Int = MAKS_ANTALL_JOBBSØKERE_PER_BATCH
     ) {
         val sql = """
             UPDATE jobbsoker
@@ -501,6 +524,35 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 }
                 stmt.executeBatch()
             }
+        }
+    }
+
+    fun gjenopprett(
+        connection: Connection,
+        jobbsøkere: Map<PersonTreffId, LeggTilJobbsøker>,
+    ) {
+        if (jobbsøkere.isEmpty()) return
+        val sql = """
+            UPDATE jobbsoker
+            SET fornavn = ?,
+                etternavn = ?,
+                kontornavn = ?,
+                veileder_navn = ?,
+                veileder_navident = ?,
+                alder = ?,
+                innsatsgruppe = ?,
+                kontornummer = ?,
+                status = ?
+            WHERE id = ?
+            """.trimIndent()
+        connection.prepareStatement(sql).use { stmt ->
+            jobbsøkere.forEach { (personTreffId, jobbsøker) ->
+                stmt.setJobbsøkerData(offset = 1, jobbsøker = jobbsøker)
+                stmt.setString(9, JobbsøkerStatus.LAGT_TIL.name)
+                stmt.setObject(10, personTreffId.somUuid)
+                stmt.addBatch()
+            }
+            stmt.executeBatch()
         }
     }
 

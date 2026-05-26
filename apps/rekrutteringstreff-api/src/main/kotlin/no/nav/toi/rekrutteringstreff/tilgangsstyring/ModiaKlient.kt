@@ -4,6 +4,7 @@ import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
+import no.nav.toi.exception.ModiaOppslagFeiletException
 import no.nav.toi.log
 import java.net.URI
 import java.net.http.HttpClient
@@ -59,8 +60,57 @@ class ModiaKlient(
             throw RuntimeException("Noe feil skjedde ved henting av aktiv enhet fra Modia: ", e)
         }
     }
+
+    /**
+     * Henter alle Nav-enheter som innlogget veileder er tilknyttet
+     * via modiacontextholder `/api/decorator`. Brukes til tilgangsstyring på
+     * jobbsøkere som er tilknyttet samme kontor som veileder.
+     *
+     * Returnerer tom liste hvis veileder ikke er tilknyttet noen enheter.
+     */
+    fun hentMineEnheter(innkommendeToken: String): List<String> {
+        return try {
+            val modiaUrl = "$modiaContextHolderUrl/api/decorator"
+            val accessToken = accessTokenClient.hentAccessToken(innkommendeToken = innkommendeToken, scope = modiaContextHolderScope)
+
+            fun fetch(): HttpResponse<String> {
+                val request = HttpRequest.newBuilder()
+                    .uri(URI.create(modiaUrl))
+                    .header("Authorization", "Bearer $accessToken")
+                    .GET()
+                    .build()
+                return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            }
+
+            val respons = withRetry(::fetch)
+            if (respons.statusCode() in 200..299) {
+                objectMapper.readValue(respons.body(), ModiaPerson::class.java)
+                    .enheter
+                    .map(ModiaEnhet::enhetId)
+            } else if (respons.statusCode() == 404) {
+                emptyList()
+            } else {
+                log.error("Feil ved henting av Modia-enheter. Status: ${respons.statusCode()}")
+                throw ModiaOppslagFeiletException("Klarte ikke å hente Modia-enheter. Prøv igjen senere.")
+            }
+        } catch (e: Exception) {
+            if (e is ModiaOppslagFeiletException) {
+                throw e
+            }
+            log.error("Det skjedde en feil ved henting av Modia-enheter: ${e.message}", e)
+            throw ModiaOppslagFeiletException("Klarte ikke å hente Modia-enheter. Prøv igjen senere.", e)
+        }
+    }
 }
 
 data class AktivEnhet(
     val aktivEnhet: String
+)
+
+internal data class ModiaPerson(
+    val enheter: List<ModiaEnhet> = emptyList()
+)
+
+internal data class ModiaEnhet(
+    val enhetId: String,
 )

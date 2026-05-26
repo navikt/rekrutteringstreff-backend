@@ -67,13 +67,13 @@ class JobbsøkerSokYtelsesTest {
                     .apply { setObject(1, treffUuid) }
                     .executeQuery().let { it.next(); it.getLong(1) }
 
-                val navkontorer = listOf("Nav Oslo", "Nav Bergen", "Nav Trondheim", "Nav Stavanger", "Nav Tromsø")
+                val kontornavnListe = listOf("Nav Oslo", "Nav Bergen", "Nav Trondheim", "Nav Stavanger", "Nav Tromsø")
                 val statuser = listOf("LAGT_TIL", "INVITERT", "SVART_JA", "SVART_NEI")
                 val baseTime = Instant.parse("2025-01-01T00:00:00Z")
 
                 conn.prepareStatement(
                     """
-                    INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, fornavn, etternavn, navkontor, veileder_navident, veileder_navn, id, status, er_synlig)
+                    INSERT INTO jobbsoker (rekrutteringstreff_id, fodselsnummer, fornavn, etternavn, kontornavn, veileder_navident, veileder_navn, id, status, er_synlig)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, true)
                     RETURNING jobbsoker_id
                     """.trimIndent()
@@ -89,7 +89,7 @@ class JobbsøkerSokYtelsesTest {
                             val fnr = String.format("%011d", i + 1)
                             val fornavn = "Fornavn$i"
                             val etternavn = "Etternavn${i % 100}"
-                            val navkontor = navkontorer[i % navkontorer.size]
+                            val kontornavn = kontornavnListe[i % kontornavnListe.size]
                             val veilederIdent = "NAV${String.format("%03d", i % 50)}"
                             val veilederNavn = "Veileder ${i % 50}"
                             val lagtTilDato = Timestamp.from(baseTime.plusSeconds(i.toLong()))
@@ -99,7 +99,7 @@ class JobbsøkerSokYtelsesTest {
                             jobbsokerStmt.setString(2, fnr)
                             jobbsokerStmt.setString(3, fornavn)
                             jobbsokerStmt.setString(4, etternavn)
-                            jobbsokerStmt.setString(5, navkontor)
+                            jobbsokerStmt.setString(5, kontornavn)
                             jobbsokerStmt.setString(6, veilederIdent)
                             jobbsokerStmt.setString(7, veilederNavn)
                             jobbsokerStmt.setObject(8, uuid)

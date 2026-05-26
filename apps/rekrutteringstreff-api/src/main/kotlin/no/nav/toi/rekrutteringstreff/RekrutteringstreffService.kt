@@ -222,7 +222,7 @@ class RekrutteringstreffService(
             val alleJobbsøkere = jobbsøkerRepository.hentJobbsøkere(connection, treffId)
 
             val jobbsøkereSomSkalOppdateres = alleJobbsøkere
-                .filter { jobbsøker -> jobbsøker.hendelser.any { it.hendelsestype == JobbsøkerHendelsestype.INVITERT } }
+                .filter { it.erInvitert() }
                 .map { it.personTreffId }
 
             if (jobbsøkereSomSkalOppdateres.isNotEmpty()) {

@@ -4,12 +4,10 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
-import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
@@ -18,59 +16,30 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.sql.Timestamp
 import java.time.Instant
+import no.nav.toi.TestInfrastructureContext
+import no.nav.toi.ApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
 class JobbsøkerSokKomponentTest {
 
     companion object {
-        private val authServer = MockOAuth2Server()
-        private val authPort = ubruktPortnrFra10000.ubruktPortnr()
         private val db = TestDatabase()
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
 
+        private lateinit var infra: TestInfrastructureContext
+
+        private lateinit var ctx: ApplicationContext
         private lateinit var app: App
     }
 
-    private val eierRepository = EierRepository(db.dataSource)
-
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        val accessTokenClient = AccessTokenClient(
-            clientId = "client-id",
-            secret = "secret",
-            azureUrl = "http://localhost:$authPort/token",
-            httpClient = httpClient
-        )
-        app = App(
-            port = appPort,
-            authConfigs = listOf(
-                AuthenticationConfiguration(
-                    issuer = "http://localhost:$authPort/default",
-                    jwksUri = "http://localhost:$authPort/default/jwks",
-                    audience = "rekrutteringstreff-audience"
-                )
-            ),
-            dataSource = db.dataSource,
-            jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,
-            arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-            utvikler = AzureAdRoller.utvikler,
-            kandidatsokApiUrl = "",
-            kandidatsokScope = "",
-            rapidsConnection = TestRapid(),
-            accessTokenClient = accessTokenClient,
-            modiaKlient = ModiaKlient(
-                modiaContextHolderUrl = wmInfo.httpBaseUrl,
-                modiaContextHolderScope = "",
-                accessTokenClient = accessTokenClient,
-                httpClient = httpClient
-            ),
-            pilotkontorer = listOf("1234"),
-            httpClient = httpClient,
-            leaderElection = LeaderElectionMock(),
-        ).also { it.start() }
-        authServer.start(port = authPort)
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra.start()
+        ctx = ApplicationContext(infra)
+        app = App(ctx = ctx, port = appPort).also { it.start() }
     }
 
     @BeforeEach
@@ -88,7 +57,7 @@ class JobbsøkerSokKomponentTest {
 
     @AfterAll
     fun tearDown() {
-        authServer.shutdown()
+        infra.stop()
         app.close()
     }
 
@@ -99,12 +68,12 @@ class JobbsøkerSokKomponentTest {
 
     private fun opprettTreffMedEier(navIdent: String = "A123456"): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
-        eierRepository.leggTil(treffId, listOf(navIdent))
+        ctx.eierRepository.leggTil(treffId, listOf(navIdent))
         return treffId
     }
 
     private fun httpPost(path: String, body: String, navIdent: String = "A123456"): HttpResponse<String> {
-        val token = authServer.lagToken(authPort, navIdent = navIdent)
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         val request = HttpRequest.newBuilder()
             .uri(URI.create("http://localhost:$appPort$path"))
             .header("Authorization", "Bearer ${token.serialize()}")
@@ -146,8 +115,8 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `søk uten filtre returnerer paginert respons`() {
         val treffId = opprettTreffMedEier()
-        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
-        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
+        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
+        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
         db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
 
         val response = httpPost(søkPath(treffId), søkBody())
@@ -184,7 +153,7 @@ class JobbsøkerSokKomponentTest {
                 Fødselsnummer("11111111111"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
-                Navkontor("KontorAlpha"),
+                Kontor(kontornummer = "1000", kontornavn = "KontorAlpha"),
                 VeilederNavn("Vera Veileder"),
                 VeilederNavIdent("NAV001"),
             ),
@@ -192,7 +161,7 @@ class JobbsøkerSokKomponentTest {
                 Fødselsnummer("22222222222"),
                 Fornavn("Kari"),
                 Etternavn("Hansen"),
-                Navkontor("KontorBeta"),
+                Kontor(kontornummer = "1000", kontornavn = "KontorBeta"),
                 VeilederNavn("Per Person"),
                 VeilederNavIdent("NAV002"),
             ),
@@ -229,9 +198,9 @@ class JobbsøkerSokKomponentTest {
     fun `kombinerte filtre fungerer sammen`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("Nav Oslo"), null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("Nav Bergen"), null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), Navkontor("Nav Oslo"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Kontor(kontornummer = "1000", kontornavn = "Nav Bergen"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"), null, null),
         ), treffId)
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
@@ -462,7 +431,7 @@ class JobbsøkerSokKomponentTest {
     fun `fritekst-søk med fødselsnummer returnerer treff`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("NAV Oslo"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), null, null),
             LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
         ), treffId)
 
@@ -557,7 +526,7 @@ class JobbsøkerSokKomponentTest {
     fun `søk returnerer kun jobbsøkere for riktig treff`() {
         val treff1 = opprettTreffMedEier()
         val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "AnnetTreff")
-        eierRepository.leggTil(treff2, listOf("A123456"))
+        ctx.eierRepository.leggTil(treff2, listOf("A123456"))
 
         db.leggTilJobbsøkereMedHendelse(listOf(
             LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Treff1Person"), Etternavn("A"), null, null, null),
