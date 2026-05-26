@@ -14,9 +14,10 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.formidling.FormidlingController
-import no.nav.toi.formidling.StillingKlient
+import no.nav.toi.formidling.StillingKlientImpl
 import no.nav.toi.formidling.FormidlingRepository
 import no.nav.toi.formidling.FormidlingService
+import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.JobbsøkerhendelserScheduler
@@ -98,7 +99,7 @@ class App(
             accessTokenClient = accessTokenClient,
             httpClient = httpClient
         ),
-        stillingKlient = StillingKlient(
+        stillingKlient = StillingKlientImpl(
             stillingApiUrl = stillingApiUrl,
             stillingScope = stillingApiScope,
             accessTokenClient = accessTokenClient,

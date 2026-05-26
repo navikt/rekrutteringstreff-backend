@@ -26,6 +26,7 @@ class FormidlingServiceTest {
         private lateinit var arbeidsgiverService: ArbeidsgiverService
         private lateinit var jobbsøkerService: JobbsøkerService
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
+        private lateinit var stillingKlient: StillingKlientStub
 
         @BeforeAll
         @JvmStatic
@@ -44,12 +45,15 @@ class FormidlingServiceTest {
             formidlingRepository = FormidlingRepository(db.dataSource)
             rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
 
+            stillingKlient = StillingKlientStub()
+
             formidlingService = FormidlingService(
                 db.dataSource,
                 formidlingRepository,
                 arbeidsgiverService,
                 jobbsøkerService,
-                rekrutteringstreffRepository
+                rekrutteringstreffRepository,
+                stillingKlient,
             )
         }
     }
