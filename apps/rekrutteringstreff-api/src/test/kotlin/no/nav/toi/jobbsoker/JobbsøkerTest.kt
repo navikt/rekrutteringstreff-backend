@@ -153,8 +153,8 @@ class JobbsøkerTest {
                             {"jobbsokerInfo":[
                               {
                                 "fodselsnummer": "${fnr.asString}",
-                                "kontornavn": "${kontor.kontornavn}",
-                                "kontornummer": "${kontor.kontornummer}",
+                                "navkontor": "${kontor.kontornavn}",
+                                "orgenhet": "${kontor.kontornummer}",
                                 "veilederNavn": "${veilederNavn.asString}",
                                 "veilederNavIdent": "${veilederNavIdent.asString}",
                                                                 "alder": $alder,

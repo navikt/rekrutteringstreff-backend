@@ -23,12 +23,12 @@ private data class KandidatKandidatnrResponsDto(val arenaKandidatnr: String)
 private data class JobbsokerInfoRequestDto(val fodselsnumre: List<String>)
 private data class JobbsokerInfoDto(
     val fodselsnummer: String,
-    val kontornavn: String?,
+    val navkontor: String? = null,
     val veilederNavn: String?,
     val veilederNavIdent: String?,
     val alder: Int?,
     val innsatsgruppe: String?,
-    val kontornummer: String? = null,
+    val orgenhet: String? = null,
 )
 private data class JobbsokerInfoResponsDto(val jobbsokerInfo: List<JobbsokerInfoDto>)
 
@@ -132,10 +132,10 @@ class KandidatsøkKlient(
             val respons = objectMapper.readValue(response.body(), JobbsokerInfoResponsDto::class.java)
             return respons.jobbsokerInfo.associate { dto ->
                 Fødselsnummer(dto.fodselsnummer) to JobbsokerInfo(
-                    kontor = dto.kontornummer?.takeIf(String::isNotBlank)?.let { nr ->
+                    kontor = dto.orgenhet?.takeIf(String::isNotBlank)?.let { nr ->
                         Kontor(
                             kontornummer = nr,
-                            kontornavn = dto.kontornavn?.takeIf(String::isNotBlank),
+                            kontornavn = dto.navkontor?.takeIf(String::isNotBlank),
                         )
                     },
                     veilederNavn = dto.veilederNavn?.takeIf(String::isNotBlank)?.let(::VeilederNavn),

@@ -48,9 +48,9 @@ class KandidatsøkKlientTest {
                             """
                             {"jobbsokerInfo":[
                               {
-                                                                "fodselsnummer": "${sisteFnr.asString}",
-                                "kontornavn": "Nav Oslo",
-                                "kontornummer": "1000",
+                                "fodselsnummer": "${sisteFnr.asString}",
+                                "navkontor": "Nav Oslo",
+                                "orgenhet": "1000",
                                 "veilederNavn": "Test Veileder",
                                 "veilederNavIdent": "Z000001",
                                 "alder": 35,
@@ -116,8 +116,8 @@ class KandidatsøkKlientTest {
                             {"jobbsokerInfo":[
                               {
                                 "fodselsnummer": "${fødselsnummer.asString}",
-                                "kontornavn": "Nav Oslo",
-                                "kontornummer": "1000",
+                                "navkontor": "Nav Oslo",
+                                "orgenhet": "1000",
                                 "veilederNavn": "Test Veileder",
                                 "veilederNavIdent": "z993798",
                                 "alder": 35,
