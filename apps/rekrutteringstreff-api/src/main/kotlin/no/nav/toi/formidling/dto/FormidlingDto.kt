@@ -74,7 +74,7 @@ data class LocationDto(
 )
 
 data class FormidlingOutboundDto(
-    val id: String,
+    val formidlingId: String,
     val opprettetTidspunkt: String,
 )
 
