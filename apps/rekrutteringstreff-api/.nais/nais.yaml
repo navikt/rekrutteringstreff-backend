@@ -86,6 +86,10 @@ spec:
       value: {{kandidatsok_api_url}}
     - name: KANDIDATSOK_API_SCOPE
       value: {{kandidatsok_api_scope}}
+    - name: STILLING_API_URL
+      value: {{stilling_api_url}}
+    - name: STILLING_API_SCOPE
+      value: {{stilling_api_scope}}
     - name: MODIACONTEXTHOLDER_URL
       value: {{modiacontextholder_url}}
     - name: MODIACONTEXTHOLDER_SCOPE
