@@ -53,7 +53,7 @@ class StillingKlient(
         val url = "$stillingApiUrl/rekrutteringstreff/formidling"
         val requestBodyJson = objectMapper.writeValueAsString(opprettFormidling)
 
-        fun fetch(): HttpResponse<String> {
+        fun post(): HttpResponse<String> {
             val request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
@@ -65,7 +65,7 @@ class StillingKlient(
         }
 
         try {
-            val response = withRetry(::fetch)
+            val response = withRetry(::post)
             return when (response.statusCode()) {
                 in 200..299 -> {
                     val respons = objectMapper.readValue(response.body(), OpprettFormidlingStillingRespons::class.java)

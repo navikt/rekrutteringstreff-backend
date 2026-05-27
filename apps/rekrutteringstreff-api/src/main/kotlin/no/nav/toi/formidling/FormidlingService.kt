@@ -6,6 +6,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
+import no.nav.toi.formidling.dto.ArbeidsgiverDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Jobbsøker
@@ -33,8 +34,19 @@ class FormidlingService(
         navIdent: String,
         userToken: String
     ): List<Formidling> {
-        val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(treffId, opprettFormidling)
-        val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(treffId, opprettFormidling, userToken)
+
+        val opprettFormidlignMedArbeidsgiver = opprettFormidling.copy(
+            stilling = opprettFormidling.stilling.copy(
+                employer = ArbeidsgiverDto(
+                    orgnr = opprettFormidling.orgnr,
+                )
+            )
+        )
+
+        logger.info("Prøver å oppprette formidling for rekrutteringstreff $treffId med dto: $opprettFormidlignMedArbeidsgiver")
+
+        val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(treffId, opprettFormidlignMedArbeidsgiver)
+        val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(treffId, opprettFormidlignMedArbeidsgiver, userToken)
         val formidlinger = lagreFormidlinger(treffId, jobbsøkere, arbeidsgiver, stillingIdOgKandidatlisteId.stillingId)
         leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøkere)
         endreJobbsøkerStatusOgLeggTilHendelser(formidlinger, navIdent)

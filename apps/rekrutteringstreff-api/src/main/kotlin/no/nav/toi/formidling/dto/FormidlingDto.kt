@@ -15,62 +15,62 @@ data class OpprettFormidlingDto(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class StillingDto(
-    val employer: ArbeidsgiverDto?,
-    val locationList: List<LocationDto>,
-    val categoryList: List<CategoryDto>,
+    val employer: ArbeidsgiverDto? = null,
+    val locationList: List<LocationDto> = emptyList(),
+    val categoryList: List<CategoryDto> = emptyList(),
     val properties: Map<String, String> = HashMap(),
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class CategoryDto(
-    val id: Int?,
-    val code: String?,
-    val categoryType: String?,
-    val name: String?,
-    val description: String?,
-    val parentId: Int?
+    val id: Int? = null,
+    val code: String? = null,
+    val categoryType: String? = null,
+    val name: String? = null,
+    val description: String? = null,
+    val parentId: Int? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 class ArbeidsgiverDto(
-    val id: Int?,
-    val uuid: String?,
-    val created: String?,
-    val createdBy: String?,
-    val updated: String?,
-    val updatedBy: String?,
+    val id: Int? = null,
+    val uuid: String? = null,
+    val created: String? = null,
+    val createdBy: String? = null,
+    val updated: String? = null,
+    val updatedBy: String? = null,
     val contactList: List<ContactDto> = ArrayList(),
-    val location: LocationDto?,
+    val location: LocationDto? = null,
     val locationList: List<LocationDto> = ArrayList(),
     val properties: Map<String, String> = HashMap(),
-    val name: String?,
-    val orgnr: String?,
-    val status: String?,
-    val parentOrgnr: String?,
-    val publicName: String?,
-    val deactivated: LocalDateTime?,
-    val orgform: String?,
-    val employees: Int?
+    val name: String? = null,
+    val orgnr: String? = null,
+    val status: String? = null,
+    val parentOrgnr: String? = null,
+    val publicName: String? = null,
+    val deactivated: LocalDateTime? = null,
+    val orgform: String? = null,
+    val employees: Int? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class ContactDto(
-    val name: String?,
-    val email: String?,
-    val phone: String?,
-    val role: String?,
-    val title: String?
+    val name: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+    val role: String? = null,
+    val title: String? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class LocationDto(
-    val address: String?,
-    val postalCode: String?,
-    val county: String?,
-    val municipal: String?,
-    val municipalCode: String?,
-    val city: String?,
-    val country: String?,
+    val address: String? = null,
+    val postalCode: String? = null,
+    val county: String? = null,
+    val municipal: String? = null,
+    val municipalCode: String? = null,
+    val city: String? = null,
+    val country: String? = null,
 )
 
 data class FormidlingOutboundDto(
