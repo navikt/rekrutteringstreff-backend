@@ -54,8 +54,9 @@ class FormidlingController(
         methods = [HttpMethod.POST]
     )
     private fun opprettFormidlingHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+        logger.info("Opprett en formidling for rekrutteringstreff $treffId")
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val dto = ctx.bodyAsClass<OpprettFormidlingDto>()
         val navIdent = ctx.extractNavIdent()
         val userToken = ctx.attribute<String>("raw_token")
