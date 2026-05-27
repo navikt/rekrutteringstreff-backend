@@ -107,6 +107,9 @@ class AutentiseringAlleEndepunkterTest {
         KiOppdaterManuell(Metode.PUT, "/api/rekrutteringstreff/{id}/ki/logg/{loggId}/manuell"),
         KiListLogg(Metode.GET, "/api/rekrutteringstreff/{id}/ki/logg"),
         KiGetLogg(Metode.GET, "/api/rekrutteringstreff/{id}/ki/logg/{loggId}"),
+
+        // Formidling controller
+         OpprettFormidling(Metode.POST, "/api/rekrutteringstreff/{id}/formidling"),
     }
 
     private fun url(endepunkt: Endepunkt): String {

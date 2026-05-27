@@ -59,9 +59,9 @@ class FormidlingController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         val dto = ctx.bodyAsClass<OpprettFormidlingDto>()
         val navIdent = ctx.extractNavIdent()
-        val userToken = ctx.attribute<String>("raw_token")
-            ?: throw io.javalin.http.UnauthorizedResponse("Missing token")
+        val userToken = ctx.authenticatedUser().innkommendeToken()
         try {
+            logger.info("Prøver å opprette en formidling for rekrutteringstreff $treffId - arbeidsgiver: ${dto.orgnr}")
             val opprettede = formidlingService.opprettFormidling(treffId, dto, navIdent, userToken)
             logger.info("Opprettet ${opprettede.size} formidlinger for treff $treffId")
             ctx.status(201).json(opprettede.map { it.toOutboundDto() })
