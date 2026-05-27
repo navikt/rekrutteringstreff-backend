@@ -7,7 +7,6 @@ import java.util.HashMap
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpprettFormidlingDto(
-    val rekrutteringstreffId: String,
     val eierNavKontorEnhetId: String,
     val orgnr: String,
     val fødselsnumre: List<String>,
@@ -16,7 +15,7 @@ data class OpprettFormidlingDto(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class StillingDto(
-    val employer: ArbeidsgiverDto,
+    val employer: ArbeidsgiverDto?,
     val locationList: List<LocationDto>,
     val categoryList: List<CategoryDto>,
     val properties: Map<String, String> = HashMap(),
@@ -32,6 +31,7 @@ data class CategoryDto(
     val parentId: Int?
 )
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 class ArbeidsgiverDto(
     val id: Int?,
     val uuid: String?,

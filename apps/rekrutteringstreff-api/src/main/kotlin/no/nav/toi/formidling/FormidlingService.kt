@@ -27,34 +27,42 @@ class FormidlingService(
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    fun opprettFormidling(opprettFormidling: OpprettFormidlingDto, navIdent: String, userToken: String): List<Formidling> {
-        val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(opprettFormidling)
-        val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(opprettFormidling, userToken)
-        val formidlinger = lagreFormidlinger(TreffId(opprettFormidling.rekrutteringstreffId), jobbsøkere, arbeidsgiver, stillingIdOgKandidatlisteId.stillingId)
+    fun opprettFormidling(
+        treffId: TreffId,
+        opprettFormidling: OpprettFormidlingDto,
+        navIdent: String,
+        userToken: String
+    ): List<Formidling> {
+        val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(treffId, opprettFormidling)
+        val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(treffId, opprettFormidling, userToken)
+        val formidlinger = lagreFormidlinger(treffId, jobbsøkere, arbeidsgiver, stillingIdOgKandidatlisteId.stillingId)
         leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøkere)
         endreJobbsøkerStatusOgLeggTilHendelser(formidlinger, navIdent)
         return formidlinger
     }
 
-    private fun validerOgHentArbeidsgivereOgJobbsøkere(opprettFormidling: OpprettFormidlingDto): Pair<Arbeidsgiver, List<Jobbsøker>> {
-        val rekrutteringstreffId = TreffId(opprettFormidling.rekrutteringstreffId)
-        rekrutteringstreffRepository.hent(rekrutteringstreffId)
-            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id ${rekrutteringstreffId} finnes ikke")
+    private fun validerOgHentArbeidsgivereOgJobbsøkere(treffId: TreffId, opprettFormidling: OpprettFormidlingDto): Pair<Arbeidsgiver, List<Jobbsøker>> {
+        rekrutteringstreffRepository.hent(treffId)
+            ?: throw RekrutteringstreffIkkeFunnetException("Rekrutteringstreff med id $treffId finnes ikke")
 
-        val arbeidsgiver = arbeidsgiverService.hentArbeidsgiver(rekrutteringstreffId, Orgnr(opprettFormidling.orgnr))
+        val arbeidsgiver = arbeidsgiverService.hentArbeidsgiver(treffId, Orgnr(opprettFormidling.orgnr))
             ?: throw ArbeidsgiverIkkeFunnetException("Arbeidsgiver med orgnr ${opprettFormidling.orgnr} finnes ikke på treffet")
 
         val jobbsøkere = opprettFormidling.fødselsnumre.map { fnr ->
-            jobbsøkerService.hentJobbsøker(rekrutteringstreffId, Fødselsnummer(fnr))
+            jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(fnr))
                 ?: throw JobbsøkerIkkeFunnetPåTreffException("Jobbsøker med fødselsnummer $fnr finnes ikke på treffet")
         }
         return Pair(arbeidsgiver, jobbsøkere)
     }
 
-    private fun opprettStillingOgKandidatliste(opprettFormidling: OpprettFormidlingDto, userToken: String): OpprettFormidlingStillingRespons {
+    private fun opprettStillingOgKandidatliste(
+        treffId: TreffId,
+        opprettFormidling: OpprettFormidlingDto,
+        userToken: String
+    ): OpprettFormidlingStillingRespons {
         val request = OpprettRekrutteringstreffFormidling(
             eierNavKontorEnhetId = opprettFormidling.eierNavKontorEnhetId,
-            rekrutteringstreffId = UUID.fromString(opprettFormidling.rekrutteringstreffId),
+            rekrutteringstreffId = treffId.somUuid,
             stilling = opprettFormidling.stilling,
         )
         return stillingKlient.opprettFormidlingStillingOgKandidatliste(request, userToken)
