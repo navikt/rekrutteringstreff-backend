@@ -87,7 +87,7 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
             fødselsnummer = Fødselsnummer("12345678902"),
             fornavn = Fornavn("Kari"),
             etternavn = Etternavn("Nordmann"),
-            navkontor = Navkontor("NAV Oslo"),
+            kontor = Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
             veilederNavn = VeilederNavn("Espen Askeladd"),
             veilederNavIdent = VeilederNavIdent("NAV456")
         )

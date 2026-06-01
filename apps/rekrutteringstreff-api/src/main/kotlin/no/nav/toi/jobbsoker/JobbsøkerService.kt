@@ -1,10 +1,14 @@
 package no.nav.toi.jobbsoker
 
-import no.nav.toi.*
+import no.nav.toi.AktørType
+import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.SecureLog
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
+import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.*
+import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -18,16 +22,10 @@ data class LeggTilJobbsøkereResultat(
 class JobbsøkerService(
     private val dataSource: DataSource,
     private val jobbsøkerRepository: JobbsøkerRepository,
-    private val jobbsøkerSokRepository: JobbsøkerSokRepository,
-    private val jobbsøkerFormidlingRepository: JobbsøkerFormidlingRepository =
-        JobbsøkerFormidlingRepository(dataSource),
+    private val jobbsøkerSokRepository: JobbsøkerSokRepository = JobbsøkerSokRepository(dataSource),
+    private val jobbsøkerFormidlingSokRepository: JobbsøkerFormidlingSokRepository = JobbsøkerFormidlingSokRepository(dataSource),
+    private val kandidatsøkKlient: KandidatsøkKlient? = null,
 ) {
-    constructor(dataSource: DataSource, jobbsøkerRepository: JobbsøkerRepository) : this(
-        dataSource,
-        jobbsøkerRepository,
-        JobbsøkerSokRepository(dataSource),
-        JobbsøkerFormidlingRepository(dataSource),
-    )
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
 
@@ -36,20 +34,58 @@ class JobbsøkerService(
         treffId: TreffId,
         navIdent: String,
         lagtTilAvNavn: String? = null,
+        innkommendeToken: String? = null,
     ): LeggTilJobbsøkereResultat {
         val eksisterendeJobbsøkere = hentJobbsøkere(treffId)
-        val slettedeJobbsøkere = hentSlettedeJobbsøkereUtenHendelser(treffId)
-        val nyeJobbsøkere = finnNyeJobbsøkere(jobbsøkere, eksisterendeJobbsøkere, slettedeJobbsøkere)
-        val gjenopprettedeJobbsøkere = finnGjenopprettedeJobbsøkere(jobbsøkere, slettedeJobbsøkere)
+        val personTreffIdForGjenoppretting = hentSlettedeJobbsøkereUtenHendelser(treffId)
+            .associate { it.fødselsnummer to it.personTreffId }
+        val jobbsøkereSomSkalLagres = finnJobbsøkereSomSkalLagres(
+            ønskedeJobbsøkere = jobbsøkere,
+            eksisterendeJobbsøkere = eksisterendeJobbsøkere,
+        )
+        val berikedeJobbsøkerBatcher = jobbsøkereSomSkalLagres
+            .chunked(MAKS_ANTALL_JOBBSØKERE_PER_BATCH)
+            .map { batch -> berikJobbsøkerBatch(batch, innkommendeToken) }
 
         dataSource.executeInTransaction { connection ->
-            opprettNyeJobbsøkere(connection, nyeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
-            gjenopprettJobbsøkere(connection, gjenopprettedeJobbsøkere, treffId, navIdent, lagtTilAvNavn)
+            berikedeJobbsøkerBatcher.forEach { batch ->
+                leggTilJobbsøkerBatch(
+                    connection = connection,
+                    batch = batch,
+                    personTreffIdForGjenoppretting = personTreffIdForGjenoppretting,
+                    treffId = treffId,
+                    navIdent = navIdent,
+                    lagtTilAvNavn = lagtTilAvNavn,
+                )
+            }
         }
 
         return LeggTilJobbsøkereResultat(
-            antallLagtTil = nyeJobbsøkere.size + gjenopprettedeJobbsøkere.size,
+            antallLagtTil = jobbsøkereSomSkalLagres.size,
         )
+    }
+
+    private fun berikJobbsøkerBatch(
+        batch: List<LeggTilJobbsøker>,
+        innkommendeToken: String?,
+    ): List<LeggTilJobbsøker> {
+        if (batch.isEmpty() || innkommendeToken == null) return batch
+        val klient = kandidatsøkKlient?.takeIf { it.erKonfigurert() } ?: return batch
+
+        val kandidatsøkdataPerFødselsnummer = klient.hentJobbsokerInfo(
+            fødselsnumre = batch.map { it.fødselsnummer },
+            innkommendeToken = innkommendeToken,
+        )
+        return batch.map { jobbsøker ->
+            val kandidatsøkdata = kandidatsøkdataPerFødselsnummer[jobbsøker.fødselsnummer] ?: return@map jobbsøker
+            jobbsøker.copy(
+                kontor = kandidatsøkdata.kontor,
+                veilederNavn = kandidatsøkdata.veilederNavn,
+                veilederNavIdent = kandidatsøkdata.veilederNavIdent,
+                alder = kandidatsøkdata.alder,
+                innsatsgruppe = kandidatsøkdata.innsatsgruppe,
+            )
+        }
     }
 
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
@@ -247,7 +283,7 @@ class JobbsøkerService(
      * Dekker både svar fra jobbsøker selv og svar lagt inn av eier på vegne av jobbsøker.
      */
     fun finnJobbsøkereMedAktivtSvarJa(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
-        return jobbsøkere.filter { it.status == JobbsøkerStatus.SVART_JA }
+        return jobbsøkere.filter { it.harAktivtSvarJa() }
     }
 
     /**
@@ -260,7 +296,7 @@ class JobbsøkerService(
     }
 
     fun skalVarslesOmEndringer(jobbsøker: Jobbsøker): Boolean =
-        jobbsøker.status == JobbsøkerStatus.SVART_JA
+        jobbsøker.harAktivtSvarJa()
 
     fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
         return dataSource.executeInTransaction { connection ->
@@ -280,74 +316,84 @@ class JobbsøkerService(
     fun søkJobbsøkere(treffId: TreffId, request: JobbsøkerSøkRequest): JobbsøkerSøkRespons =
         jobbsøkerSokRepository.sok(treffId, request)
 
-    fun hentJobbsøkereForFormidling(
+    fun hentAlleJobbsøkereForFormidling(
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,
-        kunForVeilederNavIdent: String? = null,
     ): JobbsøkerFormidlingRespons =
-        jobbsøkerFormidlingRepository.hentForFormidling(treffId, request, kunForVeilederNavIdent)
+        jobbsøkerFormidlingSokRepository.hentAlleForFormidling(treffId, request)
 
-    private fun finnNyeJobbsøkere(
+    fun hentEgneJobbsøkereForFormidling(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): JobbsøkerFormidlingRespons =
+        jobbsøkerFormidlingSokRepository.hentEgneForFormidling(
+            treffId,
+            request,
+            veilederNavIdent,
+            tilknyttedeEnheter,
+        )
+
+    private fun finnJobbsøkereSomSkalLagres(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,
         eksisterendeJobbsøkere: List<Jobbsøker>,
-        slettedeJobbsøkere: List<Jobbsøker>,
     ): List<LeggTilJobbsøker> {
         val eksisterendeFødselsnumre = eksisterendeJobbsøkere.map { it.fødselsnummer }.toSet()
-        val slettedeFødselsnumre = slettedeJobbsøkere.map { it.fødselsnummer }.toSet()
-        return ønskedeJobbsøkere.filterNot {
-            it.fødselsnummer in eksisterendeFødselsnumre || it.fødselsnummer in slettedeFødselsnumre
+        return ønskedeJobbsøkere
+            .filterNot { it.fødselsnummer in eksisterendeFødselsnumre }
+            .distinctBy { it.fødselsnummer }
+    }
+
+    private fun leggTilJobbsøkerBatch(
+        connection: java.sql.Connection,
+        batch: List<LeggTilJobbsøker>,
+        personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,
+        treffId: TreffId,
+        navIdent: String,
+        lagtTilAvNavn: String?,
+    ) {
+        val personTreffIder = leggTilEllerGjenopprett(
+            connection = connection,
+            batch = batch,
+            treffId = treffId,
+            personTreffIdForGjenoppretting = personTreffIdForGjenoppretting,
+        )
+        if (personTreffIder.isNotEmpty()) {
+            jobbsøkerRepository.leggTilOpprettetHendelser(
+                connection = connection,
+                personTreffIder = personTreffIder,
+                opprettetAv = navIdent,
+                tidspunkt = Instant.now(),
+                lagtTilAvNavn = lagtTilAvNavn,
+            )
         }
     }
 
-    private fun finnGjenopprettedeJobbsøkere(
-        ønskedeJobbsøkere: List<LeggTilJobbsøker>,
-        slettedeJobbsøkere: List<Jobbsøker>,
+    private fun leggTilEllerGjenopprett(
+        connection: java.sql.Connection,
+        batch: List<LeggTilJobbsøker>,
+        treffId: TreffId,
+        personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,
     ): List<PersonTreffId> {
-        val ønskedeFødselsnumre = ønskedeJobbsøkere.map { it.fødselsnummer }.toSet()
-        return slettedeJobbsøkere
-            .filter { it.fødselsnummer in ønskedeFødselsnumre }
-            .map { it.personTreffId }
-    }
-
-    private fun opprettNyeJobbsøkere(
-        connection: java.sql.Connection,
-        jobbsøkere: List<LeggTilJobbsøker>,
-        treffId: TreffId,
-        navIdent: String,
-        lagtTilAvNavn: String?,
-    ) {
-        if (jobbsøkere.isEmpty()) return
-
-        log.info("Legger til ${jobbsøkere.size} nye jobbsøkere for treff $treffId")
-        val now = Instant.now()
-        val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId, navIdent, now)
-        val personTreffIder = opprettedeJobbsøkere.map { it.personTreffId }
-
-        jobbsøkerRepository.leggTilOpprettetHendelser(connection, personTreffIder, navIdent, now, lagtTilAvNavn)
-    }
-
-    private fun gjenopprettJobbsøkere(
-        connection: java.sql.Connection,
-        personTreffIder: List<PersonTreffId>,
-        treffId: TreffId,
-        navIdent: String,
-        lagtTilAvNavn: String?,
-    ) {
-        if (personTreffIder.isEmpty()) return
-
-        log.info("Gjenoppretter ${personTreffIder.size} jobbsøkere for treff $treffId som tidligere har vært slettet")
-        jobbsøkerRepository.endreStatus(
-            connection = connection,
-            personTreffIder = personTreffIder,
-            jobbsøkerStatus = JobbsøkerStatus.LAGT_TIL,
+        val (jobbsøkereSomSkalGjenopprettes, nyeJobbsøkere) = batch
+            .partition { it.fødselsnummer in personTreffIdForGjenoppretting }
+        val opprettedePersonTreffIder = if (nyeJobbsøkere.isEmpty()) {
+            emptyList()
+        } else {
+            jobbsøkerRepository.leggTil(connection, nyeJobbsøkere, treffId).map { it.personTreffId }
+        }
+        val jobbsøkereForGjenoppretting = jobbsøkereSomSkalGjenopprettes.associateBy(
+            keySelector = { personTreffIdForGjenoppretting.getValue(it.fødselsnummer) },
+            valueTransform = { it },
         )
-        jobbsøkerRepository.leggTilOpprettetHendelser(
-            connection = connection,
-            personTreffIder = personTreffIder,
-            opprettetAv = navIdent,
-            tidspunkt = Instant.now(),
-            lagtTilAvNavn = lagtTilAvNavn,
-        )
+        val gjenopprettedePersonTreffIder = if (jobbsøkereForGjenoppretting.isEmpty()) {
+            emptyList()
+        } else {
+            jobbsøkerRepository.gjenopprett(connection, jobbsøkereForGjenoppretting)
+            jobbsøkereForGjenoppretting.keys.toList()
+        }
+        return opprettedePersonTreffIder + gjenopprettedePersonTreffIder
     }
 }
 

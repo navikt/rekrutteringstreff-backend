@@ -590,6 +590,6 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(body.has("type")).isTrue()
         assertThat(body.has("title")).isTrue()
         assertThat(body.get("status").asInt()).isEqualTo(400)
-        assertThat(body.get("detail").asText()).contains("Ugyldig visning")
+        assertThat(body.get("feil").asText()).contains("Ugyldig visning")
     }
 }

@@ -40,6 +40,7 @@ interface AuthenticatedUser {
     fun extractKontorId(): String?
     fun verifiserAutorisasjon(vararg arbeidsgiverRettet: Rolle)
     fun extractPid(): String
+    fun innkommendeToken(): String
     fun erUtvikler(): Boolean = false
 
     companion object {
@@ -51,14 +52,17 @@ interface AuthenticatedUser {
         ): AuthenticatedUser {
             val navIdentClaim = jwt.getClaim(NAV_IDENT_CLAIM)
             return if (navIdentClaim.isMissing) {
-                AuthenticatedCitizenUser(jwt.getClaim(PID_CLAIM).asString())
+                AuthenticatedCitizenUser(
+                    pid = jwt.getClaim(PID_CLAIM).asString(),
+                    token = jwt.token,
+                )
             } else {
                 AuthenticatedNavUser(
                     navIdent = navIdentClaim.asString(),
                     roller = jwt.getClaim("groups")
                         .asList(UUID::class.java)
                         .let(rolleUuidSpesifikasjon::rollerForUuider),
-                    jwt = jwt.token,
+                    token = jwt.token,
                     modiaKlient = modiaKlient,
                     pilotkontorer = pilotkontorer
                 )
@@ -74,7 +78,7 @@ interface AuthenticatedUser {
 private class AuthenticatedNavUser(
     private val navIdent: String,
     private val roller: Set<Rolle>,
-    private val jwt: String,
+    private val token: String,
     private val modiaKlient: ModiaKlient,
     private val pilotkontorer: List<String>
 ) : AuthenticatedUser {
@@ -86,7 +90,7 @@ private class AuthenticatedNavUser(
         } else if (erUtvikler()) {
             return
         } else {
-            veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(jwt)
+            veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(token)
             if (veiledersKontor.isNullOrEmpty()) {
                 throw ForbiddenResponse("Finner ikke veileders innloggede kontor")
             } else if (veiledersKontor !in pilotkontorer) {
@@ -97,13 +101,15 @@ private class AuthenticatedNavUser(
 
     fun erEnAvRollene(vararg gyldigeRoller: Rolle) = roller.any { it in (gyldigeRoller.toList() + Rolle.UTVIKLER) }
     override fun extractNavIdent() = navIdent
-    override fun extractKontorId() = veiledersKontor ?: modiaKlient.hentVeiledersAktivEnhet(jwt)
+    override fun extractKontorId() = veiledersKontor ?: modiaKlient.hentVeiledersAktivEnhet(token)
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
+    override fun innkommendeToken() = token
     override fun erUtvikler() = roller.any { it == Rolle.UTVIKLER }
 }
 
 private class AuthenticatedCitizenUser(
-    private val pid: String
+    private val pid: String,
+    private val token: String,
 ) : AuthenticatedUser {
     override fun extractNavIdent() = throw ForbiddenResponse()
     override fun extractKontorId() = throw ForbiddenResponse()
@@ -112,6 +118,7 @@ private class AuthenticatedCitizenUser(
     }
 
     override fun extractPid(): String = pid
+    override fun innkommendeToken() = token
 }
 
 
@@ -128,8 +135,6 @@ fun JavalinDefaultRoutingApi.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             val token = ctx.header(Header.AUTHORIZATION)
                 ?.removePrefix("Bearer ")
                 ?.trim() ?: throw UnauthorizedResponse("Missing token")
-
-            ctx.attribute("raw_token", token)
 
             val decoded = verifyJwt(verifiers, token)
             ctx.attribute(

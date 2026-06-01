@@ -3,7 +3,6 @@ package no.nav.toi.jobbsoker
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
-import io.javalin.http.InternalServerErrorResponse
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.RuteRegistrerer
@@ -16,6 +15,9 @@ import java.util.*
 
 data class KandidatnummerDto(val kandidatnummer: String)
 
+/**
+ * Denne controlleren henter data om personene utenom rekrutteirngstreff, foreløpig fra kandidatsøket.
+ */
 class JobbsøkerOutboundController(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val kandidatsøkKlient: KandidatsøkKlient,
@@ -55,17 +57,19 @@ class JobbsøkerOutboundController(
         methods = [HttpMethod.GET]
     )
     private fun hentKandidatnummerHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
+        val innloggetBruker = ctx.authenticatedUser()
+        // Om vi legger til veiledertilganger her, må vi huske å sjekke at at veileder skal ha tilgang til den enkelte kandidaten, ikke bare at veileder har tilgang til treffet. Det er enklere å legge til veiledertilganger i frontend og sjekke at veileder har tilgang til treffet, enn å legge til logikk i backend for å sjekke at veileder har tilgang til den enkelte kandidaten.
+        // Foreløpig brukes den bare et sted som kun trenger arbeidsgiverrettet tilgang, så vi har bare droppet veiledertilgangen.
+        innloggetBruker.verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.UTVIKLER)
 
         val personTreffId = PersonTreffId(ctx.pathParam(pathParamPersonTreffId))
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
-        val userToken = ctx.attribute<String>("raw_token")
-            ?: throw InternalServerErrorResponse("Raw token ikke funnet i context")
-        val navIdent = ctx.authenticatedUser().extractNavIdent()
+        val innkommendeToken = innloggetBruker.innkommendeToken()
+        val navIdent = innloggetBruker.extractNavIdent()
 
         if (eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)) {
             jobbsøkerRepository.hentFødselsnummer(personTreffId)?.let { fødselsnummer ->
-                kandidatsøkKlient.hentKandidatnummer(fødselsnummer, userToken)?.let { kandidatnummer ->
+                kandidatsøkKlient.hentKandidatnummer(fødselsnummer, innkommendeToken)?.let { kandidatnummer ->
                     ctx.json(KandidatnummerDto(kandidatnummer.asString))
                 } ?: ctx.status(HttpStatus.NOT_FOUND)
             } ?: ctx.status(HttpStatus.NOT_FOUND)

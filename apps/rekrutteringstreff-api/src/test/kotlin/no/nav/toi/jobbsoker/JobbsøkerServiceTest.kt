@@ -53,7 +53,7 @@ class JobbsøkerServiceTest {
                 Fødselsnummer("12345678901"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
-                Navkontor("NAV Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
                 VeilederNavn("Kari Veileder"),
                 VeilederNavIdent("V123")
             ),
@@ -89,7 +89,7 @@ class JobbsøkerServiceTest {
                 Fødselsnummer("12345678901"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
-                Navkontor("NAV Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
                 VeilederNavn("Kari Veileder"),
                 VeilederNavIdent("V123")
             ),
@@ -112,7 +112,7 @@ class JobbsøkerServiceTest {
                 Fødselsnummer("12345678902"),
                 Fornavn("Geir"),
                 Etternavn("Nordmann"),
-                Navkontor("NAV Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
                 VeilederNavn("Kari Veileder"),
                 VeilederNavIdent("V123")
             ),
@@ -128,6 +128,24 @@ class JobbsøkerServiceTest {
         jobbsøkerService.leggTilJobbsøkere(flereJobbsøkere, treffId, "testperson")
         val hentedeFlereJobbsøkere = jobbsøkerService.hentJobbsøkere(treffId)
         assertThat(hentedeFlereJobbsøkere).hasSize(3)
+    }
+
+    @Test
+    fun `leggTilJobbsøkere skal kunne lagre mer enn en batch`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val antallJobbsøkere = MAKS_ANTALL_JOBBSØKERE_PER_BATCH + 1
+        val jobbsøkere = (1..antallJobbsøkere).map { indeks ->
+            LeggTilJobbsøker(
+                fødselsnummer = Fødselsnummer(indeks.toString().padStart(11, '0')),
+                fornavn = Fornavn("Fornavn$indeks"),
+                etternavn = Etternavn("Etternavn$indeks"),
+            )
+        }
+
+        val resultat = jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
+
+        assertThat(resultat.antallLagtTil).isEqualTo(antallJobbsøkere)
+        assertThat(jobbsøkerService.hentJobbsøkere(treffId)).hasSize(antallJobbsøkere)
     }
 
     @Test
@@ -687,6 +705,24 @@ class JobbsøkerServiceTest {
         assertThat(jobbsøkereListe).hasSize(1)
         assertThat(jobbsøkereListe.first().fødselsnummer).isEqualTo(fnr)
         assertThat(jobbsøkereListe.first().personTreffId).isEqualTo(personTreffId)
+    }
+
+    @Test
+    fun `leggTilJobbsøkere gjenoppretter slettet jobbsøker kun én gang ved duplikat i samme kall`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = Fødselsnummer("12345678901")
+        val jobbsøkerData = LeggTilJobbsøker(fnr, Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøkerData), treffId, "testperson")
+        val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
+        jobbsøkerService.markerSlettet(personTreffId, treffId, "testperson")
+
+        jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøkerData, jobbsøkerData.copy()), treffId, "testperson")
+
+        val jobbsøkereListe = jobbsøkerService.hentJobbsøkere(treffId)
+        assertThat(jobbsøkereListe).hasSize(1)
+        assertThat(jobbsøkereListe.first().personTreffId).isEqualTo(personTreffId)
+        assertThat(jobbsøkereListe.first().fødselsnummer).isEqualTo(fnr)
     }
 
     @Test

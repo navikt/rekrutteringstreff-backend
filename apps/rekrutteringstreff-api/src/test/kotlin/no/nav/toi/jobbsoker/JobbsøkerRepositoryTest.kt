@@ -43,7 +43,7 @@ class JobbsøkerRepositoryTest {
             Fødselsnummer("12345678901"),
             Fornavn("Ola"),
             Etternavn("Nordmann"),
-            Navkontor("NAV Oslo"),
+            Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"),
             VeilederNavn("Kari Nordmann"),
             VeilederNavIdent("NAV123"))
         )
@@ -55,7 +55,7 @@ class JobbsøkerRepositoryTest {
         assertThat(js.fødselsnummer.asString).isEqualTo("12345678901")
         assertThat(js.fornavn.asString).isEqualTo("Ola")
         assertThat(js.etternavn.asString).isEqualTo("Nordmann")
-        assertThat(js.navkontor?.asString).isEqualTo("NAV Oslo")
+        assertThat(js.kontor?.kontornavn).isEqualTo("NAV Oslo")
         assertThat(js.veilederNavn?.asString).isEqualTo("Kari Nordmann")
         assertThat(js.veilederNavIdent?.asString).isEqualTo("NAV123")
         assertThat(js.hendelser).hasSize(1)
@@ -86,7 +86,7 @@ class JobbsøkerRepositoryTest {
         assertThat(js.fødselsnummer.asString).isEqualTo("98765432109")
         assertThat(js.fornavn.asString).isEqualTo("Knut")
         assertThat(js.etternavn.asString).isEqualTo("Hansen")
-        assertThat(js.navkontor).isNull()
+        assertThat(js.kontor).isNull()
         assertThat(js.veilederNavn).isNull()
         assertThat(js.veilederNavIdent).isNull()
         assertThat(js.hendelser).hasSize(1)
@@ -109,7 +109,7 @@ class JobbsøkerRepositoryTest {
                 Fødselsnummer("11111111111"),
                 Fornavn("Fornavn1"),
                 Etternavn("Etternavn1"),
-                Navkontor("Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                 VeilederNavn("Veileder1"),
                 VeilederNavIdent("NAV1"),
                 JobbsøkerStatus.INVITERT,
@@ -122,7 +122,7 @@ class JobbsøkerRepositoryTest {
                 Fødselsnummer("22222222222"),
                 Fornavn("Fornavn2"),
                 Etternavn("Etternavn2"),
-                Navkontor("Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                 VeilederNavn("Veileder1"),
                 VeilederNavIdent("NAV1"),
                 JobbsøkerStatus.INVITERT,
@@ -133,7 +133,7 @@ class JobbsøkerRepositoryTest {
                 Fødselsnummer("33333333333"),
                 Fornavn("Fornavn3"),
                 Etternavn("Etternavn3"),
-                Navkontor("Bergen"),
+                Kontor(kontornummer = "1000", kontornavn = "Bergen"),
                 VeilederNavn("Veileder2"),
                 VeilederNavIdent("NAV2"),
                 JobbsøkerStatus.INVITERT,
@@ -165,7 +165,7 @@ class JobbsøkerRepositoryTest {
             fødselsnummer1,
             Fornavn("Fornavn1"),
             Etternavn("Etternavn1"),
-            Navkontor("NAV Test"),
+            Kontor(kontornummer = "1000", kontornavn = "NAV Test"),
             VeilederNavn("Veileder Test"),
             VeilederNavIdent("V123456")
         )
@@ -184,7 +184,7 @@ class JobbsøkerRepositoryTest {
         assertThat(jobbsøker.fødselsnummer).isEqualTo(fødselsnummer1)
         assertThat(jobbsøker.fornavn.asString).isEqualTo("Fornavn1")
         assertThat(jobbsøker.etternavn.asString).isEqualTo("Etternavn1")
-        assertThat(jobbsøker.navkontor?.asString).isEqualTo("NAV Test")
+        assertThat(jobbsøker.kontor?.kontornavn).isEqualTo("NAV Test")
         assertThat(jobbsøker.veilederNavn?.asString).isEqualTo("Veileder Test")
         assertThat(jobbsøker.veilederNavIdent?.asString).isEqualTo("V123456")
         assertThat(jobbsøker.treffId).isEqualTo(treffId)
@@ -204,7 +204,7 @@ class JobbsøkerRepositoryTest {
                 Fødselsnummer("12345678901"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
-                Navkontor("Nav Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
                 VeilederNavn("Kari Nordmann"),
                 VeilederNavIdent("NAV123")
             ),
@@ -212,7 +212,7 @@ class JobbsøkerRepositoryTest {
                 Fødselsnummer("12345678902"),
                 Fornavn("Ole"),
                 Etternavn("Nordmann"),
-                Navkontor("Nav Oslo"),
+                Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
                 VeilederNavn("Kari Nordmann"),
                 VeilederNavIdent("NAV123")
             )
@@ -232,7 +232,7 @@ class JobbsøkerRepositoryTest {
                 fødselsnummer = Fødselsnummer("12345678901"),
                 fornavn = Fornavn("Ola"),
                 etternavn = Etternavn("Nordmann"),
-                navkontor = Navkontor("Nav Oslo"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.INVITERT,
@@ -243,7 +243,7 @@ class JobbsøkerRepositoryTest {
                 fødselsnummer = Fødselsnummer("12345678902"),
                 fornavn = Fornavn("Ole"),
                 etternavn = Etternavn("Nordmann"),
-                navkontor = Navkontor("Nav Oslo"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.SVART_JA,
@@ -254,7 +254,7 @@ class JobbsøkerRepositoryTest {
                 fødselsnummer = Fødselsnummer("12345678903"),
                 fornavn = Fornavn("Dole"),
                 etternavn = Etternavn("Nordmann"),
-                navkontor = Navkontor("Nav Oslo"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.SVART_JA,
@@ -274,7 +274,7 @@ class JobbsøkerRepositoryTest {
             Fødselsnummer("11223344556"),
             Fornavn("Emil"),
             Etternavn("Hansen"),
-            Navkontor("NAV Bergen"),
+            Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"),
             VeilederNavn("Lars"),
             VeilederNavIdent("NAV456"))
         )
@@ -418,6 +418,53 @@ class JobbsøkerRepositoryTest {
         }
         val alleJobbsøkereEtterSletting = repository.hentJobbsøkere(treffId)
         assertThat(alleJobbsøkereEtterSletting).hasSize(0)
+    }
+
+    @Test
+    fun `gjenopprett oppdaterer status og fersk jobbsøkerdata`() {
+        val navIdent = "testperson"
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "Test")
+        val opprinneligJobbsøker = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Fornavn("Gammelt"),
+            Etternavn("Navn"),
+            Kontor(kontornummer = "1000", kontornavn = "Nav Gammel"),
+            VeilederNavn("Gammel Veileder"),
+            VeilederNavIdent("Z000001"),
+            alder = 35,
+            innsatsgruppe = Innsatsgruppe("STANDARD_INNSATS"),
+        )
+        val personTreffId = db.leggTilJobbsøkereMedHendelse(listOf(opprinneligJobbsøker), treffId, navIdent).first()
+        db.dataSource.connection.use { connection ->
+            repository.endreStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
+        }
+
+        val oppdatertJobbsøker = LeggTilJobbsøker(
+            Fødselsnummer("12345678901"),
+            Fornavn("Oppdatert"),
+            Etternavn("Person"),
+            Kontor(kontornummer = "1000", kontornavn = "Nav Oppdatert"),
+            VeilederNavn("Oppdatert Veileder"),
+            VeilederNavIdent("Z999999"),
+            alder = 42,
+            innsatsgruppe = Innsatsgruppe("SITUASJONSBESTEMT_INNSATS"),
+        )
+
+        db.dataSource.connection.use { connection ->
+            repository.gjenopprett(connection, mapOf(personTreffId to oppdatertJobbsøker))
+        }
+
+        val gjenopprettetJobbsøker = repository.hentJobbsøker(treffId, oppdatertJobbsøker.fødselsnummer)
+        assertThat(gjenopprettetJobbsøker).isNotNull
+        assertThat(gjenopprettetJobbsøker!!.personTreffId).isEqualTo(personTreffId)
+        assertThat(gjenopprettetJobbsøker.status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
+        assertThat(gjenopprettetJobbsøker.fornavn).isEqualTo(Fornavn("Oppdatert"))
+        assertThat(gjenopprettetJobbsøker.etternavn).isEqualTo(Etternavn("Person"))
+        assertThat(gjenopprettetJobbsøker.kontor).isEqualTo(Kontor(kontornummer = "1000", kontornavn = "Nav Oppdatert"))
+        assertThat(gjenopprettetJobbsøker.veilederNavn).isEqualTo(VeilederNavn("Oppdatert Veileder"))
+        assertThat(gjenopprettetJobbsøker.veilederNavIdent).isEqualTo(VeilederNavIdent("Z999999"))
+        assertThat(gjenopprettetJobbsøker.alder).isEqualTo(42)
+        assertThat(gjenopprettetJobbsøker.innsatsgruppe).isEqualTo(Innsatsgruppe("SITUASJONSBESTEMT_INNSATS"))
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

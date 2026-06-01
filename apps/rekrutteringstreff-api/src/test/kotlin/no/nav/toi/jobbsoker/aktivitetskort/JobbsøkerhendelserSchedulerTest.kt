@@ -1,5 +1,6 @@
 package no.nav.toi.jobbsoker.aktivitetskort
 
+
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionMock
@@ -1281,7 +1282,7 @@ class JobbsøkerhendelserSchedulerTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent("Z123456"),
                 )

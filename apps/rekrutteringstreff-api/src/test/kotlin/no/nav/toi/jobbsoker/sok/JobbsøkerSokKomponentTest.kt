@@ -111,8 +111,8 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `søk uten filtre returnerer paginert respons`() {
         val treffId = opprettTreffMedEier()
-        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
-        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
+        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
+        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
         db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
 
         val response = httpPost(søkPath(treffId), søkBody())
@@ -149,7 +149,7 @@ class JobbsøkerSokKomponentTest {
                 Fødselsnummer("11111111111"),
                 Fornavn("Ola"),
                 Etternavn("Nordmann"),
-                Navkontor("KontorAlpha"),
+                Kontor(kontornummer = "1000", kontornavn = "KontorAlpha"),
                 VeilederNavn("Vera Veileder"),
                 VeilederNavIdent("NAV001"),
             ),
@@ -157,7 +157,7 @@ class JobbsøkerSokKomponentTest {
                 Fødselsnummer("22222222222"),
                 Fornavn("Kari"),
                 Etternavn("Hansen"),
-                Navkontor("KontorBeta"),
+                Kontor(kontornummer = "1000", kontornavn = "KontorBeta"),
                 VeilederNavn("Per Person"),
                 VeilederNavIdent("NAV002"),
             ),
@@ -194,9 +194,9 @@ class JobbsøkerSokKomponentTest {
     fun `kombinerte filtre fungerer sammen`() {
         val treffId = opprettTreffMedEier()
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("Nav Oslo"), null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Navkontor("Nav Bergen"), null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), Navkontor("Nav Oslo"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Kontor(kontornummer = "1000", kontornavn = "Nav Bergen"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"), null, null),
         ), treffId)
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
@@ -427,7 +427,7 @@ class JobbsøkerSokKomponentTest {
     fun `fritekst-søk med fødselsnummer returnerer treff`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Navkontor("NAV Oslo"), null, null),
+            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), null, null),
             LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
         ), treffId)
 

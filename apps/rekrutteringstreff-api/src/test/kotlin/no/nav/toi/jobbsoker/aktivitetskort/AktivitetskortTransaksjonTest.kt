@@ -70,7 +70,7 @@ class AktivitetskortTransaksjonTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent("Z123456"),
                 )
@@ -106,7 +106,7 @@ class AktivitetskortTransaksjonTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent("Z123456"),
                 )

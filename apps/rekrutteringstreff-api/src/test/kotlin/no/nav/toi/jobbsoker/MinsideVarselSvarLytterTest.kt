@@ -52,7 +52,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
@@ -121,7 +121,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
@@ -175,7 +175,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
@@ -217,7 +217,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
@@ -283,7 +283,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
@@ -331,7 +331,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
@@ -389,7 +389,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
@@ -434,7 +434,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
@@ -483,7 +483,7 @@ class MinsideVarselSvarLytterTest {
                     fødselsnummer = fødselsnummer,
                     fornavn = Fornavn("Ola"),
                     etternavn = Etternavn("Nordmann"),
-                    navkontor = Navkontor("Oslo"),
+                    kontor = Kontor(kontornummer = "1000", kontornavn = "Oslo"),
                     veilederNavn = VeilederNavn("Kari Veileder"),
                     veilederNavIdent = VeilederNavIdent(endretAvIdent),
                 )
