@@ -5,7 +5,7 @@ import no.nav.toi.rekrutteringstreff.KiLoggTestInsert
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.ki.KiLoggRepository
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
-import no.nav.toi.rekrutteringstreff.ki.SystemPrompt
+import no.nav.toi.rekrutteringstreff.ki.client.SystemPrompt
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach

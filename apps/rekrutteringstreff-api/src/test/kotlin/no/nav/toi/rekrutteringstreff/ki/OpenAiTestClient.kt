@@ -6,6 +6,7 @@ import no.nav.toi.JacksonConfig
 import no.nav.toi.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
+import no.nav.toi.rekrutteringstreff.ki.client.SystemPrompt
 import java.lang.Thread.sleep
 import java.net.URI
 import java.net.http.HttpClient

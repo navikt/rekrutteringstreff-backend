@@ -3,6 +3,8 @@ package no.nav.toi
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.kandidatsok.KandidatsøkKlient
+import no.nav.toi.rekrutteringstreff.ki.client.DefaultOpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.client.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import javax.sql.DataSource
@@ -66,6 +68,14 @@ class TestInfrastructureContext(
         accessTokenClient = accessTokenClient,
         httpClient = httpClient,
     )
+
+    override val openAiProperties: OpenAiProperties = OpenAiProperties(
+        apiUrl = "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
+        apiKey = "test-key",
+        kiVersjon =  "toi-gpt-4.1",
+    )
+
+    override val openAiKlient = DefaultOpenAiClient(httpClient, openAiProperties)
 
     fun start() { authServer.start(port = authPort) }
     fun stop() { authServer.shutdown() }

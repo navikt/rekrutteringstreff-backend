@@ -1,8 +1,13 @@
 package no.nav.toi.rekrutteringstreff
 
 import io.javalin.http.NotFoundResponse
-import no.nav.toi.*
-import no.nav.toi.rekrutteringstreff.dto.*
+import no.nav.toi.AktørType
+import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.atOslo
+import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
+import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
+import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
+import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp

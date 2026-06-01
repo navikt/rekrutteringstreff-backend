@@ -1,14 +1,18 @@
 package no.nav.toi.rekrutteringstreff.ki
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
-import no.nav.toi.rekrutteringstreff.*
+import no.nav.toi.rekrutteringstreff.KiLoggTestInsert
+import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
-import com.fasterxml.jackson.module.kotlin.readValue
-
+import no.nav.toi.rekrutteringstreff.ki.client.SystemPrompt
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KiLoggRepositoryTest {

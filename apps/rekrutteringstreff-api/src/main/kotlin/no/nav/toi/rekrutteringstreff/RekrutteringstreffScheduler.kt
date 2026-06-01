@@ -1,14 +1,8 @@
 package no.nav.toi.rekrutteringstreff
 
 import io.opentelemetry.instrumentation.annotations.WithSpan
-import no.nav.toi.DefaultScheduler
-import no.nav.toi.LeaderElectionInterface
-import no.nav.toi.ScheduledTask
-import no.nav.toi.Scheduler
-import no.nav.toi.log
-import java.util.concurrent.Executors
+import no.nav.toi.*
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 class RekrutteringstreffScheduler(
     private val rekrutteringstreffService: RekrutteringstreffService,

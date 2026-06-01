@@ -7,17 +7,12 @@ import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
-import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingSokRepository
-import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRequest
-import no.nav.toi.jobbsoker.sok.JobbsøkerFormidlingRespons
-import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
-import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
-import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRespons
+import no.nav.toi.jobbsoker.sok.*
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.TreffId
-import java.time.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import javax.sql.DataSource
 
 data class LeggTilJobbsøkereResultat(

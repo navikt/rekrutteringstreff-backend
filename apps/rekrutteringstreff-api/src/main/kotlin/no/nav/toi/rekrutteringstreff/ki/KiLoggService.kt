@@ -2,10 +2,10 @@ package no.nav.toi.rekrutteringstreff.ki
 
 import no.nav.toi.exception.KiValideringsException
 import no.nav.toi.log
-import java.util.UUID
+import java.util.*
 
 class KiLoggService(
-    private val kiLoggRepository: KiLoggRepository
+    private val kiLoggRepository: KiLoggRepository,
 ) {
     companion object {
         private const val MANGLER_VALIDERING = "KI_VALIDERING_MANGLER"

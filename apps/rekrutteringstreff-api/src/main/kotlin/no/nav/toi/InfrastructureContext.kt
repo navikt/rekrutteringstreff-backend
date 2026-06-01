@@ -6,17 +6,21 @@ import com.zaxxer.hikari.HikariDataSource
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.kandidatsok.KandidatsøkKlient
+import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.client.DefaultOpenAiClient
+import no.nav.toi.rekrutteringstreff.ki.client.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import java.net.http.HttpClient
 import java.util.*
 import javax.sql.DataSource
+import kotlin.getValue
 
 @Suppress("MemberVisibilityCanBePrivate")
 open class InfrastructureContext(
     private val env: Map<String, String> = System.getenv()
 ) {
     private fun getenv(key: String): String =
-        env[key] ?: throw NullPointerException("Det finnes ingen miljøvariabel med navn [$key]")
+        env[key] ?: throw IllegalStateException("Det finnes ingen miljøvariabel med navn [$key]")
 
     open val dataSource: DataSource by lazy {
         HikariConfig().apply {
@@ -107,6 +111,18 @@ open class InfrastructureContext(
             accessTokenClient = accessTokenClient,
             httpClient = httpClient
         )
+    }
+
+    open val openAiProperties: OpenAiProperties by lazy {
+        OpenAiProperties(
+            apiUrl = getenv("OPENAI_API_URL"),
+            apiKey = getenv("OPENAI_API_KEY"),
+            kiVersjon = getenv("OPENAI_DEPLOYMENT")
+        )
+    }
+
+    open val openAiKlient: OpenAiClient by lazy {
+        DefaultOpenAiClient(httpClient, openAiProperties)
     }
 
     open val stillingKlient: StillingKlient by lazy {

@@ -4,7 +4,7 @@ import no.nav.toi.JobbsøkerHendelsestype
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 import javax.sql.DataSource
 
 class AktivitetskortRepository(private val dataSource: DataSource) {

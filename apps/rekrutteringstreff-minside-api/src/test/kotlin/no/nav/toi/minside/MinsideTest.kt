@@ -26,6 +26,7 @@ import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.minside.ubruktPortnrFra9000.ubruktPortnr
+import no.nav.toi.rekrutteringstreff.ki.client.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
@@ -100,6 +101,11 @@ class MinsideTest {
                     stillingScope = "",
                     accessTokenClient = Companion.accessTokenClient,
                     httpClient = Companion.httpClient
+                )
+                override val openAiProperties: OpenAiProperties = OpenAiProperties(
+                    apiUrl = "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
+                    apiKey = "test-key",
+                    kiVersjon =  "toi-gpt-4.1",
                 )
             }),
             port = rekrutteringsTreffApiPort,

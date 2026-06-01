@@ -7,21 +7,14 @@ import io.kotest.assertions.json.shouldBeJsonObject
 import io.kotest.assertions.json.shouldBeValidJson
 import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.assertions.json.shouldContainJsonKeyValue
-import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
-import no.nav.toi.AzureAdRoller.jobbsøkerrettet
-import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.time.LocalDateTime
 import java.util.*
-import no.nav.toi.TestInfrastructureContext
-import no.nav.toi.ApplicationContext
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -35,10 +28,7 @@ class AppExceptionHandlingTest {
 
     @BeforeAll
     fun start(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = TestDatabase().dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
-
-        infra.start()
-
+        infra = TestInfrastructureContext(dataSource = TestDatabase().dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
         app = App(ctx = ApplicationContext(infra), port = port).also { it.start() }
         // Opprett et treff via API for å ha en gyldig id å PUT'e mot
 

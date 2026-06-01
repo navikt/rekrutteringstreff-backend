@@ -5,15 +5,9 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
-import no.nav.toi.jobbsoker.Etternavn
-import no.nav.toi.jobbsoker.Fornavn
-import no.nav.toi.jobbsoker.Fødselsnummer
-import no.nav.toi.jobbsoker.Jobbsøker
-import no.nav.toi.jobbsoker.JobbsøkerStatus
-import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI
@@ -21,9 +15,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.sql.Timestamp
 import java.time.Instant
-import java.util.UUID
-import no.nav.toi.TestInfrastructureContext
-import no.nav.toi.ApplicationContext
+import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -35,14 +27,12 @@ class RekrutteringstreffSokKomponenttest {
         private val mapper = JacksonConfig.mapper
 
         private lateinit var infra: TestInfrastructureContext
-
         private lateinit var app: App
     }
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = db.dataSource, pilotkontorer = listOf("0315"), modiaKlientUrl = wmInfo.httpBaseUrl)
-        infra.start()
+        infra = TestInfrastructureContext(dataSource = db.dataSource, pilotkontorer = listOf("0315"), modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
         app = App(ctx = ApplicationContext(infra), port = appPort).also { it.start() }
     }
 
