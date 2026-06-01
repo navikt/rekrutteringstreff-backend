@@ -84,7 +84,7 @@ class FormidlingService(
         stillingId: OpprettFormidlingStillingRespons,
         jobbsøkere: List<Jobbsøker>
     ) {
-//       TODO("Not yet implemented")
+        //       TODO("Not yet implemented")
     }
 
     private fun lagreFormidlinger(
