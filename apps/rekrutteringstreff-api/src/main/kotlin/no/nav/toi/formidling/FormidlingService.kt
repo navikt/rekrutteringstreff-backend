@@ -47,7 +47,7 @@ class FormidlingService(
 
         val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(treffId, opprettFormidlignMedArbeidsgiver)
         val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(treffId, opprettFormidlignMedArbeidsgiver, userToken)
-        val formidlinger = lagreFormidlinger(treffId, jobbsøkere, arbeidsgiver, stillingIdOgKandidatlisteId.stillingId)
+        val formidlinger = lagreFormidlinger(treffId, jobbsøkere, arbeidsgiver, stillingIdOgKandidatlisteId.stillingsId)
         leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøkere)
         endreJobbsøkerStatusOgLeggTilHendelser(formidlinger, navIdent)
         return formidlinger

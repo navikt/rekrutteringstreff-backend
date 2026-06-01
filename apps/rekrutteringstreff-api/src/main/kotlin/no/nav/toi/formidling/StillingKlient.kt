@@ -24,7 +24,7 @@ data class OpprettRekrutteringstreffFormidling(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpprettFormidlingStillingRespons(
-    val stillingId: UUID,
+    val stillingsId: UUID,
     val kandidatlisteId: UUID,
 )
 
@@ -69,7 +69,7 @@ class StillingKlient(
             return when (response.statusCode()) {
                 in 200..299 -> {
                     val respons = objectMapper.readValue(response.body(), OpprettFormidlingStillingRespons::class.java)
-                    log.info("Stilling og kandidatliste opprettet med stillingId=${respons.stillingId} og kandidatlisteId=${respons.kandidatlisteId}")
+                    log.info("Stilling og kandidatliste opprettet med stillingId=${respons.stillingsId} og kandidatlisteId=${respons.kandidatlisteId}")
                     respons
                 }
                 else -> {
