@@ -34,20 +34,10 @@ class FormidlingService(
         navIdent: String,
         userToken: String
     ): List<Formidling> {
+        logger.info("Prøver å oppprette formidling for rekrutteringstreff $treffId med dto: $opprettFormidling")
 
-        val opprettFormidlignMedArbeidsgiver = opprettFormidling.copy(
-            stilling = opprettFormidling.stilling.copy(
-                employer = ArbeidsgiverDto(
-                    orgnr = opprettFormidling.orgnr,
-                    name = "Ukjent", // TODO: Få denne fra frontend
-                )
-            )
-        )
-
-        logger.info("Prøver å oppprette formidling for rekrutteringstreff $treffId med dto: $opprettFormidlignMedArbeidsgiver")
-
-        val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(treffId, opprettFormidlignMedArbeidsgiver)
-        val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(treffId, opprettFormidlignMedArbeidsgiver, userToken)
+        val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(treffId, opprettFormidling)
+        val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(treffId, opprettFormidling, userToken)
         val formidlinger = lagreFormidlinger(treffId, jobbsøkere, arbeidsgiver, stillingIdOgKandidatlisteId.stillingsId)
         leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøkere)
         endreJobbsøkerStatusOgLeggTilHendelser(formidlinger, navIdent)
