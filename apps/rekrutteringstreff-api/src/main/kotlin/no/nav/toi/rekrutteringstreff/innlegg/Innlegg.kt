@@ -1,7 +1,7 @@
 package no.nav.toi.rekrutteringstreff.innlegg
 
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 
 data class Innlegg(
     val id: UUID,

@@ -1,13 +1,14 @@
 package no.nav.toi.rekrutteringstreff
 
-import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
+import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.JacksonConfig
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.dto.*
@@ -17,7 +18,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.ZonedDateTime
 import java.util.*
-import no.nav.toi.RuteRegistrerer
 
 class RekrutteringstreffController(
     private val rekrutteringstreffService: RekrutteringstreffService,

@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff.ki
+package no.nav.toi.rekrutteringstreff.ki.client
 
 import java.security.MessageDigest
 import java.time.LocalDateTime

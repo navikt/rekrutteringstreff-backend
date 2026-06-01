@@ -1,10 +1,6 @@
 package no.nav.toi.arbeidsgiver.dto
 
-import no.nav.toi.arbeidsgiver.ArbeidsgiverMedBehov
-import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
-import no.nav.toi.arbeidsgiver.Orgnr
-import no.nav.toi.arbeidsgiver.Orgnavn
-import no.nav.toi.arbeidsgiver.Næringskode
+import no.nav.toi.arbeidsgiver.*
 
 data class ArbeidsgiverMedBehovDto(
     val arbeidsgiverTreffId: String,

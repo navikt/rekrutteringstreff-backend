@@ -1,11 +1,12 @@
 package no.nav.toi.rekrutteringstreff.innlegg
 
-import io.javalin.openapi.*
 import io.javalin.http.Context
-import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.ForbiddenResponse
 import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
+import io.javalin.openapi.*
+import io.javalin.router.JavalinDefaultRoutingApi
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -13,8 +14,6 @@ import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import java.net.HttpURLConnection.*
 import java.util.UUID
-import no.nav.toi.RuteRegistrerer
-
 
 class InnleggController(
     private val innleggService: InnleggService,

@@ -1,12 +1,12 @@
 package no.nav.toi.rekrutteringstreff.sok
 
-import io.javalin.router.JavalinDefaultRoutingApi
 import io.javalin.http.Context
 import io.javalin.openapi.*
+import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.authenticatedUser
-import no.nav.toi.RuteRegistrerer
 
 class RekrutteringstreffSokController(
     private val sokService: RekrutteringstreffSokService,
