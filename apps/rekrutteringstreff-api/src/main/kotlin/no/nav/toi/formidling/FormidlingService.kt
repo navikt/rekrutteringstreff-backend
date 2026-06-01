@@ -39,6 +39,7 @@ class FormidlingService(
             stilling = opprettFormidling.stilling.copy(
                 employer = ArbeidsgiverDto(
                     orgnr = opprettFormidling.orgnr,
+                    name = "Ukjent", // TODO: Få denne fra frontend
                 )
             )
         )

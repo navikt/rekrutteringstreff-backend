@@ -74,6 +74,7 @@ class FormidlingController(
 
     private fun Formidling.toOutboundDto() = FormidlingOutboundDto(
         formidlingId = id.toString(),
+        stillingId = stillingId.toString(),
         opprettetTidspunkt = opprettetTidspunkt.toString(),
     )
 }
