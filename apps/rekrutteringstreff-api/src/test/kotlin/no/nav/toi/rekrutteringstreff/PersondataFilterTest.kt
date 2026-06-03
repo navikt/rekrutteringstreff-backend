@@ -88,11 +88,13 @@ class PersondataFilterTest {
 
     @Test
     fun `inneholderTall gir riktig svar`() {
-        assertThat(PersondataFilter.inneholderTall("123")).isTrue
+        assertThat(PersondataFilter.inneholderTall("12345")).isTrue
 
         assertThat(PersondataFilter.inneholderTall("")).isFalse
         assertThat(PersondataFilter.inneholderTall("  ")).isFalse
         assertThat(PersondataFilter.inneholderTall("12")).isFalse
+        assertThat(PersondataFilter.inneholderTall("123")).isFalse
+        assertThat(PersondataFilter.inneholderTall("1234")).isFalse
         assertThat(PersondataFilter.inneholderTall("test@nav.no")).isFalse
     }
 
