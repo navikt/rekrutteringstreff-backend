@@ -48,7 +48,6 @@ interface AuthenticatedUser {
             jwt: DecodedJWT,
             rolleUuidSpesifikasjon: RolleUuidSpesifikasjon,
             modiaKlient: ModiaKlient,
-            pilotkontorer: List<String>
         ): AuthenticatedUser {
             val navIdentClaim = jwt.getClaim(NAV_IDENT_CLAIM)
             return if (navIdentClaim.isMissing) {
@@ -64,7 +63,6 @@ interface AuthenticatedUser {
                         .let(rolleUuidSpesifikasjon::rollerForUuider),
                     token = jwt.token,
                     modiaKlient = modiaKlient,
-                    pilotkontorer = pilotkontorer
                 )
             }
         }
@@ -80,7 +78,6 @@ private class AuthenticatedNavUser(
     private val roller: Set<Rolle>,
     private val token: String,
     private val modiaKlient: ModiaKlient,
-    private val pilotkontorer: List<String>
 ) : AuthenticatedUser {
     var veiledersKontor: String? = null
 
@@ -93,8 +90,6 @@ private class AuthenticatedNavUser(
             veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(token)
             if (veiledersKontor.isNullOrEmpty()) {
                 throw ForbiddenResponse("Finner ikke veileders innloggede kontor")
-            } else if (veiledersKontor !in pilotkontorer) {
-                throw ForbiddenResponse("Veileder er ikke tilknyttet et pilotkontor")
             }
         }
     }
@@ -126,7 +121,6 @@ fun JavalinDefaultRoutingApi.leggTilAutensieringPåRekrutteringstreffEndepunkt(
     authConfigs: List<AuthenticationConfiguration>,
     rolleUuidSpesifikasjon: RolleUuidSpesifikasjon,
     modiaKlient: ModiaKlient,
-    pilotkontorer: List<String>
 ): JavalinDefaultRoutingApi {
     log.info("Starter autentiseringoppsett")
     val verifiers = authConfigs.flatMap { it.jwtVerifiers() }
@@ -139,7 +133,7 @@ fun JavalinDefaultRoutingApi.leggTilAutensieringPåRekrutteringstreffEndepunkt(
             val decoded = verifyJwt(verifiers, token)
             ctx.attribute(
                 "authenticatedUser",
-                AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon, modiaKlient, pilotkontorer)
+                AuthenticatedUser.fromJwt(decoded, rolleUuidSpesifikasjon, modiaKlient)
             )
         }
     }
