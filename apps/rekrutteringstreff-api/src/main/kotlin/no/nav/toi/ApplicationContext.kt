@@ -42,7 +42,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val httpClient get() = infra.httpClient
     val openAiProperties get() = infra.openAiProperties
     val rolleUuidSpesifikasjon get() = infra.rolleUuidSpesifikasjon
-    val pilotkontorer get() = infra.pilotkontorer
     val leaderElection get() = infra.leaderElection
     val modiaKlient get() = infra.modiaKlient
     val kandidatsøkKlient get() = infra.kandidatsøkKlient
