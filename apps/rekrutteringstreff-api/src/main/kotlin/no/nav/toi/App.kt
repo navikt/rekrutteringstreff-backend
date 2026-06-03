@@ -44,7 +44,6 @@ class App(
                     authConfigs = ctx.authConfigs,
                     rolleUuidSpesifikasjon = ctx.rolleUuidSpesifikasjon,
                     modiaKlient = ctx.modiaKlient,
-                    pilotkontorer = ctx.pilotkontorer
                 )
 
                 registrer(ctx.sokController)
