@@ -47,7 +47,7 @@ class ArbeidsgiverDto(
     val orgnr: String,
     val status: String? = null,
     val parentOrgnr: String? = null,
-    val publicName: String? = null,
+    val publicName: String,
     val deactivated: LocalDateTime? = null,
     val orgform: String? = null,
     val employees: Int? = null,
