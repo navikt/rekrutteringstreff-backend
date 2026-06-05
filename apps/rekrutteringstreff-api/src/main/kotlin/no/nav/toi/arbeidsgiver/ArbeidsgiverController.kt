@@ -345,7 +345,7 @@ class ArbeidsgiverController(
             content = [OpenApiContent(
                 from = BehovMetadataDto::class,
                 example = """{
-              "ansettelsesformer": ["Fast", "Vikariat", "Engasjement", "Prosjekt", "Åremål", "Sesong", "Feriejobb", "Trainee", "Lærling", "Selvstendig næringsdrivende", "Annet"],
+              "ansettelsesformer": ["Fast", "Vikariat", "Engasjement", "Prosjekt", "Åremål", "Sesong", "Feriejobb", "Trainee", "Lærling", "Selvstendig næringsdrivende"],
               "arbeidssprak": ["Norsk", "Engelsk", "Tysk", "Polsk", "Arabisk"]
             }"""
             )]
