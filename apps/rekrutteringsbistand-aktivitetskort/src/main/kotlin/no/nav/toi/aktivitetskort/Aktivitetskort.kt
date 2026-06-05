@@ -98,50 +98,50 @@ class Aktivitetskort (
 }
 
 private class AkaasMelding(
-    private val messageId: String,
-    private val source: String,
-    private val aktivitetskortType: String,
-    private val actionType: String,
-    private val aktivitetskort: AkaasAktivitetskort,
+    val messageId: String,
+    val source: String,
+    val aktivitetskortType: String,
+    val actionType: String,
+    val aktivitetskort: AkaasAktivitetskort,
 )
 
 private class AkaasAktivitetskort(
-    private val id: String,
-    private val personIdent: String,
-    private val tittel: String,
-    private val aktivitetStatus: String,
-    private val startDato: String?,
-    private val sluttDato: String?,
-    private val beskrivelse: String?,
-    private val endretAv: AkaasEndretAv,
-    private val endretTidspunkt: String,
-    private val avtaltMedNav: Boolean,
-    private val detaljer: List<AktivitetskortDetalj>,
-    private val handlinger: List<AktivitetskortHandling>?,
-    private val etiketter: List<AktivitetskortEtikett>,
-    private val oppgave: AktivitetskortOppgave?,
+    val id: String,
+    val personIdent: String,
+    val tittel: String,
+    val aktivitetStatus: String,
+    val startDato: String?,
+    val sluttDato: String?,
+    val beskrivelse: String?,
+    val endretAv: AkaasEndretAv,
+    val endretTidspunkt: String,
+    val avtaltMedNav: Boolean,
+    val detaljer: List<AktivitetskortDetalj>,
+    val handlinger: List<AktivitetskortHandling>?,
+    val etiketter: List<AktivitetskortEtikett>,
+    val oppgave: AktivitetskortOppgave?,
 )
 
 private class AkaasEndretAv(
-    private val ident: String,
-    private val identType: String,
+    val ident: String,
+    val identType: String,
 )
 
 private class AkaasFeilMelding(
-    @field:JsonProperty("@event_name") private val eventName: String,
-    private val fnr: String,
-    private val aktivitetskortId: String,
-    private val rekrutteringstreffId: String,
-    private val endretAv: String,
-    private val messageId: String,
-    private val errorMessage: String,
-    private val errorType: String,
-    private val timestamp: String,
+    @get:JsonProperty("@event_name") val eventName: String,
+    val fnr: String,
+    val aktivitetskortId: String,
+    val rekrutteringstreffId: String,
+    val endretAv: String,
+    val messageId: String,
+    val errorMessage: String,
+    val errorType: String,
+    val timestamp: String,
 )
 
 class AktivitetskortDetalj(
-    private val label: String,
-    private val verdi: String,
+    val label: String,
+    val verdi: String,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
@@ -150,10 +150,10 @@ class AktivitetskortDetalj(
 }
 
 class AktivitetskortHandling(
-    private val tekst: String,
-    private val subtekst: String,
-    private val url: String,
-    private val lenkeType: LenkeType,
+    val tekst: String,
+    val subtekst: String,
+    val url: String,
+    val lenkeType: LenkeType,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
@@ -162,8 +162,8 @@ class AktivitetskortHandling(
 }
 
 class AktivitetskortEtikett(
-    private val tekst: String,
-    private val label: Sentiment,
+    val tekst: String,
+    val label: Sentiment,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
@@ -173,8 +173,8 @@ class AktivitetskortEtikett(
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class AktivitetskortOppgave(
-    private val ekstern: AktivitetskortSubOppgave?,
-    private val intern: AktivitetskortSubOppgave?,
+    val ekstern: AktivitetskortSubOppgave?,
+    val intern: AktivitetskortSubOppgave?,
 ) {
     companion object {
         fun fraAkaasJson(json: String) = objectMapper.readValue(json, AktivitetskortOppgave::class.java)
@@ -182,9 +182,9 @@ class AktivitetskortOppgave(
 }
 
 class AktivitetskortSubOppgave(
-    private val tekst: String,
-    private val subtekst: String,
-    private val url: String,
+    val tekst: String,
+    val subtekst: String,
+    val url: String,
 )
 
 enum class Sentiment {
