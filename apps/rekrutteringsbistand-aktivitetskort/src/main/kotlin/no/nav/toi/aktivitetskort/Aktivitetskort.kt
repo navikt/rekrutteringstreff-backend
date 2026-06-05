@@ -3,8 +3,8 @@ package no.nav.toi.aktivitetskort
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.toi.Repository
+import no.nav.toi.objectMapper
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.LocalDate
@@ -97,53 +97,51 @@ class Aktivitetskort (
         }
 }
 
-internal val objectMapper = jacksonObjectMapper()
-
-private data class AkaasMelding(
-    val messageId: String,
-    val source: String,
-    val aktivitetskortType: String,
-    val actionType: String,
-    val aktivitetskort: AkaasAktivitetskort,
+private class AkaasMelding(
+    private val messageId: String,
+    private val source: String,
+    private val aktivitetskortType: String,
+    private val actionType: String,
+    private val aktivitetskort: AkaasAktivitetskort,
 )
 
-private data class AkaasAktivitetskort(
-    val id: String,
-    val personIdent: String,
-    val tittel: String,
-    val aktivitetStatus: String,
-    val startDato: String?,
-    val sluttDato: String?,
-    val beskrivelse: String?,
-    val endretAv: AkaasEndretAv,
-    val endretTidspunkt: String,
-    val avtaltMedNav: Boolean,
-    val detaljer: List<AktivitetskortDetalj>,
-    val handlinger: List<AktivitetskortHandling>?,
-    val etiketter: List<AktivitetskortEtikett>,
-    val oppgave: AktivitetskortOppgave?,
+private class AkaasAktivitetskort(
+    private val id: String,
+    private val personIdent: String,
+    private val tittel: String,
+    private val aktivitetStatus: String,
+    private val startDato: String?,
+    private val sluttDato: String?,
+    private val beskrivelse: String?,
+    private val endretAv: AkaasEndretAv,
+    private val endretTidspunkt: String,
+    private val avtaltMedNav: Boolean,
+    private val detaljer: List<AktivitetskortDetalj>,
+    private val handlinger: List<AktivitetskortHandling>?,
+    private val etiketter: List<AktivitetskortEtikett>,
+    private val oppgave: AktivitetskortOppgave?,
 )
 
-private data class AkaasEndretAv(
-    val ident: String,
-    val identType: String,
+private class AkaasEndretAv(
+    private val ident: String,
+    private val identType: String,
 )
 
-private data class AkaasFeilMelding(
-    @get:JsonProperty("@event_name") val eventName: String,
-    val fnr: String,
-    val aktivitetskortId: String,
-    val rekrutteringstreffId: String,
-    val endretAv: String,
-    val messageId: String,
-    val errorMessage: String,
-    val errorType: String,
-    val timestamp: String,
+private class AkaasFeilMelding(
+    @field:JsonProperty("@event_name") private val eventName: String,
+    private val fnr: String,
+    private val aktivitetskortId: String,
+    private val rekrutteringstreffId: String,
+    private val endretAv: String,
+    private val messageId: String,
+    private val errorMessage: String,
+    private val errorType: String,
+    private val timestamp: String,
 )
 
-data class AktivitetskortDetalj(
-    val label: String,
-    val verdi: String,
+class AktivitetskortDetalj(
+    private val label: String,
+    private val verdi: String,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
@@ -151,11 +149,11 @@ data class AktivitetskortDetalj(
     }
 }
 
-data class AktivitetskortHandling(
-    val tekst: String,
-    val subtekst: String,
-    val url: String,
-    val lenkeType: LenkeType,
+class AktivitetskortHandling(
+    private val tekst: String,
+    private val subtekst: String,
+    private val url: String,
+    private val lenkeType: LenkeType,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
@@ -163,9 +161,9 @@ data class AktivitetskortHandling(
     }
 }
 
-data class AktivitetskortEtikett(
-    val tekst: String,
-    val label: Sentiment,
+class AktivitetskortEtikett(
+    private val tekst: String,
+    private val label: Sentiment,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
@@ -174,19 +172,19 @@ data class AktivitetskortEtikett(
 }
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class AktivitetskortOppgave(
-    val ekstern: AktivitetskortSubOppgave?,
-    val intern: AktivitetskortSubOppgave?,
+class AktivitetskortOppgave(
+    private val ekstern: AktivitetskortSubOppgave?,
+    private val intern: AktivitetskortSubOppgave?,
 ) {
     companion object {
         fun fraAkaasJson(json: String) = objectMapper.readValue(json, AktivitetskortOppgave::class.java)
     }
 }
 
-data class AktivitetskortSubOppgave(
-    val tekst: String,
-    val subtekst: String,
-    val url: String,
+class AktivitetskortSubOppgave(
+    private val tekst: String,
+    private val subtekst: String,
+    private val url: String,
 )
 
 enum class Sentiment {

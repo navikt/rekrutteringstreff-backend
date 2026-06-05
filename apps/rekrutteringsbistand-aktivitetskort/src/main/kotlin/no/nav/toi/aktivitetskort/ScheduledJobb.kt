@@ -1,7 +1,5 @@
 package no.nav.toi.aktivitetskort
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import kotlinx.coroutines.runBlocking
@@ -9,6 +7,7 @@ import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.Repository
 import no.nav.toi.SecureLog
 import no.nav.toi.log
+import no.nav.toi.objectMapper
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.producer.Producer
 import java.time.Duration
@@ -110,7 +109,6 @@ class AktivitetskortFeilJobb(
                     val errorType: ErrorType
                 )
 
-                val objectMapper = jacksonObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
                 if(hendelse.source == "REKRUTTERINGSBISTAND") {
                     log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
@@ -132,9 +130,7 @@ class AktivitetskortFeilJobb(
     }
 }
 
-private val jacksonObjectMapper = jacksonObjectMapper()
-
-private fun String.hentMessageId() = jacksonObjectMapper.readTree(this)["messageId"]?.asText()?.let {
+private fun String.hentMessageId() = objectMapper.readTree(this)["messageId"]?.asText()?.let {
     UUID.fromString(it)
 } ?: error("Kunne ikke hente messageId fra hendelse: $this")
 
