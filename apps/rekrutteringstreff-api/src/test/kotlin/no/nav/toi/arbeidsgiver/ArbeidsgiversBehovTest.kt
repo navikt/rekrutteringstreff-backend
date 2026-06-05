@@ -104,10 +104,11 @@ class ArbeidsgiversBehovTest {
 
             assertThat(response.statusCode()).isEqualTo(HTTP_OK)
             val metadata = JacksonConfig.mapper.readValue(response.body(), BehovMetadataDto::class.java)
-            assertThat(metadata.ansettelsesformer).containsExactlyElementsOf(Ansettelsesform.entries.map { it.apiNavn })
+            assertThat(metadata.ansettelsesformer).containsExactlyElementsOf(Ansettelsesform.entries.filter { it != Ansettelsesform.ANNET }.map { it.apiNavn })
             assertThat(metadata.arbeidssprak).containsExactlyElementsOf(Arbeidssprak.verdier)
             assertThat(metadata.arbeidssprak).contains("Tysk", "Polsk", "Arabisk")
             assertThat(metadata.arbeidssprak).doesNotContain("Annet")
+            assertThat(metadata.ansettelsesformer).doesNotContain("Annet")
         }
     }
 

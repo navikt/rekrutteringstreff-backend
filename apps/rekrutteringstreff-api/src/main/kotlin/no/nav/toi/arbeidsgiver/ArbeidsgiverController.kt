@@ -345,7 +345,7 @@ class ArbeidsgiverController(
             content = [OpenApiContent(
                 from = BehovMetadataDto::class,
                 example = """{
-              "ansettelsesformer": ["Fast", "Vikariat", "Engasjement", "Prosjekt", "Åremål", "Sesong", "Feriejobb", "Trainee", "Lærling", "Selvstendig næringsdrivende", "Annet"],
+              "ansettelsesformer": ["Fast", "Vikariat", "Engasjement", "Prosjekt", "Åremål", "Sesong", "Feriejobb", "Trainee", "Lærling", "Selvstendig næringsdrivende"],
               "arbeidssprak": ["Norsk", "Engelsk", "Tysk", "Polsk", "Arabisk"]
             }"""
             )]
@@ -357,7 +357,7 @@ class ArbeidsgiverController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
         ctx.status(200).json(
             BehovMetadataDto(
-                ansettelsesformer = Ansettelsesform.entries.map { it.apiNavn },
+                ansettelsesformer = Ansettelsesform.entries.filter { it != Ansettelsesform.ANNET }.map { it.apiNavn },
                 arbeidssprak = Arbeidssprak.verdier,
             )
         )
