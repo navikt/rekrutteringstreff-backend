@@ -14,6 +14,7 @@ import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.util.UUID
 import javax.sql.DataSource
 
@@ -48,21 +49,18 @@ class FormidlingService(
             stillingIdOgKandidatlisteId.kandidatlisteId,
         )
 
-        jobbsøkere.forEach { jobbsøker ->
-            leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøker)
-            endreJobbsøkerStatusOgLeggTilHendelser(jobbsøker.personTreffId, navIdent)
-            val formidling = formidlinger.find { it.jobbsøkerPersonTreffId == jobbsøker.personTreffId } ?: error("Fant ikke formidling i listen")
-            oppdaterUtfallSendtTidspunktForFormidling(formidling.formidlingId)
+        formidlinger.forEach { formidling ->
+            dataSource.executeInTransaction { connection ->
+                val jobbsøker = jobbsøkere.find { it.personTreffId == formidling.jobbsøkerPersonTreffId } ?: error("Fant ikke jobbsøker i listen")
+                leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøker)
+                endreJobbsøkerStatusOgLeggTilHendelser(connection, formidling.jobbsøkerPersonTreffId, navIdent)
+                formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
+            }
         }
 
         return formidlinger
     }
 
-    fun oppdaterUtfallSendtTidspunktForFormidling(formidlingId: Long) {
-        dataSource.executeInTransaction { connection ->
-            formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidlingId)
-        }
-    }
 
     private fun validerOgHentArbeidsgivereOgJobbsøkere(treffId: TreffId, opprettFormidling: OpprettFormidlingDto): Pair<Arbeidsgiver, List<Jobbsøker>> {
         rekrutteringstreffRepository.hent(treffId)
@@ -122,8 +120,12 @@ class FormidlingService(
         return formidlingIder.mapNotNull { formidlingRepository.hent(it) }
     }
 
-    private fun endreJobbsøkerStatusOgLeggTilHendelser(jobbsøkerPersonTreffId: PersonTreffId, navIdent: String) {
-        jobbsøkerService.registrerFåttJobb(jobbsøkerPersonTreffId, navIdent)
+    private fun endreJobbsøkerStatusOgLeggTilHendelser(
+        connection: Connection,
+        jobbsøkerPersonTreffId: PersonTreffId,
+        navIdent: String
+    ) {
+        jobbsøkerService.registrerFåttJobb(connection, jobbsøkerPersonTreffId, navIdent)
     }
 
     fun hent(formidlingId: Long): Formidling? {
