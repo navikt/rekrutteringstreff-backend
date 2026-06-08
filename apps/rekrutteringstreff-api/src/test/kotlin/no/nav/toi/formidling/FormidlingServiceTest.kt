@@ -80,9 +80,9 @@ class FormidlingServiceTest {
     @Test
     fun `hent formidling med formidlingId returnerer formidling`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val (personTreffId, orgnr, stillingId) = opprettTestdataForFormidling(treffId)
+        val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId)
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
 
         val formidling = formidlingService.hent(formidlingId)
 
@@ -92,6 +92,8 @@ class FormidlingServiceTest {
         assertThat(formidling.treffId).isEqualTo(treffId)
         assertThat(formidling.jobbsøkerPersonTreffId).isEqualTo(personTreffId)
         assertThat(formidling.stillingId).isEqualTo(stillingId)
+        assertThat(formidling.kandidatlisteId).isNotNull()
+        assertThat(formidling.utfallSendtTidspunkt).isNull()
         assertThat(formidling.opprettetTidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
     }
 
@@ -104,9 +106,9 @@ class FormidlingServiceTest {
     @Test
     fun `hent formidling med treffId, personTreffId og arbeidsgiverTreffId`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val (personTreffId, orgnr, stillingId) = opprettTestdataForFormidling(treffId)
+        val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
-        db.opprettFormidling(treffId, personTreffId, orgnr, stillingId)
+        db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
 
         val arbeidsgiverTreffId = arbeidsgiverService.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId
 
@@ -135,9 +137,9 @@ class FormidlingServiceTest {
     @Test
     fun `slett formidling skal markere formidling som slettet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val (personTreffId, orgnr, stillingId) = opprettTestdataForFormidling(treffId)
+        val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId)
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
 
         // Verifiser at formidling finnes
         assertThat(formidlingService.hent(formidlingId)).isNotNull
@@ -157,9 +159,9 @@ class FormidlingServiceTest {
     @Test
     fun `slett formidling returnerer false for allerede slettet formidling`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val (personTreffId, orgnr, stillingId) = opprettTestdataForFormidling(treffId)
+        val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId)
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
 
         // Slett første gang
         val førsteSlett = formidlingService.slett(formidlingId)
@@ -175,6 +177,7 @@ class FormidlingServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val orgnr = "123456789"
         val stillingId = UUID.randomUUID()
+        val kandidatlisteId = UUID.randomUUID()
 
         // Opprett arbeidsgiver
         val arbeidsgiverTreffId = arbeidsgiverService.leggTilArbeidsgiver(
@@ -189,8 +192,8 @@ class FormidlingServiceTest {
 
         val personTreffIder = jobbsøkerService.hentJobbsøkere(treffId).map { it.personTreffId }
 
-        val formidlingId1 = db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId)
-        val formidlingId2 = db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId)
+        val formidlingId1 = db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, kandidatlisteId)
+        val formidlingId2 = db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, kandidatlisteId)
 
         // Begge finnes
         assertThat(formidlingService.hent(formidlingId1)).isNotNull
@@ -207,9 +210,9 @@ class FormidlingServiceTest {
     @Test
     fun `slettet formidling vises ikke ved hent med treffId, personTreffId og arbeidsgiverTreffId`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val (personTreffId, orgnr, stillingId) = opprettTestdataForFormidling(treffId)
+        val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId)
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
 
         val arbeidsgiverTreffId = arbeidsgiverService.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId
 
@@ -228,6 +231,7 @@ class FormidlingServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val orgnr = "123456789"
         val stillingId = UUID.randomUUID()
+        val kandidatlisteId = UUID.randomUUID()
 
         val arbeidsgiverTreffId = arbeidsgiverService.leggTilArbeidsgiver(
             LeggTilArbeidsgiver(Orgnr(orgnr), Orgnavn("Test AS"), emptyList(), null, null, null),
@@ -240,8 +244,8 @@ class FormidlingServiceTest {
 
         val personTreffIder = jobbsøkerService.hentJobbsøkere(treffId).map { it.personTreffId }
 
-        val formidlingId1 = db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId)
-        val formidlingId2 = db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId)
+        val formidlingId1 = db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, kandidatlisteId)
+        val formidlingId2 = db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, kandidatlisteId)
 
         val formidling1 = formidlingService.hent(formidlingId1)!!
         val formidling2 = formidlingService.hent(formidlingId2)!!
@@ -253,11 +257,13 @@ class FormidlingServiceTest {
         val personTreffId: PersonTreffId,
         val arbeidsgiverTreffId: ArbeidsgiverTreffId,
         val stillingId: UUID,
+        val kandidatlisteId: UUID,
     )
 
     private fun opprettTestdataForFormidling(treffId: TreffId): FormidlingTestdata {
         val orgnr = "123456789"
         val stillingId = UUID.randomUUID()
+        val kandidatlisteId = UUID.randomUUID()
 
         val arbeidsgiverTreffId = arbeidsgiverService.leggTilArbeidsgiver(
             LeggTilArbeidsgiver(Orgnr(orgnr), Orgnavn("Test AS"), emptyList(), null, null, null),
@@ -273,7 +279,7 @@ class FormidlingServiceTest {
         jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker), treffId, "testperson")
         val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
 
-        return FormidlingTestdata(personTreffId, arbeidsgiverTreffId, stillingId)
+        return FormidlingTestdata(personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId)
     }
 }
 

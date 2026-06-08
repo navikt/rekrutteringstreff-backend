@@ -6,7 +6,6 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
-import no.nav.toi.formidling.dto.ArbeidsgiverDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Jobbsøker
@@ -36,12 +35,33 @@ class FormidlingService(
     ): List<Formidling> {
         logger.info("Prøver å oppprette formidling for rekrutteringstreff $treffId med dto: $opprettFormidling")
 
+        // TODO: Sjekk hvilke formidlinger som allerede finnes og kjør kun de som ikke finnes. Dette for å unngå å
+        //  opprette duplikate formidlinger ved gjentatte kall med samme data.
+
         val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(treffId, opprettFormidling)
         val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(treffId, opprettFormidling, userToken)
-        val formidlinger = lagreFormidlinger(treffId, jobbsøkere, arbeidsgiver, stillingIdOgKandidatlisteId.stillingsId)
-        leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøkere)
-        endreJobbsøkerStatusOgLeggTilHendelser(formidlinger, navIdent)
+        val formidlinger = lagreFormidlinger(
+            treffId,
+            jobbsøkere,
+            arbeidsgiver,
+            stillingIdOgKandidatlisteId.stillingsId,
+            stillingIdOgKandidatlisteId.kandidatlisteId,
+        )
+
+        jobbsøkere.forEach { jobbsøker ->
+            leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøker)
+            endreJobbsøkerStatusOgLeggTilHendelser(jobbsøker.personTreffId, navIdent)
+            val formidling = formidlinger.find { it.jobbsøkerPersonTreffId == jobbsøker.personTreffId } ?: error("Fant ikke formidling i listen")
+            oppdaterUtfallSendtTidspunktForFormidling(formidling.formidlingId)
+        }
+
         return formidlinger
+    }
+
+    fun oppdaterUtfallSendtTidspunktForFormidling(formidlingId: Long) {
+        dataSource.executeInTransaction { connection ->
+            formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidlingId)
+        }
     }
 
     private fun validerOgHentArbeidsgivereOgJobbsøkere(treffId: TreffId, opprettFormidling: OpprettFormidlingDto): Pair<Arbeidsgiver, List<Jobbsøker>> {
@@ -73,7 +93,7 @@ class FormidlingService(
 
     private fun leggKandidaterPåListenOgSendTilStatistikk(
         stillingId: OpprettFormidlingStillingRespons,
-        jobbsøkere: List<Jobbsøker>
+        jobbsøker: Jobbsøker,
     ) {
         //       TODO("Not yet implemented")
     }
@@ -83,6 +103,7 @@ class FormidlingService(
         jobbsøkere: List<Jobbsøker>,
         arbeidsgiver: Arbeidsgiver,
         stillingId: UUID,
+        kandidatlisteId: UUID?,
     ): List<Formidling> {
         val formidlingIder = dataSource.executeInTransaction { connection ->
             jobbsøkere.map { jobbsøker ->
@@ -91,7 +112,9 @@ class FormidlingService(
                     rekrutteringstreffId,
                     jobbsøker.personTreffId,
                     arbeidsgiver.arbeidsgiverTreffId,
-                    stillingId
+                    stillingId,
+                    kandidatlisteId,
+                    null,
                 )
             }
         }
@@ -99,10 +122,8 @@ class FormidlingService(
         return formidlingIder.mapNotNull { formidlingRepository.hent(it) }
     }
 
-    private fun endreJobbsøkerStatusOgLeggTilHendelser(formidlinger: List<Formidling>, navIdent: String) {
-        formidlinger.forEach { formidling ->
-            jobbsøkerService.registrerFåttJobb(formidling.jobbsøkerPersonTreffId, navIdent)
-        }
+    private fun endreJobbsøkerStatusOgLeggTilHendelser(jobbsøkerPersonTreffId: PersonTreffId, navIdent: String) {
+        jobbsøkerService.registrerFåttJobb(jobbsøkerPersonTreffId, navIdent)
     }
 
     fun hent(formidlingId: Long): Formidling? {

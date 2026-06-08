@@ -13,5 +13,7 @@ data class Formidling(
     val jobbsøkerPersonTreffId: PersonTreffId,
     val arbeidsgiverTreffId: ArbeidsgiverTreffId,
     val stillingId: UUID,
+    val kandidatlisteId: UUID?,
+    val utfallSendtTidspunkt: ZonedDateTime?,
     val opprettetTidspunkt: ZonedDateTime,
 )
