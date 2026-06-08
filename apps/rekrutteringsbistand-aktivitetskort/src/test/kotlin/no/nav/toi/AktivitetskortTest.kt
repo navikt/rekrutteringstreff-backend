@@ -120,6 +120,36 @@ class AktivitetskortTest {
     }
 
     @Test
+    fun `tittel med spesialtegn skal gi gyldig json og bevares uendret`() {
+        val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
+        val expectedFnr = "12345678910"
+        val expectedRekrutteringstreffId = UUID.randomUUID()
+        val expectedTittel = "Jobbtreff og mulighet for jobb deltid\\fulltid\\sommer \"kvelder\"\nog\u00A0helger"
+        val expectedAktivitetskortId = repository.opprettRekrutteringstreffInvitasjon(
+            fnr = expectedFnr,
+            rekrutteringstreffId = expectedRekrutteringstreffId,
+            tittel = expectedTittel,
+            beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
+            startDato = LocalDate.now().plusDays(1),
+            sluttDato = LocalDate.now().plusDays(2),
+            tid = "18.08.25 kl 08:00-10:00",
+            endretAv = "testuser",
+            gateAdresse = "Test Sted",
+            postnummer = "1234",
+            poststed = "Test Poststed"
+        )
+
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+
+        assertThat(producer.history()).hasSize(1)
+        val record = producer.history().first()
+        record.value().let(objectMapper::readTree).apply {
+            assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
+            assertThat(this["aktivitetskort"]["tittel"].asText()).isEqualTo(expectedTittel)
+        }
+    }
+
+    @Test
     fun `To kjøringer av AktivitetsJobb skal ikke gi duplikater`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
 

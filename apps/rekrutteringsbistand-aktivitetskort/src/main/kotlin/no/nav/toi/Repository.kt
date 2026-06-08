@@ -78,21 +78,25 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         setString(8, endretAv)
                         setTimestamp(9, Timestamp.valueOf(LocalDateTime.now()))
                         setString(
-                            10, listOf(
-                                AktivitetskortDetalj("Tid", tid),
-                                AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
-                            ).joinToJson(AktivitetskortDetalj::tilAkaasJson)
+                            10, objectMapper.writeValueAsString(
+                                listOf(
+                                    AktivitetskortDetalj("Tid", tid),
+                                    AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
+                                )
+                            )
                         )
                         setString(
                             11,
-                            listOf(
-                                AktivitetskortHandling(
-                                    "Sjekk ut treffet",
-                                    "Sjekk ut treffet og svar",
-                                    "$minsideUrl/$rekrutteringstreffId",
-                                    LenkeType.FELLES
+                            objectMapper.writeValueAsString(
+                                listOf(
+                                    AktivitetskortHandling(
+                                        "Sjekk ut treffet",
+                                        "Sjekk ut treffet og svar",
+                                        "$minsideUrl/$rekrutteringstreffId",
+                                        LenkeType.FELLES
+                                    )
                                 )
-                            ).joinToJson(AktivitetskortHandling::tilAkaasJson)
+                            )
                         )
                         setString(12, "[]")
                         setNull(13, VARCHAR)
@@ -364,10 +368,12 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 setObject(3, startDato)
                 setObject(4, sluttDato)
                 setString(
-                    5, listOf(
-                        AktivitetskortDetalj("Tid", tid),
-                        AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
-                    ).joinToJson(AktivitetskortDetalj::tilAkaasJson)
+                    5, objectMapper.writeValueAsString(
+                        listOf(
+                            AktivitetskortDetalj("Tid", tid),
+                            AktivitetskortDetalj("Sted", "$gateAdresse, $postnummer $poststed"),
+                        )
+                    )
                 )
                 setString(6, EndretAvType.SYSTEM.name)
                 setString(7, EndretAvType.SYSTEM.name)
