@@ -1,8 +1,10 @@
 package no.nav.toi.aktivitetskort
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.toi.Repository
+import no.nav.toi.objectMapper
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.LocalDate
@@ -45,33 +47,31 @@ class Aktivitetskort (
         }
     }
 
-    private fun tilAkaasJson() = """
-            {
-                "messageId": "$messageId",
-                "source": "REKRUTTERINGSBISTAND",
-                "aktivitetskortType": "REKRUTTERINGSTREFF",
-                "actionType": "${actionType.name}",
-                "aktivitetskort": {
-                    "id": "$aktivitetskortId",
-                    "personIdent": "$fnr",
-                    "tittel": "$tittel",
-                    "aktivitetStatus": "$aktivitetsStatus",
-                    "startDato": "$startDato",
-                    "sluttDato": "$sluttDato",
-                    "beskrivelse": "$beskrivelse",
-                    "endretAv": {
-                        "ident": "$endretAv",
-                        "identType": "$endretAvType"
-                    },
-                    "endretTidspunkt": "$endretTidspunkt",
-                    "avtaltMedNav": false,
-                    "detaljer": ${detaljer.joinToJson(AktivitetskortDetalj::tilAkaasJson)},
-                    "handlinger": ${handlinger?.joinToJson(AktivitetskortHandling::tilAkaasJson)},
-                    "etiketter": ${etiketter.joinToJson(AktivitetskortEtikett::tilAkaasJson)},
-                    "oppgave": ${oppgave?.tilAkaasJson()}
-                }
-            }
-        """.trimIndent()
+    private fun tilAkaasJson(): String {
+        val melding = AkaasMelding(
+            messageId = messageId,
+            source = "REKRUTTERINGSBISTAND",
+            aktivitetskortType = "REKRUTTERINGSTREFF",
+            actionType = actionType.name,
+            aktivitetskort = AkaasAktivitetskort(
+                id = aktivitetskortId,
+                personIdent = fnr,
+                tittel = tittel,
+                aktivitetStatus = aktivitetsStatus.name,
+                startDato = startDato?.toString(),
+                sluttDato = sluttDato?.toString(),
+                beskrivelse = beskrivelse,
+                endretAv = AkaasEndretAv(ident = endretAv, identType = endretAvType.name),
+                endretTidspunkt = endretTidspunkt.toString(),
+                avtaltMedNav = false,
+                detaljer = detaljer,
+                handlinger = handlinger,
+                etiketter = etiketter,
+                oppgave = oppgave,
+            ),
+        )
+        return objectMapper.writeValueAsString(melding)
+    }
 
         class AktivitetskortFeil(
             private val aktivitetskortHendelse: Aktivitetskort,
@@ -80,42 +80,69 @@ class Aktivitetskort (
             private val errorType: ErrorType
         ) {
             fun sendTilRapid(rapidPublish: (String, String) -> Unit) {
-                val now = ZonedDateTime.now()
-                rapidPublish(aktivitetskortHendelse.fnr,
-                    """
-                        {
-                            "@event_name": "aktivitetskort-feil",
-                            "fnr": "${aktivitetskortHendelse.fnr}",
-                            "aktivitetskortId": "${aktivitetskortHendelse.aktivitetskortId}",
-                            "rekrutteringstreffId": "$rekrutteringstreffId",
-                            "endretAv": "${aktivitetskortHendelse.endretAv}",
-                            "messageId": "${aktivitetskortHendelse.messageId}",
-                            "errorMessage": "$errorMessage",
-                            "errorType": "${errorType.name}",
-                            "timestamp": "$now"
-                        }
-                    """.trimIndent())
+                val melding = AkaasFeilMelding(
+                    eventName = "aktivitetskort-feil",
+                    fnr = aktivitetskortHendelse.fnr,
+                    aktivitetskortId = aktivitetskortHendelse.aktivitetskortId,
+                    rekrutteringstreffId = rekrutteringstreffId,
+                    endretAv = aktivitetskortHendelse.endretAv,
+                    messageId = aktivitetskortHendelse.messageId,
+                    errorMessage = errorMessage,
+                    errorType = errorType.name,
+                    timestamp = ZonedDateTime.now().toString(),
+                )
+                rapidPublish(aktivitetskortHendelse.fnr, objectMapper.writeValueAsString(melding))
                 aktivitetskortHendelse.repository.markerFeilkøhendelseSomSendt(aktivitetskortHendelse.messageId)
             }
         }
 }
 
-fun <T> List<T>.joinToJson(transform: (T) -> String) =
-    joinToString(prefix = "[", postfix = "]", separator = ",", transform = transform)
+private class AkaasMelding(
+    val messageId: String,
+    val source: String,
+    val aktivitetskortType: String,
+    val actionType: String,
+    val aktivitetskort: AkaasAktivitetskort,
+)
 
-private val objectMapper = jacksonObjectMapper()
+private class AkaasAktivitetskort(
+    val id: String,
+    val personIdent: String,
+    val tittel: String,
+    val aktivitetStatus: String,
+    val startDato: String?,
+    val sluttDato: String?,
+    val beskrivelse: String?,
+    val endretAv: AkaasEndretAv,
+    val endretTidspunkt: String,
+    val avtaltMedNav: Boolean,
+    val detaljer: List<AktivitetskortDetalj>,
+    val handlinger: List<AktivitetskortHandling>?,
+    val etiketter: List<AktivitetskortEtikett>,
+    val oppgave: AktivitetskortOppgave?,
+)
+
+private class AkaasEndretAv(
+    val ident: String,
+    val identType: String,
+)
+
+private class AkaasFeilMelding(
+    @get:JsonProperty("@event_name") val eventName: String,
+    val fnr: String,
+    val aktivitetskortId: String,
+    val rekrutteringstreffId: String,
+    val endretAv: String,
+    val messageId: String,
+    val errorMessage: String,
+    val errorType: String,
+    val timestamp: String,
+)
 
 class AktivitetskortDetalj(
-    private val label: String,
-    private val verdi: String
+    val label: String,
+    val verdi: String,
 ) {
-    fun tilAkaasJson() = """
-        {
-            "label": "$label",
-            "verdi": "$verdi"
-        }
-    """.trimIndent()
-
     companion object {
         fun fraAkaasJson(json: String) =
             objectMapper.readValue(json, object : TypeReference<List<AktivitetskortDetalj>>(){})
@@ -123,20 +150,11 @@ class AktivitetskortDetalj(
 }
 
 class AktivitetskortHandling(
-    private val tekst: String,
-    private val subtekst: String,
-    private val url: String,
-    private val lenkeType: LenkeType
+    val tekst: String,
+    val subtekst: String,
+    val url: String,
+    val lenkeType: LenkeType,
 ) {
-    fun tilAkaasJson() = """
-        {
-            "tekst": "$tekst",
-            "subtekst": "$subtekst",
-            "url": "$url",
-            "lenkeType": "${lenkeType.name}"
-        }
-    """.trimIndent()
-
     companion object {
         fun fraAkaasJson(json: String) =
             objectMapper.readValue(json, object : TypeReference<List<AktivitetskortHandling>>(){})
@@ -144,59 +162,30 @@ class AktivitetskortHandling(
 }
 
 class AktivitetskortEtikett(
-    private val tekst: String,
-    private val label: Sentiment
+    val tekst: String,
+    val label: Sentiment,
 ) {
-    fun tilAkaasJson() = """
-        {
-            "tekst": "$label",
-            "label": "$label"
-        }
-    """.trimIndent()
-
     companion object {
         fun fraAkaasJson(json: String) =
             objectMapper.readValue(json, object : TypeReference<List<AktivitetskortEtikett>>(){})
     }
 }
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 class AktivitetskortOppgave(
-    private val ekstern: AktivitetskortSubOppgave?,
-    private val intern: AktivitetskortSubOppgave?
+    val ekstern: AktivitetskortSubOppgave?,
+    val intern: AktivitetskortSubOppgave?,
 ) {
-    fun tilAkaasJson() = listOfNotNull(
-        ekstern?.let { "ekstern" to it.tilAkaasJson() },
-        intern?.let { "intern" to it.tilAkaasJson() }
-    ).map {
-        """
-            "${it.first}": ${it.second}
-        """.trimIndent()
-    }.let {
-        """
-            {
-                ${it.joinToString(",\n")
-            }
-        """.trimIndent()
-    }
-
     companion object {
         fun fraAkaasJson(json: String) = objectMapper.readValue(json, AktivitetskortOppgave::class.java)
     }
 }
 
 class AktivitetskortSubOppgave(
-    private val tekst: String,
-    private val subtekst: String,
-    private val url: String
-) {
-    fun tilAkaasJson() = """
-        {
-            "tekst": "$tekst",
-            "subtekst": "$subtekst",
-            "url": "$url"
-        }
-    """.trimIndent()
-}
+    val tekst: String,
+    val subtekst: String,
+    val url: String,
+)
 
 enum class Sentiment {
     POSITIVE,
