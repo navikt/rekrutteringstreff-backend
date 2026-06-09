@@ -85,8 +85,8 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
 
     private fun byggFritekstFilter(fritekst: String?): Condition? {
         val trimmed = fritekst?.trim()?.takeIf { it.isNotBlank() } ?: return null
-        return if (trimmed.matches(Regex("\\d{11}"))) {
-            Condition("j.fodselsnummer = ?", SqlParam.Text(trimmed))
+        return if (trimmed.matches(Regex("\\d{1,11}"))) {
+            Condition("j.fodselsnummer LIKE ?", SqlParam.Text("$trimmed%"))
         } else {
             val søkeord = "${trimmed.lowercase()}%"
             Condition(

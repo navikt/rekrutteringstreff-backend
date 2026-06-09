@@ -142,6 +142,29 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
+    fun `fritekst-søk gjør prefiks-match på fødselsnummer`() {
+        val treffId = opprettTreffMedEier()
+        db.leggTilJobbsøkereMedHendelse(listOf(
+            LeggTilJobbsøker(Fødselsnummer("10120098765"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("10120012345"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
+            LeggTilJobbsøker(Fødselsnummer("25060011111"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
+        ), treffId)
+
+        val delvis = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody("fritekst" to "101200")).body()
+        )
+        assertThat(delvis.totalt).isEqualTo(2)
+        assertThat(delvis.jobbsøkere.map { it.fødselsnummer })
+            .containsExactlyInAnyOrder("10120098765", "10120012345")
+
+        val fullt = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody("fritekst" to "10120098765")).body()
+        )
+        assertThat(fullt.totalt).isEqualTo(1)
+        assertThat(fullt.jobbsøkere.single().fødselsnummer).isEqualTo("10120098765")
+    }
+
+    @Test
     fun `fritekst-søk filtrerer kun på navn`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(
