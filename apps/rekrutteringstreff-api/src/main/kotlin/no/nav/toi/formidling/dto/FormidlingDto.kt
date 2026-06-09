@@ -3,7 +3,6 @@ package no.nav.toi.formidling.dto
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.time.LocalDateTime
 import java.util.ArrayList
-import java.util.HashMap
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpprettFormidlingDto(
@@ -18,7 +17,7 @@ data class StillingDto(
     val employer: ArbeidsgiverDto,
     val locationList: List<LocationDto> = emptyList(),
     val categoryList: List<CategoryDto> = emptyList(),
-    val properties: Map<String, String> = HashMap(),
+    val properties: Map<String, String?>? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -39,10 +38,10 @@ class ArbeidsgiverDto(
     val createdBy: String? = null,
     val updated: String? = null,
     val updatedBy: String? = null,
-    val contactList: List<ContactDto> = ArrayList(),
+    val contactList: List<ContactDto>? = null,
     val location: LocationDto? = null,
     val locationList: List<LocationDto> = ArrayList(),
-    val properties: Map<String, String> = HashMap(),
+    val properties: Map<String, String>? = null,
     val name: String,
     val orgnr: String,
     val status: String? = null,

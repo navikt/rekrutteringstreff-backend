@@ -61,8 +61,8 @@ class FormidlingService(
 
         val formidlinger = formidlingerUtenUtfall + nyeFormidlinger
 
-        dataSource.executeInTransaction { connection ->
-            formidlinger.forEach { formidling ->
+        formidlinger.forEach { formidling ->
+            dataSource.executeInTransaction { connection ->
                 val jobbsøker = jobbsøkere.find { it.personTreffId == formidling.jobbsøkerPersonTreffId } ?: error("Fant ikke jobbsøker i listen")
                 if (formidling.kandidatlisteId == null) {
                     error("KandidatlisteId mangler for formidling for stilling ${formidling.stillingId}")
@@ -72,7 +72,6 @@ class FormidlingService(
                 formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
             }
         }
-
         return formidlinger
     }
 
