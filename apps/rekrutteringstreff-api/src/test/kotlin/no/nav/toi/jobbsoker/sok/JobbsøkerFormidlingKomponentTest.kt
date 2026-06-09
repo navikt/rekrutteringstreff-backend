@@ -453,6 +453,27 @@ class JobbsøkerFormidlingKomponentTest {
     }
 
     @Test
+    fun `fritekst-søk gjør prefiks-match på fødselsnummer`() {
+        val eierIdent = "A123456"
+        val treffId = opprettTreffMedEier(eierIdent)
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("10120098765"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("10120012345"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("25060011111"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
+            ),
+            treffId,
+        )
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(
+            httpPost(formidlingAllePath(treffId), formidlingBody("fritekst" to "101200"), eierIdent).body()
+        )
+        assertThat(resultat.totalt).isEqualTo(2)
+        assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
+            .containsExactlyInAnyOrder("10120098765", "10120012345")
+    }
+
+    @Test
     fun `formidling-egne returnerer jobbsøkere som matcher veilederident eller veileders kontor`() {
         val eierIdent = "TESTEIER"
         val veilederIdent = "TESTVEILEDER"

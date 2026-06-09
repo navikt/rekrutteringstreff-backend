@@ -146,9 +146,9 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         val params = mutableListOf<Any>(treffId.somUuid)
 
         request.fritekst?.takeIf { it.isNotBlank() }?.let {
-            if (it.trim().matches(Regex("\\d{11}"))) {
-                conditions.add("v.fodselsnummer = ?")
-                params.add(it.trim())
+            if (it.trim().matches(Regex("\\d{1,11}"))) {
+                conditions.add("v.fodselsnummer LIKE ?")
+                params.add("${it.trim()}%")
             } else {
                 val escaped = it.lowercase()
                     .replace("\\", "\\\\")
