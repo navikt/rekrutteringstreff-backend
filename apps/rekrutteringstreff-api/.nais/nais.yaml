@@ -105,6 +105,10 @@ spec:
       value: "https://{{openai_azure_host}}/openai/deployments/{{openai_deployment}}/chat/completions?api-version={{openai_api_version}}"
     - name: OPENAI_DEPLOYMENT
       value: {{openai_deployment}}
+    - name: KANDIDAT_API_URL
+      value: {{kandidat_api_url}}
+    - name: KANDIDAT_API_SCOPE
+      value: {{kandidat_api_scope}}
   observability:
     autoInstrumentation:
       enabled: true
