@@ -25,6 +25,7 @@ class FormidlingService(
     private val jobbsøkerService: JobbsøkerService,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
     private val stillingKlient: StillingKlient,
+    private val kandidatKlient: KandidatKlient,
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
@@ -52,7 +53,8 @@ class FormidlingService(
         formidlinger.forEach { formidling ->
             dataSource.executeInTransaction { connection ->
                 val jobbsøker = jobbsøkere.find { it.personTreffId == formidling.jobbsøkerPersonTreffId } ?: error("Fant ikke jobbsøker i listen")
-                leggKandidaterPåListenOgSendTilStatistikk(stillingIdOgKandidatlisteId, jobbsøker)
+                leggKandidatPåListen(stillingIdOgKandidatlisteId, jobbsøker, opprettFormidling.eierNavKontorEnhetId, userToken)
+
                 endreJobbsøkerStatusOgLeggTilHendelser(connection, formidling.jobbsøkerPersonTreffId, navIdent)
                 formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
             }
@@ -89,11 +91,19 @@ class FormidlingService(
         return stillingKlient.opprettFormidlingStillingOgKandidatliste(request, userToken)
     }
 
-    private fun leggKandidaterPåListenOgSendTilStatistikk(
-        stillingId: OpprettFormidlingStillingRespons,
+    private fun leggKandidatPåListen(
+        stillingIdOgKandidatlisteId: OpprettFormidlingStillingRespons,
         jobbsøker: Jobbsøker,
+        navKontorEnhetId: String,
+        userToken: String
     ) {
-        //       TODO("Not yet implemented")
+        kandidatKlient.leggTilPersonerPåKandidatliste(
+            kandidatlisteId = stillingIdOgKandidatlisteId.kandidatlisteId,
+            stillingId = stillingIdOgKandidatlisteId.stillingsId,
+            jobbsøker = jobbsøker,
+            navKontorVeileder = navKontorEnhetId,
+            userToken = userToken
+        )
     }
 
     private fun lagreFormidlinger(

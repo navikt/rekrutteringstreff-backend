@@ -47,6 +47,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val kandidatsøkKlient get() = infra.kandidatsøkKlient
     val openAiKlient get() = infra.openAiKlient
     val stillingKlient get() = infra.stillingKlient
+    val kandidatKlient get() = infra.kandidatKlient
 
     // Repositories
     val jobbsøkerRepository = JobbsøkerRepository(infra.dataSource, JacksonConfig.mapper)
@@ -80,7 +81,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val openAiService = OpenAiService(openAiKlient, kiLoggRepository, openAiProperties)
     val kiLoggService = KiLoggService(kiLoggRepository)
     val sokService = RekrutteringstreffSokService(sokRepository)
-    val formidlingService = FormidlingService(infra.dataSource, formidlingRepository, arbeidsgiverService, jobbsøkerService, rekrutteringstreffRepository, stillingKlient)
+    val formidlingService = FormidlingService(infra.dataSource, formidlingRepository, arbeidsgiverService, jobbsøkerService, rekrutteringstreffRepository, stillingKlient, kandidatKlient)
 
     // Controllere
     val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService)

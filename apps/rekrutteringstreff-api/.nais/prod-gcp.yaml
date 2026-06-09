@@ -4,6 +4,7 @@ kafka_pool: nav-prod
             "https://rekrutteringstreff-api.intern.nav.no/isready",
 ]
 cluster: prod-gcp
+fss_cluster: prod-fss
 min_replicas: 2
 max_replicas: 4
 gcp_db_tier: db-custom-1-3840
@@ -22,3 +23,6 @@ stilling_api_scope: "api://prod-gcp.toi.rekrutteringsbistand-stilling-api/.defau
 kafka_consumer_group_id: rekrutteringstreff-rapid-1
 modiacontextholder_url: "http://modiacontextholder.personoversikt"
 modiacontextholder_scope: "api://prod-gcp.personoversikt.modiacontextholder/.default"
+kandidat_api_host: "rekrutteringsbistand-kandidat-api.prod-fss-pub.nais.io"
+kandidat_api_url: "https://rekrutteringsbistand-kandidat-api.prod-fss-pub.nais.io/rekrutteringsbistand-kandidat-api/rest/veileder"
+kandidat_api_scope: "api://prod-fss.toi.rekrutteringsbistand-kandidat-api/.default"

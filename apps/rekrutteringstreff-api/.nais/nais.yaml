@@ -41,12 +41,15 @@ spec:
         - application: rekrutteringsbistand-kandidatsok-api
         - application: rekrutteringsbistand-stilling-api
         - application: rekrutteringsbistand-kandidat-api
+          namespace: toi
+          cluster: {{ fss_cluster }}
         - application: modiacontextholder
           namespace: personoversikt
         - application: logging
           namespace: nais-system
       external:
         - host: fakedings.intern.dev.nav.no
+        - host: {{ kandidat_api_host }}
         - host: {{ openai_azure_host }}
           ports:
             - port: 443

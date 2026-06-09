@@ -1,6 +1,7 @@
 package no.nav.toi
 
 import no.nav.security.mock.oauth2.MockOAuth2Server
+import no.nav.toi.formidling.KandidatKlient
 import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.ki.client.DefaultOpenAiClient
@@ -18,6 +19,8 @@ class TestInfrastructureContext(
     kandidatsøkKlientUrl: String = "",
     stillingKlient: StillingKlient? = null,
     stillingKlientUrl: String = "",
+    kandidatKlient: KandidatKlient? = null,
+    kandidatKlientUrl: String = "",
     val authPort: Int = ubruktPortnr(),
 ) : InfrastructureContext() {
     val authServer = MockOAuth2Server()
@@ -65,6 +68,13 @@ class TestInfrastructureContext(
     override val stillingKlient: StillingKlient = stillingKlient ?: StillingKlient(
         stillingApiUrl = stillingKlientUrl,
         stillingScope = if (stillingKlientUrl.isNotBlank()) "api://test/stilling/.default" else "",
+        accessTokenClient = accessTokenClient,
+        httpClient = httpClient,
+    )
+
+    override val kandidatKlient: KandidatKlient = kandidatKlient ?: KandidatKlient(
+        kandidatApiUrl = kandidatKlientUrl,
+        kandidatApiScope = if (kandidatKlientUrl.isNotBlank()) "api://test/kandidat/.default" else "",
         accessTokenClient = accessTokenClient,
         httpClient = httpClient,
     )

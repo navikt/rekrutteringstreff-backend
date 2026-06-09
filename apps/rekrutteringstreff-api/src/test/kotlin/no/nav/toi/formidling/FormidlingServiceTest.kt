@@ -1,7 +1,9 @@
 package no.nav.toi.formidling
 
+import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
+import no.nav.toi.httpClient
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -27,6 +29,7 @@ class FormidlingServiceTest {
         private lateinit var jobbsøkerService: JobbsøkerService
         private lateinit var rekrutteringstreffRepository: RekrutteringstreffRepository
         private lateinit var stillingKlient: StillingKlient
+        private lateinit var kandidatKlient: KandidatKlient
 
         @BeforeAll
         @JvmStatic
@@ -48,12 +51,23 @@ class FormidlingServiceTest {
             stillingKlient = StillingKlient(
                 stillingApiUrl = "",
                 stillingScope = "",
-                accessTokenClient = no.nav.toi.AccessTokenClient(
+                accessTokenClient = AccessTokenClient(
                     clientId = "test",
                     secret = "test",
                     azureUrl = "http://localhost:0/token",
-                    httpClient = java.net.http.HttpClient.newBuilder().build()
+                    httpClient = httpClient
                 ),
+            )
+            kandidatKlient = KandidatKlient(
+                kandidatApiUrl = "",
+                kandidatApiScope = "",
+                accessTokenClient = AccessTokenClient(
+                    clientId = "test",
+                    secret = "test",
+                    azureUrl = "http://localhost:0/token",
+                    httpClient = httpClient
+                ),
+                httpClient = httpClient
             )
 
             formidlingService = FormidlingService(
@@ -63,6 +77,7 @@ class FormidlingServiceTest {
                 jobbsøkerService,
                 rekrutteringstreffRepository,
                 stillingKlient,
+                kandidatKlient
             )
         }
     }
