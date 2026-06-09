@@ -3,7 +3,12 @@ package no.nav.toi.formidling
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
+import no.nav.toi.formidling.dto.ArbeidsgiverDto
+import no.nav.toi.formidling.dto.OpprettFormidlingDto
+import no.nav.toi.formidling.dto.StillingDto
+import no.nav.toi.executeInTransaction
 import no.nav.toi.httpClient
+import io.mockk.mockk
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -14,6 +19,7 @@ import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
 import java.time.Instant
+import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
 
@@ -58,17 +64,7 @@ class FormidlingServiceTest {
                     httpClient = httpClient
                 ),
             )
-            kandidatKlient = KandidatKlient(
-                kandidatApiUrl = "",
-                kandidatApiScope = "",
-                accessTokenClient = AccessTokenClient(
-                    clientId = "test",
-                    secret = "test",
-                    azureUrl = "http://localhost:0/token",
-                    httpClient = httpClient
-                ),
-                httpClient = httpClient
-            )
+            kandidatKlient = mockk(relaxed = true)
 
             formidlingService = FormidlingService(
                 db.dataSource,
@@ -147,6 +143,59 @@ class FormidlingServiceTest {
         )
 
         assertThat(formidling).isNull()
+    }
+
+    @Test
+    fun `kan gjenbruke eksisterende formidling med tomt utfallSendtTidspunkt`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
+        val orgnr = "123456789"
+
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId)
+
+        val opprettede = formidlingService.opprettFormidling(
+            treffId = treffId,
+            opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+            navIdent = "testperson",
+            userToken = "test-token",
+        )
+
+        assertThat(opprettede).hasSize(1)
+        assertThat(opprettede.single().formidlingId).isEqualTo(formidlingId)
+
+        val oppdatert = formidlingService.hent(formidlingId)
+        assertThat(oppdatert).isNotNull
+        assertThat(oppdatert!!.utfallSendtTidspunkt).isNotNull()
+        assertThat(oppdatert.utfallSendtTidspunkt!!.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+    }
+
+    @Test
+    fun `eksisterende formidling med sendt utfall behandles ikke på nytt`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
+        val orgnr = "123456789"
+
+        val formidlingId = db.dataSource.executeInTransaction { connection ->
+            formidlingRepository.opprett(
+                connection,
+                treffId,
+                personTreffId,
+                arbeidsgiverTreffId,
+                stillingId,
+                kandidatlisteId,
+                ZonedDateTime.now().minusMinutes(10),
+            )
+        }
+
+        val opprettede = formidlingService.opprettFormidling(
+            treffId = treffId,
+            opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+            navIdent = "testperson",
+            userToken = "test-token",
+        )
+
+        assertThat(opprettede).isEmpty()
+        assertThat(formidlingService.hent(formidlingId)!!.utfallSendtTidspunkt).isNotNull()
     }
 
     @Test
@@ -295,6 +344,21 @@ class FormidlingServiceTest {
         val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
 
         return FormidlingTestdata(personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId)
+    }
+
+    private fun opprettFormidlingDto(orgnr: String, fødselsnummer: String): OpprettFormidlingDto {
+        return OpprettFormidlingDto(
+            eierNavKontorEnhetId = "1234",
+            orgnr = orgnr,
+            fødselsnumre = listOf(fødselsnummer),
+            stilling = StillingDto(
+                employer = ArbeidsgiverDto(
+                    name = "Test AS",
+                    orgnr = orgnr,
+                    publicName = "Test AS",
+                ),
+            ),
+        )
     }
 }
 

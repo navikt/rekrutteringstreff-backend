@@ -35,26 +35,39 @@ class FormidlingService(
         navIdent: String,
         userToken: String
     ): List<Formidling> {
-        logger.info("Prøver å oppprette formidling for rekrutteringstreff $treffId med dto: $opprettFormidling")
-
-        // TODO: Sjekk hvilke formidlinger som allerede finnes og kjør kun de som ikke finnes. Dette for å unngå å
-        //  opprette duplikate formidlinger ved gjentatte kall med samme data.
+        logger.info("Prøver å oppprette ${opprettFormidling.fødselsnumre.size} formidlinger for rekrutteringstreff $treffId og orgnr ${opprettFormidling.orgnr}")
 
         val (arbeidsgiver, jobbsøkere) = validerOgHentArbeidsgivereOgJobbsøkere(treffId, opprettFormidling)
-        val stillingIdOgKandidatlisteId = opprettStillingOgKandidatliste(treffId, opprettFormidling, userToken)
-        val formidlinger = lagreFormidlinger(
-            treffId,
-            jobbsøkere,
-            arbeidsgiver,
-            stillingIdOgKandidatlisteId.stillingsId,
-            stillingIdOgKandidatlisteId.kandidatlisteId,
-        )
+        val (formidlingerUtenUtfall, jobbsøkereUtenFormidling) =
+            kategoriserEksisterendeFormidlinger(treffId, arbeidsgiver, jobbsøkere)
 
-        formidlinger.forEach { formidling ->
-            dataSource.executeInTransaction { connection ->
+        if (formidlingerUtenUtfall.isEmpty() && jobbsøkereUtenFormidling.isEmpty()) {
+            logger.warn("Alle formidlinger var allerede opprettet for treff $treffId og orgnr ${arbeidsgiver.orgnr}. Hopper over kall.")
+            return emptyList()
+        }
+
+        val nyeFormidlinger = if (jobbsøkereUtenFormidling.isNotEmpty()) {
+            val stillingOgKandidatliste = opprettStillingOgKandidatliste(treffId, opprettFormidling, userToken)
+            lagreFormidlinger(
+                treffId,
+                jobbsøkereUtenFormidling,
+                arbeidsgiver,
+                stillingOgKandidatliste.stillingsId,
+                stillingOgKandidatliste.kandidatlisteId,
+            )
+        } else {
+            emptyList()
+        }
+
+        val formidlinger = formidlingerUtenUtfall + nyeFormidlinger
+
+        dataSource.executeInTransaction { connection ->
+            formidlinger.forEach { formidling ->
                 val jobbsøker = jobbsøkere.find { it.personTreffId == formidling.jobbsøkerPersonTreffId } ?: error("Fant ikke jobbsøker i listen")
-                leggKandidatPåListen(stillingIdOgKandidatlisteId, jobbsøker, opprettFormidling.eierNavKontorEnhetId, userToken)
-
+                if (formidling.kandidatlisteId == null) {
+                    error("KandidatlisteId mangler for formidling for stilling ${formidling.stillingId}")
+                }
+                leggKandidatPåListen(formidling.stillingId, formidling.kandidatlisteId, jobbsøker, opprettFormidling.eierNavKontorEnhetId, userToken)
                 endreJobbsøkerStatusOgLeggTilHendelser(connection, formidling.jobbsøkerPersonTreffId, navIdent)
                 formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
             }
@@ -63,6 +76,38 @@ class FormidlingService(
         return formidlinger
     }
 
+    /**
+     * Kategoriserer jobbsøkerne mot eksisterende formidlinger (gjort slik at frontend kan prøve på nytt ved feil
+     * uten å sende utfallet to ganger):
+     * - Eksisterende formidlinger uten utfallSendtTidspunkt gjenbrukes.
+     * - Eksisterende formidlinger med utfallSendtTidspunkt ignoreres (allerede sendt).
+     * - Jobbsøkere uten formidling skal få opprettet nye formidlinger.
+     */
+    private fun kategoriserEksisterendeFormidlinger(
+        treffId: TreffId,
+        arbeidsgiver: Arbeidsgiver,
+        jobbsøkere: List<Jobbsøker>,
+    ): FormidlingsKandidater {
+        val eksisterendeFormidlinger = jobbsøkere.mapNotNull { jobbsøker ->
+            formidlingRepository.hent(treffId, jobbsøker.personTreffId, arbeidsgiver.arbeidsgiverTreffId)
+        }
+        val medUtfall = eksisterendeFormidlinger.filter { it.utfallSendtTidspunkt != null }
+        val utenUtfall = eksisterendeFormidlinger.filter { it.utfallSendtTidspunkt == null }
+
+        val personTreffIderMedFormidling = eksisterendeFormidlinger.map { it.jobbsøkerPersonTreffId }.toSet()
+        val jobbsøkereUtenFormidling = jobbsøkere.filter { it.personTreffId !in personTreffIderMedFormidling }
+
+        if (medUtfall.isNotEmpty()) {
+            logger.warn(
+                "Fant ${medUtfall.size} eksisterende formidlinger med utfallSendtTidspunkt for treff $treffId og orgnr ${arbeidsgiver.orgnr}. Disse blir ikke behandlet på nytt.",
+            )
+        }
+
+        return FormidlingsKandidater(
+            formidlingerUtenUtfall = utenUtfall,
+            jobbsøkereUtenFormidling = jobbsøkereUtenFormidling,
+        )
+    }
 
     private fun validerOgHentArbeidsgivereOgJobbsøkere(treffId: TreffId, opprettFormidling: OpprettFormidlingDto): Pair<Arbeidsgiver, List<Jobbsøker>> {
         rekrutteringstreffRepository.hent(treffId)
@@ -92,14 +137,15 @@ class FormidlingService(
     }
 
     private fun leggKandidatPåListen(
-        stillingIdOgKandidatlisteId: OpprettFormidlingStillingRespons,
+        stillingId: UUID,
+        kandidatlisteId: UUID,
         jobbsøker: Jobbsøker,
         navKontorEnhetId: String,
         userToken: String
     ) {
         kandidatKlient.leggTilPersonerPåKandidatliste(
-            kandidatlisteId = stillingIdOgKandidatlisteId.kandidatlisteId,
-            stillingId = stillingIdOgKandidatlisteId.stillingsId,
+            kandidatlisteId = kandidatlisteId,
+            stillingId = stillingId,
             jobbsøker = jobbsøker,
             navKontorVeileder = navKontorEnhetId,
             userToken = userToken
@@ -159,4 +205,9 @@ class FormidlingService(
 
 class ArbeidsgiverIkkeFunnetException(message: String) : RuntimeException(message)
 class JobbsøkerIkkeFunnetPåTreffException(message: String) : RuntimeException(message)
+
+private data class FormidlingsKandidater(
+    val formidlingerUtenUtfall: List<Formidling>,
+    val jobbsøkereUtenFormidling: List<Jobbsøker>,
+)
 

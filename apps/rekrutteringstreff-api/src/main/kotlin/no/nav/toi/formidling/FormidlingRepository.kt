@@ -51,23 +51,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
     }
 
     fun hent(formidlingId: Long): Formidling? = dataSource.connection.use { conn ->
-        val sql = """
-            SELECT 
-                f.formidling_id,
-                f.id,
-                rt.id as treff_id,
-                js.id as jobbsoker_treff_id,
-                ag.id as arbeidsgiver_treff_id,
-                f.stilling_id,
-                f.kandidatliste_id,
-                f.utfall_sendt_tidspunkt,
-                f.opprettet_tidspunkt
-            FROM formidling f
-            JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
-            JOIN jobbsoker js ON f.jobbsoker_id = js.jobbsoker_id
-            JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
-            WHERE f.formidling_id = ? AND f.slettet_tidspunkt IS NULL
-        """.trimIndent()
+        val sql = "$HENT_FORMIDLING_BASE WHERE f.formidling_id = ? AND f.slettet_tidspunkt IS NULL"
 
         conn.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, formidlingId)
@@ -78,23 +62,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
     }
 
     fun hent(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId): Formidling? = dataSource.connection.use { conn ->
-        val sql = """
-            SELECT 
-                f.formidling_id,
-                f.id,
-                rt.id as treff_id,
-                js.id as jobbsoker_treff_id,
-                ag.id as arbeidsgiver_treff_id,
-                f.stilling_id,
-                f.kandidatliste_id,
-                f.utfall_sendt_tidspunkt,
-                f.opprettet_tidspunkt
-            FROM formidling f
-            JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
-            JOIN jobbsoker js ON f.jobbsoker_id = js.jobbsoker_id
-            JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
-            WHERE rt.id = ? AND js.id = ? AND ag.id = ? AND f.slettet_tidspunkt IS NULL
-        """.trimIndent()
+        val sql = "$HENT_FORMIDLING_BASE WHERE rt.id = ? AND js.id = ? AND ag.id = ? AND f.slettet_tidspunkt IS NULL"
 
         conn.prepareStatement(sql).use { stmt ->
             stmt.setObject(1, treffId.somUuid)
@@ -158,5 +126,24 @@ class FormidlingRepository(private val dataSource: DataSource) {
         } else {
             setObject(index, value.toOffsetDateTime())
         }
+    }
+
+    private companion object {
+        private val HENT_FORMIDLING_BASE = """
+            SELECT 
+                f.formidling_id,
+                f.id,
+                rt.id as treff_id,
+                js.id as jobbsoker_treff_id,
+                ag.id as arbeidsgiver_treff_id,
+                f.stilling_id,
+                f.kandidatliste_id,
+                f.utfall_sendt_tidspunkt,
+                f.opprettet_tidspunkt
+            FROM formidling f
+            JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            JOIN jobbsoker js ON f.jobbsoker_id = js.jobbsoker_id
+            JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
+        """.trimIndent()
     }
 }

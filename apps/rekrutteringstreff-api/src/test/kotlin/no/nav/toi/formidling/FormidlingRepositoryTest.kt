@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.time.Instant
+import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.*
 
@@ -112,6 +113,58 @@ class FormidlingRepositoryTest {
         val formidlingEtter = repository.hent(formidlingId)
         assertThat(formidlingEtter!!.utfallSendtTidspunkt).isNotNull()
         assertThat(formidlingEtter.utfallSendtTidspunkt!!.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+    }
+
+    @Test
+    fun `hent skiller mellom formidling med og uten sendt utfall`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val orgnr = "123456789"
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr(orgnr), Orgnavn("Test AS"), emptyList(), null, null, null),
+            treffId,
+            "testperson"
+        )
+
+        val fnrMedSendtUtfall = "11111111111"
+        val fnrUtenSendtUtfall = "22222222222"
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer(fnrMedSendtUtfall), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer(fnrUtenSendtUtfall), Fornavn("Kari"), Etternavn("Nordmann"), null, null, null),
+            ),
+            treffId,
+            "testperson"
+        )
+
+        val stillingId = UUID.randomUUID()
+        db.dataSource.executeInTransaction { connection ->
+            repository.opprett(
+                connection,
+                treffId,
+                personTreffIder[0],
+                arbeidsgiverTreffId,
+                stillingId,
+                kandidatlisteId = null,
+                utfallSendtTidspunkt = ZonedDateTime.now().minusMinutes(1),
+            )
+            repository.opprett(
+                connection,
+                treffId,
+                personTreffIder[1],
+                arbeidsgiverTreffId,
+                stillingId,
+                kandidatlisteId = null,
+                utfallSendtTidspunkt = null,
+            )
+        }
+
+        val formidlingMedSendtUtfall = repository.hent(treffId, personTreffIder[0], arbeidsgiverTreffId)
+        val formidlingUtenSendtUtfall = repository.hent(treffId, personTreffIder[1], arbeidsgiverTreffId)
+
+        assertThat(formidlingMedSendtUtfall).isNotNull
+        assertThat(formidlingMedSendtUtfall!!.utfallSendtTidspunkt).isNotNull()
+        assertThat(formidlingUtenSendtUtfall).isNotNull
+        assertThat(formidlingUtenSendtUtfall!!.utfallSendtTidspunkt).isNull()
     }
 
     @Test
