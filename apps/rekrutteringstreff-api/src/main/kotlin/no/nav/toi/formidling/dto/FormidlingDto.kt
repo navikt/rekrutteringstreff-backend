@@ -17,7 +17,7 @@ data class StillingDto(
     val employer: ArbeidsgiverDto,
     val locationList: List<LocationDto> = emptyList(),
     val categoryList: List<CategoryDto> = emptyList(),
-    val properties: Map<String, String?>? = null,
+    val properties: Map<String, String?> = emptyMap(),
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -38,10 +38,10 @@ class ArbeidsgiverDto(
     val createdBy: String? = null,
     val updated: String? = null,
     val updatedBy: String? = null,
-    val contactList: List<ContactDto>? = null,
+    val contactList: List<ContactDto>,
     val location: LocationDto? = null,
-    val locationList: List<LocationDto> = ArrayList(),
-    val properties: Map<String, String>? = null,
+    val locationList: List<LocationDto>,
+    val properties: Map<String, String>,
     val name: String,
     val orgnr: String,
     val status: String? = null,
