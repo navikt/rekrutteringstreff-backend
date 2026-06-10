@@ -91,7 +91,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         val sql = """
             UPDATE formidling
             SET utfall_sendt_tidspunkt = now()
-            WHERE formidling_id = ? AND slettet_tidspunkt IS NULL
+            WHERE formidling_id = ? AND slettet_tidspunkt IS NULL AND utfall_sendt_tidspunkt IS NULL
         """.trimIndent()
 
         return connection.prepareStatement(sql).use { stmt ->
