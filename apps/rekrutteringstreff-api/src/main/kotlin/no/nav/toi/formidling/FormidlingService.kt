@@ -62,12 +62,12 @@ class FormidlingService(
         val formidlinger = formidlingerUtenUtfall + nyeFormidlinger
 
         formidlinger.forEach { formidling ->
+            val jobbsøker = jobbsøkere.find { it.personTreffId == formidling.jobbsøkerPersonTreffId } ?: error("Fant ikke jobbsøker i listen")
+            if (formidling.kandidatlisteId == null) {
+                error("KandidatlisteId mangler for formidling for stilling ${formidling.stillingId}")
+            }
+            leggKandidatPåListen(formidling.stillingId, formidling.kandidatlisteId, jobbsøker, opprettFormidling.eierNavKontorEnhetId, userToken)
             dataSource.executeInTransaction { connection ->
-                val jobbsøker = jobbsøkere.find { it.personTreffId == formidling.jobbsøkerPersonTreffId } ?: error("Fant ikke jobbsøker i listen")
-                if (formidling.kandidatlisteId == null) {
-                    error("KandidatlisteId mangler for formidling for stilling ${formidling.stillingId}")
-                }
-                leggKandidatPåListen(formidling.stillingId, formidling.kandidatlisteId, jobbsøker, opprettFormidling.eierNavKontorEnhetId, userToken)
                 endreJobbsøkerStatusOgLeggTilHendelser(connection, formidling.jobbsøkerPersonTreffId, navIdent)
                 formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
             }

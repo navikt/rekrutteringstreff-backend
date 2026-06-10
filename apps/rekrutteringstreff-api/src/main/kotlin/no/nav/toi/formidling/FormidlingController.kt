@@ -43,7 +43,7 @@ class FormidlingController(
         requestBody = OpenApiRequestBody(
             content = [OpenApiContent(
                 from = OpprettFormidlingDto::class,
-                example = """{ "fødselsnumre": ["12345678901", "10987654321"], "orgnr": "123456789" }"""
+                example = "{\"eierNavKontorEnhetId\":\"1124\",\"orgnr\":\"973626183\",\"fødselsnumre\":[\"12345678901\",\"10987654321\"],\"stilling\":{\"employer\":{\"name\":\"VELFERDSETATEN ADMINISTRASJON\",\"orgnr\":\"973626183\",\"publicName\":\"VELFERDSETATEN ADMINISTRASJON\"},\"locationList\":[{\"county\":\"ROGALAND\",\"municipal\":\"SOLA\",\"municipalCode\":\"1124\",\"country\":\"NORGE\"}],\"categoryList\":[{\"code\":\"19989\",\"categoryType\":\"JANZZ\",\"name\":\"Utvikler (dataspill)\"}],\"properties\":{\"sector\":\"Privat\",\"engagementtype\":\"Fast\",\"extent\":\"Heltid\"}}}"
             )]
         ),
         responses = [OpenApiResponse(
