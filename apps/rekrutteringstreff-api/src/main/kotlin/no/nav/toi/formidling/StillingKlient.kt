@@ -87,9 +87,12 @@ class StillingKlient(
 
     companion object {
         private fun withRetry(fetch: () -> HttpResponse<String>): HttpResponse<String> {
-            fun isFailure(response: HttpResponse<String>) = response.statusCode() !in 200..299
+            fun børRekjøres(response: HttpResponse<String>): Boolean {
+                val status = response.statusCode()
+                return status == 429 || status in 500..599
+            }
             val retryConfig = RetryConfig.custom<HttpResponse<String>>()
-                .retryOnResult(::isFailure)
+                .retryOnResult(::børRekjøres)
                 .build()
             val retry = Retry.of("opprett stilling og kandidatliste", retryConfig)
             val fetchWithRetry = Retry.decorateSupplier(retry, fetch)
