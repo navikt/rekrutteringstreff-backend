@@ -1,14 +1,14 @@
 package no.nav.toi.formidling
 
-import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.formidling.dto.ArbeidsgiverDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.formidling.dto.StillingDto
 import no.nav.toi.executeInTransaction
-import no.nav.toi.httpClient
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -54,16 +54,7 @@ class FormidlingServiceTest {
             formidlingRepository = FormidlingRepository(db.dataSource)
             rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
 
-            stillingKlient = StillingKlient(
-                stillingApiUrl = "",
-                stillingScope = "",
-                accessTokenClient = AccessTokenClient(
-                    clientId = "test",
-                    secret = "test",
-                    azureUrl = "http://localhost:0/token",
-                    httpClient = httpClient
-                ),
-            )
+            stillingKlient = mockk(relaxed = true)
             kandidatKlient = mockk(relaxed = true)
 
             formidlingService = FormidlingService(
@@ -143,6 +134,70 @@ class FormidlingServiceTest {
         )
 
         assertThat(formidling).isNull()
+    }
+
+    @Test
+    fun `oppretter nye formidlinger for jobbsøkere uten eksisterende formidling`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val orgnr = "123456789"
+        val stillingId = UUID.randomUUID()
+        val kandidatlisteId = UUID.randomUUID()
+
+        val arbeidsgiverTreffId = arbeidsgiverService.leggTilArbeidsgiver(
+            LeggTilArbeidsgiver(Orgnr(orgnr), Orgnavn("Test AS"), emptyList(), null, null, null),
+            treffId, "testperson"
+        )
+
+        jobbsøkerService.leggTilJobbsøkere(
+            listOf(LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            treffId, "testperson"
+        )
+        val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
+
+        every {
+            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
+        } returns OpprettFormidlingStillingRespons(stillingsId = stillingId, kandidatlisteId = kandidatlisteId)
+
+        val opprettede = formidlingService.opprettFormidling(
+            treffId = treffId,
+            opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+            navIdent = "testperson",
+            userToken = "test-token",
+        )
+
+        // Det opprettes én formidling for jobbsøkeren uten eksisterende formidling
+        assertThat(opprettede).hasSize(1)
+        val opprettet = opprettede.single()
+        assertThat(opprettet.jobbsøkerPersonTreffId).isEqualTo(personTreffId)
+        assertThat(opprettet.stillingId).isEqualTo(stillingId)
+        assertThat(opprettet.kandidatlisteId).isEqualTo(kandidatlisteId)
+
+        // StillingKlient kalles for å opprette stilling og kandidatliste
+        verify(exactly = 1) { stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any()) }
+
+        // Kandidaten legges på listen
+        verify(exactly = 1) {
+            kandidatKlient.leggTilPersonerPåKandidatliste(
+                kandidatlisteId = kandidatlisteId,
+                stillingId = stillingId,
+                jobbsøker = any(),
+                navKontorVeileder = any(),
+                userToken = "test-token",
+            )
+        }
+
+        // Formidling-raden er lagret med utfall_sendt_tidspunkt satt
+        val lagret = formidlingService.hent(opprettet.formidlingId)
+        assertThat(lagret).isNotNull
+        assertThat(lagret!!.stillingId).isEqualTo(stillingId)
+        assertThat(lagret.kandidatlisteId).isEqualTo(kandidatlisteId)
+        assertThat(lagret.arbeidsgiverTreffId).isEqualTo(arbeidsgiverTreffId)
+        assertThat(lagret.utfallSendtTidspunkt).isNotNull()
+        assertThat(lagret.utfallSendtTidspunkt!!.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+
+        // Jobbsøkerstatus er satt til FÅTT_JOBB
+        val oppdatertJobbsøker = jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }
+        assertThat(oppdatertJobbsøker.status).isEqualTo(JobbsøkerStatus.FÅTT_JOBB)
     }
 
     @Test
