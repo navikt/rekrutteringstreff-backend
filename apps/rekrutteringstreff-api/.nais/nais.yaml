@@ -39,12 +39,17 @@ spec:
     outbound:
       rules:
         - application: rekrutteringsbistand-kandidatsok-api
+        - application: rekrutteringsbistand-stilling-api
+        - application: rekrutteringsbistand-kandidat-api
+          namespace: toi
+          cluster: {{ fss_cluster }}
         - application: modiacontextholder
           namespace: personoversikt
         - application: logging
           namespace: nais-system
       external:
         - host: fakedings.intern.dev.nav.no
+        - host: {{ kandidat_api_host }}
         - host: {{ openai_azure_host }}
           ports:
             - port: 443
@@ -84,6 +89,10 @@ spec:
       value: {{kandidatsok_api_url}}
     - name: KANDIDATSOK_API_SCOPE
       value: {{kandidatsok_api_scope}}
+    - name: STILLING_API_URL
+      value: {{stilling_api_url}}
+    - name: STILLING_API_SCOPE
+      value: {{stilling_api_scope}}
     - name: MODIACONTEXTHOLDER_URL
       value: {{modiacontextholder_url}}
     - name: MODIACONTEXTHOLDER_SCOPE
@@ -96,6 +105,10 @@ spec:
       value: "https://{{openai_azure_host}}/openai/deployments/{{openai_deployment}}/chat/completions?api-version={{openai_api_version}}"
     - name: OPENAI_DEPLOYMENT
       value: {{openai_deployment}}
+    - name: KANDIDAT_API_URL
+      value: {{kandidat_api_url}}
+    - name: KANDIDAT_API_SCOPE
+      value: {{kandidat_api_scope}}
   observability:
     autoInstrumentation:
       enabled: true

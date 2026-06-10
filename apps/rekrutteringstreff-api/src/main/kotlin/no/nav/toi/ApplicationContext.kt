@@ -3,6 +3,9 @@ package no.nav.toi
 import no.nav.toi.arbeidsgiver.ArbeidsgiverController
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
+import no.nav.toi.formidling.FormidlingController
+import no.nav.toi.formidling.FormidlingRepository
+import no.nav.toi.formidling.FormidlingService
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortFeilLytter
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortRepository
@@ -43,6 +46,8 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val modiaKlient get() = infra.modiaKlient
     val kandidatsøkKlient get() = infra.kandidatsøkKlient
     val openAiKlient get() = infra.openAiKlient
+    val stillingKlient get() = infra.stillingKlient
+    val kandidatKlient get() = infra.kandidatKlient
 
     // Repositories
     val jobbsøkerRepository = JobbsøkerRepository(infra.dataSource, JacksonConfig.mapper)
@@ -54,6 +59,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val kiLoggRepository = KiLoggRepository(infra.dataSource)
     val sokRepository = RekrutteringstreffSokRepository(infra.dataSource)
     val healthRepository = HealthRepository(infra.dataSource)
+    val formidlingRepository = FormidlingRepository(infra.dataSource)
 
     // Services
     val jobbsøkerService = JobbsøkerService(
@@ -75,6 +81,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val openAiService = OpenAiService(openAiKlient, kiLoggRepository, openAiProperties)
     val kiLoggService = KiLoggService(kiLoggRepository)
     val sokService = RekrutteringstreffSokService(sokRepository)
+    val formidlingService = FormidlingService(infra.dataSource, formidlingRepository, arbeidsgiverService, jobbsøkerService, rekrutteringstreffRepository, stillingKlient, kandidatKlient)
 
     // Controllere
     val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService)
@@ -87,6 +94,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val kiController = KiController(kiLoggRepository, openAiService)
     val sokController = RekrutteringstreffSokController(sokService)
     val healthController = HealthController(healthRepository)
+    val formidlingController = FormidlingController(formidlingService)
 
     // Schedulere (lazy — har sideeffekter ved start, brukes kun i produksjon)
     val jobbsøkerhendelserScheduler by lazy {

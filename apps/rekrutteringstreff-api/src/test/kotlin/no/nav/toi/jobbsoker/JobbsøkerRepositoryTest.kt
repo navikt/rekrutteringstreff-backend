@@ -258,12 +258,23 @@ class JobbsøkerRepositoryTest {
                 veilederNavn = VeilederNavn("Kari Nordmann"),
                 veilederNavIdent = VeilederNavIdent("NAV123"),
                 status = JobbsøkerStatus.SVART_JA,
+            ),
+             Jobbsøker(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                treffId = treffId,
+                fødselsnummer = Fødselsnummer("12345678904"),
+                fornavn = Fornavn("Cole"),
+                etternavn = Etternavn("Nordmann"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
+                veilederNavn = VeilederNavn("Kari Nordmann"),
+                veilederNavIdent = VeilederNavIdent("NAV123"),
+                status = JobbsøkerStatus.FÅTT_JOBB,
             )
         )
         db.leggTilJobbsøkere(jobbsøkere)
         db.settSynlighet(jobbsøkere[2].personTreffId, false)
         val antallJobbsøkereSvartJa = repository.hentAntallJobbsøkereSvartJa(treffId)
-        assertThat(antallJobbsøkereSvartJa == 1)
+        assertThat(antallJobbsøkereSvartJa == 2)
     }
 
     @Test

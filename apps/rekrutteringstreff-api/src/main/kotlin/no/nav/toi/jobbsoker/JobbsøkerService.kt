@@ -12,6 +12,7 @@ import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.time.Instant
 import javax.sql.DataSource
 
@@ -189,6 +190,15 @@ class JobbsøkerService(
         }
     }
 
+    fun registrerFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
+        val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+        if (nåværendeStatus == JobbsøkerStatus.FÅTT_JOBB) {
+            logger.info("Jobbsøker har allerede fått jobb, ignorerer duplikat kall")
+            return
+        }
+        jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
+        jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.FÅTT_JOBB)
+    }
 
     fun markerSlettet(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): MarkerSlettetResultat {
         val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(personTreffId)

@@ -15,6 +15,8 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverStatus
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.formidling.KandidatKlient
+import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
@@ -24,6 +26,7 @@ import no.nav.toi.jobbsoker.Kontor
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
+import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.minside.ubruktPortnrFra9000.ubruktPortnr
 import no.nav.toi.rekrutteringstreff.ki.client.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
@@ -89,9 +92,15 @@ class MinsideTest {
                     accessTokenClient = Companion.accessTokenClient,
                     httpClient = Companion.httpClient
                 )
-                override val kandidatsøkKlient = no.nav.toi.kandidatsok.KandidatsøkKlient(
+                override val kandidatsøkKlient = KandidatsøkKlient(
                     kandidatsokApiUrl = "",
                     kandidatsokScope = "",
+                    accessTokenClient = Companion.accessTokenClient,
+                    httpClient = Companion.httpClient
+                )
+               override val stillingKlient = StillingKlient(
+                    stillingApiUrl = "",
+                    stillingScope = "",
                     accessTokenClient = Companion.accessTokenClient,
                     httpClient = Companion.httpClient
                 )
@@ -99,6 +108,12 @@ class MinsideTest {
                     apiUrl = "http://localhost:9955/openai/deployments/toi-gpt-4.1/chat/completions?api-version=2025-01-01-preview",
                     apiKey = "test-key",
                     kiVersjon =  "toi-gpt-4.1",
+                )
+                override val kandidatKlient = KandidatKlient(
+                    kandidatApiUrl = "",
+                    kandidatApiScope = "",
+                    accessTokenClient = Companion.accessTokenClient,
+                    httpClient = Companion.httpClient,
                 )
             }),
             port = rekrutteringsTreffApiPort,

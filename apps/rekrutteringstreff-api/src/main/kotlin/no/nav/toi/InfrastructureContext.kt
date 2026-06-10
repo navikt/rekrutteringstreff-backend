@@ -4,6 +4,8 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.helse.rapids_rivers.RapidApplication
+import no.nav.toi.formidling.KandidatKlient
+import no.nav.toi.formidling.StillingKlient
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.ki.OpenAiClient
 import no.nav.toi.rekrutteringstreff.ki.client.DefaultOpenAiClient
@@ -122,5 +124,23 @@ open class InfrastructureContext(
 
     open val openAiKlient: OpenAiClient by lazy {
         DefaultOpenAiClient(httpClient, openAiProperties)
+    }
+
+    open val stillingKlient: StillingKlient by lazy {
+        StillingKlient(
+            stillingApiUrl = getenv("STILLING_API_URL"),
+            stillingScope = getenv("STILLING_API_SCOPE"),
+            accessTokenClient = accessTokenClient,
+            httpClient = httpClient
+        )
+    }
+
+    open val kandidatKlient: KandidatKlient by lazy {
+        KandidatKlient(
+            kandidatApiUrl = getenv("KANDIDAT_API_URL"),
+            kandidatApiScope = getenv("KANDIDAT_API_SCOPE"),
+            accessTokenClient = accessTokenClient,
+            httpClient = httpClient,
+        )
     }
 }
