@@ -28,7 +28,7 @@ class KandidatKlient(
             scope = kandidatApiScope
         )
 
-        leggTilPersonerPåKandidatlisteMedAccesstoken(
+        leggTilPersonerPåKandidatlisteMedAccessToken(
             kandidatlisteId = kandidatlisteId,
             stillingId = stillingId,
             jobbsøker = jobbsøker,
@@ -37,7 +37,7 @@ class KandidatKlient(
         )
     }
 
-    fun leggTilPersonerPåKandidatlisteMedAccesstoken(
+    private fun leggTilPersonerPåKandidatlisteMedAccessToken(
         kandidatlisteId: UUID,
         stillingId: UUID,
         jobbsøker: Jobbsøker,
