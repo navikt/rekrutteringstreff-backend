@@ -298,6 +298,74 @@ class FormidlingRepositoryTest {
         assertThat(repository.hent(treffId, personTreffId, arbeidsgiverTreffId)).isNull()
     }
 
+    @Test
+    fun `hentAlleForTreff returnerer alle formidlinger med jobbsøker- og arbeidsgiverdata`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Testbedrift AS"), emptyList(), null, null, null),
+            treffId, "testperson",
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Frida"), Etternavn("Testberg"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("Z111111")),
+                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Petter"), Etternavn("Eksempel"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("Z111111")),
+            ),
+            treffId, "testperson",
+        )
+        val stillingId = UUID.randomUUID()
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+        db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+
+        val linjer = repository.hentAlleForTreff(treffId)
+
+        assertThat(linjer).hasSize(2)
+        val frida = linjer.single { it.fødselsnummer == "11111111111" }
+        assertThat(frida.fornavn).isEqualTo("Frida")
+        assertThat(frida.etternavn).isEqualTo("Testberg")
+        assertThat(frida.orgnr).isEqualTo("123456789")
+        assertThat(frida.orgnavn).isEqualTo("Testbedrift AS")
+        assertThat(frida.stillingId).isEqualTo(stillingId.toString())
+        assertThat(frida.kandidatlisteId).isNotNull()
+        assertThat(frida.personTreffId).isEqualTo(personTreffIder[0].somUuid.toString())
+    }
+
+    @Test
+    fun `hentAlleForTreff returnerer tom liste når treffet ikke har formidlinger`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+
+        assertThat(repository.hentAlleForTreff(treffId)).isEmpty()
+    }
+
+    @Test
+    fun `hentEgneForTreff returnerer kun formidlinger der bruker er veileder eller har kontortilgang`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Testbedrift AS"), emptyList(), null, null, null),
+            treffId, "testperson",
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Egen"), Etternavn("Veileder"), Kontor("1000", "Nav Test"), VeilederNavn("Min Veil"), VeilederNavIdent("Z111111")),
+                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Annet"), Etternavn("Kontor"), Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
+            ),
+            treffId, "testperson",
+        )
+        val stillingId = UUID.randomUUID()
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+        db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+
+        val somVeileder = repository.hentEgneForTreff(treffId, "Z111111", emptyList())
+        assertThat(somVeileder).hasSize(1)
+        assertThat(somVeileder.single().fødselsnummer).isEqualTo("11111111111")
+
+        val viaKontor = repository.hentEgneForTreff(treffId, "ukjent", listOf("2000"))
+        assertThat(viaKontor).hasSize(1)
+        assertThat(viaKontor.single().fødselsnummer).isEqualTo("22222222222")
+
+        val ingenTilgang = repository.hentEgneForTreff(treffId, "ukjent", emptyList())
+        assertThat(ingenTilgang).isEmpty()
+    }
+
     private data class FormidlingTestdata(
         val personTreffId: PersonTreffId,
         val arbeidsgiverTreffId: ArbeidsgiverTreffId,

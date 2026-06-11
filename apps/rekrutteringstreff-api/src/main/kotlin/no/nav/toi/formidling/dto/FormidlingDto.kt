@@ -78,3 +78,18 @@ data class FormidlingOutboundDto(
     val opprettetTidspunkt: String,
 )
 
+data class FormidlingMedPersonOgArbeidsgiver(
+    val id: String,
+    val opprettetTidspunkt: String,
+    val utfallSendtTidspunkt: String?,
+    val personTreffId: String,
+    val fødselsnummer: String,
+    val fornavn: String?,
+    val etternavn: String?,
+    val arbeidsgiverTreffId: String,
+    val orgnr: String,
+    val orgnavn: String?,
+    val stillingId: String,
+    val kandidatlisteId: String?,
+)
+

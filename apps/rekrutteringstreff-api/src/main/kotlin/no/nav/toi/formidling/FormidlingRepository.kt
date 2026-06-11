@@ -1,9 +1,12 @@
 package no.nav.toi.formidling
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
+import no.nav.toi.executeInTransaction
+import no.nav.toi.formidling.dto.FormidlingMedPersonOgArbeidsgiver
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
 import java.time.ZoneId
@@ -100,6 +103,132 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun hentAlleForTreff(treffId: TreffId): List<FormidlingMedPersonOgArbeidsgiver> {
+        val where = tilWhereClause(byggBasisFilter(treffId))
+        return hentMedWhere(where)
+    }
+
+    fun hentEgneForTreff(
+        treffId: TreffId,
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): List<FormidlingMedPersonOgArbeidsgiver> {
+        val where = tilWhereClause(
+            byggBasisFilter(treffId) + byggVeilederEllerEnhetFilter(veilederNavIdent, tilknyttedeEnheter)
+        )
+        return hentMedWhere(where)
+    }
+
+    private fun hentMedWhere(where: WhereClause): List<FormidlingMedPersonOgArbeidsgiver> =
+        dataSource.executeInTransaction { conn ->
+            val sql = """
+                SELECT
+                    f.id AS formidling_id,
+                    f.opprettet_tidspunkt,
+                    f.utfall_sendt_tidspunkt,
+                    f.stilling_id,
+                    f.kandidatliste_id,
+                    j.id::text AS jobbsoker_treff_id,
+                    j.fodselsnummer,
+                    j.fornavn,
+                    j.etternavn,
+                    ag.id::text AS arbeidsgiver_treff_id,
+                    ag.orgnr,
+                    ag.orgnavn
+                FROM formidling f
+                JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                JOIN jobbsoker j ON f.jobbsoker_id = j.jobbsoker_id
+                JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
+                ${where.sql}
+                ORDER BY f.opprettet_tidspunkt DESC, f.formidling_id DESC
+            """.trimIndent()
+
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+                settWhereParametere(stmt, where.params)
+                stmt.executeQuery().use { rs ->
+                    val resultater = mutableListOf<FormidlingMedPersonOgArbeidsgiver>()
+                    while (rs.next()) {
+                        resultater += rs.toFormidlingMedPersonOgArbeidsgiver()
+                    }
+                    resultater
+                }
+            }
+        }
+
+    private fun settWhereParametere(stmt: PreparedStatement, params: List<SqlParam>) {
+        params.forEachIndexed { index, param ->
+            settParam(stmt, index + 1, param)
+        }
+    }
+
+    private fun settParam(stmt: PreparedStatement, index: Int, param: SqlParam) {
+        when (param) {
+            is SqlParam.Uuid -> stmt.setObject(index, param.value)
+            is SqlParam.Text -> stmt.setString(index, param.value)
+            is SqlParam.TextArray ->
+                stmt.setArray(index, stmt.connection.createArrayOf("text", param.value.toTypedArray()))
+        }
+    }
+
+    private fun ResultSet.toFormidlingMedPersonOgArbeidsgiver() = FormidlingMedPersonOgArbeidsgiver(
+        id = getString("formidling_id"),
+        opprettetTidspunkt = getTimestamp("opprettet_tidspunkt")
+            .toInstant().atZone(OSLO).toString(),
+        utfallSendtTidspunkt = getTimestamp("utfall_sendt_tidspunkt")
+            ?.toInstant()?.atZone(OSLO)?.toString(),
+        personTreffId = getString("jobbsoker_treff_id"),
+        fødselsnummer = getString("fodselsnummer"),
+        fornavn = getString("fornavn"),
+        etternavn = getString("etternavn"),
+        arbeidsgiverTreffId = getString("arbeidsgiver_treff_id"),
+        orgnr = getString("orgnr"),
+        orgnavn = getString("orgnavn"),
+        stillingId = getString("stilling_id"),
+        kandidatlisteId = getObject("kandidatliste_id", UUID::class.java)?.toString(),
+    )
+
+    private data class WhereClause(
+        val sql: String,
+        val params: List<SqlParam>,
+    )
+
+    private data class Condition(
+        val sql: String,
+        val params: List<SqlParam> = emptyList(),
+    ) {
+        constructor(sql: String, vararg params: SqlParam) : this(sql, params.toList())
+    }
+
+    private sealed interface SqlParam {
+        data class Uuid(val value: UUID) : SqlParam
+        data class Text(val value: String) : SqlParam
+        data class TextArray(val value: List<String>) : SqlParam
+    }
+
+    private fun byggBasisFilter(treffId: TreffId): List<Condition> = listOf(
+        Condition("rt.id = ?", SqlParam.Uuid(treffId.somUuid)),
+        Condition("f.slettet_tidspunkt IS NULL"),
+        Condition("j.status != 'SLETTET'"),
+    )
+
+    private fun byggVeilederEllerEnhetFilter(
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): Condition {
+        val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+        return Condition(
+            "(UPPER(j.veileder_navident) = ? OR j.kontornummer = ANY (?::text[]))",
+            SqlParam.Text(veilederNavIdent.trim().uppercase()),
+            SqlParam.TextArray(unikeEnheter),
+        )
+    }
+
+    private fun tilWhereClause(conditions: List<Condition>): WhereClause = WhereClause(
+        sql = "WHERE " + conditions.joinToString(" AND ") { it.sql },
+        params = conditions.flatMap { it.params },
+    )
+
     private fun ResultSet.toFormidling() = Formidling(
         formidlingId = getLong("formidling_id"),
         id = UUID.fromString(getString("id")),
@@ -129,6 +258,9 @@ class FormidlingRepository(private val dataSource: DataSource) {
     }
 
     private companion object {
+        private const val QUERY_TIMEOUT_SECONDS = 10
+        private val OSLO = ZoneId.of("Europe/Oslo")
+
         private val HENT_FORMIDLING_BASE = """
             SELECT 
                 f.formidling_id,
