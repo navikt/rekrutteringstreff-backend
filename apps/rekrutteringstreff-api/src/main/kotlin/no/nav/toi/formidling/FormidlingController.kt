@@ -89,7 +89,7 @@ class FormidlingController(
         responses = [OpenApiResponse(
             status = "201",
             content = [OpenApiContent(
-                from = FormidlingOutboundDto::class,
+from = Array<FormidlingOutboundDto>::class,
                 example = """
                     [
                         {
