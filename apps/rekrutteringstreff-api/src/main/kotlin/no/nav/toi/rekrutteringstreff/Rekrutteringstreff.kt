@@ -31,7 +31,7 @@ class Rekrutteringstreff(
     val sistEndret: ZonedDateTime,
     val sistEndretAv: String,
 ) {
-    fun tilRekrutteringstreffDto(antallArbeidsgivere: Int, antallJobbsøkere: Int, antallJobbsøkereSvartJa: Int) = RekrutteringstreffDto(
+    fun tilRekrutteringstreffDto(antallArbeidsgivere: Int, antallJobbsøkere: Int, antallJobbsøkereSvartJa: Int, antallJobbsøkereFåttJobb: Int) = RekrutteringstreffDto(
         tittel = tittel,
         beskrivelse = beskrivelse,
         fraTid = fraTid,
@@ -52,6 +52,7 @@ class Rekrutteringstreff(
         antallArbeidsgivere = antallArbeidsgivere,
         antallJobbsøkere = antallJobbsøkere,
         antallJobbsøkereSvartJa = antallJobbsøkereSvartJa,
+        antallJobbsøkereFåttJobb = antallJobbsøkereFåttJobb,
         eiere = eiere,
         kontorer = kontorer,
         sistEndret = sistEndret,

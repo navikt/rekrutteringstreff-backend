@@ -278,6 +278,63 @@ class JobbsøkerRepositoryTest {
     }
 
     @Test
+    fun `Hent antall jobbsøkere som har fått jobb`() {
+        val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val jobbsøkere = listOf(
+            Jobbsøker(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                treffId = treffId,
+                fødselsnummer = Fødselsnummer("12345678901"),
+                fornavn = Fornavn("Ola"),
+                etternavn = Etternavn("Nordmann"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
+                veilederNavn = VeilederNavn("Kari Nordmann"),
+                veilederNavIdent = VeilederNavIdent("NAV123"),
+                status = JobbsøkerStatus.INVITERT,
+            ),
+            Jobbsøker(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                treffId = treffId,
+                fødselsnummer = Fødselsnummer("12345678902"),
+                fornavn = Fornavn("Ole"),
+                etternavn = Etternavn("Nordmann"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
+                veilederNavn = VeilederNavn("Kari Nordmann"),
+                veilederNavIdent = VeilederNavIdent("NAV123"),
+                status = JobbsøkerStatus.FÅTT_JOBB,
+            ),
+            Jobbsøker(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                treffId = treffId,
+                fødselsnummer = Fødselsnummer("12345678903"),
+                fornavn = Fornavn("Dole"),
+                etternavn = Etternavn("Nordmann"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
+                veilederNavn = VeilederNavn("Kari Nordmann"),
+                veilederNavIdent = VeilederNavIdent("NAV123"),
+                status = JobbsøkerStatus.FÅTT_JOBB,
+            ),
+            Jobbsøker(
+                personTreffId = PersonTreffId(UUID.randomUUID()),
+                treffId = treffId,
+                fødselsnummer = Fødselsnummer("12345678904"),
+                fornavn = Fornavn("Cole"),
+                etternavn = Etternavn("Nordmann"),
+                kontor = Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"),
+                veilederNavn = VeilederNavn("Kari Nordmann"),
+                veilederNavIdent = VeilederNavIdent("NAV123"),
+                status = JobbsøkerStatus.FÅTT_JOBB,
+            ),
+        )
+        db.leggTilJobbsøkere(jobbsøkere)
+        // Sett én FÅTT_JOBB-jobbsøker som ikke-synlig - skal ikke telles
+        db.settSynlighet(jobbsøkere[3].personTreffId, false)
+
+        val antall = repository.hentAntallJobbsøkereFåttJobb(treffId)
+        assertThat(antall).isEqualTo(2)
+    }
+
+    @Test
     fun hentJobbsøkerHendelserTest() {
         val treffId: TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreffHendelser")
 
