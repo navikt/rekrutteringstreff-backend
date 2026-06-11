@@ -123,16 +123,12 @@ class FormidlingRepository(private val dataSource: DataSource) {
         dataSource.executeInTransaction { conn ->
             val sql = """
                 SELECT
-                    f.id AS formidling_id,
+                    f.id,
                     f.opprettet_tidspunkt,
-                    f.utfall_sendt_tidspunkt,
                     f.stilling_id,
-                    f.kandidatliste_id,
-                    j.id::text AS jobbsoker_treff_id,
                     j.fodselsnummer,
                     j.fornavn,
                     j.etternavn,
-                    ag.id::text AS arbeidsgiver_treff_id,
                     ag.orgnr,
                     ag.orgnavn
                 FROM formidling f
@@ -172,20 +168,15 @@ class FormidlingRepository(private val dataSource: DataSource) {
     }
 
     private fun ResultSet.toFormidlingMedPersonOgArbeidsgiver() = FormidlingMedPersonOgArbeidsgiver(
-        id = getString("formidling_id"),
+        id = getString("id"),
         opprettetTidspunkt = getTimestamp("opprettet_tidspunkt")
             .toInstant().atZone(OSLO).toString(),
-        utfallSendtTidspunkt = getTimestamp("utfall_sendt_tidspunkt")
-            ?.toInstant()?.atZone(OSLO)?.toString(),
-        personTreffId = getString("jobbsoker_treff_id"),
         fødselsnummer = getString("fodselsnummer"),
         fornavn = getString("fornavn"),
         etternavn = getString("etternavn"),
-        arbeidsgiverTreffId = getString("arbeidsgiver_treff_id"),
         orgnr = getString("orgnr"),
         orgnavn = getString("orgnavn"),
         stillingId = getString("stilling_id"),
-        kandidatlisteId = getObject("kandidatliste_id", UUID::class.java)?.toString(),
     )
 
     private data class WhereClause(

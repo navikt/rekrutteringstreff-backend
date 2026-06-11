@@ -146,16 +146,12 @@ from = Array<FormidlingOutboundDto>::class,
                             {
                                 "id": "a1b2c3d4-0000-0000-0000-000000000001",
                                 "opprettetTidspunkt": "2026-01-15T10:30:00+01:00[Europe/Oslo]",
-                                "utfallSendtTidspunkt": "2026-01-15T11:00:00+01:00[Europe/Oslo]",
-                                "personTreffId": "b1c2d3e4-0000-0000-0000-000000000002",
                                 "fødselsnummer": "41017512345",
                                 "fornavn": "Testperson",
                                 "etternavn": "Én",
-                                "arbeidsgiverTreffId": "c1d2e3f4-0000-0000-0000-000000000003",
                                 "orgnr": "999999991",
                                 "orgnavn": "Test Arbeidsgiver AS",
-                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
-                                "kandidatlisteId": "d1e2f3a4-0000-0000-0000-000000000004"
+                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002"
                             }
                         ]
                     """
@@ -202,16 +198,12 @@ from = Array<FormidlingOutboundDto>::class,
                             {
                                 "id": "a1b2c3d4-0000-0000-0000-000000000001",
                                 "opprettetTidspunkt": "2026-01-15T10:30:00+01:00[Europe/Oslo]",
-                                "utfallSendtTidspunkt": null,
-                                "personTreffId": "b1c2d3e4-0000-0000-0000-000000000002",
                                 "fødselsnummer": "41017512345",
                                 "fornavn": "Testperson",
                                 "etternavn": "Én",
-                                "arbeidsgiverTreffId": "c1d2e3f4-0000-0000-0000-000000000003",
                                 "orgnr": "999999991",
                                 "orgnavn": "Test Arbeidsgiver AS",
-                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
-                                "kandidatlisteId": null
+                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002"
                             }
                         ]
                     """
