@@ -110,6 +110,7 @@ data class RekrutteringstreffSokTreff(
     val antallArbeidsgivere: Long,
     val antallJobbsøkere: Long,
     val antallJobbsøkereSvartJa: Long,
+    val antallJobbsøkereFåttJobb: Long,
 )
 
 data class FilterValg(
