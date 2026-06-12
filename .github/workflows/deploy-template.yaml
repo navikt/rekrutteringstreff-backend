@@ -74,7 +74,7 @@ jobs:
 
   call-trivy-security-scan:
     needs: build-and-publish
-    uses: navikt/toi-github-actions-workflows/.github/workflows/trivy-security-scan.yaml@v1
+    uses: navikt/toi-github-actions-workflows/.github/workflows/trivy-security-scan.yaml@v15
     with:
       image: ${{ needs.build-and-publish.outputs.image }}
     permissions:
