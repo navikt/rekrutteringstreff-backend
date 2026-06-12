@@ -1,9 +1,12 @@
 package no.nav.toi.formidling
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
+import no.nav.toi.executeInTransaction
+import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
 import java.time.ZoneId
@@ -100,6 +103,122 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun hentAlleForTreff(treffId: TreffId): List<FormidlingDto> {
+        val where = tilWhereClause(byggBasisFilter(treffId))
+        return hentMedWhere(where)
+    }
+
+    fun hentEgneForTreff(
+        treffId: TreffId,
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): List<FormidlingDto> {
+        val where = tilWhereClause(
+            byggBasisFilter(treffId) + byggVeilederEllerEnhetFilter(veilederNavIdent, tilknyttedeEnheter)
+        )
+        return hentMedWhere(where)
+    }
+
+    private fun hentMedWhere(where: WhereClause): List<FormidlingDto> =
+        dataSource.executeInTransaction { conn ->
+            val sql = """
+                SELECT
+                    f.id,
+                    f.opprettet_tidspunkt,
+                    f.stilling_id,
+                    j.fodselsnummer,
+                    j.fornavn,
+                    j.etternavn,
+                    ag.orgnr,
+                    ag.orgnavn
+                FROM formidling f
+                JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                JOIN jobbsoker j ON f.jobbsoker_id = j.jobbsoker_id
+                JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
+                ${where.sql}
+                ORDER BY f.opprettet_tidspunkt DESC, f.formidling_id DESC
+            """.trimIndent()
+
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+                settWhereParametere(stmt, where.params)
+                stmt.executeQuery().use { rs ->
+                    val resultater = mutableListOf<FormidlingDto>()
+                    while (rs.next()) {
+                        resultater += rs.toFormidlingDto()
+                    }
+                    resultater
+                }
+            }
+        }
+
+    private fun settWhereParametere(stmt: PreparedStatement, params: List<SqlParam>) {
+        params.forEachIndexed { index, param ->
+            settParam(stmt, index + 1, param)
+        }
+    }
+
+    private fun settParam(stmt: PreparedStatement, index: Int, param: SqlParam) {
+        when (param) {
+            is SqlParam.Uuid -> stmt.setObject(index, param.value)
+            is SqlParam.Text -> stmt.setString(index, param.value)
+            is SqlParam.TextArray ->
+                stmt.setArray(index, stmt.connection.createArrayOf("text", param.value.toTypedArray()))
+        }
+    }
+
+    private fun ResultSet.toFormidlingDto() = FormidlingDto(
+        id = UUID.fromString(getString("id")),
+        opprettetTidspunkt = getTimestamp("opprettet_tidspunkt").toInstant().atZone(OSLO),
+        fødselsnummer = getString("fodselsnummer"),
+        fornavn = getString("fornavn"),
+        etternavn = getString("etternavn"),
+        orgnr = getString("orgnr"),
+        orgnavn = getString("orgnavn"),
+        stillingId = UUID.fromString(getString("stilling_id")),
+    )
+
+    private data class WhereClause(
+        val sql: String,
+        val params: List<SqlParam>,
+    )
+
+    private data class Condition(
+        val sql: String,
+        val params: List<SqlParam> = emptyList(),
+    ) {
+        constructor(sql: String, vararg params: SqlParam) : this(sql, params.toList())
+    }
+
+    private sealed interface SqlParam {
+        data class Uuid(val value: UUID) : SqlParam
+        data class Text(val value: String) : SqlParam
+        data class TextArray(val value: List<String>) : SqlParam
+    }
+
+    private fun byggBasisFilter(treffId: TreffId): List<Condition> = listOf(
+        Condition("rt.id = ?", SqlParam.Uuid(treffId.somUuid)),
+        Condition("f.slettet_tidspunkt IS NULL"),
+        Condition("j.status != 'SLETTET'"),
+    )
+
+    private fun byggVeilederEllerEnhetFilter(
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): Condition {
+        val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+        return Condition(
+            "(UPPER(j.veileder_navident) = ? OR j.kontornummer = ANY (?::text[]))",
+            SqlParam.Text(veilederNavIdent.trim().uppercase()),
+            SqlParam.TextArray(unikeEnheter),
+        )
+    }
+
+    private fun tilWhereClause(conditions: List<Condition>): WhereClause = WhereClause(
+        sql = "WHERE " + conditions.joinToString(" AND ") { it.sql },
+        params = conditions.flatMap { it.params },
+    )
+
     private fun ResultSet.toFormidling() = Formidling(
         formidlingId = getLong("formidling_id"),
         id = UUID.fromString(getString("id")),
@@ -129,6 +248,9 @@ class FormidlingRepository(private val dataSource: DataSource) {
     }
 
     private companion object {
+        private const val QUERY_TIMEOUT_SECONDS = 10
+        private val OSLO = ZoneId.of("Europe/Oslo")
+
         private val HENT_FORMIDLING_BASE = """
             SELECT 
                 f.formidling_id,

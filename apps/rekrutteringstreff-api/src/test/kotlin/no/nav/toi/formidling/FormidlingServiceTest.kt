@@ -411,6 +411,9 @@ class FormidlingServiceTest {
                     name = "Test AS",
                     orgnr = orgnr,
                     publicName = "Test AS",
+                    contactList = emptyList(),
+                    locationList = emptyList(),
+                    properties = emptyMap(),
                 ),
             ),
         )

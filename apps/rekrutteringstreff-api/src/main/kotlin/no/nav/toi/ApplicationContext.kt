@@ -94,7 +94,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val kiController = KiController(kiLoggRepository, openAiService)
     val sokController = RekrutteringstreffSokController(sokService)
     val healthController = HealthController(healthRepository)
-    val formidlingController = FormidlingController(formidlingService)
+    val formidlingController = FormidlingController(formidlingService, eierService, infra.modiaKlient)
 
     // Schedulere (lazy — har sideeffekter ved start, brukes kun i produksjon)
     val jobbsøkerhendelserScheduler by lazy {
