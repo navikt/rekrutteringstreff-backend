@@ -127,7 +127,7 @@ class FormidlingService(
             ?: throw ArbeidsgiverIkkeFunnetException("Arbeidsgiver med orgnr ${opprettFormidling.orgnr} finnes ikke på treffet")
 
         val jobbsøkere = opprettFormidling.fødselsnumre.map { fnr ->
-            jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(fnr))
+            jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(fnr), inkluderUsynlige = true)
                 ?: throw JobbsøkerIkkeFunnetPåTreffException("Jobbsøker med fødselsnummer $fnr finnes ikke på treffet")
         }
         return Pair(arbeidsgiver, jobbsøkere)
