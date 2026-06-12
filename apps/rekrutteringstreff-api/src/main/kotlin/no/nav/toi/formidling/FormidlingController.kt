@@ -93,12 +93,12 @@ from = Array<FormidlingOutboundDto>::class,
                 example = """
                     [
                         {
-                            "formidlingId": "f1b2c3d4-0000-0000-0000-000000000001",
+                            "id": "f1b2c3d4-0000-0000-0000-000000000001",
                             "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
                             "opprettetTidspunkt": "2026-01-15T10:30:00+01:00[Europe/Oslo]"
                         },
                         {
-                            "formidlingId": "f1b2c3d4-0000-0000-0000-000000000003",
+                            "id": "f1b2c3d4-0000-0000-0000-000000000003",
                             "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
                             "opprettetTidspunkt": "2026-01-15T10:30:01+01:00[Europe/Oslo]"
                         }
@@ -227,8 +227,8 @@ from = Array<FormidlingOutboundDto>::class,
     }
 
     private fun Formidling.toOutboundDto() = FormidlingOutboundDto(
-        formidlingId = id.toString(),
-        stillingId = stillingId.toString(),
-        opprettetTidspunkt = opprettetTidspunkt.toString(),
+        id = id,
+        stillingId = stillingId,
+        opprettetTidspunkt = opprettetTidspunkt,
     )
 }

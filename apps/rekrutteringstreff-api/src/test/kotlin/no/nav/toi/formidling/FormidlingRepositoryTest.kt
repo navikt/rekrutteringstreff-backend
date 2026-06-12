@@ -324,7 +324,7 @@ class FormidlingRepositoryTest {
         assertThat(frida.etternavn).isEqualTo("Testberg")
         assertThat(frida.orgnr).isEqualTo("123456789")
         assertThat(frida.orgnavn).isEqualTo("Testbedrift AS")
-        assertThat(frida.stillingId).isEqualTo(stillingId.toString())
+        assertThat(frida.stillingId).isEqualTo(stillingId)
     }
 
     @Test

@@ -168,15 +168,14 @@ class FormidlingRepository(private val dataSource: DataSource) {
     }
 
     private fun ResultSet.toFormidlingMedPersonOgArbeidsgiver() = FormidlingMedPersonOgArbeidsgiver(
-        id = getString("id"),
-        opprettetTidspunkt = getTimestamp("opprettet_tidspunkt")
-            .toInstant().atZone(OSLO).toString(),
+        id = UUID.fromString(getString("id")),
+        opprettetTidspunkt = getTimestamp("opprettet_tidspunkt").toInstant().atZone(OSLO),
         fødselsnummer = getString("fodselsnummer"),
         fornavn = getString("fornavn"),
         etternavn = getString("etternavn"),
         orgnr = getString("orgnr"),
         orgnavn = getString("orgnavn"),
-        stillingId = getString("stilling_id"),
+        stillingId = UUID.fromString(getString("stilling_id")),
     )
 
     private data class WhereClause(
