@@ -8,7 +8,7 @@ import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
-import no.nav.toi.formidling.dto.FormidlingMedPersonOgArbeidsgiver
+import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
@@ -140,7 +140,7 @@ class FormidlingerKomponentTest {
         val response = httpGet(formidlingListeEgnePath(treffId), veilederIdent, listOf(AzureAdRoller.jobbsøkerrettet))
         assertThat(response.statusCode()).isEqualTo(200)
 
-        val linjer = mapper.readValue<List<FormidlingMedPersonOgArbeidsgiver>>(response.body())
+        val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).hasSize(1)
         assertThat(linjer.single().fødselsnummer).isEqualTo("11111111111")
     }
@@ -168,7 +168,7 @@ class FormidlingerKomponentTest {
         val response = httpGet(formidlingListeEgnePath(treffId), veilederIdent, listOf(AzureAdRoller.jobbsøkerrettet))
         assertThat(response.statusCode()).isEqualTo(200)
 
-        val linjer = mapper.readValue<List<FormidlingMedPersonOgArbeidsgiver>>(response.body())
+        val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).hasSize(1)
         assertThat(linjer.single().fødselsnummer).isEqualTo("11111111111")
     }
@@ -193,7 +193,7 @@ class FormidlingerKomponentTest {
         val response = httpGet(formidlingListeEgnePath(treffId), veilederIdent, listOf(AzureAdRoller.jobbsøkerrettet))
         assertThat(response.statusCode()).isEqualTo(200)
 
-        val linjer = mapper.readValue<List<FormidlingMedPersonOgArbeidsgiver>>(response.body())
+        val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).isEmpty()
     }
 
@@ -220,7 +220,7 @@ class FormidlingerKomponentTest {
         val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
         assertThat(response.statusCode()).isEqualTo(200)
 
-        val linjer = mapper.readValue<List<FormidlingMedPersonOgArbeidsgiver>>(response.body())
+        val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).hasSize(2)
         assertThat(linjer.map { it.fødselsnummer })
             .containsExactlyInAnyOrder("11111111111", "22222222222")

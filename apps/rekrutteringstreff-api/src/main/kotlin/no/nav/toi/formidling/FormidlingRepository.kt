@@ -2,7 +2,7 @@ package no.nav.toi.formidling
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.executeInTransaction
-import no.nav.toi.formidling.dto.FormidlingMedPersonOgArbeidsgiver
+import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
@@ -103,7 +103,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun hentAlleForTreff(treffId: TreffId): List<FormidlingMedPersonOgArbeidsgiver> {
+    fun hentAlleForTreff(treffId: TreffId): List<FormidlingDto> {
         val where = tilWhereClause(byggBasisFilter(treffId))
         return hentMedWhere(where)
     }
@@ -112,14 +112,14 @@ class FormidlingRepository(private val dataSource: DataSource) {
         treffId: TreffId,
         veilederNavIdent: String,
         tilknyttedeEnheter: List<String>,
-    ): List<FormidlingMedPersonOgArbeidsgiver> {
+    ): List<FormidlingDto> {
         val where = tilWhereClause(
             byggBasisFilter(treffId) + byggVeilederEllerEnhetFilter(veilederNavIdent, tilknyttedeEnheter)
         )
         return hentMedWhere(where)
     }
 
-    private fun hentMedWhere(where: WhereClause): List<FormidlingMedPersonOgArbeidsgiver> =
+    private fun hentMedWhere(where: WhereClause): List<FormidlingDto> =
         dataSource.executeInTransaction { conn ->
             val sql = """
                 SELECT
@@ -143,9 +143,9 @@ class FormidlingRepository(private val dataSource: DataSource) {
                 stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
                 settWhereParametere(stmt, where.params)
                 stmt.executeQuery().use { rs ->
-                    val resultater = mutableListOf<FormidlingMedPersonOgArbeidsgiver>()
+                    val resultater = mutableListOf<FormidlingDto>()
                     while (rs.next()) {
-                        resultater += rs.toFormidlingMedPersonOgArbeidsgiver()
+                        resultater += rs.toFormidlingDto()
                     }
                     resultater
                 }
@@ -167,7 +167,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    private fun ResultSet.toFormidlingMedPersonOgArbeidsgiver() = FormidlingMedPersonOgArbeidsgiver(
+    private fun ResultSet.toFormidlingDto() = FormidlingDto(
         id = UUID.fromString(getString("id")),
         opprettetTidspunkt = getTimestamp("opprettet_tidspunkt").toInstant().atZone(OSLO),
         fødselsnummer = getString("fodselsnummer"),

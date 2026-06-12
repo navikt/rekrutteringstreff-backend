@@ -73,13 +73,13 @@ data class LocationDto(
     val country: String? = null,
 )
 
-data class FormidlingOutboundDto(
+data class FormidlingOpprettetDto(
     val id: UUID,
     val stillingId: UUID,
     val opprettetTidspunkt: ZonedDateTime,
 )
 
-data class FormidlingMedPersonOgArbeidsgiver(
+data class FormidlingDto(
     val id: UUID,
     val opprettetTidspunkt: ZonedDateTime,
     val fødselsnummer: String,

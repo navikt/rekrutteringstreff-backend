@@ -6,7 +6,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
-import no.nav.toi.formidling.dto.FormidlingMedPersonOgArbeidsgiver
+import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Jobbsøker
@@ -30,14 +30,14 @@ class FormidlingService(
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    fun hentAlleFormidlingerForTreff(treffId: TreffId): List<FormidlingMedPersonOgArbeidsgiver> =
+    fun hentAlleFormidlingerForTreff(treffId: TreffId): List<FormidlingDto> =
         formidlingRepository.hentAlleForTreff(treffId)
 
     fun hentEgneFormidlingerForTreff(
         treffId: TreffId,
         veilederNavIdent: String,
         tilknyttedeEnheter: List<String>,
-    ): List<FormidlingMedPersonOgArbeidsgiver> =
+    ): List<FormidlingDto> =
         formidlingRepository.hentEgneForTreff(treffId, veilederNavIdent, tilknyttedeEnheter)
 
     fun opprettFormidling(

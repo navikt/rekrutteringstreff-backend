@@ -11,8 +11,8 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.authenticatedUser
-import no.nav.toi.formidling.dto.FormidlingMedPersonOgArbeidsgiver
-import no.nav.toi.formidling.dto.FormidlingOutboundDto
+import no.nav.toi.formidling.dto.FormidlingDto
+import no.nav.toi.formidling.dto.FormidlingOpprettetDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
@@ -89,7 +89,7 @@ class FormidlingController(
         responses = [OpenApiResponse(
             status = "201",
             content = [OpenApiContent(
-from = Array<FormidlingOutboundDto>::class,
+from = Array<FormidlingOpprettetDto>::class,
                 example = """
                     [
                         {
@@ -140,7 +140,7 @@ from = Array<FormidlingOutboundDto>::class,
             OpenApiResponse(
                 status = "200",
                 content = [OpenApiContent(
-                    from = Array<FormidlingMedPersonOgArbeidsgiver>::class,
+                    from = Array<FormidlingDto>::class,
                     example = """
                         [
                             {
@@ -192,7 +192,7 @@ from = Array<FormidlingOutboundDto>::class,
             OpenApiResponse(
                 status = "200",
                 content = [OpenApiContent(
-                    from = Array<FormidlingMedPersonOgArbeidsgiver>::class,
+                    from = Array<FormidlingDto>::class,
                     example = """
                         [
                             {
@@ -226,7 +226,7 @@ from = Array<FormidlingOutboundDto>::class,
         )
     }
 
-    private fun Formidling.toOutboundDto() = FormidlingOutboundDto(
+    private fun Formidling.toOutboundDto() = FormidlingOpprettetDto(
         id = id,
         stillingId = stillingId,
         opprettetTidspunkt = opprettetTidspunkt,
