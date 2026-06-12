@@ -198,7 +198,7 @@ from = Array<FormidlingOpprettetDto>::class,
                             {
                                 "id": "a1b2c3d4-0000-0000-0000-000000000001",
                                 "opprettetTidspunkt": "2026-01-15T10:30:00+01:00[Europe/Oslo]",
-                                "fødselsnummer": "41017512345",
+                                "fødselsnummer": "12345678901",
                                 "fornavn": "Testperson",
                                 "etternavn": "Én",
                                 "orgnr": "999999991",
