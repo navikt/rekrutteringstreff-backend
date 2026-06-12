@@ -58,7 +58,7 @@ class FormidlingController(
                     {
                         "eierNavKontorEnhetId": "1124",
                         "orgnr": "973626183",
-                        "fødselsnumre": ["41017512345", "42026598765"],
+                        "fødselsnumre": ["12345678901", "10987654321"],
                         "stilling": {
                             "employer": {
                                 "name": "VELFERDSETATEN ADMINISTRASJON",
