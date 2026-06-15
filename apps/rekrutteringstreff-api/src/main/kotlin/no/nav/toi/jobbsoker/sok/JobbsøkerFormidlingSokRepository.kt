@@ -80,8 +80,18 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
     ): List<Condition> = buildList {
         add(Condition("rt.id = ?", SqlParam.Uuid(treffId.somUuid)))
         add(Condition("j.status != 'SLETTET'"))
+        add(ikkeAlleredeFormidletFilter())
         byggFritekstFilter(request.fritekst)?.let(::add)
     }
+
+    private fun ikkeAlleredeFormidletFilter(): Condition = Condition(
+        """NOT EXISTS (
+            SELECT 1
+            FROM formidling f
+            WHERE f.jobbsoker_id = j.jobbsoker_id
+              AND f.slettet_tidspunkt IS NULL
+        )""",
+    )
 
     private fun byggFritekstFilter(fritekst: String?): Condition? {
         val trimmed = fritekst?.trim()?.takeIf { it.isNotBlank() } ?: return null

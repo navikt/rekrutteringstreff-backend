@@ -5,6 +5,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
+import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -206,6 +207,59 @@ class JobbsøkerFormidlingKomponentTest {
 
         assertThat(resultat.totalt).isEqualTo(1)
         assertThat(resultat.jobbsøkere.first().fødselsnummer).isEqualTo("11111111111")
+    }
+
+    @Test
+    fun `allerede formidlede jobbsøkere returneres ikke`() {
+        val eierIdent = "A123456"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Test AS"), emptyList(), null, null, null),
+            treffId,
+        )
+
+        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
+        val ider = db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
+
+        db.opprettFormidling(treffId, ider[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+
+        val response = httpPost(formidlingAllePath(treffId), formidlingBody(), eierIdent)
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.totalt).isEqualTo(1)
+        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("22222222222")
+    }
+
+    @Test
+    fun `jobbsøker med slettet formidling kan formidles på nytt`() {
+        val eierIdent = "A123456"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Test AS"), emptyList(), null, null, null),
+            treffId,
+        )
+
+        val js = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val personTreffId = db.leggTilJobbsøkereMedHendelse(listOf(js), treffId).single()
+
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+        db.dataSource.connection.use { conn ->
+            conn.prepareStatement("UPDATE formidling SET slettet_tidspunkt = now() WHERE formidling_id = ?").use { stmt ->
+                stmt.setLong(1, formidlingId)
+                stmt.executeUpdate()
+            }
+        }
+
+        val response = httpPost(formidlingAllePath(treffId), formidlingBody(), eierIdent)
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.totalt).isEqualTo(1)
+        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("11111111111")
     }
 
     @Test
