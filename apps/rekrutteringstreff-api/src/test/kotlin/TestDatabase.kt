@@ -166,7 +166,6 @@ class TestDatabase {
             opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
         )
 
-        // Bruk repository-metode for å oppdatere
         dataSource.connection.use { connection ->
             rekrutteringstreffRepository.oppdater(
                 connection,
