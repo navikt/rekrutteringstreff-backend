@@ -210,7 +210,7 @@ class JobbsøkerFormidlingKomponentTest {
     }
 
     @Test
-    fun `allerede formidlede jobbsøkere returneres ikke`() {
+    fun `allerede formidlede jobbsøkere returneres med alleredeFormidlet satt til true`() {
         val eierIdent = "A123456"
         val treffId = opprettTreffMedEier(eierIdent)
 
@@ -229,8 +229,55 @@ class JobbsøkerFormidlingKomponentTest {
         assertThat(response.statusCode()).isEqualTo(200)
 
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
-        assertThat(resultat.totalt).isEqualTo(1)
-        assertThat(resultat.jobbsøkere.single().fødselsnummer).isEqualTo("22222222222")
+        assertThat(resultat.totalt).isEqualTo(2)
+        assertThat(resultat.jobbsøkere).hasSize(2)
+        
+        val ola = resultat.jobbsøkere.find { it.fødselsnummer == "11111111111" }!!
+        val kari = resultat.jobbsøkere.find { it.fødselsnummer == "22222222222" }!!
+        
+        assertThat(ola.alleredeFormidlet).isTrue()
+        assertThat(kari.alleredeFormidlet).isFalse()
+    }
+
+    @Test
+    fun `allerede formidlede jobbsøkere returneres med alleredeFormidlet true når man søker med samme orgnr, men med false for annet orgnr`() {
+        val eierIdent = "A123456"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        val orgnrA = "123456789"
+        val orgnrB = "987654321"
+
+        val arbeidsgiverATreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr(orgnrA), Orgnavn("Test A AS"), emptyList(), null, null, null),
+            treffId,
+        )
+
+        db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr(orgnrB), Orgnavn("Test B AS"), emptyList(), null, null, null),
+            treffId,
+        )
+
+        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
+        val ider = db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
+
+        db.opprettFormidling(treffId, ider[0], arbeidsgiverATreffId, UUID.randomUUID(), UUID.randomUUID())
+
+        // Søker med orgnrA: Ola bør ha alleredeFormidlet = true
+        val responseA = httpPost(formidlingAllePath(treffId), formidlingBody("orgnr" to orgnrA), eierIdent)
+        assertThat(responseA.statusCode()).isEqualTo(200)
+        val resultatA = mapper.readValue<JobbsøkerFormidlingRespons>(responseA.body())
+        assertThat(resultatA.totalt).isEqualTo(2)
+        val olaA = resultatA.jobbsøkere.find { it.fødselsnummer == "11111111111" }!!
+        assertThat(olaA.alleredeFormidlet).isTrue()
+
+        // Søker med orgnrB: Ola bør ha alleredeFormidlet = false siden Ola ikke er formidlet til orgnrB
+        val responseB = httpPost(formidlingAllePath(treffId), formidlingBody("orgnr" to orgnrB), eierIdent)
+        assertThat(responseB.statusCode()).isEqualTo(200)
+        val resultatB = mapper.readValue<JobbsøkerFormidlingRespons>(responseB.body())
+        assertThat(resultatB.totalt).isEqualTo(2)
+        val olaB = resultatB.jobbsøkere.find { it.fødselsnummer == "11111111111" }!!
+        assertThat(olaB.alleredeFormidlet).isFalse()
     }
 
     @Test
