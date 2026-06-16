@@ -103,23 +103,37 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun hentAlleForTreff(treffId: TreffId): List<FormidlingDto> {
-        val where = tilWhereClause(byggBasisFilter(treffId))
-        return hentMedWhere(where)
+    fun hentAlleForTreff(
+        treffId: TreffId,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> {
+        val where = tilWhereClause(byggBasisFilter(treffId) + byggArbeidsgiverFilter(arbeidsgivere))
+        return hentMedWhere(where, sortering, retning)
     }
 
     fun hentEgneForTreff(
         treffId: TreffId,
         veilederNavIdent: String,
         tilknyttedeEnheter: List<String>,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
     ): List<FormidlingDto> {
         val where = tilWhereClause(
-            byggBasisFilter(treffId) + byggVeilederEllerEnhetFilter(veilederNavIdent, tilknyttedeEnheter)
+            byggBasisFilter(treffId)
+                + byggVeilederEllerEnhetFilter(veilederNavIdent, tilknyttedeEnheter)
+                + byggArbeidsgiverFilter(arbeidsgivere)
         )
-        return hentMedWhere(where)
+        return hentMedWhere(where, sortering, retning)
     }
 
-    private fun hentMedWhere(where: WhereClause): List<FormidlingDto> =
+    private fun hentMedWhere(
+        where: WhereClause,
+        sortering: FormidlingSortering,
+        retning: FormidlingSorteringsretning?,
+    ): List<FormidlingDto> =
         dataSource.executeInTransaction { conn ->
             val sql = """
                 SELECT
@@ -136,7 +150,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
                 JOIN jobbsoker j ON f.jobbsoker_id = j.jobbsoker_id
                 JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
                 ${where.sql}
-                ORDER BY f.opprettet_tidspunkt DESC, f.formidling_id DESC
+                ${sortering.orderByClause(retning)}
             """.trimIndent()
 
             conn.prepareStatement(sql).use { stmt ->
@@ -214,6 +228,12 @@ class FormidlingRepository(private val dataSource: DataSource) {
         )
     }
 
+    private fun byggArbeidsgiverFilter(arbeidsgivere: List<String>): List<Condition> {
+        val orgnr = arbeidsgivere.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+        if (orgnr.isEmpty()) return emptyList()
+        return listOf(Condition("ag.orgnr = ANY (?::text[])", SqlParam.TextArray(orgnr)))
+    }
+
     private fun tilWhereClause(conditions: List<Condition>): WhereClause = WhereClause(
         sql = "WHERE " + conditions.joinToString(" AND ") { it.sql },
         params = conditions.flatMap { it.params },
@@ -267,5 +287,59 @@ class FormidlingRepository(private val dataSource: DataSource) {
             JOIN jobbsoker js ON f.jobbsoker_id = js.jobbsoker_id
             JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
         """.trimIndent()
+    }
+}
+
+/**
+ * Sorteringsretning. SQL-verdien er fast definert (ikke bygget fra brukerinput) for å unngå SQL-injeksjon.
+ */
+enum class FormidlingSorteringsretning(internal val sql: String) {
+    STIGENDE("ASC"),
+    SYNKENDE("DESC");
+
+    companion object {
+        fun fraQueryParam(verdi: String?): FormidlingSorteringsretning? =
+            when (verdi?.trim()?.lowercase()) {
+                "asc" -> STIGENDE
+                "desc" -> SYNKENDE
+                else -> null
+            }
+    }
+}
+
+/**
+ * Sorteringsfelt for formidlingslisten. ORDER BY-klausulen bygges av faste fragmenter
+ * (felt + retning fra enum-er, ikke fra rå brukerinput) for å unngå SQL-injeksjon.
+ */
+enum class FormidlingSortering {
+    TIDSPUNKT,
+    ARBEIDSGIVER,
+    JOBBSOKER;
+
+    private val standardRetning: FormidlingSorteringsretning
+        get() = when (this) {
+            TIDSPUNKT -> FormidlingSorteringsretning.SYNKENDE
+            ARBEIDSGIVER, JOBBSOKER -> FormidlingSorteringsretning.STIGENDE
+        }
+
+    internal fun orderByClause(retning: FormidlingSorteringsretning? = null): String {
+        val retning = (retning ?: standardRetning).sql
+        return when (this) {
+            TIDSPUNKT ->
+                "ORDER BY f.opprettet_tidspunkt $retning, f.formidling_id $retning"
+            ARBEIDSGIVER ->
+                "ORDER BY lower(ag.orgnavn) $retning NULLS LAST, f.opprettet_tidspunkt DESC, f.formidling_id DESC"
+            JOBBSOKER ->
+                "ORDER BY lower(j.etternavn) $retning NULLS LAST, lower(j.fornavn) $retning NULLS LAST, f.opprettet_tidspunkt DESC, f.formidling_id DESC"
+        }
+    }
+
+    companion object {
+        fun fraQueryParam(verdi: String?): FormidlingSortering =
+            when (verdi?.trim()?.lowercase()) {
+                "arbeidsgiver" -> ARBEIDSGIVER
+                "jobbsoker", "jobbsøker" -> JOBBSOKER
+                else -> TIDSPUNKT
+            }
     }
 }

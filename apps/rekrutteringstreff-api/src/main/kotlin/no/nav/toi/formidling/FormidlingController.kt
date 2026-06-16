@@ -31,6 +31,9 @@ class FormidlingController(
         private const val formidlingPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/formidling"
         private const val formidlingListeAllePath = "$formidlingPath/liste/alle"
         private const val formidlingListeEgnePath = "$formidlingPath/liste/egne"
+        private const val queryParamSortering = "sortering"
+        private const val queryParamRetning = "retning"
+        private const val queryParamArbeidsgiver = "arbeidsgiver"
     }
 
     override fun registrer(routes: JavalinDefaultRoutingApi) {
@@ -136,6 +139,11 @@ from = Array<FormidlingOpprettetDto>::class,
         operationId = "hentAlleFormidlinger",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        queryParams = [
+            OpenApiParam(name = queryParamSortering, type = String::class, required = false, description = "Sortering: tidspunkt (standard), arbeidsgiver eller jobbsoker"),
+            OpenApiParam(name = queryParamRetning, type = String::class, required = false, description = "Sorteringsretning: asc eller desc (standard avhenger av felt)"),
+            OpenApiParam(name = queryParamArbeidsgiver, type = String::class, required = false, description = "Filtrer på arbeidsgiverens orgnr. Kan oppgis flere ganger for å vise flere arbeidsgivere"),
+        ],
         responses = [
             OpenApiResponse(
                 status = "200",
@@ -178,7 +186,14 @@ from = Array<FormidlingOpprettetDto>::class,
         }
 
         AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
-        ctx.status(200).json(formidlingService.hentAlleFormidlingerForTreff(treffId))
+        ctx.status(200).json(
+            formidlingService.hentAlleFormidlingerForTreff(
+                treffId,
+                FormidlingSortering.fraQueryParam(ctx.queryParam(queryParamSortering)),
+                FormidlingSorteringsretning.fraQueryParam(ctx.queryParam(queryParamRetning)),
+                ctx.queryParams(queryParamArbeidsgiver),
+            )
+        )
     }
 
     @OpenApi(
@@ -188,6 +203,11 @@ from = Array<FormidlingOpprettetDto>::class,
         operationId = "hentEgneFormidlinger",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        queryParams = [
+            OpenApiParam(name = queryParamSortering, type = String::class, required = false, description = "Sortering: tidspunkt (standard), arbeidsgiver eller jobbsoker"),
+            OpenApiParam(name = queryParamRetning, type = String::class, required = false, description = "Sorteringsretning: asc eller desc (standard avhenger av felt)"),
+            OpenApiParam(name = queryParamArbeidsgiver, type = String::class, required = false, description = "Filtrer på arbeidsgiverens orgnr. Kan oppgis flere ganger for å vise flere arbeidsgivere"),
+        ],
         responses = [
             OpenApiResponse(
                 status = "200",
@@ -222,7 +242,14 @@ from = Array<FormidlingOpprettetDto>::class,
 
         AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
         ctx.status(200).json(
-            formidlingService.hentEgneFormidlingerForTreff(treffId, navIdent, tilknyttedeEnheter)
+            formidlingService.hentEgneFormidlingerForTreff(
+                treffId,
+                navIdent,
+                tilknyttedeEnheter,
+                FormidlingSortering.fraQueryParam(ctx.queryParam(queryParamSortering)),
+                FormidlingSorteringsretning.fraQueryParam(ctx.queryParam(queryParamRetning)),
+                ctx.queryParams(queryParamArbeidsgiver),
+            )
         )
     }
 

@@ -30,15 +30,23 @@ class FormidlingService(
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    fun hentAlleFormidlingerForTreff(treffId: TreffId): List<FormidlingDto> =
-        formidlingRepository.hentAlleForTreff(treffId)
+    fun hentAlleFormidlingerForTreff(
+        treffId: TreffId,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> =
+        formidlingRepository.hentAlleForTreff(treffId, sortering, retning, arbeidsgivere)
 
     fun hentEgneFormidlingerForTreff(
         treffId: TreffId,
         veilederNavIdent: String,
         tilknyttedeEnheter: List<String>,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
     ): List<FormidlingDto> =
-        formidlingRepository.hentEgneForTreff(treffId, veilederNavIdent, tilknyttedeEnheter)
+        formidlingRepository.hentEgneForTreff(treffId, veilederNavIdent, tilknyttedeEnheter, sortering, retning, arbeidsgivere)
 
     fun opprettFormidling(
         treffId: TreffId,
