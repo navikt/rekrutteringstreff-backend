@@ -99,7 +99,7 @@ class AktivitetskortFeilJobb(
         sendFeilKøHendelserPåRapid()
     }
     fun lagreFeilKøHendelser() {
-        val records = consumer.poll(Duration.ofSeconds(10))
+        val records = consumer.poll(Duration.ofSeconds(60))
         records.forEach { consumerRecord ->
             consumerRecord.value().let {
                 class FeilKøHendelse(
