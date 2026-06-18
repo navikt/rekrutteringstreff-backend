@@ -197,7 +197,7 @@ class AktivitetskortTest {
         val messageId = invitasjon.messageId
         val rekrutteringstreffId = invitasjon.rekrutteringstreffId
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
             {
               "key": "${UUID.randomUUID()}",
@@ -231,7 +231,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
             {
               "key": "$messageId",
@@ -262,7 +262,7 @@ class AktivitetskortTest {
         val errorMessage = "DuplikatMeldingFeil Melding allerede handtert, ignorer"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock()) { _, _ -> }
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø") { _, _ -> }
         val value = """
         {
           "key": "${UUID.randomUUID()}",
@@ -295,7 +295,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(repository,consumer, LeaderElectionMock(), {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository,consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
             {
               "key": "$messageId",
@@ -323,7 +323,7 @@ class AktivitetskortTest {
 
         val rapid = TestRapid()
         val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
-        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), rapid::publish).run()
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).run()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
@@ -348,7 +348,7 @@ class AktivitetskortTest {
 
         val rapid = TestRapid()
         val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
-        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), rapid::publish).apply {
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).apply {
             run()
             run()
         }
