@@ -41,7 +41,7 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
             val jobbsøkere = if (totalt == 0L) {
                 emptyList()
             } else {
-                hentJobbsøkere(conn, where, responsSide, request.antallPerSide)
+                hentJobbsøkere(conn, where, responsSide, request.antallPerSide, request.orgnr)
             }
             JobbsøkerFormidlingRespons(
                 totalt = totalt,
@@ -157,12 +157,15 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         where: WhereClause,
         side: Int,
         antallPerSide: Int,
+        orgnr: String?,
     ): List<JobbsøkerFormidlingTreff> {
+        val alleredeFormidlet = alleredeFormidletUttrykk(orgnr)
         val sql = """
             SELECT j.id::text AS person_treff_id,
                    j.fodselsnummer,
                    j.fornavn,
-                   j.etternavn
+                   j.etternavn,
+                   ${alleredeFormidlet.sql} AS allerede_formidlet
             FROM jobbsoker j
             JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
             ${where.sql}
@@ -170,12 +173,14 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
             LIMIT ? OFFSET ?
         """.trimIndent()
 
+        // EXISTS-uttrykket står i SELECT, altså før WHERE — derfor bindes dets parametere først.
+        val params = alleredeFormidlet.params + where.params
+
         return conn.prepareStatement(sql).use { stmt ->
             stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
-            settWhereParametere(stmt, where.params)
-            val pagIdx = where.params.size
-            stmt.setInt(pagIdx + 1, antallPerSide)
-            stmt.setLong(pagIdx + 2, (side - 1).toLong() * antallPerSide.toLong())
+            settWhereParametere(stmt, params)
+            stmt.setInt(params.size + 1, antallPerSide)
+            stmt.setLong(params.size + 2, (side - 1).toLong() * antallPerSide.toLong())
             stmt.executeQuery().use { rs ->
                 val resultater = mutableListOf<JobbsøkerFormidlingTreff>()
                 while (rs.next()) {
@@ -184,12 +189,42 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
                         fødselsnummer = rs.getString("fodselsnummer"),
                         fornavn = rs.getString("fornavn"),
                         etternavn = rs.getString("etternavn"),
+                        alleredeFormidlet = rs.getBoolean("allerede_formidlet"),
                     )
                 }
                 resultater
             }
         }
     }
+
+    /**
+     * Bygger et EXISTS-uttrykk som angir om jobbsøkeren allerede er formidlet.
+     * Når orgnr er satt avgrenses sjekken til den valgte arbeidsgiveren, slik at samme person kan
+     * formidles til flere ulike arbeidsgivere på samme treff. Uten orgnr sjekkes alle arbeidsgivere.
+     */
+    private fun alleredeFormidletUttrykk(orgnr: String?): Condition =
+        if (orgnr != null) {
+            Condition(
+                """(EXISTS (
+                    SELECT 1
+                    FROM formidling f
+                    JOIN arbeidsgiver a ON f.arbeidsgiver_id = a.arbeidsgiver_id
+                    WHERE f.jobbsoker_id = j.jobbsoker_id
+                      AND a.orgnr = ?
+                      AND f.slettet_tidspunkt IS NULL
+                ))""",
+                SqlParam.Text(orgnr),
+            )
+        } else {
+            Condition(
+                """(EXISTS (
+                    SELECT 1
+                    FROM formidling f
+                    WHERE f.jobbsoker_id = j.jobbsoker_id
+                      AND f.slettet_tidspunkt IS NULL
+                ))""",
+            )
+        }
 
     private fun settWhereParametere(stmt: PreparedStatement, params: List<SqlParam>) {
         params.forEachIndexed { index, param ->

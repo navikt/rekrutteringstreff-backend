@@ -475,8 +475,9 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
-    fun hentJobbsøker(treff: TreffId, fødselsnummer: Fødselsnummer): Jobbsøker? =
+    fun hentJobbsøker(treff: TreffId, fødselsnummer: Fødselsnummer, inkluderUsynlige: Boolean = false): Jobbsøker? =
         dataSource.connection.use { conn ->
+            val synlighetSjekk = if (inkluderUsynlige) "" else "AND js.er_synlig = TRUE"
             conn.prepareStatement(
                 """
                 SELECT
@@ -509,7 +510,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 FROM jobbsoker js
                 JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 LEFT JOIN jobbsoker_hendelse jh ON js.jobbsoker_id = jh.jobbsoker_id
-                WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET' AND js.er_synlig = TRUE
+                WHERE rt.id = ? AND js.fodselsnummer = ? AND js.status != 'SLETTET' $synlighetSjekk
                 GROUP BY js.id, js.jobbsoker_id, js.fodselsnummer, js.fornavn, js.etternavn,
                          js.kontornavn, js.veileder_navn, js.veileder_navident, js.alder, js.innsatsgruppe, js.kontornummer, rt.id
             """

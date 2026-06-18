@@ -621,6 +621,11 @@ class JobbsøkerRepositoryTest {
         // Verifiser at jobbsøker ikke returneres
         val ikkeSynligJobbsøker = repository.hentJobbsøker(treffId, fnr)
         assertThat(ikkeSynligJobbsøker).isNull()
+
+        // Verifiser at ikke-synlig jobbsøker likevel returneres dersom inkluderUsynlige = true
+        val ikkeSynligMenInkludertJobbsøker = repository.hentJobbsøker(treffId, fnr, inkluderUsynlige = true)
+        assertThat(ikkeSynligMenInkludertJobbsøker).isNotNull
+        assertThat(ikkeSynligMenInkludertJobbsøker?.fødselsnummer).isEqualTo(fnr)
     }
 
 }
