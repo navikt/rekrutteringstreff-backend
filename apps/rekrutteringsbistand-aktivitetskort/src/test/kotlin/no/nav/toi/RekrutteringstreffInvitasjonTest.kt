@@ -101,7 +101,6 @@ class RekrutteringstreffInvitasjonTest {
                 poststed
             )
         )
-
         val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
