@@ -264,6 +264,73 @@ class FormidlingerKomponentTest {
     }
 
     @Test
+    fun `formidlingslisten anonymiserer navn og fødselsnummer for sperret jobbsøker`() {
+        val eierIdent = "A123456"
+        val markedskontaktIdent = "B200002"
+        val felleskontor = "0314"
+        val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Sperret"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            ),
+            treffId, "testperson",
+        )
+        val stillingId = UUID.randomUUID()
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Kokk", janzzKonseptId = "12345")
+
+        db.settSperret(personTreffIder[0], true)
+
+        stubMineEnheter(felleskontor)
+
+        val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
+        assertThat(linjer).hasSize(1)
+        val linje = linjer.single()
+        assertThat(linje.sperret).isTrue()
+        assertThat(linje.fødselsnummer).isNull()
+        assertThat(linje.fornavn).isNull()
+        assertThat(linje.etternavn).isNull()
+        assertThat(linje.yrkestittel).isEqualTo("Kokk")
+    }
+
+    @Test
+    fun `formidlingslisten anonymiserer jobbsøker som både er usynlig og sperret`() {
+        val eierIdent = "A123456"
+        val markedskontaktIdent = "B200002"
+        val felleskontor = "0314"
+        val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Sperret"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            ),
+            treffId, "testperson",
+        )
+        val stillingId = UUID.randomUUID()
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Kokk", janzzKonseptId = "12345")
+
+        db.settSynlighet(personTreffIder[0], false)
+        db.settSperret(personTreffIder[0], true)
+
+        stubMineEnheter(felleskontor)
+
+        val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
+        assertThat(linjer).hasSize(1)
+        val linje = linjer.single()
+        assertThat(linje.sperret).isTrue()
+        assertThat(linje.fødselsnummer).isNull()
+        assertThat(linje.fornavn).isNull()
+        assertThat(linje.etternavn).isNull()
+        assertThat(linje.yrkestittel).isEqualTo("Kokk")
+    }
+
+    @Test
     fun `markedskontakt som ikke tilhører treffets kontor får 403`() {
         val eierIdent = "A123456"
         val markedskontaktIdent = "B200002"

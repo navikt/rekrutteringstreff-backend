@@ -589,7 +589,7 @@ class JobbsøkerServiceTest {
         assertThat(jobbsøkerRepository.hentJobbsøkere(treff2)).hasSize(1)
 
         // Oppdater synlighet (simulerer event fra synlighetsmotor)
-        val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, false, Instant.now())
+        val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, false, false, Instant.now())
         assertThat(oppdatert).isEqualTo(2) // Begge rekrutteringstreff skal oppdateres
 
         // Verifiser at begge nå er ikke-synlige
@@ -606,17 +606,17 @@ class JobbsøkerServiceTest {
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
         // Need-oppdatering skal fungere når synlighet_sist_oppdatert er NULL
-        val oppdatert1 = jobbsøkerService.oppdaterSynlighetFraNeed(fnr, false, Instant.now())
+        val oppdatert1 = jobbsøkerService.oppdaterSynlighetFraNeed(fnr, false, false, Instant.now())
         assertThat(oppdatert1).isEqualTo(1)
         assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty()
 
         // Event-oppdatering skal overskrive
-        val oppdatert2 = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, Instant.now())
+        val oppdatert2 = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, false, Instant.now())
         assertThat(oppdatert2).isEqualTo(1)
         assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
 
         // Need-oppdatering skal IKKE fungere etter at synlighet er satt
-        val oppdatert3 = jobbsøkerService.oppdaterSynlighetFraNeed(fnr, false, Instant.now())
+        val oppdatert3 = jobbsøkerService.oppdaterSynlighetFraNeed(fnr, false, false, Instant.now())
         assertThat(oppdatert3).isEqualTo(0)
         assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1) // Fortsatt synlig
     }
@@ -632,12 +632,12 @@ class JobbsøkerServiceTest {
         val gammelTidspunkt = nyTidspunkt.minusSeconds(3600)
 
         // Sett synlighet med ny melding
-        val oppdatert1 = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, false, nyTidspunkt)
+        val oppdatert1 = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, false, false, nyTidspunkt)
         assertThat(oppdatert1).isEqualTo(1)
         assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty()
 
         // Prøv å oppdatere med gammel melding
-        val oppdatert2 = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, gammelTidspunkt)
+        val oppdatert2 = jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, false, gammelTidspunkt)
         assertThat(oppdatert2).isEqualTo(0) // Gammel melding ignorert
         assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).isEmpty() // Fortsatt ikke-synlig
     }

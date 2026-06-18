@@ -78,7 +78,7 @@ class SynlighetsBehovSchedulerTest {
         jobbsøkerService.leggTilJobbsøkere(listOf(jobbsøker), treffId, "testperson")
 
         // Simuler at synlighet allerede er evaluert (fra event-strøm eller tidligere need-svar)
-        jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, Instant.now())
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, false, Instant.now())
 
         // Verifiser at jobbsøker IKKE mangler evaluert synlighet
         val utenSynlighet = jobbsøkerRepository.hentFødselsnumreUtenEvaluertSynlighet()
@@ -131,7 +131,7 @@ class SynlighetsBehovSchedulerTest {
         jobbsøkerService.leggTilJobbsøkere(jobbsøkere, treffId, "testperson")
 
         // Sett synlighet for én av jobbsøkerne
-        jobbsøkerService.oppdaterSynlighetFraEvent(fnrMedSynlighet, true, Instant.now())
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnrMedSynlighet, true, false, Instant.now())
 
         // Kjør scheduler
         scheduler.kjørJobb()

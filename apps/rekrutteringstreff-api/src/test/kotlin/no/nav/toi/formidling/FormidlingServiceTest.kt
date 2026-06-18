@@ -2,11 +2,13 @@ package no.nav.toi.formidling
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
+import no.nav.toi.exception.JobbsøkerSperretException
 import no.nav.toi.formidling.dto.ArbeidsgiverDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.formidling.dto.StillingDto
 import no.nav.toi.executeInTransaction
 import io.mockk.every
+import io.mockk.clearMocks
 import io.mockk.mockk
 import io.mockk.verify
 import no.nav.toi.jobbsoker.*
@@ -15,6 +17,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
@@ -71,6 +74,7 @@ class FormidlingServiceTest {
 
     @BeforeEach
     fun beforeEach() {
+        clearMocks(stillingKlient, kandidatKlient)
         db.slettAlt()
     }
 
@@ -202,6 +206,36 @@ class FormidlingServiceTest {
         // Yrkestittel fra opprettelsen er lagret og returneres i listen
         val linjer = formidlingService.hentAlleFormidlingerForTreff(treffId)
         assertThat(linjer.single().yrkestittel).isEqualTo("Utvikler (dataspill)")
+    }
+
+    @Test
+    fun `blokkerer formidling av jobbsøker med adressebeskyttelse`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val orgnr = "123456789"
+
+        arbeidsgiverService.leggTilArbeidsgiver(
+            LeggTilArbeidsgiver(Orgnr(orgnr), Orgnavn("Test AS"), emptyList(), null, null, null),
+            treffId, "testperson"
+        )
+
+        jobbsøkerService.leggTilJobbsøkere(
+            listOf(LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            treffId, "testperson"
+        )
+        val personTreffId = jobbsøkerService.hentJobbsøkere(treffId).first().personTreffId
+        db.settSperret(personTreffId, true)
+
+        assertThatThrownBy {
+            formidlingService.opprettFormidling(
+                treffId = treffId,
+                opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+                navIdent = "testperson",
+                userToken = "test-token",
+            )
+        }.isInstanceOf(JobbsøkerSperretException::class.java)
+
+        verify(exactly = 0) { stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any()) }
+        assertThat(formidlingService.hentAlleFormidlingerForTreff(treffId)).isEmpty()
     }
 
     @Test

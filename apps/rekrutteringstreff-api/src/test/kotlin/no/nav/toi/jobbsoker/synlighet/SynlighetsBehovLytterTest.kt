@@ -68,6 +68,35 @@ class SynlighetsBehovLytterTest {
     }
 
     @Test
+    fun `skal sette sperret når need-svar har sperret true`() {
+        val rapid = TestRapid()
+        SynlighetsBehovLytter(rapid, jobbsøkerService)
+
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = "12345678901"
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
+
+        rapid.sendTestMessage(
+            """
+            {
+                "synlighetRekrutteringstreff": {
+                    "erSynlig": true,
+                    "sperret": true,
+                    "ferdigBeregnet": true
+                },
+                "fodselsnummer": "$fnr",
+                "@opprettet": "${Instant.now()}"
+            }
+            """.trimIndent()
+        )
+
+        val oppdatert = jobbsøkerRepository.hentJobbsøkere(treffId)
+        assertThat(oppdatert).hasSize(1)
+        assertThat(oppdatert.first().sperret).isTrue()
+    }
+
+    @Test
     fun `skal ikke overskrive synlighet fra event-strømmen`() {
         val rapid = TestRapid()
         SynlighetsBehovLytter(rapid, jobbsøkerService)
@@ -78,7 +107,7 @@ class SynlighetsBehovLytterTest {
         db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
 
         // Sett synlighet via event først (simulerer at event-strømmen allerede har oppdatert)
-        jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, Instant.now())
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr, true, false, Instant.now())
         assertThat(jobbsøkerRepository.hentJobbsøkere(treffId)).hasSize(1)
 
         // Send need-svar som prøver å sette ikke-synlig

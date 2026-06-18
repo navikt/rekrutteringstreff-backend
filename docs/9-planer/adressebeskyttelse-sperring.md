@@ -1,34 +1,43 @@
-# Plan: Sperring av jobbsøkere med adressebeskyttelse (kode 6 / kode 19)
+# Plan: Sperring av jobbsøkere med adressebeskyttelse
 
-**Status:** Ikke implementert (kun plan)
+**Status:** Vedtatt løsning, ikke implementert (kun plan)
 **Omfang:** Backend (rekrutteringstreff-api) + delt plattform (toi-synlighetsmotor) + frontend (rekrutteringsbistand-frontend)
 
-Denne planen beskriver hvordan jobbsøkere med streng adressebeskyttelse skal **sperres** i
+Denne planen beskriver hvordan jobbsøkere med adressebeskyttelse skal **sperres** i
 rekrutteringstreff: de skal ikke kunne legges til i en ny formidling, og dersom de allerede er
 formidlet (lagt til _før_ sperringen inntraff) skal både navn og fødselsnummer anonymiseres i
 formidlingslisten.
 
-Planen er skrevet slik at den kan implementeres uten ny analyse. Les hele «Bakgrunn og
-kodegrunnlag» før du begynner — der ligger nøkkelfunnene som avgjør valget mellom de to
-alternativene.
+**Avklart med produkteier:** Vi velger den enkleste løsningen. Kode **6**, **7** og evt. **19**
+behandles likt — all adressebeskyttelse som toi-synlighetsmotor allerede fanger tolkes som
+«sperret». Vi trenger derfor ikke skille kode 6 fra kode 7 i den delte plattformkomponenten.
 
 ---
 
 ## Begrepsavklaring
 
-| Begrep               | Betydning                                                                                                                                                                                                                                                                    |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Skjult / inaktiv** | Dagens oppførsel: `jobbsoker.er_synlig = false`. Personen er ute av kandidatsøket (manglende CV, ikke under oppfølging, kode 6/7, adressebeskyttelse, død, KVP osv.). I formidlingslisten nulles **kun** fødselsnummer; navn vises fortsatt, og UI viser «Inaktiv kandidat». |
-| **Sperret**          | Ny, strengere håndtering: personen har streng adressebeskyttelse. Kan **ikke** legges til i ny formidling, og i listen anonymiseres **både navn og fødselsnummer**. UI viser «Skjermet».                                                                                     |
+| Begrep               | Betydning                                                                                                                                                                                                                                                       |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Skjult / inaktiv** | `jobbsoker.er_synlig = false`. Personen er ute av kandidatsøket (manglende CV, ikke under oppfølging, adressebeskyttelse, død, KVP osv.). I formidlingslisten nulles **kun** fødselsnummer; navn vises fortsatt, og UI viser «Inaktiv kandidat».                |
+| **Sperret**          | Strengere håndtering av adressebeskyttelse. Personen kan **ikke** legges til i ny formidling, og i formidlingslisten anonymiseres **både navn og fødselsnummer**. UI viser «Skjermet». En sperret person er alltid også skjult (`er_synlig = false`, se under). |
 
-**Avklart scope (fra produkteier):**
+### Nøkkelinnsikt: sperret er en delmengde av skjult
 
-- **Sperret** = kun diskresjonskode **6** (`STRENGT_FORTROLIG`) og **19** (`STRENGT_FORTROLIG_UTLAND`).
-- **Kode 7** (`FORTROLIG`) og alle andre årsaker = vanlig **skjuling** (eksisterende `er_synlig = false`-oppførsel). Ingen sperring.
+En person med adressebeskyttelse er **allerede** `er_synlig = false` i toi-synlighetsmotor, fordi
+`erSynlig()` krever `harIkkeAdressebeskyttelse == true`. Konsekvensen:
+
+- Sperrede er **allerede skjult** fra jobbsøkerlisten i treffene (`hentJobbsøkere(...)` filtrerer
+  `er_synlig = TRUE`). Ingen ny logikk trengs for å skjule dem der.
+- Sperrede **telles allerede** som skjulte i `antallSkjulte`
+  (`status != SLETTET AND er_synlig = FALSE`). **Tellingen er felles** — vi innfører ikke en egen
+  `antallSperret`-kategori. I jobbsøkerkonteksten er det ikke viktig å skille sperret fra skjult.
+
+Det nye `sperret`-feltet trengs derfor **kun i formidlingskonteksten**, der det har betydning:
+anonymisere navn og blokkere ny formidling.
 
 ---
 
-## Bakgrunn og kodegrunnlag (viktig — les før implementering)
+## Datakilde og dataflyt
 
 ### Dagens synlighetsflyt i rekrutteringstreff-api
 
@@ -50,39 +59,22 @@ Synlighet settes i dag via to Kafka-veier, begge i pakken
 - `oppdaterSynlighetFraNeed(...)` — setter `synlighet_kilde = 'NEED'`. Skriver **kun** hvis
   `synlighet_sist_oppdatert IS NULL` (event har prioritet).
 
-**Konklusjon:** I dag bæres kun ett boolsk `erSynlig` over Kafka. Verken event eller need-svar
-inneholder _årsaken_ til at noen er usynlig. For å vite at noen er **sperret** må vi føre mer
-informasjon helt frem.
+I dag bæres kun ett boolsk `erSynlig` over Kafka. For å vite at noen er **sperret** må vi føre ett
+ekstra flagg helt frem — på samme to veier som `er_synlig`.
 
-### Hvordan adressebeskyttelse beregnes i toi-synlighetsmotor
+### Avledet sperret-flagg i toi-synlighetsmotor
 
-Det finnes **to uavhengige kilder** til adressebeskyttelse, og det er dette som avgjør hvor
-vanskelig det er å skille kode 6 fra kode 7:
+Synlighetsmotor vet allerede at noen har adressebeskyttelse, gjennom `erIkkeKode6eller7` (fra
+Arena-diskresjonskode i `Kandidat.kt`) og `harIkkeAdressebeskyttelse` (fra PDL-gradering). Fordi vi
+behandler kode 6, 7 og 19 likt, avleder vi ett flagg uten å måtte skille kodene:
 
-1. **Diskresjonskode (Arena, via oppfølgingsinformasjon)** — `Kandidat.kt`:
+```kotlin
+val sperret = !erIkkeKode6eller7 || !harIkkeAdressebeskyttelse
+```
 
-   ```kotlin
-   private fun erIkkeKode6EllerKode7(oppfølgingsinformasjon: Oppfølgingsinformasjon): Boolean =
-       (oppfølgingsinformasjon.diskresjonskode == null
-               || oppfølgingsinformasjon.diskresjonskode !in listOf("6", "7"))
-   ```
-
-   Den rå diskresjonskoden («6» / «7») **kastes** her og kollapses til én boolean
-   `erIkkeKode6eller7`. Denne lagres som kolonnen `er_ikke_kode6_eller_kode7` i
-   synlighetsmotor-databasen (`Repository.kt`, `databaseMap`/`evalueringFraDB`). **Etter lagring er
-   6 og 7 ikke lenger mulig å skille** — informasjonen finnes ikke i databasen.
-
-2. **PDL-adressebeskyttelse (gradering)** — need-flyten for rekrutteringstreff
-   (`SynlighetRekrutteringstreffLytter.kt`) henter et `adressebeskyttelse`-felt med graderingsstreng:
-   `UKJENT`, `UGRADERT`, `FORTROLIG`, `STRENGT_FORTROLIG`, `STRENGT_FORTROLIG_UTLAND`.
-   Her _kan_ man skille 6/19 fra 7. Men: graderingen brukes i dag kun til å sette boolean
-   `harIkkeAdressebeskyttelse` (`adressebeskyttelse == "UKJENT" || == "UGRADERT"`), og selve strengen
-   sendes **ikke** videre i need-svaret (`packet[synlighetRekrutteringstreffBehov] = mapOf("erSynlig" ..., "ferdigBeregnet" ...)`).
-
-**Dette er kjernen i problemet:** Den nøyaktige diskresjonskoden 6 vs 7 fra Arena er allerede
-borte etter at synlighetsmotor har lagret evalueringen. PDL-graderingen finnes i need-flyten, men
-overlapper ikke nødvendigvis med Arena-diskresjonskoden (en person kan være kode 6 i Arena uten at
-PDL-gradering er hentet, og omvendt).
+Den rå diskresjonskoden (6 vs 7) kastes etter lagring i synlighetsmotor-db, men det spiller ingen
+rolle her — vi trenger den ikke. Ingen ny kolonne eller migrasjon i synlighetsmotor-db kreves; kun
+å sende det avledede flagget videre i event og need-svar.
 
 ### Relevante filer
 
@@ -106,8 +98,8 @@ PDL-gradering er hentet, og omvendt).
 - `kotlin/.../formidling/dto/FormidlingDto.kt` — liste-DTO `FormidlingDto` (`fødselsnummer`,
   `fornavn`, `etternavn` nullable)
 - `kotlin/.../formidling/FormidlingService.kt` — `opprettFormidling(...)` (blokkeringspunkt)
-- Statusaggregering for jobbsøkere: `RekrutteringstreffSokRepository.statusaggregering()` /
-  `jobbsoker_sok_view` (teller `er_synlig`/`status`)
+- Telling for jobbsøkere: `JobbsøkerSokRepository.hentTellinger()` (`antallSkjulte`/`antallSlettede`) /
+  `jobbsoker_sok_view` (filtrerer `er_synlig`/`status`) — sperrede dekkes allerede av `antallSkjulte`
 
 **frontend** (`rekrutteringsbistand-frontend/...`):
 
@@ -117,126 +109,66 @@ PDL-gradering er hentet, og omvendt).
 
 ---
 
-## Alternativ 1 — Behandle kode 6 og 7 likt (begge = sperret)
+## Endringer
 
-**Idé:** Tolk _all_ adressebeskyttelse som synlighetsmotor allerede fanger (kode 6 **og** 7 +
-PDL-gradering) som «sperret». Dette unngår å måtte skille 6 fra 7, og krever ingen endringer i den
-delte plattformkomponenten utover å sende ett ekstra flagg.
+### toi-synlighetsmotor (delt plattform)
 
-### Datakilde
+1. `Evaluering.kt`: legg til avledet `fun sperret(): Boolean = !erIkkeKode6eller7 || !harIkkeAdressebeskyttelse`,
+   og ta feltet med i `Synlighet` (event) og i need-svaret.
+2. `SynlighetsgrunnlagLytter.kt`: `packet["synlighet"]` (fra `somSynlighet()`) får feltet `sperret`.
+3. `SynlighetRekrutteringstreffLytter.kt`: `packet[synlighetRekrutteringstreffBehov]` får `sperret`
+   ved siden av `erSynlig` / `ferdigBeregnet`.
 
-Synlighetsmotor vet allerede at noen er kode 6/7 eller har PDL-adressebeskyttelse, gjennom
-`erIkkeKode6eller7` og `harIkkeAdressebeskyttelse`. Innfør et avledet flagg, f.eks.
-`harAdressebeskyttelse = !erIkkeKode6eller7 || !harIkkeAdressebeskyttelse`.
+### rekrutteringstreff-api
 
-### Endringer
+4. **V11-migrasjon** (`V11__jobbsoker_sperret.sql`):
+   `ALTER TABLE jobbsoker ADD COLUMN sperret boolean NOT NULL DEFAULT false;`
+5. `SynlighetsLytter` / `SynlighetsBehovLytter`: les `sperret` fra pakken og send videre til service.
+6. `JobbsøkerService` + `JobbsøkerRepository`: utvid `oppdaterSynlighetFraEvent/FraNeed` med
+   `sperret`-parameter; UPDATE setter `sperret = ?` ved siden av `er_synlig`. Samme
+   prioritetsregler som `er_synlig` (event vinner over need).
+7. `FormidlingRepository.hentMedWhere(...)`: null ut navn **og** fnr ved sperret:
 
-**toi-synlighetsmotor:**
-
-1. `Evaluering.kt`: legg til avledet `fun harAdressebeskyttelse(): Boolean` og ta med i `Synlighet`
-   (event) og i need-svaret.
-2. `SynlighetsgrunnlagLytter.kt`: `packet["synlighet"]` får feltet `sperret` (event-strøm).
-3. `SynlighetRekrutteringstreffLytter.kt`: `packet[synlighetRekrutteringstreffBehov]` får `sperret`.
-
-**rekrutteringstreff-api:** 4. **V11-migrasjon:** `ALTER TABLE jobbsoker ADD COLUMN sperret boolean NOT NULL DEFAULT false;` 5. `SynlighetsLytter` / `SynlighetsBehovLytter`: les `sperret` og send videre. 6. `JobbsøkerService` + `JobbsøkerRepository`: utvid `oppdaterSynlighetFraEvent/FraNeed` med
-`sperret`-parameter; UPDATE setter `sperret = ?` ved siden av `er_synlig`. 7. `FormidlingRepository.hentMedWhere(...)`: null ut navn **og** fnr ved sperret:
-
-```sql
-CASE WHEN j.sperret THEN NULL WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
-CASE WHEN j.sperret THEN NULL ELSE j.fornavn END AS fornavn,
-CASE WHEN j.sperret THEN NULL ELSE j.etternavn END AS etternavn,
-j.sperret AS sperret
-```
+   ```sql
+   CASE WHEN j.sperret THEN NULL WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
+   CASE WHEN j.sperret THEN NULL ELSE j.fornavn END AS fornavn,
+   CASE WHEN j.sperret THEN NULL ELSE j.etternavn END AS etternavn,
+   j.sperret AS sperret
+   ```
 
 8. `FormidlingDto`: legg til `val sperret: Boolean`.
-9. `FormidlingService.opprettFormidling(...)`: valider at ingen valgte personer er `sperret`;
-   returner `409`/`422` med `feil` + `hint`.
-10. Statusaggregering: tell `sperret` på samme måte som `er_synlig`/`status`.
+9. `FormidlingService.opprettFormidling(...)`: i `validerOgHentArbeidsgivereOgJobbsøkere(...)`,
+   før `lagreFormidlinger()`, valider at ingen valgte personer er `sperret`; returner `422` (eller
+   `409`) med JSON `feil` + `hint`.
 
-**frontend:** 11. `FormidlingSchema` får `sperret: z.boolean()`. 12. `FormidlingRad.tsx`: når `sperret` → vis «Skjermet» (ingen navn, ingen fnr); ellers dagens logikk. 13. Opprett-modal: filtrer bort / deaktiver sperrede jobbsøkere i velg-steget med forklaring.
+**Ikke nødvendig (allerede dekket av `er_synlig`):**
 
-### Fordeler / ulemper
+- Skjuling fra jobbsøkerlisten — `hentJobbsøkere(...)` filtrerer allerede `er_synlig = TRUE`.
+- Telling — sperrede telles allerede i `antallSkjulte`
+  (`JobbsøkerSokRepository.hentTellinger()`). Ingen endring i `hentTellinger`,
+  `JobbsøkerSøkRespons`, `JobbsøkereOutboundDto` eller `jobbsoker_sok_view`.
 
-- ✅ Minst kodeendring i plattform — ingen ny diskresjonskode-kolonne i synlighetsmotor-db.
-- ✅ Trenger ikke skille 6 fra 7 (informasjonen som mangler i db er irrelevant her).
-- ❌ Kode 7 (`FORTROLIG`) blir behandlet strengere enn produkteier strengt tatt har bedt om
-  (de ville ha kode 7 som «skjult», ikke «sperret»). Avklar om dette er akseptabelt.
+### frontend (rekrutteringsbistand-frontend)
 
----
-
-## Alternativ 2 — Skille ut kun kode 6 og 19 (anbefalt mot avklart scope)
-
-**Idé:** Kun `STRENGT_FORTROLIG` (6) og `STRENGT_FORTROLIG_UTLAND` (19) = sperret. Kode 7 og resten
-faller inn under eksisterende `er_synlig = false` (skjuling), akkurat som manglende CV. Da trenger vi
-**ikke** sperret-felt/-logikk før denne planen faktisk utføres — skjuling dekker kode 7 i dag.
-
-### Hovedutfordring
-
-Diskresjonskode 6 vs 7 fra Arena er **ikke tilgjengelig** etter lagring i synlighetsmotor (se
-«Bakgrunn»). For å skille dem må synlighetsmotor begynne å ta vare på enten den rå diskresjonskoden
-eller et avledet «streng»-flagg. Dette er det som gjør alternativ 2 dyrere.
-
-### To undervarianter for datakilde
-
-**2a — Bruk PDL-graderingen (minst plattformendring, men ufullstendig):**
-Need-flyten (`SynlighetRekrutteringstreffLytter.kt`) har allerede graderingsstrengen. Sett
-`sperret = adressebeskyttelse in {"STRENGT_FORTROLIG", "STRENGT_FORTROLIG_UTLAND"}` og send i
-need-svaret. **Begrensning:** fanger ikke Arena-diskresjonskode 6 der PDL-gradering ikke er hentet,
-og event-strømmen (`somSynlighet()`) har ikke graderingsstrengen — kun boolean
-`harIkkeAdressebeskyttelse`. Krever derfor enten at man godtar at sperring kun gjelder PDL-graderte,
-eller at event-flyten også beriges (se 2b).
-
-**2b — Bevar diskresjonskode/streng-flagg gjennom synlighetsmotor (komplett, men størst endring):**
-
-1. `Kandidat.kt`: ikke kast diskresjonskoden — avled `erStrengtFortrolig =
-diskresjonskode in {"6"} || gradering in {STRENGT_FORTROLIG, STRENGT_FORTROLIG_UTLAND}`
-   (kode 19 = strengt fortrolig utland; verifiser om Arena bruker «19» eller PDL-gradering for utland).
-2. `Evaluering.kt`: nytt felt som bæres gjennom til `Synlighet`/need-svar.
-3. `Repository.kt` + **ny Flyway-migrasjon i synlighetsmotor-db**: lagre flagget (ny kolonne, f.eks.
-   `er_strengt_fortrolig`), oppdater `databaseMap` og `evalueringFraDB`.
-4. `SynlighetsgrunnlagLytter.kt` (event) + `SynlighetRekrutteringstreffLytter.kt` (need): send `sperret`.
-
-### Endringer i rekrutteringstreff-api og frontend
-
-Identiske med alternativ 1, punkt 4–13 (V11-kolonne `sperret`, lyttere, UPDATE-metoder, liste-query
-som nuller navn+fnr, `FormidlingDto.sperret`, blokkering i `opprettFormidling`, statusaggregering,
-`FormidlingRad` «Skjermet», opprett-modal filtrering).
-
-**Merk:** Hvis man velger 2a/2b og vil utsette sperret-feltet helt: kode 7 dekkes allerede av
-`er_synlig = false` i dag, så ingen umiddelbar handling kreves for kode 7. Sperret-felt og
-plattformendring innføres først når kode 6/19-sperring faktisk skal leveres.
-
-### Fordeler / ulemper
-
-- ✅ Treffer avklart scope nøyaktig (kun 6/19 sperres, 7 skjules).
-- ✅ Kan utsettes — kode 7 håndteres riktig allerede uten ny kode.
-- ❌ 2b krever endring i delt plattformkomponent **inkludert ny db-migrasjon** i synlighetsmotor,
-  med stort nedslagsfelt og koordinering med synlighetsmotor-eier.
-- ❌ 2a er enklere men ufullstendig (fanger ikke alle Arena-kode-6-tilfeller, og event-flyten mangler graderingen).
+10. `FormidlingSchema` (`useFormidlinger.ts`): legg til `sperret: z.boolean()`.
+11. `FormidlingRad.tsx`: når `sperret` → vis «Skjermet» (verken navn eller fnr); ellers dagens logikk
+    («Inaktiv kandidat» når fnr er nullet pga. `er_synlig = false`).
+12. Opprett-modal (velg jobbsøker-steg): sperrede er allerede utenfor jobbsøkerlisten
+    (`er_synlig = false`), så de dukker ikke opp som valgbare. Backend-blokkeringen (punkt 9) er
+    sikkerhetsnettet.
 
 ---
 
-## Anbefaling
-
-- Hvis produkteier kan akseptere at kode 7 også sperres: velg **Alternativ 1** (klart minst arbeid).
-- Hvis skillet 6/19 vs 7 er et reelt krav: velg **Alternativ 2b** og koordiner db-/payload-endring
-  med toi-synlighetsmotor-eier. **Alternativ 2a** kun hvis man bevisst godtar at sperring begrenses
-  til PDL-graderte og at event-flyten ikke dekkes.
-
-Uansett alternativ er endringene i rekrutteringstreff-api og frontend like (punkt 4–13). Det er kun
-**datakilden for `sperret`-flagget** som skiller alternativene.
-
----
-
-## Felles akseptansekriterier (uavhengig av alternativ)
+## Akseptansekriterier
 
 1. En sperret jobbsøker kan **ikke** legges til i en ny formidling (opprett-endepunkt returnerer feil;
    opprett-modal viser dem ikke som valgbare).
 2. En formidling lagt til **før** sperring vises fortsatt i formidlingslisten, men med **både navn og
    fødselsnummer anonymisert** og merket «Skjermet».
-3. Skjult/inaktiv kandidat (kode 7, manglende CV osv.) oppfører seg som i dag: navn vises, fnr nulles,
-   merket «Inaktiv kandidat».
-4. Sperrede telles i statusaggregeringen på samme måte som synlige/slettede.
+3. Skjult/inaktiv kandidat (manglende CV osv. uten adressebeskyttelse) oppfører seg som i dag: navn
+   vises, fnr nulles, merket «Inaktiv kandidat».
+4. Sperrede telles som skjulte i `antallSkjulte` (felles telling — ingen egen kategori) og er skjult
+   fra jobbsøkerlisten i treffene.
 
 ## Tester som må skrives
 
@@ -253,11 +185,9 @@ Uansett alternativ er endringene i rekrutteringstreff-api og frontend like (punk
 
 **toi-synlighetsmotor:**
 
-- Test at `sperret`/`er_strengt_fortrolig` settes korrekt for kode 6/19 (og ikke for kode 7 i
-  alternativ 2), og at det sendes i både event (`SynlighetsgrunnlagLytter`) og need
-  (`SynlighetRekrutteringstreffLytter`).
+- Test at `sperret` settes for kode 6/7/19 og PDL-graderte, og at det sendes i både event
+  (`SynlighetsgrunnlagLytter`) og need (`SynlighetRekrutteringstreffLytter`).
 
 **frontend (Playwright `tests/rekrutteringstreff/formidlinger.spec.ts`):**
 
 - Rad med `sperret` viser «Skjermet» (verken navn eller fnr).
-- (Hvis modal-flyt med MSW) sperret kandidat er ikke valgbar i opprett-modal.

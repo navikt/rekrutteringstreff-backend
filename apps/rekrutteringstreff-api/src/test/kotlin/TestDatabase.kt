@@ -239,6 +239,13 @@ class TestDatabase {
         }.executeUpdate()
     }
 
+    fun settSperret(personTreffId: PersonTreffId, sperret: Boolean) = dataSource.connection.use { conn ->
+        conn.prepareStatement("UPDATE jobbsoker SET sperret = ? WHERE id = ?").apply {
+            setBoolean(1, sperret)
+            setObject(2, personTreffId.somUuid)
+        }.executeUpdate()
+    }
+
     fun settJobbsøkerStatus(personTreffId: PersonTreffId, status: JobbsøkerStatus) = dataSource.connection.use { conn ->
         conn.prepareStatement("UPDATE jobbsoker SET status = ? WHERE id = ?").apply {
             setString(1, status.name)

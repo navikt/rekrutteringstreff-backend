@@ -44,6 +44,7 @@ class SynlighetsBehovLytter(
                 it.requireKey("@opprettet")
                 it.interestedIn("synlighetRekrutteringstreff.erSynlig")
                 it.interestedIn("synlighetRekrutteringstreff.ferdigBeregnet")
+                it.interestedIn("synlighetRekrutteringstreff.sperret")
             }
         }.register(this)
     }
@@ -61,6 +62,7 @@ class SynlighetsBehovLytter(
         val synlighetNode = packet["synlighetRekrutteringstreff"]
         val ferdigBeregnet = synlighetNode["ferdigBeregnet"]?.asBoolean() ?: false
         val erSynligNode = synlighetNode["erSynlig"]
+        val sperret = synlighetNode["sperret"]?.asBoolean() ?: false
         
         // Hvis ikke ferdigBeregnet eller erSynlig mangler, behandle som ikke-synlig (fail-safe)
         val erSynlig = if (ferdigBeregnet && erSynligNode != null && !erSynligNode.isNull) {
@@ -70,10 +72,10 @@ class SynlighetsBehovLytter(
             false
         }
 
-        log.info("Mottok need-svar for synlighetRekrutteringstreff: erSynlig=$erSynlig, ferdigBeregnet=$ferdigBeregnet")
-        secureLogger.info("Mottok need-svar for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig")
+        log.info("Mottok need-svar for synlighetRekrutteringstreff: erSynlig=$erSynlig, sperret=$sperret, ferdigBeregnet=$ferdigBeregnet")
+        secureLogger.info("Mottok need-svar for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig, sperret=$sperret")
 
-        val oppdatert = jobbsøkerService.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, meldingTidspunkt)
+        val oppdatert = jobbsøkerService.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, sperret, meldingTidspunkt)
 
         if (oppdatert > 0) {
             log.info("Oppdaterte synlighet i $oppdatert rekrutteringstreff fra need-svar")

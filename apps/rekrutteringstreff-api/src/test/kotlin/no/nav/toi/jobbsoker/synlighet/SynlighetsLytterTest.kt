@@ -69,6 +69,36 @@ class SynlighetsLytterTest {
     }
 
     @Test
+    fun `skal sette sperret når event har sperret true`() {
+        val rapid = TestRapid()
+        SynlighetsLytter(rapid, jobbsøkerService)
+
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val fnr = "12345678901"
+        val jobbsøker = LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn("Person"), null, null, null)
+        db.leggTilJobbsøkereMedHendelse(listOf(jobbsøker), treffId, "testperson")
+
+        rapid.sendTestMessage(
+            """
+            {
+                "synlighet": {
+                    "erSynlig": true,
+                    "sperret": true,
+                    "ferdigBeregnet": true
+                },
+                "fodselsnummer": "$fnr",
+                "@opprettet": "${Instant.now()}",
+                "@slutt_av_hendelseskjede": true
+            }
+            """.trimIndent()
+        )
+
+        val oppdatert = jobbsøkerRepository.hentJobbsøkere(treffId)
+        assertThat(oppdatert).hasSize(1)
+        assertThat(oppdatert.first().sperret).isTrue()
+    }
+
+    @Test
     fun `skal oppdatere alle rekrutteringstreff for samme person`() {
         val rapid = TestRapid()
         SynlighetsLytter(rapid, jobbsøkerService)
