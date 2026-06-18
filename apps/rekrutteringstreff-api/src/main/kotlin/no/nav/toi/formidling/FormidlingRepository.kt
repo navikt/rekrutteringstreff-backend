@@ -1,9 +1,12 @@
 package no.nav.toi.formidling
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
+import no.nav.toi.executeInTransaction
+import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Types
 import java.time.ZoneId
@@ -21,13 +24,17 @@ class FormidlingRepository(private val dataSource: DataSource) {
         stillingId: UUID,
         kandidatlisteId: UUID? = null,
         utfallSendtTidspunkt: ZonedDateTime? = null,
+        yrkestittel: String? = null,
+        janzzKonseptId: String? = null,
     ): Long {
         val sql = """
-            INSERT INTO formidling (rekrutteringstreff_id, jobbsoker_id, arbeidsgiver_id, stilling_id, kandidatliste_id, utfall_sendt_tidspunkt)
+            INSERT INTO formidling (rekrutteringstreff_id, jobbsoker_id, arbeidsgiver_id, stilling_id, kandidatliste_id, utfall_sendt_tidspunkt, yrkestittel, janzz_konsept_id)
             VALUES (
                 (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?),
                 (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?),
                 (SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ? AND rekrutteringstreff_id = (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?) AND status = 'AKTIV'),
+                ?,
+                ?,
                 ?,
                 ?,
                 ?
@@ -42,6 +49,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
             stmt.setObject(5, stillingId)
             stmt.setNullableUuid(6, kandidatlisteId)
             stmt.setNullableTimestampWithTimezone(7, utfallSendtTidspunkt)
+            stmt.setString(8, yrkestittel)
+            stmt.setString(9, janzzKonseptId)
             stmt.executeUpdate()
             stmt.generatedKeys.use { rs ->
                 rs.next()
@@ -100,6 +109,144 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun hentAlleForTreff(
+        treffId: TreffId,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> {
+        val where = tilWhereClause(byggBasisFilter(treffId) + byggArbeidsgiverFilter(arbeidsgivere))
+        return hentMedWhere(where, sortering, retning)
+    }
+
+    fun hentEgneForTreff(
+        treffId: TreffId,
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> {
+        val where = tilWhereClause(
+            byggBasisFilter(treffId)
+                + byggVeilederEllerEnhetFilter(veilederNavIdent, tilknyttedeEnheter)
+                + byggArbeidsgiverFilter(arbeidsgivere)
+        )
+        return hentMedWhere(where, sortering, retning)
+    }
+
+    private fun hentMedWhere(
+        where: WhereClause,
+        sortering: FormidlingSortering,
+        retning: FormidlingSorteringsretning?,
+    ): List<FormidlingDto> =
+        dataSource.executeInTransaction { conn ->
+            val sql = """
+                SELECT
+                    f.id,
+                    f.opprettet_tidspunkt,
+                    f.stilling_id,
+                    f.yrkestittel,
+                    CASE WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
+                    j.fornavn,
+                    j.etternavn,
+                    ag.orgnr,
+                    ag.orgnavn
+                FROM formidling f
+                JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                JOIN jobbsoker j ON f.jobbsoker_id = j.jobbsoker_id
+                JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
+                ${where.sql}
+                ${sortering.orderByClause(retning)}
+            """.trimIndent()
+
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+                settWhereParametere(stmt, where.params)
+                stmt.executeQuery().use { rs ->
+                    val resultater = mutableListOf<FormidlingDto>()
+                    while (rs.next()) {
+                        resultater += rs.toFormidlingDto()
+                    }
+                    resultater
+                }
+            }
+        }
+
+    private fun settWhereParametere(stmt: PreparedStatement, params: List<SqlParam>) {
+        params.forEachIndexed { index, param ->
+            settParam(stmt, index + 1, param)
+        }
+    }
+
+    private fun settParam(stmt: PreparedStatement, index: Int, param: SqlParam) {
+        when (param) {
+            is SqlParam.Uuid -> stmt.setObject(index, param.value)
+            is SqlParam.Text -> stmt.setString(index, param.value)
+            is SqlParam.TextArray ->
+                stmt.setArray(index, stmt.connection.createArrayOf("text", param.value.toTypedArray()))
+        }
+    }
+
+    private fun ResultSet.toFormidlingDto() = FormidlingDto(
+        id = UUID.fromString(getString("id")),
+        opprettetTidspunkt = getTimestamp("opprettet_tidspunkt").toInstant().atZone(OSLO),
+        fødselsnummer = getString("fodselsnummer"),
+        fornavn = getString("fornavn"),
+        etternavn = getString("etternavn"),
+        orgnr = getString("orgnr"),
+        orgnavn = getString("orgnavn"),
+        stillingId = UUID.fromString(getString("stilling_id")),
+        yrkestittel = getString("yrkestittel"),
+    )
+
+    private data class WhereClause(
+        val sql: String,
+        val params: List<SqlParam>,
+    )
+
+    private data class Condition(
+        val sql: String,
+        val params: List<SqlParam> = emptyList(),
+    ) {
+        constructor(sql: String, vararg params: SqlParam) : this(sql, params.toList())
+    }
+
+    private sealed interface SqlParam {
+        data class Uuid(val value: UUID) : SqlParam
+        data class Text(val value: String) : SqlParam
+        data class TextArray(val value: List<String>) : SqlParam
+    }
+
+    private fun byggBasisFilter(treffId: TreffId): List<Condition> = listOf(
+        Condition("rt.id = ?", SqlParam.Uuid(treffId.somUuid)),
+        Condition("f.slettet_tidspunkt IS NULL"),
+        Condition("j.status != 'SLETTET'"),
+    )
+
+    private fun byggVeilederEllerEnhetFilter(
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+    ): Condition {
+        val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+        return Condition(
+            "(UPPER(j.veileder_navident) = ? OR j.kontornummer = ANY (?::text[]))",
+            SqlParam.Text(veilederNavIdent.trim().uppercase()),
+            SqlParam.TextArray(unikeEnheter),
+        )
+    }
+
+    private fun byggArbeidsgiverFilter(arbeidsgivere: List<String>): List<Condition> {
+        val orgnr = arbeidsgivere.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+        if (orgnr.isEmpty()) return emptyList()
+        return listOf(Condition("ag.orgnr = ANY (?::text[])", SqlParam.TextArray(orgnr)))
+    }
+
+    private fun tilWhereClause(conditions: List<Condition>): WhereClause = WhereClause(
+        sql = "WHERE " + conditions.joinToString(" AND ") { it.sql },
+        params = conditions.flatMap { it.params },
+    )
+
     private fun ResultSet.toFormidling() = Formidling(
         formidlingId = getLong("formidling_id"),
         id = UUID.fromString(getString("id")),
@@ -129,6 +276,9 @@ class FormidlingRepository(private val dataSource: DataSource) {
     }
 
     private companion object {
+        private const val QUERY_TIMEOUT_SECONDS = 10
+        private val OSLO = ZoneId.of("Europe/Oslo")
+
         private val HENT_FORMIDLING_BASE = """
             SELECT 
                 f.formidling_id,
@@ -145,5 +295,59 @@ class FormidlingRepository(private val dataSource: DataSource) {
             JOIN jobbsoker js ON f.jobbsoker_id = js.jobbsoker_id
             JOIN arbeidsgiver ag ON f.arbeidsgiver_id = ag.arbeidsgiver_id
         """.trimIndent()
+    }
+}
+
+/**
+ * Sorteringsretning. SQL-verdien er fast definert (ikke bygget fra brukerinput) for å unngå SQL-injeksjon.
+ */
+enum class FormidlingSorteringsretning(internal val sql: String) {
+    STIGENDE("ASC"),
+    SYNKENDE("DESC");
+
+    companion object {
+        fun fraQueryParam(verdi: String?): FormidlingSorteringsretning? =
+            when (verdi?.trim()?.lowercase()) {
+                "asc" -> STIGENDE
+                "desc" -> SYNKENDE
+                else -> null
+            }
+    }
+}
+
+/**
+ * Sorteringsfelt for formidlingslisten. ORDER BY-klausulen bygges av faste fragmenter
+ * (felt + retning fra enum-er, ikke fra rå brukerinput) for å unngå SQL-injeksjon.
+ */
+enum class FormidlingSortering {
+    TIDSPUNKT,
+    ARBEIDSGIVER,
+    JOBBSOKER;
+
+    private val standardRetning: FormidlingSorteringsretning
+        get() = when (this) {
+            TIDSPUNKT -> FormidlingSorteringsretning.SYNKENDE
+            ARBEIDSGIVER, JOBBSOKER -> FormidlingSorteringsretning.STIGENDE
+        }
+
+    internal fun orderByClause(retning: FormidlingSorteringsretning? = null): String {
+        val retning = (retning ?: standardRetning).sql
+        return when (this) {
+            TIDSPUNKT ->
+                "ORDER BY f.opprettet_tidspunkt $retning, f.formidling_id $retning"
+            ARBEIDSGIVER ->
+                "ORDER BY lower(ag.orgnavn) $retning NULLS LAST, f.opprettet_tidspunkt DESC, f.formidling_id DESC"
+            JOBBSOKER ->
+                "ORDER BY lower(j.etternavn) $retning NULLS LAST, lower(j.fornavn) $retning NULLS LAST, f.opprettet_tidspunkt DESC, f.formidling_id DESC"
+        }
+    }
+
+    companion object {
+        fun fraQueryParam(verdi: String?): FormidlingSortering =
+            when (verdi?.trim()?.lowercase()) {
+                "arbeidsgiver" -> ARBEIDSGIVER
+                "jobbsoker", "jobbsøker" -> JOBBSOKER
+                else -> TIDSPUNKT
+            }
     }
 }

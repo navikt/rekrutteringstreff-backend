@@ -4,6 +4,7 @@ data class JobbsøkerFormidlingRequest(
     val fritekst: String? = null,
     val side: Int = 1,
     val antallPerSide: Int = 25,
+    val orgnr: String? = null,
 )
 
 data class JobbsøkerFormidlingTreff(
@@ -11,6 +12,7 @@ data class JobbsøkerFormidlingTreff(
     val fødselsnummer: String,
     val fornavn: String?,
     val etternavn: String?,
+    val alleredeFormidlet: Boolean,
 )
 
 data class JobbsøkerFormidlingRespons(

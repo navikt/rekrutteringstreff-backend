@@ -166,7 +166,6 @@ class TestDatabase {
             opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
         )
 
-        // Bruk repository-metode for å oppdatere
         dataSource.connection.use { connection ->
             rekrutteringstreffRepository.oppdater(
                 connection,
@@ -674,9 +673,9 @@ class TestDatabase {
     /**
      * Oppretter en formidling via repository.
      */
-    fun opprettFormidling(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId, stillingId: UUID, kandidatlisteId: UUID?): Long {
+    fun opprettFormidling(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId, stillingId: UUID, kandidatlisteId: UUID?, yrkestittel: String? = null, janzzKonseptId: String? = null): Long {
         return dataSource.executeInTransaction { connection ->
-            formidlingRepository.opprett(connection, treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId)
+            formidlingRepository.opprett(connection, treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId, yrkestittel = yrkestittel, janzzKonseptId = janzzKonseptId)
         }
     }
 

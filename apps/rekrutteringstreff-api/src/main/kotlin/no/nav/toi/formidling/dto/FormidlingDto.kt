@@ -2,7 +2,8 @@ package no.nav.toi.formidling.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.time.LocalDateTime
-import java.util.ArrayList
+import java.time.ZonedDateTime
+import java.util.UUID
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpprettFormidlingDto(
@@ -10,6 +11,8 @@ data class OpprettFormidlingDto(
     val orgnr: String,
     val fødselsnumre: List<String>,
     val stilling: StillingDto,
+    val yrkestittel: String? = null,
+    val janzzKonseptId: String? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -72,9 +75,21 @@ data class LocationDto(
     val country: String? = null,
 )
 
-data class FormidlingOutboundDto(
-    val formidlingId: String,
-    val stillingId: String,
-    val opprettetTidspunkt: String,
+data class FormidlingOpprettetDto(
+    val id: UUID,
+    val stillingId: UUID,
+    val opprettetTidspunkt: ZonedDateTime,
+)
+
+data class FormidlingDto(
+    val id: UUID,
+    val opprettetTidspunkt: ZonedDateTime,
+    val fødselsnummer: String?,
+    val fornavn: String?,
+    val etternavn: String?,
+    val orgnr: String,
+    val orgnavn: String?,
+    val stillingId: UUID,
+    val yrkestittel: String?,
 )
 

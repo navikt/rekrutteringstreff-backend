@@ -233,8 +233,8 @@ class JobbsøkerService(
         return jobbsøkerRepository.hentSlettedeJobbsøkere(treffId)
     }
 
-    fun hentJobbsøker(treffId: TreffId, fnr: Fødselsnummer): Jobbsøker? {
-        return jobbsøkerRepository.hentJobbsøker(treffId, fnr)
+    fun hentJobbsøker(treffId: TreffId, fnr: Fødselsnummer, inkluderUsynlige: Boolean = false): Jobbsøker? {
+        return jobbsøkerRepository.hentJobbsøker(treffId, fnr, inkluderUsynlige)
     }
 
     fun hentJobbsøkerHendelser(treffId: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {

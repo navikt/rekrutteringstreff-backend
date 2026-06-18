@@ -6,6 +6,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
+import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.Jobbsøker
@@ -28,6 +29,24 @@ class FormidlingService(
     private val kandidatKlient: KandidatKlient,
 ) {
     private val logger = LoggerFactory.getLogger(this::class.java)
+
+    fun hentAlleFormidlingerForTreff(
+        treffId: TreffId,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> =
+        formidlingRepository.hentAlleForTreff(treffId, sortering, retning, arbeidsgivere)
+
+    fun hentEgneFormidlingerForTreff(
+        treffId: TreffId,
+        veilederNavIdent: String,
+        tilknyttedeEnheter: List<String>,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> =
+        formidlingRepository.hentEgneForTreff(treffId, veilederNavIdent, tilknyttedeEnheter, sortering, retning, arbeidsgivere)
 
     fun opprettFormidling(
         treffId: TreffId,
@@ -54,6 +73,8 @@ class FormidlingService(
                 arbeidsgiver,
                 stillingOgKandidatliste.stillingsId,
                 stillingOgKandidatliste.kandidatlisteId,
+                opprettFormidling.yrkestittel,
+                opprettFormidling.janzzKonseptId,
             )
         } else {
             emptyList()
@@ -116,7 +137,7 @@ class FormidlingService(
             ?: throw ArbeidsgiverIkkeFunnetException("Arbeidsgiver med orgnr ${opprettFormidling.orgnr} finnes ikke på treffet")
 
         val jobbsøkere = opprettFormidling.fødselsnumre.map { fnr ->
-            jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(fnr))
+            jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(fnr), inkluderUsynlige = true)
                 ?: throw JobbsøkerIkkeFunnetPåTreffException("Jobbsøker med fødselsnummer $fnr finnes ikke på treffet")
         }
         return Pair(arbeidsgiver, jobbsøkere)
@@ -157,6 +178,8 @@ class FormidlingService(
         arbeidsgiver: Arbeidsgiver,
         stillingId: UUID,
         kandidatlisteId: UUID?,
+        yrkestittel: String?,
+        janzzKonseptId: String?,
     ): List<Formidling> {
         val formidlingIder = dataSource.executeInTransaction { connection ->
             jobbsøkere.map { jobbsøker ->
@@ -168,6 +191,8 @@ class FormidlingService(
                     stillingId,
                     kandidatlisteId,
                     null,
+                    yrkestittel,
+                    janzzKonseptId,
                 )
             }
         }
