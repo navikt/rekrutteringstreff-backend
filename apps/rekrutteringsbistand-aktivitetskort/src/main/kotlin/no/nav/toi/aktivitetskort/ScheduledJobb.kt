@@ -45,8 +45,7 @@ fun scheduler(
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
     val myJob = AktivitetskortJobb(repository, producer, leaderElection)
-    consumer.subscribe(listOf(dabAktivitetskortFeilTopic))
-    val myErrorJob = AktivitetskortFeilJobb(repository, consumer, leaderElection) { key, message ->
+    val myErrorJob = AktivitetskortFeilJobb(repository, consumer, leaderElection, dabAktivitetskortFeilTopic) { key, message ->
         rapidsConnection.publish(key, message)
     }
 
@@ -84,6 +83,7 @@ class AktivitetskortFeilJobb(
     private val repository: Repository,
     private val consumer: Consumer<String, String>,
     private val leaderElection: LeaderElectionInterface,
+    private val dabAktivitetskortFeilTopic: String,
     private val rapidPublish: (String, String) -> Unit
 ): Runnable {
     private val secureLog = SecureLog(log)
@@ -91,8 +91,17 @@ class AktivitetskortFeilJobb(
     @WithSpan
     override fun run() {
         if(!leaderElection.isLeader()) {
+            if (consumer.subscription().isNotEmpty()) {
+                log.info("Instansen er ikke leader lenger – melder consumer ut av gruppa.")
+                consumer.unsubscribe()
+            }
             log.info("Kjøring av AktivitetskortFeilJobb skippes, instansen er ikke leader.")
             return
+        }
+
+        if (consumer.subscription().isEmpty() && consumer.assignment().isEmpty()) {
+            log.info("Instansen er leader – starter consumering på $dabAktivitetskortFeilTopic.")
+            consumer.subscribe(listOf(dabAktivitetskortFeilTopic))
         }
         log.info("Kjører AktivitetskortFeilJobb")
         lagreFeilKøHendelser()
