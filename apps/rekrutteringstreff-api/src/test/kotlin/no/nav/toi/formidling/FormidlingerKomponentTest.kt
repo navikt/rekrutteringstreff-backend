@@ -227,6 +227,43 @@ class FormidlingerKomponentTest {
     }
 
     @Test
+    fun `formidlingslisten returnerer yrkestittel og skjuler fødselsnummer for usynlig jobbsøker`() {
+        val eierIdent = "A123456"
+        val markedskontaktIdent = "B200002"
+        val felleskontor = "0314"
+        val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Usynlig"), Etternavn("Bø"), Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
+            ),
+            treffId, "testperson",
+        )
+        val stillingId = UUID.randomUUID()
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Utvikler (dataspill)", janzzKonseptId = "19989")
+        db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Kokk", janzzKonseptId = "12345")
+
+        db.settSynlighet(personTreffIder[1], false)
+
+        stubMineEnheter(felleskontor)
+
+        val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
+        assertThat(linjer).hasSize(2)
+
+        val synlig = linjer.single { it.etternavn == "Aase" }
+        assertThat(synlig.fødselsnummer).isEqualTo("11111111111")
+        assertThat(synlig.yrkestittel).isEqualTo("Utvikler (dataspill)")
+
+        val usynlig = linjer.single { it.etternavn == "Bø" }
+        assertThat(usynlig.fødselsnummer).isNull()
+        assertThat(usynlig.yrkestittel).isEqualTo("Kokk")
+    }
+
+    @Test
     fun `markedskontakt som ikke tilhører treffets kontor får 403`() {
         val eierIdent = "A123456"
         val markedskontaktIdent = "B200002"

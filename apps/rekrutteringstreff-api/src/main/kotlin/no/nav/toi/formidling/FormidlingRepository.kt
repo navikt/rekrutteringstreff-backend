@@ -24,13 +24,17 @@ class FormidlingRepository(private val dataSource: DataSource) {
         stillingId: UUID,
         kandidatlisteId: UUID? = null,
         utfallSendtTidspunkt: ZonedDateTime? = null,
+        yrkestittel: String? = null,
+        janzzKonseptId: String? = null,
     ): Long {
         val sql = """
-            INSERT INTO formidling (rekrutteringstreff_id, jobbsoker_id, arbeidsgiver_id, stilling_id, kandidatliste_id, utfall_sendt_tidspunkt)
+            INSERT INTO formidling (rekrutteringstreff_id, jobbsoker_id, arbeidsgiver_id, stilling_id, kandidatliste_id, utfall_sendt_tidspunkt, yrkestittel, janzz_konsept_id)
             VALUES (
                 (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?),
                 (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?),
                 (SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ? AND rekrutteringstreff_id = (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?) AND status = 'AKTIV'),
+                ?,
+                ?,
                 ?,
                 ?,
                 ?
@@ -45,6 +49,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
             stmt.setObject(5, stillingId)
             stmt.setNullableUuid(6, kandidatlisteId)
             stmt.setNullableTimestampWithTimezone(7, utfallSendtTidspunkt)
+            stmt.setString(8, yrkestittel)
+            stmt.setString(9, janzzKonseptId)
             stmt.executeUpdate()
             stmt.generatedKeys.use { rs ->
                 rs.next()
@@ -140,7 +146,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
                     f.id,
                     f.opprettet_tidspunkt,
                     f.stilling_id,
-                    j.fodselsnummer,
+                    f.yrkestittel,
+                    CASE WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
                     j.fornavn,
                     j.etternavn,
                     ag.orgnr,
@@ -190,6 +197,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         orgnr = getString("orgnr"),
         orgnavn = getString("orgnavn"),
         stillingId = UUID.fromString(getString("stilling_id")),
+        yrkestittel = getString("yrkestittel"),
     )
 
     private data class WhereClause(

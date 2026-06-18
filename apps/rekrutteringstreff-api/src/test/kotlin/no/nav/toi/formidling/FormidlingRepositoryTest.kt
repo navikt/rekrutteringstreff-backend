@@ -558,6 +558,79 @@ class FormidlingRepositoryTest {
             .containsExactly("Beta AS", "Alfa AS")
     }
 
+    @Test
+    fun `opprett lagrer yrkestittel og janzzKonseptId, og yrkestittel returneres i listen`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Testbedrift AS"), emptyList(), null, null, null),
+            treffId, "testperson",
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
+            ),
+            treffId, "testperson",
+        )
+        val formidlingId = db.dataSource.executeInTransaction { connection ->
+            repository.opprett(
+                connection,
+                treffId,
+                personTreffIder[0],
+                arbeidsgiverTreffId,
+                UUID.randomUUID(),
+                kandidatlisteId = null,
+                utfallSendtTidspunkt = null,
+                yrkestittel = "Utvikler (dataspill)",
+                janzzKonseptId = "19989",
+            )
+        }
+
+        val linjer = repository.hentAlleForTreff(treffId)
+        assertThat(linjer).hasSize(1)
+        assertThat(linjer.single().yrkestittel).isEqualTo("Utvikler (dataspill)")
+
+        val lagretJanzzKonseptId = db.dataSource.connection.use { conn ->
+            conn.prepareStatement("SELECT janzz_konsept_id FROM formidling WHERE formidling_id = ?").use { stmt ->
+                stmt.setLong(1, formidlingId)
+                stmt.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getString("janzz_konsept_id")
+                }
+            }
+        }
+        assertThat(lagretJanzzKonseptId).isEqualTo("19989")
+    }
+
+    @Test
+    fun `hentAlleForTreff skjuler fødselsnummer for usynlig jobbsøker`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Testbedrift AS"), emptyList(), null, null, null),
+            treffId, "testperson",
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Aase"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Usynlig"), Etternavn("Bø"), null, null, null),
+            ),
+            treffId, "testperson",
+        )
+        val stillingId = UUID.randomUUID()
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+        db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+
+        db.settSynlighet(personTreffIder[1], false)
+
+        val linjer = repository.hentAlleForTreff(treffId)
+        assertThat(linjer).hasSize(2)
+
+        val synlig = linjer.single { it.etternavn == "Aase" }
+        assertThat(synlig.fødselsnummer).isEqualTo("11111111111")
+
+        val usynlig = linjer.single { it.etternavn == "Bø" }
+        assertThat(usynlig.fødselsnummer).isNull()
+    }
+
     private data class FormidlingTestdata(
         val personTreffId: PersonTreffId,
         val arbeidsgiverTreffId: ArbeidsgiverTreffId,

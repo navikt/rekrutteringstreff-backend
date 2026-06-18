@@ -11,6 +11,8 @@ data class OpprettFormidlingDto(
     val orgnr: String,
     val fødselsnumre: List<String>,
     val stilling: StillingDto,
+    val yrkestittel: String? = null,
+    val janzzKonseptId: String? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -82,11 +84,12 @@ data class FormidlingOpprettetDto(
 data class FormidlingDto(
     val id: UUID,
     val opprettetTidspunkt: ZonedDateTime,
-    val fødselsnummer: String,
+    val fødselsnummer: String?,
     val fornavn: String?,
     val etternavn: String?,
     val orgnr: String,
     val orgnavn: String?,
     val stillingId: UUID,
+    val yrkestittel: String?,
 )
 

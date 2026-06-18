@@ -198,6 +198,10 @@ class FormidlingServiceTest {
         // Jobbsøkerstatus er satt til FÅTT_JOBB
         val oppdatertJobbsøker = jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }
         assertThat(oppdatertJobbsøker.status).isEqualTo(JobbsøkerStatus.FÅTT_JOBB)
+
+        // Yrkestittel fra opprettelsen er lagret og returneres i listen
+        val linjer = formidlingService.hentAlleFormidlingerForTreff(treffId)
+        assertThat(linjer.single().yrkestittel).isEqualTo("Utvikler (dataspill)")
     }
 
     @Test
@@ -416,6 +420,8 @@ class FormidlingServiceTest {
                     properties = emptyMap(),
                 ),
             ),
+            yrkestittel = "Utvikler (dataspill)",
+            janzzKonseptId = "19989",
         )
     }
 }

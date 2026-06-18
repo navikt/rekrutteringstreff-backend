@@ -62,6 +62,8 @@ class FormidlingController(
                         "eierNavKontorEnhetId": "1124",
                         "orgnr": "973626183",
                         "fødselsnumre": ["12345678901", "10987654321"],
+                        "yrkestittel": "Utvikler (dataspill)",
+                        "janzzKonseptId": "19989",
                         "stilling": {
                             "employer": {
                                 "name": "VELFERDSETATEN ADMINISTRASJON",
@@ -159,7 +161,8 @@ from = Array<FormidlingOpprettetDto>::class,
                                 "etternavn": "Én",
                                 "orgnr": "999999991",
                                 "orgnavn": "Test Arbeidsgiver AS",
-                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002"
+                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
+                                "yrkestittel": "Utvikler (dataspill)"
                             }
                         ]
                     """
@@ -223,7 +226,8 @@ from = Array<FormidlingOpprettetDto>::class,
                                 "etternavn": "Én",
                                 "orgnr": "999999991",
                                 "orgnavn": "Test Arbeidsgiver AS",
-                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002"
+                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
+                                "yrkestittel": "Utvikler (dataspill)"
                             }
                         ]
                     """

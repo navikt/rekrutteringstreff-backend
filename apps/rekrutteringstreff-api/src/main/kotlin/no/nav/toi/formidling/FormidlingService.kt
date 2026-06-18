@@ -73,6 +73,8 @@ class FormidlingService(
                 arbeidsgiver,
                 stillingOgKandidatliste.stillingsId,
                 stillingOgKandidatliste.kandidatlisteId,
+                opprettFormidling.yrkestittel,
+                opprettFormidling.janzzKonseptId,
             )
         } else {
             emptyList()
@@ -176,6 +178,8 @@ class FormidlingService(
         arbeidsgiver: Arbeidsgiver,
         stillingId: UUID,
         kandidatlisteId: UUID?,
+        yrkestittel: String?,
+        janzzKonseptId: String?,
     ): List<Formidling> {
         val formidlingIder = dataSource.executeInTransaction { connection ->
             jobbsøkere.map { jobbsøker ->
@@ -187,6 +191,8 @@ class FormidlingService(
                     stillingId,
                     kandidatlisteId,
                     null,
+                    yrkestittel,
+                    janzzKonseptId,
                 )
             }
         }
