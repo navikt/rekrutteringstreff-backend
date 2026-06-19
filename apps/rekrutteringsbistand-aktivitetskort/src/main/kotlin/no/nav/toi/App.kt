@@ -142,7 +142,7 @@ fun consumerConfig(env: Map<String, String>) = Properties().apply {
     val trustStorePath = env.variable("KAFKA_TRUSTSTORE_PATH")
     val keyStorePath = env.variable("KAFKA_KEYSTORE_PATH")
 
-    put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100)
+    put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 50)
     put(ConsumerConfig.GROUP_ID_CONFIG, "rekrutteringsbistand-aktivitetskort-feil-4")
     put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true)
     put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
