@@ -138,8 +138,8 @@ rolle her — vi trenger den ikke. Ingen ny kolonne eller migrasjon i synlighets
 
 8. `FormidlingDto`: legg til `val sperret: Boolean`.
 9. `FormidlingService.opprettFormidling(...)`: i `validerOgHentArbeidsgivereOgJobbsøkere(...)`,
-   før `lagreFormidlinger()`, valider at ingen valgte personer er `sperret`; returner `422` (eller
-   `409`) med JSON `feil` + `hint`.
+   før `lagreFormidlinger()`, valider at ingen valgte personer er `sperret`; returner `403` med JSON
+   `feil` + `hint`.
 
 **Ikke nødvendig (allerede dekket av `er_synlig`):**
 
