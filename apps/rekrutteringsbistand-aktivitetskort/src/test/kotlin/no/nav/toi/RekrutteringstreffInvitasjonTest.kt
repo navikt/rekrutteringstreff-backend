@@ -101,7 +101,6 @@ class RekrutteringstreffInvitasjonTest {
                 poststed
             )
         )
-
         val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
@@ -110,7 +109,7 @@ class RekrutteringstreffInvitasjonTest {
         val expectedDetaljer = """[{"label":"Tid","verdi":"01. oktober 2025, kl. 08:00–10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
         rekrutteringstreffInvitasjoner.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
-            assertThat(this[0].beskrivelse).isEqualTo("Nav arrangerer rekrutteringstreff, og vil gjerne ha deg med hvis du vil. På treffet møter du arbeidsgivere som leter etter folk å ansette. Kanskje finner du jobbmuligheten du ikke visste fantes? Følg lenken under for å lese mer om treffet og svare på invitasjonen.")
+            assertThat(this[0].beskrivelse).isEqualTo("Nav arrangerer rekrutteringstreff. På treffet møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.")
             assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
             assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
