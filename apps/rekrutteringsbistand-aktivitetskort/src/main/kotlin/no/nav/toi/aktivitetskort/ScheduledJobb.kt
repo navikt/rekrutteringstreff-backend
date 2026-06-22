@@ -137,7 +137,8 @@ class AktivitetskortFeilJobb(
                 }
             }
         } catch (e: Exception) {
-            log.error("Feil ved kjøring av AktivitetskortFeilJobb", e)
+            log.error("Feil ved kjøring av AktivitetskortFeilJobb: (se securelog)")
+            secureLog.error("Feil ved kjøring av AktivitetskortFeilJobb", e)
             throw e
         }
     }
