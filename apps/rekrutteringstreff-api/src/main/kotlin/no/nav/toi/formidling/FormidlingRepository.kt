@@ -83,6 +83,18 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun hent(treffId: TreffId, id: UUID): Formidling? = dataSource.connection.use { conn ->
+        val sql = "$HENT_FORMIDLING_BASE WHERE rt.id = ? AND f.id = ? AND f.slettet_tidspunkt IS NULL"
+
+        conn.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.setObject(2, id)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.toFormidling() else null
+            }
+        }
+    }
+
     fun markerSlettet(connection: Connection, formidlingId: Long): Boolean {
         val sql = """
             UPDATE formidling

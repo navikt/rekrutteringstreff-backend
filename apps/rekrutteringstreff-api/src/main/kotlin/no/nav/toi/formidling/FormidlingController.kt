@@ -3,6 +3,7 @@ package no.nav.toi.formidling
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
+import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
@@ -14,6 +15,7 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.formidling.dto.FormidlingOpprettetDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
+import no.nav.toi.formidling.dto.SlettFormidlingDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -28,7 +30,9 @@ class FormidlingController(
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         private const val pathParamTreffId = "id"
+        private const val pathParamFormidlingId = "formidlingId"
         private const val formidlingPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/formidling"
+        private const val formidlingMedIdPath = "$formidlingPath/{$pathParamFormidlingId}"
         private const val formidlingListeAllePath = "$formidlingPath/liste/alle"
         private const val formidlingListeEgnePath = "$formidlingPath/liste/egne"
         private const val queryParamSortering = "sortering"
@@ -40,6 +44,7 @@ class FormidlingController(
         routes.post(formidlingPath, opprettFormidlingHandler())
         routes.get(formidlingListeAllePath, hentAlleFormidlingerHandler())
         routes.get(formidlingListeEgnePath, hentEgneFormidlingerHandler())
+        routes.delete(formidlingMedIdPath, slettFormidlingHandler())
     }
 
     private val logger = LoggerFactory.getLogger(this::class.java)
@@ -255,6 +260,48 @@ from = Array<FormidlingOpprettetDto>::class,
                 ctx.queryParams(queryParamArbeidsgiver),
             )
         )
+    }
+
+    @OpenApi(
+        summary = "Slett en formidling for et rekrutteringstreff",
+        description = "Markerer formidlingen som slettet og tilbakestiller jobbsøkerens status fra " +
+            "FÅTT_JOBB til SVART_JA. Krever arbeidsgiverrettet eller jobbsøkerrettet rolle.",
+        operationId = "slettFormidling",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, description = "Rekrutteringstreffets unike identifikator (UUID)"),
+            OpenApiParam(name = pathParamFormidlingId, type = UUID::class, required = true, description = "Formidlingens unike identifikator (UUID)"),
+        ],
+        requestBody = OpenApiRequestBody(
+            content = [OpenApiContent(
+                from = SlettFormidlingDto::class,
+                example = """
+                    {
+                        "eierNavKontorEnhetId": "1124"
+                    }
+                """
+            )]
+        ),
+        responses = [
+            OpenApiResponse(status = "204", description = "Formidlingen er markert som slettet."),
+            OpenApiResponse(status = "404", description = "Formidlingen finnes ikke på treffet."),
+        ],
+        path = formidlingMedIdPath,
+        methods = [HttpMethod.DELETE]
+    )
+    private fun slettFormidlingHandler(): (Context) -> Unit = { ctx ->
+        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+        val formidlingId = UUID.fromString(ctx.pathParam(pathParamFormidlingId))
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+        val dto = ctx.bodyAsClass<SlettFormidlingDto>()
+        val navIdent = ctx.extractNavIdent()
+        val userToken = ctx.authenticatedUser().innkommendeToken()
+        logger.info("Sletter formidling $formidlingId for rekrutteringstreff $treffId")
+        if (formidlingService.slett(treffId, formidlingId, navIdent, userToken, dto.eierNavKontorEnhetId)) {
+            ctx.status(204)
+        } else {
+            throw NotFoundResponse("Formidling med id $formidlingId finnes ikke på treffet")
+        }
     }
 
     private fun Formidling.toOutboundDto() = FormidlingOpprettetDto(

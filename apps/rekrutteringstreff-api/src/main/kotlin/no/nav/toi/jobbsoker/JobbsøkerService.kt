@@ -200,6 +200,51 @@ class JobbsøkerService(
         jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.FÅTT_JOBB)
     }
 
+    /**
+     * Tilbakestiller en jobbsøker som har fått jobb tilbake til statusen den hadde rett før FÅTT_JOBB.
+     * Brukes når en formidling slettes. Endrer kun status dersom jobbsøkeren faktisk har status FÅTT_JOBB,
+     * slik at andre statuser ikke overskrives.
+     */
+    fun angreFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
+        val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+        if (nåværendeStatus != JobbsøkerStatus.FÅTT_JOBB) {
+            logger.info("Jobbsøker har ikke status FÅTT_JOBB (er $nåværendeStatus), endrer ikke status ved angring av formidling")
+            return
+        }
+        val forrigeStatus = finnStatusFørFåttJobb(connection, personTreffId)
+        jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
+        jobbsøkerRepository.endreStatus(connection, personTreffId, forrigeStatus)
+        logger.info("Tilbakestilte jobbsøker $personTreffId fra FÅTT_JOBB til $forrigeStatus ved angring av formidling")
+    }
+
+    /**
+     * Rekonstruerer statusen jobbsøkeren hadde rett før den siste FÅTT_JOBB-hendelsen,
+     * ved å spille av hendelsesloggen kronologisk. Faller tilbake til SVART_JA dersom
+     * ingen tidligere status kan utledes (en formidling forutsetter aktivt svar ja).
+     */
+    private fun finnStatusFørFåttJobb(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
+        val hendelser = jobbsøkerRepository.hentHendelsestyper(connection, personTreffId)
+        val sisteFåttJobbIndex = hendelser.indexOfLast { it == JobbsøkerHendelsestype.FÅTT_JOBB }
+        if (sisteFåttJobbIndex <= 0) return JobbsøkerStatus.SVART_JA
+        return hendelser.take(sisteFåttJobbIndex)
+            .mapNotNull { it.tilJobbsøkerStatus() }
+            .lastOrNull { it != JobbsøkerStatus.FÅTT_JOBB }
+            ?: JobbsøkerStatus.SVART_JA
+    }
+
+    private fun JobbsøkerHendelsestype.tilJobbsøkerStatus(): JobbsøkerStatus? = when (this) {
+        JobbsøkerHendelsestype.OPPRETTET -> JobbsøkerStatus.LAGT_TIL
+        JobbsøkerHendelsestype.INVITERT -> JobbsøkerStatus.INVITERT
+        JobbsøkerHendelsestype.SVAR_FJERNET_AV_EIER -> JobbsøkerStatus.INVITERT
+        JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON,
+        JobbsøkerHendelsestype.SVART_JA_TIL_INVITASJON_AV_EIER -> JobbsøkerStatus.SVART_JA
+        JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+        JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> JobbsøkerStatus.SVART_NEI
+        JobbsøkerHendelsestype.SLETTET -> JobbsøkerStatus.SLETTET
+        JobbsøkerHendelsestype.FÅTT_JOBB -> JobbsøkerStatus.FÅTT_JOBB
+        else -> null
+    }
+
     fun markerSlettet(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): MarkerSlettetResultat {
         val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(personTreffId)
             ?: return MarkerSlettetResultat.IKKE_FUNNET
@@ -235,6 +280,10 @@ class JobbsøkerService(
 
     fun hentJobbsøker(treffId: TreffId, fnr: Fødselsnummer, inkluderUsynlige: Boolean = false): Jobbsøker? {
         return jobbsøkerRepository.hentJobbsøker(treffId, fnr, inkluderUsynlige)
+    }
+
+    fun hentFødselsnummer(personTreffId: PersonTreffId): Fødselsnummer? {
+        return jobbsøkerRepository.hentFødselsnummer(personTreffId)
     }
 
     fun hentJobbsøkerHendelser(treffId: TreffId): List<JobbsøkerHendelseMedJobbsøkerData> {

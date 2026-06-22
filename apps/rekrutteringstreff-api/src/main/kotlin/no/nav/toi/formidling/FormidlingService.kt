@@ -216,14 +216,47 @@ class FormidlingService(
         return formidlingRepository.hent(treffId, personTreffId, arbeidsgiverTreffId)
     }
 
-    fun slett(formidlingId: Long): Boolean {
+    fun slett(treffId: TreffId, formidlingId: UUID, navIdent: String, userToken: String, eierNavKontorEnhetId: String): Boolean {
+        val formidling = formidlingRepository.hent(treffId, formidlingId) ?: return false
+        return slett(formidling.formidlingId, navIdent, userToken, eierNavKontorEnhetId)
+    }
+
+    fun slett(formidlingId: Long, navIdent: String, userToken: String, eierNavKontorEnhetId: String): Boolean {
+        val formidling = formidlingRepository.hent(formidlingId) ?: return false
+
         val slettet = dataSource.executeInTransaction { connection ->
-            formidlingRepository.markerSlettet(connection, formidlingId)
+            val slettet = formidlingRepository.markerSlettet(connection, formidlingId)
+            if (slettet) {
+                jobbsøkerService.angreFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
+                logger.info("Markert formidling $formidlingId som slettet og tilbakestilt jobbsøkerstatus til statusen før FÅTT_JOBB")
+            }
+            slettet
         }
+
         if (slettet) {
-            logger.info("Markert formidling $formidlingId som slettet")
+            sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId)
         }
         return slettet
+    }
+
+    private fun sendUtfallTilKandidatApi(formidling: Formidling, userToken: String, eierNavKontorEnhetId: String) {
+        val kandidatlisteId = formidling.kandidatlisteId
+        if (kandidatlisteId == null) {
+            logger.warn("Formidling ${formidling.formidlingId} mangler kandidatlisteId, kan ikke sende utfall til kandidat-api")
+            return
+        }
+        val fødselsnummer = jobbsøkerService.hentFødselsnummer(formidling.jobbsøkerPersonTreffId)
+        if (fødselsnummer == null) {
+            logger.warn("Fant ikke fødselsnummer for formidling ${formidling.formidlingId}, kan ikke sende utfall til kandidat-api")
+            return
+        }
+        kandidatKlient.endreUtfall(
+            kandidatlisteId = kandidatlisteId,
+            fødselsnummer = fødselsnummer,
+            utfall = KandidatUtfall.FATT_JOBBEN,
+            navKontorVeileder = eierNavKontorEnhetId,
+            userToken = userToken,
+        )
     }
 }
 
