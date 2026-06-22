@@ -297,7 +297,7 @@ class KiLoggServiceTest {
             )
         )
 
-        // Lagret HTML inneholder hardt mellomrom (U+00A0) som rik-tekst-editoren produserer.
+        // HTML fra rik-tekst-editoren kan inneholde hardt mellomrom (U+00A0).
         // Skal ikke kaste exception - hardt mellomrom behandles som vanlig whitespace.
         kiLoggService.verifiserKiValidering(
             tekst = "<p>Bli\u00A0med på\u00A0treffet</p>",
