@@ -108,31 +108,37 @@ class AktivitetskortFeilJobb(
         sendFeilKøHendelserPåRapid()
     }
     fun lagreFeilKøHendelser() {
-        val records = consumer.poll(Duration.ofSeconds(10))
-        log.info("Mottok ${records.count()} meldinger fra $dabAktivitetskortFeilTopic")
-        records.forEach { consumerRecord ->
-            consumerRecord.value().let {
-                class FeilKøHendelse(
-                    val source: String,
-                    val failingMessage: String,
-                    val errorMessage: String,
-                    val errorType: ErrorType
-                )
-
-                val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
-                if(hendelse.source == "REKRUTTERINGSBISTAND") {
-                    log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
-                    secureLog.error("Feil ved bestilling av aktivitetskort: $it")
-                    log.info("Skal lagre feil ved bestilling av aktivitetskort i databasen")
-                    repository.lagreFeilkøHendelse(
-                        messageId = hendelse.failingMessage.hentMessageId(),
-                        failingMessage = hendelse.failingMessage,
-                        errorMessage = hendelse.errorMessage,
-                        errorType = hendelse.errorType
+        try {
+            val records = consumer.poll(Duration.ofSeconds(10))
+            log.info("Mottok ${records.count()} meldinger fra $dabAktivitetskortFeilTopic")
+            records.forEach { consumerRecord ->
+                consumerRecord.value().let {
+                    class FeilKøHendelse(
+                        val source: String,
+                        val failingMessage: String,
+                        val errorMessage: String,
+                        val errorType: ErrorType
                     )
-                    log.info("Lagret feil med bestilling av aktivitetskort")
-                } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
+
+                    val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
+                    if (hendelse.source == "REKRUTTERINGSBISTAND") {
+                        log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
+                        secureLog.error("Feil ved bestilling av aktivitetskort: $it")
+                        log.info("Skal lagre feil ved bestilling av aktivitetskort i databasen")
+
+                        repository.lagreFeilkøHendelse(
+                            messageId = hendelse.failingMessage.hentMessageId(),
+                            failingMessage = hendelse.failingMessage,
+                            errorMessage = hendelse.errorMessage,
+                            errorType = hendelse.errorType
+                        )
+                        log.info("Lagret feil med bestilling av aktivitetskort")
+                    } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
+                }
             }
+        } catch (e: Exception) {
+            log.error("Feil kjøring av AktivitetskortFeilJobb", e)
+            throw e
         }
     }
     fun sendFeilKøHendelserPåRapid() {
