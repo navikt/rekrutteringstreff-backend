@@ -123,6 +123,7 @@ class AktivitetskortFeilJobb(
                 if(hendelse.source == "REKRUTTERINGSBISTAND") {
                     log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
                     secureLog.error("Feil ved bestilling av aktivitetskort: $it")
+                    log.info("Skal lagre feil ved bestilling av aktivitetskort i databasen")
                     repository.lagreFeilkøHendelse(
                         messageId = hendelse.failingMessage.hentMessageId(),
                         failingMessage = hendelse.failingMessage,
