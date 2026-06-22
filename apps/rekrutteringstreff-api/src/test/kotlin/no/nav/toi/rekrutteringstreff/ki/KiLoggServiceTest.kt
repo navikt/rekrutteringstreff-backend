@@ -279,6 +279,35 @@ class KiLoggServiceTest {
     }
 
     @Test
+    fun `hardt mellomrom kollapses likt som vanlig mellomrom`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Bli med på treffet",
+                spørringFiltrert = "Bli med på treffet",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+
+        // Lagret HTML inneholder hardt mellomrom (U+00A0) som rik-tekst-editoren produserer.
+        // Skal ikke kaste exception - hardt mellomrom behandles som vanlig whitespace.
+        kiLoggService.verifiserKiValidering(
+            tekst = "<p>Bli\u00A0med på\u00A0treffet</p>",
+            kiLoggId = loggId.toString(),
+            lagreLikevel = false,
+            feltType = "innlegg"
+        )
+    }
+
+    @Test
     fun `erTekstEndret returnerer true for ulik tekst`() {
         assertThat(kiLoggService.erTekstEndret("Tekst 1", "Tekst 2")).isTrue()
     }
