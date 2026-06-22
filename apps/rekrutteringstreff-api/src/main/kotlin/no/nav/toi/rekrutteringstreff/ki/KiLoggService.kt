@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.ki
 
+import no.nav.toi.SecureLog
 import no.nav.toi.exception.KiValideringsException
 import no.nav.toi.log
 import java.util.*
@@ -7,6 +8,8 @@ import java.util.*
 class KiLoggService(
     private val kiLoggRepository: KiLoggRepository,
 ) {
+    private val secureLog = SecureLog(log)
+
     companion object {
         private const val MANGLER_VALIDERING = "KI_VALIDERING_MANGLER"
         private const val UGYLDIG_LOGG_ID = "KI_LOGG_ID_UGYLDIG"
@@ -70,6 +73,7 @@ class KiLoggService(
         val normalisertLoggetTekst = normaliserTekst(kiLogg.spørringFraFrontend)
         if (normalisertTekst != normalisertLoggetTekst) {
             log.warn("Lagring avvist: Tekst endret etter KI-validering for $feltType")
+            loggFørsteTegnAvvikTilSecureLog(loggId, feltType, normalisertTekst, normalisertLoggetTekst)
             throw KiValideringsException(
                 feilkode = TEKST_ENDRET,
                 melding = "Teksten har blitt endret etter KI-valideringen."
@@ -87,6 +91,39 @@ class KiLoggService(
 
     fun erTekstEndret(tekst1: String?, tekst2: String?): Boolean =
         normaliserTekst(tekst1 ?: "") != normaliserTekst(tekst2 ?: "")
+
+    // Denne koden trengs ikke vanligvis, kan være noe man slår på om man vil debugge feil i sammenligningen av tekst etter KI-validering. 
+    private fun loggFørsteTegnAvvikTilSecureLog(
+        loggId: UUID,
+        feltType: String,
+        tekstSomLagres: String,
+        tekstSomErValidert: String
+    ) {
+        val avvik = finnFørsteTegnAvvik(tekstSomLagres, tekstSomErValidert)
+        secureLog.warn(
+            "KI_TEKST_ENDRET for $feltType, loggId=$loggId. " +
+                "Første avvik: $avvik. " +
+                "Lengde lagring=${tekstSomLagres.length}, validering=${tekstSomErValidert.length}"
+        )
+    }
+
+    private fun finnFørsteTegnAvvik(tekstSomLagres: String, tekstSomErValidert: String): String {
+        val lagringTegn = tekstSomLagres.codePoints().toArray()
+        val valideringTegn = tekstSomErValidert.codePoints().toArray()
+        val fellesLengde = minOf(lagringTegn.size, valideringTegn.size)
+
+        val førsteAvvikIndex = (0 until fellesLengde).firstOrNull { index ->
+            lagringTegn[index] != valideringTegn[index]
+        } ?: fellesLengde
+
+        val lagring = lagringTegn.getOrNull(førsteAvvikIndex)?.let(::beskrivTegn) ?: "<slutt>"
+        val validering = valideringTegn.getOrNull(førsteAvvikIndex)?.let(::beskrivTegn) ?: "<slutt>"
+
+        return "index=$førsteAvvikIndex, lagring=$lagring, validering=$validering"
+    }
+
+    private fun beskrivTegn(kodepunkt: Int): String =
+        "U+${kodepunkt.toString(16).uppercase().padStart(4, '0')} (${Character.getName(kodepunkt) ?: "ukjent tegn"})"
 
     private fun normaliserTekst(tekst: String): String =
         tekst
