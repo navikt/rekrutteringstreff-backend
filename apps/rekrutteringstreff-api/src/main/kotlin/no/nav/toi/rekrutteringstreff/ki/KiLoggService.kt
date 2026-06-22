@@ -128,6 +128,20 @@ class KiLoggService(
     private fun normaliserTekst(tekst: String): String =
         tekst
             .replace(Regex("<[^>]+>"), " ")
+            // Kollapser alt whitespace til vanlig mellomrom. Frontend bruker JS-regexen \s, som i tillegg
+            // til ASCII-whitespace også matcher Unicode-mellomrom (f.eks. hardt mellomrom fra rik-tekst-editoren).
+            // Kotlin/Java sin \s matcher KUN ASCII-whitespace, så vi må liste Unicode-variantene eksplisitt for å
+            // normalisere likt som frontend – ellers gir hardt mellomrom falsk KI_TEKST_ENDRET.
+            // Vi trenger derfor ikke en separat .replace(Regex("\\s+"), " ") lenger; \s er allerede med i klassen under:
+            //   \u00A0          NO-BREAK SPACE (hardt mellomrom, vanligst fra editoren)
+            //   \u1680          OGHAM SPACE MARK
+            //   \u2000-\u200A   diverse typografiske mellomrom (en/em quad, thin space, hair space, osv.)
+            //   \u2028          LINE SEPARATOR
+            //   \u2029          PARAGRAPH SEPARATOR
+            //   \u202F          NARROW NO-BREAK SPACE
+            //   \u205F          MEDIUM MATHEMATICAL SPACE
+            //   \u3000          IDEOGRAPHIC SPACE
+            //   \uFEFF          ZERO WIDTH NO-BREAK SPACE / BOM
             .replace(Regex("[\\s\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]+"), " ")
             .trim()
 
