@@ -109,6 +109,7 @@ class AktivitetskortFeilJobb(
     }
     fun lagreFeilKøHendelser() {
         val records = consumer.poll(Duration.ofSeconds(10))
+        log.info("Mottok ${records.count()} meldinger fra $dabAktivitetskortFeilTopic")
         records.forEach { consumerRecord ->
             consumerRecord.value().let {
                 class FeilKøHendelse(
@@ -128,11 +129,13 @@ class AktivitetskortFeilJobb(
                         errorMessage = hendelse.errorMessage,
                         errorType = hendelse.errorType
                     )
+                    log.info("Lagret feil med bestilling av aktivitetskort")
                 } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
             }
         }
     }
     fun sendFeilKøHendelserPåRapid() {
+        log.info("Skal sende usendte feilKøHendelser på rapid")
         repository.hentUsendteFeilkøHendelser().forEach { usendtFeil ->
             usendtFeil.sendTilRapid(rapidPublish)
         }
