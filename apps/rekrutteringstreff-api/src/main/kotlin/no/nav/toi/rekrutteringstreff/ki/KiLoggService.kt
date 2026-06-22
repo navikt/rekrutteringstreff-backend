@@ -1,8 +1,9 @@
 package no.nav.toi.rekrutteringstreff.ki
 
-import no.nav.toi.SecureLog
 import no.nav.toi.exception.KiValideringsException
 import no.nav.toi.log
+import no.nav.toi.SecureLog
+import java.text.Normalizer
 import java.util.*
 
 class KiLoggService(
@@ -73,7 +74,13 @@ class KiLoggService(
         val normalisertLoggetTekst = normaliserTekst(kiLogg.spørringFraFrontend)
         if (normalisertTekst != normalisertLoggetTekst) {
             log.warn("Lagring avvist: Tekst endret etter KI-validering for $feltType")
-            loggFørsteTegnAvvikTilSecureLog(loggId, feltType, normalisertTekst, normalisertLoggetTekst)
+            secureLog.warn(
+                "KI_TEKST_ENDRET for $feltType, loggId=$loggId.\n" +
+                    "Lagret tekst (rå): ${kiLogg.spørringFraFrontend}\n" +
+                    "Ny tekst (rå): $tekst\n" +
+                    "Normalisert lagret: $normalisertLoggetTekst\n" +
+                    "Normalisert ny: $normalisertTekst"
+            )
             throw KiValideringsException(
                 feilkode = TEKST_ENDRET,
                 melding = "Teksten har blitt endret etter KI-valideringen."
@@ -92,58 +99,17 @@ class KiLoggService(
     fun erTekstEndret(tekst1: String?, tekst2: String?): Boolean =
         normaliserTekst(tekst1 ?: "") != normaliserTekst(tekst2 ?: "")
 
-    // Denne koden trengs ikke vanligvis, kan være noe man slår på om man vil debugge feil i sammenligningen av tekst etter KI-validering. 
-    private fun loggFørsteTegnAvvikTilSecureLog(
-        loggId: UUID,
-        feltType: String,
-        tekstSomLagres: String,
-        tekstSomErValidert: String
-    ) {
-        val avvik = finnFørsteTegnAvvik(tekstSomLagres, tekstSomErValidert)
-        secureLog.warn(
-            "KI_TEKST_ENDRET for $feltType, loggId=$loggId. " +
-                "Første avvik: $avvik. " +
-                "Lengde lagring=${tekstSomLagres.length}, validering=${tekstSomErValidert.length}"
-        )
-    }
-
-    private fun finnFørsteTegnAvvik(tekstSomLagres: String, tekstSomErValidert: String): String {
-        val lagringTegn = tekstSomLagres.codePoints().toArray()
-        val valideringTegn = tekstSomErValidert.codePoints().toArray()
-        val fellesLengde = minOf(lagringTegn.size, valideringTegn.size)
-
-        val førsteAvvikIndex = (0 until fellesLengde).firstOrNull { index ->
-            lagringTegn[index] != valideringTegn[index]
-        } ?: fellesLengde
-
-        val lagring = lagringTegn.getOrNull(førsteAvvikIndex)?.let(::beskrivTegn) ?: "<slutt>"
-        val validering = valideringTegn.getOrNull(førsteAvvikIndex)?.let(::beskrivTegn) ?: "<slutt>"
-
-        return "index=$førsteAvvikIndex, lagring=$lagring, validering=$validering"
-    }
-
-    private fun beskrivTegn(kodepunkt: Int): String =
-        "U+${kodepunkt.toString(16).uppercase().padStart(4, '0')} (${Character.getName(kodepunkt) ?: "ukjent tegn"})"
-
+    // Sammenligner kun det semantisk meningsfulle innholdet: bokstaver og tall i lowercase.
+    // Alt annet (HTML-tagger, whitespace, tegnsetting, spesialtegn) fjernes, fordi frontend og
+    // backend kan serialisere slikt ulikt (f.eks. hardt mellomrom vs. vanlig mellomrom) og gi falsk
+    // KI_TEKST_ENDRET. KI-sjekken er kun ekstrahjelp – bruker har selv ansvar for å verifisere teksten –
+    // så en whitelist er tilstrekkelig robust. NFC slår sammen tegn + combining marks (a + ◌̊ → å) før
+    // strippingen, slik at slike ikke teller som forskjeller.
     private fun normaliserTekst(tekst: String): String =
-        tekst
+        Normalizer.normalize(tekst, Normalizer.Form.NFC)
             .replace(Regex("<[^>]+>"), " ")
-            // Kollapser alt whitespace til vanlig mellomrom. Frontend bruker JS-regexen \s, som i tillegg
-            // til ASCII-whitespace også matcher Unicode-mellomrom (f.eks. hardt mellomrom fra rik-tekst-editoren).
-            // Kotlin/Java sin \s matcher KUN ASCII-whitespace, så vi må liste Unicode-variantene eksplisitt for å
-            // normalisere likt som frontend – ellers gir hardt mellomrom falsk KI_TEKST_ENDRET.
-            // Vi trenger derfor ikke en separat .replace(Regex("\\s+"), " ") lenger; \s er allerede med i klassen under:
-            //   \u00A0          NO-BREAK SPACE (hardt mellomrom, vanligst fra editoren)
-            //   \u1680          OGHAM SPACE MARK
-            //   \u2000-\u200A   diverse typografiske mellomrom (en/em quad, thin space, hair space, osv.)
-            //   \u2028          LINE SEPARATOR
-            //   \u2029          PARAGRAPH SEPARATOR
-            //   \u202F          NARROW NO-BREAK SPACE
-            //   \u205F          MEDIUM MATHEMATICAL SPACE
-            //   \u3000          IDEOGRAPHIC SPACE
-            //   \uFEFF          ZERO WIDTH NO-BREAK SPACE / BOM
-            .replace(Regex("[\\s\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]+"), " ")
-            .trim()
+            .lowercase()
+            .replace(Regex("[^\\p{L}\\p{N}]+"), "")
 
     fun hentKiLoggUuiderForScheduledSletting(månederSidenLoggOpprettet: Int): List<UUID> {
         return kiLoggRepository.hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet)
