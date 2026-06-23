@@ -81,11 +81,6 @@ data class FormidlingOpprettetDto(
     val opprettetTidspunkt: ZonedDateTime,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class SlettFormidlingDto(
-    val eierNavKontorEnhetId: String,
-)
-
 data class FormidlingDto(
     val id: UUID,
     val opprettetTidspunkt: ZonedDateTime,

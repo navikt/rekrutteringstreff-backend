@@ -15,7 +15,6 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.formidling.dto.FormidlingDto
 import no.nav.toi.formidling.dto.FormidlingOpprettetDto
 import no.nav.toi.formidling.dto.OpprettFormidlingDto
-import no.nav.toi.formidling.dto.SlettFormidlingDto
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -38,6 +37,7 @@ class FormidlingController(
         private const val queryParamSortering = "sortering"
         private const val queryParamRetning = "retning"
         private const val queryParamArbeidsgiver = "arbeidsgiver"
+        private const val queryParamEierNavKontorEnhetId = "eierNavKontorEnhetId"
     }
 
     override fun registrer(routes: JavalinDefaultRoutingApi) {
@@ -272,18 +272,12 @@ from = Array<FormidlingOpprettetDto>::class,
             OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, description = "Rekrutteringstreffets unike identifikator (UUID)"),
             OpenApiParam(name = pathParamFormidlingId, type = UUID::class, required = true, description = "Formidlingens unike identifikator (UUID)"),
         ],
-        requestBody = OpenApiRequestBody(
-            content = [OpenApiContent(
-                from = SlettFormidlingDto::class,
-                example = """
-                    {
-                        "eierNavKontorEnhetId": "1124"
-                    }
-                """
-            )]
-        ),
+        queryParams = [
+            OpenApiParam(name = queryParamEierNavKontorEnhetId, type = String::class, required = true, description = "Enhets-ID for Nav-kontoret som eier formidlingen."),
+        ],
         responses = [
             OpenApiResponse(status = "204", description = "Formidlingen er markert som slettet."),
+            OpenApiResponse(status = "400", description = "Mangler påkrevd query-param eierNavKontorEnhetId."),
             OpenApiResponse(status = "404", description = "Formidlingen finnes ikke på treffet."),
         ],
         path = formidlingMedIdPath,
@@ -293,11 +287,12 @@ from = Array<FormidlingOpprettetDto>::class,
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val formidlingId = UUID.fromString(ctx.pathParam(pathParamFormidlingId))
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
-        val dto = ctx.bodyAsClass<SlettFormidlingDto>()
+        val eierNavKontorEnhetId = ctx.queryParam(queryParamEierNavKontorEnhetId)
+            ?: throw BadRequestResponse("Mangler påkrevd query-param $queryParamEierNavKontorEnhetId")
         val navIdent = ctx.extractNavIdent()
         val userToken = ctx.authenticatedUser().innkommendeToken()
         logger.info("Sletter formidling $formidlingId for rekrutteringstreff $treffId")
-        if (formidlingService.slett(treffId, formidlingId, navIdent, userToken, dto.eierNavKontorEnhetId)) {
+        if (formidlingService.slett(treffId, formidlingId, navIdent, userToken, eierNavKontorEnhetId)) {
             ctx.status(204)
         } else {
             throw NotFoundResponse("Formidling med id $formidlingId finnes ikke på treffet")
