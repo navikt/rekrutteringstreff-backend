@@ -9,9 +9,14 @@ import no.nav.toi.SecureLog
 import no.nav.toi.log
 import no.nav.toi.objectMapper
 import org.apache.kafka.clients.consumer.Consumer
+import org.apache.kafka.clients.consumer.ConsumerRecords
+import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.clients.producer.Producer
+import org.apache.kafka.common.TopicPartition
+import org.intellij.lang.annotations.Language
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId.of
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit.MILLIS
@@ -64,17 +69,22 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
 
     @WithSpan
     override fun run() {
-        if(!leaderElection.isLeader()) {
-            log.info("Kjøring av AktivitetskortJobb skippes, instansen er ikke leader.")
-            return
-        }
-        log.info("Kjører AktivitetsJobb")
-        repository.hentUsendteAktivitetskortHendelser().forEach { usendtHendelse ->
-            try {
-                usendtHendelse.send(producer)
-            } catch (e: Exception) {
-                secureLog.error("Feil ved sending av Aktivitetskorthendelse", e)
+        try {
+            if (!leaderElection.isLeader()) {
+                log.info("Kjøring av AktivitetskortJobb skippes, instansen er ikke leader.")
+                return
             }
+            log.info("Kjører AktivitetsJobb")
+            repository.hentUsendteAktivitetskortHendelser().forEach { usendtHendelse ->
+                try {
+                    usendtHendelse.send(producer)
+                } catch (e: Exception) {
+                    secureLog.error("Feil ved sending av Aktivitetskorthendelse", e)
+                }
+            }
+        } catch (t: Throwable) {
+            log.error("Uventet feil i AktivitetskortJobb – schedulern fortsetter ved neste kjøring. (se securelog)")
+            secureLog.error("Uventet feil i AktivitetskortJobb – schedulern fortsetter ved neste kjøring.", t)
         }
     }
 }
@@ -90,44 +100,53 @@ class AktivitetskortFeilJobb(
 
     @WithSpan
     override fun run() {
-        if(!leaderElection.isLeader()) {
-            if (consumer.subscription().isNotEmpty()) {
-                log.info("Instansen er ikke leader lenger – melder consumer ut av gruppa.")
-                consumer.unsubscribe()
-            }
-            log.info("Kjøring av AktivitetskortFeilJobb skippes, instansen er ikke leader.")
-            return
-        }
-
-        if (consumer.subscription().isEmpty() && consumer.assignment().isEmpty()) {
-            log.info("Instansen er leader – starter consumering på $dabAktivitetskortFeilTopic.")
-            consumer.subscribe(listOf(dabAktivitetskortFeilTopic))
-        }
-        log.info("Kjører AktivitetskortFeilJobb")
-        lagreFeilKøHendelser()
-        sendFeilKøHendelserPåRapid()
-    }
-    fun lagreFeilKøHendelser() {
         try {
-            val records = consumer.poll(Duration.ofSeconds(10))
+            if(!leaderElection.isLeader()) {
+                if (consumer.subscription().isNotEmpty()) {
+                    log.info("Instansen er ikke leader lenger – melder consumer ut av gruppa.")
+                    consumer.unsubscribe()
+                }
+                log.info("Kjøring av AktivitetskortFeilJobb skippes, instansen er ikke leader.")
+                return
+            }
+
+            if (consumer.subscription().isEmpty() && consumer.assignment().isEmpty()) {
+                log.info("Instansen er leader – starter consumering på $dabAktivitetskortFeilTopic.")
+                consumer.subscribe(listOf(dabAktivitetskortFeilTopic))
+            }
+            log.info("Kjører AktivitetskortFeilJobb")
+            lagreFeilKøHendelser()
+            sendFeilKøHendelserPåRapid()
+        } catch (t: Throwable) {
+            log.error("Uventet feil i AktivitetskortFeilJobb – schedulern fortsetter ved neste kjøring. (se securelog)")
+            secureLog.error("Uventet feil i AktivitetskortFeilJobb – schedulern fortsetter ved neste kjøring.", t)
+        }
+    }
+
+
+    fun lagreFeilKøHendelser() {
+        var currentPositions = mutableMapOf<TopicPartition, Long>()
+        var records: ConsumerRecords<String?, String?>?
+
+        try {
+            records = consumer.poll(Duration.ofSeconds(10))
             log.info("Mottok ${records.count()} meldinger fra $dabAktivitetskortFeilTopic")
+            currentPositions = records.groupBy { TopicPartition(it.topic(), it.partition()) }
+                .mapValues { it.value.minOf { it.offset() } }
+                .toMutableMap()
+
             records.forEach { consumerRecord ->
                 consumerRecord.value().let {
-                    class FeilKøHendelse(
-                        val source: String,
-                        val failingMessage: String,
-                        val errorMessage: String,
-                        val errorType: ErrorType
-                    )
-
                     val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
                     if (hendelse.source == "REKRUTTERINGSBISTAND") {
                         log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
                         secureLog.error("Feil ved bestilling av aktivitetskort: $it")
                         log.info("Skal lagre feil ved bestilling av aktivitetskort i databasen")
 
+                        val failingMessageUtenEscaping = hendelse.failingMessage.replace("\\n", "").replace("\\\"", "\"")
+
                         repository.lagreFeilkøHendelse(
-                            messageId = hendelse.failingMessage.hentMessageId(),
+                            messageId = failingMessageUtenEscaping.hentMessageId(),
                             failingMessage = hendelse.failingMessage,
                             errorMessage = hendelse.errorMessage,
                             errorType = hendelse.errorType
@@ -135,11 +154,14 @@ class AktivitetskortFeilJobb(
                         log.info("Lagret feil med bestilling av aktivitetskort")
                     } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
                 }
+                currentPositions[TopicPartition(consumerRecord.topic(), consumerRecord.partition())] = consumerRecord.offset() + 1
             }
         } catch (e: Exception) {
             log.error("Feil ved kjøring av AktivitetskortFeilJobb: (se securelog)")
             secureLog.error("Feil ved kjøring av AktivitetskortFeilJobb", e)
-            throw e
+        } finally {
+            consumer.commitSync(currentPositions.mapValues { (_, offset) -> offsetMetadata(offset) })
+            currentPositions.clear()
         }
     }
     fun sendFeilKøHendelserPåRapid() {
@@ -148,7 +170,21 @@ class AktivitetskortFeilJobb(
             usendtFeil.sendTilRapid(rapidPublish)
         }
     }
+
+    private fun offsetMetadata(offset: Long): OffsetAndMetadata {
+        val clientId = consumer.groupMetadata().groupInstanceId().map { "\"$it\"" }.orElse("null")
+        @Language("JSON")
+        val metadata = """{"time": "${LocalDateTime.now()}","groupInstanceId": $clientId}"""
+        return OffsetAndMetadata(offset, metadata)
+    }
 }
+
+data class FeilKøHendelse(
+    val source: String,
+    val failingMessage: String,
+    val errorMessage: String,
+    val errorType: ErrorType
+)
 
 private fun String.hentMessageId() = objectMapper.readTree(this)["messageId"]?.asText()?.let {
     UUID.fromString(it)
