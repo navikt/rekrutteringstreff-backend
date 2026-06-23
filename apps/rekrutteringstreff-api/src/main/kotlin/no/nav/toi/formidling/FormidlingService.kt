@@ -224,18 +224,20 @@ class FormidlingService(
     fun slett(formidlingId: Long, navIdent: String, userToken: String, eierNavKontorEnhetId: String): Boolean {
         val formidling = formidlingRepository.hent(formidlingId) ?: return false
 
+        sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId)
+
         val slettet = dataSource.executeInTransaction { connection ->
             val slettet = formidlingRepository.markerSlettet(connection, formidlingId)
             if (slettet) {
                 jobbsøkerService.angreFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
                 logger.info("Markert formidling $formidlingId som slettet og tilbakestilt jobbsøkerstatus til statusen før FÅTT_JOBB")
+            } else {
+                logger.info("Formidling $formidlingId var allerede slettet")
             }
             slettet
         }
 
-        if (slettet) {
-            sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId)
-        }
+
         return slettet
     }
 
@@ -257,6 +259,7 @@ class FormidlingService(
             navKontorVeileder = eierNavKontorEnhetId,
             userToken = userToken,
         )
+        logger.info("Utfall er sendt til kandidat-api for ${formidling.formidlingId}")
     }
 }
 
