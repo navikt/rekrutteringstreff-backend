@@ -160,7 +160,14 @@ class AktivitetskortFeilJobb(
             log.error("Feil ved kjøring av AktivitetskortFeilJobb: (se securelog)")
             secureLog.error("Feil ved kjøring av AktivitetskortFeilJobb", e)
         } finally {
-            consumer.commitSync(currentPositions.mapValues { (_, offset) -> offsetMetadata(offset) })
+            if(currentPositions.isNotEmpty()) {
+                try {
+                    consumer.commitSync(currentPositions.mapValues { (_, offset) -> offsetMetadata(offset) })
+                } catch (e: Exception) {
+                    log.error("Feil ved commit av offsets i AktivitetskortFeilJobb: (se securelog)")
+                    secureLog.error("Feil ved commit av offsets i AktivitetskortFeilJobb", e)
+                }
+            }
             currentPositions.clear()
         }
     }
