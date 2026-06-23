@@ -1,6 +1,9 @@
 # Plan: Sperring av jobbsøkere med adressebeskyttelse
 
-**Status:** Vedtatt løsning, ikke implementert (kun plan)
+**Status:** Implementert på branch `adressesperring-formidling` (rekrutteringstreff-api,
+toi-synlighetsmotor, rekrutteringsbistand-frontend). Løsningen følger «ett need»-varianten
+(Alternativ A nedenfor) — synlighetsmotor besvarer `synlighetRekrutteringstreff` med både `erSynlig`
+og `sperret`.
 **Omfang:** Backend (rekrutteringstreff-api) + delt plattform (toi-synlighetsmotor) + frontend (rekrutteringsbistand-frontend)
 
 Denne planen beskriver hvordan jobbsøkere med adressebeskyttelse skal **sperres** i
@@ -191,3 +194,170 @@ rolle her — vi trenger den ikke. Ingen ny kolonne eller migrasjon i synlighets
 **frontend (Playwright `tests/rekrutteringstreff/formidlinger.spec.ts`):**
 
 - Rad med `sperret` viser «Skjermet» (verken navn eller fnr).
+
+---
+
+## Arkitekturvalg: ett need vs. need med to behov
+
+Spørsmålet er hvordan `sperret` skal hentes inn via need-veien. To varianter er vurdert.
+
+### Alternativ A — ett behov, synlighetsmotor avleder sperret (implementert i dag)
+
+rekrutteringstreff-api sender ett behov:
+
+```jsonc
+{
+  "@event_name": "behov",
+  "@behov": ["synlighetRekrutteringstreff"],
+  "fodselsnummer": "...",
+}
+```
+
+`SynlighetRekrutteringstreffLytter` (toi-synlighetsmotor) håndterer resten internt:
+
+1. Slår opp lagret evaluering (har Arena kode 6/7 via `erIkkeKode6eller7`).
+2. Legger selv til `adressebeskyttelse`-behov foran i køen (`leggTilBehov`) og publiserer.
+   toi-livshendelse (`AdressebeskyttelseLytter`) besvarer det med PDL-gradering.
+3. Når svaret kommer tilbake, avleder den `sperret = !erIkkeKode6eller7 || !harIkkeAdressebeskyttelse`
+   og besvarer `synlighetRekrutteringstreff` med **både** `erSynlig` og `sperret`.
+
+rekrutteringstreff-api (`SynlighetsBehovLytter`) leser `synlighetRekrutteringstreff.erSynlig` +
+`.sperret` og skriver begge i én UPDATE (`oppdaterSynlighetFraNeed`).
+
+```mermaid
+sequenceDiagram
+    participant RT as rekrutteringstreff-api
+    participant SM as toi-synlighetsmotor
+    participant LH as toi-livshendelse
+    RT->>SM: @behov [synlighetRekrutteringstreff] (fnr)
+    SM->>LH: @behov [adressebeskyttelse, synlighetRekrutteringstreff]
+    LH-->>SM: adressebeskyttelse=GRADERING
+    SM-->>RT: synlighetRekrutteringstreff{erSynlig, sperret}
+    RT->>RT: oppdaterSynlighetFraNeed (én UPDATE)
+```
+
+**Egenskaper:**
+
+- `sperret` slår sammen **begge** kilder: Arena kode 6/7 (kun i synlighetsmotor-db) **og**
+  PDL-gradering. rekrutteringstreff-api trenger ikke kjenne til noen av delene.
+- Kun **én** kontraktspart for rekrutteringstreff-api (synlighetsmotor). toi-livshendelse er en
+  intern detalj synlighetsmotor allerede er koblet mot.
+- `erSynlig` og `sperret` kommer **alltid sammen i samme svar** → én skriving, ett tidsstempel,
+  én kilde. Ingen delvis tilstand i basen.
+
+### Alternativ B — ett need med to behov fra rekrutteringstreff-api
+
+rekrutteringstreff-api sender ett need med to behov:
+
+```jsonc
+{
+  "@event_name": "behov",
+  "@behov": ["adressesperring", "synlighetRekrutteringstreff"],
+  "fodselsnummer": "...",
+}
+```
+
+`adressesperring` besvares av toi-livshendelse, `synlighetRekrutteringstreff` av synlighetsmotor
+(som da slipper å hente adressebeskyttelse selv). rekrutteringstreff-api venter til **begge** behov
+er løst før den skriver til basen.
+
+**Svar på de konkrete spørsmålene:**
+
+1. **Går det an å dele i to behov?** Teknisk ja — Rapids & Rivers støtter flere behov i ett need,
+   og `demandAtFørstkommendeUløsteBehovEr` sørger for at riktig app svarer i riktig rekkefølge
+   (adressesperring først, så synlighet). Men se «Problemer» under.
+2. **Slipper synlighet å sjekke adressesperring på nytt?** Ja, hvis svaret allerede ligger i pakken
+   kan synlighetsmotor lese feltet i stedet for å trigge eget behov. Den gjør i praksis allerede
+   dette (`interestedIn(adressebeskyttelseFelt)`): er feltet til stede, brukes det. Alternativ B
+   flytter bare hvem som **lister** behovet (rekrutteringstreff-api i stedet for synlighetsmotor).
+3. **Klarer vi oss med én kilde + ett tidspunkt også for sperret?** Ja. Begge behov ligger i samme
+   need, og en samlende lytter som krever **begge** nøklene fyrer kun én gang → én UPDATE, ett
+   `synlighet_sist_oppdatert`, én `synlighet_kilde`. Ingen ekstra kolonner for sperret (samme som i
+   dag, jf. V11). Forutsetningen er at man venter på begge før skriving.
+4. **Beholder vi kontinuerlig sperret-lytting (event-strømmen)?** Ja. Event-veien
+   (`SynlighetsgrunnlagLytter` → `synlighet`-event med `sperret` via `somSynlighet()` →
+   `SynlighetsLytter`) er **uavhengig** av need-veien og berøres ikke av valget. Alle som er lagt
+   til oppdateres fortsatt løpende.
+5. **Problemer med en ekstra «klient» på adressesperring-behovet?** Se under.
+
+```mermaid
+sequenceDiagram
+    participant RT as rekrutteringstreff-api
+    participant LH as toi-livshendelse
+    participant SM as toi-synlighetsmotor
+    RT->>LH: @behov [adressesperring, synlighetRekrutteringstreff]
+    LH-->>SM: adressesperring=GRADERING
+    SM-->>RT: synlighetRekrutteringstreff{erSynlig, sperret?}
+    RT->>RT: vent på begge → én UPDATE
+```
+
+### Problemer og fallgruver ved Alternativ B
+
+1. **Arena kode 6/7 forsvinner som kilde.** I dag er `sperret =
+!erIkkeKode6eller7 || !harIkkeAdressebeskyttelse`. `erIkkeKode6eller7` ligger **kun** i
+   synlighetsmotor-db. toi-livshendelse svarer **bare** med PDL-gradering. Hvis
+   rekrutteringstreff-api avleder `sperret` direkte fra adressesperring-svaret, mister vi
+   Arena-kilden. I praksis er PDL og Arena oftest samstemte, men de er separate kilder og designet
+   OR-er dem bevisst. For å beholde begge må synlighetsmotor uansett bidra med `sperret` — da er vi
+   i realiteten tilbake til Alternativ A, bare med ekstra koordinering.
+2. **`adressebeskyttelse`-behovet krever `aktørId`, ikke `fodselsnummer`.**
+   `AdressebeskyttelseLytter` (toi-livshendelse) har `validate { requireKey("aktørId") }`. Need-flyten
+   i rekrutteringstreff bærer `fodselsnummer`. rekrutteringstreff-api har normalt ikke aktørId, så
+   Alternativ B krever enten at rekrutteringstreff-api skaffer aktørId, eller at livshendelse-lytteren
+   utvides til å akseptere fnr. **NB:** dette gjelder også Alternativ A i dag (synlighetsmotor legger
+   til `adressebeskyttelse`-behovet på en pakke uten aktørId) — verifiser i dev at hand-offen faktisk
+   fungerer ende-til-ende; enhetstestene injiserer adressebeskyttelse-svaret manuelt og dekker ikke
+   denne grenseflaten.
+3. **To skrivere kan kappes om samme rad.** Den eksisterende `SynlighetsBehovLytter` krever kun
+   nøkkelen `synlighetRekrutteringstreff`. Innfører man en ny samlende lytter (krever begge behov),
+   må den gamle konsolideres bort — ellers fyrer begge og man får dobbeltskriving / delvis tilstand.
+4. **Flere apper kobles på rekrutteringstreff sin need-kontrakt.** toi-livshendelse blir nå en
+   eksplisitt deltaker i rekrutteringstreff-flyten. Mer kobling og flere ledd som kan feile/treghete
+   før synlighet besvares (men selvhelende via scheduler, se under).
+
+### Anbefaling
+
+**Behold Alternativ A.** Det er allerede implementert, holder rekrutteringstreff-api koblet mot kun
+**én** part, bevarer både Arena- og PDL-kilden for `sperret`, og leverer `erSynlig` + `sperret`
+atomisk i ett svar (som er nøyaktig det spørsmål 3 ber om). Alternativ B gir ingen funksjonell
+gevinst, men introduserer ny kobling, et aktørId-problem og en konsolideringsjobb på lytter-siden.
+
+Det eneste reelle poenget fra Alternativ B — at synlighet «slipper å sjekke adressesperring på
+nytt» — er allerede løst: PDL-oppslaget gjøres uansett kun **én gang per need**, og populasjonen
+(treff-jobbsøkere) er liten. Det er ingen dobbeltsjekk å fjerne.
+
+### Race conditions og kanttilfeller (gjelder begge alternativ)
+
+- **Event vs. need.** Begge veier kan skrive samme rad. Håndtert av `synlighet_kilde`-prioritet:
+  EVENT vinner alltid (skriver hvis `synlighet_sist_oppdatert IS NULL`, kilde er `NEED`, eller
+  eldre tidsstempel); NEED skriver **kun** hvis `synlighet_sist_oppdatert IS NULL`. Dette gjelder
+  `er_synlig` og `sperret` samlet, siden de skrives i samme UPDATE.
+- **Fail-safe-vindu for sperret.** I `SynlighetsBehovLytter` defaulter `sperret` til `false` ved
+  ufullstendig svar, og `Evaluering.sperret()` bruker `.default(true)` på underliggende felt (antar
+  «ikke sperret» ved ukjent). En adressebeskyttet person som ennå ikke er ferdig evaluert kan derfor
+  kortvarig stå `er_synlig = false` (skjult, fnr nullet) men `sperret = false` (navn vist) i
+  formidlingslisten. Vinduet er kort (event-strømmen + scheduler retter opp), men det er en bevisst
+  avveining mot over-anonymisering. Verdt å være klar over for allerede formidlede personer.
+- **Selvhelende need.** Hvis toi-livshendelse eller synlighetsmotor er nede, fullføres ikke
+  need-et; raden beholder `synlighet_sist_oppdatert IS NULL`, og `SynlighetsBehovScheduler` trigger
+  på nytt hvert 60. sekund. Ingen tapt tilstand.
+- **Behov-rekkefølge (kun relevant for Alternativ B).** `adressesperring` må stå/legges først, slik
+  at livshendelse svarer før synlighetsmotor. `demandAtFørstkommendeUløsteBehovEr` håndhever dette,
+  men feil rekkefølge gir at synlighet svarer uten PDL-data.
+
+### Korrektheten ellers — verifisert mot koden
+
+Følgende er sjekket og stemmer med implementasjonen på branchen:
+
+- **V11** legger til `sperret boolean NOT NULL DEFAULT FALSE` og backfiller ved å nulle
+  `synlighet_sist_oppdatert`/`synlighet_kilde` for `er_synlig = false`-rader (≠ SLETTET), slik at
+  scheduleren re-evaluerer dem. Korrekt — sperret kan kun være true der `er_synlig` allerede er
+  false.
+- **Felles tidsstempel/kilde** for `er_synlig` og `sperret` (ingen egne `sperret_*`-kolonner) —
+  bekreftet i begge UPDATE-metodene.
+- **FormidlingRepository** nuller både navn og fnr ved `sperret` (`CASE WHEN j.sperret THEN NULL …`).
+- **FormidlingService** blokkerer formidling av sperrede via `JobbsøkerSperretException`.
+- **Event-veien** bærer `sperret` (`somSynlighet()` → `Synlighet.sperret`; `SynlighetsLytter` leser
+  `synlighet.sperret`).
+- **Skjuling/telling** trenger ingen endring: sperrede er allerede `er_synlig = false` og dekkes av
+  `antallSkjulte` og `er_synlig`-filtrene.
