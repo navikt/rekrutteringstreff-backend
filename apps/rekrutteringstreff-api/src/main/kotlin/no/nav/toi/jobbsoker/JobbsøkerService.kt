@@ -308,15 +308,15 @@ class JobbsøkerService(
     fun skalVarslesOmEndringer(jobbsøker: Jobbsøker): Boolean =
         jobbsøker.harAktivtSvarJa()
 
-    fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
+    fun oppdaterSynlighetFraEvent(fodselsnummer: String, erSynlig: Boolean, sperret: Boolean, meldingTidspunkt: Instant): Int {
         return dataSource.executeInTransaction { connection ->
-            jobbsøkerRepository.oppdaterSynlighetFraEvent(connection, fodselsnummer, erSynlig, meldingTidspunkt)
+            jobbsøkerRepository.oppdaterSynlighetFraEvent(connection, fodselsnummer, erSynlig, sperret, meldingTidspunkt)
         }
     }
 
-    fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, meldingTidspunkt: Instant): Int {
+    fun oppdaterSynlighetFraNeed(fodselsnummer: String, erSynlig: Boolean, sperret: Boolean, meldingTidspunkt: Instant): Int {
         return dataSource.executeInTransaction { connection ->
-            jobbsøkerRepository.oppdaterSynlighetFraNeed(connection, fodselsnummer, erSynlig, meldingTidspunkt)
+            jobbsøkerRepository.oppdaterSynlighetFraNeed(connection, fodselsnummer, erSynlig, sperret, meldingTidspunkt)
         }
     }
 

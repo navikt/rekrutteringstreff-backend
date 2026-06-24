@@ -53,13 +53,14 @@ class SynlighetsLytter(
     ) {
         val fodselsnummer = packet["fodselsnummer"].asText()
         val erSynlig = packet["synlighet"]["erSynlig"].asBoolean()
+        val sperret = packet["synlighet"]["sperret"]?.asBoolean() ?: false
         val opprettetTekst = packet["@opprettet"].asText()
         val meldingTidspunkt = parseOpprettetTidspunktAsInstant(opprettetTekst)
 
-        log.info("Mottok synlighetsmelding fra event-strøm: erSynlig=$erSynlig, tidspunkt=$opprettetTekst")
-        secureLogger.info("Mottok synlighetsmelding for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig")
+        log.info("Mottok synlighetsmelding fra event-strøm: erSynlig=$erSynlig, sperret=$sperret, tidspunkt=$opprettetTekst")
+        secureLogger.info("Mottok synlighetsmelding for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig, sperret=$sperret")
 
-        val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, meldingTidspunkt)
+        val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, sperret, meldingTidspunkt)
 
         if (oppdatert > 0) {
             log.info("Oppdaterte synlighet i $oppdatert rekrutteringstreff fra event-strøm")
