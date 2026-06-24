@@ -82,9 +82,9 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
                     secureLog.error("Feil ved sending av Aktivitetskorthendelse", e)
                 }
             }
-        } catch (t: Throwable) {
+        } catch (e: Exception) {
             log.error("Uventet feil i AktivitetskortJobb – schedulern fortsetter ved neste kjøring. (se securelog)")
-            secureLog.error("Uventet feil i AktivitetskortJobb – schedulern fortsetter ved neste kjøring.", t)
+            secureLog.error("Uventet feil i AktivitetskortJobb – schedulern fortsetter ved neste kjøring.", e)
         }
     }
 }
@@ -117,9 +117,9 @@ class AktivitetskortFeilJobb(
             log.info("Kjører AktivitetskortFeilJobb")
             lagreFeilKøHendelser()
             sendFeilKøHendelserPåRapid()
-        } catch (t: Throwable) {
+        } catch (e: Exception) {
             log.error("Uventet feil i AktivitetskortFeilJobb – schedulern fortsetter ved neste kjøring. (se securelog)")
-            secureLog.error("Uventet feil i AktivitetskortFeilJobb – schedulern fortsetter ved neste kjøring.", t)
+            secureLog.error("Uventet feil i AktivitetskortFeilJobb – schedulern fortsetter ved neste kjøring.", e)
         }
     }
 
@@ -130,45 +130,49 @@ class AktivitetskortFeilJobb(
 
         try {
             records = consumer.poll(Duration.ofSeconds(10))
-            log.info("Mottok ${records.count()} meldinger fra $dabAktivitetskortFeilTopic")
-            currentPositions = records.groupBy { TopicPartition(it.topic(), it.partition()) }
-                .mapValues { it.value.minOf { it.offset() } }
-                .toMutableMap()
+            if(records.count() > 0) {
+                log.info("Mottok ${records.count()} meldinger fra $dabAktivitetskortFeilTopic")
+                currentPositions = records.groupBy { TopicPartition(it.topic(), it.partition()) }
+                    .mapValues { it.value.minOf { it.offset() } }
+                    .toMutableMap()
 
-            records.forEach { consumerRecord ->
-                consumerRecord.value().let {
-                    val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
-                    if (hendelse.source == "REKRUTTERINGSBISTAND") {
-                        log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
-                        secureLog.error("Feil ved bestilling av aktivitetskort: $it")
-                        log.info("Skal lagre feil ved bestilling av aktivitetskort i databasen")
+                records.forEach { consumerRecord ->
+                    consumerRecord.value().let {
+                        val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
+                        if (hendelse.source == "REKRUTTERINGSBISTAND") {
+                            log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
+                            secureLog.error("Feil ved bestilling av aktivitetskort: $it")
+                            log.info("Skal lagre feil ved bestilling av aktivitetskort i databasen")
 
-                        val failingMessageUtenEscaping = hendelse.failingMessage.replace("\\n", "").replace("\\\"", "\"")
+                            val failingMessageUtenEscaping = hendelse.failingMessage.replace("\\n", "").replace("\\\"", "\"")
 
-                        repository.lagreFeilkøHendelse(
-                            messageId = failingMessageUtenEscaping.hentMessageId(),
-                            failingMessage = hendelse.failingMessage,
-                            errorMessage = hendelse.errorMessage,
-                            errorType = hendelse.errorType
-                        )
-                        log.info("Lagret feil med bestilling av aktivitetskort")
-                    } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
+                            repository.lagreFeilkøHendelse(
+                                messageId = failingMessageUtenEscaping.hentMessageId(),
+                                failingMessage = hendelse.failingMessage,
+                                errorMessage = hendelse.errorMessage,
+                                errorType = hendelse.errorType
+                            )
+                            log.info("Lagret feil med bestilling av aktivitetskort")
+                        } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
+                    }
+                    currentPositions[TopicPartition(consumerRecord.topic(), consumerRecord.partition())] = consumerRecord.offset() + 1
                 }
-                currentPositions[TopicPartition(consumerRecord.topic(), consumerRecord.partition())] = consumerRecord.offset() + 1
             }
         } catch (e: Exception) {
             log.error("Feil ved kjøring av AktivitetskortFeilJobb: (se securelog)")
             secureLog.error("Feil ved kjøring av AktivitetskortFeilJobb", e)
         } finally {
-            if(currentPositions.isNotEmpty()) {
-                try {
+            try {
+                if (currentPositions.isNotEmpty()) {
                     consumer.commitSync(currentPositions.mapValues { (_, offset) -> offsetMetadata(offset) })
-                } catch (e: Exception) {
-                    log.error("Feil ved commit av offsets i AktivitetskortFeilJobb: (se securelog)")
-                    secureLog.error("Feil ved commit av offsets i AktivitetskortFeilJobb", e)
                 }
+            } catch (e: Exception) {
+                log.error("Feil ved commit av offsets i AktivitetskortFeilJobb: (se securelog)")
+                secureLog.error("Feil ved commit av offsets i AktivitetskortFeilJobb", e)
+            } finally {
+                currentPositions.forEach { (tp, offset) -> consumer.seek(tp, offset) }
+                currentPositions.clear()
             }
-            currentPositions.clear()
         }
     }
     fun sendFeilKøHendelserPåRapid() {
