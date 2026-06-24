@@ -47,11 +47,12 @@ class KandidatKlient(
             navKontor = navKontorVeileder,
         )
 
-        postTilKandidatApi(
+        sendTilKandidatApi(
             url = url,
             requestBody = requestBody,
             accessToken = hentOnBehalfOfToken(userToken),
             feilmelding = "Feil ved kall mot kandidat-api for å endre utfall for kandidat",
+            httpMetode = HttpMetode.PUT,
         ) { response ->
             when (response.statusCode()) {
                 200, 201, 204 -> log.info("Utfall ble endret for kandidat på kandidatliste")
@@ -78,7 +79,7 @@ class KandidatKlient(
             stillingsId = stillingId.toString(),
         )
 
-        postTilKandidatApi(
+        sendTilKandidatApi(
             url = url,
             requestBody = kandidatTilFormidling,
             accessToken = accessToken,
@@ -109,31 +110,36 @@ class KandidatKlient(
             )
         }/formidlingeravusynligkandidat"
 
+    enum class HttpMetode { POST, PUT }
+
     /**
-     * Sender en POST mot kandidat-api med retry og felles feilhåndtering.
-     * `håndterRespons` tolker statuskoden og kaster KandidatKlientException ved uventet utfall.
+     * Sender en POST/PUT mot kandidat-api med retry og felles feilhåndtering.
      */
-    private fun postTilKandidatApi(
+    private fun sendTilKandidatApi(
         url: String,
         requestBody: Any,
         accessToken: String,
         feilmelding: String,
+        httpMetode: HttpMetode = HttpMetode.POST,
         håndterRespons: (HttpResponse<String>) -> Unit,
     ) {
         val requestBodyJson = objectMapper.writeValueAsString(requestBody)
+        val bodyPublisher = HttpRequest.BodyPublishers.ofString(requestBodyJson)
 
-        fun post(): HttpResponse<String> {
-            val request = HttpRequest.newBuilder()
+        fun send(): HttpResponse<String> {
+            val builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer $accessToken")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
-                .build()
+            val request = when (httpMetode) {
+                HttpMetode.POST -> builder.POST(bodyPublisher)
+                HttpMetode.PUT -> builder.PUT(bodyPublisher)
+            }.build()
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         }
 
         try {
-            val response = withRetry(::post)
+            val response = withRetry(::send)
             håndterRespons(response)
         } catch (e: KandidatKlientException) {
             throw e
