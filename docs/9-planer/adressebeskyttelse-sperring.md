@@ -1,9 +1,10 @@
 # Plan: Sperring av jobbsøkere med adressebeskyttelse
 
-**Status:** Implementert på branch `adressesperring-formidling` (rekrutteringstreff-api,
+**Status:** Implementert og reviewet på branch `adressesperring-formidling` (rekrutteringstreff-api,
 toi-synlighetsmotor, rekrutteringsbistand-frontend). Løsningen følger «ett need»-varianten
 (Alternativ A nedenfor) — synlighetsmotor besvarer `synlighetRekrutteringstreff` med både `erSynlig`
-og `sperret`.
+og `sperret`. Need-veien keyer nå på `aktørId` (beriket av `toi-identmapper`). Gjenstående:
+manuell backfill-SQL for eksisterende innleggelser (se nederst), kjøres etter prod-verifisering.
 **Omfang:** Backend (rekrutteringstreff-api) + delt plattform (toi-synlighetsmotor) + frontend (rekrutteringsbistand-frontend)
 
 Denne planen beskriver hvordan jobbsøkere med adressebeskyttelse skal **sperres** i
@@ -68,12 +69,23 @@ ekstra flagg helt frem — på samme to veier som `er_synlig`.
 ### Avledet sperret-flagg i toi-synlighetsmotor
 
 Synlighetsmotor vet allerede at noen har adressebeskyttelse, gjennom `erIkkeKode6eller7` (fra
-Arena-diskresjonskode i `Kandidat.kt`) og `harIkkeAdressebeskyttelse` (fra PDL-gradering). Fordi vi
-behandler kode 6, 7 og 19 likt, avleder vi ett flagg uten å måtte skille kodene:
+Arena-diskresjonskode i `Kandidat.kt`) og `harIkkeAdressebeskyttelse` (fra PDL-gradering). Begge er
+`BooleanVerdi` (`True`/`False`/`Missing`). Fordi vi behandler kode 6, 7 og 19 likt, avleder vi ett
+flagg uten å måtte skille kodene:
 
 ```kotlin
-val sperret = !erIkkeKode6eller7 || !harIkkeAdressebeskyttelse
+fun sperret(): Boolean {
+    val harKode6eller7 = !erIkkeKode6eller7
+    val harAdressebeskyttelse = !harIkkeAdressebeskyttelse
+    return harKode6eller7.default(false) || harAdressebeskyttelse.default(false)
+}
 ```
+
+**Default er «ikke sperret».** Vi negerer _først_ (`Missing.not() == Missing`) og kaller `.default(false)`
+_etter_ negeringen. Ukjent informasjon gir derfor `false` (ikke sperret) — en bevisst fail-safe mot
+over-anonymisering. Merk at rekkefølgen er vesentlig: hadde vi skrevet `!erIkkeKode6eller7.default(true)`
+(default _før_ negering) ville `Missing` blitt tolket motsatt. Derfor er negeringen lagt i egne
+variabler (`harKode6eller7` / `harAdressebeskyttelse`) før `.default(false)`.
 
 Den rå diskresjonskoden (6 vs 7) kastes etter lagring i synlighetsmotor-db, men det spiller ingen
 rolle her — vi trenger den ikke. Ingen ny kolonne eller migrasjon i synlighetsmotor-db kreves; kun
@@ -116,16 +128,20 @@ rolle her — vi trenger den ikke. Ingen ny kolonne eller migrasjon i synlighets
 
 ### toi-synlighetsmotor (delt plattform)
 
-1. `Evaluering.kt`: legg til avledet `fun sperret(): Boolean = !erIkkeKode6eller7 || !harIkkeAdressebeskyttelse`,
+1. `Evaluering.kt`: legg til `fun sperret(): Boolean` som negerer `erIkkeKode6eller7` /
+   `harIkkeAdressebeskyttelse` og kaller `.default(false)` _etter_ negeringen (default «ikke sperret»),
    og ta feltet med i `Synlighet` (event) og i need-svaret.
 2. `SynlighetsgrunnlagLytter.kt`: `packet["synlighet"]` (fra `somSynlighet()`) får feltet `sperret`.
-3. `SynlighetRekrutteringstreffLytter.kt`: `packet[synlighetRekrutteringstreffBehov]` får `sperret`
-   ved siden av `erSynlig` / `ferdigBeregnet`.
+3. `SynlighetRekrutteringstreffLytter.kt`: krever `aktørId` (`precondition`), slår opp evalueringen med
+   `hentMedAktørid(...)`, keyer/publiserer på aktørId, og `packet[synlighetRekrutteringstreffBehov]`
+   får `sperret` ved siden av `erSynlig` / `ferdigBeregnet`. `toi-identmapper` (`AktørIdPopulator`)
+   beriker innkommende `fodselsnummer`-meldinger med `aktørId` før de når denne lytteren.
 
 ### rekrutteringstreff-api
 
-4. **V11-migrasjon** (`V11__jobbsoker_sperret.sql`):
-   `ALTER TABLE jobbsoker ADD COLUMN sperret boolean NOT NULL DEFAULT false;`
+4. **V11-migrasjon** (`V11__rekrutteringstreff_kategori_jobbsoker_sperring.sql`):
+   `ALTER TABLE jobbsoker ADD COLUMN sperret boolean NOT NULL DEFAULT false;` (kun kolonnen — ingen
+   backfill; den kjøres manuelt senere, se nederst).
 5. `SynlighetsLytter` / `SynlighetsBehovLytter`: les `sperret` fra pakken og send videre til service.
 6. `JobbsøkerService` + `JobbsøkerRepository`: utvid `oppdaterSynlighetFraEvent/FraNeed` med
    `sperret`-parameter; UPDATE setter `sperret = ?` ved siden av `er_synlig`. Samme
@@ -173,27 +189,36 @@ rolle her — vi trenger den ikke. Ingen ny kolonne eller migrasjon i synlighets
 4. Sperrede telles som skjulte i `antallSkjulte` (felles telling — ingen egen kategori) og er skjult
    fra jobbsøkerlisten i treffene.
 
-## Tester som må skrives
+## Tester
 
-**rekrutteringstreff-api:**
+**rekrutteringstreff-api (implementert):**
 
-- `FormidlingRepositoryTest`: liste nuller **både** navn og fnr når `sperret = true` (skill fra
+- ✅ `FormidlingRepositoryTest`: liste nuller **både** navn og fnr når `sperret = true` (skill fra
   `er_synlig = false`-testen som kun nuller fnr).
-- `FormidlingerKomponentTest` (HTTP): sperret formidling returnerer anonymisert navn+fnr +
-  `sperret = true`.
-- `FormidlingServiceTest` / komponenttest: `opprettFormidling` blokkerer sperret person med riktig
-  statuskode + `feil`/`hint`.
-- Synlighet-lytter-tester: `sperret` fra event og need oppdaterer `jobbsoker.sperret`.
-- `TestDatabase`: helper `settSperret(personTreffId, sperret)` analogt med `settSynlighet(...)`.
+- ✅ `FormidlingerKomponentTest` (HTTP): sperret formidling returnerer anonymisert navn+fnr +
+  `sperret = true`. Inkluderer egen test for kombinert `er_synlig = false` + `sperret = true`.
+- ✅ `FormidlingServiceTest`: `opprettFormidling` blokkerer sperret person (kaster
+  `JobbsøkerSperretException`, verifiserer 0 kall til stillingKlient + tom formidlingsliste).
+- ✅ Synlighet-lytter-tester: `sperret` fra event (`SynlighetsLytterTest`) og need
+  (`SynlighetsBehovLytterTest`) oppdaterer `jobbsoker.sperret`.
+- ✅ `TestDatabase`: helper `settSperret(personTreffId, sperret)` analogt med `settSynlighet(...)`.
 
-**toi-synlighetsmotor:**
+**rekrutteringstreff-api (anbefalt tillegg):**
 
-- Test at `sperret` settes for kode 6/7/19 og PDL-graderte, og at det sendes i både event
-  (`SynlighetsgrunnlagLytter`) og need (`SynlighetRekrutteringstreffLytter`).
+- ✅ `FormidlingerKomponentTest` (HTTP): `opprett formidling for sperret jobbsøker gir 403 med hint`
+  POST-er mot opprett-formidling-endepunktet og asserter `403`, `hint`, `feil` og at ingen formidling
+  ble lagret. Dekker `ExceptionMapping`-grenen for `JobbsøkerSperretException`.
 
-**frontend (Playwright `tests/rekrutteringstreff/formidlinger.spec.ts`):**
+**toi-synlighetsmotor (implementert):**
 
-- Rad med `sperret` viser «Skjermet» (verken navn eller fnr).
+- ✅ `SynlighetRekrutteringstreffLytterTest`: `sperret` settes for Arena kode 6/7, FORTROLIG,
+  STRENGT_FORTROLIG_UTLAND (kode 19) og for usynlig person med adressebeskyttelse, og sendes i
+  need-svaret. Egen test for at behov uten `aktørId` ignoreres (identmapper beriker først).
+
+**frontend (Playwright `tests/rekrutteringstreff/formidlinger.spec.ts`, implementert):**
+
+- ✅ Rad med `sperret` viser «Skjermet» + «Adressebeskyttet» (verken navn eller fnr), og verifiserer
+  at «Inaktiv kandidat» ikke vises.
 
 ---
 
@@ -203,7 +228,7 @@ Spørsmålet er hvordan `sperret` skal hentes inn via need-veien. To varianter e
 
 ### Alternativ A — ett behov, synlighetsmotor avleder sperret (implementert i dag)
 
-rekrutteringstreff-api sender ett behov:
+rekrutteringstreff-api sender ett behov med `fodselsnummer`:
 
 ```jsonc
 {
@@ -213,13 +238,22 @@ rekrutteringstreff-api sender ett behov:
 }
 ```
 
+**Berikelse med aktørId.** `toi-identmapper` (`AktørIdPopulator`) lytter på meldinger som har
+`fodselsnummer` (eller `fnr`/`fodselsnr`) men mangler `aktørId`, slår opp aktørId i PDL og republiserer
+meldingen beriket med `aktørId` (og keyer da på aktørId). `SynlighetRekrutteringstreffLytter` krever
+`aktørId` (`precondition { requireKey("aktørId") }`), slår opp evalueringen med `hentMedAktørid(...)`,
+og både publiserer og keyer på aktørId. rekrutteringstreff-api selv trenger altså ikke kjenne aktørId
+— identmapper står for hand-offen. Meldinger uten aktørId ignoreres i stillhet (identmapper beriker
+først).
+
 `SynlighetRekrutteringstreffLytter` (toi-synlighetsmotor) håndterer resten internt:
 
-1. Slår opp lagret evaluering (har Arena kode 6/7 via `erIkkeKode6eller7`).
+1. Slår opp lagret evaluering på aktørId (har Arena kode 6/7 via `erIkkeKode6eller7`).
 2. Legger selv til `adressebeskyttelse`-behov foran i køen (`leggTilBehov`) og publiserer.
    toi-livshendelse (`AdressebeskyttelseLytter`) besvarer det med PDL-gradering.
-3. Når svaret kommer tilbake, avleder den `sperret = !erIkkeKode6eller7 || !harIkkeAdressebeskyttelse`
-   og besvarer `synlighetRekrutteringstreff` med **både** `erSynlig` og `sperret`.
+3. Når svaret kommer tilbake, avleder den `sperret` via `Evaluering.sperret()` (negering +
+   `.default(false)`, se over) og besvarer `synlighetRekrutteringstreff` med **både** `erSynlig` og
+   `sperret`.
 
 rekrutteringstreff-api (`SynlighetsBehovLytter`) leser `synlighetRekrutteringstreff.erSynlig` +
 `.sperret` og skriver begge i én UPDATE (`oppdaterSynlighetFraNeed`).
@@ -227,9 +261,11 @@ rekrutteringstreff-api (`SynlighetsBehovLytter`) leser `synlighetRekrutteringstr
 ```mermaid
 sequenceDiagram
     participant RT as rekrutteringstreff-api
+    participant IM as toi-identmapper
     participant SM as toi-synlighetsmotor
     participant LH as toi-livshendelse
-    RT->>SM: @behov [synlighetRekrutteringstreff] (fnr)
+    RT->>IM: @behov [synlighetRekrutteringstreff] (fnr)
+    IM->>SM: beriket med aktørId (key=aktørId)
     SM->>LH: @behov [adressebeskyttelse, synlighetRekrutteringstreff]
     LH-->>SM: adressebeskyttelse=GRADERING
     SM-->>RT: synlighetRekrutteringstreff{erSynlig, sperret}
@@ -293,21 +329,22 @@ sequenceDiagram
 
 ### Problemer og fallgruver ved Alternativ B
 
-1. **Arena kode 6/7 forsvinner som kilde.** I dag er `sperret =
-!erIkkeKode6eller7 || !harIkkeAdressebeskyttelse`. `erIkkeKode6eller7` ligger **kun** i
-   synlighetsmotor-db. toi-livshendelse svarer **bare** med PDL-gradering. Hvis
+1. **Arena kode 6/7 forsvinner som kilde.** I dag avledes `sperret` fra **både** Arena kode 6/7
+   (`erIkkeKode6eller7`) og PDL-gradering (`harIkkeAdressebeskyttelse`). `erIkkeKode6eller7` ligger
+   **kun** i synlighetsmotor-db. toi-livshendelse svarer **bare** med PDL-gradering. Hvis
    rekrutteringstreff-api avleder `sperret` direkte fra adressesperring-svaret, mister vi
    Arena-kilden. I praksis er PDL og Arena oftest samstemte, men de er separate kilder og designet
    OR-er dem bevisst. For å beholde begge må synlighetsmotor uansett bidra med `sperret` — da er vi
    i realiteten tilbake til Alternativ A, bare med ekstra koordinering.
 2. **`adressebeskyttelse`-behovet krever `aktørId`, ikke `fodselsnummer`.**
    `AdressebeskyttelseLytter` (toi-livshendelse) har `validate { requireKey("aktørId") }`. Need-flyten
-   i rekrutteringstreff bærer `fodselsnummer`. rekrutteringstreff-api har normalt ikke aktørId, så
-   Alternativ B krever enten at rekrutteringstreff-api skaffer aktørId, eller at livshendelse-lytteren
-   utvides til å akseptere fnr. **NB:** dette gjelder også Alternativ A i dag (synlighetsmotor legger
-   til `adressebeskyttelse`-behovet på en pakke uten aktørId) — verifiser i dev at hand-offen faktisk
-   fungerer ende-til-ende; enhetstestene injiserer adressebeskyttelse-svaret manuelt og dekker ikke
-   denne grenseflaten.
+   fra rekrutteringstreff-api bærer `fodselsnummer`. **Løst i implementasjonen:** `toi-identmapper`
+   (`AktørIdPopulator`) beriker meldingen med `aktørId` før synlighetsmotor behandler den, og
+   `SynlighetRekrutteringstreffLytter` krever nå `aktørId` (`requireKey`) og keyer/slår opp på den
+   (`hentMedAktørid`). rekrutteringstreff-api trenger dermed ikke skaffe aktørId selv. Konsekvens:
+   hand-offen er avhengig av at identmapper kjører — både need-veien og det interne
+   `adressebeskyttelse`-behovet hviler på aktørId. Verifiser ende-til-ende i dev (enhetstestene
+   injiserer aktørId/adressebeskyttelse manuelt og dekker ikke selve identmapper-grenseflaten).
 3. **To skrivere kan kappes om samme rad.** Den eksisterende `SynlighetsBehovLytter` krever kun
    nøkkelen `synlighetRekrutteringstreff`. Innfører man en ny samlende lytter (krever begge behov),
    må den gamle konsolideres bort — ellers fyrer begge og man får dobbeltskriving / delvis tilstand.
@@ -333,11 +370,13 @@ nytt» — er allerede løst: PDL-oppslaget gjøres uansett kun **én gang per n
   eldre tidsstempel); NEED skriver **kun** hvis `synlighet_sist_oppdatert IS NULL`. Dette gjelder
   `er_synlig` og `sperret` samlet, siden de skrives i samme UPDATE.
 - **Fail-safe-vindu for sperret.** I `SynlighetsBehovLytter` defaulter `sperret` til `false` ved
-  ufullstendig svar, og `Evaluering.sperret()` bruker `.default(true)` på underliggende felt (antar
-  «ikke sperret» ved ukjent). En adressebeskyttet person som ennå ikke er ferdig evaluert kan derfor
-  kortvarig stå `er_synlig = false` (skjult, fnr nullet) men `sperret = false` (navn vist) i
-  formidlingslisten. Vinduet er kort (event-strømmen + scheduler retter opp), men det er en bevisst
-  avveining mot over-anonymisering. Verdt å være klar over for allerede formidlede personer.
+  ufullstendig svar, og `Evaluering.sperret()` negerer `erIkkeKode6eller7` / `harIkkeAdressebeskyttelse`
+  og kaller `.default(false)` på de negerte verdiene (`Missing.not() == Missing`, og
+  `Missing.default(false) == false`) — altså antas «ikke sperret» ved ukjent. En adressebeskyttet
+  person som ennå ikke er ferdig evaluert kan derfor kortvarig stå `er_synlig = false` (skjult, fnr
+  nullet) men `sperret = false` (navn vist) i formidlingslisten. Vinduet er kort (event-strømmen +
+  scheduler retter opp), men det er en bevisst avveining mot over-anonymisering. Verdt å være klar
+  over for allerede formidlede personer.
 - **Selvhelende need.** Hvis toi-livshendelse eller synlighetsmotor er nede, fullføres ikke
   need-et; raden beholder `synlighet_sist_oppdatert IS NULL`, og `SynlighetsBehovScheduler` trigger
   på nytt hvert 60. sekund. Ingen tapt tilstand.
@@ -349,10 +388,11 @@ nytt» — er allerede løst: PDL-oppslaget gjøres uansett kun **én gang per n
 
 Følgende er sjekket og stemmer med implementasjonen på branchen:
 
-- **V11** legger til `sperret boolean NOT NULL DEFAULT FALSE` og backfiller ved å nulle
-  `synlighet_sist_oppdatert`/`synlighet_kilde` for `er_synlig = false`-rader (≠ SLETTET), slik at
-  scheduleren re-evaluerer dem. Korrekt — sperret kan kun være true der `er_synlig` allerede er
-  false.
+- **V11** (`V11__rekrutteringstreff_kategori_jobbsoker_sperring.sql`) legger til
+  `sperret boolean NOT NULL DEFAULT FALSE`. **Den backfiller ikke** — migrasjonen legger kun til
+  kolonnen. Backfill av eksisterende rader gjøres med den manuelle SQL-en under
+  («Oppdatere gamle jobbsøkerkandidater»), som kjøres først etter at alt er ute i prod og verifisert.
+  Korrekt — sperret kan kun bli true der `er_synlig` allerede er false.
 - **Felles tidsstempel/kilde** for `er_synlig` og `sperret` (ingen egne `sperret\_\*``-kolonner) —
   bekreftet i begge UPDATE-metodene.
 - **FormidlingRepository** nuller både navn og fnr ved `sperret` (`CASE WHEN j.sperret THEN NULL …`).

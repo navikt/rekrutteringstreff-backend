@@ -305,6 +305,38 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
+    fun `sperret og slettet jobbsøker telles som slettet, ikke som skjult`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            (1..3).map { i ->
+                LeggTilJobbsøker(
+                    Fødselsnummer("${i}3333333333".take(11)),
+                    Fornavn("Person$i"),
+                    Etternavn("Etternavn$i"),
+                    null,
+                    null,
+                    null,
+                )
+            },
+            treffId,
+        )
+        db.settSperret(personTreffIder[1], true)
+        db.settSynlighet(personTreffIder[1], false)
+        db.settSperret(personTreffIder[2], true)
+        db.settSynlighet(personTreffIder[2], false)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
+
+        val dto = mapper.readValue<JobbsøkerSøkRespons>(
+            httpPost(søkPath(treffId), søkBody()).body()
+        )
+
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.antallSkjulte).isEqualTo(1)
+        assertThat(dto.antallSlettede).isEqualTo(1)
+        assertThat(dto.jobbsøkere.map { it.fødselsnummer }).containsExactly("13333333333")
+    }
+
+    @Test
     fun `sortering på navn gir alfabetisk rekkefølge`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(listOf(

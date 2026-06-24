@@ -4,6 +4,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
+import io.mockk.every
+import io.mockk.mockk
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
@@ -34,6 +36,9 @@ class FormidlingerKomponentTest {
         private val appPort = ubruktPortnrFra10000.ubruktPortnr()
         private val mapper = JacksonConfig.mapper
 
+        private val stillingKlient = mockk<StillingKlient>()
+        private val kandidatKlient = mockk<KandidatKlient>(relaxed = true)
+
         private lateinit var infra: TestInfrastructureContext
         private lateinit var ctx: ApplicationContext
         private lateinit var app: App
@@ -41,7 +46,12 @@ class FormidlingerKomponentTest {
 
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
-        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl).also { it.start() }
+        infra = TestInfrastructureContext(
+            dataSource = db.dataSource,
+            modiaKlientUrl = wmInfo.httpBaseUrl,
+            stillingKlient = stillingKlient,
+            kandidatKlient = kandidatKlient,
+        ).also { it.start() }
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
     }
@@ -117,6 +127,44 @@ class FormidlingerKomponentTest {
             .build()
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
+
+    private fun httpPost(
+        path: String,
+        body: String,
+        navIdent: String,
+        groups: List<UUID>,
+    ): HttpResponse<String> {
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = groups)
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:$appPort$path"))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build()
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+    }
+
+    private fun formidlingPath(treffId: TreffId): String =
+        "/api/rekrutteringstreff/${treffId.somUuid}/formidling"
+
+    private fun opprettFormidlingBody(orgnr: String, fødselsnummer: String): String =
+        """
+        {
+            "eierNavKontorEnhetId": "1234",
+            "orgnr": "$orgnr",
+            "fødselsnumre": ["$fødselsnummer"],
+            "stilling": {
+                "employer": {
+                    "name": "Testbedrift AS",
+                    "orgnr": "$orgnr",
+                    "publicName": "Testbedrift AS"
+                }
+            },
+            "yrkestittel": "Kokk",
+            "janzzKonseptId": "12345"
+        }
+        """.trimIndent()
+
 
     @Test
     fun `veileder ser egne formidlinger via brukertilgang (veileder_navident)`() {
@@ -328,6 +376,98 @@ class FormidlingerKomponentTest {
         assertThat(linje.fornavn).isNull()
         assertThat(linje.etternavn).isNull()
         assertThat(linje.yrkestittel).isEqualTo("Kokk")
+    }
+
+    @Test
+    fun `opprett formidling lagrer formidling og returnerer 201`() {
+        val eierIdent = "A123456"
+        val orgnr = "123456789"
+        val treffId = opprettTreffMedEier(eierIdent)
+        leggTilArbeidsgiver(treffId)
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aase"), Etternavn("Testesen"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            ),
+            treffId, "testperson",
+        )
+        val stillingId = UUID.randomUUID()
+        val kandidatlisteId = UUID.randomUUID()
+        every {
+            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
+        } returns OpprettFormidlingStillingRespons(stillingsId = stillingId, kandidatlisteId = kandidatlisteId)
+
+        val response = httpPost(
+            formidlingPath(treffId),
+            opprettFormidlingBody(orgnr, "11111111111"),
+            eierIdent,
+            listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(201)
+        val lagrede = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)
+        assertThat(lagrede).hasSize(1)
+        val lagret = lagrede.single()
+        assertThat(lagret.fødselsnummer).isEqualTo("11111111111")
+        assertThat(lagret.yrkestittel).isEqualTo("Kokk")
+    }
+
+    @Test
+    fun `opprett formidling for sperret jobbsøker gir 403 med hint`() {
+        val eierIdent = "A123456"
+        val orgnr = "123456789"
+        val treffId = opprettTreffMedEier(eierIdent)
+        leggTilArbeidsgiver(treffId)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Sperret"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            ),
+            treffId, "testperson",
+        )
+        db.settSperret(personTreffIder[0], true)
+
+        val response = httpPost(
+            formidlingPath(treffId),
+            opprettFormidlingBody(orgnr, "11111111111"),
+            eierIdent,
+            listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+        val problem = mapper.readTree(response.body())
+        assertThat(problem.get("status").asInt()).isEqualTo(403)
+        assertThat(problem.get("hint").asText()).isEqualTo("Jobbsøkeren har adressebeskyttelse og kan ikke formidles.")
+        assertThat(problem.get("feil").asText()).isEqualTo("Jobbsøker med adressebeskyttelse kan ikke formidles.")
+        assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).isEmpty()
+    }
+
+    @Test
+    fun `opprett formidling for skjult jobbsøker lagrer formidling og returnerer 201`() {
+        val eierIdent = "A123456"
+        val orgnr = "123456789"
+        val treffId = opprettTreffMedEier(eierIdent)
+        leggTilArbeidsgiver(treffId)
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Skjult"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            ),
+            treffId, "testperson",
+        )
+        db.settSynlighet(personTreffIder[0], false)
+        val stillingId = UUID.randomUUID()
+        val kandidatlisteId = UUID.randomUUID()
+        every {
+            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
+        } returns OpprettFormidlingStillingRespons(stillingsId = stillingId, kandidatlisteId = kandidatlisteId)
+
+        val response = httpPost(
+            formidlingPath(treffId),
+            opprettFormidlingBody(orgnr, "11111111111"),
+            eierIdent,
+            listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(201)
+        assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).hasSize(1)
     }
 
     @Test
