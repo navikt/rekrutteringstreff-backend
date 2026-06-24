@@ -2,11 +2,15 @@ package no.nav.toi.rekrutteringstreff.ki
 
 import no.nav.toi.exception.KiValideringsException
 import no.nav.toi.log
+import no.nav.toi.SecureLog
+import java.text.Normalizer
 import java.util.*
 
 class KiLoggService(
     private val kiLoggRepository: KiLoggRepository,
 ) {
+    private val secureLog = SecureLog(log)
+
     companion object {
         private const val MANGLER_VALIDERING = "KI_VALIDERING_MANGLER"
         private const val UGYLDIG_LOGG_ID = "KI_LOGG_ID_UGYLDIG"
@@ -70,6 +74,13 @@ class KiLoggService(
         val normalisertLoggetTekst = normaliserTekst(kiLogg.spørringFraFrontend)
         if (normalisertTekst != normalisertLoggetTekst) {
             log.warn("Lagring avvist: Tekst endret etter KI-validering for $feltType")
+            secureLog.warn(
+                "KI_TEKST_ENDRET for $feltType, loggId=$loggId.\n" +
+                    "Lagret tekst (rå): ${kiLogg.spørringFraFrontend}\n" +
+                    "Ny tekst (rå): $tekst\n" +
+                    "Normalisert lagret: $normalisertLoggetTekst\n" +
+                    "Normalisert ny: $normalisertTekst"
+            )
             throw KiValideringsException(
                 feilkode = TEKST_ENDRET,
                 melding = "Teksten har blitt endret etter KI-valideringen."
@@ -88,11 +99,17 @@ class KiLoggService(
     fun erTekstEndret(tekst1: String?, tekst2: String?): Boolean =
         normaliserTekst(tekst1 ?: "") != normaliserTekst(tekst2 ?: "")
 
+    // Sammenligner kun det semantisk meningsfulle innholdet: bokstaver og tall i lowercase.
+    // Alt annet (HTML-tagger, whitespace, tegnsetting, spesialtegn) fjernes, fordi frontend og
+    // backend kan serialisere slikt ulikt (f.eks. hardt mellomrom vs. vanlig mellomrom) og gi falsk
+    // KI_TEKST_ENDRET. KI-sjekken er kun ekstrahjelp – bruker har selv ansvar for å verifisere teksten –
+    // så en whitelist er tilstrekkelig robust. NFC slår sammen tegn + combining marks (a + ◌̊ → å) før
+    // strippingen, slik at slike ikke teller som forskjeller.
     private fun normaliserTekst(tekst: String): String =
-        tekst
+        Normalizer.normalize(tekst, Normalizer.Form.NFC)
             .replace(Regex("<[^>]+>"), " ")
-            .replace(Regex("\\s+"), " ")
-            .trim()
+            .lowercase()
+            .replace(Regex("[^\\p{L}\\p{N}]+"), "")
 
     fun hentKiLoggUuiderForScheduledSletting(månederSidenLoggOpprettet: Int): List<UUID> {
         return kiLoggRepository.hentKiLoggIderForScheduledSletting(månederSidenLoggOpprettet)
