@@ -1,0 +1,3 @@
+ALTER TABLE rekrutteringstreff ADD COLUMN kategori text NOT NULL DEFAULT 'REKRUTTERINGSTREFF';
+
+ALTER TABLE jobbsoker ADD COLUMN sperret boolean NOT NULL DEFAULT FALSE;
