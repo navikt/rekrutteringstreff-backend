@@ -126,7 +126,7 @@ class AktivitetskortFeilJobb(
 
     fun lagreFeilKøHendelser() {
         var currentPositions = mutableMapOf<TopicPartition, Long>()
-        var records: ConsumerRecords<String?, String?>?
+        var records: ConsumerRecords<String?, String?>
 
         try {
             records = consumer.poll(Duration.ofSeconds(10))
@@ -170,11 +170,13 @@ class AktivitetskortFeilJobb(
                 log.error("Feil ved commit av offsets i AktivitetskortFeilJobb: (se securelog)")
                 secureLog.error("Feil ved commit av offsets i AktivitetskortFeilJobb", e)
             } finally {
+                // Må kunne søke seg tilbake til riktig offset hvis ikke alle meldingene i batchen har blitt prosessert
                 currentPositions.forEach { (tp, offset) -> consumer.seek(tp, offset) }
                 currentPositions.clear()
             }
         }
     }
+
     fun sendFeilKøHendelserPåRapid() {
         log.info("Skal sende usendte feilKøHendelser på rapid")
         repository.hentUsendteFeilkøHendelser().forEach { usendtFeil ->
