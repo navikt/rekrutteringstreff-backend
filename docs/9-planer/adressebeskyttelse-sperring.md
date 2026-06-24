@@ -353,7 +353,7 @@ Følgende er sjekket og stemmer med implementasjonen på branchen:
   `synlighet_sist_oppdatert`/`synlighet_kilde` for `er_synlig = false`-rader (≠ SLETTET), slik at
   scheduleren re-evaluerer dem. Korrekt — sperret kan kun være true der `er_synlig` allerede er
   false.
-- **Felles tidsstempel/kilde** for `er_synlig` og `sperret` (ingen egne `sperret_*`-kolonner) —
+- **Felles tidsstempel/kilde** for `er_synlig` og `sperret` (ingen egne `sperret\_\*``-kolonner) —
   bekreftet i begge UPDATE-metodene.
 - **FormidlingRepository** nuller både navn og fnr ved `sperret` (`CASE WHEN j.sperret THEN NULL …`).
 - **FormidlingService** blokkerer formidling av sperrede via `JobbsøkerSperretException`.
@@ -361,3 +361,25 @@ Følgende er sjekket og stemmer med implementasjonen på branchen:
   `synlighet.sperret`).
 - **Skjuling/telling** trenger ingen endring: sperrede er allerede `er_synlig = false` og dekkes av
   `antallSkjulte` og `er_synlig`-filtrene.
+
+### Oppdatere gamle jobbsøkerkandidater med sperring
+
+Når alt er testet og ute, bør vi backfille. Foreslått SQL:
+
+```sql
+-- Backfill av sperret for eksisterende jobbsøkere.
+-- sperret kan kun være true for rader som allerede er er_synlig = false
+-- (adressebeskyttelse og kode 6/7 tvinger erSynlig() = false i synlighetsmotor),
+-- så vi re-evaluerer kun disse radene.
+--
+-- Ved å nulle synlighet_sist_oppdatert plukker SynlighetsBehovScheduler radene opp
+-- og trigger need-meldinger på nytt. Need-svaret skriver da er_synlig + sperret.
+UPDATE jobbsoker
+SET synlighet_sist_oppdatert = NULL,
+    synlighet_kilde = NULL
+WHERE er_synlig = false
+  AND status != 'SLETTET'
+  AND synlighet_sist_oppdatert IS NOT NULL;
+```
+
+Vi bør få ut alt i prod først, sjekke at alt er riktig, og sså kjøre denne i konsoll(om vi har tilgang) eller i flyway(om den trengs for tilgang)
