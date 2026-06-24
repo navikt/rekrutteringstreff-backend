@@ -83,8 +83,8 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
                 }
             }
         } catch (e: Exception) {
-            log.error("Uventet feil i AktivitetskortJobb – schedulern fortsetter ved neste kjøring. (se securelog)")
-            secureLog.error("Uventet feil i AktivitetskortJobb – schedulern fortsetter ved neste kjøring.", e)
+            log.error("Uventet feil i AktivitetskortJobb – scheduleren fortsetter ved neste kjøring. (se securelog)")
+            secureLog.error("Uventet feil i AktivitetskortJobb – scheduleren fortsetter ved neste kjøring.", e)
         }
     }
 }
@@ -118,8 +118,8 @@ class AktivitetskortFeilJobb(
             lagreFeilKøHendelser()
             sendFeilKøHendelserPåRapid()
         } catch (e: Exception) {
-            log.error("Uventet feil i AktivitetskortFeilJobb – schedulern fortsetter ved neste kjøring. (se securelog)")
-            secureLog.error("Uventet feil i AktivitetskortFeilJobb – schedulern fortsetter ved neste kjøring.", e)
+            log.error("Uventet feil i AktivitetskortFeilJobb – scheduleren fortsetter ved neste kjøring. (se securelog)")
+            secureLog.error("Uventet feil i AktivitetskortFeilJobb – scheduleren fortsetter ved neste kjøring.", e)
         }
     }
 
