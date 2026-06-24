@@ -165,6 +165,33 @@ class FormidlingerKomponentTest {
         }
         """.trimIndent()
 
+    private fun jobbsøker(
+        fødselsnummer: String,
+        fornavn: String,
+        etternavn: String,
+        kontor: Kontor? = null,
+        veilederNavn: VeilederNavn? = null,
+        veilederNavIdent: VeilederNavIdent? = null,
+    ) = LeggTilJobbsøker(Fødselsnummer(fødselsnummer), Fornavn(fornavn), Etternavn(etternavn), kontor, veilederNavn, veilederNavIdent)
+
+    private fun leggTilJobbsøkere(treffId: TreffId, vararg jobbsøkere: LeggTilJobbsøker) =
+        db.leggTilJobbsøkereMedHendelse(jobbsøkere.toList(), treffId, "testperson")
+
+    private fun stubOpprettStilling() {
+        every {
+            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
+        } returns OpprettFormidlingStillingRespons(stillingsId = UUID.randomUUID(), kandidatlisteId = UUID.randomUUID())
+    }
+
+    private fun opprettFormidlingKall(treffId: TreffId, orgnr: String, fødselsnummer: String, navIdent: String): HttpResponse<String> =
+        httpPost(formidlingPath(treffId), opprettFormidlingBody(orgnr, fødselsnummer), navIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+
+    private fun hentAlleFormidlinger(treffId: TreffId, navIdent: String): HttpResponse<String> =
+        httpGet(formidlingListeAllePath(treffId), navIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+
+    private fun hentEgneFormidlinger(treffId: TreffId, navIdent: String): HttpResponse<String> =
+        httpGet(formidlingListeEgnePath(treffId), navIdent, listOf(AzureAdRoller.jobbsøkerrettet))
+
 
     @Test
     fun `veileder ser egne formidlinger via brukertilgang (veileder_navident)`() {
@@ -172,12 +199,9 @@ class FormidlingerKomponentTest {
         val veilederIdent = "Z111111"
         val treffId = opprettTreffMedEier(eierIdent)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Egen"), Etternavn("Bruker"), Kontor("1000", "Nav Test"), VeilederNavn("Min Veil"), VeilederNavIdent(veilederIdent)),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Annen"), Etternavn("Bruker"), Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Egen", "Bruker", Kontor("1000", "Nav Test"), VeilederNavn("Min Veil"), VeilederNavIdent(veilederIdent)),
+            jobbsøker("22222222222", "Annen", "Bruker", Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
@@ -185,7 +209,7 @@ class FormidlingerKomponentTest {
 
         stubMineEnheter()
 
-        val response = httpGet(formidlingListeEgnePath(treffId), veilederIdent, listOf(AzureAdRoller.jobbsøkerrettet))
+        val response = hentEgneFormidlinger(treffId, veilederIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
@@ -200,12 +224,9 @@ class FormidlingerKomponentTest {
         val veiledersKontor = "0314"
         val treffId = opprettTreffMedEier(eierIdent)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Samme"), Etternavn("Kontor"), Kontor(veiledersKontor, "Nav Test"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Annet"), Etternavn("Kontor"), Kontor("9999", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z888888")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Samme", "Kontor", Kontor(veiledersKontor, "Nav Test"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
+            jobbsøker("22222222222", "Annet", "Kontor", Kontor("9999", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z888888")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
@@ -213,7 +234,7 @@ class FormidlingerKomponentTest {
 
         stubMineEnheter(veiledersKontor)
 
-        val response = httpGet(formidlingListeEgnePath(treffId), veilederIdent, listOf(AzureAdRoller.jobbsøkerrettet))
+        val response = hentEgneFormidlinger(treffId, veilederIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
@@ -227,18 +248,15 @@ class FormidlingerKomponentTest {
         val veilederIdent = "Z333333"
         val treffId = opprettTreffMedEier(eierIdent)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Annen"), Etternavn("Bruker"), Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Annen", "Bruker", Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
 
         stubMineEnheter()
 
-        val response = httpGet(formidlingListeEgnePath(treffId), veilederIdent, listOf(AzureAdRoller.jobbsøkerrettet))
+        val response = hentEgneFormidlinger(treffId, veilederIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
@@ -252,12 +270,9 @@ class FormidlingerKomponentTest {
         val felleskontor = "0314"
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aase"), Etternavn("Testesen"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Bo"), Etternavn("Testesen"), Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("22222222222", "Bo", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
@@ -265,7 +280,7 @@ class FormidlingerKomponentTest {
 
         stubMineEnheter(felleskontor)
 
-        val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+        val response = hentAlleFormidlinger(treffId, markedskontaktIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
@@ -281,12 +296,9 @@ class FormidlingerKomponentTest {
         val felleskontor = "0314"
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Usynlig"), Etternavn("Bø"), Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Synlig", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("22222222222", "Usynlig", "Bø", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Utvikler (dataspill)", janzzKonseptId = "19989")
@@ -296,7 +308,7 @@ class FormidlingerKomponentTest {
 
         stubMineEnheter(felleskontor)
 
-        val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+        val response = hentAlleFormidlinger(treffId, markedskontaktIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
@@ -318,11 +330,8 @@ class FormidlingerKomponentTest {
         val felleskontor = "0314"
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Sperret"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Kokk", janzzKonseptId = "12345")
@@ -331,7 +340,7 @@ class FormidlingerKomponentTest {
 
         stubMineEnheter(felleskontor)
 
-        val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+        val response = hentAlleFormidlinger(treffId, markedskontaktIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
@@ -351,11 +360,8 @@ class FormidlingerKomponentTest {
         val felleskontor = "0314"
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = felleskontor)
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Sperret"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         val stillingId = UUID.randomUUID()
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID(), yrkestittel = "Kokk", janzzKonseptId = "12345")
@@ -365,7 +371,7 @@ class FormidlingerKomponentTest {
 
         stubMineEnheter(felleskontor)
 
-        val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+        val response = hentAlleFormidlinger(treffId, markedskontaktIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
@@ -384,24 +390,12 @@ class FormidlingerKomponentTest {
         val orgnr = "123456789"
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
-        db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aase"), Etternavn("Testesen"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            ),
-            treffId, "testperson",
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
-        val stillingId = UUID.randomUUID()
-        val kandidatlisteId = UUID.randomUUID()
-        every {
-            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
-        } returns OpprettFormidlingStillingRespons(stillingsId = stillingId, kandidatlisteId = kandidatlisteId)
+        stubOpprettStilling()
 
-        val response = httpPost(
-            formidlingPath(treffId),
-            opprettFormidlingBody(orgnr, "11111111111"),
-            eierIdent,
-            listOf(AzureAdRoller.arbeidsgiverrettet),
-        )
+        val response = opprettFormidlingKall(treffId, orgnr, "11111111111", eierIdent)
 
         assertThat(response.statusCode()).isEqualTo(201)
         val lagrede = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)
@@ -417,20 +411,12 @@ class FormidlingerKomponentTest {
         val orgnr = "123456789"
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Sperret"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Sperret", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.settSperret(personTreffIder[0], true)
 
-        val response = httpPost(
-            formidlingPath(treffId),
-            opprettFormidlingBody(orgnr, "11111111111"),
-            eierIdent,
-            listOf(AzureAdRoller.arbeidsgiverrettet),
-        )
+        val response = opprettFormidlingKall(treffId, orgnr, "11111111111", eierIdent)
 
         assertThat(response.statusCode()).isEqualTo(403)
         val problem = mapper.readTree(response.body())
@@ -446,25 +432,13 @@ class FormidlingerKomponentTest {
         val orgnr = "123456789"
         val treffId = opprettTreffMedEier(eierIdent)
         leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Skjult"), Etternavn("Aase"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Skjult", "Aase", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.settSynlighet(personTreffIder[0], false)
-        val stillingId = UUID.randomUUID()
-        val kandidatlisteId = UUID.randomUUID()
-        every {
-            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
-        } returns OpprettFormidlingStillingRespons(stillingsId = stillingId, kandidatlisteId = kandidatlisteId)
+        stubOpprettStilling()
 
-        val response = httpPost(
-            formidlingPath(treffId),
-            opprettFormidlingBody(orgnr, "11111111111"),
-            eierIdent,
-            listOf(AzureAdRoller.arbeidsgiverrettet),
-        )
+        val response = opprettFormidlingKall(treffId, orgnr, "11111111111", eierIdent)
 
         assertThat(response.statusCode()).isEqualTo(201)
         assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).hasSize(1)
@@ -476,17 +450,14 @@ class FormidlingerKomponentTest {
         val markedskontaktIdent = "B200002"
         val treffId = opprettTreffMedEier(eierIdent, opprettetAvKontor = "0101")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aase"), Etternavn("Testesen"), Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
-            ),
-            treffId, "testperson",
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
 
         stubMineEnheter("0202")
 
-        val response = httpGet(formidlingListeAllePath(treffId), markedskontaktIdent, listOf(AzureAdRoller.arbeidsgiverrettet))
+        val response = hentAlleFormidlinger(treffId, markedskontaktIdent)
         assertThat(response.statusCode()).isEqualTo(403)
     }
 }
