@@ -45,8 +45,7 @@ fun scheduler(
     val scheduledExecutor = Executors.newScheduledThreadPool(1)
     val scheduledFeilExecutor = Executors.newScheduledThreadPool(1)
     val myJob = AktivitetskortJobb(repository, producer, leaderElection)
-    consumer.subscribe(listOf(dabAktivitetskortFeilTopic))
-    val myErrorJob = AktivitetskortFeilJobb(repository, consumer, leaderElection) { key, message ->
+    val myErrorJob = AktivitetskortFeilJobb(repository, consumer, leaderElection, dabAktivitetskortFeilTopic) { key, message ->
         rapidsConnection.publish(key, message)
     }
 
@@ -84,6 +83,7 @@ class AktivitetskortFeilJobb(
     private val repository: Repository,
     private val consumer: Consumer<String, String>,
     private val leaderElection: LeaderElectionInterface,
+    private val dabAktivitetskortFeilTopic: String,
     private val rapidPublish: (String, String) -> Unit
 ): Runnable {
     private val secureLog = SecureLog(log)
@@ -91,39 +91,59 @@ class AktivitetskortFeilJobb(
     @WithSpan
     override fun run() {
         if(!leaderElection.isLeader()) {
+            if (consumer.subscription().isNotEmpty()) {
+                log.info("Instansen er ikke leader lenger – melder consumer ut av gruppa.")
+                consumer.unsubscribe()
+            }
             log.info("Kjøring av AktivitetskortFeilJobb skippes, instansen er ikke leader.")
             return
+        }
+
+        if (consumer.subscription().isEmpty() && consumer.assignment().isEmpty()) {
+            log.info("Instansen er leader – starter consumering på $dabAktivitetskortFeilTopic.")
+            consumer.subscribe(listOf(dabAktivitetskortFeilTopic))
         }
         log.info("Kjører AktivitetskortFeilJobb")
         lagreFeilKøHendelser()
         sendFeilKøHendelserPåRapid()
     }
     fun lagreFeilKøHendelser() {
-        val records = consumer.poll(Duration.ofSeconds(10))
-        records.forEach { consumerRecord ->
-            consumerRecord.value().let {
-                class FeilKøHendelse(
-                    val source: String,
-                    val failingMessage: String,
-                    val errorMessage: String,
-                    val errorType: ErrorType
-                )
-
-                val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
-                if(hendelse.source == "REKRUTTERINGSBISTAND") {
-                    log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
-                    secureLog.error("Feil ved bestilling av aktivitetskort: $it")
-                    repository.lagreFeilkøHendelse(
-                        messageId = hendelse.failingMessage.hentMessageId(),
-                        failingMessage = hendelse.failingMessage,
-                        errorMessage = hendelse.errorMessage,
-                        errorType = hendelse.errorType
+        try {
+            val records = consumer.poll(Duration.ofSeconds(10))
+            log.info("Mottok ${records.count()} meldinger fra $dabAktivitetskortFeilTopic")
+            records.forEach { consumerRecord ->
+                consumerRecord.value().let {
+                    class FeilKøHendelse(
+                        val source: String,
+                        val failingMessage: String,
+                        val errorMessage: String,
+                        val errorType: ErrorType
                     )
-                } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
+
+                    val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
+                    if (hendelse.source == "REKRUTTERINGSBISTAND") {
+                        log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
+                        secureLog.error("Feil ved bestilling av aktivitetskort: $it")
+                        log.info("Skal lagre feil ved bestilling av aktivitetskort i databasen")
+
+                        repository.lagreFeilkøHendelse(
+                            messageId = hendelse.failingMessage.hentMessageId(),
+                            failingMessage = hendelse.failingMessage,
+                            errorMessage = hendelse.errorMessage,
+                            errorType = hendelse.errorType
+                        )
+                        log.info("Lagret feil med bestilling av aktivitetskort")
+                    } else log.info("Hendelse med source ${hendelse.source} ignoreres.")
+                }
             }
+        } catch (e: Exception) {
+            log.error("Feil ved kjøring av AktivitetskortFeilJobb: (se securelog)")
+            secureLog.error("Feil ved kjøring av AktivitetskortFeilJobb", e)
+            throw e
         }
     }
     fun sendFeilKøHendelserPåRapid() {
+        log.info("Skal sende usendte feilKøHendelser på rapid")
         repository.hentUsendteFeilkøHendelser().forEach { usendtFeil ->
             usendtFeil.sendTilRapid(rapidPublish)
         }

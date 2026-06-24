@@ -279,6 +279,35 @@ class KiLoggServiceTest {
     }
 
     @Test
+    fun `hardt mellomrom kollapses likt som vanlig mellomrom`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase("A123456").somUuid
+        val loggId = kiLoggRepository.insert(
+            KiLoggInsert(
+                treffId = treffId,
+                feltType = "innlegg",
+                spørringFraFrontend = "Bli med på treffet",
+                spørringFiltrert = "Bli med på treffet",
+                systemprompt = "prompt",
+                ekstraParametreJson = null,
+                bryterRetningslinjer = false,
+                begrunnelse = "OK",
+                kiNavn = "azure-openai",
+                kiVersjon = "2025-01-01",
+                svartidMs = 123
+            )
+        )
+
+        // HTML fra rik-tekst-editoren kan inneholde hardt mellomrom (U+00A0).
+        // Skal ikke kaste exception - hardt mellomrom behandles som vanlig whitespace.
+        kiLoggService.verifiserKiValidering(
+            tekst = "<p>Bli\u00A0med på\u00A0treffet</p>",
+            kiLoggId = loggId.toString(),
+            lagreLikevel = false,
+            feltType = "innlegg"
+        )
+    }
+
+    @Test
     fun `erTekstEndret returnerer true for ulik tekst`() {
         assertThat(kiLoggService.erTekstEndret("Tekst 1", "Tekst 2")).isTrue()
     }
@@ -292,6 +321,46 @@ class KiLoggServiceTest {
     fun `erTekstEndret normaliserer HTML og whitespace`() {
         assertThat(kiLoggService.erTekstEndret("<p>Tekst</p>", "Tekst")).isFalse()
         assertThat(kiLoggService.erTekstEndret("Tekst  med   space", "Tekst med space")).isFalse()
+    }
+
+    @Test
+    fun `normalisering fjerner dash-varianter og tegnsetting`() {
+        // Bindestrek (U+002D), en-dash (U+2013) og em-dash (U+2014) strippes alle bort,
+        // sammen med kolon og mellomrom. Forventet normalisert form: kun tall.
+        assertThat(kiLoggService.erTekstEndret("09:00-09:30", "09000930")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("09:00\u201309:30", "09000930")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("09:00\u201409:30", "09000930")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("09:00\u201309:30", "09:00-09:30")).isFalse()
+    }
+
+    @Test
+    fun `normalisering fjerner linjeskift og carriage return`() {
+        // \n, \r og \r\n behandles likt og forsvinner ved normalisering.
+        assertThat(kiLoggService.erTekstEndret("Linje1\nLinje2", "linje1linje2")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("Linje1\r\nLinje2", "linje1linje2")).isFalse()
+        assertThat(kiLoggService.erTekstEndret("Linje1\r\nLinje2", "Linje1\nLinje2")).isFalse()
+    }
+
+    @Test
+    fun `normalisering beholder kun bokstaver og tall i lowercase`() {
+        // Rar tekst med HTML, hardt mellomrom (U+00A0), smarte anførselstegn,
+        // emoji, dash og blandet store-sma bokstaver -> kun bokstaver og tall, lowercase.
+        val rarTekst = "<p>Hei\u00A0\u201CVerden\u201D! \uD83D\uDE80 \u2013 \u00C6\u00D8\u00C5 123</p>"
+        assertThat(kiLoggService.erTekstEndret(rarTekst, "heiverdenæøå123")).isFalse()
+    }
+
+    @Test
+    fun `normalisering behandler kombinert tegn likt som precomposed`() {
+        // 'å' som ett kodepunkt (U+00E5) vs 'a' + combining ring above (U+0061 U+030A)
+        // skal normaliseres likt via NFC.
+        assertThat(kiLoggService.erTekstEndret("M\u00E5l", "Ma\u030Al")).isFalse()
+    }
+
+    @Test
+    fun `normalisering ser endring i faktiske ord og tall`() {
+        // Sjekken skal fortsatt fange reelle innholdsendringer.
+        assertThat(kiLoggService.erTekstEndret("Tekst 1", "Tekst 2")).isTrue()
+        assertThat(kiLoggService.erTekstEndret("Kontakt Ola", "Kontakt Kari")).isTrue()
     }
 
     @Test

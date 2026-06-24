@@ -197,7 +197,7 @@ class AktivitetskortTest {
         val messageId = invitasjon.messageId
         val rekrutteringstreffId = invitasjon.rekrutteringstreffId
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
             {
               "key": "${UUID.randomUUID()}",
@@ -210,10 +210,14 @@ class AktivitetskortTest {
         """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
         jobb.run()
-        assertThat(listAppender.list).hasSize(3)
+        assertThat(listAppender.list).hasSize(7)
         assertThat(listAppender.list[0].message).contains("Kjører AktivitetskortFeilJobb")
-        assertThat(listAppender.list[1].message).contains("Feil ved bestilling av aktivitetskort: (se securelog)")
-        assertThat(listAppender.list[2].message).contains("Feil ved bestilling av aktivitetskort: $value")
+        assertThat(listAppender.list[1].message).contains("Mottok 1 meldinger fra feil-kø")
+        assertThat(listAppender.list[2].message).contains("Feil ved bestilling av aktivitetskort: (se securelog)")
+        assertThat(listAppender.list[3].message).contains("Feil ved bestilling av aktivitetskort: $value")
+        assertThat(listAppender.list[4].message).contains("Skal lagre feil ved bestilling av aktivitetskort i databasen")
+        assertThat(listAppender.list[5].message).contains("Lagret feil med bestilling av aktivitetskort")
+        assertThat(listAppender.list[6].message).contains("Skal sende usendte feilKøHendelser på rapid")
     }
 
     @Test
@@ -231,7 +235,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
             {
               "key": "$messageId",
@@ -244,9 +248,11 @@ class AktivitetskortTest {
         """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
         jobb.run()
-        assertThat(listAppender.list).hasSize(2)
+        assertThat(listAppender.list).hasSize(4)
         assertThat(listAppender.list[0].message).contains("Kjører AktivitetskortFeilJobb")
-        assertThat(listAppender.list[1].message).contains("Hendelse med source ARENA_TILTAK_AKTIVITET_ACL ignoreres.")
+        assertThat(listAppender.list[1].message).contains("Mottok 1 meldinger fra feil-kø")
+        assertThat(listAppender.list[2].message).contains("Hendelse med source ARENA_TILTAK_AKTIVITET_ACL ignoreres.")
+        assertThat(listAppender.list[3].message).contains("Skal sende usendte feilKøHendelser på rapid")
     }
 
     @Test
@@ -262,7 +268,7 @@ class AktivitetskortTest {
         val errorMessage = "DuplikatMeldingFeil Melding allerede handtert, ignorer"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
 
-        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock()) { _, _ -> }
+        val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø") { _, _ -> }
         val value = """
         {
           "key": "${UUID.randomUUID()}",
@@ -295,7 +301,7 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val messageId = testRepository.hentAlle()[0].messageId
 
-        val jobb = AktivitetskortFeilJobb(repository,consumer, LeaderElectionMock(), {_,_->})
+        val jobb = AktivitetskortFeilJobb(repository,consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
             {
               "key": "$messageId",
@@ -323,7 +329,7 @@ class AktivitetskortTest {
 
         val rapid = TestRapid()
         val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
-        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), rapid::publish).run()
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).run()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
@@ -348,7 +354,7 @@ class AktivitetskortTest {
 
         val rapid = TestRapid()
         val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
-        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), rapid::publish).apply {
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).apply {
             run()
             run()
         }
