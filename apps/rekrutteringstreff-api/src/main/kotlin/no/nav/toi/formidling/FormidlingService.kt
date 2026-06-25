@@ -4,6 +4,7 @@ import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
 import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.exception.JobbsøkerSperretException
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.executeInTransaction
 import no.nav.toi.formidling.dto.FormidlingDto
@@ -140,6 +141,13 @@ class FormidlingService(
             jobbsøkerService.hentJobbsøker(treffId, Fødselsnummer(fnr), inkluderUsynlige = true)
                 ?: throw JobbsøkerIkkeFunnetPåTreffException("Jobbsøker med fødselsnummer $fnr finnes ikke på treffet")
         }
+
+        val sperrede = jobbsøkere.filter { it.sperret }
+        if (sperrede.isNotEmpty()) {
+            logger.warn("Avviser formidling for treff $treffId: ${sperrede.size} jobbsøker(e) har adressebeskyttelse")
+            throw JobbsøkerSperretException("Jobbsøker med adressebeskyttelse kan ikke formidles.")
+        }
+
         return Pair(arbeidsgiver, jobbsøkere)
     }
 

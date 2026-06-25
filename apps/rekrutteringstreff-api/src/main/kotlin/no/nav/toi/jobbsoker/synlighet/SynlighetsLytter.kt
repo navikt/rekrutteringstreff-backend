@@ -23,7 +23,7 @@ import org.slf4j.Logger
  */
 class SynlighetsLytter(
     rapidsConnection: RapidsConnection,
-    private val jobbsøkerService: JobbsøkerService
+    private val jobbsøkerService: JobbsøkerService,
 ) : River.PacketListener {
 
     private val secureLogger: Logger = SecureLog(log)
@@ -33,12 +33,12 @@ class SynlighetsLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireKey("synlighet.erSynlig")
-                it.requireKey("fodselsnummer")
                 it.requireValue("synlighet.ferdigBeregnet", true)
                 // Lytt kun på siste melding i hendelseskjeden for å unngå duplikate oppdateringer
                 it.requireValue("@slutt_av_hendelseskjede", true)
             }
             validate {
+                it.requireKey("fodselsnummer")
                 it.requireKey("@opprettet")
                 it.interestedIn("synlighet")
             }
@@ -49,17 +49,18 @@ class SynlighetsLytter(
         packet: JsonMessage,
         context: MessageContext,
         metadata: MessageMetadata,
-        meterRegistry: MeterRegistry
+        meterRegistry: MeterRegistry,
     ) {
         val fodselsnummer = packet["fodselsnummer"].asText()
         val erSynlig = packet["synlighet"]["erSynlig"].asBoolean()
+        val sperret = packet["synlighet"]["sperret"]?.asBoolean() ?: false
         val opprettetTekst = packet["@opprettet"].asText()
         val meldingTidspunkt = parseOpprettetTidspunktAsInstant(opprettetTekst)
 
-        log.info("Mottok synlighetsmelding fra event-strøm: erSynlig=$erSynlig, tidspunkt=$opprettetTekst")
-        secureLogger.info("Mottok synlighetsmelding for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig")
+        log.info("Mottok synlighetsmelding fra event-strøm: erSynlig=$erSynlig, sperret=$sperret, tidspunkt=$opprettetTekst")
+        secureLogger.info("Mottok synlighetsmelding for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig, sperret=$sperret")
 
-        val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, meldingTidspunkt)
+        val oppdatert = jobbsøkerService.oppdaterSynlighetFraEvent(fodselsnummer, erSynlig, sperret, meldingTidspunkt)
 
         if (oppdatert > 0) {
             log.info("Oppdaterte synlighet i $oppdatert rekrutteringstreff fra event-strøm")

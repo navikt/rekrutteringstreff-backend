@@ -144,7 +144,7 @@ class SynlighetsKomponentTest {
         assertThat(jobbsøkereFør).hasSize(1)
         
         // Simuler at synlighetsmotor sender event om at person er kode 6/7
-        jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, Instant.now())
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, false, Instant.now())
         
         // Jobbsøker skal nå være filtrert ut fra API
         val responseEtter = httpPostSøk(søkPath(treffId))
@@ -168,7 +168,7 @@ class SynlighetsKomponentTest {
         assertThat(jobbsøkereFør).isEmpty()
         
         // Simuler at synlighetsmotor sender event om at person er synlig igjen (f.eks. KVP avsluttet)
-        jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, true, Instant.now())
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, true, false, Instant.now())
         
         // Jobbsøker skal nå være med i API-responsen
         val responseEtter = httpPostSøk(søkPath(treffId))
@@ -194,7 +194,7 @@ class SynlighetsKomponentTest {
         assertThat(mapper.readValue<JobbsøkerSøkRespons>(httpPostSøk(søkPath(treff2)).body()).jobbsøkere).hasSize(1)
         
         // Synlighetsmotor markerer person som ikke-synlig
-        jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, Instant.now())
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr.asString, false, false, Instant.now())
         
         // Begge treff skal nå filtrere ut jobbsøkeren
         assertThat(mapper.readValue<JobbsøkerSøkRespons>(httpPostSøk(søkPath(treff1)).body()).jobbsøkere).isEmpty()
@@ -275,7 +275,7 @@ class SynlighetsKomponentTest {
         jobbsøkerService.markerSlettet(personTreffIder[1], treffId, "A123456")
         
         // Endre synlighet til false for én av dem (simulerer synlighetsmotor-event)
-        jobbsøkerService.oppdaterSynlighetFraEvent(fnr1.asString, false, Instant.now())
+        jobbsøkerService.oppdaterSynlighetFraEvent(fnr1.asString, false, false, Instant.now())
         
         val response = httpPostSøk(søkPath(treffId))
         

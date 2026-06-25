@@ -204,6 +204,18 @@ object ExceptionMapping {
             )
         }
 
+        exception(`JobbsøkerSperretException`::class.java) { e, ctx ->
+            ctx.status(403).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.FORBIDDEN,
+                    ctx = ctx,
+                    feil = e.message,
+                    hint = "Jobbsøkeren har adressebeskyttelse og kan ikke formidles."
+                )
+            )
+        }
+
         exception(KiValideringsException::class.java) { e, ctx ->
             ctx.status(422).json(
                 ProblemDetails.fromThrowable(

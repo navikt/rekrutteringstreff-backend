@@ -159,9 +159,10 @@ class FormidlingRepository(private val dataSource: DataSource) {
                     f.opprettet_tidspunkt,
                     f.stilling_id,
                     f.yrkestittel,
-                    CASE WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
-                    j.fornavn,
-                    j.etternavn,
+                    CASE WHEN j.sperret THEN NULL WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
+                    CASE WHEN j.sperret THEN NULL ELSE j.fornavn END AS fornavn,
+                    CASE WHEN j.sperret THEN NULL ELSE j.etternavn END AS etternavn,
+                    j.sperret,
                     ag.orgnr,
                     ag.orgnavn
                 FROM formidling f
@@ -210,6 +211,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         orgnavn = getString("orgnavn"),
         stillingId = UUID.fromString(getString("stilling_id")),
         yrkestittel = getString("yrkestittel"),
+        sperret = getBoolean("sperret"),
     )
 
     private data class WhereClause(

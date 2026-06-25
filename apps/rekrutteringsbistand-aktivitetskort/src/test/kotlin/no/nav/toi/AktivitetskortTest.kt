@@ -12,6 +12,7 @@ import no.nav.toi.aktivitetskort.AktivitetskortJobb
 import no.nav.toi.aktivitetskort.ErrorType
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
+import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.BeforeEach
@@ -187,7 +188,7 @@ class AktivitetskortTest {
         listAppender.start()
         logger.addAppender(listAppender)
 
-        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
         val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
@@ -195,7 +196,6 @@ class AktivitetskortTest {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val invitasjon = testRepository.hentAlle()[0]
         val messageId = invitasjon.messageId
-        val rekrutteringstreffId = invitasjon.rekrutteringstreffId
 
         val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
@@ -227,7 +227,7 @@ class AktivitetskortTest {
         listAppender.start()
         logger.addAppender(listAppender)
 
-        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
         val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
@@ -257,7 +257,7 @@ class AktivitetskortTest {
 
     @Test
     fun `feil ved bestilling skal lagres i db`() {
-        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
         val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
@@ -294,7 +294,7 @@ class AktivitetskortTest {
 
     @Test
     fun `Urelaterte feil skal ikke lagres i db`() {
-        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
         val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
@@ -328,7 +328,7 @@ class AktivitetskortTest {
         repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
 
         val rapid = TestRapid()
-        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
         AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).run()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
@@ -353,12 +353,99 @@ class AktivitetskortTest {
         repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
 
         val rapid = TestRapid()
-        val consumer = MockConsumer<String, String>(org.apache.kafka.clients.consumer.OffsetResetStrategy.EARLIEST)
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
         AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).apply {
             run()
             run()
         }
         assertThat(rapid.inspektør.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `ved feil midt i en batch skal kun offset for prosesserte meldinger committes`() {
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
+        val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
+        consumer.assign(listOf(topicPartition))
+        consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
+
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val messageId = testRepository.hentAlle()[0].messageId
+
+        val gyldigMelding = """
+            {
+              "key": "${UUID.randomUUID()}",
+              "source": "REKRUTTERINGSBISTAND",
+              "timestamp": "2019-08-24T14:15:22Z",
+              "failingMessage": "{\"messageId\":\"$messageId\"}",
+              "errorMessage": "DuplikatMeldingFeil Melding allerede handtert, ignorer",
+              "errorType": "DUPLIKATMELDINGFEIL"
+            }
+        """.trimIndent()
+        val ugyldigMelding = "{ dette er ikke gyldig json"
+
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), gyldigMelding))
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 1, UUID.randomUUID().toString(), ugyldigMelding))
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 2, UUID.randomUUID().toString(), gyldigMelding))
+
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø") { _, _ -> }.run()
+
+        val committedOffset = consumer.committed(setOf(topicPartition))[topicPartition]?.offset()
+        assertThat(committedOffset).isEqualTo(1L)
+
+        val lagredeFeilmeldinger = testRepository.hentAlle().mapNotNull { it.feil }
+        assertThat(lagredeFeilmeldinger).hasSize(1)
+    }
+
+    @Test
+    fun `ved suksess skal committed offset peke forbi siste prosesserte melding`() {
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
+        val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
+        consumer.assign(listOf(topicPartition))
+        consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
+
+        repository.opprettTestRekrutteringstreffInvitasjon()
+        val messageId = testRepository.hentAlle()[0].messageId
+
+        val gyldigMelding = """
+            {
+              "key": "${UUID.randomUUID()}",
+              "source": "REKRUTTERINGSBISTAND",
+              "timestamp": "2019-08-24T14:15:22Z",
+              "failingMessage": "{\"messageId\":\"$messageId\"}",
+              "errorMessage": "DuplikatMeldingFeil Melding allerede handtert, ignorer",
+              "errorType": "DUPLIKATMELDINGFEIL"
+            }
+        """.trimIndent()
+
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), gyldigMelding))
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 1, UUID.randomUUID().toString(), gyldigMelding))
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 2, UUID.randomUUID().toString(), gyldigMelding))
+
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø") { _, _ -> }.run()
+
+        val committedOffset = consumer.committed(setOf(topicPartition))[topicPartition]?.offset()
+        assertThat(committedOffset).isEqualTo(3L)
+    }
+
+    @Test
+    fun `ved feil på første melding skal offset ikke flyttes forbi den`() {
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
+        val topicPartition = org.apache.kafka.common.TopicPartition("feil-kø", 0)
+        consumer.assign(listOf(topicPartition))
+        consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
+
+        val ugyldigMelding = "{ dette er ikke gyldig json"
+
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), ugyldigMelding))
+        consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 1, UUID.randomUUID().toString(), ugyldigMelding))
+
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø") { _, _ -> }.run()
+
+        val committedOffset = consumer.committed(setOf(topicPartition))[topicPartition]?.offset()
+        assertThat(committedOffset).isEqualTo(0L)
+
+        val lagredeFeilmeldinger = testRepository.hentAlle().mapNotNull { it.feil }
+        assertThat(lagredeFeilmeldinger).isEmpty()
     }
 }
 

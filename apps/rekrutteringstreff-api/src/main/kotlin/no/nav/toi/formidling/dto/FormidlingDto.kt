@@ -91,5 +91,6 @@ data class FormidlingDto(
     val orgnavn: String?,
     val stillingId: UUID,
     val yrkestittel: String?,
+    val sperret: Boolean,
 )
 
