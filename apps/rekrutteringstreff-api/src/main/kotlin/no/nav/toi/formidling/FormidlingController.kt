@@ -265,7 +265,7 @@ from = Array<FormidlingOpprettetDto>::class,
     @OpenApi(
         summary = "Slett en formidling for et rekrutteringstreff",
         description = "Markerer formidlingen som slettet og tilbakestiller jobbsøkerens status fra " +
-            "FÅTT_JOBB til SVART_JA. Krever arbeidsgiverrettet eller jobbsøkerrettet rolle.",
+            "FÅTT_JOBB til statusen den hadde før FÅTT_JOBB. Krever arbeidsgiverrettet eller jobbsøkerrettet rolle.",
         operationId = "slettFormidling",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [
@@ -292,11 +292,8 @@ from = Array<FormidlingOpprettetDto>::class,
         val navIdent = ctx.extractNavIdent()
         val userToken = ctx.authenticatedUser().innkommendeToken()
         logger.info("Sletter formidling $formidlingId for rekrutteringstreff $treffId")
-        if (formidlingService.slett(treffId, formidlingId, navIdent, userToken, eierNavKontorEnhetId)) {
-            ctx.status(204)
-        } else {
-            throw NotFoundResponse("Formidling med id $formidlingId finnes ikke på treffet")
-        }
+        formidlingService.slett(treffId, formidlingId, navIdent, userToken, eierNavKontorEnhetId)
+        ctx.status(200)
     }
 
     private fun Formidling.toOutboundDto() = FormidlingOpprettetDto(

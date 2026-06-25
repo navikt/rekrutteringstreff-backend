@@ -1,5 +1,6 @@
 package no.nav.toi.formidling
 
+import io.javalin.http.NotFoundResponse
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
@@ -224,17 +225,17 @@ class FormidlingService(
         return formidlingRepository.hent(treffId, personTreffId, arbeidsgiverTreffId)
     }
 
-    fun slett(treffId: TreffId, formidlingId: UUID, navIdent: String, userToken: String, eierNavKontorEnhetId: String): Boolean {
-        val formidling = formidlingRepository.hent(treffId, formidlingId) ?: return false
-        return slett(formidling.formidlingId, navIdent, userToken, eierNavKontorEnhetId)
+    fun slett(treffId: TreffId, formidlingId: UUID, navIdent: String, userToken: String, eierNavKontorEnhetId: String) {
+        val formidling = formidlingRepository.hent(treffId, formidlingId) ?: throw NotFoundResponse("Formidling ikke funnet")
+        slett(formidling.formidlingId, navIdent, userToken, eierNavKontorEnhetId)
     }
 
-    fun slett(formidlingId: Long, navIdent: String, userToken: String, eierNavKontorEnhetId: String): Boolean {
-        val formidling = formidlingRepository.hent(formidlingId) ?: return false
+    fun slett(formidlingId: Long, navIdent: String, userToken: String, eierNavKontorEnhetId: String) {
+        val formidling = formidlingRepository.hent(formidlingId) ?: throw NotFoundResponse("Formidling ikke funnet")
 
         sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
 
-        val slettet = dataSource.executeInTransaction { connection ->
+        dataSource.executeInTransaction { connection ->
             val slettet = formidlingRepository.markerSlettet(connection, formidlingId)
             if (slettet) {
                 jobbsøkerService.angreFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
@@ -242,11 +243,7 @@ class FormidlingService(
             } else {
                 logger.info("Formidling $formidlingId var allerede slettet")
             }
-            slettet
         }
-
-
-        return slettet
     }
 
     private fun sendUtfallTilKandidatApi(formidling: Formidling, userToken: String, eierNavKontorEnhetId: String, utfall: KandidatUtfall) {
