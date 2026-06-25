@@ -95,8 +95,24 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun markerSlettet(connection: Connection, formidlingId: Long): Boolean {
+
+    /** Sjekker om en formidling finnes på et gitt treff, uavhengig av om den er markert slettet. */
+    fun finnesPåTreff(treffId: TreffId, id: UUID): Boolean = dataSource.connection.use { conn ->
         val sql = """
+            SELECT 1
+            FROM formidling f
+            JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ? AND f.id = ?
+        """.trimIndent()
+
+        conn.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.setObject(2, id)
+            stmt.executeQuery().use { it.next() }
+        }
+    }
+
+    fun markerSlettet(connection: Connection, formidlingId: Long): Boolean {        val sql = """
             UPDATE formidling
             SET slettet_tidspunkt = now()
             WHERE formidling_id = ? AND slettet_tidspunkt IS NULL

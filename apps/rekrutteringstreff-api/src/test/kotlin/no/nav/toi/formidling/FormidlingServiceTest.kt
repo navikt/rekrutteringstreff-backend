@@ -1,5 +1,6 @@
 package no.nav.toi.formidling
 
+import io.javalin.http.NotFoundResponse
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.exception.JobbsøkerSperretException
@@ -17,6 +18,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatNoException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
@@ -297,21 +299,16 @@ class FormidlingServiceTest {
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
         val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         // Verifiser at formidling finnes
         assertThat(formidlingService.hent(formidlingId)).isNotNull
 
-        val slettet = formidlingService.slett(formidlingId, "testperson", "dummytoken", "1234")
+        formidlingService.slett(treffId, formidlingUuid, "testperson", "dummytoken", "1234")
 
-        assertThat(slettet).isTrue()
         assertThat(formidlingService.hent(formidlingId)).isNull()
     }
 
-    @Test
-    fun `slett formidling returnerer false når formidling ikke finnes`() {
-        val slettet = formidlingService.slett(999999L, "testperson", "dummytoken", "1234")
-        assertThat(slettet).isFalse()
-    }
 
     @Test
     fun `slett formidling via treffId og UUID tilbakestiller jobbsøkerstatus til statusen før FÅTT_JOBB`() {
@@ -333,9 +330,8 @@ class FormidlingServiceTest {
         assertThat(jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }.status)
             .isEqualTo(JobbsøkerStatus.FÅTT_JOBB)
 
-        val slettet = formidlingService.slett(treffId, formidlingUuid, "testperson", "dummytoken", "1234")
+        formidlingService.slett(treffId, formidlingUuid, "testperson", "dummytoken", "1234")
 
-        assertThat(slettet).isTrue()
         assertThat(formidlingService.hent(formidlingId)).isNull()
         // Jobbsøkerstatus tilbakestilles til statusen før FÅTT_JOBB (SVART_JA)
         assertThat(jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }.status)
@@ -360,34 +356,37 @@ class FormidlingServiceTest {
         assertThat(jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }.status)
             .isEqualTo(JobbsøkerStatus.FÅTT_JOBB)
 
-        val slettet = formidlingService.slett(treffId, formidlingUuid, "testperson", "dummytoken", "1234")
+        formidlingService.slett(treffId, formidlingUuid, "testperson", "dummytoken", "1234")
 
-        assertThat(slettet).isTrue()
         assertThat(jobbsøkerService.hentJobbsøkere(treffId).first { it.personTreffId == personTreffId }.status)
             .isEqualTo(JobbsøkerStatus.SVART_NEI)
     }
 
     @Test
-    fun `slett formidling via treffId og UUID returnerer false når formidling ikke finnes på treffet`() {
+    fun `slett formidling via treffId og UUID kaster NotFoundResponse når formidling ikke finnes på treffet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
-        val slettet = formidlingService.slett(treffId, UUID.randomUUID(), "testperson", "dummytoken", "1234")
-        assertThat(slettet).isFalse()
+        assertThatThrownBy {
+            formidlingService.slett(treffId, UUID.randomUUID(), "testperson", "dummytoken", "1234")
+        }.isInstanceOf(NotFoundResponse::class.java)
     }
 
     @Test
-    fun `slett formidling returnerer false for allerede slettet formidling`() {
+    fun `slett formidling via treffId og UUID er idempotent når formidlingen allerede er slettet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
         val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         // Slett første gang
-        val førsteSlett = formidlingService.slett(formidlingId, "testperson", "dummytoken", "1234")
-        assertThat(førsteSlett).isTrue()
+        formidlingService.slett(treffId, formidlingUuid, "testperson", "dummytoken", "1234")
+        assertThat(formidlingService.hent(formidlingId)).isNull()
 
-        // Slett andre gang - skal returnere false
-        val andreSlett = formidlingService.slett(formidlingId, "testperson", "dummytoken", "1234")
-        assertThat(andreSlett).isFalse()
+        // Slett andre gang - skal være et no-op (idempotent), ikke kaste
+        assertThatNoException().isThrownBy {
+            formidlingService.slett(treffId, formidlingUuid, "testperson", "dummytoken", "1234")
+        }
+        assertThat(formidlingService.hent(formidlingId)).isNull()
     }
 
     @Test
@@ -418,7 +417,7 @@ class FormidlingServiceTest {
         assertThat(formidlingService.hent(formidlingId2)).isNotNull
 
         // Slett bare den første
-        formidlingService.slett(formidlingId1, "testperson", "dummytoken", "1234")
+        formidlingService.slett(treffId, formidlingService.hent(formidlingId1)!!.id, "testperson", "dummytoken", "1234")
 
         // Verifiser at bare den ene er slettet
         assertThat(formidlingService.hent(formidlingId1)).isNull()
@@ -431,6 +430,7 @@ class FormidlingServiceTest {
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
         val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         val arbeidsgiverTreffId = arbeidsgiverService.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId
 
@@ -438,7 +438,7 @@ class FormidlingServiceTest {
         assertThat(formidlingService.hent(treffId, personTreffId, arbeidsgiverTreffId)).isNotNull
 
         // Slett
-        formidlingService.slett(formidlingId, "testperson", "dummytoken", "1234")
+        formidlingService.slett(treffId, formidlingUuid, "testperson", "dummytoken", "1234")
 
         // Verifiser at formidling ikke lenger returneres
         assertThat(formidlingService.hent(treffId, personTreffId, arbeidsgiverTreffId)).isNull()

@@ -276,6 +276,30 @@ class FormidlingRepositoryTest {
         assertThat(slettetIgjen).isFalse()
     }
 
+
+    @Test
+    fun `finnesPåTreff returnerer true også for slettet formidling`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
+
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingUuid = repository.hent(formidlingId)!!.id
+
+        assertThat(repository.finnesPåTreff(treffId, formidlingUuid)).isTrue()
+
+        db.dataSource.connection.use { conn ->
+            repository.markerSlettet(conn, formidlingId)
+        }
+
+        assertThat(repository.finnesPåTreff(treffId, formidlingUuid)).isTrue()
+    }
+
+    @Test
+    fun `finnesPåTreff returnerer false når formidling ikke finnes på treffet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        assertThat(repository.finnesPåTreff(treffId, UUID.randomUUID())).isFalse()
+    }
+
     @Test
     fun `slettet formidling vises ikke ved hent med treffId, personTreffId og arbeidsgiverTreffId`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")

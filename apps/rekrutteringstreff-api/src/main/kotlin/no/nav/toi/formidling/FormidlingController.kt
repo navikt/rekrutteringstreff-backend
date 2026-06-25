@@ -3,7 +3,6 @@ package no.nav.toi.formidling
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
-import io.javalin.http.NotFoundResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
@@ -293,7 +292,7 @@ from = Array<FormidlingOpprettetDto>::class,
         val userToken = ctx.authenticatedUser().innkommendeToken()
         logger.info("Sletter formidling $formidlingId for rekrutteringstreff $treffId")
         formidlingService.slett(treffId, formidlingId, navIdent, userToken, eierNavKontorEnhetId)
-        ctx.status(200)
+        ctx.status(204)
     }
 
     private fun Formidling.toOutboundDto() = FormidlingOpprettetDto(

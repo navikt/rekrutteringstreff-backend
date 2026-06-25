@@ -226,22 +226,25 @@ class FormidlingService(
     }
 
     fun slett(treffId: TreffId, formidlingId: UUID, navIdent: String, userToken: String, eierNavKontorEnhetId: String) {
-        val formidling = formidlingRepository.hent(treffId, formidlingId) ?: throw NotFoundResponse("Formidling ikke funnet")
-        slett(formidling.formidlingId, navIdent, userToken, eierNavKontorEnhetId)
-    }
-
-    fun slett(formidlingId: Long, navIdent: String, userToken: String, eierNavKontorEnhetId: String) {
-        val formidling = formidlingRepository.hent(formidlingId) ?: throw NotFoundResponse("Formidling ikke funnet")
+        val formidling = formidlingRepository.hent(treffId, formidlingId)
+        if (formidling == null) {
+            // Idempotent: hvis formidlingen finnes men allerede er slettet, er sletting et no-op.
+            if (formidlingRepository.finnesPåTreff(treffId, formidlingId)) {
+                logger.info("Formidling $formidlingId på treff $treffId var allerede slettet, sletting er et no-op")
+                return
+            }
+            throw NotFoundResponse("Formidling med id $formidlingId finnes ikke på treffet")
+        }
 
         sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
 
         dataSource.executeInTransaction { connection ->
-            val slettet = formidlingRepository.markerSlettet(connection, formidlingId)
+            val slettet = formidlingRepository.markerSlettet(connection, formidling.formidlingId)
             if (slettet) {
                 jobbsøkerService.angreFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
-                logger.info("Markert formidling $formidlingId som slettet og tilbakestilt jobbsøkerstatus til statusen før FÅTT_JOBB")
+                logger.info("Markert formidling ${formidling.formidlingId} som slettet og tilbakestilt jobbsøkerstatus til statusen før FÅTT_JOBB")
             } else {
-                logger.info("Formidling $formidlingId var allerede slettet")
+                logger.info("Formidling ${formidling.formidlingId} var allerede slettet")
             }
         }
     }
