@@ -31,6 +31,8 @@ import no.nav.toi.rekrutteringstreff.opprydning.RekrutteringstreffOpprydningSche
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokController
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokRepository
 import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokService
+import no.nav.toi.statistikk.StatistikkController
+import no.nav.toi.statistikk.StatistikkRepository
 
 @Suppress("MemberVisibilityCanBePrivate")
 class ApplicationContext(val infra: InfrastructureContext = InfrastructureContext()) {
@@ -60,6 +62,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val sokRepository = RekrutteringstreffSokRepository(infra.dataSource)
     val healthRepository = HealthRepository(infra.dataSource)
     val formidlingRepository = FormidlingRepository(infra.dataSource)
+    val statistikkRepository = StatistikkRepository(infra.dataSource)
 
     // Services
     val jobbsøkerService = JobbsøkerService(
@@ -95,6 +98,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val sokController = RekrutteringstreffSokController(sokService)
     val healthController = HealthController(healthRepository)
     val formidlingController = FormidlingController(formidlingService, eierService, infra.modiaKlient)
+    val statistikkController = StatistikkController(statistikkRepository)
 
     // Schedulere (lazy — har sideeffekter ved start, brukes kun i produksjon)
     val jobbsøkerhendelserScheduler by lazy {

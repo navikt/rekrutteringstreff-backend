@@ -112,6 +112,9 @@ class AutentiseringAlleEndepunkterTest {
         OpprettFormidling(Metode.POST, "/api/rekrutteringstreff/{id}/formidling"),
         HentAlleFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/alle"),
         HentEgneFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/egne"),
+
+        // StatistikkController
+        HentFåttJobbStatistikk(Metode.GET, "/api/rekrutteringstreff/statistikk/fatt-jobben"),
     }
 
     private fun url(endepunkt: Endepunkt): String {
