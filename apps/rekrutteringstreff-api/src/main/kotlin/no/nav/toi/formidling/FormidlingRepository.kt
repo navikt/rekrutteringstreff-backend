@@ -112,7 +112,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    fun markerSlettet(connection: Connection, formidlingId: Long): Boolean {        val sql = """
+    fun markerSlettet(connection: Connection, formidlingId: Long): Boolean {
+        val sql = """
             UPDATE formidling
             SET slettet_tidspunkt = now()
             WHERE formidling_id = ? AND slettet_tidspunkt IS NULL
