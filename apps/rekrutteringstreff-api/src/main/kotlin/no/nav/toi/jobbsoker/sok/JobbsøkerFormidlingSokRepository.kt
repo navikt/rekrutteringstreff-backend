@@ -80,6 +80,7 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
     ): List<Condition> = buildList {
         add(Condition("rt.id = ?", SqlParam.Uuid(treffId.somUuid)))
         add(Condition("j.status != 'SLETTET'"))
+        add(Condition("j.sperret = FALSE"))
         byggFritekstFilter(request.fritekst)?.let(::add)
     }
 

@@ -125,6 +125,28 @@ class JobbsøkerFormidlingKomponentTest {
     }
 
     @Test
+    fun `sperret jobbsøker ekskluderes, men usynlig beholdes`() {
+        val eierIdent = "A123456"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        val synlig = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)
+        val usynlig = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null)
+        val sperret = LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), null, null, null)
+        val ider = db.leggTilJobbsøkereMedHendelse(listOf(synlig, usynlig, sperret), treffId)
+
+        db.settSynlighet(ider[1], false)
+        db.settSperret(ider[2], true)
+
+        val response = httpPost(formidlingAllePath(treffId), formidlingBody(), eierIdent)
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.totalt).isEqualTo(2)
+        assertThat(resultat.jobbsøkere.map { it.fødselsnummer })
+            .containsExactlyInAnyOrder("11111111111", "22222222222")
+    }
+
+    @Test
     fun `veileder med jobbsøker-rolle som ikke er eier ser kun egne jobbsøkere`() {
         val eierIdent = "A123456"
         val veilederIdent = "V200002"
