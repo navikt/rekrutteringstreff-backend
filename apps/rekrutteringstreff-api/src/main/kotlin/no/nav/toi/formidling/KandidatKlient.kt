@@ -57,8 +57,10 @@ class KandidatKlient(
             when (response.statusCode()) {
                 200, 201, 204 -> log.info("Utfall ble endret for kandidat på kandidatliste")
                 else -> {
-                    log.error("Utfall kunne ikke endres for kandidat ${response.statusCode()}")
-                    throw KandidatKlientException("Utfall kunne ikke endres for kandidat ${response.statusCode()}")
+                    val msg =
+                        "Utfall kunne ikke endres for kandidat på kandidatlisten ${kandidatlisteId}. StatusKode:  ${response.statusCode()}"
+                    log.error(msg)
+                    throw KandidatKlientException(msg)
                 }
             }
         }
@@ -89,8 +91,10 @@ class KandidatKlient(
                 201 -> log.info("Kandidaten ble lagt til på kandidatliste")
                 409 -> log.info("Kandidaten er allerede lagt til på kandidatlisten")
                 else -> {
-                    log.error("Kandidaten kunne ikke legges til på kandidatliste ${response.statusCode()}")
-                    throw KandidatKlientException("Kandidaten kunne ikke legges til på kandidatliste ${response.statusCode()}")
+                    val msg =
+                        "Kandidaten kunne ikke legges til på kandidatliste ${kandidatlisteId}. StatusKode: ${response.statusCode()}"
+                    log.error(msg)
+                    throw KandidatKlientException(msg)
                 }
             }
         }
