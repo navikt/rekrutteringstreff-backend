@@ -232,7 +232,7 @@ class FormidlingService(
     fun slett(formidlingId: Long, navIdent: String, userToken: String, eierNavKontorEnhetId: String): Boolean {
         val formidling = formidlingRepository.hent(formidlingId) ?: return false
 
-        sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId)
+        sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
 
         val slettet = dataSource.executeInTransaction { connection ->
             val slettet = formidlingRepository.markerSlettet(connection, formidlingId)
@@ -249,7 +249,7 @@ class FormidlingService(
         return slettet
     }
 
-    private fun sendUtfallTilKandidatApi(formidling: Formidling, userToken: String, eierNavKontorEnhetId: String) {
+    private fun sendUtfallTilKandidatApi(formidling: Formidling, userToken: String, eierNavKontorEnhetId: String, utfall: KandidatUtfall) {
         val kandidatlisteId = formidling.kandidatlisteId
         if (kandidatlisteId == null) {
             logger.warn("Formidling ${formidling.formidlingId} mangler kandidatlisteId, kan ikke sende utfall til kandidat-api")
@@ -263,7 +263,7 @@ class FormidlingService(
         kandidatKlient.endreUtfall(
             kandidatlisteId = kandidatlisteId,
             fødselsnummer = fødselsnummer,
-            utfall = KandidatUtfall.FATT_JOBBEN,
+            utfall = utfall,
             navKontorVeileder = eierNavKontorEnhetId,
             userToken = userToken,
         )
