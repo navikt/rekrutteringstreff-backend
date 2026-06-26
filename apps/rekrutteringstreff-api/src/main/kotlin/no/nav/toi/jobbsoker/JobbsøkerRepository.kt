@@ -713,6 +713,26 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
 
     /**
+     * Henter alle hendelsestyper for en jobbsøker i kronologisk rekkefølge (eldst først).
+     * Brukes for å rekonstruere hvilken status jobbsøkeren hadde på et tidligere tidspunkt.
+     */
+    fun hentHendelsestyper(connection: Connection, personTreffId: PersonTreffId): List<JobbsøkerHendelsestype> =
+        connection.prepareStatement(
+            """
+            SELECT jh.hendelsestype
+            FROM jobbsoker_hendelse jh
+            JOIN jobbsoker js ON jh.jobbsoker_id = js.jobbsoker_id
+            WHERE js.id = ?
+            ORDER BY jh.tidspunkt ASC, jh.jobbsoker_hendelse_id ASC
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")) else null }.toList()
+            }
+        }
+
+    /**
      * Sjekker om en jobbsøker er synlig.
      * Returnerer true hvis synlig, false hvis ikke synlig, null hvis jobbsøkeren ikke finnes.
      */

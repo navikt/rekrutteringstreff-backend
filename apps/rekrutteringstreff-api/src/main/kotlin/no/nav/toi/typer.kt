@@ -19,6 +19,7 @@ enum class JobbsøkerHendelsestype {
     TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON,
     MOTTATT_SVAR_FRA_MINSIDE,
     FÅTT_JOBB,
+    ANGRE_FÅTT_JOBB,
 }
 
 enum class ArbeidsgiverHendelsestype {

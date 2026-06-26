@@ -1,5 +1,6 @@
 package no.nav.toi.formidling
 
+import io.javalin.http.NotFoundResponse
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
@@ -224,14 +225,49 @@ class FormidlingService(
         return formidlingRepository.hent(treffId, personTreffId, arbeidsgiverTreffId)
     }
 
-    fun slett(formidlingId: Long): Boolean {
-        val slettet = dataSource.executeInTransaction { connection ->
-            formidlingRepository.markerSlettet(connection, formidlingId)
+    fun slett(treffId: TreffId, formidlingId: UUID, navIdent: String, userToken: String, eierNavKontorEnhetId: String) {
+        val formidling = formidlingRepository.hent(treffId, formidlingId)
+        if (formidling == null) {
+            // Idempotent: hvis formidlingen finnes men allerede er slettet, er sletting et no-op.
+            if (formidlingRepository.finnesPåTreff(treffId, formidlingId)) {
+                logger.info("Formidling $formidlingId på treff $treffId var allerede slettet, sletting er et no-op")
+                return
+            }
+            throw NotFoundResponse("Formidling med id $formidlingId finnes ikke på treffet")
         }
-        if (slettet) {
-            logger.info("Markert formidling $formidlingId som slettet")
+
+        sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
+
+        dataSource.executeInTransaction { connection ->
+            val slettet = formidlingRepository.markerSlettet(connection, formidling.formidlingId)
+            if (slettet) {
+                jobbsøkerService.angreFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
+                logger.info("Markert formidling ${formidling.formidlingId} som slettet og tilbakestilt jobbsøkerstatus til statusen før FÅTT_JOBB")
+            } else {
+                logger.info("Formidling ${formidling.formidlingId} var allerede slettet")
+            }
         }
-        return slettet
+    }
+
+    private fun sendUtfallTilKandidatApi(formidling: Formidling, userToken: String, eierNavKontorEnhetId: String, utfall: KandidatUtfall) {
+        val kandidatlisteId = formidling.kandidatlisteId
+        if (kandidatlisteId == null) {
+            logger.warn("Formidling ${formidling.formidlingId} mangler kandidatlisteId, kan ikke sende utfall til kandidat-api")
+            return
+        }
+        val fødselsnummer = jobbsøkerService.hentFødselsnummer(formidling.jobbsøkerPersonTreffId)
+        if (fødselsnummer == null) {
+            logger.warn("Fant ikke fødselsnummer for formidling ${formidling.formidlingId}, kan ikke sende utfall til kandidat-api")
+            return
+        }
+        kandidatKlient.endreUtfall(
+            kandidatlisteId = kandidatlisteId,
+            fødselsnummer = fødselsnummer,
+            utfall = utfall,
+            navKontorVeileder = eierNavKontorEnhetId,
+            userToken = userToken,
+        )
+        logger.info("Utfall er sendt til kandidat-api for ${formidling.formidlingId}")
     }
 }
 
