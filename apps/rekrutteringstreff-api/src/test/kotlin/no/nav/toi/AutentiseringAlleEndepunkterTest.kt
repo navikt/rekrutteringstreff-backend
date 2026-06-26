@@ -112,6 +112,7 @@ class AutentiseringAlleEndepunkterTest {
         OpprettFormidling(Metode.POST, "/api/rekrutteringstreff/{id}/formidling"),
         HentAlleFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/alle"),
         HentEgneFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/egne"),
+        SlettFormidling(Metode.DELETE, "/api/rekrutteringstreff/{id}/formidling/{formidlingId}"),
     }
 
     private fun url(endepunkt: Endepunkt): String {
@@ -120,6 +121,7 @@ class AutentiseringAlleEndepunkterTest {
             .replace("{treffId}", dummyId)
             .replace("{arbeidsgiverId}", dummyId2)
             .replace("{innleggId}", dummyId2)
+            .replace("{formidlingId}", dummyId2)
             .replace("{jobbsokerid}", dummyId2)
             .replace("{personTreffId}", dummyId2)
             .replace("{navIdent}", "A999999")

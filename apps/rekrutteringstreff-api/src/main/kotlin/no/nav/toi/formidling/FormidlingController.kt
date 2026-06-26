@@ -28,18 +28,22 @@ class FormidlingController(
     companion object {
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
         private const val pathParamTreffId = "id"
+        private const val pathParamFormidlingId = "formidlingId"
         private const val formidlingPath = "$endepunktRekrutteringstreff/{$pathParamTreffId}/formidling"
+        private const val formidlingMedIdPath = "$formidlingPath/{$pathParamFormidlingId}"
         private const val formidlingListeAllePath = "$formidlingPath/liste/alle"
         private const val formidlingListeEgnePath = "$formidlingPath/liste/egne"
         private const val queryParamSortering = "sortering"
         private const val queryParamRetning = "retning"
         private const val queryParamArbeidsgiver = "arbeidsgiver"
+        private const val queryParamEierNavKontorEnhetId = "eierNavKontorEnhetId"
     }
 
     override fun registrer(routes: JavalinDefaultRoutingApi) {
         routes.post(formidlingPath, opprettFormidlingHandler())
         routes.get(formidlingListeAllePath, hentAlleFormidlingerHandler())
         routes.get(formidlingListeEgnePath, hentEgneFormidlingerHandler())
+        routes.delete(formidlingMedIdPath, slettFormidlingHandler())
     }
 
     private val logger = LoggerFactory.getLogger(this::class.java)
@@ -255,6 +259,40 @@ from = Array<FormidlingOpprettetDto>::class,
                 ctx.queryParams(queryParamArbeidsgiver),
             )
         )
+    }
+
+    @OpenApi(
+        summary = "Slett en formidling for et rekrutteringstreff",
+        description = "Markerer formidlingen som slettet og tilbakestiller jobbsøkerens status fra " +
+            "FÅTT_JOBB til statusen den hadde før FÅTT_JOBB. Krever arbeidsgiverrettet eller jobbsøkerrettet rolle.",
+        operationId = "slettFormidling",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [
+            OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, description = "Rekrutteringstreffets unike identifikator (UUID)"),
+            OpenApiParam(name = pathParamFormidlingId, type = UUID::class, required = true, description = "Formidlingens unike identifikator (UUID)"),
+        ],
+        queryParams = [
+            OpenApiParam(name = queryParamEierNavKontorEnhetId, type = String::class, required = true, description = "Enhets-ID for Nav-kontoret som eier formidlingen."),
+        ],
+        responses = [
+            OpenApiResponse(status = "204", description = "Formidlingen er markert som slettet."),
+            OpenApiResponse(status = "400", description = "Mangler påkrevd query-param eierNavKontorEnhetId."),
+            OpenApiResponse(status = "404", description = "Formidlingen finnes ikke på treffet."),
+        ],
+        path = formidlingMedIdPath,
+        methods = [HttpMethod.DELETE]
+    )
+    private fun slettFormidlingHandler(): (Context) -> Unit = { ctx ->
+        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+        val formidlingId = UUID.fromString(ctx.pathParam(pathParamFormidlingId))
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+        val eierNavKontorEnhetId = ctx.queryParam(queryParamEierNavKontorEnhetId)
+            ?: throw BadRequestResponse("Mangler påkrevd query-param $queryParamEierNavKontorEnhetId")
+        val navIdent = ctx.extractNavIdent()
+        val userToken = ctx.authenticatedUser().innkommendeToken()
+        logger.info("Sletter formidling $formidlingId for rekrutteringstreff $treffId")
+        formidlingService.slett(treffId, formidlingId, navIdent, userToken, eierNavKontorEnhetId)
+        ctx.status(204)
     }
 
     private fun Formidling.toOutboundDto() = FormidlingOpprettetDto(
