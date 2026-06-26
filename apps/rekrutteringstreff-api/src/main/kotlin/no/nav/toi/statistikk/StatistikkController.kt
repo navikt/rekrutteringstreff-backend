@@ -33,13 +33,13 @@ class StatistikkController(
         tags = ["statistikk"],
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
-            OpenApiParam(name = queryParamNavKontor, type = String::class, required = true, description = "Nav-kontorets enhetsnummer"),
-            OpenApiParam(name = queryParamFraOgMed, type = String::class, required = true, description = "Fra og med-dato (ISO-8601, f.eks. 2026-06-01)"),
-            OpenApiParam(name = queryParamTilOgMed, type = String::class, required = true, description = "Til og med-dato (ISO-8601, f.eks. 2026-06-30)"),
+            OpenApiParam(name = queryParamNavKontor, type = String::class, required = true, description = "Nav-kontorets enhetsnummer", example = "0318"),
+            OpenApiParam(name = queryParamFraOgMed, type = String::class, required = true, description = "Fra og med-dato (ISO-8601, f.eks. 2026-06-01)", example = "2026-06-01"),
+            OpenApiParam(name = queryParamTilOgMed, type = String::class, required = true, description = "Til og med-dato (ISO-8601, f.eks. 2026-06-30)", example = "2026-06-30"),
         ],
         responses = [OpenApiResponse(
             status = "200",
-            content = [OpenApiContent(from = FåttJobbStatistikk::class)]
+            content = [OpenApiContent(from = FåttJobbStatistikk::class, example = """{"totalt": 12, "under30år": 4, "innsatsgruppeIkkeStandard": 3}""")]
         )],
         path = fåttJobbPath,
         methods = [HttpMethod.GET]
