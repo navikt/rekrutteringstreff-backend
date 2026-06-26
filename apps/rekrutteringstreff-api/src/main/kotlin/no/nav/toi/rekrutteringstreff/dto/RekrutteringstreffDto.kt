@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.dto
 
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import java.time.ZonedDateTime
 import java.util.*
@@ -18,6 +19,7 @@ data class RekrutteringstreffDto(
     val kommunenummer: String?,
     val fylke: String?,
     val fylkesnummer: String?,
+    val kategori: RekrutteringstreffKategori,
     val status: RekrutteringstreffStatus,
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,

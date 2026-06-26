@@ -49,6 +49,7 @@ class RekrutteringstreffRepository(
         private const val id = "id"
         private const val tittel = "tittel"
         private const val beskrivelse = "beskrivelse"
+        private const val kategori = "kategori"
         private const val status = "status"
         private const val opprettetAvPersonNavident = "opprettet_av_person_navident"
         private const val opprettetAvKontorEnhetid = "opprettet_av_kontor_enhetid"
@@ -351,6 +352,7 @@ class RekrutteringstreffRepository(
         kommunenummer = getString(kommunenummer),
         fylke = getString(fylke),
         fylkesnummer = getString(fylkesnummer),
+        kategori = RekrutteringstreffKategori.valueOf(getString(kategori)),
         status = RekrutteringstreffStatus.valueOf(getString(status)),
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
