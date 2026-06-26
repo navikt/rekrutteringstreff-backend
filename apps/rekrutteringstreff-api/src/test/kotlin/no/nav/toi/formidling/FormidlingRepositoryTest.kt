@@ -276,6 +276,30 @@ class FormidlingRepositoryTest {
         assertThat(slettetIgjen).isFalse()
     }
 
+
+    @Test
+    fun `finnesPåTreff returnerer true også for slettet formidling`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
+
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingUuid = repository.hent(formidlingId)!!.id
+
+        assertThat(repository.finnesPåTreff(treffId, formidlingUuid)).isTrue()
+
+        db.dataSource.connection.use { conn ->
+            repository.markerSlettet(conn, formidlingId)
+        }
+
+        assertThat(repository.finnesPåTreff(treffId, formidlingUuid)).isTrue()
+    }
+
+    @Test
+    fun `finnesPåTreff returnerer false når formidling ikke finnes på treffet`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        assertThat(repository.finnesPåTreff(treffId, UUID.randomUUID())).isFalse()
+    }
+
     @Test
     fun `slettet formidling vises ikke ved hent med treffId, personTreffId og arbeidsgiverTreffId`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
@@ -325,6 +349,34 @@ class FormidlingRepositoryTest {
         assertThat(frida.orgnr).isEqualTo("123456789")
         assertThat(frida.orgnavn).isEqualTo("Testbedrift AS")
         assertThat(frida.stillingId).isEqualTo(stillingId)
+    }
+
+    @Test
+    fun `hentAlleForTreff anonymiserer navn og fødselsnummer for sperret jobbsøker`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Testbedrift AS"), emptyList(), null, null, null),
+            treffId, "testperson",
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Frida"), Etternavn("Testberg"), null, null, null),
+            ),
+            treffId, "testperson",
+        )
+        db.settSperret(personTreffIder[0], true)
+        val stillingId = UUID.randomUUID()
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+
+        val linjer = repository.hentAlleForTreff(treffId)
+
+        assertThat(linjer).hasSize(1)
+        val linje = linjer.single()
+        assertThat(linje.sperret).isTrue()
+        assertThat(linje.fødselsnummer).isNull()
+        assertThat(linje.fornavn).isNull()
+        assertThat(linje.etternavn).isNull()
+        assertThat(linje.orgnavn).isEqualTo("Testbedrift AS")
     }
 
     @Test

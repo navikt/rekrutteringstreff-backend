@@ -216,6 +216,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.innsatsgruppe,
                     js.kontornummer,
                     js.status,
+                    js.sperret,
                     rt.id as treff_id
                 FROM jobbsoker js
                 JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
@@ -247,6 +248,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                 js.innsatsgruppe,
                 js.kontornummer,
                 js.status,
+                js.sperret,
                 rt.id as treff_id,
                 COALESCE(
                     json_agg(
@@ -396,6 +398,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         hendelser = parseHendelser(getString("hendelser")),
         alder = nullableInt("alder"),
         innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
+        sperret = getBoolean("sperret"),
     )
 
     private fun ResultSet.toJobbsøkerUtenHendelser() = Jobbsøker(
@@ -410,6 +413,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         status = JobbsøkerStatus.valueOf(getString("status")),
         alder = nullableInt("alder"),
         innsatsgruppe = getString("innsatsgruppe")?.let(::Innsatsgruppe),
+        sperret = getBoolean("sperret"),
     )
 
     private fun ResultSet.toKontor(): Kontor? {
@@ -493,6 +497,7 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
                     js.innsatsgruppe,
                     js.kontornummer,
                     js.status,
+                    js.sperret,
                     rt.id as treff_id,
                     COALESCE(
                         json_agg(
@@ -618,21 +623,24 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     fun oppdaterSynlighetFraEvent(
         fodselsnummer: String,
         erSynlig: Boolean,
+        sperret: Boolean,
         tidspunkt: Instant
     ): Int = dataSource.connection.use { conn ->
-        oppdaterSynlighetFraEvent(conn, fodselsnummer, erSynlig, tidspunkt)
+        oppdaterSynlighetFraEvent(conn, fodselsnummer, erSynlig, sperret, tidspunkt)
     }
 
     fun oppdaterSynlighetFraEvent(
         connection: Connection,
         fodselsnummer: String,
         erSynlig: Boolean,
+        sperret: Boolean,
         tidspunkt: Instant
     ): Int =
         connection.prepareStatement(
             """
             UPDATE jobbsoker
             SET er_synlig = ?,
+                sperret = ?,
                 synlighet_sist_oppdatert = ?,
                 synlighet_kilde = 'EVENT'
             WHERE fodselsnummer = ?
@@ -642,9 +650,10 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             """.trimIndent()
         ).use { stmt ->
             stmt.setBoolean(1, erSynlig)
-            stmt.setTimestamp(2, Timestamp.from(tidspunkt))
-            stmt.setString(3, fodselsnummer)
-            stmt.setTimestamp(4, Timestamp.from(tidspunkt))
+            stmt.setBoolean(2, sperret)
+            stmt.setTimestamp(3, Timestamp.from(tidspunkt))
+            stmt.setString(4, fodselsnummer)
+            stmt.setTimestamp(5, Timestamp.from(tidspunkt))
             stmt.executeUpdate()
         }
 
@@ -655,21 +664,24 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
     fun oppdaterSynlighetFraNeed(
         fodselsnummer: String,
         erSynlig: Boolean,
+        sperret: Boolean,
         tidspunkt: Instant
     ): Int = dataSource.connection.use { conn ->
-        oppdaterSynlighetFraNeed(conn, fodselsnummer, erSynlig, tidspunkt)
+        oppdaterSynlighetFraNeed(conn, fodselsnummer, erSynlig, sperret, tidspunkt)
     }
 
     fun oppdaterSynlighetFraNeed(
         connection: Connection,
         fodselsnummer: String,
         erSynlig: Boolean,
+        sperret: Boolean,
         tidspunkt: Instant
     ): Int =
         connection.prepareStatement(
             """
             UPDATE jobbsoker
             SET er_synlig = ?,
+                sperret = ?,
                 synlighet_sist_oppdatert = ?,
                 synlighet_kilde = 'NEED'
             WHERE fodselsnummer = ?
@@ -677,8 +689,9 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             """.trimIndent()
         ).use { stmt ->
             stmt.setBoolean(1, erSynlig)
-            stmt.setTimestamp(2, Timestamp.from(tidspunkt))
-            stmt.setString(3, fodselsnummer)
+            stmt.setBoolean(2, sperret)
+            stmt.setTimestamp(3, Timestamp.from(tidspunkt))
+            stmt.setString(4, fodselsnummer)
             stmt.executeUpdate()
         }
 
@@ -696,6 +709,26 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             stmt.setObject(1, personTreffId.somUuid)
             stmt.executeQuery().use { rs ->
                 if (rs.next()) JobbsøkerStatus.valueOf(rs.getString("status")) else null
+            }
+        }
+
+    /**
+     * Henter alle hendelsestyper for en jobbsøker i kronologisk rekkefølge (eldst først).
+     * Brukes for å rekonstruere hvilken status jobbsøkeren hadde på et tidligere tidspunkt.
+     */
+    fun hentHendelsestyper(connection: Connection, personTreffId: PersonTreffId): List<JobbsøkerHendelsestype> =
+        connection.prepareStatement(
+            """
+            SELECT jh.hendelsestype
+            FROM jobbsoker_hendelse jh
+            JOIN jobbsoker js ON jh.jobbsoker_id = js.jobbsoker_id
+            WHERE js.id = ?
+            ORDER BY jh.tidspunkt ASC, jh.jobbsoker_hendelse_id ASC
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")) else null }.toList()
             }
         }
 

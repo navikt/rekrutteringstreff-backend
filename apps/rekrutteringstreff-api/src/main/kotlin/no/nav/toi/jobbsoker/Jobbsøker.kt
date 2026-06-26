@@ -108,6 +108,7 @@ data class Jobbsøker(
     val hendelser: List<JobbsøkerHendelse> = emptyList(),
     val alder: Int? = null,
     val innsatsgruppe: Innsatsgruppe? = null,
+    val sperret: Boolean = false,
 ) {
     fun harAktivtSvarJa(): Boolean =
         status == JobbsøkerStatus.SVART_JA

@@ -83,6 +83,35 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun hent(treffId: TreffId, id: UUID): Formidling? = dataSource.connection.use { conn ->
+        val sql = "$HENT_FORMIDLING_BASE WHERE rt.id = ? AND f.id = ? AND f.slettet_tidspunkt IS NULL"
+
+        conn.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.setObject(2, id)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) rs.toFormidling() else null
+            }
+        }
+    }
+
+
+    /** Sjekker om en formidling finnes på et gitt treff, uavhengig av om den er markert slettet. */
+    fun finnesPåTreff(treffId: TreffId, id: UUID): Boolean = dataSource.connection.use { conn ->
+        val sql = """
+            SELECT 1
+            FROM formidling f
+            JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            WHERE rt.id = ? AND f.id = ?
+        """.trimIndent()
+
+        conn.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.setObject(2, id)
+            stmt.executeQuery().use { it.next() }
+        }
+    }
+
     fun markerSlettet(connection: Connection, formidlingId: Long): Boolean {
         val sql = """
             UPDATE formidling
@@ -147,9 +176,10 @@ class FormidlingRepository(private val dataSource: DataSource) {
                     f.opprettet_tidspunkt,
                     f.stilling_id,
                     f.yrkestittel,
-                    CASE WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
-                    j.fornavn,
-                    j.etternavn,
+                    CASE WHEN j.sperret THEN NULL WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
+                    CASE WHEN j.sperret THEN NULL ELSE j.fornavn END AS fornavn,
+                    CASE WHEN j.sperret THEN NULL ELSE j.etternavn END AS etternavn,
+                    j.sperret,
                     ag.orgnr,
                     ag.orgnavn
                 FROM formidling f
@@ -198,6 +228,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         orgnavn = getString("orgnavn"),
         stillingId = UUID.fromString(getString("stilling_id")),
         yrkestittel = getString("yrkestittel"),
+        sperret = getBoolean("sperret"),
     )
 
     private data class WhereClause(

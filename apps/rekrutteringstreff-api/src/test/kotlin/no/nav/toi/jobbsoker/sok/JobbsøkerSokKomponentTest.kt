@@ -91,6 +91,21 @@ class JobbsøkerSokKomponentTest {
         return mapper.writeValueAsString(map)
     }
 
+    private fun søk(treffId: TreffId, vararg felter: Pair<String, Any>): JobbsøkerSøkRespons =
+        mapper.readValue(httpPost(søkPath(treffId), søkBody(*felter)).body())
+
+    private fun jobbsøker(
+        fødselsnummer: String,
+        fornavn: String,
+        etternavn: String,
+        kontor: Kontor? = null,
+        veilederNavn: VeilederNavn? = null,
+        veilederNavIdent: VeilederNavIdent? = null,
+    ) = LeggTilJobbsøker(Fødselsnummer(fødselsnummer), Fornavn(fornavn), Etternavn(etternavn), kontor, veilederNavn, veilederNavIdent)
+
+    private fun leggTilJobbsøkere(treffId: TreffId, vararg jobbsøkere: LeggTilJobbsøker) =
+        db.leggTilJobbsøkereMedHendelse(jobbsøkere.toList(), treffId)
+
     private fun oppdaterLagtTilDato(personTreffId: PersonTreffId, lagtTilDato: Instant) {
         db.dataSource.connection.use { conn ->
             conn.prepareStatement(
@@ -111,9 +126,9 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `søk uten filtre returnerer paginert respons`() {
         val treffId = opprettTreffMedEier()
-        val js1 = LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
-        val js2 = LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
-        db.leggTilJobbsøkereMedHendelse(listOf(js1, js2), treffId)
+        val js1 = jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), VeilederNavn("Veil1"), VeilederNavIdent("NAV001"))
+        val js2 = jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "NAV Bergen"), VeilederNavn("Veil2"), VeilederNavIdent("NAV002"))
+        leggTilJobbsøkere(treffId, js1, js2)
 
         val response = httpPost(søkPath(treffId), søkBody())
         assertThat(response.statusCode()).isEqualTo(200)
@@ -128,14 +143,13 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `fritekst-søk filtrerer på navn`() {
         val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
-        ), treffId)
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann"),
+            jobbsøker("22222222222", "Kari", "Hansen"),
+            jobbsøker("33333333333", "Per", "Olsen"),
+        )
 
-        val response = httpPost(søkPath(treffId), søkBody("fritekst" to "ola"))
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
+        val dto = søk(treffId, "fritekst" to "ola")
 
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.jobbsøkere.first().fornavn).isEqualTo("Ola")
@@ -144,22 +158,18 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `fritekst-søk gjør prefiks-match på fødselsnummer`() {
         val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("10120098765"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("10120012345"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("25060011111"), Fornavn("Per"), Etternavn("Olsen"), null, null, null),
-        ), treffId)
-
-        val delvis = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("fritekst" to "101200")).body()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("10120098765", "Ola", "Nordmann"),
+            jobbsøker("10120012345", "Kari", "Hansen"),
+            jobbsøker("25060011111", "Per", "Olsen"),
         )
+
+        val delvis = søk(treffId, "fritekst" to "101200")
         assertThat(delvis.totalt).isEqualTo(2)
         assertThat(delvis.jobbsøkere.map { it.fødselsnummer })
             .containsExactlyInAnyOrder("10120098765", "10120012345")
 
-        val fullt = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("fritekst" to "10120098765")).body()
-        )
+        val fullt = søk(treffId, "fritekst" to "10120098765")
         assertThat(fullt.totalt).isEqualTo(1)
         assertThat(fullt.jobbsøkere.single().fødselsnummer).isEqualTo("10120098765")
     }
@@ -167,31 +177,13 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `fritekst-søk filtrerer kun på navn`() {
         val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(
-                Fødselsnummer("11111111111"),
-                Fornavn("Ola"),
-                Etternavn("Nordmann"),
-                Kontor(kontornummer = "1000", kontornavn = "KontorAlpha"),
-                VeilederNavn("Vera Veileder"),
-                VeilederNavIdent("NAV001"),
-            ),
-            LeggTilJobbsøker(
-                Fødselsnummer("22222222222"),
-                Fornavn("Kari"),
-                Etternavn("Hansen"),
-                Kontor(kontornummer = "1000", kontornavn = "KontorBeta"),
-                VeilederNavn("Per Person"),
-                VeilederNavIdent("NAV002"),
-            ),
-        ), treffId)
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "KontorAlpha"), VeilederNavn("Vera Veileder"), VeilederNavIdent("NAV001")),
+            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "KontorBeta"), VeilederNavn("Per Person"), VeilederNavIdent("NAV002")),
+        )
 
-        val kontorTreff = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("fritekst" to "alpha")).body()
-        )
-        val veilederTreff = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("fritekst" to "nav002")).body()
-        )
+        val kontorTreff = søk(treffId, "fritekst" to "alpha")
+        val veilederTreff = søk(treffId, "fritekst" to "nav002")
 
         assertThat(kontorTreff.jobbsøkere).isEmpty()
         assertThat(veilederTreff.jobbsøkere).isEmpty()
@@ -200,14 +192,13 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `statusfilter returnerer kun jobbsøkere med gitt status`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann"),
+            jobbsøker("22222222222", "Kari", "Hansen"),
+        )
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
-        val response = httpPost(søkPath(treffId), søkBody("status" to listOf("INVITERT")))
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
+        val dto = søk(treffId, "status" to listOf("INVITERT"))
 
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.jobbsøkere.first().status).isEqualTo(JobbsøkerStatus.INVITERT)
@@ -216,15 +207,14 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `kombinerte filtre fungerer sammen`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"), null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), Kontor(kontornummer = "1000", kontornavn = "Nav Bergen"), null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("Olsen"), Kontor(kontornummer = "1000", kontornavn = "Nav Oslo"), null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+            jobbsøker("22222222222", "Kari", "Hansen", Kontor(kontornummer = "1000", kontornavn = "Nav Bergen")),
+            jobbsøker("33333333333", "Per", "Olsen", Kontor(kontornummer = "1000", kontornavn = "Nav Oslo")),
+        )
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
-        val response = httpPost(søkPath(treffId), søkBody("status" to listOf("INVITERT")))
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(response.body())
+        val dto = søk(treffId, "status" to listOf("INVITERT"))
 
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.jobbsøkere.first().fornavn).isEqualTo("Ola")
@@ -234,25 +224,19 @@ class JobbsøkerSokKomponentTest {
     fun `paginering fungerer korrekt`() {
         val treffId = opprettTreffMedEier()
         val jobbsøkere = (1..5).map { i ->
-            LeggTilJobbsøker(Fødselsnummer("${i}1111111111".take(11)), Fornavn("Person$i"), Etternavn("Etternavn$i"), null, null, null)
+            jobbsøker("${i}1111111111".take(11), "Person$i", "Etternavn$i")
         }
-        db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId)
+        leggTilJobbsøkere(treffId, *jobbsøkere.toTypedArray())
 
-        val side1 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("side" to 1, "antallPerSide" to 2)).body()
-        )
+        val side1 = søk(treffId, "side" to 1, "antallPerSide" to 2)
         assertThat(side1.totalt).isEqualTo(5)
         assertThat(side1.side).isEqualTo(1)
         assertThat(side1.jobbsøkere).hasSize(2)
 
-        val side2 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("side" to 2, "antallPerSide" to 2)).body()
-        )
+        val side2 = søk(treffId, "side" to 2, "antallPerSide" to 2)
         assertThat(side2.jobbsøkere).hasSize(2)
 
-        val side3 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("side" to 3, "antallPerSide" to 2)).body()
-        )
+        val side3 = søk(treffId, "side" to 3, "antallPerSide" to 2)
         assertThat(side3.jobbsøkere).hasSize(1)
     }
 
@@ -260,13 +244,11 @@ class JobbsøkerSokKomponentTest {
     fun `ugyldig høy side clampes til siste gyldige side`() {
         val treffId = opprettTreffMedEier()
         val jobbsøkere = (1..5).map { i ->
-            LeggTilJobbsøker(Fødselsnummer("${i}2222222222".take(11)), Fornavn("Person$i"), Etternavn("Etternavn$i"), null, null, null)
+            jobbsøker("${i}2222222222".take(11), "Person$i", "Etternavn$i")
         }
-        db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId)
+        leggTilJobbsøkere(treffId, *jobbsøkere.toTypedArray())
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("side" to 4, "antallPerSide" to 2)).body()
-        )
+        val dto = søk(treffId, "side" to 4, "antallPerSide" to 2)
 
         assertThat(dto.totalt).isEqualTo(5)
         assertThat(dto.side).isEqualTo(3)
@@ -277,25 +259,16 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `ugyldig høy side clampes etter at skjulte og slettede er filtrert bort`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
-            (1..5).map { i ->
-                LeggTilJobbsøker(
-                    Fødselsnummer("${i}3333333333".take(11)),
-                    Fornavn("Person$i"),
-                    Etternavn("Etternavn$i"),
-                    null,
-                    null,
-                    null,
-                )
-            },
+        val personTreffIder = leggTilJobbsøkere(
             treffId,
+            *((1..5).map { i ->
+                jobbsøker("${i}3333333333".take(11), "Person$i", "Etternavn$i")
+            }).toTypedArray(),
         )
         db.settSynlighet(personTreffIder[3], false)
         db.settJobbsøkerStatus(personTreffIder[4], JobbsøkerStatus.SLETTET)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("side" to 3, "antallPerSide" to 2)).body()
-        )
+        val dto = søk(treffId, "side" to 3, "antallPerSide" to 2)
 
         assertThat(dto.totalt).isEqualTo(3)
         assertThat(dto.antallSkjulte).isEqualTo(1)
@@ -305,17 +278,38 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
+    fun `sperret og slettet jobbsøker telles som slettet, ikke som skjult`() {
+        val treffId = opprettTreffMedEier()
+        val personTreffIder = leggTilJobbsøkere(
+            treffId,
+            *((1..3).map { i ->
+                jobbsøker("${i}3333333333".take(11), "Person$i", "Etternavn$i")
+            }).toTypedArray(),
+        )
+        db.settSperret(personTreffIder[1], true)
+        db.settSynlighet(personTreffIder[1], false)
+        db.settSperret(personTreffIder[2], true)
+        db.settSynlighet(personTreffIder[2], false)
+        db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
+
+        val dto = søk(treffId)
+
+        assertThat(dto.totalt).isEqualTo(1)
+        assertThat(dto.antallSkjulte).isEqualTo(1)
+        assertThat(dto.antallSlettede).isEqualTo(1)
+        assertThat(dto.jobbsøkere.map { it.fødselsnummer }).containsExactly("13333333333")
+    }
+
+    @Test
     fun `sortering på navn gir alfabetisk rekkefølge`() {
         val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Charlie"), Etternavn("C"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Alice"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Bob"), Etternavn("B"), null, null, null),
-        ), treffId)
-
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "navn")).body()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Charlie", "C"),
+            jobbsøker("22222222222", "Alice", "A"),
+            jobbsøker("33333333333", "Bob", "B"),
         )
+
+        val dto = søk(treffId, "sortering" to "navn")
 
         assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
     }
@@ -323,15 +317,13 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `sortering på navn støtter synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Charlie"), Etternavn("C"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Alice"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Bob"), Etternavn("B"), null, null, null),
-        ), treffId)
-
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "navn", "retning" to "desc")).body()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Charlie", "C"),
+            jobbsøker("22222222222", "Alice", "A"),
+            jobbsøker("33333333333", "Bob", "B"),
         )
+
+        val dto = søk(treffId, "sortering" to "navn", "retning" to "desc")
 
         assertThat(dto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
     }
@@ -339,22 +331,18 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `sortering på lagt til støtter stigende og synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Charlie"), Etternavn("C"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Alice"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Bob"), Etternavn("B"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Charlie", "C"),
+            jobbsøker("22222222222", "Alice", "A"),
+            jobbsøker("33333333333", "Bob", "B"),
+        )
 
         oppdaterLagtTilDato(personTreffIder[0], Instant.parse("2026-03-01T12:00:00Z"))
         oppdaterLagtTilDato(personTreffIder[1], Instant.parse("2026-01-01T12:00:00Z"))
         oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-02-01T12:00:00Z"))
 
-        val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "lagt-til", "retning" to "asc")).body()
-        )
-        val synkendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "lagt-til", "retning" to "desc")).body()
-        )
+        val stigendeDto = søk(treffId, "sortering" to "lagt-til", "retning" to "asc")
+        val synkendeDto = søk(treffId, "sortering" to "lagt-til", "retning" to "desc")
 
         assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
         assertThat(synkendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
@@ -363,22 +351,18 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `sortering på lagt til bruker klokkeslett innenfor samme dato`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Charlie"), Etternavn("C"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("55555555555"), Fornavn("Alice"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("66666666666"), Fornavn("Bob"), Etternavn("B"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("44444444444", "Charlie", "C"),
+            jobbsøker("55555555555", "Alice", "A"),
+            jobbsøker("66666666666", "Bob", "B"),
+        )
 
         oppdaterLagtTilDato(personTreffIder[0], Instant.parse("2026-03-01T12:00:03Z"))
         oppdaterLagtTilDato(personTreffIder[1], Instant.parse("2026-03-01T12:00:01Z"))
         oppdaterLagtTilDato(personTreffIder[2], Instant.parse("2026-03-01T12:00:02Z"))
 
-        val stigendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "lagt-til", "retning" to "asc")).body()
-        )
-        val synkendeDto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "lagt-til", "retning" to "desc")).body()
-        )
+        val stigendeDto = søk(treffId, "sortering" to "lagt-til", "retning" to "asc")
+        val synkendeDto = søk(treffId, "sortering" to "lagt-til", "retning" to "desc")
 
         assertThat(stigendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Bob", "Charlie")
         assertThat(synkendeDto.jobbsøkere.map { it.fornavn }).containsExactly("Charlie", "Bob", "Alice")
@@ -387,19 +371,17 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `sortering på status støtter stigende rekkefølge`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("77777777771"), Fornavn("LagtTil"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("77777777772"), Fornavn("Invitert"), Etternavn("B"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("77777777773"), Fornavn("SvartNei"), Etternavn("C"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("77777777774"), Fornavn("SvartJa"), Etternavn("D"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("77777777771", "LagtTil", "A"),
+            jobbsøker("77777777772", "Invitert", "B"),
+            jobbsøker("77777777773", "SvartNei", "C"),
+            jobbsøker("77777777774", "SvartJa", "D"),
+        )
         db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2], personTreffIder[3]), treffId)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_NEI)
         db.settJobbsøkerStatus(personTreffIder[3], JobbsøkerStatus.SVART_JA)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "status", "retning" to "asc")).body()
-        )
+        val dto = søk(treffId, "sortering" to "status", "retning" to "asc")
 
         assertThat(dto.jobbsøkere.map { it.status }).containsExactly(
             JobbsøkerStatus.SVART_JA,
@@ -412,19 +394,17 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `sortering på status støtter synkende rekkefølge`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("77777777781"), Fornavn("LagtTil"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("77777777782"), Fornavn("Invitert"), Etternavn("B"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("77777777783"), Fornavn("SvartNei"), Etternavn("C"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("77777777784"), Fornavn("SvartJa"), Etternavn("D"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("77777777781", "LagtTil", "A"),
+            jobbsøker("77777777782", "Invitert", "B"),
+            jobbsøker("77777777783", "SvartNei", "C"),
+            jobbsøker("77777777784", "SvartJa", "D"),
+        )
         db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2], personTreffIder[3]), treffId)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_NEI)
         db.settJobbsøkerStatus(personTreffIder[3], JobbsøkerStatus.SVART_JA)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "status", "retning" to "desc")).body()
-        )
+        val dto = søk(treffId, "sortering" to "status", "retning" to "desc")
 
         assertThat(dto.jobbsøkere.map { it.status }).containsExactly(
             JobbsøkerStatus.LAGT_TIL,
@@ -438,9 +418,7 @@ class JobbsøkerSokKomponentTest {
     fun `tomt resultatsett returnerer tom liste og totalt 0`() {
         val treffId = opprettTreffMedEier()
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("fritekst" to "finnesikke")).body()
-        )
+        val dto = søk(treffId, "fritekst" to "finnesikke")
 
         assertThat(dto.totalt).isEqualTo(0)
         assertThat(dto.jobbsøkere).isEmpty()
@@ -449,14 +427,12 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `fritekst-søk med fødselsnummer returnerer treff`() {
         val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), Kontor(kontornummer = "1000", kontornavn = "NAV Oslo"), null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
-        ), treffId)
-
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("fritekst" to "11111111111")).body()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann", Kontor(kontornummer = "1000", kontornavn = "NAV Oslo")),
+            jobbsøker("22222222222", "Kari", "Hansen"),
         )
+
+        val dto = søk(treffId, "fritekst" to "11111111111")
 
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.jobbsøkere.first().fødselsnummer).isEqualTo("11111111111")
@@ -467,9 +443,7 @@ class JobbsøkerSokKomponentTest {
     fun `fritekst-søk med ukjent fødselsnummer returnerer tomt resultat`() {
         val treffId = opprettTreffMedEier()
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("fritekst" to "99999999999")).body()
-        )
+        val dto = søk(treffId, "fritekst" to "99999999999")
 
         assertThat(dto.totalt).isEqualTo(0)
         assertThat(dto.jobbsøkere).isEmpty()
@@ -487,15 +461,13 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `slettede jobbsøkere ekskluderes fra søkeresultat`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Aktiv"), Etternavn("Person"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Slettet"), Etternavn("Person"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aktiv", "Person"),
+            jobbsøker("22222222222", "Slettet", "Person"),
+        )
         db.settJobbsøkerStatus(personTreffIder[1], JobbsøkerStatus.SLETTET)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
-        )
+        val dto = søk(treffId)
 
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.jobbsøkere.first().fornavn).isEqualTo("Aktiv")
@@ -504,15 +476,13 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `ikke-synlige jobbsøkere ekskluderes fra søkeresultat`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("Person"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Skjult"), Etternavn("Person"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Synlig", "Person"),
+            jobbsøker("22222222222", "Skjult", "Person"),
+        )
         db.settSynlighet(personTreffIder[1], false)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
-        )
+        val dto = søk(treffId)
 
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.jobbsøkere.first().fornavn).isEqualTo("Synlig")
@@ -529,9 +499,9 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `manglende side og antallPerSide bruker standard paginering`() {
         val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-        ), treffId)
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann"),
+        )
 
         val response = httpPost(søkPath(treffId), søkBody())
 
@@ -547,22 +517,18 @@ class JobbsøkerSokKomponentTest {
         val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "AnnetTreff")
         ctx.eierRepository.leggTil(treff2, listOf("A123456"))
 
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Treff1Person"), Etternavn("A"), null, null, null),
-        ), treff1)
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Treff2Person"), Etternavn("B"), null, null, null),
-        ), treff2)
-
-        val dto1 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treff1), søkBody()).body()
+        leggTilJobbsøkere(treff1,
+            jobbsøker("11111111111", "Treff1Person", "A"),
         )
+        leggTilJobbsøkere(treff2,
+            jobbsøker("22222222222", "Treff2Person", "B"),
+        )
+
+        val dto1 = søk(treff1)
         assertThat(dto1.totalt).isEqualTo(1)
         assertThat(dto1.jobbsøkere.first().fornavn).isEqualTo("Treff1Person")
 
-        val dto2 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treff2), søkBody()).body()
-        )
+        val dto2 = søk(treff2)
         assertThat(dto2.totalt).isEqualTo(1)
         assertThat(dto2.jobbsøkere.first().fornavn).isEqualTo("Treff2Person")
     }
@@ -570,13 +536,11 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `søk fungerer med null-felter på eldre data`() {
         val treffId = opprettTreffMedEier()
-        db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Uten"), Etternavn("Data"), null, null, null),
-        ), treffId)
-
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Uten", "Data"),
         )
+
+        val dto = søk(treffId)
 
         assertThat(dto.totalt).isEqualTo(1)
     }
@@ -584,16 +548,14 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `søk inkluderer minsideHendelser for jobbsøkere med MOTTATT_SVAR_FRA_MINSIDE`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Med"), Etternavn("Hendelse"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Uten"), Etternavn("Hendelse"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Med", "Hendelse"),
+            jobbsøker("22222222222", "Uten", "Hendelse"),
+        )
 
         db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("sortering" to "navn")).body()
-        )
+        val dto = søk(treffId, "sortering" to "navn")
 
         assertThat(dto.jobbsøkere).hasSize(2)
         val medHendelse = dto.jobbsøkere.first { it.fornavn == "Med" }
@@ -608,16 +570,14 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `søk inkluderer flere minsideHendelser per jobbsøker`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann"),
+        )
 
         db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT"}""")
         db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v2","eksternKanal":null,"eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
-        )
+        val dto = søk(treffId)
 
         assertThat(dto.jobbsøkere).hasSize(1)
         assertThat(dto.jobbsøkere.first().minsideHendelser).hasSize(2)
@@ -626,16 +586,14 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `minsideHendelser inkluderer hendelseData som json`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann"),
+        )
 
         val hendelseJson = """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT","minsideStatus":"OPPRETTET","eksternFeilmelding":null}"""
         db.leggTilMinsideHendelse(personTreffIder[0], hendelseJson)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
-        )
+        val dto = søk(treffId)
 
         val hendelse = dto.jobbsøkere.first().minsideHendelser.first()
         val hendelseDataNode = mapper.readTree(mapper.writeValueAsString(hendelse)).get("hendelseData")
@@ -647,14 +605,12 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `minsideHendelser returneres ikke for andre hendelsetyper`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann"),
+        )
         db.inviterJobbsøkere(listOf(personTreffIder[0]), treffId)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
-        )
+        val dto = søk(treffId)
 
         assertThat(dto.jobbsøkere.first().minsideHendelser).isEmpty()
     }
@@ -663,21 +619,17 @@ class JobbsøkerSokKomponentTest {
     fun `minsideHendelser isoleres per treff ved paginering`() {
         val treffId = opprettTreffMedEier()
         val jobbsøkere = (1..3).map { i ->
-            LeggTilJobbsøker(Fødselsnummer("${i}1111111111".take(11)), Fornavn("Person$i"), Etternavn("Etternavn$i"), null, null, null)
+            jobbsøker("${i}1111111111".take(11), "Person$i", "Etternavn$i")
         }
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(jobbsøkere, treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId, *jobbsøkere.toTypedArray())
 
         db.leggTilMinsideHendelse(personTreffIder[0], """{"varselId":"v1","eksternKanal":"SMS","eksternStatus":"SENDT"}""")
         db.leggTilMinsideHendelse(personTreffIder[2], """{"varselId":"v2","eksternKanal":null,"eksternStatus":"SENDT","minsideStatus":"OPPRETTET"}""")
 
-        val side1 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("side" to 1, "antallPerSide" to 2, "sortering" to "navn")).body()
-        )
+        val side1 = søk(treffId, "side" to 1, "antallPerSide" to 2, "sortering" to "navn")
         assertThat(side1.jobbsøkere).hasSize(2)
 
-        val side2 = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("side" to 2, "antallPerSide" to 2, "sortering" to "navn")).body()
-        )
+        val side2 = søk(treffId, "side" to 2, "antallPerSide" to 2, "sortering" to "navn")
         assertThat(side2.jobbsøkere).hasSize(1)
 
         val alleMedHendelser = (side1.jobbsøkere + side2.jobbsøkere).filter { it.minsideHendelser.isNotEmpty() }
@@ -687,18 +639,16 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `antallPerStatus returnerer riktige tall for alle statuser`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("B"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("C"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("44444444444"), Fornavn("Lise"), Etternavn("D"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "A"),
+            jobbsøker("22222222222", "Kari", "B"),
+            jobbsøker("33333333333", "Per", "C"),
+            jobbsøker("44444444444", "Lise", "D"),
+        )
         db.inviterJobbsøkere(listOf(personTreffIder[1], personTreffIder[2]), treffId)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SVART_JA)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
-        )
+        val dto = søk(treffId)
 
         assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(2)
         assertThat(dto.antallPerStatus[JobbsøkerStatus.INVITERT]).isEqualTo(1)
@@ -709,16 +659,14 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `antallPerStatus er ufiltrert selv med statusfilter aktivt`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("B"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Per"), Etternavn("C"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "A"),
+            jobbsøker("22222222222", "Kari", "B"),
+            jobbsøker("33333333333", "Per", "C"),
+        )
         db.inviterJobbsøkere(listOf(personTreffIder[1]), treffId)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("status" to listOf("INVITERT"))).body()
-        )
+        val dto = søk(treffId, "status" to listOf("INVITERT"))
 
         assertThat(dto.totalt).isEqualTo(1)
         assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(2)
@@ -728,17 +676,15 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `antallPerStatus ekskluderer skjulte og slettede jobbsøkere`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Synlig"), Etternavn("A"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Skjult"), Etternavn("B"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Slettet"), Etternavn("C"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Synlig", "A"),
+            jobbsøker("22222222222", "Skjult", "B"),
+            jobbsøker("33333333333", "Slettet", "C"),
+        )
         db.settSynlighet(personTreffIder[1], false)
         db.settJobbsøkerStatus(personTreffIder[2], JobbsøkerStatus.SLETTET)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
-        )
+        val dto = søk(treffId)
 
         assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(1)
         assertThat(dto.antallPerStatus[JobbsøkerStatus.SLETTET]).isNull()
@@ -747,16 +693,14 @@ class JobbsøkerSokKomponentTest {
     @Test
     fun `antallPerStatus filtreres av fritekst men ikke av statusfilter`() {
         val treffId = opprettTreffMedEier()
-        val personTreffIder = db.leggTilJobbsøkereMedHendelse(listOf(
-            LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Kari"), Etternavn("Hansen"), null, null, null),
-            LeggTilJobbsøker(Fødselsnummer("33333333333"), Fornavn("Ola"), Etternavn("Hansen"), null, null, null),
-        ), treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Ola", "Nordmann"),
+            jobbsøker("22222222222", "Kari", "Hansen"),
+            jobbsøker("33333333333", "Ola", "Hansen"),
+        )
         db.inviterJobbsøkere(listOf(personTreffIder[2]), treffId)
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody("fritekst" to "ola")).body()
-        )
+        val dto = søk(treffId, "fritekst" to "ola")
 
         assertThat(dto.totalt).isEqualTo(2)
         assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(1)
@@ -767,14 +711,12 @@ class JobbsøkerSokKomponentTest {
     fun `jobbsøkersøk returnerer null lagtTilAvNavn for eldre opprettet-hendelser uten navn`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(
-            listOf(LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            listOf(jobbsøker("11111111111", "Ola", "Nordmann")),
             treffId,
             opprettetAv = "Z123456",
         )
 
-        val dto = mapper.readValue<JobbsøkerSøkRespons>(
-            httpPost(søkPath(treffId), søkBody()).body()
-        )
+        val dto = søk(treffId)
 
         assertThat(dto.jobbsøkere).hasSize(1)
         assertThat(dto.jobbsøkere.single().lagtTilAv).isEqualTo("Z123456")
