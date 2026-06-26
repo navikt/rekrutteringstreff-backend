@@ -12,7 +12,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
 class StatistikkController(
-    private val statistikkRepository: StatistikkRepository,
+    private val statistikkService: StatistikkService,
 ) : RuteRegistrerer {
     companion object {
         private const val fåttJobbPath = "/api/rekrutteringstreff/statistikk/fatt-jobben"
@@ -58,7 +58,7 @@ class StatistikkController(
         }
 
         logger.info("Henter fått-jobb-statistikk for kontor $navKontor i perioden $fraOgMed - $tilOgMed")
-        ctx.json(statistikkRepository.hentFåttJobbStatistikk(navKontor, fraOgMed, tilOgMed))
+        ctx.json(statistikkService.hentFåttJobbStatistikk(navKontor, fraOgMed, tilOgMed))
     }
 
     private fun String?.parseDato(parameterNavn: String): LocalDate {
