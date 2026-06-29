@@ -99,7 +99,7 @@ class StatistikkKomponentTest {
     }
 
     @Test
-    fun `henter fått-jobb-statistikk for kontor i periode`() {
+    fun `arbeidsgiverrettet rolle henter fått-jobb-statistikk for kontor i periode`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
 
@@ -113,7 +113,12 @@ class StatistikkKomponentTest {
         opprettSendtFormidling(treffId, eldreStandard.personTreffId, arbeidsgiverTreffId, iPerioden)
         opprettSendtFormidling(treffId, annetKontor.personTreffId, arbeidsgiverTreffId, iPerioden)
 
-        val response = hentStatistikk(navKontor = "1000", fraOgMed = "2026-06-01", tilOgMed = "2026-06-30")
+        val response = hentStatistikk(
+            navKontor = "1000",
+            fraOgMed = "2026-06-01",
+            tilOgMed = "2026-06-30",
+            groups = listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
 
         assertThat(response.statusCode()).isEqualTo(200)
         val statistikk = mapper.readValue<FåttJobbStatistikk>(response.body())
@@ -149,6 +154,17 @@ class StatistikkKomponentTest {
     fun `tilOgMed før fraOgMed gir 400`() {
         val response = hentStatistikk(navKontor = "1000", fraOgMed = "2026-06-30", tilOgMed = "2026-06-01")
         assertThat(response.statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `uten godkjent rolle gir 403`() {
+        val response = hentStatistikk(
+            navKontor = "1000",
+            fraOgMed = "2026-06-01",
+            tilOgMed = "2026-06-30",
+            groups = listOf(UUID.randomUUID()),
+        )
+        assertThat(response.statusCode()).isEqualTo(403)
     }
 
     private fun hentStatistikk(
