@@ -95,7 +95,8 @@ class StatistikkRepositoryTest {
 
         val iPerioden = ZonedDateTime.of(2026, 6, 15, 12, 0, 0, 0, OSLO)
         val slettetId = opprettSendtFormidling(treffId, slettet.personTreffId, arbeidsgiverTreffId, iPerioden)
-        db.dataSource.connection.use { formidlingRepository.markerSlettet(it, slettetId) }
+        val erMarkertSlettet = db.dataSource.connection.use { formidlingRepository.markerSlettet(it, slettetId) }
+        assertThat(erMarkertSlettet).isTrue
         opprettFormidling(treffId, utenUtfall.personTreffId, arbeidsgiverTreffId, utfallSendtTidspunkt = null)
         opprettSendtFormidling(treffId, gyldig.personTreffId, arbeidsgiverTreffId, iPerioden)
 
