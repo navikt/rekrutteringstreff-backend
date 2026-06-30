@@ -121,8 +121,7 @@ class ArbeidsgiverRepositoryTest {
         assertThat(hendelser.any { it.hendelsestype == ArbeidsgiverHendelsestype.SLETTET }).isTrue()
 
         val arbeidsgiverSomErSlettet = repository.hentArbeidsgiver(treffId, input.orgnr)
-        assertThat(arbeidsgiverSomErSlettet).isNotNull()
-        assertThat(arbeidsgiverSomErSlettet?.status).isEqualTo(ArbeidsgiverStatus.SLETTET)
+        assertThat(arbeidsgiverSomErSlettet).isNull()
     }
 
     @Test
