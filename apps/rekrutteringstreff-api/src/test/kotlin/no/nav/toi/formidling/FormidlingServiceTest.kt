@@ -208,6 +208,11 @@ class FormidlingServiceTest {
         // Yrkestittel fra opprettelsen er lagret og returneres i listen
         val linjer = formidlingService.hentAlleFormidlingerForTreff(treffId)
         assertThat(linjer.single().yrkestittel).isEqualTo("Utvikler (dataspill)")
+
+        // Kontornummer og kontornavn fra opprettelsen er lagret på formidlingen
+        val (kontornummer, kontornavn) = db.hentFormidlingKontor(treffId)
+        assertThat(kontornummer).isEqualTo("1234")
+        assertThat(kontornavn).isEqualTo("Nav Test")
     }
 
     @Test
@@ -502,7 +507,8 @@ class FormidlingServiceTest {
 
     private fun opprettFormidlingDto(orgnr: String, fødselsnummer: String): OpprettFormidlingDto {
         return OpprettFormidlingDto(
-            eierNavKontorEnhetId = "1234",
+            kontornummer = "1234",
+            kontornavn = "Nav Test",
             orgnr = orgnr,
             fødselsnumre = listOf(fødselsnummer),
             stilling = StillingDto(

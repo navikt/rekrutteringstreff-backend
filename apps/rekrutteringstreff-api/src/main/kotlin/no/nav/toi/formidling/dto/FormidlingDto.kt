@@ -7,7 +7,8 @@ import java.util.UUID
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OpprettFormidlingDto(
-    val eierNavKontorEnhetId: String,
+    val kontornummer: String,
+    val kontornavn: String? = null,
     val orgnr: String,
     val fødselsnumre: List<String>,
     val stilling: StillingDto,

@@ -53,9 +53,9 @@ class StatistikkRepositoryTest {
         db.leggTilJobbsøkere(listOf(ungIkkeStandard, eldreStandard, annetKontor))
 
         val iPerioden = ZonedDateTime.of(2026, 6, 15, 12, 0, 0, 0, OSLO)
-        opprettSendtFormidling(treffId, ungIkkeStandard.personTreffId, arbeidsgiverTreffId, iPerioden)
-        opprettSendtFormidling(treffId, eldreStandard.personTreffId, arbeidsgiverTreffId, iPerioden)
-        opprettSendtFormidling(treffId, annetKontor.personTreffId, arbeidsgiverTreffId, iPerioden)
+        opprettSendtFormidling(treffId, ungIkkeStandard.personTreffId, arbeidsgiverTreffId, iPerioden, kontornummer = "1000")
+        opprettSendtFormidling(treffId, eldreStandard.personTreffId, arbeidsgiverTreffId, iPerioden, kontornummer = "1000")
+        opprettSendtFormidling(treffId, annetKontor.personTreffId, arbeidsgiverTreffId, iPerioden, kontornummer = "2000")
 
         val statistikk = repository.hentFåttJobbStatistikk("1000", LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30))
 
@@ -131,13 +131,15 @@ class StatistikkRepositoryTest {
         personTreffId: PersonTreffId,
         arbeidsgiverTreffId: no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId,
         utfallSendtTidspunkt: ZonedDateTime,
-    ) = opprettFormidling(treffId, personTreffId, arbeidsgiverTreffId, utfallSendtTidspunkt)
+        kontornummer: String = "1000",
+    ) = opprettFormidling(treffId, personTreffId, arbeidsgiverTreffId, utfallSendtTidspunkt, kontornummer)
 
     private fun opprettFormidling(
         treffId: TreffId,
         personTreffId: PersonTreffId,
         arbeidsgiverTreffId: no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId,
         utfallSendtTidspunkt: ZonedDateTime?,
+        kontornummer: String = "1000",
     ): Long = db.dataSource.executeInTransaction { connection ->
         formidlingRepository.opprett(
             connection,
@@ -147,6 +149,7 @@ class StatistikkRepositoryTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             utfallSendtTidspunkt = utfallSendtTidspunkt,
+            kontornummer = kontornummer,
         )
     }
 }

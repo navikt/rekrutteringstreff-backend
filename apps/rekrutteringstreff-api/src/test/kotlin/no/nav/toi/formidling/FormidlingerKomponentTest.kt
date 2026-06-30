@@ -165,7 +165,8 @@ class FormidlingerKomponentTest {
     private fun opprettFormidlingBody(orgnr: String, fødselsnummer: String): String =
         """
         {
-            "eierNavKontorEnhetId": "1234",
+            "kontornummer": "1234",
+            "kontornavn": "Nav Test",
             "orgnr": "$orgnr",
             "fødselsnumre": ["$fødselsnummer"],
             "stilling": {
@@ -418,6 +419,10 @@ class FormidlingerKomponentTest {
         val lagret = lagrede.single()
         assertThat(lagret.fødselsnummer).isEqualTo("11111111111")
         assertThat(lagret.yrkestittel).isEqualTo("Kokk")
+
+        val (kontornummer, kontornavn) = db.hentFormidlingKontor(treffId)
+        assertThat(kontornummer).isEqualTo("1234")
+        assertThat(kontornavn).isEqualTo("Nav Test")
     }
 
     @Test

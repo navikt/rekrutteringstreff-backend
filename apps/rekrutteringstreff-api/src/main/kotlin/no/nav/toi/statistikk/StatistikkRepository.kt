@@ -24,7 +24,7 @@ class StatistikkRepository(private val dataSource: DataSource) {
               AND f.utfall_sendt_tidspunkt IS NOT NULL
               AND f.utfall_sendt_tidspunkt >= ?
               AND f.utfall_sendt_tidspunkt < ?
-              AND j.kontornummer = ?
+              AND f.kontornummer = ?
         """.trimIndent()
 
         val fra = fraOgMed.atStartOfDay(OSLO).toOffsetDateTime()
