@@ -113,6 +113,10 @@ class AutentiseringAlleEndepunkterTest {
         HentAlleFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/alle"),
         HentEgneFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/egne"),
         SlettFormidling(Metode.DELETE, "/api/rekrutteringstreff/{id}/formidling/{formidlingId}"),
+
+        // Statistikk controller
+        HentFåttJobbStatistikk(Metode.GET, "/api/rekrutteringstreff/statistikk/fatt-jobben"),
+
     }
 
     private fun url(endepunkt: Endepunkt): String {

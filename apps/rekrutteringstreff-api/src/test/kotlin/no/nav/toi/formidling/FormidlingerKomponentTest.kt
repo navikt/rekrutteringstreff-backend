@@ -6,6 +6,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
@@ -140,6 +141,20 @@ class FormidlingerKomponentTest {
             .header("Authorization", "Bearer ${token.serialize()}")
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build()
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+    }
+
+    private fun httpDelete(
+        path: String,
+        navIdent: String,
+        groups: List<UUID>,
+    ): HttpResponse<String> {
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent, groups = groups)
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:$appPort$path"))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .DELETE()
             .build()
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
@@ -459,5 +474,118 @@ class FormidlingerKomponentTest {
 
         val response = hentAlleFormidlinger(treffId, markedskontaktIdent)
         assertThat(response.statusCode()).isEqualTo(403)
+    }
+
+    @Test
+    fun `slett formidling markerer som slettet, sender PRESENTERT til kandidat-api og returnerer 204`() {
+        val eierIdent = "A123456"
+        val treffId = opprettTreffMedEier(eierIdent)
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+        )
+        val kandidatlisteId = UUID.randomUUID()
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), kandidatlisteId)
+        val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
+
+        val response = httpDelete(
+            "${formidlingPath(treffId)}/$formidlingId?eierNavKontorEnhetId=1234",
+            eierIdent,
+            listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(204)
+        assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).isEmpty()
+        verify {
+            kandidatKlient.endreUtfall(
+                kandidatlisteId = kandidatlisteId,
+                fødselsnummer = Fødselsnummer("11111111111"),
+                utfall = KandidatUtfall.PRESENTERT,
+                navKontorVeileder = "1234",
+                userToken = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `slett formidling uten eierNavKontorEnhetId gir 400`() {
+        val eierIdent = "A123456"
+        val treffId = opprettTreffMedEier(eierIdent)
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+        )
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+        val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
+
+        val response = httpDelete(
+            "${formidlingPath(treffId)}/$formidlingId",
+            eierIdent,
+            listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `jobbsøkerrettet kan slette formidling`() {
+        val veilederIdent = "Z111111"
+        val treffId = opprettTreffMedEier("A123456")
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+        )
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+        val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
+
+        val response = httpDelete(
+            "${formidlingPath(treffId)}/$formidlingId?eierNavKontorEnhetId=1234",
+            veilederIdent,
+            listOf(AzureAdRoller.jobbsøkerrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(204)
+        assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).isEmpty()
+    }
+
+    @Test
+    fun `rolle uten arbeidsgiverrettet eller jobbsøkerrettet får 403 ved sletting`() {
+        val treffId = opprettTreffMedEier("A123456")
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+        )
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+        val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
+
+        val response = httpDelete(
+            "${formidlingPath(treffId)}/$formidlingId?eierNavKontorEnhetId=1234",
+            "Z111111",
+            emptyList(),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(403)
+        assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).hasSize(1)
+    }
+
+    @Test
+    fun `veileder kan slette annen veileders formidling`() {
+        val annenVeilederIdent = "Z222222"
+        val treffId = opprettTreffMedEier("A123456")
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Eier Veil"), VeilederNavIdent("V999998")),
+        )
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+        val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
+
+        val response = httpDelete(
+            "${formidlingPath(treffId)}/$formidlingId?eierNavKontorEnhetId=1234",
+            annenVeilederIdent,
+            listOf(AzureAdRoller.jobbsøkerrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(204)
+        assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).isEmpty()
     }
 }
