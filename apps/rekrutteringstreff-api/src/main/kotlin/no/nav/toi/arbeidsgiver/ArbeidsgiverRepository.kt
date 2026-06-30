@@ -315,7 +315,7 @@ class ArbeidsgiverRepository(
                     rt.id as treff_id
                 FROM arbeidsgiver ag
                 JOIN rekrutteringstreff rt ON ag.rekrutteringstreff_id = rt.rekrutteringstreff_id
-                WHERE rt.id = ? and ag.orgnr = ?
+                WHERE rt.id = ? and ag.orgnr = ? and ag.status = 'AKTIV'
                 ORDER BY ag.arbeidsgiver_id;
             """.trimIndent()
 
