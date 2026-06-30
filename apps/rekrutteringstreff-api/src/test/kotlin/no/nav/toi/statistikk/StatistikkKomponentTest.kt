@@ -109,9 +109,9 @@ class StatistikkKomponentTest {
         db.leggTilJobbsøkere(listOf(ungIkkeStandard, eldreStandard, annetKontor))
 
         val iPerioden = ZonedDateTime.of(2026, 6, 15, 12, 0, 0, 0, OSLO)
-        opprettSendtFormidling(treffId, ungIkkeStandard.personTreffId, arbeidsgiverTreffId, iPerioden)
-        opprettSendtFormidling(treffId, eldreStandard.personTreffId, arbeidsgiverTreffId, iPerioden)
-        opprettSendtFormidling(treffId, annetKontor.personTreffId, arbeidsgiverTreffId, iPerioden)
+        opprettSendtFormidling(treffId, ungIkkeStandard.personTreffId, arbeidsgiverTreffId, iPerioden, kontornummer = "1000")
+        opprettSendtFormidling(treffId, eldreStandard.personTreffId, arbeidsgiverTreffId, iPerioden, kontornummer = "1000")
+        opprettSendtFormidling(treffId, annetKontor.personTreffId, arbeidsgiverTreffId, iPerioden, kontornummer = "2000")
 
         val response = hentStatistikk(
             navKontor = "1000",
@@ -218,6 +218,7 @@ class StatistikkKomponentTest {
         personTreffId: PersonTreffId,
         arbeidsgiverTreffId: ArbeidsgiverTreffId,
         utfallSendtTidspunkt: ZonedDateTime,
+        kontornummer: String = "1000",
     ): Long = db.dataSource.executeInTransaction { connection ->
         formidlingRepository.opprett(
             connection,
@@ -227,6 +228,7 @@ class StatistikkKomponentTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             utfallSendtTidspunkt = utfallSendtTidspunkt,
+            kontornummer = kontornummer,
         )
     }
 }
