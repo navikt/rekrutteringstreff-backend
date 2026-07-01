@@ -8,6 +8,7 @@ import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.minside.JacksonConfig
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -39,6 +40,7 @@ class TestDatabase {
                     opprettetAvNavkontorEnhetId = "Original Kontor",
                     opprettetAvPersonNavident = navIdent,
                     opprettetAvTidspunkt = nowOslo().minusDays(10),
+                    kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
                 )
             )
             rekrutteringstreffRepository.leggTilHendelse(
@@ -190,11 +192,12 @@ class TestDatabase {
         status = RekrutteringstreffStatus.valueOf(rs.getString("status")),
         opprettetAvPersonNavident = rs.getString("opprettet_av_person_navident"),
         opprettetAvNavkontorEnhetId = rs.getString("opprettet_av_kontor_enhetid"),
-        opprettetAvTidspunkt     = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
+        opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant().atOslo(),
         eiere = (rs.getArray("eiere").array as Array<String>).toList(),
         sistEndret = rs.getTimestamp("sist_endret").toInstant().atOslo(),
         sistEndretAv = rs.getString("sist_endret_av") ?: "Ukjent",
         kontorer = (rs.getArray("kontorer")?.array as? Array<String>)?.toList() ?: emptyList(),
+        kategori = RekrutteringstreffKategori.valueOf(rs.getString("kategori")),
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
