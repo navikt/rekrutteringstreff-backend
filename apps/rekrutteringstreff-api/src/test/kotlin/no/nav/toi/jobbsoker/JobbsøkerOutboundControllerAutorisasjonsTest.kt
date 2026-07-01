@@ -9,6 +9,7 @@ import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -81,7 +82,7 @@ class JobbsøkerOutboundControllerAutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        ctx.rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
+        ctx.rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", RekrutteringstreffKategori.REKRUTTERINGSTREFF,"A213456", "Kontor", ZonedDateTime.now()))
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
         val leggTilJobbsøker = LeggTilJobbsøker(
             fødselsnummer = Fødselsnummer("12345678902"),

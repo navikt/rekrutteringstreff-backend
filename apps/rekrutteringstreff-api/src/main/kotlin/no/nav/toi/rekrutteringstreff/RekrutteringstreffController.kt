@@ -87,6 +87,7 @@ class RekrutteringstreffController(
             ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
         val internalDto = OpprettRekrutteringstreffInternalDto(
             tittel = inputDto.tittel,
+            kategori = inputDto.kategori,
             opprettetAvPersonNavident = ctx.extractNavIdent(),
             opprettetAvNavkontorEnhetId = kontorId,
             opprettetAvTidspunkt = ZonedDateTime.now(),

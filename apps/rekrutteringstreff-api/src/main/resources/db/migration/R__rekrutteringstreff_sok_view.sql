@@ -3,6 +3,7 @@ SELECT
     rt.id,
     rt.tittel,
     rt.beskrivelse,
+    rt.kategori,
     rt.status,
     rt.fratid AS fra_tid,
     rt.tiltid AS til_tid,

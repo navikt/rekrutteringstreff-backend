@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.sok
 
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -36,11 +37,13 @@ class RekrutteringstreffSokRepositoryTest {
         navIdent: String = "A123456",
         tittel: String = "TestTreff",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
         kontorId: String = "0315",
     ): TreffId =
         db.opprettRekrutteringstreffMedEierOgKontor(
             navIdent = navIdent,
             tittel = tittel,
+            kategori = kategori,
             status = status,
             kontorId = kontorId,
         )
@@ -49,8 +52,13 @@ class RekrutteringstreffSokRepositoryTest {
     fun `sok returnerer tomme resultater når ingen treff finnes`() {
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, publisertStatuser = null, kontorer = null,
-            visning = Visning.ALLE, side = 1, antallPerSide = 25
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
         )
         assertThat(resultat.treff).isEmpty()
         assertThat(resultat.antallTotalt).isEqualTo(0)
@@ -63,8 +71,13 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, publisertStatuser = null, kontorer = null,
-            visning = Visning.ALLE, side = 1, antallPerSide = 25
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(2)
         assertThat(resultat.antallTotalt).isEqualTo(2)
@@ -77,8 +90,13 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, publisertStatuser = null, kontorer = null,
-            visning = Visning.MINE, side = 1, antallPerSide = 25
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            visning = Visning.MINE,
+            side = 1,
+            antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(1)
         assertThat(resultat.treff.first().tittel).isEqualTo("Mitt")
@@ -91,8 +109,13 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
-            statuser = null, publisertStatuser = null, kontorer = null,
-            visning = Visning.MITT_KONTOR, side = 1, antallPerSide = 25
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            visning = Visning.MITT_KONTOR,
+            side = 1,
+            antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(1)
         assertThat(resultat.treff.first().tittel).isEqualTo("Mitt kontor")
@@ -105,6 +128,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = listOf(SokStatus.PUBLISERT), publisertStatuser = null,
             kontorer = null, visning = Visning.ALLE,
             side = 1, antallPerSide = 25
@@ -121,6 +145,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = listOf(SokStatus.PUBLISERT, SokStatus.UTKAST), publisertStatuser = null,
             kontorer = null, visning = Visning.ALLE,
             side = 1, antallPerSide = 25
@@ -134,6 +159,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = listOf(SokStatus.PUBLISERT, SokStatus.UTKAST), publisertStatuser = listOf(PublisertStatus.SVARFRIST_PASSERT, PublisertStatus.ÅPEN_FOR_SØKERE),
             kontorer = null, visning = Visning.ALLE,
             side = 1, antallPerSide = 25
@@ -155,6 +181,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = listOf("0315"),
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
@@ -169,6 +196,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
@@ -183,6 +211,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat1 = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 2
         )
@@ -191,6 +220,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat3 = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = null,
             visning = Visning.ALLE, side = 3, antallPerSide = 2
         )
@@ -203,6 +233,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = null,
             visning = Visning.ALLE, side = Int.MAX_VALUE, antallPerSide = 100
         )
@@ -217,6 +248,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
@@ -224,6 +256,7 @@ class RekrutteringstreffSokRepositoryTest {
         val t = resultat.treff.first()
         assertThat(t.tittel).isEqualTo("Fullt treff")
         assertThat(t.beskrivelse).isNotNull()
+        assertThat(t.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
         assertThat(t.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
         assertThat(t.fraTid).isNotNull()
         assertThat(t.tilTid).isNotNull()
@@ -245,6 +278,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
@@ -262,6 +296,7 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = listOf("0315"),
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
@@ -278,10 +313,44 @@ class RekrutteringstreffSokRepositoryTest {
 
         val resultat = repository.sokMedAggregering(
             navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
             statuser = null, publisertStatuser = null, kontorer = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(resultat.statusaggregering).hasSize(2)
+    }
+
+    @Test
+    fun `sok filtrerer på kategori`() {
+        opprettTreff(tittel = "Rekrutteringstreff", kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        opprettTreff(tittel = "WorkOp", kategori = RekrutteringstreffKategori.WORKOP)
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = listOf(SokKategori.WORKOP),
+            statuser = null, publisertStatuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
+        )
+        assertThat(resultat.treff).hasSize(1)
+        assertThat(resultat.treff.first().tittel).isEqualTo("WorkOp")
+    }
+
+    @Test
+    fun `kategoriaggregering teller per kategori og ekskluderer kategorifilter`() {
+        opprettTreff(kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        opprettTreff(kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        opprettTreff(kategori = RekrutteringstreffKategori.WORKOP)
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = listOf(SokKategori.WORKOP),
+            statuser = null, publisertStatuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
+        )
+        val rekrutteringstreff = resultat.kategoriaggregering.find { it.verdi == SokKategori.REKRUTTERINGSTREFF.name }
+        val workOp = resultat.kategoriaggregering.find { it.verdi == SokKategori.WORKOP.name }
+        assertThat(rekrutteringstreff?.antall).isEqualTo(2)
+        assertThat(workOp?.antall).isEqualTo(1)
     }
 
 }

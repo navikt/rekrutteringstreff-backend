@@ -75,15 +75,16 @@ class RekrutteringstreffRepository(
         val nyTreffId = TreffId(UUID.randomUUID())
         val dbId = connection.prepareStatement(
             """
-            INSERT INTO $tabellnavn($id,$tittel,$status,$opprettetAvPersonNavident,
+            INSERT INTO $tabellnavn($id,$tittel,$kategori,$status,$opprettetAvPersonNavident,
                                      $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere,$kontorer,$sistEndret,$sistEndretAv)
-            VALUES (?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
             RETURNING rekrutteringstreff_id
             """
         ).apply {
             var i = 0
             setObject(++i, nyTreffId.somUuid)
             setString(++i, dto.tittel)
+            setString(++i, dto.kategori.name)
             setString(++i, RekrutteringstreffStatus.UTKAST.name)
             setString(++i, dto.opprettetAvPersonNavident)
             setString(++i, dto.opprettetAvNavkontorEnhetId)

@@ -74,7 +74,8 @@ private class AutorisasjonsTest {
 
     @BeforeEach
     fun setup() {
-        gyldigRekrutteringstreff = ctx.rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel", "A213456", "Kontor", ZonedDateTime.now()))
+        gyldigRekrutteringstreff = ctx.rekrutteringstreffService.opprett(OpprettRekrutteringstreffInternalDto("Tittel",
+            RekrutteringstreffKategori.REKRUTTERINGSTREFF,"A213456", "Kontor", ZonedDateTime.now()))
     }
 
     @AfterEach
