@@ -77,6 +77,8 @@ class FormidlingService(
                 stillingOgKandidatliste.kandidatlisteId,
                 opprettFormidling.yrkestittel,
                 opprettFormidling.janzzKonseptId,
+                opprettFormidling.kontornummer,
+                opprettFormidling.kontornavn,
             )
         } else {
             emptyList()
@@ -89,7 +91,7 @@ class FormidlingService(
             if (formidling.kandidatlisteId == null) {
                 error("KandidatlisteId mangler for formidling for stilling ${formidling.stillingId}")
             }
-            leggKandidatPåListen(formidling.stillingId, formidling.kandidatlisteId, jobbsøker, opprettFormidling.eierNavKontorEnhetId, userToken)
+            leggKandidatPåListen(formidling.stillingId, formidling.kandidatlisteId, jobbsøker, opprettFormidling.kontornummer, userToken)
             dataSource.executeInTransaction { connection ->
                 endreJobbsøkerStatusOgLeggTilHendelser(connection, formidling.jobbsøkerPersonTreffId, navIdent)
                 formidlingRepository.oppdaterUtfallSendtTidspunkt(connection, formidling.formidlingId)
@@ -158,7 +160,7 @@ class FormidlingService(
         userToken: String
     ): OpprettFormidlingStillingRespons {
         val request = OpprettRekrutteringstreffFormidling(
-            eierNavKontorEnhetId = opprettFormidling.eierNavKontorEnhetId,
+            eierNavKontorEnhetId = opprettFormidling.kontornummer,
             rekrutteringstreffId = treffId.somUuid,
             stilling = opprettFormidling.stilling,
         )
@@ -189,6 +191,8 @@ class FormidlingService(
         kandidatlisteId: UUID?,
         yrkestittel: String?,
         janzzKonseptId: String?,
+        kontornummer: String,
+        kontornavn: String?,
     ): List<Formidling> {
         val formidlingIder = dataSource.executeInTransaction { connection ->
             jobbsøkere.map { jobbsøker ->
@@ -202,6 +206,8 @@ class FormidlingService(
                     null,
                     yrkestittel,
                     janzzKonseptId,
+                    kontornummer,
+                    kontornavn,
                 )
             }
         }

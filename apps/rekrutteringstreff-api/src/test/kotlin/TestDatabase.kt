@@ -698,6 +698,24 @@ class TestDatabase {
     fun hentFormidling(formidlingId: Long): Formidling? {
         return formidlingRepository.hent(formidlingId)
     }
+
+    fun hentFormidlingKontor(treffId: TreffId): Pair<String?, String?> =
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                """
+                SELECT f.kontornummer, f.kontornavn
+                FROM formidling f
+                JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                WHERE rt.id = ?
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setObject(1, treffId.somUuid)
+                stmt.executeQuery().use { rs ->
+                    rs.next()
+                    rs.getString("kontornummer") to rs.getString("kontornavn")
+                }
+            }
+        }
 }
 
 data class KiLoggTestInsert( //Brukes for i testene for å legge inn logger med opprettetTidspunkt tilbake i tid

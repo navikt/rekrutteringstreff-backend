@@ -63,7 +63,8 @@ class FormidlingController(
                 from = OpprettFormidlingDto::class,
                 example = """
                     {
-                        "eierNavKontorEnhetId": "1124",
+                        "kontornummer": "1124",
+                        "kontornavn": "Nav Sola",
                         "orgnr": "973626183",
                         "fødselsnumre": ["12345678901", "10987654321"],
                         "yrkestittel": "Utvikler (dataspill)",

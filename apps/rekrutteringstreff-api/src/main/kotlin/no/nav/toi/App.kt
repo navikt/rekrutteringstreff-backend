@@ -56,6 +56,7 @@ class App(
                 registrer(ctx.jobbsøkerOutboundController)
                 registrer(ctx.kiController)
                 registrer(ctx.formidlingController)
+                registrer(ctx.statistikkController)
             }
         }
 

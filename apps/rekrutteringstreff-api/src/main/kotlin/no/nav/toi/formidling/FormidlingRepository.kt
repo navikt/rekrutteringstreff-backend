@@ -26,13 +26,17 @@ class FormidlingRepository(private val dataSource: DataSource) {
         utfallSendtTidspunkt: ZonedDateTime? = null,
         yrkestittel: String? = null,
         janzzKonseptId: String? = null,
+        kontornummer: String? = null,
+        kontornavn: String? = null,
     ): Long {
         val sql = """
-            INSERT INTO formidling (rekrutteringstreff_id, jobbsoker_id, arbeidsgiver_id, stilling_id, kandidatliste_id, utfall_sendt_tidspunkt, yrkestittel, janzz_konsept_id)
+            INSERT INTO formidling (rekrutteringstreff_id, jobbsoker_id, arbeidsgiver_id, stilling_id, kandidatliste_id, utfall_sendt_tidspunkt, yrkestittel, janzz_konsept_id, kontornummer, kontornavn)
             VALUES (
                 (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?),
                 (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?),
                 (SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ? AND rekrutteringstreff_id = (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?) AND status = 'AKTIV'),
+                ?,
+                ?,
                 ?,
                 ?,
                 ?,
@@ -51,6 +55,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
             stmt.setNullableTimestampWithTimezone(7, utfallSendtTidspunkt)
             stmt.setString(8, yrkestittel)
             stmt.setString(9, janzzKonseptId)
+            stmt.setString(10, kontornummer)
+            stmt.setString(11, kontornavn)
             stmt.executeUpdate()
             stmt.generatedKeys.use { rs ->
                 rs.next()
