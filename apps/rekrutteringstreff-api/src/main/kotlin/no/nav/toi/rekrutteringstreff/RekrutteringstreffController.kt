@@ -87,6 +87,7 @@ class RekrutteringstreffController(
             ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
         val internalDto = OpprettRekrutteringstreffInternalDto(
             tittel = inputDto.tittel,
+            kategori = inputDto.kategori,
             opprettetAvPersonNavident = ctx.extractNavIdent(),
             opprettetAvNavkontorEnhetId = kontorId,
             opprettetAvTidspunkt = ZonedDateTime.now(),
@@ -114,6 +115,7 @@ class RekrutteringstreffController(
                     "gateadresse": null,
                     "postnummer": null,
                     "poststed": null,
+                    "kategori": "REKRUTTERINGSTREFF",
                     "status":"UTKAST",
                     "opprettetAvPersonNavident":"A123456",
                     "opprettetAvNavkontorEnhetId":"0318",
@@ -186,6 +188,7 @@ class RekrutteringstreffController(
                     "gateadresse": "Malmøgata 1",
                     "postnummer": "0566",
                     "poststed": "Oslo",
+                    "kategori": "REKRUTTERINGSTREFF",
                     "status": "UTKAST", 
                     "opprettetAvPersonNavident": "A123456", 
                     "opprettetAvNavkontorEnhetId": "0318",

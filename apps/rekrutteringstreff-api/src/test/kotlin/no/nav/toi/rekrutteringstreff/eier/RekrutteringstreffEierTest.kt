@@ -6,6 +6,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
@@ -301,6 +302,7 @@ class RekrutteringstreffEierTest {
     ) {
         val originalDto = OpprettRekrutteringstreffInternalDto(
             tittel = tittel,
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
             opprettetAvNavkontorEnhetId = kontor,
             opprettetAvPersonNavident = navIdent,
             opprettetAvTidspunkt = nowOslo().minusDays(10),

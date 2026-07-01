@@ -657,6 +657,7 @@ class RekrutteringstreffServiceTest {
     private fun opprettTreff(): TreffId {
         val rekrutteringstreff = OpprettRekrutteringstreffInternalDto(
             tittel = "Treff",
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
             opprettetAvPersonNavident = "NAV1234",
             opprettetAvNavkontorEnhetId = "0605",
             opprettetAvTidspunkt = nowOslo(),

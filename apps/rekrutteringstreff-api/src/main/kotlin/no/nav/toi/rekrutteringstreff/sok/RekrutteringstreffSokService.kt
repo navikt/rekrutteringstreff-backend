@@ -22,6 +22,7 @@ class RekrutteringstreffSokService(
         val resultat = repository.sokMedAggregering(
             navIdent = navIdent,
             kontorId = kontorId,
+            kategorier = request.kategorier,
             statuser = request.statuser,
             publisertStatuser = request.publisertStatuser,
             kontorer = request.kontorer,
@@ -36,6 +37,7 @@ class RekrutteringstreffSokService(
             antallTotalt = resultat.antallTotalt,
             side = request.side,
             antallPerSide = request.antallPerSide,
+            kategoriaggregering = resultat.kategoriaggregering,
             statusaggregering = resultat.statusaggregering,
             publisertstatusaggregering = resultat.publisertstatusaggregering,
         )
@@ -43,12 +45,13 @@ class RekrutteringstreffSokService(
         val varighetMs = Duration.ofNanos(System.nanoTime() - startTidNanos).toMillis()
         if (varighetMs > TREGT_SOK_TERSKEL_MS) {
             logger.warn(
-                "Rekrutteringstreff-søk brukte {} ms: visning={}, sortering={}, side={}, antallPerSide={}, antallStatuser={}, antallKontorer={}, antallTotalt={}",
+                "Rekrutteringstreff-søk brukte {} ms: visning={}, sortering={}, side={}, antallPerSide={}, antallKategorier={}, antallStatuser={}, antallKontorer={}, antallTotalt={}",
                 varighetMs,
                 request.visning.jsonVerdi,
                 request.sortering.jsonVerdi,
                 request.side,
                 request.antallPerSide,
+                request.kategorier?.size ?: 0,
                 request.statuser?.size ?: 0,
                 request.kontorer?.size ?: 0,
                 resultat.antallTotalt,

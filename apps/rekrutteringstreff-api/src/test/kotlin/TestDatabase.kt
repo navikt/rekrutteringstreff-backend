@@ -124,6 +124,7 @@ class TestDatabase {
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
         opprettetAvNavkontorEnhetId: String = "Original Kontor",
     ): TreffId {
         return dataSource.connection.use { connection ->
@@ -131,6 +132,7 @@ class TestDatabase {
                 connection,
                 OpprettRekrutteringstreffInternalDto(
                     tittel = tittel,
+                    kategori = kategori,
                     opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
                     opprettetAvPersonNavident = navIdent,
                     opprettetAvTidspunkt = nowOslo().minusDays(10),
@@ -158,11 +160,13 @@ class TestDatabase {
         fylke: String = "Oslo",
         fylkesnummer: String = "03",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
         opprettetAvNavkontorEnhetId: String = "0315"
     ): TreffId {
         val treffId = opprettRekrutteringstreffIDatabase(
             navIdent = navIdent,
             tittel = tittel,
+            kategori = kategori,
             opprettetAvNavkontorEnhetId = opprettetAvNavkontorEnhetId,
         )
 
@@ -203,11 +207,13 @@ class TestDatabase {
         navIdent: String = "A123456",
         tittel: String = "TestTreff",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
         kontorId: String = "0315"
     ): TreffId {
         val treffId = opprettRekrutteringstreffMedAlleFelter(
             navIdent = navIdent,
             tittel = tittel,
+            kategori = kategori,
             status = status,
             opprettetAvNavkontorEnhetId = kontorId,
         )

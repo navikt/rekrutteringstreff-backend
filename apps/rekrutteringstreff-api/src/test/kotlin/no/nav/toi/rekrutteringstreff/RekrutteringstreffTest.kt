@@ -86,6 +86,7 @@ class RekrutteringstreffTest {
 
         val rekrutteringstreff = db.hentAlleRekrutteringstreff().first()
         assertThat(rekrutteringstreff.tittel).isEqualTo("Nytt rekrutteringstreff")
+        assertThat(rekrutteringstreff.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
         assertThat(rekrutteringstreff.beskrivelse).isNull()
         assertThat(rekrutteringstreff.fraTid).isNull()
         assertThat(rekrutteringstreff.tilTid).isNull()

@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff.sok
 
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import java.sql.Connection
 import java.sql.ResultSet
@@ -14,6 +15,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     fun sokMedAggregering(
         navIdent: String?,
         kontorId: String?,
+        kategorier: List<SokKategori>?,
         statuser: List<SokStatus>?,
         publisertStatuser: List<PublisertStatus>?,
         kontorer: List<String>?,
@@ -22,9 +24,19 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         side: Int,
         antallPerSide: Int,
     ): SokMedAggregeringResultat {
+        val (whereForKategoriAggregering, paramsForKategoriAggregering) = byggWhere(
+            navIdent = navIdent,
+            kontorId = kontorId,
+            kategorier = null,
+            statuser = statuser,
+            publisertStatuser = publisertStatuser,
+            kontorer = kontorer,
+            visning = visning,
+        )
         val (whereForStatusaggregering, paramsForStatusaggregering) = byggWhere(
             navIdent = navIdent,
             kontorId = kontorId,
+            kategorier = kategorier,
             statuser = null,
             publisertStatuser = null,
             kontorer = kontorer,
@@ -33,6 +45,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         val (whereForTreffliste, paramsForTreffliste) = byggWhere(
             navIdent = navIdent,
             kontorId = kontorId,
+            kategorier = kategorier,
             statuser = statuser,
             publisertStatuser = publisertStatuser,
             kontorer = kontorer,
@@ -43,6 +56,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             SokMedAggregeringResultat(
                 treff = hentTreff(conn, whereForTreffliste, paramsForTreffliste, sortering, side, antallPerSide),
                 antallTotalt = hentAntallTotalt(conn, whereForTreffliste, paramsForTreffliste),
+                kategoriaggregering = hentKategoriaggregering(conn, whereForKategoriAggregering, paramsForKategoriAggregering),
                 statusaggregering = hentStatusaggregering(conn, whereForStatusaggregering, paramsForStatusaggregering),
                 publisertstatusaggregering = hentPublisertStatusaggregering(conn, whereForStatusaggregering, paramsForStatusaggregering),
             )
@@ -70,7 +84,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         antallPerSide: Int,
     ): List<RekrutteringstreffSokTreff> {
         val sql = """
-            SELECT id, tittel, beskrivelse, status, frist_utgatt, fra_tid, til_tid, svarfrist,
+            SELECT id, tittel, beskrivelse, kategori, status, frist_utgatt, fra_tid, til_tid, svarfrist,
                    gateadresse, postnummer, poststed,
                    opprettet_av_person_navident, opprettet_av_tidspunkt, sist_endret,
                    eiere, kontorer,
@@ -89,6 +103,35 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 generateSequence { if (rs.next()) tilTreff(rs) else null }.toList()
             }
         }
+    }
+
+    private fun hentKategoriaggregering(conn: Connection, where: String, params: List<SqlParam>): List<FilterValg> {
+        val sqlKategorier = """
+            SELECT
+                kategori AS aggregert_kategori,
+                count(*) AS antall
+            FROM rekrutteringstreff_sok_view
+            $where
+            GROUP BY aggregert_kategori
+            ORDER BY aggregert_kategori
+        """.trimIndent()
+        val kategoriResultat = conn.prepareStatement(sqlKategorier).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            settWhereParametere(stmt, params)
+            stmt.executeQuery().use { rs ->
+                buildList {
+                    while (rs.next()) {
+                        add(
+                            FilterValg(
+                                verdi = rs.getString("aggregert_kategori"),
+                                antall = rs.getLong("antall"),
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        return kategoriResultat
     }
 
     private fun hentStatusaggregering(conn: Connection, where: String, params: List<SqlParam>): List<FilterValg> {
@@ -183,11 +226,12 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         val statuser: List<SokStatus>,
         val publisertStatuser: List<PublisertStatus>?,
     )
-    private enum class ParamType { STRING, STRING_ARRAY, STATUS_ARRAY, BOOLEAN }
+    private enum class ParamType { STRING, STRING_ARRAY, STATUS_ARRAY, BOOLEAN, KATEGORI_ARRAY }
 
     private fun byggWhere(
         navIdent: String?,
         kontorId: String?,
+        kategorier: List<SokKategori>?,
         statuser: List<SokStatus>?,
         publisertStatuser: List<PublisertStatus>?,
         kontorer: List<String>?,
@@ -195,6 +239,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     ): Pair<String, List<SqlParam>> {
         val conditions = listOfNotNull(
             byggVisningsCondition(visning, navIdent, kontorId),
+            byggKategoriCondition(kategorier),
             byggStatusCondition(statuser, publisertStatuser),
             byggKontorCondition(kontorer),
         )
@@ -226,6 +271,13 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         }
     }
 
+    private fun byggKategoriCondition(kategorier: List<SokKategori>?): Condition? {
+        if (kategorier.isNullOrEmpty()) return null
+        return Condition(
+            clause = "kategori = ANY(?)",
+            params = listOf(SqlParam(kategorier, ParamType.KATEGORI_ARRAY)),
+        )
+    }
 
     private fun byggStatusCondition(
         statuser: List<SokStatus>?,
@@ -297,17 +349,24 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 s.setArray(index, s.connection.createArrayOf("text", arr.toTypedArray()))
             }
             ParamType.BOOLEAN -> s.setBoolean(index, param.value as Boolean)
+            ParamType.KATEGORI_ARRAY -> {
+                @Suppress("UNCHECKED_CAST")
+                val arr = (param.value as List<SokKategori>).map { it.name }
+                s.setArray(index, s.connection.createArrayOf("text", arr.toTypedArray()))
+            }
         }
     }
 
     private fun tilTreff(rs: ResultSet): RekrutteringstreffSokTreff {
         val eiereArr = rs.getArray("eiere")?.array as? Array<*>
         val kontorerArr = rs.getArray("kontorer")?.array as? Array<*>
+        val kategori = RekrutteringstreffKategori.valueOf(rs.getString("kategori"))
         val status = RekrutteringstreffStatus.valueOf(rs.getString("status"))
         return RekrutteringstreffSokTreff(
             id = rs.getString("id"),
             tittel = rs.getString("tittel"),
             beskrivelse = rs.getString("beskrivelse"),
+            kategori = kategori,
             status = status,
             publisertStatus = PublisertStatus.fraDbVerdiMedFrist(status, rs.getBoolean("frist_utgatt")),
             fraTid = rs.getTimestamp("fra_tid")?.toInstant(),

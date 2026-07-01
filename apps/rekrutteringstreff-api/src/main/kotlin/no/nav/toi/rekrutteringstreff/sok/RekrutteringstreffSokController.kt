@@ -25,6 +25,7 @@ class RekrutteringstreffSokController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
             OpenApiParam(name = "visning", type = Visning::class, required = false, description = "Filter for hvilke treff som skal vises", example = "alle"),
+            OpenApiParam(name = "kategorier", type = String::class, required = false, description = "Kommaseparert liste av kategorier, REKRUTTERINGSTREFF eller WORKOP", example = "REKRUTTERINGSTREFF,WORKOP"),
             OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel PUBLISERT,UTKAST", example = "PUBLISERT,UTKAST"),
             OpenApiParam(name = "publisertStatuser", type = String::class, required = false, description = "Kommaseparert liste av publisert statuser", example = "ÅPEN_FOR_SØKERE,SVARFRIST_PASSERT"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
@@ -42,6 +43,7 @@ class RekrutteringstreffSokController(
                             "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                             "tittel": "Rekrutteringstreff – bygg og anlegg",
                             "beskrivelse": "Treff for arbeidsgivere og jobbsøkere innen bygg og anlegg",
+                            "kategori": "REKRUTTERINGSTREFF",
                             "status": "PUBLISERT",
                             "fraTid": "2026-04-15T09:00:00Z",
                             "tilTid": "2026-04-15T12:00:00Z",
@@ -62,6 +64,7 @@ class RekrutteringstreffSokController(
                             "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
                             "tittel": "Jobbmesse for helsesektoren",
                             "beskrivelse": null,
+                            "kategori": "REKRUTTERINGSTREFF",
                             "status": "UTKAST",
                             "fraTid": null,
                             "tilTid": null,
@@ -82,6 +85,10 @@ class RekrutteringstreffSokController(
                     "antallTotalt": 42,
                     "side": 1,
                     "antallPerSide": 20,
+                    "kategoriaggregering": [
+                        {"verdi": "REKRUTTERINGSTREFF", "antall": 30},
+                        {"verdi": "WORKOP", "antall": 12}
+                    ],
                     "statusaggregering": [
                         {"verdi": "PUBLISERT", "antall": 12},
                         {"verdi": "UTKAST", "antall": 12},
@@ -114,6 +121,13 @@ class RekrutteringstreffSokController(
             }
         } ?: Sortering.SIST_OPPDATERTE
 
+        val kategorier = ctx.queryParam("kategorier")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
+            try {
+                SokKategori.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
+                throw IllegalArgumentException("Ugyldig kategori: $it")
+            }
+        }
+
         val statuser = ctx.queryParam("statuser")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
             try { SokStatus.fraJsonVerdi(it) } catch (_: IllegalArgumentException) {
                 throw IllegalArgumentException("Ugyldig status: $it")
@@ -140,6 +154,7 @@ class RekrutteringstreffSokController(
         }
 
         val request = RekrutteringstreffSokRequest(
+            kategorier = kategorier,
             statuser = statuser,
             publisertStatuser = publisertStatuser,
             publisertFristUtgatt = publisertFristUtgatt,

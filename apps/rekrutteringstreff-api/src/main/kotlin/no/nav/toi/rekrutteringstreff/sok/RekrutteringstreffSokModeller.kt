@@ -1,8 +1,21 @@
 package no.nav.toi.rekrutteringstreff.sok
 
 import com.fasterxml.jackson.annotation.JsonValue
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import java.time.Instant
+
+enum class SokKategori(@JsonValue val jsonVerdi: String) {
+    REKRUTTERINGSTREFF("REKRUTTERINGSTREFF"),
+    WORKOP("WORKOP"),
+    ;
+
+    companion object {
+        fun fraJsonVerdi(verdi: String): SokKategori =
+            SokKategori.entries.find { it.jsonVerdi == verdi }
+                ?: throw IllegalArgumentException("Ugyldig kategori: $verdi")
+    }
+}
 
 enum class SokStatus(@JsonValue val jsonVerdi: String) {
     UTKAST("UTKAST"),
@@ -71,6 +84,7 @@ enum class Sortering(val sql: String, val jsonVerdi: String) {
 }
 
 data class RekrutteringstreffSokRequest(
+    val kategorier: List<SokKategori>? = null,
     val statuser: List<SokStatus>? = null,
     val publisertStatuser: List<PublisertStatus>? = null,
     val publisertFristUtgatt: Boolean? = null,
@@ -86,6 +100,7 @@ data class RekrutteringstreffSokRespons(
     val antallTotalt: Long,
     val side: Int,
     val antallPerSide: Int,
+    val kategoriaggregering: List<FilterValg>,
     val statusaggregering: List<FilterValg>,
     val publisertstatusaggregering: List<FilterValg>,
 )
@@ -94,6 +109,7 @@ data class RekrutteringstreffSokTreff(
     val id: String,
     val tittel: String,
     val beskrivelse: String?,
+    val kategori: RekrutteringstreffKategori,
     val status: RekrutteringstreffStatus,
     val publisertStatus: PublisertStatus?,
     val fraTid: Instant?,
@@ -121,6 +137,7 @@ data class FilterValg(
 data class SokMedAggregeringResultat(
     val treff: List<RekrutteringstreffSokTreff>,
     val antallTotalt: Long,
+    val kategoriaggregering: List<FilterValg>,
     val statusaggregering: List<FilterValg>,
     val publisertstatusaggregering: List<FilterValg>,
 )

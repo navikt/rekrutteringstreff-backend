@@ -8,6 +8,7 @@ import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
 import no.nav.toi.AzureAdRoller.modiaGenerell
 import no.nav.toi.AzureAdRoller.utvikler
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
@@ -78,6 +79,7 @@ class InnleggAutorisasjonsTest {
         ctx.rekrutteringstreffService.opprett(
             OpprettRekrutteringstreffInternalDto(
                 "Tittel",
+                RekrutteringstreffKategori.REKRUTTERINGSTREFF,
                 "A213456",
                 "Kontor",
                 ZonedDateTime.now()
