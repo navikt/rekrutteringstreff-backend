@@ -45,7 +45,8 @@ class StatistikkController(
         methods = [HttpMethod.GET]
     )
     private fun hentFåttJobbStatistikkHandler(): (Context) -> Unit = { ctx ->
-        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET)
+        ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET, Rolle.JOBBSØKER_RETTET,
+            Rolle.MODIA_GENERELL, Rolle.MODIA_OPPFØLGING)
 
         val navKontor = ctx.queryParam(queryParamNavKontor)
             ?.takeIf { it.isNotBlank() }
