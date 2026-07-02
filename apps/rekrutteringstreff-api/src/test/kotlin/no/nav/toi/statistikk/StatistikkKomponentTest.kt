@@ -139,6 +139,28 @@ class StatistikkKomponentTest {
     }
 
     @Test
+    fun `modia generell rolle har tilgang`() {
+        val response = hentStatistikk(
+            navKontor = "1000",
+            fraOgMed = "2026-06-01",
+            tilOgMed = "2026-06-30",
+            groups = listOf(AzureAdRoller.modiaGenerell),
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+    }
+
+    @Test
+    fun `modia oppfølging rolle har tilgang`() {
+        val response = hentStatistikk(
+            navKontor = "1000",
+            fraOgMed = "2026-06-01",
+            tilOgMed = "2026-06-30",
+            groups = listOf(AzureAdRoller.modiaOppfølging),
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+    }
+
+    @Test
     fun `manglende navKontor gir 400`() {
         val response = httpGet("/api/rekrutteringstreff/statistikk/fatt-jobben?fraOgMed=2026-06-01&tilOgMed=2026-06-30")
         assertThat(response.statusCode()).isEqualTo(400)

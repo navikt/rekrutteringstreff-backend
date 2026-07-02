@@ -46,7 +46,9 @@ class TestInfrastructureContext(
     override val rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
         jobbsøkerrettet = AzureAdRoller.jobbsøkerrettet,
         arbeidsgiverrettet = AzureAdRoller.arbeidsgiverrettet,
-        utvikler = AzureAdRoller.utvikler
+        utvikler = AzureAdRoller.utvikler,
+        modiaGenerell = AzureAdRoller.modiaGenerell,
+        modiaOppfølging = AzureAdRoller.modiaOppfølging,
     )
 
     override val leaderElection = LeaderElectionMock()
