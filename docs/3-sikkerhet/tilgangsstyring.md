@@ -70,7 +70,7 @@ Personbrukere autentiseres via ID-porten. Tilgangen gir mulighet til å:
 
 ## 2. NAV-ansatt
 
-NAV-ansatte autentiseres via Azure AD og får roller basert på AD-gruppemedlemskap. Det er tre roller:
+NAV-ansatte autentiseres via Azure AD og får roller basert på AD-gruppemedlemskap. Rollene er:
 
 ### Jobbsøkerrettet
 
@@ -95,6 +95,18 @@ Full tilgang til alle funksjoner, inkludert:
 - Administrere alle treff uavhengig av eierskap
 - Tilgang til utviklerverktøy og diagnostikk
 - Tilgang uavhengig av pilotkontor
+
+### Modia generell
+
+Veiledere med generell Modia-tilgang. Gir per nå kun lesetilgang til statistikk:
+
+- Se «fått jobben»-statistikk per Nav-kontor
+
+### Modia oppfølging
+
+Veiledere med oppfølgingstilgang i Modia. Gir per nå kun lesetilgang til statistikk:
+
+- Se «fått jobben»-statistikk per Nav-kontor
 
 ## Eierskap
 
@@ -156,10 +168,14 @@ sequenceDiagram
 Roller tildeles via medlemskap i AD-grupper:
 
 | Rolle              | AD-gruppe                                 | Tilgang                        |
-| ------------------ | ----------------------------------------- | ------------------------------ |
+| ------------------ |-------------------------------------------| ------------------------------ |
 | Jobbsøkerrettet    | `rekrutteringsbistand-jobbsokerrettet`    | Lese og legge til jobbsøkere   |
 | Arbeidsgiverrettet | `rekrutteringsbistand-arbeidsgiverrettet` | Opprette og administrere treff |
 | Utvikler           | `rekrutteringsbistand-utvikler`           | Full tilgang                   |
+| Modia generell     | `rekrutteringsbistand-modia-generell`     | Lese «fått jobben»-statistikk  |
+| Modia oppfølging   | `rekrutteringsbistand-modia-oppfolging`   | Lese «fått jobben»-statistikk  |
+
+> AD-gruppe-UUID-ene for Modia-rollene er miljøspesifikke og settes i `.nais/dev-gcp.yaml` og `.nais/prod-gcp.yaml`, og mappes til roller i `Rolle.kt`.
 
 ## Pilotkontorer
 

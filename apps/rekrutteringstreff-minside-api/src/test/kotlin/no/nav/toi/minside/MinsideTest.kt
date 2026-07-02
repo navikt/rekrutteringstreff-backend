@@ -80,7 +80,9 @@ class MinsideTest {
                 override val rolleUuidSpesifikasjon = RolleUuidSpesifikasjon(
                     jobbsøkerrettet = UUID.randomUUID(),
                     arbeidsgiverrettet = UUID.randomUUID(),
-                    utvikler = UUID.randomUUID()
+                    utvikler = UUID.randomUUID(),
+                    modiaGenerell = UUID.randomUUID(),
+                    modiaOppfølging = UUID.randomUUID()
                 )
                 override val pilotkontorer = emptyList<String>()
                 override val leaderElection = LeaderElectionMock()

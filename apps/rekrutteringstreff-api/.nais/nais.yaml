@@ -66,6 +66,8 @@ spec:
           - id: {{ adGruppeUtvikler }}
           - id: {{ adGruppeArbeidsgiverrettet }}
           - id: {{ adGruppeJobbsokerrettet }}
+          - id: {{ adGruppeModiaGenerell }}
+          - id: {{ adGruppeModiaOppfolging }}
   kafka:
     pool: {{ kafka_pool }}
   leaderElection: true
@@ -85,6 +87,10 @@ spec:
       value: {{adGruppeUtvikler}}
     - name: REKRUTTERINGSBISTAND_JOBBSOKERRETTET
       value: {{adGruppeJobbsokerrettet}}
+    - name: REKRUTTERINGSBISTAND_MODIA_GENERELL
+      value: {{adGruppeModiaGenerell}}
+    - name: REKRUTTERINGSBISTAND_MODIA_OPPFOLGING
+      value: {{adGruppeModiaOppfolging}}
     - name: KANDIDATSOK_API_URL
       value: {{kandidatsok_api_url}}
     - name: KANDIDATSOK_API_SCOPE

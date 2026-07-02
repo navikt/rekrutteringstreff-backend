@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 object AzureAdRoller {
     val modiaGenerell: UUID = UUID.randomUUID()
+    val modiaOppfølging: UUID = UUID.randomUUID()
     val jobbsøkerrettet: UUID = UUID.randomUUID()
     val arbeidsgiverrettet: UUID = UUID.randomUUID()
     val utvikler: UUID = UUID.randomUUID()
