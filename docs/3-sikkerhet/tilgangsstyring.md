@@ -175,8 +175,6 @@ Roller tildeles via medlemskap i AD-grupper:
 | Modia generell     | `rekrutteringsbistand-modia-generell`     | Lese «fått jobben»-statistikk  |
 | Modia oppfølging   | `rekrutteringsbistand-modia-oppfolging`   | Lese «fått jobben»-statistikk  |
 
-> AD-gruppe-UUID-ene for Modia-rollene er miljøspesifikke og settes i `.nais/dev-gcp.yaml` og `.nais/prod-gcp.yaml`, og mappes til roller i `Rolle.kt`.
-
 ## Pilotkontorer
 
 I pilotperioden må NAV-ansatte (unntatt utviklere) være innlogget på et pilotkontor for å få tilgang.
