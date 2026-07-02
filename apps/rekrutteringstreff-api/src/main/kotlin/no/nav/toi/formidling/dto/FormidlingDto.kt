@@ -14,6 +14,7 @@ data class OpprettFormidlingDto(
     val stilling: StillingDto,
     val yrkestittel: String? = null,
     val janzzKonseptId: String? = null,
+    val opprettetAvNavn: String? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -93,5 +94,7 @@ data class FormidlingDto(
     val stillingId: UUID,
     val yrkestittel: String?,
     val sperret: Boolean,
+    val opprettetAvNavn: String?,
+    val opprettetAvNavIdent: String?,
 )
 

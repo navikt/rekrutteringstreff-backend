@@ -69,6 +69,7 @@ class FormidlingController(
                         "fødselsnumre": ["12345678901", "10987654321"],
                         "yrkestittel": "Utvikler (dataspill)",
                         "janzzKonseptId": "19989",
+                        "opprettetAvNavn": "Test Veileder",
                         "stilling": {
                             "employer": {
                                 "name": "VELFERDSETATEN ADMINISTRASJON",
@@ -167,7 +168,9 @@ from = Array<FormidlingOpprettetDto>::class,
                                 "orgnr": "999999991",
                                 "orgnavn": "Test Arbeidsgiver AS",
                                 "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
-                                "yrkestittel": "Utvikler (dataspill)"
+                                "yrkestittel": "Utvikler (dataspill)",
+                                "opprettetAvNavn": "Test Veileder",
+                                "opprettetAvNavIdent": "T123456"   
                             }
                         ]
                     """
@@ -206,8 +209,7 @@ from = Array<FormidlingOpprettetDto>::class,
 
     @OpenApi(
         summary = "Hent egne formidlinger for et rekrutteringstreff",
-        description = "Returnerer formidlinger på treffet der innlogget bruker er veileder for jobbsøkeren " +
-            "eller tilhører samme kontor som jobbsøkeren. Krever jobbsøkerrettet rolle.",
+        description = "Returnerer formidlinger på treffet som bruker har opprettet",
         operationId = "hentEgneFormidlinger",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
@@ -232,7 +234,9 @@ from = Array<FormidlingOpprettetDto>::class,
                                 "orgnr": "999999991",
                                 "orgnavn": "Test Arbeidsgiver AS",
                                 "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
-                                "yrkestittel": "Utvikler (dataspill)"
+                                "yrkestittel": "Utvikler (dataspill)",
+                                "opprettetAvNavn": "Test Veileder",
+                                "opprettetAvNavIdent": "T123456"  
                             }
                         ]
                     """
@@ -247,14 +251,12 @@ from = Array<FormidlingOpprettetDto>::class,
         innloggetBruker.verifiserAutorisasjon(Rolle.JOBBSØKER_RETTET)
         val treffId = TreffId(ctx.pathParam(pathParamTreffId))
         val navIdent = ctx.extractNavIdent()
-        val tilknyttedeEnheter = modiaKlient.hentMineEnheter(innloggetBruker.innkommendeToken())
 
         AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
         ctx.status(200).json(
             formidlingService.hentEgneFormidlingerForTreff(
                 treffId,
                 navIdent,
-                tilknyttedeEnheter,
                 FormidlingSortering.fraQueryParam(ctx.queryParam(queryParamSortering)),
                 FormidlingSorteringsretning.fraQueryParam(ctx.queryParam(queryParamRetning)),
                 ctx.queryParams(queryParamArbeidsgiver),

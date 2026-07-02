@@ -1,6 +1,8 @@
 package no.nav.toi.formidling
 
 import io.javalin.http.NotFoundResponse
+import no.nav.toi.AktørType
+import no.nav.toi.FormidlingHendelsestype
 import no.nav.toi.arbeidsgiver.Arbeidsgiver
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.ArbeidsgiverService
@@ -43,12 +45,11 @@ class FormidlingService(
     fun hentEgneFormidlingerForTreff(
         treffId: TreffId,
         veilederNavIdent: String,
-        tilknyttedeEnheter: List<String>,
         sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
         retning: FormidlingSorteringsretning? = null,
         arbeidsgivere: List<String> = emptyList(),
     ): List<FormidlingDto> =
-        formidlingRepository.hentEgneForTreff(treffId, veilederNavIdent, tilknyttedeEnheter, sortering, retning, arbeidsgivere)
+        formidlingRepository.hentEgneForTreff(treffId, veilederNavIdent, sortering, retning, arbeidsgivere)
 
     fun opprettFormidling(
         treffId: TreffId,
@@ -70,15 +71,17 @@ class FormidlingService(
         val nyeFormidlinger = if (jobbsøkereUtenFormidling.isNotEmpty()) {
             val stillingOgKandidatliste = opprettStillingOgKandidatliste(treffId, opprettFormidling, userToken)
             lagreFormidlinger(
-                treffId,
-                jobbsøkereUtenFormidling,
-                arbeidsgiver,
-                stillingOgKandidatliste.stillingsId,
-                stillingOgKandidatliste.kandidatlisteId,
-                opprettFormidling.yrkestittel,
-                opprettFormidling.janzzKonseptId,
-                opprettFormidling.kontornummer,
-                opprettFormidling.kontornavn,
+                rekrutteringstreffId = treffId,
+                jobbsøkere = jobbsøkereUtenFormidling,
+                arbeidsgiver = arbeidsgiver,
+                stillingId = stillingOgKandidatliste.stillingsId,
+                kandidatlisteId = stillingOgKandidatliste.kandidatlisteId,
+                yrkestittel = opprettFormidling.yrkestittel,
+                janzzKonseptId = opprettFormidling.janzzKonseptId,
+                kontornummer = opprettFormidling.kontornummer,
+                kontornavn = opprettFormidling.kontornavn,
+                opprettetAvNavn = opprettFormidling.opprettetAvNavn,
+                opprettetAvNavIdent = navIdent,
             )
         } else {
             emptyList()
@@ -193,10 +196,12 @@ class FormidlingService(
         janzzKonseptId: String?,
         kontornummer: String,
         kontornavn: String?,
+        opprettetAvNavn: String?,
+        opprettetAvNavIdent: String?,
     ): List<Formidling> {
         val formidlingIder = dataSource.executeInTransaction { connection ->
             jobbsøkere.map { jobbsøker ->
-                formidlingRepository.opprett(
+                val formidlingId = formidlingRepository.opprett(
                     connection,
                     rekrutteringstreffId,
                     jobbsøker.personTreffId,
@@ -208,11 +213,30 @@ class FormidlingService(
                     janzzKonseptId,
                     kontornummer,
                     kontornavn,
+                    opprettetAvNavn,
+                    opprettetAvNavIdent,
                 )
+                leggTilHendelseForFormidling(connection, formidlingId, FormidlingHendelsestype.OPPRETTET, opprettetAvNavIdent)
+                formidlingId
             }
         }
         logger.info("Opprettet ${formidlingIder.size} formidlinger for treff ${rekrutteringstreffId} med arbeidsgiver ${arbeidsgiver.arbeidsgiverTreffId}")
         return formidlingIder.mapNotNull { formidlingRepository.hent(it) }
+    }
+
+    fun leggTilHendelseForFormidling(
+        connection: Connection,
+        formidlingId: Long,
+        hendelsestype: FormidlingHendelsestype,
+        navIdent: String?,
+    ) {
+        formidlingRepository.leggTilHendelseForFormidling(
+            connection = connection,
+            formidlingId = formidlingId,
+            hendelsestype = hendelsestype,
+            opprettetAvAktørType = AktørType.MARKEDSKONTAKT_ELLER_VEILEDER,
+            aktøridentifikasjon = navIdent,
+        )
     }
 
     private fun endreJobbsøkerStatusOgLeggTilHendelser(
@@ -248,6 +272,7 @@ class FormidlingService(
             val slettet = formidlingRepository.markerSlettet(connection, formidling.formidlingId)
             if (slettet) {
                 jobbsøkerService.angreFåttJobb(connection, formidling.jobbsøkerPersonTreffId, navIdent)
+                leggTilHendelseForFormidling(connection, formidling.formidlingId, FormidlingHendelsestype.SLETTET, navIdent)
                 logger.info("Markert formidling ${formidling.formidlingId} som slettet og tilbakestilt jobbsøkerstatus til statusen før FÅTT_JOBB")
             } else {
                 logger.info("Formidling ${formidling.formidlingId} var allerede slettet")
