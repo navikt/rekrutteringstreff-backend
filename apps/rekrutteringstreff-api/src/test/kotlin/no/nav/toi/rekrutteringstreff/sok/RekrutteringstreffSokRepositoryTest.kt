@@ -359,7 +359,7 @@ class RekrutteringstreffSokRepositoryTest {
     }
 
     @Test
-    fun `skal kun returnere egne utkast`() {
+    fun `skal kun returnere egne utkast og skjule andres utkast fra aggregeringen`() {
         val egetUtkast = opprettTreff(navIdent = "A123456", tittel = "Mitt utkast", status = RekrutteringstreffStatus.UTKAST)
         val egetPublisert = opprettTreff(
             navIdent = "A123456",
@@ -386,9 +386,13 @@ class RekrutteringstreffSokRepositoryTest {
         )
 
         assertThat(resultat.treff).extracting("id").doesNotContain(noenAndresUtkastId.toString())
-        assertThat(resultat.treff).extracting("id").contains(egetUtkast.toString())
-        assertThat(resultat.treff).extracting("id").contains(egetPublisert.toString())
-        assertThat(resultat.treff).extracting("id").contains(noenAndresPublisert.toString())
+        assertThat(resultat.treff).extracting("id").contains(egetUtkast.toString(), egetPublisert.toString(), noenAndresPublisert.toString())
+
+        val utkastAggregering = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
+        val publisertAggregering = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
+
+        assertThat(utkastAggregering?.antall).isEqualTo(1)
+        assertThat(publisertAggregering?.antall).isEqualTo(2)
     }
 
 }
