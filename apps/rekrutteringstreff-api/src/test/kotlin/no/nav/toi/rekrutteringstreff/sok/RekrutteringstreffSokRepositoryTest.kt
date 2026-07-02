@@ -158,11 +158,15 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Pub", status = RekrutteringstreffStatus.PUBLISERT)
 
         val resultat = repository.sokMedAggregering(
-            navIdent = "A123456", kontorId = "0315",
+            navIdent = "A123456",
+            kontorId = "0315",
             kategorier = null,
-            statuser = listOf(SokStatus.PUBLISERT, SokStatus.UTKAST), publisertStatuser = listOf(PublisertStatus.SVARFRIST_PASSERT, PublisertStatus.ÅPEN_FOR_SØKERE),
-            kontorer = null, visning = Visning.ALLE,
-            side = 1, antallPerSide = 25
+            statuser = listOf(SokStatus.PUBLISERT, SokStatus.UTKAST),
+            publisertStatuser = listOf(PublisertStatus.SVARFRIST_PASSERT, PublisertStatus.ÅPEN_FOR_SØKERE),
+            kontorer = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(1)
         assertThat(resultat.statusaggregering).hasSize(1)
@@ -170,7 +174,8 @@ class RekrutteringstreffSokRepositoryTest {
         assertThat(publisert.size).isEqualTo(1)
 
         assertThat(resultat.publisertstatusaggregering).hasSize(1)
-        val åpenForSøkere = resultat.publisertstatusaggregering.filter { it.verdi == PublisertStatus.ÅPEN_FOR_SØKERE.name }
+        val åpenForSøkere =
+            resultat.publisertstatusaggregering.filter { it.verdi == PublisertStatus.ÅPEN_FOR_SØKERE.name }
         assertThat(åpenForSøkere.size).isEqualTo(1)
     }
 
@@ -351,6 +356,43 @@ class RekrutteringstreffSokRepositoryTest {
         val workOp = resultat.kategoriaggregering.find { it.verdi == SokKategori.WORKOP.name }
         assertThat(rekrutteringstreff?.antall).isEqualTo(2)
         assertThat(workOp?.antall).isEqualTo(1)
+    }
+
+    @Test
+    fun `skal kun returnere egne utkast og skjule andres utkast fra aggregeringen`() {
+        val egetUtkast = opprettTreff(navIdent = "A123456", tittel = "Mitt utkast", status = RekrutteringstreffStatus.UTKAST)
+        val egetPublisert = opprettTreff(
+            navIdent = "A123456",
+            tittel = "Mitt publiserte treff",
+            status = RekrutteringstreffStatus.PUBLISERT
+        )
+        val noenAndresUtkastId = opprettTreff(navIdent = "B654321", tittel = "Noen andres utkast", status = RekrutteringstreffStatus.UTKAST)
+        val noenAndresPublisert = opprettTreff(
+            navIdent = "B654321",
+            tittel = "Noen andres publiserte treff",
+            status = RekrutteringstreffStatus.PUBLISERT
+        )
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+
+        assertThat(resultat.treff).extracting("id").doesNotContain(noenAndresUtkastId.toString())
+        assertThat(resultat.treff).extracting("id").contains(egetUtkast.toString(), egetPublisert.toString(), noenAndresPublisert.toString())
+
+        val utkastAggregering = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
+        val publisertAggregering = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
+
+        assertThat(utkastAggregering?.antall).isEqualTo(1)
+        assertThat(publisertAggregering?.antall).isEqualTo(2)
     }
 
 }
