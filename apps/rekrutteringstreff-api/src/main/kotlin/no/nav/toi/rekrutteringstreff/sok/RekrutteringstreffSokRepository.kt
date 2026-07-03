@@ -239,6 +239,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     ): Pair<String, List<SqlParam>> {
         val conditions = listOfNotNull(
             byggVisningsCondition(visning, navIdent, kontorId),
+            byggUtkastSynlighetCondition(navIdent),
             byggKategoriCondition(kategorier),
             byggStatusCondition(statuser, publisertStatuser),
             byggKontorCondition(kontorer),
@@ -271,6 +272,12 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         }
     }
 
+    private fun byggUtkastSynlighetCondition(navIdent: String?): Condition {
+        return Condition(
+            clause = "(status <> 'UTKAST' OR ? = ANY(eiere))",
+            params = listOf(SqlParam(navIdent ?: "", ParamType.STRING)),
+        )
+    }
     private fun byggKategoriCondition(kategorier: List<SokKategori>?): Condition? {
         if (kategorier.isNullOrEmpty()) return null
         return Condition(

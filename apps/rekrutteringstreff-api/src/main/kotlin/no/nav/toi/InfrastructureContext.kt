@@ -73,7 +73,9 @@ open class InfrastructureContext(
         RolleUuidSpesifikasjon(
             jobbsøkerrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_JOBBSOKERRETTET")),
             arbeidsgiverrettet = UUID.fromString(getenv("REKRUTTERINGSBISTAND_ARBEIDSGIVERRETTET")),
-            utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER"))
+            utvikler = UUID.fromString(getenv("REKRUTTERINGSBISTAND_UTVIKLER")),
+            modiaGenerell = UUID.fromString(getenv("REKRUTTERINGSBISTAND_MODIA_GENERELL")),
+            modiaOppfølging = UUID.fromString(getenv("REKRUTTERINGSBISTAND_MODIA_OPPFOLGING")),
         )
     }
 

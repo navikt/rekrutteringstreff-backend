@@ -6,6 +6,8 @@ enum class Rolle {
     JOBBSØKER_RETTET,
     ARBEIDSGIVER_RETTET,
     UTVIKLER,
+    MODIA_GENERELL,
+    MODIA_OPPFØLGING,
     BORGER
 }
 
@@ -17,11 +19,15 @@ data class RolleUuidSpesifikasjon(
     private val jobbsøkerrettet: UUID,
     private val arbeidsgiverrettet: UUID,
     private val utvikler: UUID,
+    private val modiaGenerell: UUID,
+    private val modiaOppfølging: UUID,
 ) {
     private fun rolleForUuid(uuid: UUID): Rolle? = when (uuid) {
         jobbsøkerrettet -> Rolle.JOBBSØKER_RETTET
         arbeidsgiverrettet -> Rolle.ARBEIDSGIVER_RETTET
         utvikler -> Rolle.UTVIKLER
+        modiaGenerell -> Rolle.MODIA_GENERELL
+        modiaOppfølging -> Rolle.MODIA_OPPFØLGING
         else -> { log.warn("Ukjent rolle-UUID: $uuid"); null }
     }
 
