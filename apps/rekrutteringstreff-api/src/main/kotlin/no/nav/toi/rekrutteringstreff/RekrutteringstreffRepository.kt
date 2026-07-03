@@ -38,7 +38,7 @@ data class RekrutteringstreffDetaljOutboundDto(
 )
 
 enum class HendelseRessurs {
-    REKRUTTERINGSTREFF, JOBBSØKER, ARBEIDSGIVER
+    REKRUTTERINGSTREFF, JOBBSØKER, ARBEIDSGIVER, FORMIDLING
 }
 
 class RekrutteringstreffRepository(
@@ -236,11 +236,27 @@ class RekrutteringstreffRepository(
                 JOIN   arbeidsgiver ag      ON ag.arbeidsgiver_id = ah.arbeidsgiver_id
                 JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = ag.rekrutteringstreff_id
                 WHERE  r.id = ?
+
+                UNION ALL
+
+                SELECT fh.id,
+                       '${HendelseRessurs.FORMIDLING.name}' AS ressurs,
+                       fh.tidspunkt,
+                       fh.hendelsestype,
+                       fh.opprettet_av_aktortype,
+                       fh.aktøridentifikasjon,
+                       js.fodselsnummer AS subjekt_id,
+                       js.fornavn || ' ' || js.etternavn AS subjekt_navn
+                FROM   formidling_hendelse fh
+                JOIN   formidling f         ON f.formidling_id = fh.formidling_id
+                JOIN   jobbsoker js         ON js.jobbsoker_id = f.jobbsoker_id
+                JOIN   rekrutteringstreff r ON r.rekrutteringstreff_id = f.rekrutteringstreff_id
+                WHERE  r.id = ? AND js.er_synlig = TRUE
             ) AS union_hendelser
             ORDER BY tidspunkt DESC
             """
             ).use { s ->
-                repeat(3) { idx -> s.setObject(idx + 1, treff.somUuid) }
+                repeat(4) { idx -> s.setObject(idx + 1, treff.somUuid) }
                 s.executeQuery().let { rs ->
                     generateSequence {
                         if (rs.next()) {

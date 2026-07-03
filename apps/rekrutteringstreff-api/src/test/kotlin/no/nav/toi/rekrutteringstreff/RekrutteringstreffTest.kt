@@ -680,6 +680,70 @@ class RekrutteringstreffTest {
         }
     }
 
+    @Test
+    fun `hent alle hendelser inkluderer formidlingshendelser med jobbsøker som subjekt`() {
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
+        val treff = db.opprettRekrutteringstreffIDatabase("A123456")
+
+        val personTreffId = PersonTreffId(UUID.randomUUID())
+        db.leggTilJobbsøkere(
+            listOf(
+                Jobbsøker(
+                    personTreffId = personTreffId,
+                    treffId = treff,
+                    fødselsnummer = Fødselsnummer("11111111111"),
+                    fornavn = Fornavn("Ola"),
+                    etternavn = Etternavn("Nordmann"),
+                    kontor = null,
+                    veilederNavn = null,
+                    veilederNavIdent = null,
+                    status = JobbsøkerStatus.LAGT_TIL,
+                )
+            )
+        )
+
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(
+                Orgnr("999888777"),
+                Orgnavn("Test AS"),
+                emptyList(),
+                "Fyrstikkalleen 1",
+                "0661",
+                "Oslo",
+            ),
+            treff,
+            "A123456",
+        )
+
+        val formidlingId = db.opprettFormidling(
+            treffId = treff,
+            personTreffId = personTreffId,
+            arbeidsgiverTreffId = arbeidsgiverTreffId,
+            stillingId = UUID.randomUUID(),
+            kandidatlisteId = null,
+        )
+        db.leggTilFormidlingHendelse(formidlingId, FormidlingHendelsestype.OPPRETTET, aktøridentifikasjon = "A123456")
+
+        val res = httpGet(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.somUuid}/allehendelser",
+            token.serialize()
+        )
+
+        assertThat(res.statusCode()).isEqualTo(200)
+        val type = mapper.typeFactory.constructCollectionType(
+            List::class.java,
+            FellesHendelseOutboundDto::class.java
+        )
+        val list: List<FellesHendelseOutboundDto> = mapper.readValue(res.body(), type)
+
+        val formidlingHendelse = list.find { it.ressurs == HendelseRessurs.FORMIDLING }
+        assertThat(formidlingHendelse).isNotNull
+        assertThat(formidlingHendelse?.hendelsestype).isEqualTo(FormidlingHendelsestype.OPPRETTET.name)
+        assertThat(formidlingHendelse?.subjektId).isEqualTo("11111111111")
+        assertThat(formidlingHendelse?.subjektNavn).isEqualTo("Ola Nordmann")
+        assertThat(list).isSortedAccordingTo(compareByDescending<FellesHendelseOutboundDto> { it.tidspunkt })
+    }
+
     @ParameterizedTest
     @MethodSource("tokenVarianter")
     fun autentiseringOpprett(autentiseringstest: UautentifiserendeTestCase) {

@@ -700,6 +700,20 @@ class TestDatabase {
         return formidlingRepository.hent(formidlingId)
     }
 
+    /**
+     * Legger til en hendelse på en formidling via repository.
+     */
+    fun leggTilFormidlingHendelse(
+        formidlingId: Long,
+        hendelsestype: FormidlingHendelsestype,
+        opprettetAvAktørType: AktørType = AktørType.ARRANGØR,
+        aktøridentifikasjon: String? = "testperson",
+    ) = dataSource.executeInTransaction { connection ->
+        formidlingRepository.leggTilHendelseForFormidling(
+            connection, formidlingId, hendelsestype, opprettetAvAktørType, aktøridentifikasjon,
+        )
+    }
+
     fun hentFormidlingKontor(treffId: TreffId): Pair<String?, String?> =
         dataSource.connection.use { conn ->
             conn.prepareStatement(
