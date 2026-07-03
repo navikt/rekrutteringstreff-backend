@@ -224,6 +224,7 @@ class TestDatabase {
     }
 
     fun slettAlt() = dataSource.connection.use { conn ->
+        conn.prepareStatement("DELETE FROM formidling_hendelse").executeUpdate()
         conn.prepareStatement("DELETE FROM formidling").executeUpdate()
         conn.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
         conn.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
@@ -716,7 +717,49 @@ class TestDatabase {
                 }
             }
         }
+
+    fun hentFormidlingHendelser(formidlingId: Long): List<FormidlingHendelseRad> =
+        hentFormidlingHendelserMed("fh.formidling_id = ?") { it.setLong(1, formidlingId) }
+
+    fun hentFormidlingHendelserForUuid(formidlingUuid: UUID): List<FormidlingHendelseRad> =
+        hentFormidlingHendelserMed("f.id = ?") { it.setObject(1, formidlingUuid) }
+
+    private fun hentFormidlingHendelserMed(
+        whereClause: String,
+        settParam: (java.sql.PreparedStatement) -> Unit,
+    ): List<FormidlingHendelseRad> = dataSource.connection.use { conn ->
+        conn.prepareStatement(
+            """
+            SELECT fh.hendelsestype, fh.opprettet_av_aktortype, fh.aktøridentifikasjon, fh.hendelse_data
+            FROM formidling_hendelse fh
+            JOIN formidling f ON fh.formidling_id = f.formidling_id
+            WHERE $whereClause
+            ORDER BY fh.tidspunkt, fh.formidling_hendelse_id
+            """.trimIndent()
+        ).use { stmt ->
+            settParam(stmt)
+            stmt.executeQuery().use { rs ->
+                val res = mutableListOf<FormidlingHendelseRad>()
+                while (rs.next()) {
+                    res += FormidlingHendelseRad(
+                        hendelsestype = rs.getString("hendelsestype"),
+                        opprettetAvAktortype = rs.getString("opprettet_av_aktortype"),
+                        aktøridentifikasjon = rs.getString("aktøridentifikasjon"),
+                        hendelseData = rs.getString("hendelse_data"),
+                    )
+                }
+                res
+            }
+        }
+    }
 }
+
+data class FormidlingHendelseRad(
+    val hendelsestype: String,
+    val opprettetAvAktortype: String,
+    val aktøridentifikasjon: String?,
+    val hendelseData: String?,
+)
 
 data class KiLoggTestInsert( //Brukes for i testene for å legge inn logger med opprettetTidspunkt tilbake i tid
     val treffId: UUID?,

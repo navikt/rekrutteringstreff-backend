@@ -1,5 +1,7 @@
 package no.nav.toi.formidling
 
+import no.nav.toi.AktørType
+import no.nav.toi.FormidlingHendelsestype
 import no.nav.toi.executeInTransaction
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
@@ -54,6 +56,30 @@ class FormidlingRepositoryTest {
         assertThat(formidling.kandidatlisteId).isNotNull()
         assertThat(formidling.utfallSendtTidspunkt).isNull()
         assertThat(formidling.opprettetTidspunkt.toInstant()).isCloseTo(Instant.now(), within(5, ChronoUnit.SECONDS))
+    }
+
+    @Test
+    fun `leggTilHendelseForFormidling lagrer hendelse med hendelsestype, aktørtype og identifikasjon`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val (personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
+        val formidlingId = db.opprettFormidling(treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId)
+
+        db.dataSource.executeInTransaction { connection ->
+            repository.leggTilHendelseForFormidling(
+                connection,
+                formidlingId,
+                FormidlingHendelsestype.OPPRETTET,
+                AktørType.MARKEDSKONTAKT_ELLER_VEILEDER,
+                "Z123456",
+            )
+        }
+
+        val hendelser = db.hentFormidlingHendelser(formidlingId)
+        assertThat(hendelser).hasSize(1)
+        val hendelse = hendelser.single()
+        assertThat(hendelse.hendelsestype).isEqualTo("OPPRETTET")
+        assertThat(hendelse.opprettetAvAktortype).isEqualTo("MARKEDSKONTAKT_ELLER_VEILEDER")
+        assertThat(hendelse.aktøridentifikasjon).isEqualTo("Z123456")
     }
 
     @Test
@@ -387,7 +413,7 @@ class FormidlingRepositoryTest {
     }
 
     @Test
-    fun `hentEgneForTreff returnerer kun formidlinger der bruker er veileder eller har kontortilgang`() {
+    fun `hentEgneForTreff returnerer kun formidlinger som bruker selv har opprettet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
             LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Testbedrift AS"), emptyList(), null, null, null),
@@ -395,25 +421,21 @@ class FormidlingRepositoryTest {
         )
         val personTreffIder = db.leggTilJobbsøkereMedHendelse(
             listOf(
-                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Egen"), Etternavn("Veileder"), Kontor("1000", "Nav Test"), VeilederNavn("Min Veil"), VeilederNavIdent("Z111111")),
-                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Annet"), Etternavn("Kontor"), Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Egen"), Etternavn("Formidling"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Annen"), Etternavn("Formidling"), null, null, null),
             ),
             treffId, "testperson",
         )
-        val stillingId = UUID.randomUUID()
-        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
-        db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+        db.dataSource.executeInTransaction { connection ->
+            repository.opprett(connection, treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), opprettetAvNavIdent = "Z111111")
+            repository.opprett(connection, treffId, personTreffIder[1], arbeidsgiverTreffId, UUID.randomUUID(), opprettetAvNavIdent = "Z999999")
+        }
 
-        val somVeileder = repository.hentEgneForTreff(treffId, "Z111111", emptyList())
-        assertThat(somVeileder).hasSize(1)
-        assertThat(somVeileder.single().fødselsnummer).isEqualTo("11111111111")
+        val egne = repository.hentEgneForTreff(treffId, "Z111111")
 
-        val viaKontor = repository.hentEgneForTreff(treffId, "ukjent", listOf("2000"))
-        assertThat(viaKontor).hasSize(1)
-        assertThat(viaKontor.single().fødselsnummer).isEqualTo("22222222222")
-
-        val ingenTilgang = repository.hentEgneForTreff(treffId, "ukjent", emptyList())
-        assertThat(ingenTilgang).isEmpty()
+        assertThat(egne).hasSize(1)
+        assertThat(egne.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(egne.single().opprettetAvNavIdent).isEqualTo("Z111111")
     }
 
     @Test

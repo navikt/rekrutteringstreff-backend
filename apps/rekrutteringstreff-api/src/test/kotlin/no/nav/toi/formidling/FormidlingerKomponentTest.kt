@@ -210,20 +210,18 @@ class FormidlingerKomponentTest {
 
 
     @Test
-    fun `veileder ser egne formidlinger via brukertilgang (veileder_navident)`() {
+    fun `veileder ser formidling de selv opprettet selv om de ikke er jobbsøkerens veileder`() {
         val eierIdent = "A123456"
         val veilederIdent = "Z111111"
+        val orgnr = "123456789"
         val treffId = opprettTreffMedEier(eierIdent)
-        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Egen", "Bruker", Kontor("1000", "Nav Test"), VeilederNavn("Min Veil"), VeilederNavIdent(veilederIdent)),
-            jobbsøker("22222222222", "Annen", "Bruker", Kontor("2000", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
+        leggTilArbeidsgiver(treffId)
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Egen", "Bruker", Kontor("1000", "Nav Test"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
         )
-        val stillingId = UUID.randomUUID()
-        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
-        db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+        stubOpprettStilling()
 
-        stubMineEnheter()
+        assertThat(opprettFormidlingKall(treffId, orgnr, "11111111111", veilederIdent).statusCode()).isEqualTo(201)
 
         val response = hentEgneFormidlinger(treffId, veilederIdent)
         assertThat(response.statusCode()).isEqualTo(200)
@@ -231,31 +229,29 @@ class FormidlingerKomponentTest {
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).hasSize(1)
         assertThat(linjer.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(linjer.single().opprettetAvNavIdent).isEqualTo(veilederIdent)
     }
 
     @Test
-    fun `veileder ser egne formidlinger via kontortilgang`() {
+    fun `veileder ser ikke formidling opprettet av annen veileder selv om de er jobbsøkerens veileder`() {
         val eierIdent = "A123456"
         val veilederIdent = "Z222222"
-        val veiledersKontor = "0314"
+        val annenVeileder = "Z999999"
+        val orgnr = "123456789"
         val treffId = opprettTreffMedEier(eierIdent)
-        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Samme", "Kontor", Kontor(veiledersKontor, "Nav Test"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z999999")),
-            jobbsøker("22222222222", "Annet", "Kontor", Kontor("9999", "Nav Andre"), VeilederNavn("Annen Veil"), VeilederNavIdent("Z888888")),
+        leggTilArbeidsgiver(treffId)
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Samme", "Kontor", Kontor("0314", "Nav Test"), VeilederNavn("Min Veil"), VeilederNavIdent(veilederIdent)),
         )
-        val stillingId = UUID.randomUUID()
-        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
-        db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, UUID.randomUUID())
+        stubOpprettStilling()
 
-        stubMineEnheter(veiledersKontor)
+        assertThat(opprettFormidlingKall(treffId, orgnr, "11111111111", annenVeileder).statusCode()).isEqualTo(201)
 
         val response = hentEgneFormidlinger(treffId, veilederIdent)
         assertThat(response.statusCode()).isEqualTo(200)
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
-        assertThat(linjer).hasSize(1)
-        assertThat(linjer.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(linjer).isEmpty()
     }
 
     @Test
@@ -277,6 +273,32 @@ class FormidlingerKomponentTest {
 
         val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
         assertThat(linjer).isEmpty()
+    }
+
+    @Test
+    fun `veileder ser kun formidlinger de selv har opprettet`() {
+        val eierIdent = "A123456"
+        val egenVeileder = "Z111111"
+        val annenVeileder = "Z222222"
+        val orgnr = "123456789"
+        val treffId = opprettTreffMedEier(eierIdent)
+        leggTilArbeidsgiver(treffId)
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Egen", "Formidling", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+            jobbsøker("22222222222", "Annen", "Formidling", Kontor("1000", "Nav Test"), VeilederNavn("Veil B"), VeilederNavIdent("V999997")),
+        )
+        stubOpprettStilling()
+
+        assertThat(opprettFormidlingKall(treffId, orgnr, "11111111111", egenVeileder).statusCode()).isEqualTo(201)
+        assertThat(opprettFormidlingKall(treffId, orgnr, "22222222222", annenVeileder).statusCode()).isEqualTo(201)
+
+        val response = hentEgneFormidlinger(treffId, egenVeileder)
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val linjer = mapper.readValue<List<FormidlingDto>>(response.body())
+        assertThat(linjer).hasSize(1)
+        assertThat(linjer.single().fødselsnummer).isEqualTo("11111111111")
+        assertThat(linjer.single().opprettetAvNavIdent).isEqualTo(egenVeileder)
     }
 
     @Test
@@ -426,6 +448,28 @@ class FormidlingerKomponentTest {
     }
 
     @Test
+    fun `opprett formidling registrerer OPPRETTET-hendelse`() {
+        val eierIdent = "A123456"
+        val orgnr = "123456789"
+        val treffId = opprettTreffMedEier(eierIdent)
+        leggTilArbeidsgiver(treffId)
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+        )
+        stubOpprettStilling()
+
+        assertThat(opprettFormidlingKall(treffId, orgnr, "11111111111", eierIdent).statusCode()).isEqualTo(201)
+
+        val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
+        val hendelser = db.hentFormidlingHendelserForUuid(formidlingId)
+        assertThat(hendelser).hasSize(1)
+        val hendelse = hendelser.single()
+        assertThat(hendelse.hendelsestype).isEqualTo("OPPRETTET")
+        assertThat(hendelse.opprettetAvAktortype).isEqualTo("MARKEDSKONTAKT_ELLER_VEILEDER")
+        assertThat(hendelse.aktøridentifikasjon).isEqualTo(eierIdent)
+    }
+
+    @Test
     fun `opprett formidling for sperret jobbsøker gir 403 med hint`() {
         val eierIdent = "A123456"
         val orgnr = "123456789"
@@ -510,6 +554,31 @@ class FormidlingerKomponentTest {
                 userToken = any(),
             )
         }
+    }
+
+    @Test
+    fun `slett formidling registrerer SLETTET-hendelse`() {
+        val eierIdent = "A123456"
+        val treffId = opprettTreffMedEier(eierIdent)
+        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
+        val personTreffIder = leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
+        )
+        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+        val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
+
+        val response = httpDelete(
+            "${formidlingPath(treffId)}/$formidlingId?eierNavKontorEnhetId=1234",
+            eierIdent,
+            listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(204)
+        val hendelser = db.hentFormidlingHendelserForUuid(formidlingId)
+        assertThat(hendelser.map { it.hendelsestype }).containsExactly("SLETTET")
+        val hendelse = hendelser.single()
+        assertThat(hendelse.opprettetAvAktortype).isEqualTo("MARKEDSKONTAKT_ELLER_VEILEDER")
+        assertThat(hendelse.aktøridentifikasjon).isEqualTo(eierIdent)
     }
 
     @Test

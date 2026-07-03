@@ -1,5 +1,7 @@
 package no.nav.toi.formidling
 
+import no.nav.toi.AktørType
+import no.nav.toi.FormidlingHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.executeInTransaction
 import no.nav.toi.formidling.dto.FormidlingDto
@@ -8,7 +10,10 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.Statement
+import java.sql.Timestamp
 import java.sql.Types
+import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.*
@@ -28,9 +33,11 @@ class FormidlingRepository(private val dataSource: DataSource) {
         janzzKonseptId: String? = null,
         kontornummer: String? = null,
         kontornavn: String? = null,
+        opprettetAvNavn: String? = null,
+        opprettetAvNavIdent: String? = null,
     ): Long {
         val sql = """
-            INSERT INTO formidling (rekrutteringstreff_id, jobbsoker_id, arbeidsgiver_id, stilling_id, kandidatliste_id, utfall_sendt_tidspunkt, yrkestittel, janzz_konsept_id, kontornummer, kontornavn)
+            INSERT INTO formidling (rekrutteringstreff_id, jobbsoker_id, arbeidsgiver_id, stilling_id, kandidatliste_id, utfall_sendt_tidspunkt, yrkestittel, janzz_konsept_id, kontornummer, kontornavn, opprettet_av_veileder_navn, opprettet_av_veileder_navident)
             VALUES (
                 (SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?),
                 (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?),
@@ -41,11 +48,13 @@ class FormidlingRepository(private val dataSource: DataSource) {
                 ?,
                 ?,
                 ?,
+                ?,
+                ?,
                 ?
             )
         """.trimIndent()
 
-        return connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS).use { stmt ->
+        return connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
             stmt.setObject(1, treffId.somUuid)
             stmt.setObject(2, personTreffId.somUuid)
             stmt.setObject(3, arbeidsgiverTreffId.somUuid)
@@ -57,6 +66,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
             stmt.setString(9, janzzKonseptId)
             stmt.setString(10, kontornummer)
             stmt.setString(11, kontornavn)
+            stmt.setString(12, opprettetAvNavn)
+            stmt.setString(13, opprettetAvNavIdent)
             stmt.executeUpdate()
             stmt.generatedKeys.use { rs ->
                 rs.next()
@@ -144,6 +155,32 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
+    fun leggTilHendelseForFormidling(
+        connection: Connection,
+        formidlingId: Long,
+        hendelsestype: FormidlingHendelsestype,
+        opprettetAvAktørType: AktørType,
+        aktøridentifikasjon: String?,
+        hendelseData: String? = null,
+    ) {
+        val sql = """
+            INSERT INTO formidling_hendelse (
+                id, formidling_id, hendelsestype, tidspunkt, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)
+        """.trimIndent()
+
+        connection.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, UUID.randomUUID())
+            stmt.setLong(2, formidlingId)
+            stmt.setString(3, hendelsestype.name)
+            stmt.setTimestamp(4, Timestamp.from(Instant.now()))
+            stmt.setString(5, opprettetAvAktørType.name)
+            stmt.setString(6, aktøridentifikasjon)
+            stmt.setString(7, hendelseData)
+            stmt.executeUpdate()
+        }
+    }
+
     fun hentAlleForTreff(
         treffId: TreffId,
         sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
@@ -157,14 +194,13 @@ class FormidlingRepository(private val dataSource: DataSource) {
     fun hentEgneForTreff(
         treffId: TreffId,
         veilederNavIdent: String,
-        tilknyttedeEnheter: List<String>,
         sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
         retning: FormidlingSorteringsretning? = null,
         arbeidsgivere: List<String> = emptyList(),
     ): List<FormidlingDto> {
         val where = tilWhereClause(
             byggBasisFilter(treffId)
-                + byggVeilederEllerEnhetFilter(veilederNavIdent, tilknyttedeEnheter)
+                + byggOpprettetFormidlingFilter(veilederNavIdent)
                 + byggArbeidsgiverFilter(arbeidsgivere)
         )
         return hentMedWhere(where, sortering, retning)
@@ -182,6 +218,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
                     f.opprettet_tidspunkt,
                     f.stilling_id,
                     f.yrkestittel,
+                    f.opprettet_av_veileder_navn,
+                    f.opprettet_av_veileder_navident,
                     CASE WHEN j.sperret THEN NULL WHEN j.er_synlig THEN j.fodselsnummer ELSE NULL END AS fodselsnummer,
                     CASE WHEN j.sperret THEN NULL ELSE j.fornavn END AS fornavn,
                     CASE WHEN j.sperret THEN NULL ELSE j.etternavn END AS etternavn,
@@ -235,6 +273,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
         stillingId = UUID.fromString(getString("stilling_id")),
         yrkestittel = getString("yrkestittel"),
         sperret = getBoolean("sperret"),
+        opprettetAvNavn = getString("opprettet_av_veileder_navn"),
+        opprettetAvNavIdent = getString("opprettet_av_veileder_navident"),
     )
 
     private data class WhereClause(
@@ -273,6 +313,15 @@ class FormidlingRepository(private val dataSource: DataSource) {
         )
     }
 
+    private fun byggOpprettetFormidlingFilter(
+        veilederNavIdent: String,
+    ): Condition {
+        return Condition(
+            "UPPER(f.opprettet_av_veileder_navident) = ?",
+            SqlParam.Text(veilederNavIdent.trim().uppercase()),
+        )
+    }
+
     private fun byggArbeidsgiverFilter(arbeidsgivere: List<String>): List<Condition> {
         val orgnr = arbeidsgivere.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
         if (orgnr.isEmpty()) return emptyList()
@@ -296,7 +345,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         opprettetTidspunkt = getTimestamp("opprettet_tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
     )
 
-    private fun java.sql.PreparedStatement.setNullableUuid(index: Int, value: UUID?) {
+    private fun PreparedStatement.setNullableUuid(index: Int, value: UUID?) {
         if (value == null) {
             setNull(index, Types.OTHER)
         } else {
@@ -304,7 +353,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         }
     }
 
-    private fun java.sql.PreparedStatement.setNullableTimestampWithTimezone(index: Int, value: ZonedDateTime?) {
+    private fun PreparedStatement.setNullableTimestampWithTimezone(index: Int, value: ZonedDateTime?) {
         if (value == null) {
             setNull(index, Types.TIMESTAMP_WITH_TIMEZONE)
         } else {
@@ -326,7 +375,9 @@ class FormidlingRepository(private val dataSource: DataSource) {
                 f.stilling_id,
                 f.kandidatliste_id,
                 f.utfall_sendt_tidspunkt,
-                f.opprettet_tidspunkt
+                f.opprettet_tidspunkt,
+                f.opprettet_av_veileder_navn,
+                f.opprettet_av_veileder_navident
             FROM formidling f
             JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
             JOIN jobbsoker js ON f.jobbsoker_id = js.jobbsoker_id
