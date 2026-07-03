@@ -317,7 +317,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         veilederNavIdent: String,
     ): Condition {
         return Condition(
-            "f.opprettet_av_veileder_navident = ?",
+            "UPPER(f.opprettet_av_veileder_navident) = ?",
             SqlParam.Text(veilederNavIdent.trim().uppercase()),
         )
     }
