@@ -395,4 +395,40 @@ class RekrutteringstreffSokRepositoryTest {
         assertThat(publisertAggregering?.antall).isEqualTo(2)
     }
 
+    @Test
+    fun `skal kun returnere egne WorkOp og skjule andres WorkOp fra aggregeringen`() {
+        val egetWorkOp = opprettTreff(
+            navIdent = "A123456", tittel = "Mitt WorkOp",
+            kategori = RekrutteringstreffKategori.WORKOP
+        )
+        val egetRekrutteringstreff = opprettTreff(
+            navIdent = "A123456", tittel = "Mitt rekrutteringstreff",
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
+        )
+        val andresWorkOp = opprettTreff(
+            navIdent = "B654321", tittel = "Andres WorkOp",
+            kategori = RekrutteringstreffKategori.WORKOP
+        )
+        val andresRekrutteringstreff = opprettTreff(
+            navIdent = "B654321", tittel = "Andres rekrutteringstreff",
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
+        )
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
+            visning = Visning.ALLE, side = 1, antallPerSide = 25
+        )
+
+        assertThat(resultat.treff).extracting("id").doesNotContain(andresWorkOp.toString())
+        assertThat(resultat.treff).extracting("id")
+            .contains(egetWorkOp.toString(), egetRekrutteringstreff.toString(), andresRekrutteringstreff.toString())
+
+        val workOpAggregering = resultat.kategoriaggregering.find { it.verdi == SokKategori.WORKOP.name }
+        val rekrutteringstreffAggregering = resultat.kategoriaggregering.find { it.verdi == SokKategori.REKRUTTERINGSTREFF.name }
+
+        assertThat(workOpAggregering?.antall).isEqualTo(1)
+        assertThat(rekrutteringstreffAggregering?.antall).isEqualTo(2)
+    }
+
 }
