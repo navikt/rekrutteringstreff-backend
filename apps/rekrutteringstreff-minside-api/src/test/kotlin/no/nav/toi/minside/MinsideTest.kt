@@ -286,7 +286,7 @@ class MinsideTest {
 
         assertThat(response.statusCode()).isEqualTo(200)
         val dto = mapper.readTree(response.body())
-        assertThat(dto["kategori"].asText()).isEqualTo("WORKOP")
+        assertThat(dto["kategori"].asText()).isEqualTo(RekrutteringstreffKategori.WORKOP.name)
         assertThat(dto["arbeidsgivere"]).isEmpty()
     }
 
