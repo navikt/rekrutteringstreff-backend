@@ -23,6 +23,7 @@ class RekrutteringstreffOutboundDtoTest {
             postnummer = null,
             poststed = null,
             status = null,
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
             innlegg = listOf(
                 InnleggOutboundDto("En tittel", "<p>Tekst med \"anførselstegn\"</p>")
             ),
@@ -32,6 +33,6 @@ class RekrutteringstreffOutboundDtoTest {
         )
 
         val json = treff.json()
-        assertThat(json).isEqualTo("""{"id":"d6a587cd-8797-4b9a-a68b-575373f16d65","tittel":"Sommerjobbtreff","beskrivelse":null,"fraTid":"2026-06-01T12:00:00Z","tilTid":null,"svarfrist":null,"gateadresse":null,"postnummer":null,"poststed":null,"status":null,"innlegg":[{"tittel":"En tittel","htmlContent":"<p>Tekst med \"anførselstegn\"</p>"}],"arbeidsgivere":[{"organisasjonsnummer":"123456789","navn":"Testbedrift"}]}""")
+        assertThat(json).isEqualTo("""{"id":"d6a587cd-8797-4b9a-a68b-575373f16d65","tittel":"Sommerjobbtreff","beskrivelse":null,"fraTid":"2026-06-01T12:00:00Z","tilTid":null,"svarfrist":null,"gateadresse":null,"postnummer":null,"poststed":null,"status":null,"kategori":"REKRUTTERINGSTREFF","innlegg":[{"tittel":"En tittel","htmlContent":"<p>Tekst med \"anførselstegn\"</p>"}],"arbeidsgivere":[{"organisasjonsnummer":"123456789","navn":"Testbedrift"}]}""")
     }
 }

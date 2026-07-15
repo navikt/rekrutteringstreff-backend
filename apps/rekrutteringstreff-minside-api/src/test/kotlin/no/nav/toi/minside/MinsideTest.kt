@@ -28,6 +28,7 @@ import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.minside.ubruktPortnrFra9000.ubruktPortnr
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.ki.client.OpenAiProperties
 import no.nav.toi.rekrutteringstreff.no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
@@ -40,7 +41,10 @@ import org.junit.jupiter.api.fail
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.net.URI
 import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -191,6 +195,29 @@ class MinsideTest {
                 ))
             }.hentAlleRekrutteringstreff().first { tittel == it.tittel }
         }
+        private val workOp = "WorkOp".let { tittel ->
+            db.apply {
+                opprettRekrutteringstreffIDatabase(
+                    navIdent = "navIdent",
+                    tittel = tittel,
+                    kategori = RekrutteringstreffKategori.WORKOP
+                )
+            }.apply {
+                val treffId = hentAlleRekrutteringstreff().first { tittel == it.tittel }.id
+                leggTilArbeidsgivere(listOf(
+                    Arbeidsgiver(
+                        arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.randomUUID()),
+                        treffId = treffId,
+                        orgnr = Orgnr(arrangørOrgNr),
+                        orgnavn = Orgnavn(arrangørOrgnavn),
+                        status = ArbeidsgiverStatus.AKTIV,
+                        gateadresse = "Gate 1",
+                        postnummer = "0123",
+                        poststed = "Oslo",
+                    )
+                ))
+            }.hentAlleRekrutteringstreff().first { tittel == it.tittel }
+        }
     }
 
     @BeforeAll
@@ -221,6 +248,7 @@ class MinsideTest {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = mapper.readTree(result.get())
                 assertThat(dto["tittel"].asText()).isEqualTo(rekrutteringstreffMeldtPå.tittel)
+                assertThat(dto["arbeidsgivere"]).isNotEmpty
             }
         }
     }
@@ -242,6 +270,24 @@ class MinsideTest {
                 assertThat(dto["navn"].asText()).isEqualTo(arrangørOrgnavn)
             }
         }
+    }
+
+    @Test
+    fun `arbeidsgivere er tom liste når kategori er WorkOp`() {
+        val token = authServer.lagToken(authPort, pid = "12345678910")
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${workOp.id}"))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .GET()
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val dto = mapper.readTree(response.body())
+        assertThat(dto["kategori"].asText()).isEqualTo("WORKOP")
+        assertThat(dto["arbeidsgivere"]).isEmpty()
     }
 
     @Test

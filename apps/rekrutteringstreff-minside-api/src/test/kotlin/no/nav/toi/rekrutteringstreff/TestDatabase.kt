@@ -31,6 +31,7 @@ class TestDatabase {
     fun opprettRekrutteringstreffIDatabase(
         navIdent: String = "Original navident",
         tittel: String = "Original Tittel",
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
     ): TreffId {
         return dataSource.connection.use { connection ->
             val (treffId, treffDbId) = rekrutteringstreffRepository.opprett(
@@ -40,7 +41,7 @@ class TestDatabase {
                     opprettetAvNavkontorEnhetId = "Original Kontor",
                     opprettetAvPersonNavident = navIdent,
                     opprettetAvTidspunkt = nowOslo().minusDays(10),
-                    kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
+                    kategori = kategori
                 )
             )
             rekrutteringstreffRepository.leggTilHendelse(

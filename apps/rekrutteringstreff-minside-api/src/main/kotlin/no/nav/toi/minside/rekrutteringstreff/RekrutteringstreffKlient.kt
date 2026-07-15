@@ -99,6 +99,7 @@ data class Rekrutteringstreff(
     private val postnummer: String?,
     private val poststed: String?,
     private val status: String?,
+    private val kategori: RekrutteringstreffKategori,
 ) {
     fun tilDTOForBruker() = RekrutteringstreffOutboundDto(
         id,
@@ -110,7 +111,8 @@ data class Rekrutteringstreff(
         gateadresse,
         postnummer,
         poststed,
-        status
+        status,
+        kategori
     )
 }
 

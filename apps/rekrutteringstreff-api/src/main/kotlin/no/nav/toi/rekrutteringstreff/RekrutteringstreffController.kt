@@ -65,7 +65,8 @@ class RekrutteringstreffController(
                 from = OpprettRekrutteringstreffDto::class,
                 example = """
                     {
-                        "tittel": "Nytt rekrutteringstreff"
+                        "tittel": "Nytt rekrutteringstreff",
+                        "kategori": "WORKOP"
                     }
                 """
             )]
