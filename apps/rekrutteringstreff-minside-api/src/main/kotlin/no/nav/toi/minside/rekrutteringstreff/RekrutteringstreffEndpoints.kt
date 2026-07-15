@@ -46,7 +46,7 @@ class RekrutteringstreffEndpoints {
                    "postnummer":null,
                    "poststed":null,
                    "status":null,
-                   "kategori":"REKRUTTERINGSTREFF",
+                   "kategori":"REKRUTTERINGSTREFF"
                 }"""
             )]
         )],
