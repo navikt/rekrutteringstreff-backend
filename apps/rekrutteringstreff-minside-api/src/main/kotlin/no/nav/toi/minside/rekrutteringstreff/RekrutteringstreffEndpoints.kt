@@ -45,7 +45,8 @@ class RekrutteringstreffEndpoints {
                    "gateadresse":null,
                    "postnummer":null,
                    "poststed":null,
-                   "status":null
+                   "status":null,
+                   "kategori":"REKRUTTERINGSTREFF"
                 }"""
             )]
         )],
@@ -60,8 +61,9 @@ class RekrutteringstreffEndpoints {
             ctx.status(404).json("{ message: \"Fant ikke treff med id: $id\" }")
         } else {
             val arbeidsgivere =
-                treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() }
-                    ?: emptyList()
+                if (treff.kategori == RekrutteringstreffKategori.WORKOP) emptyList()
+                else treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)
+                    ?.map { it.tilDTOForBruker() } ?: emptyList()
             val innlegg =
                 treffKlient.hentInnlegg(id, ctx.authenticatedUser().jwt)?.map { it.tilDTOForBruker() } ?: emptyList()
             log.info("Hentet rekrutteringstrefff med id: $id")
@@ -84,6 +86,7 @@ data class RekrutteringstreffOutboundDto(
     val postnummer: String?,
     val poststed: String?,
     val status: String?,
+    val kategori: RekrutteringstreffKategori,
     val innlegg: List<InnleggOutboundDto> = emptyList(),
     val arbeidsgivere: List<ArbeidsgiverOutboundDto> = emptyList(),
 ) {
