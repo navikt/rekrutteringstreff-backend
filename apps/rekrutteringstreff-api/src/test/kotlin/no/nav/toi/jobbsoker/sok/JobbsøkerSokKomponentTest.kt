@@ -101,7 +101,8 @@ class JobbsøkerSokKomponentTest {
         kontor: Kontor? = null,
         veilederNavn: VeilederNavn? = null,
         veilederNavIdent: VeilederNavIdent? = null,
-    ) = LeggTilJobbsøker(Fødselsnummer(fødselsnummer), Fornavn(fornavn), Etternavn(etternavn), kontor, veilederNavn, veilederNavIdent)
+        alder: Int? = null,
+    ) = LeggTilJobbsøker(Fødselsnummer(fødselsnummer), Fornavn(fornavn), Etternavn(etternavn), kontor, veilederNavn, veilederNavIdent, alder)
 
     private fun leggTilJobbsøkere(treffId: TreffId, vararg jobbsøkere: LeggTilJobbsøker) =
         db.leggTilJobbsøkereMedHendelse(jobbsøkere.toList(), treffId)
@@ -412,6 +413,50 @@ class JobbsøkerSokKomponentTest {
             JobbsøkerStatus.SVART_NEI,
             JobbsøkerStatus.SVART_JA,
         )
+    }
+
+    @Test
+    fun `sortering på alder gir stigende rekkefølge`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("22222222222", "Alice", "A", alder = 40),
+            jobbsøker("33333333333", "Bob", "B", alder = 25),
+            jobbsøker("11111111111", "Charlie", "C", alder = 30),
+            )
+
+        val dto = søk(treffId, "sortering" to "alder")
+
+        assertThat(dto.jobbsøkere.map { it.alder }).containsExactly(25, 30, 40)
+    }
+
+    @Test
+    fun `sortering på alder støtter synkende rekkefølge`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("22222222222", "Alice", "A", alder = 40),
+            jobbsøker("33333333333", "Bob", "B", alder = 25),
+            jobbsøker("11111111111", "Charlie", "C", alder = 30),
+        )
+
+        val dto = søk(treffId, "sortering" to "alder", "retning" to "desc")
+
+        assertThat(dto.jobbsøkere.map { it.alder }).containsExactly(40, 30, 25)
+    }
+
+    @Test
+    fun `sortering på alder plasserer ukjent alder sist uansett retning`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("22222222222", "Alice", "A", alder = 40),
+            jobbsøker("33333333333", "Bob", "B", alder = null),
+            jobbsøker("11111111111", "Charlie", "C", alder = 30),
+        )
+
+        val stigende = søk(treffId, "sortering" to "alder", "retning" to "asc")
+        val synkende = søk(treffId, "sortering" to "alder", "retning" to "desc")
+
+        assertThat(stigende.jobbsøkere.map { it.alder }).containsExactly(30, 40, 0)
+        assertThat(synkende.jobbsøkere.map { it.alder }).containsExactly(40, 30, 0)
     }
 
     @Test

@@ -30,6 +30,7 @@ enum class JobbsøkerSorteringsfelt {
     NAVN,
     LAGT_TIL,
     STATUS,
+    ALDER,
     ;
 
     @JsonValue
@@ -37,6 +38,7 @@ enum class JobbsøkerSorteringsfelt {
         NAVN -> "navn"
         LAGT_TIL -> "lagt-til"
         STATUS -> "status"
+        ALDER -> "alder"
     }
 
     val standardRetning: JobbsøkerSorteringsretning
@@ -44,6 +46,7 @@ enum class JobbsøkerSorteringsfelt {
             LAGT_TIL -> JobbsøkerSorteringsretning.DESC
             NAVN -> JobbsøkerSorteringsretning.ASC
             STATUS -> JobbsøkerSorteringsretning.ASC
+            ALDER -> JobbsøkerSorteringsretning.ASC
         }
 
     private fun statusSorteringSql(retning: JobbsøkerSorteringsretning): String {
@@ -66,6 +69,7 @@ enum class JobbsøkerSorteringsfelt {
             NAVN -> "LOWER(v.etternavn) ${retning.sql}, LOWER(v.fornavn) ${retning.sql}, v.lagt_til_dato DESC NULLS LAST, v.jobbsoker_id DESC"
             LAGT_TIL -> "v.lagt_til_dato ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
             STATUS -> statusSorteringSql(retning)
+            ALDER -> "v.alder ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
         }
 
     companion object {
@@ -76,6 +80,7 @@ enum class JobbsøkerSorteringsfelt {
                 "navn" -> NAVN
                 "lagt-til" -> LAGT_TIL
                 "status" -> STATUS
+                "alder" -> ALDER
                 else -> throw IllegalArgumentException("Ugyldig sortering: $verdi")
             }
     }
@@ -110,6 +115,7 @@ data class JobbsøkerSøkTreff(
     val lagtTilDato: Instant?,
     val lagtTilAv: String?,
     val lagtTilAvNavn: String?,
+    val alder: Int?,
     val minsideHendelser: List<MinsideHendelseSøkDto> = emptyList(),
 )
 
