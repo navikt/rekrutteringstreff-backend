@@ -87,18 +87,15 @@ enum class Aldersgruppe(val sql: String) {
     ;
 
     @JsonValue
-    fun jsonVerdi(): String = when (this) {
-        UNDER_30 -> "under_30"
-        OVER_30 -> "over_30"
-    }
+    fun jsonVerdi(): String = name
 
     companion object {
         @JvmStatic
         @JsonCreator
         fun fraJson(verdi: String): Aldersgruppe =
-            when (verdi.lowercase()) {
-                "under_30" -> UNDER_30
-                "over_30" -> OVER_30
+            when (verdi.uppercase()) {
+                "UNDER_30" -> UNDER_30
+                "OVER_30" -> OVER_30
                 else -> throw IllegalArgumentException("Ugyldig aldersgruppe: $verdi")
             }
     }
