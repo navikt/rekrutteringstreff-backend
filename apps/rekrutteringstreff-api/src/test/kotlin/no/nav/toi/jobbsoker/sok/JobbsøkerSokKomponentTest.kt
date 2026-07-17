@@ -416,47 +416,44 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
-    fun `sortering på alder gir stigende rekkefølge`() {
+    fun `filtrering på over 30 returnerer kun jobbsøkere 30 år og eldre`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("22222222222", "Alice", "A", alder = 40),
-            jobbsøker("33333333333", "Bob", "B", alder = 25),
-            jobbsøker("11111111111", "Charlie", "C", alder = 30),
+            jobbsøker("11111111111", "Alice", "A", alder = 30),
+            jobbsøker("22222222222", "Bob", "B", alder = 45),
+            jobbsøker("33333333333", "Charlie", "C", alder = 20),
             )
 
-        val dto = søk(treffId, "sortering" to "alder")
+        val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.OVER_30))
 
-        assertThat(dto.jobbsøkere.map { it.alder }).containsExactly(25, 30, 40)
+        assertThat(søkRespons.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Bob")
     }
 
     @Test
-    fun `sortering på alder støtter synkende rekkefølge`() {
+    fun `filtrering på under 30 returnerer kun jobbsøkere yngre enn 30`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("22222222222", "Alice", "A", alder = 40),
-            jobbsøker("33333333333", "Bob", "B", alder = 25),
-            jobbsøker("11111111111", "Charlie", "C", alder = 30),
-        )
+            jobbsøker("11111111111", "Alice", "A", alder = 30),
+            jobbsøker("22222222222", "Bob", "B", alder = 45),
+            jobbsøker("33333333333", "Charlie", "C", alder = 20),
+            )
 
-        val dto = søk(treffId, "sortering" to "alder", "retning" to "desc")
+        val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.UNDER_30))
 
-        assertThat(dto.jobbsøkere.map { it.alder }).containsExactly(40, 30, 25)
+        assertThat(søkRespons.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Charlie")
     }
 
     @Test
-    fun `sortering på alder plasserer ukjent alder sist uansett retning`() {
+    fun `filtrering på alder ekskluderer ukjent alder`() {
         val treffId = opprettTreffMedEier()
         leggTilJobbsøkere(treffId,
-            jobbsøker("22222222222", "Alice", "A", alder = 40),
-            jobbsøker("33333333333", "Bob", "B", alder = null),
-            jobbsøker("11111111111", "Charlie", "C", alder = 30),
+            jobbsøker("11111111111", "Alice", "A", alder = 35),
+            jobbsøker("22222222222", "Bob", "B", alder = null),
         )
 
-        val stigende = søk(treffId, "sortering" to "alder", "retning" to "asc")
-        val synkende = søk(treffId, "sortering" to "alder", "retning" to "desc")
+        val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.OVER_30))
 
-        assertThat(stigende.jobbsøkere.map { it.alder }).containsExactly(30, 40, 0)
-        assertThat(synkende.jobbsøkere.map { it.alder }).containsExactly(40, 30, 0)
+        assertThat(søkRespons.jobbsøkere.map { it.fornavn }).containsExactly("Alice")
     }
 
     @Test

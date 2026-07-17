@@ -30,7 +30,6 @@ enum class JobbsøkerSorteringsfelt {
     NAVN,
     LAGT_TIL,
     STATUS,
-    ALDER,
     ;
 
     @JsonValue
@@ -38,7 +37,6 @@ enum class JobbsøkerSorteringsfelt {
         NAVN -> "navn"
         LAGT_TIL -> "lagt-til"
         STATUS -> "status"
-        ALDER -> "alder"
     }
 
     val standardRetning: JobbsøkerSorteringsretning
@@ -46,7 +44,6 @@ enum class JobbsøkerSorteringsfelt {
             LAGT_TIL -> JobbsøkerSorteringsretning.DESC
             NAVN -> JobbsøkerSorteringsretning.ASC
             STATUS -> JobbsøkerSorteringsretning.ASC
-            ALDER -> JobbsøkerSorteringsretning.ASC
         }
 
     private fun statusSorteringSql(retning: JobbsøkerSorteringsretning): String {
@@ -69,7 +66,6 @@ enum class JobbsøkerSorteringsfelt {
             NAVN -> "LOWER(v.etternavn) ${retning.sql}, LOWER(v.fornavn) ${retning.sql}, v.lagt_til_dato DESC NULLS LAST, v.jobbsoker_id DESC"
             LAGT_TIL -> "v.lagt_til_dato ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
             STATUS -> statusSorteringSql(retning)
-            ALDER -> "v.alder ${retning.sql} NULLS LAST, v.jobbsoker_id ${retning.sql}"
         }
 
     companion object {
@@ -80,8 +76,30 @@ enum class JobbsøkerSorteringsfelt {
                 "navn" -> NAVN
                 "lagt-til" -> LAGT_TIL
                 "status" -> STATUS
-                "alder" -> ALDER
                 else -> throw IllegalArgumentException("Ugyldig sortering: $verdi")
+            }
+    }
+}
+
+enum class Aldersgruppe(val sql: String) {
+    UNDER_30("v.alder <= 30"),
+    OVER_30("v.alder > 30"),
+    ;
+
+    @JsonValue
+    fun jsonVerdi(): String = when (this) {
+        UNDER_30 -> "under_30"
+        OVER_30 -> "over_30"
+    }
+
+    companion object {
+        @JvmStatic
+        @JsonCreator
+        fun fraJson(verdi: String): Aldersgruppe =
+            when (verdi.lowercase()) {
+                "under_30" -> UNDER_30
+                "over_30" -> OVER_30
+                else -> throw IllegalArgumentException("Ugyldig aldersgruppe: $verdi")
             }
     }
 }
@@ -89,6 +107,7 @@ enum class JobbsøkerSorteringsfelt {
 data class JobbsøkerSøkRequest(
     val fritekst: String? = null,
     val status: List<JobbsøkerStatus>? = null,
+    val aldersgruppe: List<Aldersgruppe>? = null,
     @JsonProperty("sortering")
     val sorteringsfelt: JobbsøkerSorteringsfelt = JobbsøkerSorteringsfelt.NAVN,
     @JsonProperty("retning")

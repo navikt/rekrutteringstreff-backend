@@ -124,6 +124,7 @@ class JobbsøkerController(
                 example = """{
                   "fritekst": "Ola",
                   "status": ["LAGT_TIL"],
+                  "aldersgruppe": ["over_30"],
                   "sortering": "navn",
                   "retning": "asc",
                   "side": 1,

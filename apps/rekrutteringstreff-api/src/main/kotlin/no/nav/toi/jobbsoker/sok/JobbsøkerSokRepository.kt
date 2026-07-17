@@ -166,6 +166,11 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             statuser.forEach { params.add(it.name) }
         }
 
+        request.aldersgruppe?.takeIf { it.isNotEmpty() }?.let { aldersgrupper ->
+            val orClause = aldersgrupper.joinToString(" OR ") { it.sql }
+            conditions.add("($orClause)")
+        }
+
         val whereClause = "WHERE " + conditions.joinToString(" AND ")
         return Pair(whereClause, params)
     }
