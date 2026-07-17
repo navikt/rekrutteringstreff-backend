@@ -101,7 +101,8 @@ class JobbsøkerSokKomponentTest {
         kontor: Kontor? = null,
         veilederNavn: VeilederNavn? = null,
         veilederNavIdent: VeilederNavIdent? = null,
-    ) = LeggTilJobbsøker(Fødselsnummer(fødselsnummer), Fornavn(fornavn), Etternavn(etternavn), kontor, veilederNavn, veilederNavIdent)
+        alder: Int? = null,
+    ) = LeggTilJobbsøker(Fødselsnummer(fødselsnummer), Fornavn(fornavn), Etternavn(etternavn), kontor, veilederNavn, veilederNavIdent, alder)
 
     private fun leggTilJobbsøkere(treffId: TreffId, vararg jobbsøkere: LeggTilJobbsøker) =
         db.leggTilJobbsøkereMedHendelse(jobbsøkere.toList(), treffId)
@@ -415,6 +416,47 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
+    fun `filtrering på over 30 returnerer kun jobbsøkere 30 år og eldre`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Alice", "A", alder = 30),
+            jobbsøker("22222222222", "Bob", "B", alder = 45),
+            jobbsøker("33333333333", "Charlie", "C", alder = 20),
+            )
+
+        val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.OVER_30))
+
+        assertThat(søkRespons.jobbsøkere.map { it.fornavn }).containsExactlyInAnyOrder("Bob")
+    }
+
+    @Test
+    fun `filtrering på under 30 returnerer kun jobbsøkere yngre enn 30`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Alice", "A", alder = 30),
+            jobbsøker("22222222222", "Bob", "B", alder = 45),
+            jobbsøker("33333333333", "Charlie", "C", alder = 20),
+            )
+
+        val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.UNDER_30))
+
+        assertThat(søkRespons.jobbsøkere.map { it.fornavn }).containsExactly("Alice", "Charlie")
+    }
+
+    @Test
+    fun `filtrering på alder ekskluderer ukjent alder`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Alice", "A", alder = 35),
+            jobbsøker("22222222222", "Bob", "B", alder = null),
+        )
+
+        val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.OVER_30))
+
+        assertThat(søkRespons.jobbsøkere.map { it.fornavn }).containsExactly("Alice")
+    }
+
+    @Test
     fun `tomt resultatsett returnerer tom liste og totalt 0`() {
         val treffId = opprettTreffMedEier()
 
@@ -705,6 +747,22 @@ class JobbsøkerSokKomponentTest {
         assertThat(dto.totalt).isEqualTo(2)
         assertThat(dto.antallPerStatus[JobbsøkerStatus.LAGT_TIL]).isEqualTo(1)
         assertThat(dto.antallPerStatus[JobbsøkerStatus.INVITERT]).isEqualTo(1)
+    }
+
+    @Test
+    fun `antallPerAldersgruppe teller uavhengig av valgt aldersgruppe`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Alice", "A", alder = 20),
+            jobbsøker("22222222222", "Bob", "B", alder = 30),
+            jobbsøker("33333333333", "Charlie", "C", alder = 45),
+            jobbsøker("44444444444", "Dana", "D", alder = null),
+        )
+
+        val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.UNDER_30))
+
+        assertThat(søkRespons.antallPerAldersgruppe[Aldersgruppe.UNDER_30]).isEqualTo(2)
+        assertThat(søkRespons.antallPerAldersgruppe[Aldersgruppe.OVER_30]).isEqualTo(1)
     }
 
     @Test

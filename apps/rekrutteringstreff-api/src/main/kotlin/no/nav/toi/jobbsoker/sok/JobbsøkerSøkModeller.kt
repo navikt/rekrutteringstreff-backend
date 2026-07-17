@@ -81,9 +81,30 @@ enum class JobbsøkerSorteringsfelt {
     }
 }
 
+enum class Aldersgruppe(val sql: String) {
+    UNDER_30("v.alder <= 30"),
+    OVER_30("v.alder > 30"),
+    ;
+
+    @JsonValue
+    fun jsonVerdi(): String = name
+
+    companion object {
+        @JvmStatic
+        @JsonCreator
+        fun fraJson(verdi: String): Aldersgruppe =
+            when (verdi.uppercase()) {
+                "UNDER_30" -> UNDER_30
+                "OVER_30" -> OVER_30
+                else -> throw IllegalArgumentException("Ugyldig aldersgruppe: $verdi")
+            }
+    }
+}
+
 data class JobbsøkerSøkRequest(
     val fritekst: String? = null,
     val status: List<JobbsøkerStatus>? = null,
+    val aldersgruppe: List<Aldersgruppe>? = null,
     @JsonProperty("sortering")
     val sorteringsfelt: JobbsøkerSorteringsfelt = JobbsøkerSorteringsfelt.NAVN,
     @JsonProperty("retning")
@@ -99,6 +120,7 @@ data class JobbsøkerSøkRespons(
     val side: Int,
     val jobbsøkere: List<JobbsøkerSøkTreff>,
     val antallPerStatus: Map<JobbsøkerStatus, Int> = emptyMap(),
+    val antallPerAldersgruppe: Map<Aldersgruppe, Int> = emptyMap(),
 )
 
 data class JobbsøkerSøkTreff(
@@ -110,6 +132,7 @@ data class JobbsøkerSøkTreff(
     val lagtTilDato: Instant?,
     val lagtTilAv: String?,
     val lagtTilAvNavn: String?,
+    val alder: Int?,
     val minsideHendelser: List<MinsideHendelseSøkDto> = emptyList(),
 )
 
