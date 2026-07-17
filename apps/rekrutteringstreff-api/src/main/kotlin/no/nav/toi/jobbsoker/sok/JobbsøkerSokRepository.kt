@@ -23,6 +23,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
             val responsSide = beregnResponsSide(request.side, request.antallPerSide, totalt)
             val tellinger = hentTellinger(conn, treffId)
             val antallPerStatus = hentAntallPerStatus(conn, treffId, request)
+            val antallPerAldersgruppe = hentAntallPerAldersgruppe(conn, treffId, request)
             val treff = if (totalt == 0L) {
                 emptyList()
             } else {
@@ -47,6 +48,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 side = responsSide,
                 jobbsøkere = jobbsøkereMedHendelser,
                 antallPerStatus = antallPerStatus,
+                antallPerAldersgruppe = antallPerAldersgruppe,
             )
         }
     }
@@ -92,6 +94,31 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 val result = mutableMapOf<JobbsøkerStatus, Int>()
                 while (rs.next()) {
                     result[JobbsøkerStatus.valueOf(rs.getString("status"))] = rs.getInt("antall")
+                }
+                result
+            }
+        }
+    }
+
+    private fun hentAntallPerAldersgruppe(conn: Connection, treffId: TreffId, request: JobbsøkerSøkRequest): Map<Aldersgruppe, Int> {
+        val (where, params) = byggWhere(treffId, request.copy(aldersgruppe = null))
+        val selectSpørring = Aldersgruppe.entries.joinToString(",\n") { aldersgruppe ->
+            "COUNT(*) FILTER (WHERE ${aldersgruppe.sql}) AS ${aldersgruppe.name.lowercase()}"
+        }
+        val sql = """
+        SELECT $selectSpørring
+        FROM jobbsoker_sok_view v
+        $where
+    """.trimIndent()
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            params.forEachIndexed { index, param -> settParam(stmt, index + 1, param) }
+            stmt.executeQuery().use { rs ->
+                val result = mutableMapOf<Aldersgruppe, Int>()
+                if (rs.next()) {
+                    Aldersgruppe.entries.forEach { aldersgruppe ->
+                        result[aldersgruppe] = rs.getInt(aldersgruppe.name.lowercase())
+                    }
                 }
                 result
             }

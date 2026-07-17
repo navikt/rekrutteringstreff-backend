@@ -123,6 +123,7 @@ data class JobbsøkerSøkRespons(
     val side: Int,
     val jobbsøkere: List<JobbsøkerSøkTreff>,
     val antallPerStatus: Map<JobbsøkerStatus, Int> = emptyMap(),
+    val antallPerAldersgruppe: Map<Aldersgruppe, Int> = emptyMap(),
 )
 
 data class JobbsøkerSøkTreff(

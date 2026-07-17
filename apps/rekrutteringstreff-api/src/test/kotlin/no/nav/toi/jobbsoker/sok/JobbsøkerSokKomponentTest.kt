@@ -750,6 +750,22 @@ class JobbsøkerSokKomponentTest {
     }
 
     @Test
+    fun `antallPerAldersgruppe teller uavhengig av valgt aldersgruppe`() {
+        val treffId = opprettTreffMedEier()
+        leggTilJobbsøkere(treffId,
+            jobbsøker("11111111111", "Alice", "A", alder = 20),
+            jobbsøker("22222222222", "Bob", "B", alder = 30),
+            jobbsøker("33333333333", "Charlie", "C", alder = 45),
+            jobbsøker("44444444444", "Dana", "D", alder = null),
+        )
+
+        val søkRespons = søk(treffId, "aldersgruppe" to listOf(Aldersgruppe.UNDER_30))
+
+        assertThat(søkRespons.antallPerAldersgruppe[Aldersgruppe.UNDER_30]).isEqualTo(2)
+        assertThat(søkRespons.antallPerAldersgruppe[Aldersgruppe.OVER_30]).isEqualTo(1)
+    }
+
+    @Test
     fun `jobbsøkersøk returnerer null lagtTilAvNavn for eldre opprettet-hendelser uten navn`() {
         val treffId = opprettTreffMedEier()
         db.leggTilJobbsøkereMedHendelse(
