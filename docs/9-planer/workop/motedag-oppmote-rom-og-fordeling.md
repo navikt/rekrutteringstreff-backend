@@ -20,20 +20,20 @@ løsningen passer inn med dagens `rekrutteringstreff-api`.
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Omfang                 | Kun **WorkOp-treff** (`kategori === WORKOP`). Rom-rotasjon og speedintervju er WorkOp-metodikk.                                                                                                         |
 | Feature toggle         | Samme mønster som Formidlinger-fanen: `getMiljø() !== Miljø.ProdGcp` (vises i lokalt/dev/test, skjult i prod), gated i både `TabsNav.tsx` og `TabsPanels.tsx`. I tillegg gate på `kategori === WORKOP`. |
-| Inngang                | To innganger: (a) **burgermeny** på jobbsøkerkortet for å registrere oppmøte, og (b) en **egen «Møtedagen»-fane**.                                                                                      |
-| Stegnavigasjon         | Aksel **Stepper** inne i Møtedagen-fanen (4 steg, kan gå tilbake til fullførte steg).                                                                                                                   |
-| Aksel-prinsipp         | Bruk Aksel layout-primitives (`VStack`, `HStack`, `HGrid`, `Box`) med spacing tokens. Nye lokale meldinger bruker `LocalAlert` der det passer.                             |
+| Inngang                | To innganger: (a) **burgermeny** på jobbsøkerkortet for å registrere oppmøte, og (b) en **egen «WorkOp gjennomføring»-fane**.                                                                                      |
+| Stegnavigasjon         | Aksel **Stepper** inne i WorkOp gjennomføring-fanen (4 steg, kan gå tilbake til fullførte steg).                                                                                                                   |
+| Aksel-prinsipp         | Bruk Aksel layout-primitives (`VStack`, `HStack`, `HGrid`, `Box`) med spacing tokens. Nye lokale meldinger bruker `LocalAlert` der det passer.                                                          |
 | Persistering           | **MSW-mock først** – dynamisk nok til å demonstrere hele flyten. Backend skisseres, bygges senere.                                                                                                      |
 | Antall rom             | Settes i steg 1 sammen med tidene. Standard = **antall arbeidsgivere**, kan overstyres. Færre rom enn arbeidsgivere → noen arbeidsgivere **venter** mellom rundene.                                     |
-| Romfordeling           | **Automatisk** i første versjon (skjer ved «Sett opp møter»). Manuell justering vurderes ut fra tilbakemeldinger.                                                                                       |
+| Romfordeling           | **Automatisk** i første versjon (skjer ved «Sett opp møteplan»). Manuell justering vurderes ut fra tilbakemeldinger.                                                                                       |
 | Oppmøte-omfang         | **Kun selve WorkOp-dagen** nå. Formøte er en egen sak senere.                                                                                                                                           |
 | Oppmøte-lagring        | **Kun hendelse** i v1 (utledes fra `MØTT_OPP`/`ANGRE_MØTT_OPP`). Egen `JobbsøkerStatus` senere, når aktivitetsplanen også oppdateres.                                                                   |
 | Hvem kan markeres møtt | **Alle** jobbsøkere på lista (ikke begrenset til svarstatus).                                                                                                                                           |
 | Redigerbarhet          | Steg er redigerbare **etter at forutsetningene finnes**. Steg 2–4 er ikke interaktive før møteoppsett/oppmøte er etablert, men låses ikke etterpå.                                                      |
-| Møteoppsett            | **Starttidspunkt**, **varighet per møte**, **pause mellom møter** og **antall rom** settes i steg 1 via «Sett opp møter».                                                                               |
+| Møteoppsett            | **Starttidspunkt**, **varighet per møte**, **pause mellom møter** og **antall rom** settes i steg 1 via «Sett opp møteplan».                                                                               |
 | Rotasjonsplan          | Vises som sammendrag i steg 2, med lenke til **modal** med detaljert plan, klokkeslett og **utskrift**.                                                                                                 |
 | Steg 3 (fordeling)     | Kun **jobbsøkers ønske** (hvilke arbeidsgivere de vil møte).                                                                                                                                            |
-| Steg 4 (vurdering)     | **Aktuell / Kanskje / Kladd** per jobbsøker × arbeidsgiver (samme valg som Excel).                                                                                                                      |
+| Steg 4 (vurdering)     | **Aktuell / Kanskje / Kladd** i en matrise (jobbsøker × arbeidsgiver), kun kolonner der det er satt opp møte med arbeidsgiveren.                                                                                                                      |
 | Tilgang                | Kun de to hovedansvarlige (eier/kontor), samme regel som formidling (`ARBEIDSGIVER_RETTET` + eier/kontor).                                                                                              |
 
 ---
@@ -45,7 +45,7 @@ løsningen passer inn med dagens `rekrutteringstreff-api`.
       │
       │   Burgermeny på jobbsøkerkort: «Registrer oppmøte»
       ▼
-  MØTEDAGEN-FANE  —  Aksel Stepper med 4 steg
+  WORKOP GJENNOMFØRING-FANE  —  Aksel Stepper med 4 steg
   ───────────────────────────────────────────────────
       │
       ▼
@@ -53,7 +53,7 @@ løsningen passer inn med dagens `rekrutteringstreff-api`.
   │ Steg 1             │
   │ Oppmøte og oppsett │
   └────────────────────┘
-      │   «Sett opp møter» (auto-fordeler rom og rotasjon)
+      │   «Sett opp møteplan» (auto-fordeler rom og rotasjon)
       ▼
   ┌────────────────────┐
   │ Steg 2             │
@@ -75,7 +75,7 @@ løsningen passer inn med dagens `rekrutteringstreff-api`.
   Tilbake: via Stepper kan man når som helst gå til et fullført steg
 ```
 
-Møtedagen-fanen er en **Aksel Stepper** med fire steg. Innholdet for det aktive
+WorkOp gjennomføring-fanen er en **Aksel Stepper** med fire steg. Innholdet for det aktive
 steget rendres under stegindikatoren. Fullførte steg kan besøkes på nytt (les/rediger),
 og et lite sammendrag øverst («23 møtt · 5 rom · 5 arbeidsgivere») gir kontekst
 på tvers av steg.
@@ -97,14 +97,14 @@ settes `interactive={false}` til forutsetningene finnes.
 Planen er i hovedsak i tråd med Aksel og dagens Rekbis-mønstre, men implementasjonen
 bør styres av disse kravene:
 
-| Område | Vurdering | Krav i implementasjon |
-| --- | --- | --- |
-| Stepper | Riktig komponent når bruker kan navigere mellom steg. | Bruk `as="button"`, `aria-labelledby`, `completed` bare for reelt fullførte steg og `interactive={false}` for steg uten forutsetninger. |
-| Layout | Riktig å bruke Aksel primitives for layout. | Bruk `VStack`/`HStack`/`HGrid`/`Box` med `space-*` tokens for spacing og kolonner. |
+| Område            | Vurdering                                                                                             | Krav i implementasjon                                                                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Stepper           | Riktig komponent når bruker kan navigere mellom steg.                                                 | Bruk `as="button"`, `aria-labelledby`, `completed` bare for reelt fullførte steg og `interactive={false}` for steg uten forutsetninger.                      |
+| Layout            | Riktig å bruke Aksel primitives for layout.                                                           | Bruk `VStack`/`HStack`/`HGrid`/`Box` med `space-*` tokens for spacing og kolonner.                                                                           |
 | Tabeller/matriser | `Table` er riktig for enkel tabulær data. `DataGrid` er fortsatt preview og bør ikke være førstevalg. | Bruk `Table` med `caption`, `HeaderCell scope="row"/"col"`, maks ett interaktivt element per celle og tydelig `aria-labelledby` for skjulte checkbox-labels. |
-| Lokale meldinger | Nye lokale infomeldinger bør bruke dagens Aksel-komponenter. | Bruk `LocalAlert` for lokale info-/warning-meldinger der kodebasen tillater det, og unngå å introdusere nye `Alert`-flater uten grunn. |
-| Personvern | Planen har riktig retning med fiktive mockdata. | Ikke vis eller logg fødselsnummer/personident i møtedag-flaten. Ikke legg inn notatfelt i v1. Mockdata skal være åpenbart syntetisk. |
-| Tilgang | Frontend-gating er nødvendig, men ikke tilstrekkelig for backend. | Når backend bygges må `kategori === WORKOP`, eier/hovedansvarlig og rolle håndheves server-side. Ikke stol på fane-/feature-toggle alene. |
+| Lokale meldinger  | Nye lokale infomeldinger bør bruke dagens Aksel-komponenter.                                          | Bruk `LocalAlert` for lokale info-/warning-meldinger der kodebasen tillater det, og unngå å introdusere nye `Alert`-flater uten grunn.                       |
+| Personvern        | Planen har riktig retning med fiktive mockdata.                                                       | Vis fødselsnummer kun der det trengs (forenklet jobbsøkerliste i steg 1) og logg det aldri. Ikke legg inn notatfelt i v1. Mockdata skal være åpenbart syntetisk (ingen realistiske fødselsnumre).                         |
+| Tilgang           | Frontend-gating er nødvendig, men ikke tilstrekkelig for backend.                                     | Når backend bygges må `kategori === WORKOP`, eier/hovedansvarlig og rolle håndheves server-side. Ikke stol på fane-/feature-toggle alene.                    |
 
 ---
 
@@ -118,7 +118,7 @@ punktene «Endre svar» og «Slett»). Vi legger til:
 
 - **«Registrer oppmøte»** / **«Fjern oppmøte»** (toggle) som et nytt
   `ActionMenyPunkt`.
-- Punktet er feature-togglet som resten av møtedagen: vises kun for WorkOp-treff
+- Punktet er feature-togglet som resten av WorkOp gjennomføring: vises kun for WorkOp-treff
   og i ikke-prod (`kategori === WORKOP` og `getMiljø() !== Miljø.ProdGcp`).
 - Kortet får en synlig markør når personen er møtt (f.eks. en Aksel `Tag`
   «Møtt», på linje med `JobbsøkerStatusTag`).
@@ -129,14 +129,14 @@ registreres oppmøte **kun som en hendelse** (ikke som en ny `JobbsøkerStatus`)
 På sikt kan «møtt opp» bli en egen jobbsøkerstatus – se avsnittet «Oppmøte: kun
 hendelse i v1 (status senere)».
 
-### 2. Ny «Møtedagen»-fane
+### 2. Ny «WorkOp gjennomføring»-fane
 
 Ny verdi i `RekrutteringstreffTabs` (i
 [Rekrutteringstreff.tsx](../../../../rekrutteringsbistand-frontend/app/rekrutteringstreff/%5BrekrutteringstreffId%5D/_ui/Rekrutteringstreff.tsx)),
 plassert etter `ARBEIDSGIVERE`:
 
 ```
-OM_TREFFET | JOBBSØKERE | ARBEIDSGIVERE | MØTEDAGEN | (FORMIDLINGER) | HENDELSER
+OM_TREFFET | JOBBSØKERE | ARBEIDSGIVERE | WORKOP_GJENNOMFØRING | (FORMIDLINGER) | HENDELSER
 ```
 
 Synlighetsregel (speiler Formidlinger-fanen):
@@ -145,7 +145,7 @@ Synlighetsregel (speiler Formidlinger-fanen):
 const erProd = getMiljø() === Miljø.ProdGcp;
 const erWorkOp =
   rekrutteringstreff.kategori === RekrutteringstreffKategori.WORKOP;
-const visMøtedagen = !erProd && erWorkOp; // + fanene vises uansett kun for eier
+const visWorkOpGjennomføring = !erProd && erWorkOp; // + fanene vises uansett kun for eier (allerede implementert)
 ```
 
 Regelen legges i både `TabsNav.tsx` (fane-knappen) og `TabsPanels.tsx`
@@ -160,10 +160,10 @@ antall rom) før rotasjonen starter.
 
 **Elementer:**
 
-- **Liste over møtte jobbsøkere** – gjenbruker kort-stilen fra `JobbsøkerKort` /
-  `ListeKort` (navn «Etternavn, Fornavn», evt. NAV-kontor). Hver rad har en
-  «Fjern oppmøte»-knapp (speiler burgermeny-handlingen). **Alle** jobbsøkere kan
-  markeres som møtt, uavhengig av svarstatus.
+- **Forenklet jobbsøkerliste** – kun **fornavn, etternavn og fødselsnummer** (ikke
+  full kort-stil). Hver rad har en «Fjern oppmøte»-knapp (speiler
+  burgermeny-handlingen). **Alle** jobbsøkere kan markeres som møtt, uavhengig av
+  svarstatus.
 - **Teller:** «X møtt av Y påmeldte».
 - **Liste over arbeidsgivere** – deltakende arbeidsgivere (typisk 5), gjenbruker
   `ArbeidsgiverListeItem`. Teller «Z arbeidsgivere».
@@ -171,11 +171,11 @@ antall rom) før rotasjonen starter.
   - **Starttidspunkt** (gjenbruk eksisterende `TimeInput` hvis den passer,
     ellers Aksel `TextField`), standard f.eks. `09:00`.
   - **Varighet per møte** i minutter (én runde / presentasjon), standard `5`.
-  - **Pause mellom møter** i minutter (tid til å rotere), standard `2`.
+  - **Pause mellom møter** i minutter (tid til å rotere), standard `5`.
   - **Antall rom** (Aksel `TextField`, type number), standard = antall
     arbeidsgivere, kan overstyres. Færre rom enn arbeidsgivere betyr at noen
     arbeidsgivere venter mellom rundene (se rotasjonslogikk i steg 2).
-- **Primærknapp «Sett opp møter»** – lagrer møteoppsettet, **fordeler de møtte
+- **Primærknapp «Sett opp møteplan»** – lagrer møteoppsettet, **fordeler de møtte
   jobbsøkerne automatisk og jevnt på rommene** (25 personer / 5 rom = 5 per rom),
   genererer rotasjonsplanen og går til steg 2. Erstatter den tidligere «Ferdig å
   registrere oppmøte»-knappen. Oppmøtet låses ikke – man kan gå tilbake og
@@ -239,13 +239,13 @@ møter` til før neste runde.
 
 Rotasjonsplanen vises i en Aksel `Modal` (åpnes fra lenken «Vis rotasjonsplan» i
 steg 2) med en **«Skriv ut»-knapp**. Eksempel med start `09:00`, varighet `5 min`
-og pause `2 min`:
+og pause `5 min`:
 
 | Klokkeslett | Rom 1          | Rom 2          | Rom 3          | Rom 4          | Rom 5          |
 | ----------- | -------------- | -------------- | -------------- | -------------- | -------------- |
 | 09:00–09:05 | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C | Arbeidsgiver D | Arbeidsgiver E |
-| 09:07–09:12 | Arbeidsgiver E | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C | Arbeidsgiver D |
-| 09:14–09:19 | Arbeidsgiver D | Arbeidsgiver E | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C |
+| 09:10–09:15 | Arbeidsgiver E | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C | Arbeidsgiver D |
+| 09:20–09:25 | Arbeidsgiver D | Arbeidsgiver E | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C |
 | …           | …              | …              | …              | …              | …              |
 
 Utskrift gjøres med en utskriftsvennlig visning (print-stilark / `window.print()`),
@@ -275,8 +275,7 @@ arbeidsgivere hver jobbsøker **ønsker** speedintervju med.
 - Tabellen skal ha `caption`, jobbsøker som `HeaderCell scope="row"` og arbeidsgiver
   som `HeaderCell scope="col"`. Checkbox-label kan skjules visuelt, men må knyttes
   til både rad og kolonne med `aria-labelledby` eller tilsvarende.
-- Fritekstsøk/filter på jobbsøker (gjenbruk mønster fra Jobbsøker-fanen) hvis
-  listen er lang.
+- Vis alle jobbsøkere i matrisen – ingen filtrering/søk i v1.
 - Per rad: teller «ønsker N arbeidsgivere».
 - **Primærknapp «Neste»** → steg 4.
 
@@ -292,15 +291,17 @@ arbeidsgiver, med samme valg som Excel-arket.
 
 **Elementer:**
 
-- **Per arbeidsgiver-visning** (nærmest Excel-fanene «Bedrift 1–6»): velg
-  arbeidsgiver, se dens aktuelle jobbsøkere med en vurderingskontroll per person.
-- **Vurderingskontroll:** Aksel `ToggleGroup`/`RadioGroup`/`Select` med verdiene
-  **Aktuell / Kanskje / Kladd** (+ blank/«ingen»). Bruk `RadioGroup` når valget
-  trenger tydelig feltlabel per rad; `ToggleGroup` kan brukes der rommet er trangt
-  og label/legend fortsatt blir tilgjengelig.
-- Mulighet til å veksle mellom «per arbeidsgiver» og «per jobbsøker»-visning
-  (speiler Excel «Master» vs. «Bedrift N»).
+- **Matrise** (Aksel `Table`): rader = jobbsøkere, kolonner = arbeidsgivere,
+  celle = vurdering **Aktuell / Kanskje / Kladd** (+ blank/«ingen»). Samme
+  matriseoppsett som steg 3, men med vurderingsverdier i stedet for avkrysning.
+- **Kun kolonner der det er satt opp møte** med arbeidsgiveren vises/er aktive –
+  arbeidsgivere uten oppsatt speedintervju tas ikke med i matrisen.
+- **Vurderingskontroll per celle:** Aksel `Select` (eller `ToggleGroup`) med
+  verdiene **Aktuell / Kanskje / Kladd**.
 - **Primærknapp «Fullfør»** / lagre.
+
+Per-arbeidsgiver- og per-jobbsøker-visning (speiler Excel «Master» vs. «Bedrift N»)
+er utenfor scope i første omgang – v1 er kun matrisen.
 
 Rikere resultatfelter i Excel («2. intervju hos», «Jobbtilbud fra», økonomi) er
 **utenfor scope nå** – de hører til statistikk/formidlingstelling (behov nr. 13)
@@ -322,7 +323,7 @@ interface MøtedagDTO {
   antallRom: number; // default = antall arbeidsgivere
   starttidspunkt: string; // «HH:mm», f.eks. «09:00»
   varighetPerMøteMinutter: number; // default 5
-  pauseMellomMøterMinutter: number; // default 2
+  pauseMellomMøterMinutter: number; // default 5
   oppmøte: string[]; // personTreffId som har møtt
   rom: RomDTO[];
   arbeidsgiverRekkefølge: ArbeidsgiverRotasjonDTO[];
@@ -417,7 +418,7 @@ så en status nå ville blitt ufullstendig og litt misvisende. Vi «jukser» der
 med ren hendelsesregistrering i v1, og løfter det til en egen `JobbsøkerStatus`
 når aktivitetsplan-oppdateringen er på plass.
 
-**Omfang:** funksjonen er WorkOp-only og dev-togglet (som resten av møtedagen),
+**Omfang:** funksjonen er WorkOp-only og dev-togglet (som resten av WorkOp gjennomføring),
 så mellomløsningen eksponeres ikke bredt før den er komplett.
 
 ---
@@ -463,14 +464,14 @@ så mellomløsningen eksponeres ikke bredt før den er komplett.
 
 1. **Fase A0 – Kontrakt + mock-grunnmur:** frontend-typer, `møtedagStore` i MSW,
    syntetisk WorkOp-seed og felles hjelpefunksjoner for oppmøte/rotasjon.
-2. **Fase A1 – Møtedagen-fane + Steg 1:** ny fane + gating + Stepper-skjelett.
+2. **Fase A1 – WorkOp gjennomføring-fane + Steg 1:** ny fane + gating + Stepper-skjelett.
    Burgermeny-handling «Registrer oppmøte», oppmøteliste (alle kan markeres møtt),
    arbeidsgiverliste, møteoppsett (start/varighet/pause/antall rom) og «Sett opp
-   møter»-knapp som auto-fordeler rom + genererer rotasjon.
+   møteplan»-knapp som auto-fordeler rom + genererer rotasjon.
 3. **Fase B – Steg 2 (Rom og rotasjon):** vis auto-fordelte rom og
    rotasjonsplan med klokkeslett i modal med utskrift.
 4. **Fase C – Steg 3:** ønske-matrise (tilgjengelig tabell).
-5. **Fase D – Steg 4:** vurdering per arbeidsgiver (Aktuell/Kanskje/Kladd).
+5. **Fase D – Steg 4:** vurderingsmatrise (Aktuell/Kanskje/Kladd), kun kolonner med oppsatt møte.
 6. **Fase E – Backend:** Flyway-migrasjoner, controller/service/repository,
    hendelser, og bytte MSW-mock mot ekte endepunkter.
 
@@ -478,10 +479,15 @@ så mellomløsningen eksponeres ikke bredt før den er komplett.
 
 ## Åpne spørsmål
 
-- Standardverdier for møteoppsett – er start `09:00`, varighet `5 min`, pause
-  `2 min` og antall rom = antall arbeidsgivere greit som utgangspunkt?
-- Holder **automatisk** romfordeling i v1, eller trengs manuell justering
-  (flytte person mellom rom) med en gang?
+- **Defaultverdier for WorkOp-møtetid** er ikke avklart. Pause mellom møter er satt
+  til `5 min`; starttidspunkt og varighet per møte må bestemmes (antall rom =
+  antall arbeidsgivere som utgangspunkt).
+- Hva gjør vi hvis møtene er gjennomført og noen endrer fordelingen på nytt?
+  Diskuter **grad av låsing** av verdier i WorkOp gjennomføring-fanen.
+- Trenger vi mulighet til å **endre romfordelingen manuelt** (flytte person mellom
+  rom), eller holder automatisk fordeling i v1?
+- **Utskrift:** har romvertene egen notasjon for print, f.eks. bare initialer på
+  jobbsøkere?
 - Er dagens eier-/kontorregel streng nok for WorkOp, eller må «hovedansvarlige»
   modelleres eksplisitt før backend bygges?
 - Skal steg 4 på sikt også dekke «2. intervju» og «jobbtilbud» (Excel), eller
