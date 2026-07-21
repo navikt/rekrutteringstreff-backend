@@ -457,6 +457,8 @@ så mellomløsningen eksponeres ikke bredt før den er komplett.
   med in-memory store.
 - **Aksel:** `Stepper`, `Table`, `TextField`, `CheckboxGroup`, `ToggleGroup`/
   `RadioGroup`, `Box`/`HStack`/`VStack`/`HGrid`, `Tag`, `Button`, `LocalAlert`.
+- **Testing:** `tests/rekrutteringstreff/`, `gotoApp`/`ventTilKlar`, `storageState`
+  per rolle, og MSW node-server via `instrumentation.ts` + `mocks/server.ts`.
 
 ---
 
@@ -474,6 +476,62 @@ så mellomløsningen eksponeres ikke bredt før den er komplett.
 5. **Fase D – Steg 4:** vurderingsmatrise (Aktuell/Kanskje/Kladd), kun kolonner med oppsatt møte.
 6. **Fase E – Backend:** Flyway-migrasjoner, controller/service/repository,
    hendelser, og bytte MSW-mock mot ekte endepunkter.
+
+Hver fase avsluttes med Playwright-verifisering: bekreft tilstandene manuelt med
+playwright-mcp, og dekk dem med nye tester i `tests/rekrutteringstreff/`.
+
+---
+
+## Validering og testing
+
+Målet er å sikre at frontend vises i **riktige tilstander** gjennom hele flyten –
+ikke å teste selve mock-laget.
+
+### Verktøy under utvikling
+
+- **playwright-mcp:** kjør en ekte nettleser mot dev-serveren og klikk gjennom
+  flyten (oppmøte → «Sett opp møteplan» → rom/rotasjon → ønsker → vurdering) for å
+  bekrefte at riktige tilstander vises. Bruk den til å utforske UI-et og finne
+  stabile role-baserte selektorer før tester skrives.
+- **next-devtools-mcp (valgfritt):** inspiser Next.js (App Router-ruter, server-/
+  klientkomponenter, konsoll-/byggefeil) når noe ikke rendres som forventet.
+
+### MSW med state (ikke stub-svar)
+
+- `møtedagStore` (se «MSW-mock») **muteres** av PUT-handlerne og leses av
+  GET-handleren, slik at oppmøte → romfordeling → ønsker → vurdering henger sammen
+  som ekte tilstandsoverganger.
+- Testene skal drive flyten via UI-et og verifisere at tilstanden **utvikler seg
+  riktig** (f.eks. at «Møtt»-tag dukker opp etter registrering, at rom fylles etter
+  «Sett opp møteplan»). Ikke skriv tester som bare sjekker at et endepunkt returnerer
+  en fast verdi.
+- Node-MSW startes i test-modus via `instrumentation.ts`
+  (`NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE=true`) + `mocks/server.ts`. Legg
+  WorkOp-handlerne i `mocks/handlers.ts` og seed `id === 'workop'` med syntetiske
+  data.
+
+### Nye Playwright-tester
+
+Plasseres i `tests/rekrutteringstreff/` (f.eks. `workop-gjennomforing.spec.ts`),
+samme mønster som eksisterende tester: `storageState` for rolle
+(arbeidsgiverrettet), `gotoApp(page, …)`, `ventTilKlar` og role-baserte selektorer
+(`getByRole`). Fokuser på **tilstandene som vises**:
+
+- **Fane-synlighet:** «WorkOp gjennomføring»-fanen vises kun for WorkOp-treff, for
+  eier og i ikke-prod – skjult ellers (gjenbruk `tilgangskontroll`-mønsteret).
+- **Stepper:** de fire stegene vises; fullførte steg er klikkbare, steg uten
+  forutsetninger er ikke-interaktive.
+- **Steg 1 – oppmøte:** empty state når ingen er møtt; «Møtt»-tag og telleren
+  «X av Y» oppdateres når oppmøte registreres fra burgermenyen.
+- **«Sett opp møteplan»:** rommene fylles (25 / 5 = 5 per rom), rotasjonsplan-modalen
+  viser klokkeslett, og «Skriv ut» finnes.
+- **Steg 3 – ønsker:** matrisen viser alle jobbsøkere (ingen filtrering), og
+  avkryssing oppdaterer telleren per rad.
+- **Steg 4 – vurdering:** matrisen viser **kun kolonner der det er satt opp møte**,
+  og vurdering (Aktuell/Kanskje/Kladd) kan settes per aktive celle.
+
+Unngå assertions som bare speiler mock-data; verifiser at UI-et står i forventet
+tilstand etter reelle brukerhandlinger.
 
 ---
 
