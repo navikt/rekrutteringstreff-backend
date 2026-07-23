@@ -7,10 +7,11 @@ som må utredes og utvikles»):
 1. **Registrere oppmøte** (behov nr. 6, oppgave 1)
 2. **Fordele jobbsøkere i grupperom** (behov nr. 7, oppgave 2)
 3. **Fordele jobbsøkere til arbeidsgivere for speedintervju** (behov nr. 8, oppgave 3)
+4. **Følge opp resultatet per arbeidsgiver** (behov nr. 9, oppgave 4)
 
-Dette er et **design-/flytdokument**, ikke en implementasjon. Fokus er frontend
-(`rekrutteringsbistand-frontend`), med en skisse av backend-kontrakten slik at
-løsningen passer inn med dagens `rekrutteringstreff-api`.
+Dette er et **design-, flyt- og statusdokument**. Fase A–D er implementert i
+frontend (`rekrutteringsbistand-frontend`) med stateful MSW. Backend-delene er
+fortsatt en kontraktskisse for `rekrutteringstreff-api`.
 
 ---
 
@@ -34,8 +35,8 @@ løsningen passer inn med dagens `rekrutteringstreff-api`.
 | Møteoppsett            | **Starttidspunkt**, **varighet per møte**, **pause mellom møter** og **antall rom** settes i steg 1. Standardverdier er `09:00`, `5`, `5` og antall arbeidsgivere.                                                                           |
 | Rotasjonsplan          | Vises som sammendrag i steg 2, med lenke til **modal** med detaljert plan, klokkeslett og **utskrift**.                                                                                                                                      |
 | Steg 3 (ønsker)        | Registrer **jobbsøkers ønske** om hvilke arbeidsgivere hen vil møte. Kun fremmøtte jobbsøkere inngår.                                                                                                                                        |
-| Steg 4 (tildeling)     | Arrangør fordeler faktiske speedintervjuer. En tildeling må være et delsett av ønskene og lagres som et jobbsøker–arbeidsgiver-par, uten køplass eller tidspunkt.                                                                            |
-| Steg 5 (vurdering)     | **Aktuell / Kanskje / Kladd** per faktisk tildelt jobbsøker × arbeidsgiver.                                                                                                                                                                  |
+| Steg 4 (fordeling)     | Arrangør lager intervjurekkefølge per arbeidsgiver. Jobbsøkere kan flyttes over og under sperrelinjen. Rekkefølgen lagres, men ikke konkrete tidspunkter.                                                                                       |
+| Steg 5 (status)        | **Status og oppfølging** per jobbsøker × arbeidsgiver: oppsummering av ønske og speedintervju, vurdering (**Aktuell / Kanskje / Kladd**), **2. intervju**, **Jobbtilbud** og skrivebeskyttet **Fått jobben** fra Formidlinger.                    |
 | Tilgang                | Kun de to eksplisitt registrerte hovedansvarlige, én markedskontakt og én veileder, har tilgang. Utvikler kan ha bypass. Kontortilgang alene gir ikke tilgang.                                                                               |
 
 ---
@@ -77,7 +78,8 @@ løsningen passer inn med dagens `rekrutteringstreff-api`.
       ▼
   ┌────────────────────┐
   │ Steg 5             │
-  │ Vurdering          │
+  │ Status og          │
+  │ oppfølging         │
   └────────────────────┘
 
   Tilbake: via Stepper kan man når som helst gå til et fullført steg
@@ -302,41 +304,68 @@ registrert. Dette er den andre halvdelen av behov nr. 8 og kan ikke utledes av
 
 **Elementer:**
 
-- Matrise med kun fremmøtte jobbsøkere og arbeidsgivere.
-- Ønskede kombinasjoner er tydelig markert. Arrangøren velger hvilke av dem som
-  faktisk tildeles intervju.
-- En tildeling må være et delsett av ønskene. For å overstyre må arrangøren først
-  registrere kombinasjonen som et ønske.
-- Vis teller per jobbsøker og arbeidsgiver slik at skjev fordeling oppdages.
+- Ett `ExpansionCard` per arbeidsgiver med en ordnet liste over jobbsøkere.
+- Arrangøren endrer rekkefølgen med dra-og-slipp eller piler. Jobbsøkere under
+  sperrelinjen er ikke med på speedintervjuet.
+- Startrekkefølgen fordeles uten plasseringskrasj mellom arbeidsgivere når det er
+  mulig. Manuelle rekkefølger beholdes.
+- Hvis samme jobbsøker har samme plass hos flere arbeidsgivere, vises en
+  varseltrekant med forklaring i tooltip.
 - **Primærknapp «Neste»** → steg 5.
 
-En tildeling lagres kun som et jobbsøker–arbeidsgiver-par. Køplass, rekkefølge og
-konkret intervjutidspunkt er utenfor omfanget.
+Fordelingen lagres som inkluderte og ekskluderte `personTreffId`-lister i
+rekkefølge per arbeidsgiver. Konkret intervjutidspunkt er utenfor omfanget.
 
 ---
 
-## Steg 5 – Vurdering (speedintervju-resultat)
+## Steg 5 – Status og oppfølging
 
-**Mål:** Registrere arrangørens/arbeidsgivernes vurdering per jobbsøker ×
-arbeidsgiver, med samme valg som Excel-arket.
+**Mål:** Samle resultatet fra de tidligere stegene og registrere videre
+oppfølging per jobbsøker × arbeidsgiver. Steget skal gi arrangøren en praktisk
+arbeidsflate etter speedintervjuet, uten å duplisere Formidlinger som
+sannhetskilde for hvem som har fått jobb.
 
-**Elementer:**
+**Layout og innhold:**
 
-- **Matrise** (Aksel `Table`): rader = jobbsøkere, kolonner = arbeidsgivere,
-  celle = vurdering **Aktuell / Kanskje / Kladd** (+ blank/«ingen»). Samme
-  matriseoppsett som steg 3, men med vurderingsverdier i stedet for avkrysning.
-- Kun jobbsøker–arbeidsgiver-par som faktisk er tildelt intervju er aktive.
-  Arbeidsgivere uten noen tildelinger tas ikke med i matrisen.
-- **Vurderingskontroll per celle:** Aksel `Select` (eller `ToggleGroup`) med
-  verdiene **Aktuell / Kanskje / Kladd**.
-- **Primærknapp «Lagre vurderinger»**.
+- Ett åpent Aksel `ExpansionCard` per arbeidsgiver, også når arbeidsgiveren ikke
+  har relevante jobbsøkere. Tomme kort viser en kort tomtilstand.
+- Hver jobbsøkerrad viser relevante oppsummeringstagger:
+  **Ønsket intervju**, **Satt opp til speedintervju** og eventuelt
+  **Fått jobben**.
+- Arrangøren kan velge **Ingen vurdering / Aktuell / Kanskje / Kladd** og
+  registrere de uavhengige statusene **2. intervju** og **Jobbtilbud**.
+- Endringer lagres automatisk per jobbsøker–arbeidsgiver-par. UI-et oppdateres
+  optimistisk og ruller tilbake med lokal feilmelding hvis lagringen feiler.
 
-Per-arbeidsgiver- og per-jobbsøker-visning (speiler Excel «Master» vs. «Bedrift N»)
-er utenfor scope i første omgang – v1 er kun matrisen.
+En rad vises når minst ett av disse kriteriene er oppfylt:
 
-Rikere resultatfelter i Excel («2. intervju hos», «Jobbtilbud fra», økonomi) er
-**utenfor omfanget** – de hører til statistikk/formidlingstelling (behov nr. 13)
-og [fått-jobben-planen](../rekrutteringstreff-fått-jobben/formidling-utfall-til-statistikk.md).
+1. Jobbsøkeren ønsker arbeidsgiveren.
+2. Jobbsøkeren er inkludert i arbeidsgiverens speedintervjufordeling.
+3. Paret har en lagret vurdering, 2. intervju eller jobbtilbud.
+4. En aktiv Formidling viser at jobbsøkeren har fått jobb hos arbeidsgiveren.
+
+Lagrede vurderinger og oppfølgingsstatuser beholdes når ønske eller
+intervjufordeling senere fjernes. Raden forsvinner først når paret ikke lenger
+oppfyller noen av kriteriene. Arbeidsgiverkortet beholdes.
+
+### Skrivebeskyttet «Fått jobben»
+
+- «Fått jobben» skrives og endres **kun i Formidlinger**. Feltet finnes ikke i
+  `MøtedagDTO`, `VurderingDTO` eller WorkOp-mutasjoner.
+- Frontend speiler aktive, ikke-sperrede formidlingsrader ved å koble
+  fødselsnummer og organisasjonsnummer i minnet. Det matches aldri på navn, og
+  fødselsnummer legges ikke i URL eller logger.
+- Flere jobbsøkere kan være registrert i samme formidling og dele
+  `stillingId`. Koblingen må derfor aldri anta 1:1 mellom et WorkOp-par og en
+  formidling.
+- Lenken «Se formidlinger hos …» åpner Formidlinger-fanen filtrert på
+  arbeidsgiver via query-parameteren `formidlingArbeidsgivere`. Den lenker ikke
+  direkte til jobbsøkeren.
+- Formidlinger lastes separat. Ved feil er «Fått jobben» **ukjent**, ikke
+  «nei», og de redigerbare WorkOp-statusene virker fortsatt.
+
+Fritekst/notat, yrkesønske, ledighetsmåneder, ytelse og økonomiberegninger fra
+Excel er utenfor dette steget.
 
 ---
 
@@ -359,7 +388,7 @@ interface MøtedagDTO {
   rom: RomDTO[];
   arbeidsgiverRekkefølge: ArbeidsgiverRotasjonDTO[];
   ønsker: ØnskeDTO[];
-  tildelinger: SpeedintervjuTildelingDTO[];
+  intervjufordelinger: ArbeidsgiverIntervjufordelingDTO[];
   vurderinger: VurderingDTO[];
 }
 interface RomDTO {
@@ -374,23 +403,29 @@ interface ØnskeDTO {
   personTreffId: string;
   arbeidsgiverTreffId: string;
 }
-interface SpeedintervjuTildelingDTO {
-  personTreffId: string;
+interface ArbeidsgiverIntervjufordelingDTO {
   arbeidsgiverTreffId: string;
+  inkludertePersonTreffIder: string[];
+  ekskludertePersonTreffIder: string[];
 }
 interface VurderingDTO {
   personTreffId: string;
   arbeidsgiverTreffId: string;
-  vurdering: SpeedintervjuVurdering;
+  vurdering: SpeedintervjuVurdering | null;
+  andreIntervju: boolean;
+  jobbtilbud: boolean;
 }
 ```
+
+«Fått jobben» er med vilje ikke del av møtedagskontrakten. Den avledes
+skrivebeskyttet fra Formidlinger.
 
 ### MSW-mock (dynamisk for demo)
 
 Legg en `møtedagStore = new Map<string, MøtedagDTO>()` i
 [mswState.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/mswState.ts)
 (samme mønster som `arbeidsgiverStore`/`innleggStore`). Handlerne bygger svar fra
-samme store som leses, slik at oppmøte → romfordeling → ønsker → tildeling →
+samme store som leses, slik at oppmøte → romfordeling → ønsker → fordeling →
 vurdering henger sammen gjennom en demo. Kontrakten og handlerne inkluderer alle
 fem faser og samlinger. Seed for `id === 'workop'` bruker tydelig oppdiktede
 navn/identer – ingen realistiske fødselsnumre.
@@ -410,8 +445,10 @@ Controller → Service → Repository:
 - **`rom_tildeling`:** `rekrutteringstreff_id`, `jobbsoker_id`, `romnummer`.
 - **`arbeidsgiver_rotasjon`:** `arbeidsgiver_id`, `start_posisjon`.
 - **`speedintervju_onske`:** `jobbsoker_id`, `arbeidsgiver_id`.
-- **`speedintervju_tildeling`:** `jobbsoker_id`, `arbeidsgiver_id`.
-- **`speedintervju_vurdering`:** `jobbsoker_id`, `arbeidsgiver_id`, `vurdering`.
+- **`speedintervju_fordeling`:** `jobbsoker_id`, `arbeidsgiver_id`, plassering
+  og om jobbsøkeren er inkludert.
+- **`speedintervju_vurdering`:** `jobbsoker_id`, `arbeidsgiver_id`,
+  nullable `vurdering`, `andre_intervju` og `jobbtilbud`.
 
 API-et bruker de offentlige domenenøklene `personTreffId` og
 `arbeidsgiverTreffId`. Repository mapper disse til interne `jobbsoker_id` og
@@ -426,8 +463,8 @@ Foreslåtte endepunkter (under `/api/rekrutteringstreff/{id}/moetedag`, i tråd 
 | PUT    | `/moetedag/oppmote`     | Registrer/fjern oppmøte (skriver `MØTT_OPP`/`ANGRE_MØTT_OPP`-hendelse) |
 | PUT    | `/moetedag/moteoppsett` | Sett tider + antall rom → auto-fordel rom + rotasjon, fase = ROM       |
 | PUT    | `/moetedag/onsker`      | Sett/fjern ett ønskepar idempotent                                     |
-| PUT    | `/moetedag/tildelinger` | Sett/fjern én faktisk intervjutildeling idempotent                     |
-| PUT    | `/moetedag/vurderinger` | Sett/fjern vurdering for ett tildelt par                               |
+| PUT    | `/moetedag/intervjufordeling` | Lagre rekkefølge over og under sperrelinjen for én arbeidsgiver |
+| PUT    | `/moetedag/vurderinger` | Sett/fjern vurdering og oppfølging for ett par                         |
 
 Matriseendringer lagres per par (`personTreffId`, `arbeidsgiverTreffId`) i
 stedet for å overskrive hele samlingen. Det reduserer faren for at de to
@@ -435,11 +472,18 @@ hovedansvarlige mister hverandres samtidige endringer. Møteoppsettet bør i
 tillegg ha en versjon eller annen optimistisk lås dersom begge kan redigere det
 samtidig.
 
-Backend validerer at person og arbeidsgiver tilhører samme WorkOp-treff, at bare
-fremmøtte kan ha ønsker/tildelinger, at tildeling som standard finnes i ønsker,
-og at vurdering bare finnes for et tildelt par. Fjerning av oppmøte når det
-finnes ønsker, tildelinger eller vurderinger skal kreve eksplisitt bekreftelse;
+Backend validerer at person og arbeidsgiver tilhører samme WorkOp-treff, og at
+bare fremmøtte kan få ønsker og intervjufordeling. En vurdering kan bestå etter
+at ønske og intervjufordeling fjernes. En vurderingsrad der vurdering er `null`
+og begge boolean-feltene er `false`, slettes. Fjerning av oppmøte når det finnes
+ønsker, intervjufordeling eller vurderinger skal kreve eksplisitt bekreftelse;
 data må aldri bli hengende igjen inkonsistent.
+
+Begge registrerte WorkOp-eiere må kunne lese alle relevante Formidlinger for
+treffet. Dagens rollebaserte `alle`/`egne`-endepunkter dekker ikke nødvendigvis
+det kravet og må avklares i backend. Frontendens midlertidige kobling med
+fødselsnummer + organisasjonsnummer skal erstattes av en autoritativ kobling når
+backendkontrakten utformes.
 
 Tilgang: `verifiserAutorisasjon(ARBEIDSGIVER_RETTET)` + eksplisitt registrert
 hovedansvarlig (utvikler kan ha bypass). Hovedansvar lagres med ansvarstype
@@ -487,9 +531,11 @@ leveransen og unngår en ufullstendig statusmodell.
 | Oppmøte (finnes ikke som egen kolonne i dagens ark)         | Steg 1 – Oppmøte                          |
 | Grupperom/gruppeinndeling (håndteres manuelt i dag)         | Steg 1–2 (romoppsett + rotasjon)          |
 | «Bedrift 1–6» – hvilke bedrifter kandidaten ønsker          | Steg 3 – Ønsker                           |
-| Faktisk fordeling til speedintervju                         | Steg 4 – Intervjufordeling                |
-| «Aktuell / Kanskje / Kladd» (Master + fanene «Bedrift 1–6») | Steg 5 – Vurdering                        |
-| «Ønsker og Økonomi» (2. intervju, jobbtilbud, ytelse)       | Utenfor scope – statistikk (behov nr. 13) |
+| Faktisk fordeling og rekkefølge til speedintervju           | Steg 4 – Intervjufordeling                |
+| «Aktuell / Kanskje / Kladd» (Master + fanene «Bedrift 1–6») | Steg 5 – Status og oppfølging             |
+| «2. intervju hos» og «Jobbtilbud fra»                       | Steg 5 – Status og oppfølging             |
+| «Fått jobben»                                               | Skrivebeskyttet speil fra Formidlinger    |
+| Yrkesønske, ledighetsmåneder, ytelse og økonomi             | Utenfor scope – statistikk (behov nr. 13) |
 
 ---
 
@@ -499,8 +545,8 @@ leveransen og unngår en ufullstendig statusmodell.
 | --------------------------------- | ------- | -------------------------------------------------------------- |
 | Nr. 6 – Registrere oppmøte        | 1       | Steg 1 + burgermeny                                            |
 | Nr. 7 – 5 grupper/grupperom       | 2       | Steg 1 (antall rom + auto-fordeling) + steg 2 (rom + rotasjon) |
-| Nr. 8 – Fordele til speedintervju | 3       | Steg 3 (ønsker) + steg 4 (faktisk intervjutildeling)           |
-| Nr. 9 – Statusoversikt            | —       | Relatert, men egen sak (jobbsøkerstatuser)                     |
+| Nr. 8 – Fordele til speedintervju | 3       | Steg 3 (ønsker) + steg 4 (intervjufordeling)                   |
+| Nr. 9 – Statusoversikt            | —       | Steg 5 – arbeidsgiverspesifikk status og oppfølging            |
 
 ---
 
@@ -523,7 +569,7 @@ leveransen og unngår en ufullstendig statusmodell.
 ## Gjennomføringsrekkefølge (frontend først)
 
 1. **Fase A0 – Komplett kontrakt og mock-grunnmur:** etabler `MøtedagDTO` med
-   alle fem faser, rom, rotasjon, ønsker, tildelinger og vurderinger. Opprett
+   alle fem faser, rom, rotasjon, ønsker, intervjufordelinger og vurderinger. Opprett
    stateful MSW-handlere for alle mutasjoner, syntetisk WorkOp-seed og testede
    hjelpefunksjoner for stabil romfordeling og rotasjon.
 2. **Fase A1 – Navigasjon og steg 1:** opprett fane, tilgangsgating og Stepper med
@@ -531,11 +577,12 @@ leveransen og unngår en ufullstendig statusmodell.
    arbeidsgiverliste, møteoppsett og «Sett opp møteplan».
 3. **Fase B – Steg 2 (Rom og rotasjon):** vis
    auto-fordelte rom og rotasjonsplan med klokkeslett i modal med utskrift.
-4. **Fase C – Steg 3 og 4:** bygg ønske-matrise og faktisk intervjutildeling på
+4. **Fase C – Steg 3 og 4:** bygg ønske-matrise og intervjufordeling på
    den etablerte kontrakten.
-5. **Fase D – Steg 5:** vurderingsmatrise (Aktuell/Kanskje/Kladd), kun aktive
-   celler for faktisk tildelte intervjuer.
-6. **Fase E – Backend:** implementer den samme kontrakten med Flyway-migrasjoner,
+5. **Fase D – Steg 5 (frontend implementert):** arbeidsgiverkort med oppsummering,
+   Aktuell/Kanskje/Kladd, 2. intervju, Jobbtilbud og skrivebeskyttet
+   Formidling-speil. Stateful MSW dekker lagring per par.
+6. **Fase E – Backend:** implementer den ønsker impsamme kontrakten med Flyway-migrasjoner,
    controller/service/repository og hendelser. Bytt datakilden fra MSW til API
    uten å endre komponentenes DTO-er eller flyt.
 
@@ -552,7 +599,7 @@ ikke å teste selve mock-laget.
 ### Verktøy under utvikling
 
 - **playwright-mcp:** kjør en ekte nettleser mot dev-serveren og klikk gjennom
-  flyten (oppmøte → «Sett opp møteplan» → rom/rotasjon → ønsker → tildeling →
+  flyten (oppmøte → «Sett opp møteplan» → rom/rotasjon → ønsker → fordeling →
   vurdering) for å bekrefte at riktige tilstander vises. Bruk den til å utforske UI-et og finne
   stabile role-baserte selektorer før tester skrives.
 - **next-devtools-mcp (valgfritt):** inspiser Next.js (App Router-ruter, server-/
@@ -561,7 +608,7 @@ ikke å teste selve mock-laget.
 ### MSW med state (ikke stub-svar)
 
 - `møtedagStore` (se «MSW-mock») **muteres** av PUT-handlerne og leses av
-  GET-handleren, slik at oppmøte → romfordeling → ønsker → tildeling → vurdering henger sammen
+  GET-handleren, slik at oppmøte → romfordeling → ønsker → fordeling → vurdering henger sammen
   som ekte tilstandsoverganger.
 - Testene skal drive flyten via UI-et og verifisere at tilstanden **utvikler seg
   riktig** (f.eks. at «Møtt»-tag dukker opp etter registrering, at rom fylles etter
@@ -590,10 +637,14 @@ samme mønster som eksisterende tester: `storageState` for rolle
   viser klokkeslett, og «Skriv ut» finnes.
 - **Steg 3 – ønsker:** matrisen viser kun fremmøtte jobbsøkere, og avkryssing
   oppdaterer telleren per rad.
-- **Steg 4 – intervjutildeling:** ønskede par kan tildeles og fordelingen vises
-  per jobbsøker og arbeidsgiver.
-- **Steg 5 – vurdering:** bare faktisk tildelte par er aktive, og vurdering
-  (Aktuell/Kanskje/Kladd) kan settes per aktiv celle.
+- **Steg 4 – intervjufordeling:** rekkefølgen kan endres med dra-og-slipp og
+  piler, jobbsøkere kan flyttes over/under sperrelinjen, og plasskonflikter
+  varsles.
+- **Steg 5 – status og oppfølging:** kortene viser unionen av ønsker,
+  intervjufordeling, lagrede statuser og Formidlinger. Test lagring/nullstilling,
+  utholdenhet etter fjernet ønske/fordeling, tomme arbeidsgiverkort,
+  skrivebeskyttet «Fått jobben», flere kandidater i samme formidling, filtrert
+  navigasjon og lokal feiltilstand for begge datakildene.
 
 Unngå assertions som bare speiler mock-data; verifiser at UI-et står i forventet
 tilstand etter reelle brukerhandlinger.
@@ -605,12 +656,12 @@ tilstand etter reelle brukerhandlinger.
 - Møteoppsettet er redigerbart og har ingen låse-/gjenåpningsmekanisme.
 - Romfordelingen er automatisk. Manuell flytting og full re-fordeling inngår ikke.
 - Utskrift viser navn, rom og arbeidsgiver, men aldri fødselsnummer.
-- Intervjutildeling krever et registrert ønske og lagrer ikke køplass,
-  rekkefølge eller tidspunkt.
-- Fjerning av oppmøte etter at ønsker, tildelinger eller vurderinger finnes,
+- Intervjufordelingen tar utgangspunkt i registrerte ønsker og lagrer rekkefølge
+  over og under sperrelinjen, men ikke tidspunkt.
+- Fjerning av oppmøte etter at ønsker, intervjufordeling eller vurderinger finnes,
   krever bekreftelse og rydder avhengige data atomisk.
-- «2. intervju», jobbtilbud og økonomidata hører til statistikk- og
-  formidlingssporet.
+- «2. intervju» og «Jobbtilbud» registreres i WorkOp. «Fått jobben» registreres
+  bare i Formidlinger og speiles skrivebeskyttet. Økonomidata inngår ikke.
 - Egen `JobbsøkerStatus` for oppmøte krever en separat beslutning sammen med
   oppdatering av aktivitetsplan og aktivitetskort.
 
@@ -627,7 +678,9 @@ tilstand etter reelle brukerhandlinger.
   jobbsøkere?
 - Er dagens eier-/kontorregel streng nok for WorkOp, eller må «hovedansvarlige»
   modelleres eksplisitt før backend bygges?
-- Skal steg 4 på sikt også dekke «2. intervju» og «jobbtilbud» (Excel), eller
-  hører det hjemme i statistikk-/formidlingssporet?
+- Hvilket backendendepunkt skal gi begge WorkOp-eierne komplett, autorisert
+  lesetilgang til relevante Formidlinger?
+- Hvilke autoritative domenenøkler skal erstatte frontendens midlertidige
+  kobling med fødselsnummer + organisasjonsnummer?
 - Når bør «møtt opp» løftes fra hendelse til egen `JobbsøkerStatus` – i takt med
   at oppmøte også oppdaterer aktivitetsplanen/aktivitetskortet?
