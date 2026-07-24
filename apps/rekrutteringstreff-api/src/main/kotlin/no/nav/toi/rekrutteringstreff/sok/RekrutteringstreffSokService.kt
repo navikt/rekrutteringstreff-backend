@@ -26,6 +26,8 @@ class RekrutteringstreffSokService(
             statuser = request.statuser,
             publisertStatuser = request.publisertStatuser,
             kontorer = request.kontorer,
+            fylkesnumre = request.fylkesnumre,
+            kommunenumre = request.kommunenumre,
             visning = request.visning,
             sortering = request.sortering,
             side = request.side,
@@ -40,6 +42,7 @@ class RekrutteringstreffSokService(
             kategoriaggregering = resultat.kategoriaggregering,
             statusaggregering = resultat.statusaggregering,
             publisertstatusaggregering = resultat.publisertstatusaggregering,
+            geografiaggregering = resultat.geografiaggregering,
         )
 
         val varighetMs = Duration.ofNanos(System.nanoTime() - startTidNanos).toMillis()
