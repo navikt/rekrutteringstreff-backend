@@ -436,7 +436,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         )
     }
 
-    private fun byggKommunenummeCondition(kommunenumre: List<String>?): Condition? {
+    private fun byggKommunenummerCondition(kommunenumre: List<String>?): Condition? {
         if (kommunenumre.isNullOrEmpty()) return null
         return Condition(
             clause = "kommunenummer = ANY(?::text[])",
