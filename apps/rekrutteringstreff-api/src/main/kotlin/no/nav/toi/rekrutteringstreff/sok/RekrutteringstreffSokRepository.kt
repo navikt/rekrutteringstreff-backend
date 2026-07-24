@@ -320,7 +320,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             byggStatusCondition(statuser, publisertStatuser),
             byggKontorCondition(kontorer),
             byggFylkesnummerCondition(fylkesnumre),
-            byggKommunenummeCondition(kommunenumre),
+            byggKommunenummerCondition(kommunenumre),
         )
 
         val whereClause = conditions
