@@ -19,6 +19,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         statuser: List<SokStatus>?,
         publisertStatuser: List<PublisertStatus>?,
         kontorer: List<String>?,
+        fylkesnumre: List<String>?,
+        kommunenumre: List<String>?,
         visning: Visning,
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
@@ -31,6 +33,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             statuser = statuser,
             publisertStatuser = publisertStatuser,
             kontorer = kontorer,
+            fylkesnumre = fylkesnumre,
+            kommunenumre = kommunenumre,
             visning = visning,
         )
         val (whereForStatusaggregering, paramsForStatusaggregering) = byggWhere(
@@ -40,8 +44,35 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             statuser = null,
             publisertStatuser = null,
             kontorer = kontorer,
+            fylkesnumre = fylkesnumre,
+            kommunenumre = kommunenumre,
             visning = visning,
         )
+
+        val (whereForFylkesnummerAggregering, paramsForFylkesnummerAggregering) = byggWhere(
+            navIdent = navIdent,
+            kontorId = kontorId,
+            kategorier = kategorier,
+            statuser = statuser,
+            publisertStatuser = publisertStatuser,
+            kontorer = kontorer,
+            fylkesnumre = null,
+            kommunenumre = kommunenumre,
+            visning = visning,
+        )
+
+        val (whereForKommunenummerAggregering, paramsForKommunenummerAggregering) = byggWhere(
+            navIdent = navIdent,
+            kontorId = kontorId,
+            kategorier = kategorier,
+            statuser = statuser,
+            publisertStatuser = publisertStatuser,
+            kontorer = kontorer,
+            fylkesnumre = fylkesnumre,
+            kommunenumre = null,
+            visning = visning,
+        )
+
         val (whereForTreffliste, paramsForTreffliste) = byggWhere(
             navIdent = navIdent,
             kontorId = kontorId,
@@ -49,6 +80,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             statuser = statuser,
             publisertStatuser = publisertStatuser,
             kontorer = kontorer,
+            fylkesnumre = fylkesnumre,
+            kommunenumre = kommunenumre,
             visning = visning,
         )
 
@@ -59,6 +92,10 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                 kategoriaggregering = hentKategoriaggregering(conn, whereForKategoriAggregering, paramsForKategoriAggregering),
                 statusaggregering = hentStatusaggregering(conn, whereForStatusaggregering, paramsForStatusaggregering),
                 publisertstatusaggregering = hentPublisertStatusaggregering(conn, whereForStatusaggregering, paramsForStatusaggregering),
+                geografiaggregering = Geografiaggregering(
+                    fylkesnummeraggregering = hentFylkesnummeraggregering(conn, whereForFylkesnummerAggregering, paramsForFylkesnummerAggregering),
+                    kommunenummeraggregering = hentKommunenummeraggregering(conn, whereForKommunenummerAggregering, paramsForKommunenummerAggregering),
+                ),
             )
         }
     }
@@ -85,7 +122,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
     ): List<RekrutteringstreffSokTreff> {
         val sql = """
             SELECT id, tittel, beskrivelse, kategori, status, frist_utgatt, fra_tid, til_tid, svarfrist,
-                   gateadresse, postnummer, poststed,
+                   gateadresse, postnummer, poststed, kommunenummer, fylkesnummer,
                    opprettet_av_person_navident, opprettet_av_tidspunkt, sist_endret,
                    eiere, kontorer,
                    antall_arbeidsgivere, antall_jobbsokere, antall_jobbsokere_svart_ja, antall_jobbsokere_fatt_jobb
@@ -196,6 +233,42 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         return publiserteStatusResultat
     }
 
+    private fun hentFylkesnummeraggregering(conn: Connection, where: String, params: List<SqlParam>): List<FilterValg> {
+        val whereSeparator = if (where.isNotEmpty()) " AND " else " WHERE "
+        val sql = """
+        SELECT fylkesnummer AS aggregert_fylkesnummer, count(*) AS antall
+        FROM rekrutteringstreff_sok_view
+        $where $whereSeparator fylkesnummer IS NOT NULL
+        GROUP BY aggregert_fylkesnummer
+        ORDER BY aggregert_fylkesnummer
+    """.trimIndent()
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            settWhereParametere(stmt, params)
+            stmt.executeQuery().use { rs ->
+                buildList { while (rs.next()) add(FilterValg(rs.getString("aggregert_fylkesnummer"), rs.getLong("antall"))) }
+            }
+        }
+    }
+
+    private fun hentKommunenummeraggregering(conn: Connection, where: String, params: List<SqlParam>): List<FilterValg> {
+        val whereSeparator = if (where.isNotEmpty()) " AND " else " WHERE "
+        val sql = """
+        SELECT kommunenummer AS aggregert_kommunenummer, count(*) AS antall
+        FROM rekrutteringstreff_sok_view
+        $where $whereSeparator kommunenummer IS NOT NULL
+        GROUP BY aggregert_kommunenummer
+        ORDER BY aggregert_kommunenummer
+    """.trimIndent()
+        return conn.prepareStatement(sql).use { stmt ->
+            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
+            settWhereParametere(stmt, params)
+            stmt.executeQuery().use { rs ->
+                buildList { while (rs.next()) add(FilterValg(rs.getString("aggregert_kommunenummer"), rs.getLong("antall"))) }
+            }
+        }
+    }
+
     private fun settWhereParametere(stmt: java.sql.PreparedStatement, params: List<SqlParam>) {
         params.forEachIndexed { index, param ->
             settParam(stmt, index + 1, param)
@@ -235,6 +308,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         statuser: List<SokStatus>?,
         publisertStatuser: List<PublisertStatus>?,
         kontorer: List<String>?,
+        fylkesnumre: List<String>?,
+        kommunenumre: List<String>?,
         visning: Visning,
     ): Pair<String, List<SqlParam>> {
         val conditions = listOfNotNull(
@@ -244,6 +319,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             byggKategoriCondition(kategorier),
             byggStatusCondition(statuser, publisertStatuser),
             byggKontorCondition(kontorer),
+            byggFylkesnummerCondition(fylkesnumre),
+            byggKommunenummeCondition(kommunenumre),
         )
 
         val whereClause = conditions
@@ -351,6 +428,22 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         )
     }
 
+    private fun byggFylkesnummerCondition(fylkesnumre: List<String>?): Condition? {
+        if (fylkesnumre.isNullOrEmpty()) return null
+        return Condition(
+            clause = "fylkesnummer = ANY(?::text[])",
+            params = listOf(SqlParam(fylkesnumre, ParamType.STRING_ARRAY)),
+        )
+    }
+
+    private fun byggKommunenummeCondition(kommunenumre: List<String>?): Condition? {
+        if (kommunenumre.isNullOrEmpty()) return null
+        return Condition(
+            clause = "kommunenummer = ANY(?::text[])",
+            params = listOf(SqlParam(kommunenumre, ParamType.STRING_ARRAY)),
+        )
+    }
+
     private fun settParam(s: java.sql.PreparedStatement, index: Int, param: SqlParam) {
         when (param.type) {
             ParamType.STRING -> s.setString(index, param.value as String)
@@ -391,6 +484,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             gateadresse = rs.getString("gateadresse"),
             postnummer = rs.getString("postnummer"),
             poststed = rs.getString("poststed"),
+            kommunenummer = rs.getString("kommunenummer"),
+            fylkesnummer = rs.getString("fylkesnummer"),
             opprettetAv = rs.getString("opprettet_av_person_navident"),
             opprettetAvTidspunkt = rs.getTimestamp("opprettet_av_tidspunkt").toInstant(),
             sistEndret = rs.getTimestamp("sist_endret").toInstant(),

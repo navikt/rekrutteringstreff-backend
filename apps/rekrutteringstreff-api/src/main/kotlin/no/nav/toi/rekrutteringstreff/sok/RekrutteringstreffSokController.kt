@@ -29,6 +29,8 @@ class RekrutteringstreffSokController(
             OpenApiParam(name = "statuser", type = String::class, required = false, description = "Kommaseparert liste av statuser, for eksempel PUBLISERT,UTKAST", example = "PUBLISERT,UTKAST"),
             OpenApiParam(name = "publisertStatuser", type = String::class, required = false, description = "Kommaseparert liste av publisert statuser", example = "ÅPEN_FOR_SØKERE,SVARFRIST_PASSERT"),
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
+            OpenApiParam(name = "fylkesnumre", type = String::class, required = false, description = "Kommaseparert liste av fylkesnumre, for eksempel 03,11", example = "03,11"),
+            OpenApiParam(name = "kommunenumre", type = String::class, required = false, description = "Kommaseparert liste av kommunenumre, for eksempel 0301,1103", example = "0301,1103"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
             OpenApiParam(name = "antallPerSide", type = Int::class, required = false, description = "Antall treff per side, må være mellom 1 og 100", example = "20"),
@@ -98,7 +100,17 @@ class RekrutteringstreffSokController(
                     "publisertstatusaggregering": [
                         {"verdi": "ÅPEN_FOR_SØKERE", "antall": 8},
                         {"verdi": "SVARFRIST_PASSERT", "antall": 4}
-                    ]
+                    ],
+                    "geografiaggregering": {
+                        "fylkesnummeraggregering": [
+                            {"verdi": "03", "antall": 8},
+                            {"verdi": "46", "antall": 3}
+                        ],
+                        "kommunenummeraggregering": [
+                            {"verdi": "0301", "antall": 5},
+                            {"verdi": "4601", "antall": 2}
+                        ]
+                    }
                 }"""
             )]
         ),
@@ -143,7 +155,8 @@ class RekrutteringstreffSokController(
             it.toBooleanStrictOrNull() ?: throw IllegalArgumentException("Ugyldig publisertFristUtgatt: $it")
         }
         val kontorer = ctx.csvQueryParam("kontorer")
-
+        val fylkesnumre = ctx.csvQueryParam("fylkesnumre")
+        val kommunenumre = ctx.csvQueryParam("kommunenumre")
         val side = ctx.queryParamAsInt("side") ?: 1
         val antallPerSide = ctx.queryParamAsInt("antallPerSide") ?: 20
         if (side < 1) {
@@ -159,6 +172,8 @@ class RekrutteringstreffSokController(
             publisertStatuser = publisertStatuser,
             publisertFristUtgatt = publisertFristUtgatt,
             kontorer = if (visning == Visning.MITT_KONTOR) null else kontorer,
+            fylkesnumre = fylkesnumre,
+            kommunenumre = kommunenumre,
             visning = visning,
             sortering = sortering,
             side = side,
