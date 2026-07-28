@@ -57,7 +57,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             publisertStatuser = publisertStatuser,
             kontorer = kontorer,
             fylkesnumre = null,
-            kommunenumre = kommunenumre,
+            kommunenumre = null,
             visning = visning,
         )
 
