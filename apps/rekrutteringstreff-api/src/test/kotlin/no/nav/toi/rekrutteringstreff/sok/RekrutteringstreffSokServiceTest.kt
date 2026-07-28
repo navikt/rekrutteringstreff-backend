@@ -39,12 +39,16 @@ class RekrutteringstreffSokServiceTest {
         tittel: String = "TestTreff",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
         kontorId: String = "0315",
+        kommunenummer: String = "0301",
+        fylkesnummer: String = "03",
     ): TreffId =
         db.opprettRekrutteringstreffMedEierOgKontor(
             navIdent = navIdent,
             tittel = tittel,
             status = status,
             kontorId = kontorId,
+            kommunenummer = kommunenummer,
+            fylkesnummer = fylkesnummer,
         )
 
     @Test
@@ -148,5 +152,56 @@ class RekrutteringstreffSokServiceTest {
         val statusUtkast = respons.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
         assertThat(statusPub?.antall).isEqualTo(1)
         assertThat(statusUtkast?.antall).isEqualTo(1)
+    }
+
+    @Test
+    fun `sok med fylkefilter gir treff kun for valgt fylke`() {
+        opprettTreff(tittel = "Oslo", fylkesnummer = "03")
+        opprettTreff(tittel = "Bergen", fylkesnummer = "46")
+
+        val respons = service.sok(
+            request = RekrutteringstreffSokRequest(fylkesnumre = listOf("03")),
+            navIdent = "A123456",
+            kontorId = "0315",
+        )
+
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().tittel).isEqualTo("Oslo")
+    }
+
+    @Test
+    fun `sok med kommunefilter gir treff kun for valgt kommune`() {
+        opprettTreff(tittel = "Oslo", fylkesnummer = "03", kommunenummer = "0301")
+        opprettTreff(tittel = "Bergen", fylkesnummer = "46", kommunenummer = "4601")
+
+        val respons = service.sok(
+            request = RekrutteringstreffSokRequest(kommunenumre = listOf("4601")),
+            navIdent = "A123456",
+            kontorId = "0315",
+        )
+
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.treff.first().tittel).isEqualTo("Bergen")
+    }
+
+    @Test
+    fun `kommuneaggregering ekskluderer kommunefilteret men inkluderer fylkefilteret`() {
+        opprettTreff(fylkesnummer = "03", kommunenummer = "0301")
+        opprettTreff(fylkesnummer = "03", kommunenummer = "0399")
+        opprettTreff(fylkesnummer = "46", kommunenummer = "4601")
+
+        val respons = service.sok(
+            request = RekrutteringstreffSokRequest(
+                fylkesnumre = listOf("03"),
+                kommunenumre = listOf("0301"),
+            ),
+            navIdent = "A123456",
+            kontorId = "0315",
+        )
+
+        assertThat(respons.treff).hasSize(1)
+        assertThat(respons.geografiaggregering.kommunenummeraggregering).extracting("verdi").containsExactlyInAnyOrder("0301", "0399")
+        assertThat(respons.geografiaggregering.kommunenummeraggregering.find { it.verdi == "0301" }?.antall).isEqualTo(1)
+        assertThat(respons.geografiaggregering.kommunenummeraggregering.find { it.verdi == "0399" }?.antall).isEqualTo(1)
     }
 }

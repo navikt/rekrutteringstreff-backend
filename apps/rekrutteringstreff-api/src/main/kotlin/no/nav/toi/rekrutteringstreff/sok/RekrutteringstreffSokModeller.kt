@@ -89,6 +89,8 @@ data class RekrutteringstreffSokRequest(
     val publisertStatuser: List<PublisertStatus>? = null,
     val publisertFristUtgatt: Boolean? = null,
     val kontorer: List<String>? = null,
+    val fylkesnumre: List<String>? = null,
+    val kommunenumre: List<String>? = null,
     val visning: Visning = Visning.ALLE,
     val sortering: Sortering = Sortering.SIST_OPPDATERTE,
     val side: Int = 1,
@@ -103,7 +105,8 @@ data class RekrutteringstreffSokRespons(
     val kategoriaggregering: List<FilterValg>,
     val statusaggregering: List<FilterValg>,
     val publisertstatusaggregering: List<FilterValg>,
-)
+    val geografiaggregering: Geografiaggregering,
+    )
 
 data class RekrutteringstreffSokTreff(
     val id: String,
@@ -118,6 +121,8 @@ data class RekrutteringstreffSokTreff(
     val gateadresse: String?,
     val postnummer: String?,
     val poststed: String?,
+    val kommunenummer: String?,
+    val fylkesnummer: String?,
     val opprettetAv: String,
     val opprettetAvTidspunkt: Instant,
     val sistEndret: Instant,
@@ -134,10 +139,16 @@ data class FilterValg(
     val antall: Long,
 )
 
+data class Geografiaggregering(
+    val fylkesnummeraggregering: List<FilterValg>,
+    val kommunenummeraggregering: List<FilterValg>,
+)
+
 data class SokMedAggregeringResultat(
     val treff: List<RekrutteringstreffSokTreff>,
     val antallTotalt: Long,
     val kategoriaggregering: List<FilterValg>,
     val statusaggregering: List<FilterValg>,
     val publisertstatusaggregering: List<FilterValg>,
+    val geografiaggregering: Geografiaggregering,
 )

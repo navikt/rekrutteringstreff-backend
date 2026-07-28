@@ -208,7 +208,9 @@ class TestDatabase {
         tittel: String = "TestTreff",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
         kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
-        kontorId: String = "0315"
+        kontorId: String = "0315",
+        kommunenummer: String = "0301",
+        fylkesnummer: String = "03",
     ): TreffId {
         val treffId = opprettRekrutteringstreffMedAlleFelter(
             navIdent = navIdent,
@@ -216,6 +218,8 @@ class TestDatabase {
             kategori = kategori,
             status = status,
             opprettetAvNavkontorEnhetId = kontorId,
+            kommunenummer = kommunenummer,
+            fylkesnummer = fylkesnummer,
         )
 
         eierRepository.leggTil(treffId, listOf(navIdent))
