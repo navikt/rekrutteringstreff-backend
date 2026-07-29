@@ -38,7 +38,7 @@ fortsatt en kontraktskisse for `rekrutteringstreff-api`.
 | Steg 4 (fordeling)     | Arrangør lager intervjurekkefølge per arbeidsgiver. Jobbsøkere kan flyttes over og under sperrelinjen. Rekkefølgen lagres, men ikke konkrete tidspunkter.                                                                                                             |
 | Steg 5 (registrering)  | **Registrering av status** per jobbsøker × arbeidsgiver: oppsummering av ønske og speedintervju, vurdering (**Aktuell / Kanskje / Ikke aktuell**), **2. intervju**, **Jobbtilbud** og skrivebeskyttet **Formidlet** fra Formidlinger.                                 |
 | Steg 6 (oppsummering)  | **Oppsummering** av hele treffet: nøkkeltall for aktuelle kandidater, andre intervju, øvrige statuser og formidling, samt en tabell per arbeidsgiver. Hver kandidat telles én gang, med den mest positive vurderinga hen har fått.                                    |
-| Tilgang                | Kun de to eksplisitt registrerte hovedansvarlige, én markedskontakt og én veileder, har tilgang. Utvikler kan ha bypass. Kontortilgang alene gir ikke tilgang.                                                                                                        |
+| Tilgang                | **Avklart:** samme eier-regel som resten av API-et. Eier eller utvikler har tilgang, kontortilgang alene gir ikke tilgang. Egen hovedansvarlig-modell er forkastet som unødvendig kompleksitet.                                          |
 
 ---
 
@@ -522,74 +522,213 @@ navn/identer – ingen realistiske fødselsnumre.
 
 ### Backend-kontrakt
 
-Følger dagens hybrid (current-state-tabeller + hendelser) og
-Controller → Service → Repository:
+Frontend er bygd ferdig mot MSW-mocken, og kontrakten i
+[useMøtedag.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/[...slug]/møtedag/useMøtedag.ts)
+er fasiten. Backend skal treffe den uendret, slik at frontend kun trenger å skru
+av mocken.
 
-- **Oppmøte (v1):** kun hendelse `MØTT_OPP` / `ANGRE_MØTT_OPP` i
-  `jobbsoker_hendelse` – ingen ny kolonne. «Har møtt» utledes av hendelsene
-  (se eget avsnitt under).
-- **`møtedag`** (1:1 med treff): `rekrutteringstreff_id` (PK/FK), `fase`,
-  `antall_rom`, `start_tidspunkt`, `varighet_min`, `pause_min`.
-- **`workop_hovedansvarlig`:** `rekrutteringstreff_id`, `nav_ident`,
-  `ansvarstype`; unik kombinasjon av treff + ansvarstype og treff + ident.
-- **`rom_tildeling`:** `rekrutteringstreff_id`, `jobbsoker_id`, `romnummer`.
-- **`arbeidsgiver_rotasjon`:** `arbeidsgiver_id`, `start_posisjon`.
-- **`speedintervju_onske`:** `jobbsoker_id`, `arbeidsgiver_id`.
-- **`speedintervju_fordeling`:** `jobbsoker_id`, `arbeidsgiver_id`, plassering
-  og om jobbsøkeren er inkludert.
-- **`speedintervju_vurdering`:** `jobbsoker_id`, `arbeidsgiver_id`,
-  nullable `vurdering`, `andre_intervju` og `jobbtilbud`.
+#### Prinsipper
 
-API-et bruker de offentlige domenenøklene `personTreffId` og
-`arbeidsgiverTreffId`. Repository mapper disse til interne `jobbsoker_id` og
-`arbeidsgiver_id`; interne database-ID-er skal ikke lekke ut i DTO-ene.
+- Samme lagdeling som resten av API-et: Controller → Service → Repository.
+  `formidling/`-pakken er referansemønsteret.
+- Ren SQL med JDBC, ingen ORM. All databasetilgang går gjennom service, som eier
+  transaksjonen.
+- Hele møtedagen leses og skrives som ett aggregat. Alle skriveoperasjoner
+  returnerer hele møtedagen, slik frontend allerede forventer.
 
-Foreslåtte endepunkter (under `/api/rekrutteringstreff/{id}/moetedag`, i tråd med
-`/jobbsoker`- og `/formidling`-mønsteret):
+#### Ny pakke
 
-| Metode | Sti                           | Funksjon                                                                                                 |
-| ------ | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| GET    | `/moetedag`                   | Hent hele `MøtedagDTO`                                                                                   |
-| PUT    | `/moetedag/oppmote`           | Registrer/fjern oppmøte (skriver `MØTT_OPP`/`ANGRE_MØTT_OPP`-hendelse)                                   |
-| PUT    | `/moetedag/moteoppsett`       | Sett tider + 1–9 rom → opprett full round-robin-fordeling + rotasjon, fase = ROM                          |
-| PUT    | `/moetedag/romfordeling`      | Erstatt komplett romfordeling etter manuell flytting eller eksplisitt «Fordel på nytt»                   |
-| PUT    | `/moetedag/onsker`            | Sett/fjern ett ønskepar idempotent                                                                       |
-| PUT    | `/moetedag/intervjufordeling` | Lagre rekkefølge over og under sperrelinjen for én arbeidsgiver                                          |
-| PUT    | `/moetedag/vurderinger`       | Sett/fjern vurdering og oppfølging for ett par                                                           |
+`no.nav.toi.motedag` med `Motedag.kt` (domenemodell), `MotedagController.kt`,
+`MotedagService.kt`, `MotedagRepository.kt` og `dto/MotedagDto.kt`.
 
-`PUT /romfordeling` tar alle rom med ordnede `personTreffId`-lister. Backend
-validerer at romnumrene er unike innenfor 1–9, og at hver fremmøtt jobbsøker
-finnes nøyaktig én gang uten ukjente personer.
+#### DTO-er og enums
 
-`PUT /moteoppsett` oppretter bare den første planen. En identisk retry er
-idempotent og returnerer eksisterende plan uten ny romfordeling; forsøk på å
-endre et allerede opprettet møteoppsett avvises med `409 Conflict`. Det hindrer
-at en gammel fane eller en annen arrangør overskriver manuelle romplasseringer.
+Speiler frontend-typene over 1:1. `MotedagDto` er svaret på samtlige endepunkter.
+
+```kotlin
+enum class MøtedagFase { OPPMØTE, ROM, ØNSKER, FORDELING, VURDERING }
+
+enum class SpeedintervjuVurdering { AKTUELL, KANSKJE, IKKE_AKTUELL }
+
+// Nye verdier i eksisterende JobbsøkerHendelsestype
+MØTT_OPP, ANGRE_MØTT_OPP
+
+data class MotedagDto(
+    val rekrutteringstreffId: UUID,
+    val fase: MøtedagFase,
+    val antallRom: Int,
+    val starttidspunkt: String,          // "HH:mm"
+    val varighetPerMøteMinutter: Int,
+    val pauseMellomMøterMinutter: Int,
+    val oppmøte: List<UUID>,             // personTreffId
+    val rom: List<RomDto>,
+    val arbeidsgiverRekkefølge: List<ArbeidsgiverRotasjonDto>,
+    val ønsker: List<ØnskeDto>,
+    val intervjufordelinger: List<ArbeidsgiverIntervjufordelingDto>,
+    val vurderinger: List<VurderingDto>,
+)
+
+data class RomDto(
+    val romnummer: Int,                  // 1-basert
+    val jobbsøkere: List<UUID>,
+)
+
+data class ArbeidsgiverRotasjonDto(
+    val arbeidsgiverTreffId: UUID,
+    val startPosisjon: Int,
+)
+
+data class ØnskeDto(
+    val personTreffId: UUID,
+    val arbeidsgiverTreffId: UUID,
+)
+
+data class ArbeidsgiverIntervjufordelingDto(
+    val arbeidsgiverTreffId: UUID,
+    val inkludertePersonTreffIder: List<UUID>,   // rekkefølgen er plassnummeret
+    val ekskludertePersonTreffIder: List<UUID>,
+)
+
+data class VurderingDto(
+    val personTreffId: UUID,
+    val arbeidsgiverTreffId: UUID,
+    val vurdering: SpeedintervjuVurdering?,
+    val andreIntervju: Boolean,
+    val jobbtilbud: Boolean,
+)
+```
+
+Frontend behandler en ukjent vurderingsverdi som «ingen vurdering» framfor å
+feile. Den gamle `KLADD`-verdien er tatt bort og skal ikke innføres i backend.
+
+#### Endepunkter
+
+Alle under `/api/rekrutteringstreff/{id}/motedag`, alle returnerer hele
+møtedagen:
+
+| Metode | Sti                  | Funksjon                                                                       |
+| ------ | -------------------- | ------------------------------------------------------------------------------ |
+| GET    | `/`                  | Hent møtedagen. Oppretter tom møtedag ved behov.                               |
+| PUT    | `/oppmote`           | Registrer eller angre oppmøte for én jobbsøker.                                |
+| PUT    | `/moteoppsett`       | Sett tider og 1–9 rom → opprett full round-robin-fordeling + rotasjon, fase = ROM |
+| PUT    | `/romfordeling`      | Erstatt komplett romfordeling etter manuell flytting eller «Fordel på nytt».   |
+| PUT    | `/onsker`            | Sett eller fjern ett ønskepar, idempotent.                                     |
+| PUT    | `/intervjufordeling` | Lagre rekkefølge over og under sperrelinjen for én arbeidsgiver.               |
+| PUT    | `/vurderinger`       | Sett eller fjern vurdering og oppfølging for ett par.                          |
+
+#### Validering
+
+Invarianter backend må håndheve, ikke bare stole på fra frontend:
+
+- Person og arbeidsgiver tilhører samme WorkOp-treff.
+- En jobbsøker forekommer bare én gang i `inkludertePersonTreffIder`, én gang i
+  `ekskludertePersonTreffIder`, og aldri i begge hos samme arbeidsgiver.
+- `starttidspunkt` er `HH:mm` i 24-timers format, `antallRom` minst 1,
+  `pauseMellomMøterMinutter` minst 0.
+- `PUT /romfordeling` tar alle rom med ordnede `personTreffId`-lister. Romnumre
+  er unike innenfor 1–9, og hver fremmøtt jobbsøker finnes nøyaktig én gang uten
+  ukjente personer.
+- `PUT /moteoppsett` oppretter bare den første planen. En identisk retry er
+  idempotent; forsøk på å endre et allerede opprettet møteoppsett avvises med
+  `409 Conflict`. Det hindrer at en gammel fane eller en annen arrangør
+  overskriver manuelle romplasseringer.
+- Bare fremmøtte kan få ønsker og intervjufordeling. En vurdering kan bestå etter
+  at ønske og intervjufordeling fjernes. En vurderingsrad der vurdering er `null`
+  og begge boolean-feltene er `false`, slettes.
+- Fjerning av oppmøte når det finnes ønsker, intervjufordeling eller vurderinger
+  krever eksplisitt bekreftelse; data må aldri bli hengende igjen inkonsistent.
 
 Matriseendringer lagres per par (`personTreffId`, `arbeidsgiverTreffId`) i
 stedet for å overskrive hele samlingen. Det reduserer faren for at de to
-hovedansvarlige mister hverandres samtidige endringer. Møteoppsettet bør i
-tillegg ha en versjon eller annen optimistisk lås dersom begge kan redigere det
-samtidig.
+hovedansvarlige mister hverandres samtidige endringer.
 
-Backend validerer at person og arbeidsgiver tilhører samme WorkOp-treff, og at
-bare fremmøtte kan få ønsker og intervjufordeling. En vurdering kan bestå etter
-at ønske og intervjufordeling fjernes. En vurderingsrad der vurdering er `null`
-og begge boolean-feltene er `false`, slettes. Fjerning av oppmøte når det finnes
-ønsker, intervjufordeling eller vurderinger skal kreve eksplisitt bekreftelse;
-data må aldri bli hengende igjen inkonsistent.
+#### Tilgang
 
-Begge registrerte WorkOp-eiere må kunne lese alle relevante Formidlinger for
-treffet. Dagens rollebaserte `alle`/`egne`-endepunkter dekker ikke nødvendigvis
-det kravet og må avklares i backend. Frontendens midlertidige kobling med
-fødselsnummer + organisasjonsnummer skal erstattes av en autoritativ kobling når
-backendkontrakten utformes.
+Samme regel som resten av API-et, ingen egen WorkOp-mekanisme:
+`verifiserAutorisasjon(ARBEIDSGIVER_RETTET)` +
+`eierService.erEierEllerUtvikler(...)`, ellers 403.
 
-Tilgang: `verifiserAutorisasjon(ARBEIDSGIVER_RETTET)` + eksplisitt registrert
-hovedansvarlig (utvikler kan ha bypass). Hovedansvar lagres med ansvarstype
-`MARKEDSKONTAKT` eller `VEILEDER`, med maks én av hver per treff. Samme regel
-håndheves for møtedag-endepunktene, direkte henting av WorkOp-treff via ID og
-treff-søket. Formidlingsendepunktenes kontortilgang skal ikke gjenbrukes.
+Formidlingsendepunktenes kontortilgang gjenbrukes **ikke** – for møtedagen er
+eierskap eneste vei inn. Det er en innstramming, ikke en oppmykning.
+
+At WorkOp-treff ikke skal vises i søket håndteres som en egen oppgave.
+
+#### Koblingsnøkler
+
+`personTreffId` og `arbeidsgiverTreffId` brukes gjennomgående. Repository mapper
+disse til interne `jobbsoker_id` og `arbeidsgiver_id`; interne database-ID-er
+skal ikke lekke ut i DTO-ene. Fødselsnummer og organisasjonsnummer er kun
+visningsdata og skal aldri brukes til å koble sammen data — heller ikke i
+frontend.
+
+Konsekvens for eksisterende kode: `FormidlingDto` utvides additivt med
+`personTreffId` og `arbeidsgiverTreffId`. Begge finnes allerede som
+fremmednøkler på `formidling`-tabellen, og lista joiner allerede både `jobbsoker`
+og `arbeidsgiver`. Det er derfor to nye kolonner i eksisterende select, uten
+migrasjon og uten å fjerne noe. Frontend er allerede lagt om til de nye feltene.
+
+#### Database
+
+Én ny migrasjon, `V14__motedag.sql`, med seks tabeller:
+
+| Tabell                    | Innhold                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `motedag`                 | 1:1 med treff: `rekrutteringstreff_id` (PK/FK), `fase`, `antall_rom`, `start_tidspunkt`, `varighet_min`, `pause_min` |
+| `rom_tildeling`           | `rekrutteringstreff_id`, `jobbsoker_id`, `romnummer`                          |
+| `arbeidsgiver_rotasjon`   | `arbeidsgiver_id`, `start_posisjon`                                           |
+| `speedintervju_onske`     | `jobbsoker_id`, `arbeidsgiver_id`                                             |
+| `speedintervju_fordeling` | `jobbsoker_id`, `arbeidsgiver_id`, plassering og om jobbsøkeren er inkludert  |
+| `speedintervju_vurdering` | `jobbsoker_id`, `arbeidsgiver_id`, nullable `vurdering`, `andre_intervju`, `jobbtilbud` |
+
+Rekkefølge lagres eksplisitt som et heltall — den skal ikke utledes av
+innsettingsrekkefølge. Migrasjonen er rene `CREATE TABLE` uten endringer på
+eksisterende tabeller, og er derfor trygg å rulle tilbake ved å droppe tabellene.
+
+Oppmøte får **ingen** ny kolonne, se [Oppmøte lagret som hendelse](#oppmøte-lagret-som-hendelse).
+
+#### Kjente gap som må lukkes i backend
+
+Disse finnes i mocken i dag og må håndteres ordentlig når backend tar over:
+
+1. **Stale møteoppsett.** Mocken fryser antall rom og arbeidsgiverrekkefølge ved
+   første lagring. Legges en arbeidsgiver til etterpå, får den aldri rom eller
+   plass i rotasjonen; fjernes en, blir den stående. Backend må utlede rom og
+   rotasjon fra arbeidsgiverne som faktisk er på treffet på lesetidspunktet.
+2. **Samtidige endringer.** To hovedansvarlige som jobber samtidig vil i dag
+   overskrive hverandre. Minimumsløsning er en versjonskolonne på `motedag` og
+   409 ved konflikt.
+
+#### Observability
+
+- Teller for antall registrerte oppmøter per treff.
+- Teller for lagringsfeil per endepunkt, slik at vi ser om autolagringen i
+  frontend feiler systematisk.
+- Ingen fødselsnumre i logger. Logg `personTreffId` og treff-id.
+
+#### Testing
+
+Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
+
+- Tilgang: eier får 200, ikke-eier får 403, kontortilgang alene gir 403.
+- Oppmøte: registrer, angre, registrer igjen — utledet tilstand er riktig.
+- Aggregatet: hver PUT returnerer hele møtedagen med de andre delene intakt.
+- Stale-tilfellet: arbeidsgiver lagt til etter at møteoppsettet ble lagret.
+
+#### Rekkefølge
+
+1. `V14__motedag.sql` og repository for lesing.
+2. `GET /motedag` med tilgangssjekk. Frontend kan da lese ekte data.
+3. `FormidlingDto`-utvidelsen — uavhengig av resten, kan tas først.
+4. Oppmøtehendelsene.
+5. Resten av PUT-endepunktene, ett steg om gangen.
+6. Skru av MSW i frontend.
+
+#### Rød sone
+
+Skrives av utvikler selv, ikke generert:
+
+- Tilgangssjekken i `MotedagController` — sikkerhetskritisk.
+- `V14__motedag.sql` — irreversibel i produksjon.
 
 ### Oppmøte lagret som hendelse
 
@@ -783,11 +922,11 @@ tilstand etter reelle brukerhandlinger.
   Diskuter **grad av låsing** av verdier i WorkOp gjennomføring-fanen.
 - **Utskrift:** har romvertene egen notasjon for print, f.eks. bare initialer på
   jobbsøkere?
-- Er dagens eier-/kontorregel streng nok for WorkOp, eller må «hovedansvarlige»
-  modelleres eksplisitt før backend bygges?
+- ~~Er dagens eier-/kontorregel streng nok for WorkOp?~~ **Avklart:** ja, vi
+  bruker eier-regelen uten egen hovedansvarlig-modell.
 - Hvilket backendendepunkt skal gi begge WorkOp-eierne komplett, autorisert
   lesetilgang til relevante Formidlinger?
-- Hvilke autoritative domenenøkler skal erstatte frontendens midlertidige
-  kobling med fødselsnummer + organisasjonsnummer?
+- ~~Hvilke autoritative domenenøkler skal erstatte fødselsnummer +
+  organisasjonsnummer?~~ **Avklart:** `personTreffId` og `arbeidsgiverTreffId`.
 - Når bør «møtt opp» løftes fra hendelse til egen `JobbsøkerStatus` – i takt med
   at oppmøte også oppdaterer aktivitetsplanen/aktivitetskortet?
