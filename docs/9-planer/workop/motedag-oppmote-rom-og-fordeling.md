@@ -128,7 +128,7 @@ bør styres av disse kravene:
 | Tabeller/matriser | `Table` er riktig for enkel tabulær data. `DataGrid` er fortsatt preview og bør ikke være førstevalg. | Bruk `Table` med `caption`, `HeaderCell scope="row"/"col"`, maks ett interaktivt element per celle og tydelig `aria-labelledby` for skjulte checkbox-labels.                                      |
 | Lokale meldinger  | Nye lokale infomeldinger bør bruke dagens Aksel-komponenter.                                          | Bruk `LocalAlert` for lokale info-/warning-meldinger der kodebasen tillater det, og unngå å introdusere nye `Alert`-flater uten grunn.                                                            |
 | Personvern        | Planen har riktig retning med fiktive mockdata.                                                       | Vis fødselsnummer kun der det trengs (forenklet jobbsøkerliste i steg 1) og logg det aldri. Ikke legg inn notatfelt i v1. Mockdata skal være åpenbart syntetisk (ingen realistiske fødselsnumre). |
-| Tilgang           | Frontend-gating er nødvendig, men ikke tilstrekkelig.                                                 | Backend håndhever `kategori === WORKOP`, eksplisitt hovedansvarlig og rolle server-side. Kontortilgang alene er ikke nok. Frontend bruker det samme autoritative tilgangsresultatet.              |
+| Tilgang           | Frontend-gating er nødvendig, men ikke tilstrekkelig.                                                 | Backend håndhever `kategori === WORKOP`, eierskap og rolle server-side. Kontortilgang alene er ikke nok. Frontend bruker det samme autoritative tilgangsresultatet.              |
 
 ---
 
@@ -232,7 +232,7 @@ redigerbar arbeidsflate:
 - Tastatur- og klikkfallback er en Aksel `ActionMenu` kalt **«Flytt til rom»**.
   Brukeren velger målrom direkte i stedet for å måtte klikke gjennom naborom eller
   skrive og validere et romnummer.
-- Flytting lagres optimistisk via `PUT /moetedag/romfordeling`. Ved feil rulles
+- Flytting lagres optimistisk via `PUT /motedag/romfordeling`. Ved feil rulles
   plasseringen tilbake og en lokal feil vises.
 - **«Fordel på nytt»** krever bekreftelse og erstatter alle manuelle plasseringer
   med en ny, full round-robin-fordeling. Ønsker, intervjufordeling og vurderinger
@@ -365,8 +365,14 @@ registrert. Dette er den andre halvdelen av behov nr. 8 og kan ikke utledes av
   er åpen som standard; de andre kortene er komprimerte til brukeren åpner dem.
 - Arrangøren endrer rekkefølgen med dra-og-slipp eller piler. Jobbsøkere under
   sperrelinjen er ikke med på speedintervjuet.
-- Startrekkefølgen fordeles uten plasseringskrasj mellom arbeidsgivere når det er
-  mulig. Manuelle rekkefølger beholdes.
+- Fordelingen skjer bare etter en **bevisst handling**, aldri ved navigering:
+  første gang arrangøren går videre fra ønskesteget, og når hun trykker
+  **«Fordel på nytt»** (som krever bekreftelse, siden den overskriver manuelle
+  flyttinger). Går hun fram og tilbake mellom stegene, står fordelingen urørt.
+- Backend eier algoritmen. Frontend kaller `POST /intervjufordeling/fordel` og
+  viser svaret; den regner ikke ut rekkefølger selv.
+- Jobbsøkere som er flyttet under sperrelinjen blir værende der også etter
+  «Fordel på nytt». Skal de bli med igjen, må de flyttes opp manuelt først.
 - Hvis samme jobbsøker har samme plass hos flere arbeidsgivere, vises en
   varseltrekant med forklaring i tooltip.
 - Jobbsøkerne over sperrelinjen er **nummerert** med plassen sin, både på
@@ -520,6 +526,12 @@ vurdering henger sammen gjennom en demo. Kontrakten og handlerne inkluderer alle
 fem faser og samlinger. Seed for `id === 'workop'` bruker tydelig oppdiktede
 navn/identer – ingen realistiske fødselsnumre.
 
+Mocken implementerer også `POST /intervjufordeling/fordel`, men med en **bevisst
+forenklet** algoritme: bare regel 1 og 2, uten «beste av to». Knappen «Fordel på
+nytt» gjør dermed noe ekte lokalt og i tester, mens finjusteringene bare finnes i
+backend der de kan måles ordentlig. Mocken er ikke fasit for
+fordelingskvaliteten, og frontendtester skal ikke måle den.
+
 ### Backend-kontrakt
 
 Frontend er bygd ferdig mot MSW-mocken, og kontrakten i
@@ -608,13 +620,88 @@ møtedagen:
 
 | Metode | Sti                  | Funksjon                                                                       |
 | ------ | -------------------- | ------------------------------------------------------------------------------ |
-| GET    | `/`                  | Hent møtedagen. Oppretter tom møtedag ved behov.                               |
-| PUT    | `/oppmote`           | Registrer eller angre oppmøte for én jobbsøker.                                |
-| PUT    | `/moteoppsett`       | Sett tider og 1–9 rom → opprett full round-robin-fordeling + rotasjon, fase = ROM |
+| GET    | `/`                  | Hent møtedagen. Rent lesende — tomt aggregat hvis ingenting er lagret.         |
+| PUT    | `/oppmote`           | Registrer eller angre oppmøte for én jobbsøker. Fjerning med registreringer krever `bekreftSlettRegistreringer`. |
+| PUT    | `/moteoppsett`       | Sett tider og 1–9 rom. Første gang: opprett full round-robin-fordeling + rotasjon, fase = ROM. Senere: oppdater tider/rom uten å regenerere. |
 | PUT    | `/romfordeling`      | Erstatt komplett romfordeling etter manuell flytting eller «Fordel på nytt».   |
-| PUT    | `/onsker`            | Sett eller fjern ett ønskepar, idempotent.                                     |
-| PUT    | `/intervjufordeling` | Lagre rekkefølge over og under sperrelinjen for én arbeidsgiver.               |
+| PUT    | `/onsker`            | Sett eller fjern ett ønskepar, idempotent. Nytt ønske legges bakerst blant de inkluderte i intervjufordelingen; trukket ønske fjernes fra begge lister. |
+| PUT    | `/intervjufordeling` | Lagre rekkefølge over og under sperrelinjen for én arbeidsgiver. Brukes ved manuell dra-og-slipp. |
+| POST   | `/intervjufordeling/fordel` | Fordel speedintervjuene på nytt. Tom body — alt som trengs er lagret. Erstatter hele fordelingen i én transaksjon. |
 | PUT    | `/vurderinger`       | Sett eller fjern vurdering og oppfølging for ett par.                          |
+
+Request-DTO-ene, som speiler `mutations.ts` i frontend. Merk at bare
+romfordelingen er innpakket i et objekt — intervjufordeling og vurdering sendes
+som selve DTO-en i rotnivå av bodyen:
+
+```kotlin
+data class OppmøteRequest(
+    val personTreffId: UUID,
+    val møtt: Boolean,
+    val bekreftSlettRegistreringer: Boolean = false,
+)
+
+data class MøteoppsettRequest(
+    val antallRom: Int,                  // 1-9
+    val starttidspunkt: String,          // "HH:mm"
+    val varighetPerMøteMinutter: Int,    // minst 1
+    val pauseMellomMøterMinutter: Int,   // minst 0
+)
+
+data class RomfordelingRequest(val rom: List<RomDto>)
+
+data class ØnskeRequest(
+    val personTreffId: UUID,
+    val arbeidsgiverTreffId: UUID,
+    val ønsket: Boolean,
+)
+
+// PUT /intervjufordeling tar ArbeidsgiverIntervjufordelingDto direkte.
+// PUT /vurderinger tar VurderingDto direkte.
+```
+
+#### Fordelingsalgoritmen (backend)
+
+Frontend eide denne en periode, men den er flyttet hit fordi den er ren
+forretningslogikk, leser hele møtedagen og må skrives atomisk. `POST
+/intervjufordeling/fordel` og førstegangsopprettelsen skal kalle **samme**
+servicefunksjon — det skal ikke finnes to kodeveier.
+
+**Domenet:** posisjonen i den inkluderte lista er en *tidsluke*. Alle
+arbeidsgivere kjører intervju 1 samtidig, så intervju 2. Står samme person på
+samme plass hos to arbeidsgivere, kan hun ikke være begge steder — det er en
+**plasskonflikt**.
+
+Algoritmen er bevisst *ikke* en fullstendig løser. Den fjerner de fleste
+konfliktene; resten vises som varseltrekant i frontend og rettes manuelt.
+
+To regler:
+
+1. **Arbeidsgivere med færrest personer fordeles først.** De har minst å gå på,
+   så de får velge mens det ennå er ledige tidsluker.
+2. **Hver person får den ledige plassen nærmest den hun står på nå**, blant
+   plassene hun ikke allerede er opptatt i hos en annen arbeidsgiver.
+
+I tillegg kjøres fordelingen **to ganger** med ulik kørekkefølge innenfor hver
+arbeidsgiver — én gang i listerekkefølge, én gang med de mest etterspurte først
+(flest arbeidsgivere som vil intervjue henne). Den av de to som gir færrest
+plasskonflikter beholdes; ved uavgjort vinner listerekkefølgen. Ingen av
+strategiene vinner alltid, og å kjøre begge er billigere enn å gjette.
+
+Målt på 3000 tilfeldige treff ga dette 27 % færre konflikter enn regel 1 og 2
+alene, og andelen helt konfliktfrie fordelinger gikk fra 43 % til 64 %.
+
+**Invarianter:**
+
+- Ekskluderte forblir ekskluderte. Bare rekkefølgen på de inkluderte regnes ut.
+- Ønsker som ennå ikke er plassert regnes som inkluderte.
+- Personer som ikke lenger er ønsket faller ut av begge lister.
+
+Algoritmen er ren og bør ligge i en egen fil uten databasetilgang, testet med
+vanlige enhetstester — ikke Testcontainers.
+
+**Plasskonflikter beregnes ikke av backend.** Frontend må uansett regne dem på
+nytt ved hver dra-og-slipp for å oppdatere varselet uten rundtur, og to
+implementasjoner ville drifte fra hverandre.
 
 #### Validering
 
@@ -628,19 +715,72 @@ Invarianter backend må håndheve, ikke bare stole på fra frontend:
 - `PUT /romfordeling` tar alle rom med ordnede `personTreffId`-lister. Romnumre
   er unike innenfor 1–9, og hver fremmøtt jobbsøker finnes nøyaktig én gang uten
   ukjente personer.
-- `PUT /moteoppsett` oppretter bare den første planen. En identisk retry er
-  idempotent; forsøk på å endre et allerede opprettet møteoppsett avvises med
-  `409 Conflict`. Det hindrer at en gammel fane eller en annen arrangør
-  overskriver manuelle romplasseringer.
+- `PUT /moteoppsett` er en vanlig oppdatering, ikke en engangsoperasjon.
+  Møtetidene kan endres når som helst uten `409`. Tidene styrer bare timeplanen,
+  ikke hvem som sitter hvor, så en endring skal **ikke** regenerere romfordeling,
+  ønsker, intervjufordeling eller vurderinger. Første kall — når det ennå ikke
+  finnes rom — oppretter round-robin-fordelingen og rotasjonen og setter fase
+  `ROM`. Senere kall oppdaterer bare de tre tidsfeltene.
+  `antallRom` er utledet av antall arbeidsgivere på treffet og settes ikke
+  manuelt i UI-et, så det skal ikke overstyre en eksisterende romfordeling. Se
+  [Kjente gap](#kjente-gap-som-må-lukkes-i-backend) for hva som må skje når
+  arbeidsgiverlista endrer seg etter at rommene er opprettet.
 - Bare fremmøtte kan få ønsker og intervjufordeling. En vurdering kan bestå etter
   at ønske og intervjufordeling fjernes. En vurderingsrad der vurdering er `null`
   og begge boolean-feltene er `false`, slettes.
 - Fjerning av oppmøte når det finnes ønsker, intervjufordeling eller vurderinger
   krever eksplisitt bekreftelse; data må aldri bli hengende igjen inkonsistent.
+  Se [Bekreftet kaskadesletting](#bekreftet-kaskadesletting).
 
-Matriseendringer lagres per par (`personTreffId`, `arbeidsgiverTreffId`) i
-stedet for å overskrive hele samlingen. Det reduserer faren for at de to
-hovedansvarlige mister hverandres samtidige endringer.
+#### Bekreftet kaskadesletting
+
+`PUT /motedag/oppmote` tar feltet `bekreftSlettRegistreringer: Boolean = false`.
+Når oppmøte fjernes for en person som har ønsker, intervjufordeling eller
+vurderinger, og feltet er `false`, svarer backend `409 Conflict` uten å endre
+noe:
+
+```json
+{
+  "feil": "Jobbsøkeren har registreringer som slettes hvis oppmøtet fjernes.",
+  "hint": "Bekreft med bekreftSlettRegistreringer=true.",
+  "registreringer": { "ønsker": 2, "intervjuplasser": 1, "vurderinger": 1 }
+}
+```
+
+Frontend bruker tallene i `registreringer` til å beskrive konsekvensen i
+bekreftelsesdialogen, og sender deretter samme kall med
+`bekreftSlettRegistreringer: true`. Da slettes oppmøtet og de avhengige radene i
+én transaksjon. MSW-mocken i frontend implementerer allerede nøyaktig denne
+oppførselen og er referansen for backend.
+
+#### Samtidighet
+
+Ingen global versjonskolonne og ingen optimistisk låsing. Møtedagen skrives
+gjennom små, atomiske delressurs-PUT-er (`/moteoppsett`, `/oppmote`,
+`/romfordeling`, `/onsker`, `/intervjufordeling`, `/vurderinger`), der hver PUT
+er transaksjonell for sin egen del og siste skriving vinner. Matriseendringer
+lagres per par (`personTreffId`, `arbeidsgiverTreffId`) i stedet for å
+overskrive hele samlingen, slik at to arrangører som jobber i hver sin del av
+skjermbildet ikke overskriver hverandre.
+
+Dette er et bevisst valg: møtedagen redigeres av et lite antall kjente personer
+i samme rom, og kostnaden ved versjonskonflikt-UI er større enn gevinsten.
+Skulle reelle konflikter vise seg i bruk, kan optimistisk låsing legges til
+senere per delressurs uten å endre lesekontrakten.
+
+#### Ingen sideeffekt ved lesing
+
+`GET /motedag` er rent lesende. Finnes det ingen lagret møtedag, returneres
+et tomt aggregat med `200`: fase `OPPMØTE`, standardtider og tomme lister — det
+opprettes ingen rad. Lagret tilstand oppstår først ved første PUT. Dette gjør at
+det å åpne fanen aldri skriver til databasen, og at en leser uten skrivehensikt
+ikke kan «låse inn» et møteoppsett.
+
+Frontend har ingen egen «ikke startet»-fase; `OPPMØTE` med tom `oppmøte`-liste
+_er_ tomtilstanden. Standardverdiene backend returnerer for et tomt aggregat
+skal speile `møtedagStartdata.ts` i frontend: `antallRom` = antall
+arbeidsgivere på treffet (minst 1), `starttidspunkt` `"10:00"`,
+`varighetPerMøteMinutter` 10, `pauseMellomMøterMinutter` 5.
 
 #### Tilgang
 
@@ -682,7 +822,15 @@ migrasjon og uten å fjerne noe. Frontend er allerede lagt om til de nye feltene
 
 Rekkefølge lagres eksplisitt som et heltall — den skal ikke utledes av
 innsettingsrekkefølge. Migrasjonen er rene `CREATE TABLE` uten endringer på
-eksisterende tabeller, og er derfor trygg å rulle tilbake ved å droppe tabellene.
+eksisterende tabeller.
+
+**Rollback:** Flyway ruller ikke tilbake automatisk. Fordi migrasjonen kun
+oppretter nye tabeller, er den likevel trygg i praksis: eksisterende
+funksjonalitet er upåvirket om WorkOp må skrus av, og fanen gates i frontend.
+Skal tabellene faktisk fjernes, kreves en ny migrasjon med `DROP TABLE` — data
+i dem går da tapt. Det er akseptabelt i v1 siden møtedagsdata er
+gjennomføringsstøtte, ikke vedtaksgrunnlag, men det gjør migrasjonen
+rød sone: den skal leses nøye av utvikler før den kjøres i produksjon.
 
 Oppmøte får **ingen** ny kolonne, se [Oppmøte lagret som hendelse](#oppmøte-lagret-som-hendelse).
 
@@ -694,9 +842,10 @@ Disse finnes i mocken i dag og må håndteres ordentlig når backend tar over:
    første lagring. Legges en arbeidsgiver til etterpå, får den aldri rom eller
    plass i rotasjonen; fjernes en, blir den stående. Backend må utlede rom og
    rotasjon fra arbeidsgiverne som faktisk er på treffet på lesetidspunktet.
-2. **Samtidige endringer.** To hovedansvarlige som jobber samtidig vil i dag
-   overskrive hverandre. Minimumsløsning er en versjonskolonne på `motedag` og
-   409 ved konflikt.
+2. **Endret arbeidsgiverliste etter fordeling.** Fjernes en arbeidsgiver etter at
+   ønsker og intervjufordeling er registrert, må backend rydde radene som peker
+   på den — ikke la dem bli hengende som foreldreløse referanser. Mocken gjør
+   ikke dette i dag.
 
 #### Observability
 
@@ -711,7 +860,16 @@ Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
 
 - Tilgang: eier får 200, ikke-eier får 403, kontortilgang alene gir 403.
 - Oppmøte: registrer, angre, registrer igjen — utledet tilstand er riktig.
+- Kaskadesletting: fjerning av oppmøte med registreringer gir 409 uten bekreftelse
+  og uten sideeffekt, og sletter alt i én transaksjon med bekreftelse.
 - Aggregatet: hver PUT returnerer hele møtedagen med de andre delene intakt.
+- Fordeling: enhetstester på algoritmen (ekskluderte bevares, ingen mister
+  plass, ønsker uten plassering blir inkludert), og én komponenttest på at
+  `POST /fordel` erstatter hele fordelingen i én transaksjon.
+- Lesing uten sideeffekt: `GET /motedag` på et treff uten lagret møtedag gir
+  tomt aggregat, og et påfølgende GET viser fortsatt ingen lagret rad.
+- Endret møteoppsett: tider kan endres etter opprettelse uten at romfordeling,
+  ønsker eller vurderinger går tapt.
 - Stale-tilfellet: arbeidsgiver lagt til etter at møteoppsettet ble lagret.
 
 #### Rekkefølge
@@ -719,9 +877,32 @@ Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
 1. `V14__motedag.sql` og repository for lesing.
 2. `GET /motedag` med tilgangssjekk. Frontend kan da lese ekte data.
 3. `FormidlingDto`-utvidelsen — uavhengig av resten, kan tas først.
-4. Oppmøtehendelsene.
+4. Oppmøtehendelsene, inkludert `bekreftSlettRegistreringer` og 409-svaret.
 5. Resten av PUT-endepunktene, ett steg om gangen.
-6. Skru av MSW i frontend.
+6. `POST /intervjufordeling/fordel` med fordelingsalgoritmen. Frontend kaller
+   den allerede, og mocken har en forenklet variant som kan slås av her.
+7. Skru av MSW i frontend, ett endepunkt om gangen etter hvert som backend er klar.
+8. **Produksjonsaktivering** — se under. Dette er et eget, bevisst steg og skjer
+   ikke automatisk når backend er ferdig.
+
+#### Produksjonsaktivering
+
+Fanen er gated på `getMiljø() !== Miljø.ProdGcp` i både `TabsNav.tsx` og
+`TabsPanels.tsx` gjennom `useWorkOpMøtedag`. Fram til aktivering
+kjører WorkOp bare i lokalt, dev og test.
+
+Rekkefølge for å skru på i produksjon:
+
+1. Alle backend-endepunkter er i drift i dev og test, og MSW er skrudd av for dem.
+2. Verifisert i test med et ekte WorkOp-treff: oppmøte, romfordeling, ønsker,
+   fordeling, status og utskrift fungerer ende-til-ende.
+3. `V14__motedag.sql` er kjørt i produksjon, og tabellene er tomme.
+4. Miljøsjekken fjernes fra `useWorkOpMøtedag`, slik at gatingen bare
+   består av `kategori === WORKOP` og eier-/utviklerrolle.
+5. Observability-tellerne følges i første reelle gjennomføring.
+
+Punkt 4 er en egen, liten PR. Å holde den atskilt gjør det mulig å skru av
+igjen ved å reversere én linje.
 
 #### Rød sone
 
@@ -870,7 +1051,7 @@ samme mønster som eksisterende tester: `storageState` for rolle
 (`getByRole`). Fokuser på **tilstandene som vises**:
 
 - **Fane-synlighet:** «WorkOp gjennomføring»-fanen vises kun for WorkOp-treff, for
-  hovedansvarlig eller utvikler og i ikke-prod – skjult ellers. En 403 fra
+  eier eller utvikler og i ikke-prod – skjult ellers. En 403 fra
   `/motedag` skjuler både fane og panel.
 - **Stepper:** seks steg vises; fullførte steg er klikkbare, og steg uten
   forutsetninger er ikke-interaktive.
@@ -915,6 +1096,20 @@ tilstand etter reelle brukerhandlinger.
   bare i Formidlinger og speiles skrivebeskyttet. Økonomidata inngår ikke.
 - Egen `JobbsøkerStatus` for oppmøte krever en separat beslutning sammen med
   oppdatering av aktivitetsplan og aktivitetskort.
+- **Desktop-only.** Fanen er laget for arrangørens PC i møtelokalet. Matrisen,
+  romfordelingen og utskriftsvisningen forutsetter bred skjerm og scroller
+  horisontalt på smale vinduer. Egen mobiltilpasning er bevisst utelatt —
+  det finnes ingen mobilklient for arrangørflaten.
+- **Ingen optimistisk låsing.** Delressurs-PUT-ene er atomiske og siste skriving
+  vinner. Se [Samtidighet](#samtidighet).
+- **Maks 100 jobbsøkere vises.** `useJobbsøkere` henter én side à 100, og
+  backend håndhever `antallPerSide` i intervallet 1–100. Har treffet flere enn
+  100 jobbsøkere, faller de bakerste ut av lista WorkOp regner navn og status
+  ut fra. Dette gjelder også utenfor WorkOp — for eksempel duplikatsjekken i
+  «Finn kandidater» — og er derfor en eksisterende begrensning i frontend, ikke
+  noe WorkOp innfører. Fikses separat, enten ved at frontend paginerer eller ved
+  at backend tilbyr et «hent alle»-endepunkt. WorkOp-treff med speedintervju i
+  maks 9 rom ligger i praksis godt under grensen.
 
 ## Åpne spørsmål
 
