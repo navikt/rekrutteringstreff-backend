@@ -25,6 +25,7 @@ SELECT
     (SELECT count(*) FROM jobbsoker j WHERE j.rekrutteringstreff_id = rt.rekrutteringstreff_id AND j.status = 'FÅTT_JOBB' AND j.er_synlig = true) AS antall_jobbsokere_fatt_jobb,
     rt.kategori,
     rt.kommunenummer,
-    rt.fylkesnummer
+    rt.fylkesnummer,
+    rt.rekrutteringstreff_id
 FROM rekrutteringstreff rt
 WHERE rt.status != 'SLETTET';
