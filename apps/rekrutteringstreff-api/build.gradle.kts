@@ -3,6 +3,9 @@ plugins {
     kotlin("kapt")
 }
 
+application {
+    mainClass.set("no.nav.toi.AppKt")
+}
 val javalinVersion = "7.2.0"
 val mockOAuth2ServerVersion = "2.1.0"
 val flywayVersion = "11.3.0"

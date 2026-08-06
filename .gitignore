@@ -38,6 +38,9 @@ robTestresultater.txt
 # Generated bin directories
 bin/
 
+# https://mise.jdx.dev/
+mise.toml
+
 # Følgende er generert av nav-pilot. Team Toi sin policy per juli 2026 er at vi ikke comitter disse filene, fordi
 # utviklere kan ønske å ha ulike AI-agent konfigurasjoner lokalt.
 AGENTS.md

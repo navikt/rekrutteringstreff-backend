@@ -2,6 +2,10 @@ plugins {
     id("toi.rapids-and-rivers")
 }
 
+application {
+    mainClass.set("no.nav.toi.AppKt")
+}
+
 val flywayVersion = "11.3.0"
 val postgresVersion = "42.7.10"
 val hikariVersion = "6.2.1"
