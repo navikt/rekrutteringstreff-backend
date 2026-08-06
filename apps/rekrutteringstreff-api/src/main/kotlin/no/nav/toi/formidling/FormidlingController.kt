@@ -33,6 +33,7 @@ class FormidlingController(
         private const val formidlingMedIdPath = "$formidlingPath/{$pathParamFormidlingId}"
         private const val formidlingListeAllePath = "$formidlingPath/liste/alle"
         private const val formidlingListeEgnePath = "$formidlingPath/liste/egne"
+        private const val formidlingListeMittKontorPath = "$formidlingPath/liste/mittkontor"
         private const val queryParamSortering = "sortering"
         private const val queryParamRetning = "retning"
         private const val queryParamArbeidsgiver = "arbeidsgiver"
@@ -43,6 +44,7 @@ class FormidlingController(
         routes.post(formidlingPath, opprettFormidlingHandler())
         routes.get(formidlingListeAllePath, hentAlleFormidlingerHandler())
         routes.get(formidlingListeEgnePath, hentEgneFormidlingerHandler())
+        routes.get(formidlingListeMittKontorPath, hentFormidlingerForMittKontorHandler())
         routes.delete(formidlingMedIdPath, slettFormidlingHandler())
     }
 
@@ -257,6 +259,65 @@ from = Array<FormidlingOpprettetDto>::class,
             formidlingService.hentEgneFormidlingerForTreff(
                 treffId,
                 navIdent,
+                FormidlingSortering.fraQueryParam(ctx.queryParam(queryParamSortering)),
+                FormidlingSorteringsretning.fraQueryParam(ctx.queryParam(queryParamRetning)),
+                ctx.queryParams(queryParamArbeidsgiver),
+            )
+        )
+    }
+
+    @OpenApi(
+        summary = "Hent formidlinger for mitt kontor for et rekrutteringstreff",
+        description = "Returnerer formidlinger på treffet som er opprettet fra et av Nav-kontorene " +
+            "innlogget bruker er tilknyttet i Modia (uavhengig av hvilken veileder som opprettet formidlingen).",
+        operationId = "hentFormidlingerForMittKontor",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        queryParams = [
+            OpenApiParam(name = queryParamSortering, type = String::class, required = false, description = "Sortering: tidspunkt (standard), arbeidsgiver eller jobbsoker"),
+            OpenApiParam(name = queryParamRetning, type = String::class, required = false, description = "Sorteringsretning: asc eller desc (standard avhenger av felt)"),
+            OpenApiParam(name = queryParamArbeidsgiver, type = String::class, required = false, description = "Filtrer på arbeidsgiverens orgnr. Kan oppgis flere ganger for å vise flere arbeidsgivere"),
+        ],
+        responses = [
+            OpenApiResponse(
+                status = "200",
+                content = [OpenApiContent(
+                    from = Array<FormidlingDto>::class,
+                    example = """
+                        [
+                            {
+                                "id": "a1b2c3d4-0000-0000-0000-000000000001",
+                                "opprettetTidspunkt": "2026-01-15T10:30:00+01:00[Europe/Oslo]",
+                                "fødselsnummer": "12345678901",
+                                "fornavn": "Testperson",
+                                "etternavn": "Én",
+                                "orgnr": "999999991",
+                                "orgnavn": "Test Arbeidsgiver AS",
+                                "stillingId": "c1d2e3f4-0000-0000-0000-000000000002",
+                                "yrkestittel": "Utvikler (dataspill)",
+                                "opprettetAvNavn": "Test Veileder",
+                                "opprettetAvNavIdent": "T123456"
+                            }
+                        ]
+                    """
+                )]
+            ),
+        ],
+        path = formidlingListeMittKontorPath,
+        methods = [HttpMethod.GET]
+    )
+    private fun hentFormidlingerForMittKontorHandler(): (Context) -> Unit = { ctx ->
+        val innloggetBruker = ctx.authenticatedUser()
+        innloggetBruker.verifiserAutorisasjon(Rolle.JOBBSØKER_RETTET)
+        val treffId = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = ctx.extractNavIdent()
+        val tilknyttedeEnheter = modiaKlient.hentMineEnheter(innloggetBruker.innkommendeToken())
+
+        AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
+        ctx.status(200).json(
+            formidlingService.hentFormidlingerForMittKontor(
+                treffId,
+                tilknyttedeEnheter,
                 FormidlingSortering.fraQueryParam(ctx.queryParam(queryParamSortering)),
                 FormidlingSorteringsretning.fraQueryParam(ctx.queryParam(queryParamRetning)),
                 ctx.queryParams(queryParamArbeidsgiver),
