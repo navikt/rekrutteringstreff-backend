@@ -19,10 +19,6 @@ val logstashLogbackEncoderVersion = "9.0"
 val junitJupiterVersion = "5.9.1"
 val junitPlatformVersion = "1.9.1"
 val assertjVersion = "3.23.1"
-// mockk (1.13.x/1.14.x) bundles byte-buddy 1.15.11, which doesn't support the JDK 25 bytecode
-// format. Without this, mockk silently fails to instrument final Kotlin classes and calls fall
-// through to the real (uninitialized) implementation instead of the stub, causing NPEs in tests.
-val byteBuddyVersion = "1.17.5"
 
 dependencies {
     constraints {
@@ -49,12 +45,6 @@ dependencies {
         }
         testRuntimeOnly("org.junit.platform:junit-platform-launcher") {
             version { require(junitPlatformVersion) }
-        }
-        testImplementation("net.bytebuddy:byte-buddy") {
-            version { require(byteBuddyVersion) }
-        }
-        testImplementation("net.bytebuddy:byte-buddy-agent") {
-            version { require(byteBuddyVersion) }
         }
     }
 

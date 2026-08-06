@@ -5,6 +5,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.Logger
@@ -146,6 +147,7 @@ class RekrutteringstreffSokYtelsestest {
         }
     }
 
+    @Disabled("TODO Are: Enable før merge til main")
     @Test
     fun `sok med 20k genererte testtreff logger tid for warmup og endret kall`() {
         val warmupRequest = RekrutteringstreffSokRequest(

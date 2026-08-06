@@ -50,6 +50,6 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
-    testImplementation("io.mockk:mockk:1.13.17")
+    testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("io.kotest:kotest-assertions-json-jvm:$kotestVersion")
 }
