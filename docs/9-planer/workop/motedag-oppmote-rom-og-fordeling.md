@@ -32,7 +32,7 @@ fortsatt en kontraktskisse for `rekrutteringstreff-api`.
 | Hvem kan markeres møtt | **Alle** jobbsøkere på lista (ikke begrenset til svarstatus).                                                                                                                                                                                                         |
 | Redigerbarhet          | Steg er redigerbare når forutsetningene finnes. Møteoppsettet i steg 1 kan endres også etter opprettelse – tidene styrer bare timeplanen, ikke hvem som sitter hvor – og romplasseringene kan endres i steg 2. Første versjon har ingen egen låse- eller gjenåpningsmekanisme.                                               |
 | Oppmøte etter oppsett  | Endret oppmøte skal ikke stille om alle rom i det skjulte. Eksisterende romplasseringer beholdes, ny deltaker legges i rommet med færrest personer, og fjerning berører bare den personen. Brukeren kan deretter flytte manuelt eller velge «Fordel på nytt».       |
-| Møteoppsett            | **Starttidspunkt**, **varighet per møte**, og **pause mellom møter** settes i steg 1. Standardverdier er `10:00`, `10` og `5`. Antall rom er avledet fra antall arbeidsgivere.                                                                                                    |
+| Møteoppsett            | **Starttidspunkt** og **varighet per møte** settes i steg 1. Standardverdier er `10:00` og `10`. Siste minutt av hvert møte brukes til forflytning, så det finnes ingen egen pause. Antall rom er avledet fra antall arbeidsgivere. |
 | Rotasjonsplan          | Vises som sammendrag og full matrise i steg 2. To separate utskrifter: **én til arbeidsgiverne** (hvilket rom de skal til, per klokkeslett) og **én til jobbsøkerne** (hvem som kommer til rommet, per klokkeslett). Én mottaker per side.                            |
 | Steg 3 (ønsker)        | Registrer **jobbsøkers ønske** om hvilke arbeidsgivere hen vil møte. Kun fremmøtte jobbsøkere inngår.                                                                                                                                                                 |
 | Steg 4 (fordeling)     | Arrangør lager intervjurekkefølge per arbeidsgiver. Jobbsøkere kan flyttes over og under sperrelinjen. Rekkefølgen lagres, men ikke konkrete tidspunkter.                                                                                                             |
@@ -48,6 +48,7 @@ fortsatt en kontraktskisse for `rekrutteringstreff-api`.
   JOBBSØKER-FANE
       │
       │   Burgermeny på jobbsøkerkort: «Registrer oppmøte»
+      │   Handlingsrad: «Marker som møtt (N)» og «Fjern oppmøte (N)»
       ▼
   WORKOP GJENNOMFØRING-FANE  —  Aksel Stepper med 6 steg
   ───────────────────────────────────────────────────
@@ -146,6 +147,20 @@ punktene «Endre svar» og «Slett»). Vi legger til:
   og i ikke-prod (`kategori === WORKOP` og `getMiljø() !== Miljø.ProdGcp`).
 - Kortet får en synlig markør når personen er møtt (f.eks. en Aksel `Tag`
   «Møtt», på linje med `JobbsøkerStatusTag`).
+- **«Marker som møtt (N)»** og **«Fjern oppmøte (N)»** i `JobbsøkerHandlingsrad`
+  for å registrere oppmøte på mange samtidig, basert på avkrysningene i lista.
+  Begge sender ett `PUT`-kall per person **sekvensielt** (samme endepunkt som
+  burgermenyen) og tømmer valget når alle er registrert. Tellerne viser bare de
+  valgte som faktisk endres, så «Marker som møtt» hopper over dem som allerede
+  er møtt, og omvendt.
+- Fjerning krever bekreftelse, siden den sletter ønsker, intervjuplasser og
+  vurderinger. Dialogen er den samme `FjernOppmøteBekreftelse` som brukes for
+  én person, men får **summen** av registreringene for alle de valgte, slik at
+  konsekvensen vises samlet før noe kjøres.
+- Avkrysningsboksen i `JobbsøkerKort` var låst til `status === LAGT_TIL` (den
+  var laget for invitasjonsflyten). På WorkOp-treff åpnes den for alle
+  statuser, siden oppmøte er ortogonalt til svarstatus. «Inviter»-knappen
+  påvirkes ikke, fordi den allerede filtrerer på `LAGT_TIL`.
 
 Oppmøte er **ortogonalt** til invitasjonsstatusen (`LAGT_TIL → INVITERT →
 SVART_JA …`) – en person kan være «møtt» uansett svarstatus. I første versjon
@@ -175,6 +190,35 @@ Regelen legges i både `TabsNav.tsx` (fane-knappen) og `TabsPanels.tsx`
 (fane-panelet). `harWorkOpTilgang` skal bygge på eksplisitt hovedansvar, ikke
 kontortilhørighet.
 
+### 3. Aktivt steg i URL-en
+
+Stegvelgeren holder tilstanden i URL-en, på samme måte som fanevalget
+(`visFane`). Under et treff sitter flere veiledere på hver sin skjerm, og et
+steg må kunne deles i en melding uten å beskrive veien dit. En utilsiktet
+oppfriskning skal heller ikke kaste deg tilbake til start.
+
+| Parameter | Verdier | Merknad |
+| --- | --- | --- |
+| `visSteg` | `1`–`6` | Utelates på steg 1 (`clearOnDefault`), så adressen holdes ren |
+
+Som resten av appen skriver den med nuqs' standard `history: 'replace'`.
+Stegbytte lager altså ikke egne oppføringer i nettleserhistorikken – det
+speiler fanebyttet, og gjør at tilbakeknappen fortsatt fører ut av treffet
+framfor å vandre bakover gjennom seks steg.
+
+**Klemming av ugyldige steg.** Verdien kan komme fra en delt lenke, et bokmerke
+eller et håndredigert adressefelt, og kan peke på et steg treffet ikke har
+kommet til. `nærmesteTilgjengeligeSteg` i
+[workopSteg.ts](../../../../rekrutteringsbistand-frontend/app/rekrutteringstreff/%5BrekrutteringstreffId%5D/_ui/workop/workopSteg.ts)
+går bakover til første steg som faktisk er tilgjengelig, framfor å vise en tom
+side eller kaste brukeren helt til start. URL-en rettes deretter opp, slik at
+adressen viser det man faktisk ser på. Ikke-numeriske verdier faller tilbake
+til steg 1.
+
+Tilgjengelighetsregelen (`erStegTilgjengelig`) bor samme sted og brukes både av
+klemmingen og av `interactive`-flagget på stegvelgeren, så en lenke aldri kan
+nå et steg man ikke kunne ha klikket seg til.
+
 ---
 
 ## Steg 1 – Oppmøte og oppsett
@@ -184,8 +228,9 @@ før rotasjonen starter.
 
 **Elementer:**
 
-- **Forenklet jobbsøkerliste** – kun **fornavn, etternavn og fødselsnummer** (ikke
-  full kort-stil). Hver rad har en «Fjern oppmøte»-knapp (speiler
+- **Forenklet jobbsøkerliste** – kun **deltakernummer, fornavn, etternavn og
+  fødselsnummer** (ikke full kort-stil). Lista sorteres fortløpende på
+  deltakernummer, slik at den leses som kortbunken som er delt ut. Hver rad har en «Fjern oppmøte»-knapp (speiler
   burgermeny-handlingen). **Alle** jobbsøkere kan markeres som møtt, uavhengig av
   svarstatus.
 - **Teller:** «X møtt av Y påmeldte».
@@ -197,7 +242,7 @@ før rotasjonen starter.
   - **Starttidspunkt** (gjenbruk eksisterende `TimeInput` hvis den passer,
     ellers Aksel `TextField`), standard `10:00`.
   - **Varighet per møte** i minutter (én runde / presentasjon), standard `10`.
-  - **Pause mellom møter** i minutter (tid til å rotere), standard `5`.
+    Siste minutt brukes til forflytning til neste rom.
   - **Antall rom** vises ikke i skjemaet. Det er alltid ett rom per
     arbeidsgiver, så antallet trenger verken oppgis eller bekreftes.
 - Oppmøtelista har fast maks-høyde. Når det finnes flere jobbsøkere lenger ned,
@@ -213,6 +258,11 @@ før rotasjonen starter.
   2 uten lagring eller ny beregning.
 - Oppretting er deaktivert til minst én jobbsøker er registrert møtt og minst én
   arbeidsgiver finnes. Oppmøtet låses ikke.
+
+- **Deltakernummer** tildeles når jobbsøkeren registreres møtt, starter på 1 og
+  øker fortløpende. Nummeret svarer til det fysiske kortet som deles ut i døra,
+  følger personen resten av dagen og gjenbrukes aldri av noen andre. Se
+  [Deltakernummer](#deltakernummer) for regelen backend skal implementere.
 
 **Empty state:** Hvis ingen er markert som møtt: informasjon om at oppmøte
 registreres via burgermenyen i Jobbsøker-fanen (med lenke/knapp tilbake dit).
@@ -280,19 +330,19 @@ Tre tilfeller:
   runder).
 
 **Klokkeslett per runde** beregnes fra møteoppsettet i steg 1: runde 1 starter på
-`starttidspunkt` og varer `varighet per møte`; deretter legges `pause mellom
-møter` til før neste runde.
+`starttidspunkt` og varer `varighet per møte`; neste runde starter når den
+forrige slutter. Siste minutt av møtet brukes til forflytning.
 
 ### Rotasjonsmatrise og utskrifter
 
 Rotasjonsmatrisen vises på skjermen i steg 2 som arrangørens oversikt. Eksempel
-med start `10:00`, varighet `10 min` og pause `5 min`:
+med start `10:00` og varighet `10 min`:
 
 | Klokkeslett | Rom 1          | Rom 2          | Rom 3          | Rom 4          | Rom 5          |
 | ----------- | -------------- | -------------- | -------------- | -------------- | -------------- |
 | 10:00–10:10 | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C | Arbeidsgiver D | Arbeidsgiver E |
-| 10:15–10:25 | Arbeidsgiver E | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C | Arbeidsgiver D |
-| 10:30–10:40 | Arbeidsgiver D | Arbeidsgiver E | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C |
+| 10:10–10:20 | Arbeidsgiver E | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C | Arbeidsgiver D |
+| 10:20–10:30 | Arbeidsgiver D | Arbeidsgiver E | Arbeidsgiver A | Arbeidsgiver B | Arbeidsgiver C |
 | …           | …              | …              | …              | …              | …              |
 
 Er det færre rom enn arbeidsgivere, får matrisen en **«Venter»-kolonne** som
@@ -360,11 +410,32 @@ registrert. Dette er den andre halvdelen av behov nr. 8 og kan ikke utledes av
 
 **Elementer:**
 
-- Ett `ExpansionCard` per arbeidsgiver med en ordnet liste over jobbsøkere.
+- Ett `ExpansionCard` per arbeidsgiver med en ordnet liste over jobbsøkere, i
+  et rutenett som fyller bredden med **så mange kolonner det er plass til**
+  – som romkortene i steg 2. Kolonnetallet styres av en
+  minstebredde per kort (`repeat(auto-fit, minmax(21rem, 1fr))`), ikke av faste
+  brekkpunkter: radene her er bredere enn i steg 2 (dragehåndtak, plassnummer,
+  navn, varseltrekant og to pilknapper), så faste brekkpunkter ga for smale
+  kolonner. I praksis gir det 2 kolonner rundt 1280px, 3 på 1440px og 4 på
+  1920px.
   Kortoverskriften viser antall med og ikke med. Første arbeidsgiver med ønsker
-  er åpen som standard; de andre kortene er komprimerte til brukeren åpner dem.
+  er åpen som standard; de andre er komprimerte til brukeren åpner dem.
+  Kortene åpnes uavhengig av hverandre, også når de står på samme rad – et
+  lukket kort strekkes ikke til høyden av et åpent nabokort.
+- I hver rad ligger **pilknappene alltid til høyre**, på samme linje som navnet.
+  Er navnet for langt for kortbredden, brytes navneteksten over flere linjer i
+  stedet for at knappene skyves ned på en egen linje. Minstebredden på kortet
+  (`21rem`) er valgt slik at vanlige navn får plass på én linje; å presse inn en
+  kolonne til ville tvunget også korte navn til å brytes.
 - Arrangøren endrer rekkefølgen med dra-og-slipp eller piler. Jobbsøkere under
-  sperrelinjen er ikke med på speedintervjuet.
+  sperrelinjen, merket **«Ikke gjennomført speedintervju»**, er ikke med på
+  speedintervjuet.
+- **Plassen i rekkefølgen vises ikke som et eget tall.** Den er implisitt i
+  rekkefølgen på lista. Navnet begynner allerede med deltakernummeret, og et
+  plassnummer ved siden av ga to tall per rad som ble lest som samme slags
+  nummer. Det gjelder også utskriften. Plasskonflikter omtaler fortsatt plassen
+  i klartekst («Plass 3 også hos …»), der tallet er nødvendig for å forklare
+  hva som kolliderer.
 - Fordelingen skjer bare etter en **bevisst handling**, aldri ved navigering:
   første gang arrangøren går videre fra ønskesteget, og når hun trykker
   **«Fordel på nytt»** (som krever bekreftelse, siden den overskriver manuelle
@@ -401,12 +472,49 @@ sannhetskilde for hvem som har fått jobb.
   relevante jobbsøkere. **Alle kort med jobbsøkere er åpne som standard**; tomme
   kort er lukket og viser arbeidsgiver og antall jobbsøkere i en kompakt
   overskrift. Åpne tomme kort viser en kort tomtilstand.
-- Hver jobbsøkerrad viser relevante oppsummeringstagger:
+- Hver jobbsøkerrad viser relevante oppsummeringstagger: **innsatsbehov**,
   **Ønsket speedintervju**, **Satt opp til speedintervju** og eventuelt
   **Formidlet**.
+- **Innsatsbehov** er ren visning av jobbsøkerens gjeldende § 14 a-vurdering, og
+  gjenbruker etikettene fra `alleInnsatsgrupper` i kandidatsøket. Det står først
+  i taggrekka fordi det er egenskapen ved personen, ikke noe som skjedde på
+  møtedagen. Feltet kommer fra jobbsøkersøket som `innsatsgruppe` og lagres
+  **ikke** i møtedagen. Koder frontend ikke kjenner igjen vises ikke i det hele
+  tatt, slik at en ny verdi fra backend ikke havner rå på skjermen.
 - Arrangøren kan velge **Ingen vurdering / Aktuell / Kanskje / Ikke aktuell** og
   registrere de uavhengige statusene **2. intervju** og **Jobbtilbud**. Valget
   bruker Aksel `Select`.
+- **Notater** er observasjoner fra møtet, valgt fra en fast liste og vist som
+  etiketter. De er bevisst **uavhengige av vurderinga**: det som kom fram i
+  samtalen er like sant enten paret ender som aktuelt eller ikke, og arrangøren
+  skal kunne skrive det ned med en gang – før vurderinga er tatt. Notatene blir
+  derfor stående når vurderinga endres.
+- Et par kan ha **flere notater samtidig**, og de vises gruppert på **hvem som
+  har sagt det** («Arbeidsgiveren» / «Jobbsøkeren»), med hver sin farge.
+  Gruppering framfor å gjenta parten i hver etikett holder radene korte, slik at
+  flere notater får plass i kortet. Parten ligger i verdien (prefiks `AG_` /
+  `JS_`), så part og notat kan ikke komme i utakt. Én kilde til sannhet:
+  `workop/notatvalg.ts`.
+- Notatene velges i en `Popover` med én `CheckboxGroup` per part. Flervalg i en
+  popover framfor et nedtrekk, fordi lista er lang og man ofte velger flere.
+- **Dato for 2. intervju** vises bare når 2. intervju er huket av. Avkryssinga
+  gjør altså feltet **tilgjengelig**, men åpner ikke kalenderen. Å åpne
+  kalenderen er en egen handling, ved siden av å skrive datoen rett inn i
+  feltet. Sprettet kalenderen opp automatisk, måtte den lukkes igjen i alle
+  tilfellene der datoen ennå ikke er avtalt – og det er nettopp det vanlige rett
+  etter at avtalen er gjort. Datoen er **valgfri**: avtalen kan stå uten at
+  partene har landet en dag. Den kan endres og fjernes i ettertid uten at
+  avkryssinga røres, men fjernes automatisk når avkryssinga fjernes, slik at den
+  ikke blir liggende igjen som en usynlig rest.
+- Både datofeltet og notatene ligger på **egne linjer** under kontrollraden.
+  Det er et bevisst layoutvalg: legges datofeltet inn i samme rad som
+  avkryssingene, flytter «Jobbtilbud» seg nedover i det øyeblikket man huker av
+  «2. intervju», og man risikerer å klikke feil.
+
+> **Må avklares med fag:** selve notatlista i `notatvalg.ts` er et forslag fra
+> utviklingssida, ikke et fagvalidert vokabular. Ordlyden og utvalget bør
+> gjennomgås før dette settes i produksjon, siden verdiene blir en enum i basen
+> og senere endringer krever migrering.
 - Lenken **«Vis formidling»** vises på samme kontrollinje etter 2. intervju og
   Jobbtilbud når paret finnes i Formidlinger.
 - Endringer lagres automatisk per jobbsøker–arbeidsgiver-par. UI-et oppdateres
@@ -478,14 +586,18 @@ interface MøtedagDTO {
   fase: MøtedagFase; // hvor langt man er kommet
   antallRom: number; // alltid lik antall arbeidsgivere
   starttidspunkt: string; // «HH:mm», f.eks. «09:00»
-  varighetPerMøteMinutter: number; // default 5
-  pauseMellomMøterMinutter: number; // default 5
+  varighetPerMøteMinutter: number; // default 10
   oppmøte: string[]; // personTreffId som har møtt
+  deltakernummer: DeltakernummerDTO[]; // nummeret på det fysiske kortet
   rom: RomDTO[];
   arbeidsgiverRekkefølge: ArbeidsgiverRotasjonDTO[];
   ønsker: ØnskeDTO[];
   intervjufordelinger: ArbeidsgiverIntervjufordelingDTO[];
   vurderinger: VurderingDTO[];
+}
+interface DeltakernummerDTO {
+  personTreffId: string;
+  nummer: number; // 1, 2, 3 … i den rekkefølgen folk ble registrert møtt
 }
 interface RomDTO {
   romnummer: number;
@@ -508,7 +620,9 @@ interface VurderingDTO {
   personTreffId: string;
   arbeidsgiverTreffId: string;
   vurdering: SpeedintervjuVurdering | null;
+  notater: string[]; // se notatvalg.ts
   andreIntervju: boolean;
+  andreIntervjuDato: string | null; // yyyy-MM-dd
   jobbtilbud: boolean;
 }
 ```
@@ -571,13 +685,18 @@ data class MotedagDto(
     val antallRom: Int,
     val starttidspunkt: String,          // "HH:mm"
     val varighetPerMøteMinutter: Int,
-    val pauseMellomMøterMinutter: Int,
     val oppmøte: List<UUID>,             // personTreffId
+    val deltakernummer: List<DeltakernummerDto>,
     val rom: List<RomDto>,
     val arbeidsgiverRekkefølge: List<ArbeidsgiverRotasjonDto>,
     val ønsker: List<ØnskeDto>,
     val intervjufordelinger: List<ArbeidsgiverIntervjufordelingDto>,
     val vurderinger: List<VurderingDto>,
+)
+
+data class DeltakernummerDto(
+    val personTreffId: UUID,
+    val nummer: Int,                     // 1-basert, aldri gjenbrukt
 )
 
 data class RomDto(
@@ -605,13 +724,27 @@ data class VurderingDto(
     val personTreffId: UUID,
     val arbeidsgiverTreffId: UUID,
     val vurdering: SpeedintervjuVurdering?,
+    val notater: List<Vurderingsnotat>,
     val andreIntervju: Boolean,
+    val andreIntervjuDato: LocalDate?,
     val jobbtilbud: Boolean,
 )
 ```
 
 Frontend behandler en ukjent vurderingsverdi som «ingen vurdering» framfor å
 feile. Den gamle `KLADD`-verdien er tatt bort og skal ikke innføres i backend.
+
+`notater` valideres bevisst **ikke** mot en enum i frontend-skjemaet. Legger
+backend til et nytt notat, skal det vises som ukjent verdi framfor å velte hele
+møtedagen. Backend eier lista og bør validere den. Backend bør også avvise
+`andreIntervjuDato` når `andreIntervju` er `false` — frontend rydder allerede,
+så dette er et vern mot andre klienter.
+
+En vurderingsrad regnes som **tom** først når verken vurdering, notater, 2.
+intervju, dato eller jobbtilbud er satt. Tomme rader slettes. Regelen ligger
+ett sted i frontend (`harRegistrertNoe`) fordi den brukes både til å avgjøre om
+raden vises, om den lagres og om den slettes — kommer de i utakt, forsvinner
+registreringer uten spor. Backend bør ha samme regel ett sted.
 
 #### Endepunkter
 
@@ -644,7 +777,6 @@ data class MøteoppsettRequest(
     val antallRom: Int,                  // 1-9
     val starttidspunkt: String,          // "HH:mm"
     val varighetPerMøteMinutter: Int,    // minst 1
-    val pauseMellomMøterMinutter: Int,   // minst 0
 )
 
 data class RomfordelingRequest(val rom: List<RomDto>)
@@ -710,8 +842,8 @@ Invarianter backend må håndheve, ikke bare stole på fra frontend:
 - Person og arbeidsgiver tilhører samme WorkOp-treff.
 - En jobbsøker forekommer bare én gang i `inkludertePersonTreffIder`, én gang i
   `ekskludertePersonTreffIder`, og aldri i begge hos samme arbeidsgiver.
-- `starttidspunkt` er `HH:mm` i 24-timers format, `antallRom` minst 1,
-  `pauseMellomMøterMinutter` minst 0.
+- `starttidspunkt` er `HH:mm` i 24-timers format, `antallRom` minst 1 og
+  `varighetPerMøteMinutter` minst 1.
 - `PUT /romfordeling` tar alle rom med ordnede `personTreffId`-lister. Romnumre
   er unike innenfor 1–9, og hver fremmøtt jobbsøker finnes nøyaktig én gang uten
   ukjente personer.
@@ -780,7 +912,7 @@ Frontend har ingen egen «ikke startet»-fase; `OPPMØTE` med tom `oppmøte`-lis
 _er_ tomtilstanden. Standardverdiene backend returnerer for et tomt aggregat
 skal speile `møtedagStartdata.ts` i frontend: `antallRom` = antall
 arbeidsgivere på treffet (minst 1), `starttidspunkt` `"10:00"`,
-`varighetPerMøteMinutter` 10, `pauseMellomMøterMinutter` 5.
+`varighetPerMøteMinutter` 10.
 
 #### Tilgang
 
@@ -809,16 +941,18 @@ migrasjon og uten å fjerne noe. Frontend er allerede lagt om til de nye feltene
 
 #### Database
 
-Én ny migrasjon, `V14__motedag.sql`, med seks tabeller:
+Én ny migrasjon, `V14__motedag.sql`, med sju tabeller:
 
 | Tabell                    | Innhold                                                                       |
 | ------------------------- | ----------------------------------------------------------------------------- |
-| `motedag`                 | 1:1 med treff: `rekrutteringstreff_id` (PK/FK), `fase`, `antall_rom`, `start_tidspunkt`, `varighet_min`, `pause_min` |
+| `motedag`                 | 1:1 med treff: `rekrutteringstreff_id` (PK/FK), `fase`, `antall_rom`, `start_tidspunkt`, `varighet_min` |
+| `deltakernummer`          | `rekrutteringstreff_id`, `jobbsoker_id`, `nummer` — unik på (treff, nummer) og (treff, jobbsoker) |
 | `rom_tildeling`           | `rekrutteringstreff_id`, `jobbsoker_id`, `romnummer`                          |
 | `arbeidsgiver_rotasjon`   | `arbeidsgiver_id`, `start_posisjon`                                           |
 | `speedintervju_onske`     | `jobbsoker_id`, `arbeidsgiver_id`                                             |
 | `speedintervju_fordeling` | `jobbsoker_id`, `arbeidsgiver_id`, plassering og om jobbsøkeren er inkludert  |
-| `speedintervju_vurdering` | `jobbsoker_id`, `arbeidsgiver_id`, nullable `vurdering`, `andre_intervju`, `jobbtilbud` |
+| `speedintervju_vurdering` | `jobbsoker_id`, `arbeidsgiver_id`, nullable `vurdering`, `andre_intervju`, nullable `andre_intervju_dato`, `jobbtilbud` |
+| `speedintervju_notat`     | `vurdering_id`, `notat` — ett rad per notat, siden et par kan ha flere        |
 
 Rekkefølge lagres eksplisitt som et heltall — den skal ikke utledes av
 innsettingsrekkefølge. Migrasjonen er rene `CREATE TABLE` uten endringer på
@@ -833,6 +967,45 @@ gjennomføringsstøtte, ikke vedtaksgrunnlag, men det gjør migrasjonen
 rød sone: den skal leses nøye av utvikler før den kjøres i produksjon.
 
 Oppmøte får **ingen** ny kolonne, se [Oppmøte lagret som hendelse](#oppmøte-lagret-som-hendelse).
+
+##### Deltakernummer
+
+`deltakernummer` er en egen tabell og ikke en kolonne på oppmøtehendelsen. Det er
+nettopp separasjonen som gir persistensen: nummeret skal overleve at oppmøtet
+fjernes og settes på nytt.
+
+Regelen backend skal følge, tildelt i samme transaksjon som oppmøtet
+registreres:
+
+```sql
+INSERT INTO deltakernummer (rekrutteringstreff_id, jobbsoker_id, nummer)
+SELECT :treffId, :jobbsokerId, COALESCE(MAX(nummer), 0) + 1
+  FROM deltakernummer WHERE rekrutteringstreff_id = :treffId
+ON CONFLICT (rekrutteringstreff_id, jobbsoker_id) DO NOTHING;
+```
+
+- **Aldri gjenbruk.** Nummeret regnes fra `MAX(nummer) + 1`, ikke fra antall
+  rader. Fjernes oppmøtet, blir raden stående, og neste person i døra får et
+  nytt nummer. Hull i rekka er derfor forventet og riktig: nummeret står på et
+  fysisk kort som allerede er delt ut, og samme kortnummer skal aldri peke på to
+  personer i løpet av dagen.
+- **Gjenbruk til samme person.** `ON CONFLICT … DO NOTHING` gjør at en person som
+  registreres møtt på nytt får tilbake sitt opprinnelige nummer.
+- **Unik på (treff, nummer)** i databasen, ikke bare i koden. To samtidige
+  oppmøteregistreringer kan ellers lese samme `MAX` og dele ut samme kortnummer.
+  Ved konflikt skal kallet prøves på nytt framfor å feile mot brukeren.
+- Tabellen tåler at `nummer` ikke finnes for en jobbsøker. Frontend viser da bare
+  navnet, slik at møtedager fra før nummereringen fantes fortsatt kan åpnes.
+
+Nummeret kobler skjermbildet til de **fysiske kortene** som deles ut i døra.
+Under speedintervjuene noterer arbeidsgiverne nummeret framfor navnet, og
+utskriftene bruker det samme nummeret. Derfor vises det sammen med navnet i alle
+stegene, på formen `3. Fornavn Etternavn`, og lista i steg 1 sorteres
+fortløpende på det slik at den leses som kortbunken.
+
+Deltakernummeret er det **eneste** tallet som vises ved navnet. Plassen i
+intervjurekkefølgen i steg 4 er implisitt i rekkefølgen på lista, nettopp for at
+to tall ved siden av hverandre ikke skal forveksles.
 
 #### Kjente gap som må lukkes i backend
 
@@ -964,7 +1137,7 @@ leveransen og unngår en ufullstendig statusmodell.
 
 | Behov                             | Oppgave | Dekkes av                                                      |
 | --------------------------------- | ------- | -------------------------------------------------------------- |
-| Nr. 6 – Registrere oppmøte        | 1       | Steg 1 + burgermeny                                            |
+| Nr. 6 – Registrere oppmøte        | 1       | Steg 1 + burgermeny + samlehandlinger i handlingsraden       |
 | Nr. 7 – 5 grupper/grupperom       | 2       | Steg 1 (antall rom + auto-fordeling) + steg 2 (rom + rotasjon) |
 | Nr. 8 – Fordele til speedintervju | 3       | Steg 3 (ønsker) + steg 4 (intervjufordeling)                   |
 | Nr. 9 – Statusoversikt            | —       | Steg 5 – arbeidsgiverspesifikk status og oppfølging            |
@@ -984,6 +1157,36 @@ leveransen og unngår en ufullstendig statusmodell.
   `RadioGroup`, `Box`/`HStack`/`VStack`/`HGrid`, `Tag`, `Button`, `LocalAlert`.
 - **Testing:** `tests/rekrutteringstreff/`, `gotoApp`/`ventTilKlar`, `storageState`
   per rolle, og MSW node-server via `instrumentation.ts` + `mocks/server.ts`.
+
+### Lange navn
+
+Navn som ikke får plass avkortes med ellipse i stedet for å brytes, og hele
+navnet vises da i en tooltip. Felleskomponenten `components/AvkortetTekst.tsx`
+gjør dette, og brukes på skjermvisninger av person- og arbeidsgivernavn i alle
+stegene.
+
+Avveiningen er bevisst: stabil radhøyde og layout er viktigere enn å alltid vise
+hele navnet. Brytes navnet, skyves dragehåndtak, plassnummer og pilknapper ut av
+stilling, og det rammer *alle* rader – ikke bare den med det lange navnet.
+
+To unntak:
+
+- **Utskrift** avkorter aldri. Papir har ingen hover, så hele navnet må stå.
+- **Kolonneoverskriftene i ønskematrisen** brytes fortsatt over to linjer.
+  Avkorting krever at navnet står på én linje, og med fem arbeidsgivere ville
+  tabellen da blitt bredere enn skjermen. Der er det bredden, ikke radhøyden,
+  som er knapp.
+
+Tooltipen vises **bare** når teksten faktisk er kuttet, så man slipper en boble
+som gjentar det man allerede kan lese. Det krever at bredden måles i nettleseren,
+og komponenten måler både etter layout, ved endret størrelse og når nettfonten er
+lastet.
+
+Avkorting forutsetter at hele kjeden av foreldre får lov til å krympe. Aksels
+`ExpansionCard` har en indre innpakning med `min-width: auto` som nekter å bli
+smalere enn innholdet sitt. I steg 4 gjorde det at radene rant ut av kortet og
+pilknappene ble klippet bort i smale kolonner, uten at de forsvant fra DOM-en.
+Kortet i steg 4 overstyrer derfor `min-width` på den innpakningen.
 
 ---
 
@@ -1054,15 +1257,25 @@ samme mønster som eksisterende tester: `storageState` for rolle
   eier eller utvikler og i ikke-prod – skjult ellers. En 403 fra
   `/motedag` skjuler både fane og panel.
 - **Stepper:** seks steg vises; fullførte steg er klikkbare, og steg uten
-  forutsetninger er ikke-interaktive.
+  forutsetninger er ikke-interaktive. Fra `xl` står stegnavnene på én linje.
+  Aksel lar ellers hvert stegnavn krympe til sitt lengste ord, og det overstyres
+  med Tailwind-klasser på `Stepper` i `WorkOpGjennomføring.tsx` – ikke i
+  `globals.css`, slik at overstyringen står der den gjelder. Under `xl` brytes
+  navnene som før.
 - **Steg 1 – oppmøte:** empty state når ingen er møtt; «Møtt»-tag og telleren
-  «X av Y» oppdateres når oppmøte registreres fra burgermenyen.
+  «X av Y» oppdateres når oppmøte registreres fra burgermenyen. Egen test for
+  «Marker som møtt (N)»: kryss av to jobbsøkere i jobbsøkerfanen, registrer, og
+  sjekk at begge får «Møtt»-tag, at valget tømmes, og at telleren i steg 1 øker.
+  Tilsvarende for «Fjern oppmøte (N)»: bekreftelsesdialogen skal navngi antallet
+  og listen skal miste «Møtt»-taggen først etter at fjerningen er bekreftet.
 - **Møteplan og rom:** «Opprett møteplan» fyller rommene, og «Gå til
   romfordeling» navigerer uten lagring. Test dra-og-slipp, direkte romvalg,
   innsetting sist, rollback ved lagringsfeil og full «Fordel på nytt» med
   bekreftelse. Rotasjonsplan-modalen viser klokkeslett, og «Skriv ut» finnes.
 - **Steg 3 – ønsker:** matrisen viser kun fremmøtte jobbsøkere, og avkryssing
-  oppdaterer telleren per rad.
+  oppdaterer telleren per rad. Egen test for avkorting: et langt navn skal ha
+  samme høyde som et kort, være kuttet, og vise hele navnet i tooltip ved hover –
+  mens et navn som får plass ikke skal gi noen tooltip.
 - **Steg 4 – intervjufordeling:** rekkefølgen kan endres med dra-og-slipp og
   piler, jobbsøkere kan flyttes over/under sperrelinjen, og plasskonflikter
   varsles. Den samlede utskriftsvisningen bevarer rekkefølgen og utelater
@@ -1075,6 +1288,15 @@ samme mønster som eksisterende tester: `storageState` for rolle
   navigasjon og lokal feiltilstand for begge datakildene.
 - **Steg 6 – oppsummering:** nøkkeltallene teller hver kandidat én gang med
   beste vurdering, og tabellen per arbeidsgiver teller rader.
+- **Deltakernummer** (`workop-deltakernummer.spec.ts`): nummeret tildeles ved
+  oppmøteregistrering og fortsetter der forrige slapp; det beholdes når oppmøtet
+  fjernes og gis tilbake til samme person ved ny registrering, mens neste person
+  i køen får et nytt nummer; det vises sammen med navnet i alle stegene; og
+  radene i steg 4 viser ett tall, ikke deltakernummer og plassnummer ved siden
+  av hverandre. Testene er verifisert ved å sabotere hver regel i tur og se at
+  riktig test feiler.
+- **Innsatsbehov** vises i steg 5 for jobbsøkere med kjent innsatsgruppe, og
+  vises ikke i det hele tatt for jobbsøkere uten.
 
 Unngå assertions som bare speiler mock-data; verifiser at UI-et står i forventet
 tilstand etter reelle brukerhandlinger.
@@ -1087,7 +1309,10 @@ tilstand etter reelle brukerhandlinger.
   fordeler ikke rommene på nytt. Det kan opprettes mellom 1 og 9 rom.
 - Romfordelingen opprettes automatisk, kan endres manuelt og kan erstattes med en
   eksplisitt full round-robin-fordeling.
-- Utskrift viser navn, rom og arbeidsgiver, men aldri fødselsnummer.
+- Utskrift viser deltakernummer, navn, rom og arbeidsgiver, men aldri
+  fødselsnummer.
+- Deltakernummer deles ut per rekrutteringstreff og gjenbrukes aldri innenfor
+  samme treff. Hull i rekka etter fjernet oppmøte er forventet.
 - Intervjufordelingen tar utgangspunkt i registrerte ønsker og lagrer rekkefølge
   over og under sperrelinjen, men ikke tidspunkt.
 - Fjerning av oppmøte etter at ønsker, intervjufordeling eller vurderinger finnes,
