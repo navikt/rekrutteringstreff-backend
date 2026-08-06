@@ -364,8 +364,8 @@ for å vente på at kopierte `<link>`-stilark melder seg ferdig lastet.
 > Kantcase: er `antallRom > antallArbeidsgivere` står noen rom tomme i enkelte
 > runder. Er `antallRom < antallArbeidsgivere` **venter** de overskytende
 > arbeidsgiverne den runden (benk) og roterer inn igjen senere – da blir det
-> flere runder. I praksis er antall rom alltid lik antall arbeidsgivere, så
-> ingen av kantcasene oppstår.
+> flere runder. Antall rom _er_ antall arbeidsgivere, så ingen av kantcasene kan
+> oppstå. Grenene er vern mot feil, ikke funksjonalitet noen skal planlegge for.
 
 For layout brukes `HGrid` med én kolonne per rom (`columns={antallRom}` eller
 `repeat(auto-fit, minmax(14rem, 1fr))`). Rotasjonsplanen i modal bør ha `caption`,
@@ -651,7 +651,7 @@ også skriveoperasjonene, som alltid returnerer hele møtedagen.
 | ------------------------- | ------------------------ | ---------------------------------------------------- |
 | `rekrutteringstreffId`    | UUID                     |                                                      |
 | `fase`                    | enum                     | `OPPMØTE`, `ROM`, `ØNSKER`, `FORDELING`, `VURDERING` |
-| `antallRom`               | heltall                  | Utledet av antall arbeidsgivere, minst 1             |
+| `antallRom`               | heltall                  | Beregnet ved lesing, ikke lagret. Se under           |
 | `starttidspunkt`          | tekst                    | `HH:mm`, 24-timers                                   |
 | `varighetPerMøteMinutter` | heltall                  | Minst 1                                              |
 | `oppmøte`                 | liste av `personTreffId` | Hvem som er registrert møtt                          |
@@ -726,15 +726,15 @@ møtedagen:
 
 **Request-bodyer**, som speiler `mutations.ts` i frontend:
 
-| Endepunkt                        | Body                                           | Felt                                                                               |
-| -------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `PUT /oppmote`                   | eget objekt                                    | `personTreffId`, `møtt`, `bekreftSlettRegistreringer` (standard `false`)           |
-| `PUT /moteoppsett`               | eget objekt                                    | `antallRom` (1–9), `starttidspunkt` (`HH:mm`), `varighetPerMøteMinutter` (minst 1) |
-| `PUT /romfordeling`              | innpakket                                      | `{ rom: [RomDto] }`                                                                |
-| `PUT /onsker`                    | eget objekt                                    | `personTreffId`, `arbeidsgiverTreffId`, `ønsket`                                   |
-| `PUT /intervjufordeling`         | **`ArbeidsgiverIntervjufordelingDto` direkte** | Ikke innpakket                                                                     |
-| `POST /intervjufordeling/fordel` | tom                                            | Alt som trengs er allerede lagret                                                  |
-| `PUT /vurderinger`               | **`VurderingDto` direkte**                     | Ikke innpakket                                                                     |
+| Endepunkt                        | Body                                           | Felt                                                                     |
+| -------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
+| `PUT /oppmote`                   | eget objekt                                    | `personTreffId`, `møtt`, `bekreftSlettRegistreringer` (standard `false`) |
+| `PUT /moteoppsett`               | eget objekt                                    | `starttidspunkt` (`HH:mm`), `varighetPerMøteMinutter` (minst 1)          |
+| `PUT /romfordeling`              | innpakket                                      | `{ rom: [RomDto] }`                                                      |
+| `PUT /onsker`                    | eget objekt                                    | `personTreffId`, `arbeidsgiverTreffId`, `ønsket`                         |
+| `PUT /intervjufordeling`         | **`ArbeidsgiverIntervjufordelingDto` direkte** | Ikke innpakket                                                           |
+| `POST /intervjufordeling/fordel` | tom                                            | Alt som trengs er allerede lagret                                        |
+| `PUT /vurderinger`               | **`VurderingDto` direkte**                     | Ikke innpakket                                                           |
 
 Merk asymmetrien: bare romfordelingen er pakket inn i et objekt, mens
 intervjufordeling og vurdering sendes som selve DTO-en på rotnivå. Det er slik
@@ -792,8 +792,8 @@ Invarianter backend må håndheve, ikke bare stole på fra frontend:
 - Person og arbeidsgiver tilhører samme treff.
 - En jobbsøker forekommer bare én gang i `inkludertePersonTreffIder`, én gang i
   `ekskludertePersonTreffIder`, og aldri i begge hos samme arbeidsgiver.
-- `starttidspunkt` er `HH:mm` i 24-timers format, `antallRom` minst 1 og
-  `varighetPerMøteMinutter` minst 1.
+- `starttidspunkt` er `HH:mm` i 24-timers format og `varighetPerMøteMinutter`
+  minst 1.
 - `PUT /romfordeling` tar alle rom med ordnede `personTreffId`-lister. Romnumre
   er unike innenfor 1–9, og hver fremmøtt jobbsøker finnes nøyaktig én gang uten
   ukjente personer.
@@ -803,10 +803,8 @@ Invarianter backend må håndheve, ikke bare stole på fra frontend:
   ønsker, intervjufordeling eller vurderinger. Første kall — når det ennå ikke
   finnes rom — oppretter round-robin-fordelingen og rotasjonen og setter fase
   `ROM`. Senere kall oppdaterer bare de tre tidsfeltene.
-  `antallRom` er utledet av antall arbeidsgivere på treffet og settes ikke
-  manuelt i UI-et, så det skal ikke overstyre en eksisterende romfordeling. Se
-  [Kjente gap](#kjente-gap-som-må-lukkes-i-backend) for hva som må skje når
-  arbeidsgiverlista endrer seg etter at rommene er opprettet.
+  Antall rom sendes ikke inn — det beregnes av backend, se
+  [Antall rom beregnes, ikke lagres](#antall-rom-beregnes-ikke-lagres).
 - Bare fremmøtte kan få ønsker og intervjufordeling. En vurdering kan bestå etter
   at ønske og intervjufordeling fjernes. En vurderingsrad der vurdering er `null`
   og begge boolean-feltene er `false`, slettes.
@@ -892,11 +890,11 @@ migrasjon og uten å fjerne noe. Frontend er allerede lagt om til de nye feltene
 
 #### Database
 
-Én ny migrasjon, `V14__motedag.sql`, med sju tabeller:
+Én ny migrasjon, `V14__motedag.sql`, med åtte tabeller:
 
 | Tabell                    | Innhold                                                                                                                 |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `motedag`                 | 1:1 med treff: `rekrutteringstreff_id` (PK/FK), `fase`, `antall_rom`, `start_tidspunkt`, `varighet_min`                 |
+| `motedag`                 | 1:1 med treff: `rekrutteringstreff_id` (unik FK), `fase`, `start_tidspunkt`, `varighet_min`                             |
 | `deltakernummer`          | `rekrutteringstreff_id`, `jobbsoker_id`, `nummer` — unik på (treff, nummer) og (treff, jobbsoker)                       |
 | `rom_tildeling`           | `rekrutteringstreff_id`, `jobbsoker_id`, `romnummer`                                                                    |
 | `arbeidsgiver_rotasjon`   | `arbeidsgiver_id`, `start_posisjon`                                                                                     |
@@ -913,96 +911,129 @@ eksisterende tabeller.
 
 Samme form som
 [2-arkitektur/database.md](../../2-arkitektur/database.md#entity-relationship-diagram),
-som skal oppdateres med disse tabellene når migrasjonen er skrevet. Eksisterende
-tabeller er tatt med i grått omfang for å vise koblingene; bare de sju under
-`V14` er nye.
+som skal oppdateres med disse tabellene når migrasjonen er skrevet.
+
+Modellen er delt i fire diagrammer. Ett samlet diagram blir rundt dobbelt så
+bredt som det er høyt igjen, og må zoomes for å leses — mermaid legger alle
+tabeller med samme forelder side om side, og åtte nye tabeller gir da én lang
+rad. Oppdelingen følger møtedagens egne steg, så hvert diagram svarer på ett
+spørsmål og får plass på skjermen. Tabelloversikten over viser helheten.
+
+`rekrutteringstreff`, `jobbsoker` og `arbeidsgiver` er eksisterende tabeller og
+vises uten felter. Bare de åtte under `V14` er nye.
+
+**1. Rammen rundt dagen** — når møtene går, og hvor arbeidsgiverne starter
 
 ```mermaid
 erDiagram
     rekrutteringstreff ||--o| motedag : "har"
-    rekrutteringstreff ||--o{ deltakernummer : "deler ut"
-    rekrutteringstreff ||--o{ rom_tildeling : "fordeler"
-    rekrutteringstreff ||--o{ rekrutteringstreff_hendelse : "logger"
-
-    jobbsoker ||--o| deltakernummer : "har"
-    jobbsoker ||--o| rom_tildeling : "sitter i"
-    jobbsoker ||--o{ speedintervju_onske : "ønsker"
-    jobbsoker ||--o{ speedintervju_fordeling : "er fordelt til"
-    jobbsoker ||--o{ speedintervju_vurdering : "vurderes i"
-    jobbsoker ||--o{ jobbsoker_hendelse : "logger"
-
     arbeidsgiver ||--o| arbeidsgiver_rotasjon : "roterer etter"
-    arbeidsgiver ||--o{ speedintervju_onske : "ønskes av"
-    arbeidsgiver ||--o{ speedintervju_fordeling : "intervjuer"
-    arbeidsgiver ||--o{ speedintervju_vurdering : "vurderer"
-    arbeidsgiver ||--o{ arbeidsgiver_hendelse : "logger"
-
-    speedintervju_vurdering ||--o{ speedintervju_notat : "har"
-
     motedag {
-        bigint rekrutteringstreff_id PK, FK "1:1 med treffet"
-        text fase "OPPMØTE, ROM, ØNSKER, FORDELING, VURDERING"
-        int antall_rom "1-9, utledet av antall arbeidsgivere"
-        time start_tidspunkt "Når første møte starter"
-        int varighet_min "Varighet per møte, minst 1"
+        bigserial motedag_id PK
+        bigint rekrutteringstreff_id FK, UK "Én møtedag per treff"
+        text fase "Hvilket steg dagen står i"
+        time start_tidspunkt "Første møte"
+        int varighet_min "Per møte, minst 1"
     }
-
-    deltakernummer {
-        bigserial deltakernummer_id PK "Intern primærnøkkel"
-        bigint rekrutteringstreff_id FK "Nummerserien er per treff"
-        bigint jobbsoker_id FK "Personen nummeret tilhører"
-        int nummer "1-basert. Unik med treff. Gjenbrukes aldri"
-        timestamptz tildelt_tidspunkt "Når kortet ble delt ut"
-    }
-
-    rom_tildeling {
-        bigserial rom_tildeling_id PK "Intern primærnøkkel"
-        bigint rekrutteringstreff_id FK "Referanse til treffet"
-        bigint jobbsoker_id FK "Unik per treff: én person, ett rom"
-        int romnummer "1-basert"
-    }
-
     arbeidsgiver_rotasjon {
-        bigserial arbeidsgiver_rotasjon_id PK "Intern primærnøkkel"
-        bigint arbeidsgiver_id FK "Unik: én startposisjon per arbeidsgiver"
-        int start_posisjon "0-basert. Er den >= antall rom, står arbeidsgiveren på venteplass"
-    }
-
-    speedintervju_onske {
-        bigserial speedintervju_onske_id PK "Intern primærnøkkel"
-        bigint jobbsoker_id FK "Hvem som ønsker"
-        bigint arbeidsgiver_id FK "Hvem det ønskes å møte. Unik med jobbsoker_id"
-    }
-
-    speedintervju_fordeling {
-        bigserial speedintervju_fordeling_id PK "Intern primærnøkkel"
-        bigint jobbsoker_id FK "Unik med arbeidsgiver_id"
-        bigint arbeidsgiver_id FK "Referanse til arbeidsgiver"
-        int plassering "0-basert plass i rekkefølgen. Tidsluke, ikke pynt"
-        boolean inkludert "false = under sperrelinjen"
-    }
-
-    speedintervju_vurdering {
-        bigserial speedintervju_vurdering_id PK "Intern primærnøkkel"
-        bigint jobbsoker_id FK "Unik med arbeidsgiver_id"
-        bigint arbeidsgiver_id FK "Referanse til arbeidsgiver"
-        text vurdering "NULL, AKTUELL, KANSKJE eller IKKE_AKTUELL"
-        boolean andre_intervju "Om 2. intervju er avtalt"
-        date andre_intervju_dato "NULL når dato ennå ikke er avtalt"
-        boolean jobbtilbud "Om jobbtilbud er gitt"
-    }
-
-    speedintervju_notat {
-        bigserial speedintervju_notat_id PK "Intern primærnøkkel"
-        bigint speedintervju_vurdering_id FK "Referanse til vurderingen"
-        text notat "Kodeverdi. AG_-prefiks = arbeidsgiver, JS_ = jobbsøker"
+        bigserial arbeidsgiver_rotasjon_id PK
+        bigint arbeidsgiver_id FK "Unik"
+        int start_posisjon "0-basert"
     }
 ```
 
+**2. Hvor jobbsøkeren er** — kortnummeret og rommet (steg 1 og 2)
+
+```mermaid
+erDiagram
+    rekrutteringstreff ||--o{ deltakernummer : "deler ut"
+    rekrutteringstreff ||--o{ rom_tildeling : "fordeler"
+    jobbsoker ||--o| deltakernummer : "har"
+    jobbsoker ||--o| rom_tildeling : "sitter i"
+    deltakernummer {
+        bigserial deltakernummer_id PK
+        bigint rekrutteringstreff_id FK "Serien er per treff"
+        bigint jobbsoker_id FK "Eieren av nummeret"
+        int nummer "1-basert, gjenbrukes aldri"
+        timestamptz tildelt_tidspunkt
+    }
+    rom_tildeling {
+        bigserial rom_tildeling_id PK
+        bigint rekrutteringstreff_id FK
+        bigint jobbsoker_id FK "Unik per treff"
+        int romnummer "1-basert"
+    }
+```
+
+**3. Hvem som møter hvem** — ønsker og fordeling (steg 3 og 4)
+
+```mermaid
+erDiagram
+    jobbsoker ||--o{ speedintervju_onske : "ønsker"
+    jobbsoker ||--o{ speedintervju_fordeling : "er fordelt til"
+    arbeidsgiver ||--o{ speedintervju_onske : "ønskes av"
+    arbeidsgiver ||--o{ speedintervju_fordeling : "intervjuer"
+    speedintervju_onske {
+        bigserial speedintervju_onske_id PK
+        bigint jobbsoker_id FK "Hvem som ønsker"
+        bigint arbeidsgiver_id FK "Unik med jobbsoker_id"
+    }
+    speedintervju_fordeling {
+        bigserial speedintervju_fordeling_id PK
+        bigint jobbsoker_id FK "Unik med arbeidsgiver_id"
+        bigint arbeidsgiver_id FK
+        int plassering "0-basert tidsluke"
+        boolean inkludert "false = under sperrelinjen"
+    }
+```
+
+**4. Hva som kom ut av møtet** — vurdering og notater (steg 5)
+
+```mermaid
+erDiagram
+    jobbsoker ||--o{ speedintervju_vurdering : "vurderes i"
+    arbeidsgiver ||--o{ speedintervju_vurdering : "vurderer"
+    speedintervju_vurdering ||--o{ speedintervju_notat : "har"
+    speedintervju_vurdering {
+        bigserial speedintervju_vurdering_id PK
+        bigint jobbsoker_id FK "Unik med arbeidsgiver_id"
+        bigint arbeidsgiver_id FK
+        text vurdering "Nullable"
+        boolean andre_intervju
+        date andre_intervju_dato "Nullable"
+        boolean jobbtilbud
+    }
+    speedintervju_notat {
+        bigserial speedintervju_notat_id PK
+        bigint speedintervju_vurdering_id FK
+        text notat "Kodeverdi, ikke fritekst"
+    }
+```
+
+Verdiene bak de korte beskrivelsene står i tabellen over: `fase` er
+`OPPMØTE`/`ROM`/`ØNSKER`/`FORDELING`/`VURDERING`, `vurdering` er
+`AKTUELL`/`KANSKJE`/`IKKE_AKTUELL` eller `NULL`, og `notat` er kodeverdier med
+`AG_`-prefiks for arbeidsgiverens notater og `JS_` for jobbsøkerens.
+
+Møtedagen skriver også til `jobbsoker_hendelse`, `arbeidsgiver_hendelse` og
+`rekrutteringstreff_hendelse`. De får ingen nye kolonner, bare nye
+hendelsestyper, og er derfor holdt utenfor diagrammene — se
+[Hendelser på møtedagen](#hendelser-på-møtedagen).
+
 Noen valg diagrammet ikke viser av seg selv:
 
-- **`motedag` har treffets ID som både primærnøkkel og fremmednøkkel.** Det er
-  én møtedag per treff, og basen skal si det framfor at koden må passe på det.
+- **`motedag` har egen `motedag_id`, ikke treffets ID som primærnøkkel.** Alle
+  ti tabellene som finnes fra før bruker `bigserial <navn>_id` som PK, og ingen
+  av dem gjenbruker en fremmednøkkel. Å bryte mønsteret her ville spart én
+  kolonne og kostet gjenkjennelighet i all repository-kode. 1:1-kravet
+  håndheves i stedet med `UNIQUE` på `rekrutteringstreff_id`, som sier det
+  samme like tydelig.
+- **Ingen av de nye tabellene har en `uuid id`.** I basen fra før har den
+  kolonnen bare tabeller som eksponeres utenfra og må kunne adresseres i et
+  API. Møtedagens tabeller nås alltid gjennom treffet, jobbsøkeren eller
+  arbeidsgiveren, som allerede har sin egen UUID.
+- **Antall rom er ingen kolonne.** Det er alltid antall arbeidsgivere på
+  treffet, minst 1, og utledes ved lesing — se under.
 - **`rom_tildeling` og `deltakernummer` peker på treffet i tillegg til
   jobbsøkeren**, selv om jobbsøkeren allerede tilhører ett treff. Det gjør
   unikhetskravene mulige å uttrykke direkte: ett rom per person per treff, og én
@@ -1011,6 +1042,9 @@ Noen valg diagrammet ikke viser av seg selv:
   knyttet til nøyaktig ett treff og det ikke finnes noe unikhetskrav på tvers.
 - **`speedintervju_notat` er en egen tabell**, ikke en tekstkolonne eller array,
   fordi et par kan ha flere notater og de skal kunne telles og filtreres.
+- **`plassering` er en tidsluke, ikke pynt.** Tallet bestemmer når i rotasjonen
+  møtet skjer, og to jobbsøkere med samme plassering hos samme arbeidsgiver er
+  en reell dobbeltbooking — ikke bare en rar sortering.
 - **Oppmøte har ingen tabell her.** Det utledes av hendelser, se
   [Oppmøte lagret som hendelse](#oppmøte-lagret-som-hendelse).
 
@@ -1024,6 +1058,42 @@ gjennomføringsstøtte, ikke vedtaksgrunnlag, men det gjør migrasjonen
 rød sone: den skal leses nøye av utvikler før den kjøres i produksjon.
 
 Oppmøte får **ingen** ny kolonne, se [Oppmøte lagret som hendelse](#oppmøte-lagret-som-hendelse).
+
+##### Antall rom beregnes, ikke lagres
+
+`antallRom` er med i `MotedagDto`, men har **ingen kolonne**. Backend regner det
+ut ved lesing som `max(antall arbeidsgivere på treffet, 1)` — samme uttrykk som
+frontend bruker i dag.
+
+Grunnen er at en lagret kolonne ville vært et frosset øyeblikksbilde av noe som
+kan endre seg. Legges en arbeidsgiver til etter at møteoppsettet er lagret, ville
+`antall_rom` pekt på gårsdagens virkelighet, og basen ville hatt to svar på
+samme spørsmål. Planen krever allerede at rom og rotasjon utledes av
+arbeidsgiverne som faktisk er på treffet på lesetidspunktet; en lagret kolonne
+ville motsagt det kravet.
+
+Verdt å vite for den som implementerer:
+
+- **Frontend sender `antallRom` i dag.** `settOppMøteplan` regner det ut i
+  `OppmøteOgOppsett.tsx` og legger det i bodyen til `PUT /moteoppsett`. Feltet
+  skal ut av requesten når backend tar over. Fram til da bør backend **ignorere**
+  det framfor å stole på det — en klient skal ikke kunne bestemme hvor mange rom
+  et treff har.
+- **Venteplass-logikken blir død kode i normaltilfellet.**
+  `beregnRotasjonsplan` håndterer `antallRom < antallArbeidsgivere` ved å sette
+  overskytende arbeidsgivere på benken. Når antall rom alltid _er_ antall
+  arbeidsgivere, kan ikke den grenen nås. Den er verdt å beholde som vern, men
+  ingen skal tro at den brukes.
+- **Romfordelingen må tåle at tallet endrer seg.** Kommer en arbeidsgiver til,
+  går antall rom fra 5 til 6, og rom 6 er tomt til noen fordeles dit. Det er
+  synlig i UI-et og kan rettes, i motsetning til en arbeidsgiver som i stillhet
+  havner på venteplass.
+
+Skal antall rom senere kunne settes uavhengig — fordi lokalet har fire rom og
+ikke fem — er det en reell funksjonsendring, ikke en opprydding. Da legges
+kolonnen til som _nullable overstyring_, der `NULL` betyr «følg
+arbeidsgiverne». Å innføre den nå, uten UI som kan sette den, ville vært en
+kolonne uten avsender.
 
 ##### Deltakernummer
 
@@ -1216,6 +1286,11 @@ Disse finnes i mocken i dag og må håndteres ordentlig når backend tar over:
    første lagring. Legges en arbeidsgiver til etterpå, får den aldri rom eller
    plass i rotasjonen; fjernes en, blir den stående. Backend må utlede rom og
    rotasjon fra arbeidsgiverne som faktisk er på treffet på lesetidspunktet.
+   For antall rom er dette løst i skjemaet ved at kolonnen ikke finnes, se
+   [Antall rom beregnes, ikke lagres](#antall-rom-beregnes-ikke-lagres).
+   Rotasjonen er ikke løst: `arbeidsgiver_rotasjon` lagrer `start_posisjon` per
+   arbeidsgiver, og en ny arbeidsgiver har ingen rad. Backend må gi den en
+   posisjon ved lesing framfor å utelate den.
 2. **Endret arbeidsgiverliste etter fordeling.** Fjernes en arbeidsgiver etter at
    ønsker og intervjufordeling er registrert, må backend rydde radene som peker
    på den — ikke la dem bli hengende som foreldreløse referanser. Mocken gjør
