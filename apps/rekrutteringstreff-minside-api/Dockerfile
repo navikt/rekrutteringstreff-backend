@@ -2,7 +2,9 @@
 FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/jre:openjdk-25
 ARG APP_NAME
 WORKDIR /$APP_NAME
-COPY build/libs/*.jar ./
+COPY build/runtime-libs/*.jar ./runtime-libs/
+COPY build/libs/app.jar ./
+
 
 # Asume that logback.xml is located in the project/app root dir.
 # The unconventional location is a signal to developers to make them aware that we use this file in an unconventional

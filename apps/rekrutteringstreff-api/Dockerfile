@@ -2,7 +2,8 @@
 FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/jre:openjdk-25
 ARG APP_NAME
 WORKDIR /$APP_NAME
-COPY build/libs/*.jar ./
+COPY build/runtime-libs/*.jar ./runtime-libs/
+COPY build/libs/app.jar ./
 
 ENV LANG="nb_NO.UTF-8"
 ENV LANGUAGE="nb_NO:nb"
