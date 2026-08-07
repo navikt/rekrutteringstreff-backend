@@ -20,20 +20,23 @@ jobs:
       image: ${{ steps.docker-build-push.outputs.image }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup Java v25
-        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b115c00 # v4.7.1
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: 'temurin'
           java-version: '25'
       - name: Gradle test and build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUTS_APP_NAME: ${{ inputs.app_name }}
         run: |
           chmod +x ./gradlew
-          ./gradlew :apps:${{ inputs.app_name }}:test :apps:${{ inputs.app_name }}:build
+          ./gradlew :apps:${INPUTS_APP_NAME}:test :apps:${INPUTS_APP_NAME}:build
       - name: Push docker image to GAR
-        uses: nais/docker-build-push@cd5ec5663feb0e05c3fa374d1fb442605b046c6b # v0
+        uses: nais/docker-build-push@2d2b0a7193e65422b7f0355d4afb445e0a8b2cc3 # v0
         id: docker-build-push
         with:
           team: toi
@@ -50,8 +53,10 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == inputs.deploy_dev_branch
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: nais/deploy/actions/deploy@fa754451577294aae42872a69b888b3470478ec1 # v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: nais/deploy/actions/deploy@849e900e3cfa7faf7ad1532bb3a3e6499c932199 # v2
         env:
           CLUSTER: dev-gcp
           RESOURCE: apps/${{ inputs.app_name }}/.nais/nais.yaml
@@ -64,8 +69,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: nais/deploy/actions/deploy@fa754451577294aae42872a69b888b3470478ec1 # v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: nais/deploy/actions/deploy@849e900e3cfa7faf7ad1532bb3a3e6499c932199 # v2
         env:
           CLUSTER: prod-gcp
           RESOURCE: apps/${{ inputs.app_name }}/.nais/nais.yaml,apps/${{ inputs.app_name }}/.nais/alerts.yaml
@@ -74,10 +81,9 @@ jobs:
 
   call-trivy-security-scan:
     needs: build-and-publish
-    uses: navikt/toi-github-actions-workflows/.github/workflows/trivy-security-scan.yaml@v15
+    uses: navikt/toi-github-actions-workflows/.github/workflows/trivy-security-scan.yaml@v15  # zizmor: ignore[ref-confusion,unpinned-uses]
     with:
       image: ${{ needs.build-and-publish.outputs.image }}
     permissions:
       id-token: write
       security-events: write
-    secrets: inherit
