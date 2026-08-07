@@ -22,6 +22,9 @@ val assertjVersion = "3.23.1"
 
 dependencies {
     constraints {
+        // Alternativer til require er strictly og preferred.
+        // Se https://docs.gradle.org/current/userguide/dependency_versions.html#sec:rich-version-constraints
+
         implementation("org.slf4j:slf4j-api") {
             version { require(slf4jVersion) }
         }
