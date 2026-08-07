@@ -1,5 +1,5 @@
 # Liste over Chainguard images finner du her: https://console.cloud.google.com/artifacts/docker/cgr-nav/europe-north1/pull-through
-FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/jre:openjdk-21
+FROM europe-north1-docker.pkg.dev/cgr-nav/pull-through/nav.no/jre:openjdk-25
 ARG APP_NAME
 WORKDIR /$APP_NAME
 COPY build/libs/*.jar ./
