@@ -3,6 +3,10 @@ plugins {
     kotlin("kapt")
 }
 
+application {
+    mainClass.set("no.nav.toi.minside.AppKt")
+}
+
 // TODO: Bør ikke trenge dette, men trengs fordi alt fra rekrutteringstreff-api kommer inn i testoppsettet
 repositories {
     maven("https://jitpack.io")

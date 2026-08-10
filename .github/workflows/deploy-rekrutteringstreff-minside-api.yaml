@@ -7,6 +7,7 @@ on:
       - .github/workflows/deploy-rekrutteringstreff-minside-api.yaml
       - .github/workflows/deploy-template.yaml
       - buildSrc/**
+      - technical-libs/testrapid/**
   workflow_dispatch:
 
 jobs:
@@ -14,8 +15,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/min-side-kategori
-    secrets: inherit
+      deploy_dev_branch: refs/heads/bygg-som-i-toirapidsandrivers
     permissions:
       contents: read
       id-token: write
