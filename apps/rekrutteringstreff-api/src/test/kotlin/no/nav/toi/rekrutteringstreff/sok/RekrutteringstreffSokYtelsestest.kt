@@ -14,6 +14,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.system.measureTimeMillis
 
+//@Disabled("TODO Are: Enable før merge til main. Supertreig.")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokYtelsestest {
     companion object {

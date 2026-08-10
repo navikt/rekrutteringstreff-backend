@@ -1,5 +1,5 @@
 plugins {
-    id("toi.common")
+    id("toi.app")
 }
 
 repositories {
