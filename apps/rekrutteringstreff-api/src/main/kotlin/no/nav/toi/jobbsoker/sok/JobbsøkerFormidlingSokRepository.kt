@@ -31,10 +31,6 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         return hentJobbsøkereMedWhere(where, request)
     }
 
-    /**
-     * Henter jobbsøkere på treffet som tilhører kontorene innlogget bruker er tilknyttet i Modia,
-     * uavhengig av hvem som er registrert som veileder.
-     */
     fun hentForMittKontorForFormidling(
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,

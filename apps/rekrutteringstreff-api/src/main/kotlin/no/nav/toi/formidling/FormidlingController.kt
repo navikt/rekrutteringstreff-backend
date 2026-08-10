@@ -269,7 +269,7 @@ from = Array<FormidlingOpprettetDto>::class,
     @OpenApi(
         summary = "Hent formidlinger for mitt kontor for et rekrutteringstreff",
         description = "Returnerer formidlinger på treffet som er opprettet fra et av Nav-kontorene " +
-            "innlogget bruker er tilknyttet i Modia (uavhengig av hvilken veileder som opprettet formidlingen).",
+            "innlogget bruker er tilknyttet i Modia.",
         operationId = "hentFormidlingerForMittKontor",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],

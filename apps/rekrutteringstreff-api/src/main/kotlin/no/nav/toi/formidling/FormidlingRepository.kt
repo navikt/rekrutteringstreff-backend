@@ -343,10 +343,6 @@ class FormidlingRepository(private val dataSource: DataSource) {
         return listOf(Condition("ag.orgnr = ANY (?::text[])", SqlParam.TextArray(orgnr)))
     }
 
-    /**
-     * Filtrerer på formidlinger opprettet fra ett av veilederens tilknyttede Nav-kontor (fra Modia).
-     * Hvis veilederen ikke er tilknyttet noen enheter, returneres ingen treff (i stedet for alle).
-     */
     private fun byggKontorFilter(tilknyttedeEnheter: List<String>): List<Condition> {
         val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
         if (unikeEnheter.isEmpty()) return listOf(Condition("FALSE"))
