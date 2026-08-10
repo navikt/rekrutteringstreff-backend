@@ -5,7 +5,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.Logger
@@ -15,7 +14,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.system.measureTimeMillis
 
-@Disabled("TODO Are: Enable før merge til main")
+//@Disabled("TODO Are: Enable før merge til main. Supertreig.")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokYtelsestest {
     companion object {

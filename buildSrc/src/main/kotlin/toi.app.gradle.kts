@@ -1,6 +1,4 @@
-import org.gradle.api.tasks.JavaExec
 import org.gradle.jvm.tasks.Jar
-import org.gradle.api.tasks.Sync
 
 plugins {
     id("toi.common")
@@ -20,13 +18,14 @@ val copyRuntimeClasspathJars = tasks.register<Sync>("copyRuntimeClasspathJars") 
 
 tasks.named<Jar>("jar") {
     dependsOn(copyRuntimeClasspathJars)
-
     archiveBaseName.set("app")
+
     val mainClass = tasks.named<JavaExec>("run").flatMap { it.mainClass }
     val classPath = runtimeClasspath.map { files -> files.joinToString(separator = " ") { "runtime-libs/${it.name}" } }
-
-    manifest.attributes(
-        "Main-Class" to mainClass,
-        "Class-Path" to classPath
-    )
+    doFirst {
+        manifest.attributes(
+            "Main-Class" to mainClass.get(),
+            "Class-Path" to classPath.get()
+        )
+    }
 }
