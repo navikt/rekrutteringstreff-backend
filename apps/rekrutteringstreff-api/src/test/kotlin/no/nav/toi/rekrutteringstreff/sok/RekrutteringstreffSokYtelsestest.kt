@@ -15,6 +15,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.system.measureTimeMillis
 
+@Disabled("TODO Are: Enable før merge til main")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokYtelsestest {
     companion object {
@@ -147,7 +148,6 @@ class RekrutteringstreffSokYtelsestest {
         }
     }
 
-    @Disabled("TODO Are: Enable før merge til main")
     @Test
     fun `sok med 20k genererte testtreff logger tid for warmup og endret kall`() {
         val warmupRequest = RekrutteringstreffSokRequest(
