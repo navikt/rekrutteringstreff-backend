@@ -394,6 +394,21 @@ class JobbsøkerService(
             tilknyttedeEnheter,
         )
 
+    /**
+     * Henter jobbsøkere på treffet som tilhører kontorene innlogget bruker er tilknyttet i Modia,
+     * uavhengig av om brukeren selv er registrert som veileder for jobbsøkeren.
+     */
+    fun hentJobbsøkereForMittKontorForFormidling(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        tilknyttedeEnheter: List<String>,
+    ): JobbsøkerFormidlingRespons =
+        jobbsøkerFormidlingSokRepository.hentForMittKontorForFormidling(
+            treffId,
+            request,
+            tilknyttedeEnheter,
+        )
+
     private fun finnJobbsøkereSomSkalLagres(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,
         eksisterendeJobbsøkere: List<Jobbsøker>,
