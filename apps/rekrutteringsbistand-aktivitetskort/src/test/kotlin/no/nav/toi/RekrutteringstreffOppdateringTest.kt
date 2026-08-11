@@ -98,7 +98,7 @@ class RekrutteringstreffOppdateringTest {
             )
         )
 
-        val invitasjoner = testRepository.hentAlle()
+        val invitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(invitasjoner).hasSize(1)
         val aktivitetskortId = invitasjoner[0].aktivitetskortId
 
@@ -124,7 +124,7 @@ class RekrutteringstreffOppdateringTest {
         )
 
         // Hent alle aktivitetskort og verifiser oppdatering
-        val aktivitetskort = testRepository.hentAlle()
+        val aktivitetskort = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(aktivitetskort).hasSize(2) // Original + oppdatert versjon
 
         val oppdatertKort = aktivitetskort.last()
@@ -190,7 +190,7 @@ class RekrutteringstreffOppdateringTest {
             )
         )
 
-        val aktivitetskort = testRepository.hentAlle()
+        val aktivitetskort = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         val oppdatertKort = aktivitetskort.last()
 
         assertThat(oppdatertKort.fraTid).isEqualTo(nyFraTid.toLocalDate())

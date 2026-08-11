@@ -107,7 +107,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
                 endretAvPersonbruker = true
             )
         )
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(0)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -169,7 +169,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
                 endretAvPersonbruker = false
             )
         )
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(0)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -218,7 +218,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             )
         )
 
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(2)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -284,7 +284,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             )
         )
 
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(2)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -349,7 +349,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             )
         )
 
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(2)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)

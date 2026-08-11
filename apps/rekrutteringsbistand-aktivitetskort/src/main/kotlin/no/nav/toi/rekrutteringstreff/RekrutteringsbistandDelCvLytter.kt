@@ -42,6 +42,17 @@ class RekrutteringsbistandDelCvLytter(
         val arbeidsgiver = packet["arbeidsgiver"].asText()
         val arbeidssted = packet["arbeidssted"].asText()
 
-        repository.opprettDeltStilling(fnr, stillingId, tittel, opprettetAv, opprettetTidspunkt, arbeidsgiver, arbeidssted)
+        repository.opprettDeltStilling(
+            fnr,
+            stillingId,
+            tittel,
+            opprettetAv,
+            opprettetTidspunkt,
+            arbeidsgiver,
+            arbeidssted
+        )?.let { aktivitetskortId ->
+            packet["aktivitetskortuuid"] = aktivitetskortId
+            context.publish(fnr, packet.toJson())
+        }
     }
 }

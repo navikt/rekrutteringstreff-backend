@@ -94,14 +94,15 @@ class RekrutteringsbistandStillingDelingAvCvTest {
                 arbeidssted
             )
         )
-        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
-        assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
+        val rekrutteringsbistandStillinger = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(rekrutteringsbistandStillinger).hasSize(1)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
 
         val expectedDetaljer = """[{"label":"Arbeidsgiver","verdi":"$arbeidsGiver"},{"label":"Arbeidssted","verdi":"$arbeidssted"}]"""
-        rekrutteringstreffInvitasjoner.apply {
+        rekrutteringsbistandStillinger.apply {
             assertThat(this[0].tittel).isEqualTo(tittel)
+            assertThat(this[0].stillingId).isEqualTo(stillingId)
             assertThat(this[0].beskrivelse).isEqualTo("Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg.")
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
@@ -132,7 +133,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
                 arbeidssted
             )
         )
-        val expectedRekrutteringsbistandStillinger = testRepository.hentAlle()
+        val expectedRekrutteringsbistandStillinger = testRepository.hentAlleRekrutteringsbistandStillinger()
         assertThat(expectedRekrutteringsbistandStillinger).hasSize(1)
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -146,7 +147,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             )
         )
 
-        val actualRekrutteringsbistandStillinger = testRepository.hentAlle()
+        val actualRekrutteringsbistandStillinger = testRepository.hentAlleRekrutteringsbistandStillinger()
         assertThat(actualRekrutteringsbistandStillinger).hasSize(1)
         assertThat(actualRekrutteringsbistandStillinger.first()).usingRecursiveComparison().isEqualTo(expectedRekrutteringsbistandStillinger.first())
         val inspektør = rapid.inspektør
@@ -178,7 +179,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
         inspektør.message(0).also { message ->
-            assertThat(message["@event_name"].asText()).isEqualTo("rekrutteringstreffinvitasjon")
+            assertThat(message["@event_name"].asText()).isEqualTo("rekrutteringsbistandstilling-deling-av-cv")
             assertThat(message["fnr"].asText()).isEqualTo(fnr)
             assertThat(message["stillingId"].asText()).isEqualTo(stillingId.toString())
             assertThat(message["tittel"].asText()).isEqualTo(tittel)

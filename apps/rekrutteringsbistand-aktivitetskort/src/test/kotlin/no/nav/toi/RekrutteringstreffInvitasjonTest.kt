@@ -101,7 +101,7 @@ class RekrutteringstreffInvitasjonTest {
                 poststed
             )
         )
-        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
@@ -149,7 +149,7 @@ class RekrutteringstreffInvitasjonTest {
             )
         )
 
-        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
@@ -187,7 +187,7 @@ class RekrutteringstreffInvitasjonTest {
                 poststed
             )
         )
-        val expectedRekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val expectedRekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(expectedRekrutteringstreffInvitasjoner).hasSize(1)
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -204,7 +204,7 @@ class RekrutteringstreffInvitasjonTest {
             )
         )
 
-        val actualRekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val actualRekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(actualRekrutteringstreffInvitasjoner).hasSize(1)
         assertThat(actualRekrutteringstreffInvitasjoner.first()).usingRecursiveComparison().isEqualTo(expectedRekrutteringstreffInvitasjoner.first())
         val inspektør = rapid.inspektør

@@ -397,7 +397,77 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         opprettetTidspunkt: String,
         arbeidsgiver: String,
         arbeidssted: String
-    ) {
-        TODO()
+    ): UUID? {
+        val aktivitetskortId = UUID.randomUUID()
+
+        dataSource.connection.use { connection ->
+            try {
+                connection.autoCommit = false
+
+                val endredeLinjer = connection.prepareStatement(
+                    """
+                    INSERT INTO delt_stilling (aktivitetskort_id, fnr, stilling_id)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (stilling_id, fnr) DO NOTHING
+                    """.trimIndent()
+                ).apply {
+                    setObject(1, aktivitetskortId)
+                    setString(2, fnr)
+                    setObject(3, UUID.fromString(stillingId))
+                }.executeUpdate()
+
+                if (endredeLinjer == 0) {
+                    connection.rollback()
+                    secureLog.info("Aktivitetskort finnes allerede for stilling $stillingId og fnr")
+                    return null
+                }
+
+                connection.prepareStatement(
+                    """
+                    INSERT INTO aktivitetskort (
+                        fnr, tittel, beskrivelse, message_id, aktivitetskort_id, aktivitets_status,
+                        endret_av, endret_av_type, endret_tidspunkt, detaljer, handlinger, etiketter,
+                        oppgave, action_type, avtalt_med_nav
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}',
+                        ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json,
+                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false
+                    )
+                    """.trimIndent()
+                ).apply {
+                    setString(1, fnr)
+                    setString(2, tittel)
+                    setString(
+                        3,
+                        "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
+                    )
+                    setObject(4, UUID.randomUUID())
+                    setObject(5, aktivitetskortId)
+                    setString(6, opprettetAv)
+                    setObject(7, ZonedDateTime.parse(opprettetTidspunkt).toOffsetDateTime())
+                    setString(
+                        8,
+                        objectMapper.writeValueAsString(
+                            listOf(
+                                AktivitetskortDetalj("Arbeidsgiver", arbeidsgiver),
+                                AktivitetskortDetalj("Arbeidssted", arbeidssted),
+                            )
+                        )
+                    )
+                    setString(9, "[]")
+                    setString(10, "[]")
+                    setNull(11, VARCHAR)
+                }.executeUpdate()
+
+                connection.commit()
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
+            } finally {
+                connection.autoCommit = true
+            }
+        }
+
+        return aktivitetskortId
     }
 }

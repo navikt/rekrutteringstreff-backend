@@ -194,7 +194,7 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val invitasjon = testRepository.hentAlle()[0]
+        val invitasjon = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0]
         val messageId = invitasjon.messageId
 
         val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
@@ -233,7 +233,7 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
 
         val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
@@ -262,7 +262,7 @@ class AktivitetskortTest {
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
         val timestamp = ZonedDateTime.now()
         val failingMessage = """{"messageId":"$messageId"}"""
         val errorMessage = "DuplikatMeldingFeil Melding allerede handtert, ignorer"
@@ -281,7 +281,7 @@ class AktivitetskortTest {
     """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
         jobb.run()
-        val meldinger = testRepository.hentAlle()
+        val meldinger = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(meldinger).hasSize(1)
         assertThat(meldinger[0].feil).isNotNull
         meldinger[0].feil!!.apply {
@@ -299,7 +299,7 @@ class AktivitetskortTest {
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
 
         val jobb = AktivitetskortFeilJobb(repository,consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
@@ -314,7 +314,7 @@ class AktivitetskortTest {
         """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
         jobb.run()
-        val meldinger = testRepository.hentAlle()
+        val meldinger = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(meldinger).hasSize(1)
         assertThat(meldinger[0].feil).isNull()
     }
@@ -322,7 +322,7 @@ class AktivitetskortTest {
     @Test
     fun `feilkø-hendelse skal føre til melding på rapid`() {
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val invitasjon = testRepository.hentAlle().first()
+        val invitasjon = testRepository.hentAlleRekrutteringstreffInvitasjoner().first()
         val errorMessage = "Duplikat prøvd opprettet"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
         repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
@@ -347,7 +347,7 @@ class AktivitetskortTest {
     @Test
     fun `feilkø-hendelse skal bare sendes 1 gang på rapid`() {
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val invitasjon = testRepository.hentAlle().first()
+        val invitasjon = testRepository.hentAlleRekrutteringstreffInvitasjoner().first()
         val errorMessage = "Duplikat prøvd opprettet"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
         repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
@@ -369,7 +369,7 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
 
         val gyldigMelding = """
             {
@@ -392,7 +392,7 @@ class AktivitetskortTest {
         val committedOffset = consumer.committed(setOf(topicPartition))[topicPartition]?.offset()
         assertThat(committedOffset).isEqualTo(1L)
 
-        val lagredeFeilmeldinger = testRepository.hentAlle().mapNotNull { it.feil }
+        val lagredeFeilmeldinger = testRepository.hentAlleRekrutteringstreffInvitasjoner().mapNotNull { it.feil }
         assertThat(lagredeFeilmeldinger).hasSize(1)
     }
 
@@ -404,7 +404,7 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
 
         val gyldigMelding = """
             {
@@ -444,7 +444,7 @@ class AktivitetskortTest {
         val committedOffset = consumer.committed(setOf(topicPartition))[topicPartition]?.offset()
         assertThat(committedOffset).isEqualTo(0L)
 
-        val lagredeFeilmeldinger = testRepository.hentAlle().mapNotNull { it.feil }
+        val lagredeFeilmeldinger = testRepository.hentAlleRekrutteringstreffInvitasjoner().mapNotNull { it.feil }
         assertThat(lagredeFeilmeldinger).isEmpty()
     }
 }
