@@ -48,6 +48,7 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
                         opprettetAvType = resultSet.getString("endret_av_type"),
                         opprettetTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toZonedDateTime(),
                         messageId = UUID.fromString(resultSet.getString("message_id")),
+                        aktivitetsType = resultSet.getString("aktivitetskort_type"),
                         feil = resultSet.getString("failing_message")?.let { failingMessage ->
                             AktivitetskortFeil(
                                 timestamp = resultSet.getTimestamp("timestamp").toZonedDateTime(),
@@ -90,6 +91,7 @@ class TestRepository(private val databaseConfig: DatabaseConfig) {
                         opprettetAvType = resultSet.getString("endret_av_type"),
                         opprettetTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toZonedDateTime(),
                         messageId = UUID.fromString(resultSet.getString("message_id")),
+                        aktivitetsType = resultSet.getString("aktivitetskort_type"),
                         feil = resultSet.getString("failing_message")?.let { failingMessage ->
                             AktivitetskortFeil(
                                 timestamp = resultSet.getTimestamp("timestamp").toZonedDateTime(),
@@ -123,6 +125,7 @@ class RekrutteringstreffInvitasjon(
     val opprettetAvType: String,
     val opprettetTidspunkt: ZonedDateTime,
     val messageId: UUID,
+    val aktivitetsType: String,
     val feil: AktivitetskortFeil?
 )
 class AktivitetskortFeil(
@@ -147,5 +150,6 @@ class RekrutteringsbistandStilling(
     val opprettetAvType: String,
     val opprettetTidspunkt: ZonedDateTime,
     val messageId: UUID,
+    val aktivitetsType: String,
     val feil: AktivitetskortFeil?
 )

@@ -5,6 +5,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
@@ -107,6 +108,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
+            assertThat(this[0].aktivitetsType).isEqualTo(AktivitetskortType.DELTSTILLING.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
         }
