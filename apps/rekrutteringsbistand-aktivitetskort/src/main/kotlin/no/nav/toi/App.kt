@@ -12,6 +12,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.SchedulerContext
 import no.nav.toi.aktivitetskort.scheduler
+import no.nav.toi.rekrutteringstreff.RekrutteringsbistandDelCvLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffSvarOgStatusLytter
@@ -68,6 +69,7 @@ class App(
 
     private fun startRapidsAndRivers() {
         log.info("Starter RapidsConnection")
+        RekrutteringsbistandDelCvLytter(rapidsConnection, repository)
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)

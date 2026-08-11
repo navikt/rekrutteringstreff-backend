@@ -388,4 +388,16 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
             }
         }
     }
+
+    fun opprettDeltStilling(
+        fnr: String,
+        stillingId: String,
+        tittel: String,
+        opprettetAv: String,
+        opprettetTidspunkt: String,
+        arbeidsgiver: String,
+        arbeidssted: String
+    ) {
+        TODO()
+    }
 }
