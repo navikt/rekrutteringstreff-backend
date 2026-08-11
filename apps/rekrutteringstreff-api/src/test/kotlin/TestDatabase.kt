@@ -206,6 +206,7 @@ class TestDatabase {
     fun opprettRekrutteringstreffMedEierOgKontor(
         navIdent: String = "A123456",
         tittel: String = "TestTreff",
+        beskrivelse: String = "En fin beskrivelse av treffet",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
         kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
         kontorId: String = "0315",
@@ -215,6 +216,7 @@ class TestDatabase {
         val treffId = opprettRekrutteringstreffMedAlleFelter(
             navIdent = navIdent,
             tittel = tittel,
+            beskrivelse = beskrivelse,
             kategori = kategori,
             status = status,
             opprettetAvNavkontorEnhetId = kontorId,

@@ -28,6 +28,7 @@ class RekrutteringstreffSokService(
             kontorer = request.kontorer,
             fylkesnumre = request.fylkesnumre,
             kommunenumre = request.kommunenumre,
+            fritekst = request.fritekst,
             visning = request.visning,
             sortering = request.sortering,
             side = request.side,
@@ -48,7 +49,7 @@ class RekrutteringstreffSokService(
         val varighetMs = Duration.ofNanos(System.nanoTime() - startTidNanos).toMillis()
         if (varighetMs > TREGT_SOK_TERSKEL_MS) {
             logger.warn(
-                "Rekrutteringstreff-søk brukte {} ms: visning={}, sortering={}, side={}, antallPerSide={}, antallKategorier={}, antallStatuser={}, antallKontorer={}, antallTotalt={}",
+                "Rekrutteringstreff-søk brukte {} ms: visning={}, sortering={}, side={}, antallPerSide={}, antallKategorier={}, antallStatuser={}, antallKontorer={}, antallTegnFritekst={}, antallTotalt={}",
                 varighetMs,
                 request.visning.jsonVerdi,
                 request.sortering.jsonVerdi,
@@ -57,6 +58,7 @@ class RekrutteringstreffSokService(
                 request.kategorier?.size ?: 0,
                 request.statuser?.size ?: 0,
                 request.kontorer?.size ?: 0,
+                request.fritekst?.length ?: 0,
                 resultat.antallTotalt,
             )
         }

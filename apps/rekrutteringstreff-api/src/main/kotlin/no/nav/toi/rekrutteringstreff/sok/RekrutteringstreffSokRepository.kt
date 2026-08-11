@@ -21,6 +21,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kontorer: List<String>?,
         fylkesnumre: List<String>?,
         kommunenumre: List<String>?,
+        fritekst: String?,
         visning: Visning,
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
@@ -35,6 +36,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = kommunenumre,
+            fritekst = fritekst,
             visning = visning,
         )
         val (whereForStatusaggregering, paramsForStatusaggregering) = byggWhere(
@@ -46,6 +48,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = kommunenumre,
+            fritekst = fritekst,
             visning = visning,
         )
 
@@ -58,6 +61,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = fritekst,
             visning = visning,
         )
 
@@ -70,6 +74,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = null,
+            fritekst = fritekst,
             visning = visning,
         )
 
@@ -82,6 +87,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = kommunenumre,
+            fritekst = fritekst,
             visning = visning,
         )
 
@@ -310,6 +316,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kontorer: List<String>?,
         fylkesnumre: List<String>?,
         kommunenumre: List<String>?,
+        fritekst: String?,
         visning: Visning,
     ): Pair<String, List<SqlParam>> {
         val conditions = listOfNotNull(
@@ -321,6 +328,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             byggKontorCondition(kontorer),
             byggFylkesnummerCondition(fylkesnumre),
             byggKommunenummerCondition(kommunenumre),
+            byggFritekstCondition(fritekst),
         )
 
         val whereClause = conditions
@@ -441,6 +449,26 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         return Condition(
             clause = "kommunenummer = ANY(?::text[])",
             params = listOf(SqlParam(kommunenumre, ParamType.STRING_ARRAY)),
+        )
+    }
+
+    private fun byggFritekstCondition(fritekst: String?): Condition? {
+        val normalisertFritekst = fritekst?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return Condition(
+            clause = """
+            rekrutteringstreff_id IN (
+                SELECT rekrutteringstreff_id FROM rekrutteringstreff
+                 WHERE sok_tsv @@ websearch_to_tsquery('norwegian', ?)
+                UNION
+                SELECT rekrutteringstreff_id FROM arbeidsgiver
+                 WHERE status = 'AKTIV'
+                   AND sok_tsv @@ websearch_to_tsquery('norwegian', ?)
+            )
+        """.trimIndent(),
+            params = listOf(
+                SqlParam(normalisertFritekst, ParamType.STRING),
+                SqlParam(normalisertFritekst, ParamType.STRING),
+            ),
         )
     }
 
