@@ -10,6 +10,11 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.LocalDate
 import java.time.ZonedDateTime
 
+enum class AktivitetskortType {
+    REKRUTTERINGSTREFF,
+    DELTSTILLING,
+}
+
 class Aktivitetskort (
     private val dabAktivitetskortTopic: String,
     private val repository: Repository,
@@ -30,7 +35,8 @@ class Aktivitetskort (
     private val endretAv: String,
     private val endretAvType: EndretAvType,
     private val endretTidspunkt: ZonedDateTime,
-    private val sendtTidspunkt: ZonedDateTime?
+    private val sendtTidspunkt: ZonedDateTime?,
+    private val aktivitetskortType: AktivitetskortType,
 ) {
 
     fun send(producer: Producer<String, String>) {
@@ -51,7 +57,7 @@ class Aktivitetskort (
         val melding = AkaasMelding(
             messageId = messageId,
             source = "REKRUTTERINGSBISTAND",
-            aktivitetskortType = "REKRUTTERINGSTREFF",
+            aktivitetskortType = aktivitetskortType.name,
             actionType = actionType.name,
             aktivitetskort = AkaasAktivitetskort(
                 id = aktivitetskortId,
