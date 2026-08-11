@@ -91,6 +91,7 @@ class AutentiseringAlleEndepunkterTest {
         HentJobbsøkerHendelser(Metode.GET, "/api/rekrutteringstreff/{id}/jobbsoker/hendelser"),
         InviterJobbsøkere(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/inviter"),
         FormidlingEgne(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/egne"),
+        FormidlingMittKontor(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/mittkontor"),
         FormidlingAlle(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/alle"),
 
         // JobbsøkerInnloggetBorgerController
@@ -112,6 +113,7 @@ class AutentiseringAlleEndepunkterTest {
         OpprettFormidling(Metode.POST, "/api/rekrutteringstreff/{id}/formidling"),
         HentAlleFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/alle"),
         HentEgneFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/egne"),
+        HentMittKontoreFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/mittkontor"),
         SlettFormidling(Metode.DELETE, "/api/rekrutteringstreff/{id}/formidling/{formidlingId}"),
 
         // Statistikk controller

@@ -31,6 +31,15 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         return hentJobbsøkereMedWhere(where, request)
     }
 
+    fun hentForMittKontorForFormidling(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        tilknyttedeEnheter: List<String>,
+    ): JobbsøkerFormidlingRespons {
+        val where = byggJobbsøkerWhereForMittKontor(treffId, request, tilknyttedeEnheter)
+        return hentJobbsøkereMedWhere(where, request)
+    }
+
     private fun hentJobbsøkereMedWhere(
         where: WhereClause,
         request: JobbsøkerFormidlingRequest,
@@ -74,6 +83,15 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         return tilWhereClause(conditions)
     }
 
+    private fun byggJobbsøkerWhereForMittKontor(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        tilknyttedeEnheter: List<String>,
+    ): WhereClause {
+        val conditions = byggJobbsøkerBasisFilter(treffId, request) + byggEnhetFilter(tilknyttedeEnheter)
+        return tilWhereClause(conditions)
+    }
+
     private fun byggJobbsøkerBasisFilter(
         treffId: TreffId,
         request: JobbsøkerFormidlingRequest,
@@ -102,11 +120,17 @@ class JobbsøkerFormidlingSokRepository(private val dataSource: DataSource) {
         veilederNavIdent: String,
         tilknyttedeEnheter: List<String>,
     ): Condition {
-        val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
-
+        val enhetFilter = byggEnhetFilter(tilknyttedeEnheter)
         return Condition(
-            "(UPPER(j.veileder_navident) = ? OR j.kontornummer = ANY (?::text[]))",
-            SqlParam.Text(veilederNavIdent.trim().uppercase()),
+            "(UPPER(j.veileder_navident) = ? OR ${enhetFilter.sql})",
+            listOf(SqlParam.Text(veilederNavIdent.trim().uppercase())) + enhetFilter.params,
+        )
+    }
+
+    private fun byggEnhetFilter(tilknyttedeEnheter: List<String>): Condition {
+        val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+        return Condition(
+            "j.kontornummer = ANY (?::text[])",
             SqlParam.TextArray(unikeEnheter),
         )
     }

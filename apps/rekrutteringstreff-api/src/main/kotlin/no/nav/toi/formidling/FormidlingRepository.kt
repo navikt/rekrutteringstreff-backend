@@ -206,6 +206,21 @@ class FormidlingRepository(private val dataSource: DataSource) {
         return hentMedWhere(where, sortering, retning)
     }
 
+    fun hentForMittKontorForTreff(
+        treffId: TreffId,
+        tilknyttedeEnheter: List<String>,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> {
+        val where = tilWhereClause(
+            byggBasisFilter(treffId)
+                + byggKontorFilter(tilknyttedeEnheter)
+                + byggArbeidsgiverFilter(arbeidsgivere)
+        )
+        return hentMedWhere(where, sortering, retning)
+    }
+
     private fun hentMedWhere(
         where: WhereClause,
         sortering: FormidlingSortering,
@@ -326,6 +341,12 @@ class FormidlingRepository(private val dataSource: DataSource) {
         val orgnr = arbeidsgivere.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
         if (orgnr.isEmpty()) return emptyList()
         return listOf(Condition("ag.orgnr = ANY (?::text[])", SqlParam.TextArray(orgnr)))
+    }
+
+    private fun byggKontorFilter(tilknyttedeEnheter: List<String>): List<Condition> {
+        val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+        if (unikeEnheter.isEmpty()) return listOf(Condition("FALSE"))
+        return listOf(Condition("f.kontornummer = ANY (?::text[])", SqlParam.TextArray(unikeEnheter)))
     }
 
     private fun tilWhereClause(conditions: List<Condition>): WhereClause = WhereClause(
