@@ -1,7 +1,6 @@
 package no.nav.toi.aktivitetskort
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.type.TypeReference
 import no.nav.toi.Repository
 import no.nav.toi.objectMapper
@@ -79,28 +78,6 @@ class Aktivitetskort (
         return objectMapper.writeValueAsString(melding)
     }
 
-        class AktivitetskortFeil(
-            private val aktivitetskortHendelse: Aktivitetskort,
-            private val rekrutteringstreffId: String,
-            private val errorMessage: String,
-            private val errorType: ErrorType
-        ) {
-            fun sendTilRapid(rapidPublish: (String, String) -> Unit) {
-                val melding = AkaasFeilMelding(
-                    eventName = "aktivitetskort-feil",
-                    fnr = aktivitetskortHendelse.fnr,
-                    aktivitetskortId = aktivitetskortHendelse.aktivitetskortId,
-                    rekrutteringstreffId = rekrutteringstreffId,
-                    endretAv = aktivitetskortHendelse.endretAv,
-                    messageId = aktivitetskortHendelse.messageId,
-                    errorMessage = errorMessage,
-                    errorType = errorType.name,
-                    timestamp = ZonedDateTime.now().toString(),
-                )
-                rapidPublish(aktivitetskortHendelse.fnr, objectMapper.writeValueAsString(melding))
-                aktivitetskortHendelse.repository.markerFeilkøhendelseSomSendt(aktivitetskortHendelse.messageId)
-            }
-        }
 }
 
 private class AkaasMelding(
@@ -131,18 +108,6 @@ private class AkaasAktivitetskort(
 private class AkaasEndretAv(
     val ident: String,
     val identType: String,
-)
-
-private class AkaasFeilMelding(
-    @get:JsonProperty("@event_name") val eventName: String,
-    val fnr: String,
-    val aktivitetskortId: String,
-    val rekrutteringstreffId: String,
-    val endretAv: String,
-    val messageId: String,
-    val errorMessage: String,
-    val errorType: String,
-    val timestamp: String,
 )
 
 class AktivitetskortDetalj(

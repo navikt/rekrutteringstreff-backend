@@ -182,50 +182,63 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         }
     }
 
-    fun hentUsendteFeilkøHendelser(): List<Aktivitetskort.AktivitetskortFeil> =
+    fun hentUsendteFeilkøHendelser(): List<AktivitetskortFeil> =
         dataSource.connection.use { connection ->
             connection.prepareStatement(
                 """
-            SELECT af.*, a.*, rt.rekrutteringstreff_id
+            SELECT
+                af.message_id,
+                af.error_message,
+                af.error_type,
+                a.aktivitetskort_id,
+                a.fnr,
+                a.endret_av,
+                a.aktivitetskort_type,
+                rt.rekrutteringstreff_id,
+                ds.stilling_id
             FROM aktivitetskort_hendelse_feil af
             JOIN aktivitetskort a ON af.message_id = a.message_id
-            JOIN rekrutteringstreff rt ON a.aktivitetskort_id = rt.aktivitetskort_id
+            LEFT JOIN rekrutteringstreff rt ON a.aktivitetskort_id = rt.aktivitetskort_id
+            LEFT JOIN delt_stilling ds ON a.aktivitetskort_id = ds.aktivitetskort_id
             WHERE af.sendt_tidspunkt IS NULL
             """.trimIndent()
             ).executeQuery().use { resultSet ->
                 generateSequence {
                     if (resultSet.next()) {
-                        Aktivitetskort.AktivitetskortFeil(
-                            Aktivitetskort(
-                                dabAktivitetskortTopic = dabAktivitetskortTopic,
-                                repository = this,
-                                messageId = resultSet.getObject("message_id", UUID::class.java).toString(),
-                                aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java)
-                                    .toString(),
-                                fnr = resultSet.getString("fnr"),
-                                tittel = resultSet.getString("tittel"),
-                                beskrivelse = resultSet.getString("beskrivelse"),
-                                startDato = resultSet.getTimestamp("start_dato").toLocalDateTime().toLocalDate(),
-                                sluttDato = resultSet.getTimestamp("slutt_dato").toLocalDateTime().toLocalDate(),
-                                actionType = resultSet.getString("action_type").let(::enumValueOf),
-                                endretAv = resultSet.getString("endret_av"),
-                                endretAvType = resultSet.getString("endret_av_type").let(::enumValueOf),
-                                endretTidspunkt = resultSet.getTimestamp("endret_tidspunkt").toInstant().atOslo(),
-                                aktivitetsStatus = resultSet.getString("aktivitets_status").let(::enumValueOf),
-                                detaljer = AktivitetskortDetalj.fraAkaasJson(resultSet.getString("detaljer")),
-                                handlinger = AktivitetskortHandling.fraAkaasJson(resultSet.getString("handlinger")),
-                                etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
-                                oppgave = resultSet.getString("oppgave")
-                                    ?.let { AktivitetskortOppgave.fraAkaasJson(it) },
-                                avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
-                                sendtTidspunkt = null,
-                                aktivitetskortType = resultSet.getString("aktivitetskort_type").let(::enumValueOf),
-                            ),
-                            rekrutteringstreffId = resultSet.getObject("rekrutteringstreff_id", UUID::class.java)
-                                .toString(),
-                            errorMessage = resultSet.getString("error_message"),
-                            errorType = resultSet.getString("error_type").let(::enumValueOf),
+                        val messageId = resultSet.getObject("message_id", UUID::class.java).toString()
+                        val aktivitetskortId = resultSet.getObject("aktivitetskort_id", UUID::class.java).toString()
+                        val fnr = resultSet.getString("fnr")
+                        val endretAv = resultSet.getString("endret_av")
+                        val errorMessage = resultSet.getString("error_message")
+                        val errorType = resultSet.getString("error_type")
+                        val aktivitetskortType = resultSet.getString("aktivitetskort_type")
+
+                        val fellesMeldingsfelter = FellesMeldingsfelter(
+                            messageId = messageId,
+                            fnr = fnr,
+                            aktivitetskortId = aktivitetskortId,
+                            endretAv = endretAv,
+                            errorMessage = errorMessage,
+                            errorType = errorType,
+                            aktivitetskortType = aktivitetskortType,
+                            timestamp = ZonedDateTime.now().toString()
                         )
+                        when (aktivitetskortType.let<_, AktivitetskortType>(::enumValueOf)) {
+                            AktivitetskortType.REKRUTTERINGSTREFF -> RekrutteringstreffFeilMelding(
+                                fellesMeldingsfelter = fellesMeldingsfelter,
+                                rekrutteringstreffId = resultSet
+                                    .getObject("rekrutteringstreff_id", UUID::class.java)
+                                    ?.toString()
+                                    ?: error("Mangler rekrutteringstreffId for aktivitetskort $aktivitetskortId"),
+                            )
+
+                            AktivitetskortType.DELTSTILLING -> DeltStillingFeilMelding(
+                                fellesMeldingsfelter = fellesMeldingsfelter,
+                                stillingId = resultSet.getObject("stilling_id", UUID::class.java)
+                                    ?.toString()
+                                    ?: error("Mangler stillingId for aktivitetskort $aktivitetskortId"),
+                            )
+                        }
                     } else {
                         null
                     }

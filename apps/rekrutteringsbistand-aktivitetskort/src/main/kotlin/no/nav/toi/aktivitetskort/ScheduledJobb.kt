@@ -180,7 +180,7 @@ class AktivitetskortFeilJobb(
     fun sendFeilKøHendelserPåRapid() {
         log.info("Skal sende usendte feilKøHendelser på rapid")
         repository.hentUsendteFeilkøHendelser().forEach { usendtFeil ->
-            usendtFeil.sendTilRapid(rapidPublish)
+            usendtFeil.sendTilRapid(rapidPublish, repository::markerFeilkøhendelseSomSendt)
         }
     }
 

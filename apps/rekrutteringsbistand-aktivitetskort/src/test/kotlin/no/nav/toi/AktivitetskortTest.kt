@@ -333,7 +333,7 @@ class AktivitetskortTest {
         AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).run()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
-            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
+            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-rekrutteringstreff")
             assertThat(this["fnr"].asText()).isEqualTo(invitasjon.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(invitasjon.aktivitetskortId.toString())
             assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
@@ -370,7 +370,7 @@ class AktivitetskortTest {
 
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
-            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
+            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-deltstilling")
             assertThat(this["fnr"].asText()).isEqualTo(deltStilling.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(deltStilling.aktivitetskortId.toString())
             assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELTSTILLING.name)
