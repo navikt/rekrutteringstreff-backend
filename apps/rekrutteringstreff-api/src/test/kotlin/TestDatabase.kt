@@ -14,6 +14,7 @@ import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
+import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.OffsetDateTime
@@ -227,30 +228,35 @@ class TestDatabase {
         return treffId
     }
 
+    /**
+     * Én TRUNCATE framfor én DELETE per tabell: Postgres slipper å gå gjennom radene,
+     * og tømmingen tar konstant tid uansett hvor mye testen har seedet.
+     *
+     * Tabellene hentes fra katalogen slik at en ny Flyway-migrasjon ikke kan bli
+     * glemt her. Blir en tabell stående igjen, lekker data over i neste test og gir
+     * feil som avhenger av rekkefølgen testene kjøres i.
+     */
     fun slettAlt() = dataSource.connection.use { conn ->
-        conn.prepareStatement("DELETE FROM formidling_hendelse").executeUpdate()
-        conn.prepareStatement("DELETE FROM formidling").executeUpdate()
-        conn.prepareStatement("DELETE FROM aktivitetskort_polling").executeUpdate()
-        conn.prepareStatement("DELETE FROM vurdering_notat").executeUpdate()
-        conn.prepareStatement("DELETE FROM vurdering").executeUpdate()
-        conn.prepareStatement("DELETE FROM intervju_fordeling").executeUpdate()
-        conn.prepareStatement("DELETE FROM interesse").executeUpdate()
-        conn.prepareStatement("DELETE FROM arbeidsgiver_rotasjon").executeUpdate()
-        conn.prepareStatement("DELETE FROM jobbsoker_rom_tildeling").executeUpdate()
-        conn.prepareStatement("DELETE FROM deltakernummer").executeUpdate()
-        conn.prepareStatement("DELETE FROM moteoppsett").executeUpdate()
-        conn.prepareStatement("DELETE FROM treffgjennomforing").executeUpdate()
-        conn.prepareStatement("DELETE FROM jobbsoker_hendelse").executeUpdate()
-        conn.prepareStatement("DELETE FROM arbeidsgiver_hendelse").executeUpdate()
-        conn.prepareStatement("DELETE FROM arbeidsgivers_behov").executeUpdate()
-        conn.prepareStatement("DELETE FROM rekrutteringstreff_hendelse").executeUpdate()
-        conn.prepareStatement("DELETE FROM naringskode").executeUpdate()
-        conn.prepareStatement("DELETE FROM innlegg").executeUpdate()
-        conn.prepareStatement("DELETE FROM arbeidsgiver").executeUpdate()
-        conn.prepareStatement("DELETE FROM jobbsoker").executeUpdate()
-        conn.prepareStatement("DELETE FROM ki_spørring_logg").executeUpdate()
-        conn.prepareStatement("DELETE FROM rekrutteringstreff").executeUpdate()
+        val tabeller = tabellerSomKanTømmes(conn)
+        if (tabeller.isNotEmpty()) {
+            conn.createStatement().use { it.execute("TRUNCATE TABLE $tabeller CASCADE") }
+        }
     }
+
+    private fun tabellerSomKanTømmes(conn: Connection): String =
+        conn.prepareStatement(
+            """
+            SELECT quote_ident(table_name)
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_type = 'BASE TABLE'
+              AND table_name <> 'flyway_schema_history'
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.executeQuery().use { rs ->
+                generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+            }
+        }.joinToString(", ")
 
     fun settSynlighet(personTreffId: PersonTreffId, erSynlig: Boolean) = dataSource.connection.use { conn ->
         conn.prepareStatement("UPDATE jobbsoker SET er_synlig = ? WHERE id = ?").apply {
