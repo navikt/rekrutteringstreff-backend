@@ -411,7 +411,6 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         stillingId: String,
         tittel: String,
         opprettetAv: String,
-        opprettetTidspunkt: String,
         arbeidsgiver: String,
         arbeidssted: String
     ): UUID? {
@@ -461,7 +460,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     setObject(4, UUID.randomUUID())
                     setObject(5, aktivitetskortId)
                     setString(6, opprettetAv)
-                    setObject(7, ZonedDateTime.parse(opprettetTidspunkt).toOffsetDateTime())
+                    setObject(7, ZonedDateTime.now().toLocalDateTime())
                     setString(
                         8,
                         objectMapper.writeValueAsString(

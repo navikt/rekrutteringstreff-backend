@@ -25,10 +25,7 @@ class RekrutteringsbistandDelCvLytter(
                 it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
-                it.requireKey(
-                    "fnr", "stillingId", "tittel",
-                    "opprettetAv", "opprettetTidspunkt", "arbeidsgiver", "arbeidssted"
-                )
+                it.requireKey("fnr", "stillingId", "tittel", "opprettetAv", "arbeidsgiver", "arbeidssted")
             }
 
         }.register(this)
@@ -43,7 +40,6 @@ class RekrutteringsbistandDelCvLytter(
         val stillingId = packet["stillingId"].asText()
         val tittel = packet["tittel"].asText()
         val opprettetAv = packet["opprettetAv"].asText()
-        val opprettetTidspunkt = packet["opprettetTidspunkt"].asText()
         val arbeidsgiver = packet["arbeidsgiver"].asText()
         val arbeidssted = packet["arbeidssted"].asText()
 
@@ -52,7 +48,6 @@ class RekrutteringsbistandDelCvLytter(
             stillingId,
             tittel,
             opprettetAv,
-            opprettetTidspunkt,
             arbeidsgiver,
             arbeidssted
         )?.let { aktivitetskortId ->

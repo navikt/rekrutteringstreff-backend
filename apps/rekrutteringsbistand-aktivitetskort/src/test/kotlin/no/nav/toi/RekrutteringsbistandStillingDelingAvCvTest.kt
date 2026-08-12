@@ -90,7 +90,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
                 stillingId,
                 tittel,
                 opprettetAv,
-                opprettetTidspunkt,
                 arbeidsGiver,
                 arbeidssted
             )
@@ -110,7 +109,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].aktivitetsType).isEqualTo(AktivitetskortType.DELTSTILLING.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
-            assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
+            assertThat(this[0].opprettetTidspunkt).isBetween(opprettetTidspunkt, ZonedDateTime.now())
         }
     }
 
@@ -120,7 +119,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val stillingId = UUID.randomUUID()
         val tittel = "Test Stilling"
         val opprettetAv = "testuser"
-        val opprettetTidspunkt = ZonedDateTime.now()
         val arbeidsGiver = "LINE LOTTE LIFESTYLE LINE LOTTE TANGEN"
         val arbeidssted = "Viken"
 
@@ -130,7 +128,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
                 stillingId,
                 tittel,
                 opprettetAv,
-                opprettetTidspunkt,
                 arbeidsGiver,
                 arbeidssted
             )
@@ -143,7 +140,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
                 stillingId,
                 tittel,
                 opprettetAv,
-                opprettetTidspunkt,
                 arbeidsGiver,
                 arbeidssted
             )
@@ -162,7 +158,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         val stillingId = UUID.randomUUID()
         val tittel = "Test Stilling"
         val opprettetAv = "testuser"
-        val opprettetTidspunkt = ZonedDateTime.now()
         val arbeidsgiver = "LINE LOTTE LIFESTYLE LINE LOTTE TANGEN"
         val arbeidssted = "Viken"
 
@@ -172,7 +167,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
                 stillingId,
                 tittel,
                 opprettetAv,
-                opprettetTidspunkt,
                 arbeidsgiver,
                 arbeidssted
             )
@@ -186,7 +180,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(message["stillingId"].asText()).isEqualTo(stillingId.toString())
             assertThat(message["tittel"].asText()).isEqualTo(tittel)
             assertThat(message["opprettetAv"].asText()).isEqualTo(opprettetAv)
-            assertThat(message["opprettetTidspunkt"].asText()).isEqualTo(opprettetTidspunkt.toString())
+            assertThat(message["opprettetTidspunkt"].isMissingNode()).isFalse
             assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
             assertThat(message["arbeidssted"].asText()).isEqualTo(arbeidssted)
             assertThat(message["arbeidsgiver"].asText()).isEqualTo(arbeidsgiver)
@@ -197,7 +191,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         stillingId: UUID,
         tittel: String,
         opprettetAv: String,
-        opprettetTidspunkt: ZonedDateTime,
         arbeidsgiver: String,
         arbeidssted: String,
     ): String = """
@@ -207,7 +200,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "stillingId":"$stillingId",
             "tittel": "$tittel",
             "opprettetAv": "$opprettetAv",
-            "opprettetTidspunkt": "$opprettetTidspunkt",
             "arbeidsgiver":"$arbeidsgiver",
             "arbeidssted":"$arbeidssted"
         }

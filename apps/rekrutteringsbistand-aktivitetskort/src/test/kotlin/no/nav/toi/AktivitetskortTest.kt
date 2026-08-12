@@ -128,7 +128,6 @@ class AktivitetskortTest {
         val expectedStillingId = UUID.randomUUID()
         val expectedTittel = "Teststilling"
         val expectedOpprettetAv = "testuser"
-        val expectedOpprettetTidspunkt = ZonedDateTime.now()
         val expectedArbeidsgiver = "Testarbeidsgiver"
         val expectedArbeidssted = "Oslo"
         val expectedAktivitetskortId = repository.opprettDeltStilling(
@@ -136,7 +135,6 @@ class AktivitetskortTest {
             stillingId = expectedStillingId.toString(),
             tittel = expectedTittel,
             opprettetAv = expectedOpprettetAv,
-            opprettetTidspunkt = expectedOpprettetTidspunkt.toString(),
             arbeidsgiver = expectedArbeidsgiver,
             arbeidssted = expectedArbeidssted,
         )
@@ -162,7 +160,7 @@ class AktivitetskortTest {
             )
             assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedOpprettetAv)
             assertThat(this["aktivitetskort"]["endretAv"]["identType"].asText()).isEqualTo("NAVIDENT")
-            assertThat(this["aktivitetskort"]["endretTidspunkt"].asText()).isEqualTo(expectedOpprettetTidspunkt.toString())
+            assertThat(this["aktivitetskort"]["endretTidspunkt"].isMissingNode()).isFalse
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
             val expectedDetaljer = objectMapper.readTree(
@@ -411,7 +409,6 @@ class AktivitetskortTest {
             stillingId = stillingId.toString(),
             tittel = "Teststilling",
             opprettetAv = "testuser",
-            opprettetTidspunkt = ZonedDateTime.now().toString(),
             arbeidsgiver = "Testarbeidsgiver",
             arbeidssted = "Oslo"
         )
