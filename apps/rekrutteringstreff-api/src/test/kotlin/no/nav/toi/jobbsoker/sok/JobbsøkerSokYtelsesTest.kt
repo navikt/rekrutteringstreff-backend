@@ -5,7 +5,6 @@ import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
-import org.junit.Ignore
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -121,7 +120,6 @@ class JobbsøkerSokYtelsesTest {
             return TreffId(treffUuid.toString())
         }
     }
-    @Ignore("Går sent, kan kjøres ved behov for ytelsestesting")
     @Test
     fun `søk med 10k jobbsøkere holder terskelverdier`() {
         val warmupRequest = JobbsøkerSøkRequest(
