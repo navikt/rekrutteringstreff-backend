@@ -122,6 +122,62 @@ class AktivitetskortTest {
     }
 
     @Test
+    fun `bestill aktivitetskort for delt stilling`() {
+        val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
+        val expectedFnr = "12345678910"
+        val expectedStillingId = UUID.randomUUID()
+        val expectedTittel = "Teststilling"
+        val expectedOpprettetAv = "testuser"
+        val expectedOpprettetTidspunkt = ZonedDateTime.now()
+        val expectedArbeidsgiver = "Testarbeidsgiver"
+        val expectedArbeidssted = "Oslo"
+        val expectedAktivitetskortId = repository.opprettDeltStilling(
+            fnr = expectedFnr,
+            stillingId = expectedStillingId.toString(),
+            tittel = expectedTittel,
+            opprettetAv = expectedOpprettetAv,
+            opprettetTidspunkt = expectedOpprettetTidspunkt.toString(),
+            arbeidsgiver = expectedArbeidsgiver,
+            arbeidssted = expectedArbeidssted,
+        )
+
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+
+        assertThat(expectedAktivitetskortId).isNotNull()
+        assertThat(producer.history()).hasSize(1)
+        val record = producer.history().first()
+        record.value().let(objectMapper::readTree).apply {
+            assertThat(this["messageId"].asText()).isNotBlank()
+            assertThat(this["source"].asText()).isEqualTo("REKRUTTERINGSBISTAND")
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELTSTILLING.name)
+            assertThat(this["actionType"].asText()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
+            assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
+            assertThat(this["aktivitetskort"]["personIdent"].asText()).isEqualTo(expectedFnr)
+            assertThat(this["aktivitetskort"]["tittel"].asText()).isEqualTo(expectedTittel)
+            assertThat(this["aktivitetskort"]["aktivitetStatus"].asText()).isEqualTo("FORSLAG")
+            assertThat(this["aktivitetskort"]["startDato"].isNull).isTrue()
+            assertThat(this["aktivitetskort"]["sluttDato"].isNull).isTrue()
+            assertThat(this["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(
+                "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
+            )
+            assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedOpprettetAv)
+            assertThat(this["aktivitetskort"]["endretAv"]["identType"].asText()).isEqualTo("NAVIDENT")
+            assertThat(this["aktivitetskort"]["endretTidspunkt"].asText()).isEqualTo(expectedOpprettetTidspunkt.toString())
+            assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
+            assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
+            val expectedDetaljer = objectMapper.readTree(
+                """[{"label":"Arbeidsgiver","verdi":"$expectedArbeidsgiver"},{"label":"Arbeidssted","verdi":"$expectedArbeidssted"}]"""
+            )
+            assertThat(this["aktivitetskort"]["detaljer"]).containsExactlyInAnyOrder(*expectedDetaljer.toList().toTypedArray())
+            assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
+            assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
+            assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
+            assertThat(this["aktivitetskort"]["handlinger"]).isEmpty()
+            assertThat(this["aktivitetskort"]["oppgave"].isNull).isTrue()
+        }
+    }
+
+    @Test
     fun `tittel med spesialtegn skal gi gyldig json og bevares uendret`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         val expectedFnr = "12345678910"
