@@ -119,6 +119,16 @@ class AutentiseringAlleEndepunkterTest {
         // Statistikk controller
         HentFåttJobbStatistikk(Metode.GET, "/api/rekrutteringstreff/statistikk/fatt-jobben"),
 
+        // TreffgjennomforingController
+        HentTreffgjennomforing(Metode.GET, "/api/rekrutteringstreff/{id}/treffgjennomforing-og-oppfolging"),
+        OppdaterOppmøte(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/oppmote"),
+        LagreMøteoppsett(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/moteoppsett"),
+        LagreRomfordeling(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/romfordeling"),
+        SettInteresse(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/interesse"),
+        LagreIntervjufordeling(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/intervjufordeling"),
+        FordelIntervjuer(Metode.POST, "/api/rekrutteringstreff/{id}/treffgjennomforing/intervjufordeling/fordel"),
+        LagreVurdering(Metode.PUT, "/api/rekrutteringstreff/{id}/oppfolging/vurderinger"),
+
     }
 
     private fun url(endepunkt: Endepunkt): String {

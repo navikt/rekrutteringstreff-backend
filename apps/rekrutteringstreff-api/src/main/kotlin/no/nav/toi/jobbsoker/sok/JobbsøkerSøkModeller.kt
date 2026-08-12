@@ -134,6 +134,22 @@ data class JobbsøkerSøkTreff(
     val lagtTilAvNavn: String?,
     val alder: Int?,
     val minsideHendelser: List<MinsideHendelseSøkDto> = emptyList(),
+    val oppmøte: OppmøteSammendragDto? = null,
+)
+
+/**
+ * Oppmøtet slik det er utledet av hendelsene, sammen med hva som forsvinner om
+ * det fjernes. Frontend konstruerer ikke tellingene selv.
+ */
+data class OppmøteSammendragDto(
+    val møtt: Boolean,
+    val registreringerSomSlettes: RegistreringerSammendragDto,
+)
+
+data class RegistreringerSammendragDto(
+    val interesser: Int,
+    val intervjuplasser: Int,
+    val vurderinger: Int,
 )
 
 data class MinsideHendelseSøkDto(

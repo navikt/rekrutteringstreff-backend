@@ -9,6 +9,9 @@ import io.javalin.http.HttpStatus
 import io.javalin.router.JavalinDefaultRoutingApi
 import io.opentelemetry.api.trace.Span
 import no.nav.toi.exception.*
+import no.nav.toi.treffgjennomforing.OppmøteHarRegistreringerException
+import no.nav.toi.treffgjennomforing.dto.KaskadeAdvarselDto
+import no.nav.toi.treffgjennomforing.dto.RegistreringerDto
 import java.sql.SQLException
 import java.time.LocalDateTime
 
@@ -134,6 +137,20 @@ object ExceptionMapping {
                     status = HttpStatus.CONFLICT,
                     ctx = ctx,
                     feil = e.message
+                )
+            )
+        }
+
+        exception(OppmøteHarRegistreringerException::class.java) { e, ctx ->
+            ctx.status(409).json(
+                KaskadeAdvarselDto(
+                    feil = "Jobbsøkeren har registreringer som slettes hvis oppmøtet fjernes.",
+                    hint = "Bekreft med bekreftSlettRegistreringer=true.",
+                    registreringer = RegistreringerDto(
+                        interesser = e.registreringer.interesser,
+                        intervjuplasser = e.registreringer.intervjuplasser,
+                        vurderinger = e.registreringer.vurderinger,
+                    ),
                 )
             )
         }

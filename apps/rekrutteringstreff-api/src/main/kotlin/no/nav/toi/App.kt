@@ -57,6 +57,7 @@ class App(
                 registrer(ctx.kiController)
                 registrer(ctx.formidlingController)
                 registrer(ctx.statistikkController)
+                registrer(ctx.treffgjennomforingController)
             }
         }
 

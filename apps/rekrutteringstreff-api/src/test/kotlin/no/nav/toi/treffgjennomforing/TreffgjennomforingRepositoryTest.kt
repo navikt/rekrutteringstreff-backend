@@ -1,0 +1,240 @@
+package no.nav.toi.treffgjennomforing
+
+import no.nav.toi.jobbsoker.Etternavn
+import no.nav.toi.jobbsoker.Fornavn
+import no.nav.toi.jobbsoker.Fødselsnummer
+import no.nav.toi.jobbsoker.LeggTilJobbsøker
+import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
+import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
+import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
+import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.TreffId
+import org.assertj.core.api.Assertions.assertThat
+import org.flywaydb.core.Flyway
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.UUID
+
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class TreffgjennomforingRepositoryTest {
+
+    private val db = TestDatabase()
+    private val kontekstRepository = TreffkontekstRepository()
+    private val lesRepository = TreffgjennomforingLesRepository()
+    private val skrivRepository = TreffgjennomforingSkrivRepository()
+    private val sokRepository = JobbsøkerSokRepository(db.dataSource)
+
+    /** TestDatabase starter bare containeren — skjemaet må opprettes her. */
+    @BeforeAll
+    fun migrer() {
+        Flyway.configure().dataSource(db.dataSource).load().migrate()
+    }
+
+    @AfterEach
+    fun reset() {
+        db.slettAlt()
+    }
+
+    @Test
+    fun `tomt aggregat har standardverdier og ingen lagrede rader`() {
+        val treff = opprettTreff()
+
+        val aggregat = les(treff)
+
+        assertThat(aggregat.fase).isEqualTo(TreffgjennomføringFase.OPPMØTE)
+        assertThat(aggregat.møteoppsett.starttidspunkt).isEqualTo(Treffgjennomføring.STANDARD_STARTTIDSPUNKT)
+        assertThat(aggregat.møteoppsett.varighetPerMøteMinutter).isEqualTo(10)
+        assertThat(aggregat.oppmøte).isEmpty()
+        assertThat(aggregat.rom).isEmpty()
+        assertThat(aggregat.vurderinger).isEmpty()
+    }
+
+    @Test
+    fun `siste oppmøtehendelse bestemmer tilstanden`() {
+        val treff = opprettTreff()
+        val person = jobbsøker(treff)
+
+        leggTilOppmøtehendelse(person, "MØTT_OPP", Instant.now().minusSeconds(60))
+        assertThat(les(treff).oppmøte).containsExactly(person)
+
+        leggTilOppmøtehendelse(person, "ANGRE_MØTT_OPP", Instant.now().minusSeconds(30))
+        assertThat(les(treff).oppmøte).isEmpty()
+
+        leggTilOppmøtehendelse(person, "MØTT_OPP", Instant.now())
+        assertThat(les(treff).oppmøte).containsExactly(person)
+    }
+
+    @Test
+    fun `ved likt tidspunkt avgjør hendelses-ID, ikke tilfeldig rekkefølge`() {
+        val treff = opprettTreff()
+        val person = jobbsøker(treff)
+        val samtidig = Instant.now()
+
+        leggTilOppmøtehendelse(person, "MØTT_OPP", samtidig)
+        leggTilOppmøtehendelse(person, "ANGRE_MØTT_OPP", samtidig)
+
+        // Den sist innsatte vinner, og svaret er det samme for hvert kall.
+        repeat(3) { assertThat(les(treff).oppmøte).isEmpty() }
+    }
+
+    @Test
+    fun `deltakernummer gjenbrukes aldri, men beholdes for samme person`() {
+        val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
+        val første = jobbsøker(treff, "11111111111")
+        val andre = jobbsøker(treff, "22222222222")
+
+        val nummerFørste = db.dataSource.connection.use { conn ->
+            val treffDbId = treffDbId(treff)
+            skrivRepository.tildelDeltakernummer(conn, treffDbId, jobbsøkerDbId(første))
+        }
+        val nummerFørsteIgjen = db.dataSource.connection.use { conn ->
+            skrivRepository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(første))
+        }
+        val nummerAndre = db.dataSource.connection.use { conn ->
+            skrivRepository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(andre))
+        }
+
+        assertThat(nummerFørste).isEqualTo(1)
+        assertThat(nummerFørsteIgjen).isEqualTo(1)
+        assertThat(nummerAndre).isEqualTo(2)
+    }
+
+    @Test
+    fun `romfordeling lagres med rekkefølge og leses tilbake`() {
+        val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
+        arbeidsgiver(treff, "999999991")
+        arbeidsgiver(treff, "999999992")
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        listOf(p1, p2).forEach { leggTilOppmøtehendelse(it, "MØTT_OPP", Instant.now()) }
+
+        db.dataSource.connection.use { conn ->
+            val kontekst = kontekstRepository.hent(conn, treff)!!
+            skrivRepository.erstattRomfordeling(
+                conn, kontekst.treffDbId,
+                listOf(Rom(1, listOf(p2, p1)), Rom(2, emptyList())),
+                kontekst,
+            )
+        }
+
+        val rom = les(treff).rom
+        assertThat(rom).hasSize(2)
+        assertThat(rom.first { it.romnummer == 1 }.jobbsøkere).containsExactly(p2, p1)
+        assertThat(rom.first { it.romnummer == 2 }.jobbsøkere).isEmpty()
+    }
+
+    @Test
+    fun `jobbsøkersøket beriker bare personene på den returnerte siden`() {
+        val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
+        val personer = (1..5).map { jobbsøker(treff, "1111111111$it", etternavn = "Person$it") }
+        personer.forEach { leggTilOppmøtehendelse(it, "MØTT_OPP", Instant.now()) }
+
+        val side = sokRepository.sok(treff, JobbsøkerSøkRequest(side = 1, antallPerSide = 2))
+
+        assertThat(side.totalt).isEqualTo(5L)
+        assertThat(side.jobbsøkere).hasSize(2)
+        side.jobbsøkere.forEach { treffrad ->
+            assertThat(treffrad.oppmøte).isNotNull
+            assertThat(treffrad.oppmøte!!.møtt).isTrue()
+        }
+    }
+
+    @Test
+    fun `jobbsøkersøket teller registreringene som forsvinner ved fjernet oppmøte`() {
+        val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
+        val arbeidsgiverId = arbeidsgiver(treff, "999999991")
+        val person = jobbsøker(treff)
+        leggTilOppmøtehendelse(person, "MØTT_OPP", Instant.now())
+
+        db.dataSource.connection.use { conn ->
+            skrivRepository.settInteresse(conn, jobbsøkerDbId(person), arbeidsgiverId, true)
+        }
+
+        val rad = sokRepository.sok(treff, JobbsøkerSøkRequest()).jobbsøkere.single()
+
+        assertThat(rad.oppmøte!!.møtt).isTrue()
+        assertThat(rad.oppmøte!!.registreringerSomSlettes.interesser).isEqualTo(1)
+        assertThat(rad.oppmøte!!.registreringerSomSlettes.vurderinger).isZero()
+    }
+
+    @Test
+    fun `jobbsøker uten oppmøtehendelse er ikke møtt`() {
+        val treff = opprettTreff()
+        jobbsøker(treff)
+
+        val rad = sokRepository.sok(treff, JobbsøkerSøkRequest()).jobbsøkere.single()
+
+        assertThat(rad.oppmøte!!.møtt).isFalse()
+    }
+
+    // --- hjelpere -------------------------------------------------------------
+
+    private fun les(treff: TreffId): Treffgjennomføring = db.dataSource.connection.use { conn ->
+        lesRepository.hentAggregat(conn, kontekstRepository.hent(conn, treff)!!)
+    }
+
+    private fun opprettTreff(
+        kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
+    ): TreffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A100001", kategori = kategori)
+
+    private fun jobbsøker(
+        treff: TreffId,
+        fnr: String = "12345678901",
+        etternavn: String = "Testesen",
+    ): PersonTreffId = db.leggTilJobbsøkereMedHendelse(
+        listOf(LeggTilJobbsøker(Fødselsnummer(fnr), Fornavn("Test"), Etternavn(etternavn))),
+        treff,
+    ).first()
+
+    private fun arbeidsgiver(treff: TreffId, orgnr: String): Long {
+        val id = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr(orgnr), Orgnavn("Testbedrift $orgnr"), emptyList(), null, null, null),
+            treff,
+        )
+        return db.dataSource.connection.use { conn ->
+            conn.prepareStatement("SELECT arbeidsgiver_id FROM arbeidsgiver WHERE id = ?").use { stmt ->
+                stmt.setObject(1, id.somUuid)
+                stmt.executeQuery().use { it.next(); it.getLong(1) }
+            }
+        }
+    }
+
+    private fun treffDbId(treff: TreffId): Long = db.dataSource.connection.use { conn ->
+        conn.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").use { stmt ->
+            stmt.setObject(1, treff.somUuid)
+            stmt.executeQuery().use { it.next(); it.getLong(1) }
+        }
+    }
+
+    private fun jobbsøkerDbId(personTreffId: PersonTreffId): Long = db.dataSource.connection.use { conn ->
+        conn.prepareStatement("SELECT jobbsoker_id FROM jobbsoker WHERE id = ?").use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { it.next(); it.getLong(1) }
+        }
+    }
+
+    private fun leggTilOppmøtehendelse(personTreffId: PersonTreffId, type: String, tidspunkt: Instant) {
+        val sql = """
+            INSERT INTO jobbsoker_hendelse
+              (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon)
+            VALUES (?, (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?), ?, ?, 'MARKEDSKONTAKT_ELLER_VEILEDER', 'A100001')
+        """.trimIndent()
+        db.dataSource.connection.use { conn ->
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.setObject(1, UUID.randomUUID())
+                stmt.setObject(2, personTreffId.somUuid)
+                stmt.setTimestamp(3, Timestamp.from(tidspunkt))
+                stmt.setString(4, type)
+                stmt.executeUpdate()
+            }
+        }
+    }
+}
