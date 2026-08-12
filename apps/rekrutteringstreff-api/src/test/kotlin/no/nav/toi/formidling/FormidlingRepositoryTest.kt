@@ -439,6 +439,49 @@ class FormidlingRepositoryTest {
     }
 
     @Test
+    fun `hentForMittKontorForTreff returnerer kun formidlinger opprettet fra tilknyttede kontor`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Testbedrift AS"), emptyList(), null, null, null),
+            treffId, "testperson",
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Eget"), Etternavn("Kontor"), null, null, null),
+                LeggTilJobbsøker(Fødselsnummer("22222222222"), Fornavn("Annet"), Etternavn("Kontor"), null, null, null),
+            ),
+            treffId, "testperson",
+        )
+        db.dataSource.executeInTransaction { connection ->
+            repository.opprett(connection, treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), kontornummer = "1000")
+            repository.opprett(connection, treffId, personTreffIder[1], arbeidsgiverTreffId, UUID.randomUUID(), kontornummer = "2000")
+        }
+
+        val mittKontor = repository.hentForMittKontorForTreff(treffId, listOf("1000"))
+
+        assertThat(mittKontor).hasSize(1)
+        assertThat(mittKontor.single().fødselsnummer).isEqualTo("11111111111")
+    }
+
+    @Test
+    fun `hentForMittKontorForTreff returnerer tom liste når bruker ikke har tilknyttede enheter`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(Orgnr("123456789"), Orgnavn("Testbedrift AS"), emptyList(), null, null, null),
+            treffId, "testperson",
+        )
+        val personTreffIder = db.leggTilJobbsøkereMedHendelse(
+            listOf(LeggTilJobbsøker(Fødselsnummer("11111111111"), Fornavn("Eget"), Etternavn("Kontor"), null, null, null)),
+            treffId, "testperson",
+        )
+        db.dataSource.executeInTransaction { connection ->
+            repository.opprett(connection, treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), kontornummer = "1000")
+        }
+
+        assertThat(repository.hentForMittKontorForTreff(treffId, emptyList())).isEmpty()
+    }
+
+    @Test
     fun `hentAlleForTreff sorterer på nyeste formidlingstidspunkt som standard`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val arbeidsgiverTreffId = db.leggTilArbeidsgiverMedHendelse(

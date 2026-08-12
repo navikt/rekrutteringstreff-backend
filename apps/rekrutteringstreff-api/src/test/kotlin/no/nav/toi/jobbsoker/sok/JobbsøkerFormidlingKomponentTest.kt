@@ -75,6 +75,9 @@ class JobbsøkerFormidlingKomponentTest {
     private fun formidlingEgnePath(treffId: TreffId): String =
         "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/formidling/egne"
 
+    private fun formidlingMittKontorPath(treffId: TreffId): String =
+        "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/formidling/mittkontor"
+
     private fun formidlingAllePath(treffId: TreffId): String =
         "/api/rekrutteringstreff/${treffId.somUuid}/jobbsoker/formidling/alle"
 
@@ -253,10 +256,10 @@ class JobbsøkerFormidlingKomponentTest {
         val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
         assertThat(resultat.totalt).isEqualTo(2)
         assertThat(resultat.jobbsøkere).hasSize(2)
-        
+
         val ola = resultat.jobbsøkere.find { it.fødselsnummer == "11111111111" }!!
         val kari = resultat.jobbsøkere.find { it.fødselsnummer == "22222222222" }!!
-        
+
         assertThat(ola.alleredeFormidlet).isTrue()
         assertThat(kari.alleredeFormidlet).isFalse()
     }
@@ -775,6 +778,84 @@ class JobbsøkerFormidlingKomponentTest {
 
         val problemDetails = mapper.readValue<ProblemDetails>(response.body())
         assertThat(problemDetails.feil).isEqualTo("Klarte ikke å hente Modia-enheter. Prøv igjen senere.")
+    }
+
+    @Test
+    fun `formidling-mittkontor returnerer jobbsøkere kun basert på kontornummer, uavhengig av veileder`() {
+        val eierIdent = "TESTEIER"
+        val innloggetIdent = "TESTINNLOGGET"
+        val veiledersKontor = "KONTOR-A"
+        val annetKontor = "KONTOR-B"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        stubFor(
+            get(urlPathEqualTo("/api/decorator"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"enheter":[{"enhetId":"$veiledersKontor","navn":"Kontor Test"}]}""")
+                )
+        )
+
+        fun jobbsøker(fødselsnummer: String, veilederNavIdent: String, kontornummer: String) =
+            LeggTilJobbsøker(
+                fødselsnummer = Fødselsnummer(fødselsnummer),
+                fornavn = Fornavn("Filter"),
+                etternavn = Etternavn("Rad${fødselsnummer.takeLast(2)}"),
+                veilederNavIdent = VeilederNavIdent(veilederNavIdent),
+                kontor = Kontor(kontornummer = kontornummer, kontornavn = null),
+            )
+
+        db.leggTilJobbsøkereMedHendelse(
+            listOf(
+                // Samme kontor som innlogget bruker, men annen veileder — skal med
+                jobbsøker("11111111111", "ANNENVEILEDER", veiledersKontor),
+                // Innlogget bruker selv registrert som veileder, men annet kontor — skal IKKE med
+                jobbsøker("22222222222", innloggetIdent, annetKontor),
+                // Verken kontor- eller veiledermatch — skal IKKE med
+                jobbsøker("33333333333", "ANNENVEILEDER", annetKontor),
+            ),
+            treffId,
+        )
+
+        val response = httpPost(
+            formidlingMittKontorPath(treffId),
+            formidlingBody(),
+            navIdent = innloggetIdent,
+            groups = listOf(AzureAdRoller.jobbsøkerrettet),
+        )
+        assertThat(response.statusCode()).isEqualTo(200)
+
+        val resultat = mapper.readValue<JobbsøkerFormidlingRespons>(response.body())
+        assertThat(resultat.jobbsøkere.map { it.fødselsnummer }).containsExactly("11111111111")
+    }
+
+    @Test
+    fun `bruker uten relevante roller får 403 på formidling-mittkontor`() {
+        val treffId = opprettTreffMedEier("A123456")
+        val response = httpPost(
+            formidlingMittKontorPath(treffId),
+            formidlingBody(),
+            navIdent = "B999999",
+            groups = emptyList(),
+        )
+        assertThat(response.statusCode()).isEqualTo(403)
+    }
+
+    @Test
+    fun `arbeidsgiverrettet får ikke bruke formidling-mittkontor`() {
+        val eierIdent = "A123456"
+        val arbeidsgiverrettetIdent = "B200002"
+        val treffId = opprettTreffMedEier(eierIdent)
+
+        val response = httpPost(
+            formidlingMittKontorPath(treffId),
+            formidlingBody(),
+            navIdent = arbeidsgiverrettetIdent,
+            groups = listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+        assertThat(response.statusCode()).isEqualTo(403)
     }
 
 }
