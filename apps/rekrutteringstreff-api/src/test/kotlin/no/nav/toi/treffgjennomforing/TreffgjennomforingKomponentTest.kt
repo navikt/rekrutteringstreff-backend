@@ -1,6 +1,12 @@
 package no.nav.toi.treffgjennomforing
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
 import no.nav.toi.AzureAdRoller.arbeidsgiverrettet
 import no.nav.toi.AzureAdRoller.jobbsøkerrettet
@@ -22,6 +28,7 @@ import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.net.URI
@@ -30,6 +37,7 @@ import java.net.http.HttpResponse
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@WireMockTest
 class TreffgjennomforingKomponentTest {
 
     private val db = TestDatabase()
@@ -44,11 +52,24 @@ class TreffgjennomforingKomponentTest {
     private val ikkeEier = "A200002"
 
     @BeforeAll
-    fun setUp() {
+    fun setUp(wmInfo: WireMockRuntimeInfo) {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
-        infra = TestInfrastructureContext(dataSource = db.dataSource).also { it.start() }
+        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+            .also { it.start() }
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
+    }
+
+    @BeforeEach
+    fun stubModia() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet")).willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("""{"aktivEnhet": "1234"}""")
+            )
+        )
     }
 
     @AfterAll
