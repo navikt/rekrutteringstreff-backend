@@ -178,8 +178,9 @@ punktene «Endre svar» og «Slett»). Vi legger til:
 
 - **«Registrer oppmøte»** / **«Fjern oppmøte»** (toggle) som et nytt
   `ActionMenyPunkt`.
-- Punktet er feature-togglet som resten av treffgjennomføringa: vises kun for WorkOp-treff
-  og i ikke-prod (`kategori === WORKOP` og `getMiljø() !== Miljø.ProdGcp`).
+- Punktet vises for treff der oppmøtefunksjonen er aktivert. I den lokale
+  implementasjonen betyr det alle treff utenfor produksjon; eventuell
+  finere feature-toggle innføres før produksjonsaktivering.
 - Kortet får en synlig markør når personen er møtt (f.eks. en Aksel `Tag`
   «Møtt», på linje med `JobbsøkerStatusTag`).
 - **«Marker som møtt (N)»** og **«Fjern oppmøte (N)»** i `JobbsøkerHandlingsrad`
@@ -677,14 +678,46 @@ samme kandidat kan være vurdert hos flere.
 
 ### Frontend-typer (mock + framtidig API-form)
 
-Kontrakten er definert som Zod-skjemaer i
+Treffgjennomføringskontrakten er definert som Zod-skjemaer i
 [useTreffgjennomføring.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/%5B...slug%5D/treffgjennomføring/useTreffgjennomføring.ts),
-og det er **fasiten** – ikke dette dokumentet. Feltene er beskrevet som tabell
+og oppmøtesammendraget i jobbsøkersøket er definert i
+[useJobbsøkerSøk.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/%5B...slug%5D/jobbsøkere/useJobbsøkerSøk.ts).
+Disse skjemaene er **fasiten** – ikke dette dokumentet. Feltene er beskrevet som tabell
 under [DTO-er](#dto-er), i den formen backend skal svare med. Typene i frontend
 speiler dem 1:1, med `string` der backend har `UUID`.
 
 «Formidlet» er med vilje ikke del av treffgjennomføringskontrakten. Den avledes
 skrivebeskyttet fra Formidlinger.
+
+#### Oppmøte i `JobbsøkerSøkTreffDTO`
+
+Jobbsøkerkort og massehandlinger leser oppmøte fra den eksisterende, paginerte
+jobbsøkerresponsen. De skal ikke abonnere på hele treffgjennomføringsaggregatet.
+Hver søkerad utvides additivt med:
+
+```json
+{
+  "oppmøte": {
+    "møtt": true,
+    "registreringerSomSlettes": {
+      "interesser": 2,
+      "intervjuplasser": 1,
+      "vurderinger": 0
+    }
+  }
+}
+```
+
+`oppmøte` er valgfritt i frontend mens backend rulles ut. Manglende felt betyr
+«backend støtter ikke denne lesemodellen», ikke `møtt: false`; frontend skjuler
+da oppmøtehandlingene. Når backendendringen er rullet ut, skal feltet alltid
+finnes på søkeradene. API-feltet kan beholdes selv om visningen senere
+feature-toggles bort.
+
+Etter en vellykket oppmøtemutasjon revaliderer frontend jobbsøkersøket, slik at
+`møtt` og `registreringerSomSlettes` alltid kommer fra backend. Frontend
+konstruerer ikke tellingene selv. Treffgjennomføringsfanen fortsetter å lese hele
+aggregatet fra sitt eget endepunkt.
 
 ### MSW-mock (dynamisk for demo)
 
@@ -824,6 +857,12 @@ Fanen heter **«Treffgjennomføring og oppfølging»**, og navnet svarer til to 
 1–4 er selve treffgjennomføringen, steg 5–6 er oppfølgingen etterpå. Endepunktene er
 gruppert etter det samme skillet, slik at stien sier hvilken del av arbeidet et
 kall hører til.
+
+**Jobbsøkerlisten leses separat.** Det eksisterende søket utvides additivt:
+
+| Metode | Sti                                                   | Funksjon                                                                                         |
+| ------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| POST   | `/api/rekrutteringstreff/{id}/jobbsoker/sok`          | Returnerer paginert søkeresultat med `oppmøte` og `registreringerSomSlettes` på hver returnert rad. |
 
 **Lesing er felles.** Hele aggregatet hentes med ett kall:
 
@@ -1495,14 +1534,30 @@ tatt**, og tilstanden utledes av hendelsene. Tre alternativer ble vurdert:
   kolonne.**
 - «Har møtt» **utledes** av hendelsene: den siste av `MØTT_OPP` /
   `ANGRE_MØTT_OPP` bestemmer tilstanden. Treffgjennomføring-lista, «Møtt»-taggen og telleren
-  «X møtt av Y» leser fra hendelsene – samme måte som minside-/relevante hendelser
-  allerede utledes i frontend.
+  «X møtt av Y» bygger på denne tilstanden. Jobbsøkersøket eksponerer den samme
+  avledede tilstanden per søkerad.
 - Ved like tidspunkt brukes `jobbsoker_hendelse_id` som deterministisk
   tie-breaker; sorter på tidspunkt synkende og hendelses-ID synkende. Uten den
   er tilstanden udefinert ved to registreringer i samme millisekund, og «har
   møtt» kunne svart ulikt fra kall til kall.
 - Regelen om at hendelser bare skrives ved **reell endring** gjelder også her:
   å registrere oppmøte for en som allerede er møtt gir ingen ny rad.
+
+##### Berikelse av jobbsøkersøket
+
+Backend skal først filtrere, sortere og paginere jobbsøkersøket. Deretter
+berikes bare `personTreffId`-ene på den returnerte siden:
+
+- `møtt` hentes fra siste `MØTT_OPP`/`ANGRE_MØTT_OPP` per person.
+- `interesser`, `intervjuplasser` og `vurderinger` telles samlet fra
+  `interesse`, `intervju_fordeling` og `vurdering`.
+- Berikelsen gjøres med batchspørringer eller én samlet spørring, aldri én
+  spørring per søkerad.
+
+Løsningen skal ytelsestestes med realistiske treff, inkludert 10 000
+jobbsøkere, og dokumentere med `EXPLAIN (ANALYZE, BUFFERS)` at arbeidet følger
+sidestørrelsen og ikke totalt antall treff. Indekser bestemmes ut fra denne
+målingen; det skal ikke legges til spekulative indekser.
 
 **Hvorfor ikke egen status:** En statusendring må også oppdatere aktivitetsplanen
 og aktivitetskortet. Hendelsene er derfor eneste sannhetskilde for oppmøte i denne
@@ -1531,6 +1586,8 @@ Disse finnes i mocken i dag og må håndteres ordentlig når backend tar over:
 - Teller for antall registrerte oppmøter per treff.
 - Teller for lagringsfeil per endepunkt, slik at vi ser om autolagringen i
   frontend feiler systematisk.
+- Varighet og feilrate for jobbsøkersøket etter oppmøteberikelsen, uten
+  personidentifikatorer som metrikklabler.
 - Ingen fødselsnumre i logger. Logg `personTreffId` og treff-id.
 
 #### Testing
@@ -1539,6 +1596,12 @@ Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
 
 - Tilgang: eier får 200, ikke-eier får 403, kontortilgang alene gir 403.
 - Oppmøte: registrer, angre, registrer igjen — utledet tilstand er riktig.
+- Jobbsøkersøk: søkeradene har riktig `møtt` og tellinger fra `interesse`,
+  `intervju_fordeling` og `vurdering`.
+- Paginering før berikelse: repository-/komponenttest viser at bare personene
+  på den returnerte siden inngår i oppmøte- og tellingsspørringene.
+- Ytelse: et realistisk treff med opptil 10 000 jobbsøkere holder avtalt
+  responstid, uten N+1-spørringer.
 - Kaskadesletting: fjerning av oppmøte med registreringer gir 409 uten bekreftelse
   og uten sideeffekt, og sletter alt i én transaksjon med bekreftelse.
 - Aggregatet: hver PUT returnerer hele treffgjennomføringen med de andre delene intakt.
@@ -1562,15 +1625,19 @@ Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
 
 #### Rekkefølge
 
-1. `V14__treffgjennomforing.sql` og repository for lesing.
-2. `GET /treffgjennomforing-og-oppfolging` med tilgangssjekk. Frontend kan da lese ekte data.
-3. `FormidlingDto`-utvidelsen — uavhengig av resten, kan tas først.
-4. Oppmøtehendelsene, inkludert `bekreftSlettRegistreringer` og 409-svaret.
-5. Resten av PUT-endepunktene, ett steg om gangen. Hendelsene for hvert steg følger med sitt eget endepunkt.
-6. `POST /intervjufordeling/fordel` med fordelingsalgoritmen. Frontend kaller
+1. Behold frontend bakoverkompatibel: `oppmøte` er valgfritt og handlingene
+   skjules når feltet mangler.
+2. `V14__treffgjennomforing.sql` og repository for lesing.
+3. Oppmøtehendelsene, inkludert `bekreftSlettRegistreringer` og 409-svaret.
+4. Utvid `POST /jobbsoker/sok` med page-first oppmøteberikelse, komponenttester
+   og ytelsestest.
+5. `GET /treffgjennomforing-og-oppfolging` med tilgangssjekk. Frontend kan da lese ekte data.
+6. `FormidlingDto`-utvidelsen — uavhengig av resten, kan tas først.
+7. Resten av PUT-endepunktene, ett steg om gangen. Hendelsene for hvert steg følger med sitt eget endepunkt.
+8. `POST /intervjufordeling/fordel` med fordelingsalgoritmen. Frontend kaller
    den allerede, og mocken har en forenklet variant som kan slås av her.
-7. Skru av MSW i frontend, ett endepunkt om gangen etter hvert som backend er klar.
-8. **Produksjonsaktivering** — se under. Dette er et eget, bevisst steg og skjer
+9. Skru av MSW i frontend, ett endepunkt om gangen etter hvert som backend er klar.
+10. **Produksjonsaktivering** — se under. Dette er et eget, bevisst steg og skjer
    ikke automatisk når backend er ferdig.
 
 #### Produksjonsaktivering
@@ -1582,16 +1649,18 @@ bare lokalt, i dev og i test.
 Rekkefølge for å skru på i produksjon:
 
 1. Alle backend-endepunkter er i drift i dev og test, og MSW er skrudd av for dem.
-2. Verifisert i test med et ekte WorkOp-treff: oppmøte, romfordeling,
+2. `POST /jobbsoker/sok` leverer oppmøte og tellinger, og søkeytelsen er
+   verifisert mot realistisk volum.
+3. Verifisert i test med et ekte WorkOp-treff: oppmøte, romfordeling,
    interesse, fordeling, status og utskrift fungerer ende-til-ende. Og med et
    vanlig treff: den generelle treffgjennomføringen viser fire steg og lagrer riktig.
-3. `V14__treffgjennomforing.sql` er kjørt i produksjon, og tabellene er tomme.
-4. Miljøsjekken fjernes fra `useTreffgjennomføringFane`, slik at gatingen bare består av
+4. `V14__treffgjennomforing.sql` er kjørt i produksjon, og tabellene er tomme.
+5. Miljøsjekken fjernes fra `useTreffgjennomføringFane`, slik at gatingen bare består av
    eier-/utviklerrollen. Vurder å slippe WorkOp og den generelle treffgjennomføringen løs
    hver for seg — de har ulik risiko og ulikt antall brukere.
-5. Observability-tellerne følges i første reelle gjennomføring.
+6. Observability-tellerne følges i første reelle gjennomføring.
 
-Punkt 4 er en egen, liten PR. Å holde den atskilt gjør det mulig å skru av
+Punkt 5 er en egen, liten PR. Å holde den atskilt gjør det mulig å skru av
 igjen ved å reversere én linje.
 
 #### Rød sone
@@ -1703,10 +1772,10 @@ Fase A–D3 er **implementert i frontend** mot MSW. Fase E gjenstår.
    oppfølging» og del skriveendepunktene i `/treffgjennomforing/*` og `/oppfolging/*`.
 8. **Fase E – Backend:** implementer samme kontrakt med Flyway-migrasjon,
    controller/service/repository og hendelser. Bytt datakilden fra MSW til API
-   uten å endre komponentenes DTO-er eller flyt. Steg 5 er i tillegg avhengig av
-   at `POST /jobbsoker/sok` returnerer `innsatsgruppe` for treffets jobbsøkere —
-   uten det feltet mangler innsatsbehov-taggen, selv om resten av
-   treffgjennomføringen virker.
+   uten å endre komponentenes DTO-er eller flyt. `POST /jobbsoker/sok` skal
+   returnere både `innsatsgruppe` og det sidevis berikede `oppmøte`-feltet.
+   Førstnevnte brukes i steg 5; sistnevnte brukes av jobbsøkerkort og
+   massehandlinger.
 
 Hver fase avsluttes med Playwright-verifisering: bekreft tilstandene manuelt med
 playwright-mcp, og dekk dem med nye tester i `tests/rekrutteringstreff/`.
@@ -1761,7 +1830,10 @@ samme mønster som eksisterende tester: `storageState` for rolle
   «Marker som møtt (N)»: kryss av to jobbsøkere i jobbsøkerfanen, registrer, og
   sjekk at begge får «Møtt»-tag, at valget tømmes, og at telleren i steg 1 øker.
   Tilsvarende for «Fjern oppmøte (N)»: bekreftelsesdialogen skal navngi antallet
-  og listen skal miste «Møtt»-taggen først etter at fjerningen er bekreftet.
+  og summere tellingene fra søkeradene; listen skal miste «Møtt»-taggen først
+  etter at fjerningen er bekreftet. Test også at manglende `oppmøte` i en
+  overgangsrespons skjuler enkelt- og massehandlingene i stedet for å vise alle
+  som «ikke møtt».
 - **Møteplan og rom:** «Opprett møteplan» fyller rommene, og «Gå til
   romfordeling» navigerer uten lagring. Test dra-og-slipp, direkte romvalg,
   innsetting sist, rollback ved lagringsfeil og full «Fordel på nytt» med
@@ -1839,7 +1911,9 @@ tilstand etter reelle brukerhandlinger.
   «Finn kandidater» — og er derfor en eksisterende begrensning i frontend, ikke
   noe WorkOp innfører. Fikses separat, enten ved at frontend paginerer eller ved
   at backend tilbyr et «hent alle»-endepunkt. WorkOp-treff med speedintervju i
-  maks 9 rom ligger i praksis godt under grensen.
+  maks 9 rom ligger i praksis godt under grensen. Dette endrer ikke kravet til
+  `POST /jobbsoker/sok`: det søket er paginert og skal berike bare den
+  returnerte siden også når treffet totalt har 10 000 jobbsøkere.
 
 ## Åpne spørsmål
 
