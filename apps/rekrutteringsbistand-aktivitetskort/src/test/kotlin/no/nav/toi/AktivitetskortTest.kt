@@ -9,6 +9,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
 import no.nav.toi.aktivitetskort.AktivitetskortJobb
+import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.ErrorType
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
@@ -320,7 +321,7 @@ class AktivitetskortTest {
     }
 
     @Test
-    fun `feilkø-hendelse skal føre til melding på rapid`() {
+    fun `feilkø-hendelse for rekrutteringstreffinvitasjon skal føre til melding på rapid`() {
         repository.opprettTestRekrutteringstreffInvitasjon()
         val invitasjon = testRepository.hentAlleRekrutteringstreffInvitasjoner().first()
         val errorMessage = "Duplikat prøvd opprettet"
@@ -335,12 +336,50 @@ class AktivitetskortTest {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
             assertThat(this["fnr"].asText()).isEqualTo(invitasjon.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(invitasjon.aktivitetskortId.toString())
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
+            assertThat(this.has("stillingId")).isFalse()
             assertThat(this["rekrutteringstreffId"].asText()).isEqualTo(invitasjon.rekrutteringstreffId.toString())
             assertThat(this["endretAv"].asText()).isEqualTo(invitasjon.endretAv)
             assertThat(this["messageId"].asText()).isEqualTo(invitasjon.messageId.toString())
             assertThat(this["errorMessage"].asText()).isEqualTo(errorMessage)
             assertThat(this["errorType"].asText()).isEqualTo(errorType.name)
             assertThat(this["timestamp"].asText().let(ZonedDateTime::parse)).isCloseTo(ZonedDateTime.now(), within(1, ChronoUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun `feilkø-hendelse for delt stilling skal føre til melding på rapid`() {
+        val stillingId = UUID.randomUUID()
+        repository.opprettDeltStilling(
+            fnr = "12345678910",
+            stillingId = stillingId.toString(),
+            tittel = "Teststilling",
+            opprettetAv = "testuser",
+            opprettetTidspunkt = ZonedDateTime.now().toString(),
+            arbeidsgiver = "Testarbeidsgiver",
+            arbeidssted = "Oslo"
+        )
+        val deltStilling = testRepository.hentAlleRekrutteringsbistandStillinger().single()
+        val errorMessage = "Aktivitetskortet ble avvist"
+        val errorType = ErrorType.ULOVLIG_ENDRING
+        repository.lagreFeilkøHendelse(deltStilling.messageId, "{}", errorMessage, errorType)
+
+        val rapid = TestRapid()
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).run()
+
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        rapid.inspektør.message(0).apply {
+            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
+            assertThat(this["fnr"].asText()).isEqualTo(deltStilling.fnr)
+            assertThat(this["aktivitetskortId"].asText()).isEqualTo(deltStilling.aktivitetskortId.toString())
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELTSTILLING.name)
+            assertThat(this["stillingId"].asText()).isEqualTo(stillingId.toString())
+            assertThat(this.has("rekrutteringstreffId")).isFalse()
+            assertThat(this["endretAv"].asText()).isEqualTo(deltStilling.endretAv)
+            assertThat(this["messageId"].asText()).isEqualTo(deltStilling.messageId.toString())
+            assertThat(this["errorMessage"].asText()).isEqualTo(errorMessage)
+            assertThat(this["errorType"].asText()).isEqualTo(errorType.name)
         }
     }
 
