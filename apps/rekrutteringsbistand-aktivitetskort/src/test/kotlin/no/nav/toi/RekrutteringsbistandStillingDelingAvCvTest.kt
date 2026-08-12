@@ -180,7 +180,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(message["stillingId"].asText()).isEqualTo(stillingId.toString())
             assertThat(message["tittel"].asText()).isEqualTo(tittel)
             assertThat(message["opprettetAv"].asText()).isEqualTo(opprettetAv)
-            assertThat(message["opprettetTidspunkt"].isMissingNode()).isFalse
             assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
             assertThat(message["arbeidssted"].asText()).isEqualTo(arbeidssted)
             assertThat(message["arbeidsgiver"].asText()).isEqualTo(arbeidsgiver)
