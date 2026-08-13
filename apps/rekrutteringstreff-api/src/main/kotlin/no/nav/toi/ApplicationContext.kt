@@ -36,15 +36,13 @@ import no.nav.toi.statistikk.StatistikkRepository
 import no.nav.toi.statistikk.StatistikkService
 import no.nav.toi.treffgjennomforing.TreffgjennomforingController
 import no.nav.toi.treffgjennomforing.TreffgjennomforingHendelser
-import no.nav.toi.treffgjennomforing.TreffgjennomforingLesRepository
+import no.nav.toi.treffgjennomforing.TreffgjennomforingRepository
 import no.nav.toi.treffgjennomforing.TreffgjennomforingService
-import no.nav.toi.treffgjennomforing.TreffgjennomforingSkrivRepository
 import no.nav.toi.treffgjennomforing.TreffkontekstRepository
 
 @Suppress("MemberVisibilityCanBePrivate")
 class ApplicationContext(val infra: InfrastructureContext = InfrastructureContext()) {
 
-    // Infrastruktur (delegert fra InfrastructureContext)
     val dataSource get() = infra.dataSource
     val rapidsConnection get() = infra.rapidsConnection
     val authConfigs get() = infra.authConfigs
@@ -58,7 +56,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val stillingKlient get() = infra.stillingKlient
     val kandidatKlient get() = infra.kandidatKlient
 
-    // Repositories
     val jobbsøkerRepository = JobbsøkerRepository(infra.dataSource, JacksonConfig.mapper)
     val arbeidsgiverRepository = ArbeidsgiverRepository(infra.dataSource, JacksonConfig.mapper)
     val rekrutteringstreffRepository = RekrutteringstreffRepository(infra.dataSource)
@@ -71,10 +68,8 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val formidlingRepository = FormidlingRepository(infra.dataSource)
     val statistikkRepository = StatistikkRepository(infra.dataSource)
     val treffkontekstRepository = TreffkontekstRepository()
-    val treffgjennomforingLesRepository = TreffgjennomforingLesRepository()
-    val treffgjennomforingSkrivRepository = TreffgjennomforingSkrivRepository()
+    val treffgjennomforingRepository = TreffgjennomforingRepository()
 
-    // Services
     val jobbsøkerService = JobbsøkerService(
         dataSource = infra.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
@@ -99,8 +94,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val treffgjennomforingService = TreffgjennomforingService(
         dataSource = infra.dataSource,
         kontekstRepository = treffkontekstRepository,
-        lesRepository = treffgjennomforingLesRepository,
-        skrivRepository = treffgjennomforingSkrivRepository,
+        repository = treffgjennomforingRepository,
         hendelser = TreffgjennomforingHendelser(
             jobbsøkerRepository = jobbsøkerRepository,
             arbeidsgiverRepository = arbeidsgiverRepository,
@@ -109,7 +103,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         ),
     )
 
-    // Controllere
     val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService)
     val rekrutteringstreffController = RekrutteringstreffController(rekrutteringstreffService, eierService, kiLoggService)
     val eierController = EierController(eierService)
@@ -124,7 +117,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val statistikkController = StatistikkController(statistikkService)
     val treffgjennomforingController = TreffgjennomforingController(treffgjennomforingService, eierService)
 
-    // Schedulere (lazy — har sideeffekter ved start, brukes kun i produksjon)
     val jobbsøkerhendelserScheduler by lazy {
         JobbsøkerhendelserScheduler(
             dataSource = infra.dataSource,
@@ -152,7 +144,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         RekrutteringstreffScheduler(rekrutteringstreffService, infra.leaderElection)
     }
 
-    // Rapids & Rivers-lyttere (lazy — registrerer seg selv mot rapidsConnection ved opprettelse)
     private val aktivitetskortFeilLytter by lazy { AktivitetskortFeilLytter(infra.rapidsConnection, jobbsøkerService) }
     private val minsideVarselSvarLytter by lazy { MinsideVarselSvarLytter(infra.rapidsConnection, jobbsøkerService, JacksonConfig.mapper) }
     private val synlighetsLytter by lazy { SynlighetsLytter(infra.rapidsConnection, jobbsøkerService) }

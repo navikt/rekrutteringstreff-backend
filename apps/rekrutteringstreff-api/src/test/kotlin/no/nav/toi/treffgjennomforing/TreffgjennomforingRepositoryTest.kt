@@ -28,8 +28,7 @@ class TreffgjennomforingRepositoryTest {
 
     private val db = TestDatabase()
     private val kontekstRepository = TreffkontekstRepository()
-    private val lesRepository = TreffgjennomforingLesRepository()
-    private val skrivRepository = TreffgjennomforingSkrivRepository()
+    private val repository = TreffgjennomforingRepository()
     private val sokRepository = JobbsøkerSokRepository(db.dataSource)
 
     /** TestDatabase starter bare containeren — skjemaet må opprettes her. */
@@ -93,13 +92,13 @@ class TreffgjennomforingRepositoryTest {
 
         val nummerFørste = db.dataSource.connection.use { conn ->
             val treffDbId = treffDbId(treff)
-            skrivRepository.tildelDeltakernummer(conn, treffDbId, jobbsøkerDbId(første))
+            repository.tildelDeltakernummer(conn, treffDbId, jobbsøkerDbId(første))
         }
         val nummerFørsteIgjen = db.dataSource.connection.use { conn ->
-            skrivRepository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(første))
+            repository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(første))
         }
         val nummerAndre = db.dataSource.connection.use { conn ->
-            skrivRepository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(andre))
+            repository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(andre))
         }
 
         assertThat(nummerFørste).isEqualTo(1)
@@ -118,7 +117,7 @@ class TreffgjennomforingRepositoryTest {
 
         db.dataSource.connection.use { conn ->
             val kontekst = kontekstRepository.hent(conn, treff)!!
-            skrivRepository.erstattRomfordeling(
+            repository.erstattRomfordeling(
                 conn, kontekst.treffDbId,
                 listOf(Rom(1, listOf(p2, p1)), Rom(2, emptyList())),
                 kontekst,
@@ -155,7 +154,7 @@ class TreffgjennomforingRepositoryTest {
         leggTilOppmøtehendelse(person, "MØTT_OPP", Instant.now())
 
         db.dataSource.connection.use { conn ->
-            skrivRepository.settInteresse(conn, jobbsøkerDbId(person), arbeidsgiverId, true)
+            repository.settInteresse(conn, jobbsøkerDbId(person), arbeidsgiverId, true)
         }
 
         val rad = sokRepository.sok(treff, JobbsøkerSøkRequest()).jobbsøkere.single()
@@ -175,10 +174,8 @@ class TreffgjennomforingRepositoryTest {
         assertThat(rad.oppmøte!!.møtt).isFalse()
     }
 
-    // --- hjelpere -------------------------------------------------------------
-
     private fun les(treff: TreffId): Treffgjennomføring = db.dataSource.connection.use { conn ->
-        lesRepository.hentAggregat(conn, kontekstRepository.hent(conn, treff)!!)
+        repository.hentAggregat(conn, kontekstRepository.hent(conn, treff)!!)
     }
 
     private fun opprettTreff(

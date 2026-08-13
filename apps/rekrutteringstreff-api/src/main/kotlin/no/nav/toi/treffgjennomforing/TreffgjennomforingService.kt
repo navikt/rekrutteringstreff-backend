@@ -23,15 +23,14 @@ import javax.sql.DataSource
 class TreffgjennomforingService(
     private val dataSource: DataSource,
     private val kontekstRepository: TreffkontekstRepository,
-    private val lesRepository: TreffgjennomforingLesRepository,
-    private val skrivRepository: TreffgjennomforingSkrivRepository,
+    private val repository: TreffgjennomforingRepository,
     private val hendelser: TreffgjennomforingHendelser,
 ) {
 
     /** Rent lesende. Finnes ingen lagret treffgjennomføring, er svaret tomtilstanden. */
     fun hent(treffId: TreffId): TreffgjennomforingDto = dataSource.executeInTransaction { connection ->
         val kontekst = hentKontekst(connection, treffId)
-        lesRepository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
+        repository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
     }
 
     fun oppdaterOppmøte(treffId: TreffId, dto: OppmøteRequestDto, navIdent: String): TreffgjennomforingDto =
@@ -39,7 +38,7 @@ class TreffgjennomforingService(
             val person = PersonTreffId(dto.personTreffId)
             val jobbsøkerId = kontekst.jobbsøkerId(person)
                 ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
-            val aggregat = lesRepository.hentAggregat(connection, kontekst)
+            val aggregat = repository.hentAggregat(connection, kontekst)
 
             if (dto.møtt == aggregat.oppmøte.contains(person)) return@skriv
             if (dto.møtt) registrerOppmøte(connection, kontekst, person, jobbsøkerId, navIdent)
@@ -53,9 +52,9 @@ class TreffgjennomforingService(
         jobbsøkerId: Long,
         navIdent: String,
     ) {
-        // Kortbunken finnes bare på WorkOp, og da skal andre treff heller ikke late som.
+
         val deltakernummer =
-            if (kontekst.erWorkOp) skrivRepository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
+            if (kontekst.erWorkOp) repository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
             else null
 
         hendelser.jobbsøker(
@@ -71,10 +70,10 @@ class TreffgjennomforingService(
         bekreftet: Boolean,
         navIdent: String,
     ) {
-        val registreringer = skrivRepository.tellRegistreringer(connection, jobbsøkerId)
+        val registreringer = repository.tellRegistreringer(connection, jobbsøkerId)
         if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
 
-        skrivRepository.slettRegistreringerFor(connection, jobbsøkerId)
+        repository.slettRegistreringerFor(connection, jobbsøkerId)
         hendelser.jobbsøker(
             connection, person, JobbsøkerHendelsestype.ANGRE_MØTT_OPP, navIdent,
             mapOf(
@@ -85,17 +84,12 @@ class TreffgjennomforingService(
         )
     }
 
-    /**
-     * Vanlig oppdatering, ikke en engangsoperasjon. Tidene styrer bare timeplanen,
-     * så en endring regenererer verken rom, interesser eller vurderinger. Første
-     * kall — når det ennå ikke finnes rom — oppretter fordelingen og rotasjonen.
-     */
     fun lagreMøteoppsett(treffId: TreffId, dto: MøteoppsettRequestDto, navIdent: String): TreffgjennomforingDto =
         skriv(treffId) { connection, kontekst, rad ->
             krevWorkOp(kontekst)
             val møteoppsett = TreffgjennomforingValidering.møteoppsett(dto)
-            val aggregat = lesRepository.hentAggregat(connection, kontekst)
-            skrivRepository.lagreMøteoppsett(connection, rad.id, møteoppsett)
+            val aggregat = repository.hentAggregat(connection, kontekst)
+            repository.lagreMøteoppsett(connection, rad.id, møteoppsett)
 
             if (aggregat.rom.isNotEmpty()) {
                 hendelser.treff(
@@ -123,12 +117,12 @@ class TreffgjennomforingService(
         if (kontekst.arbeidsgivere.isEmpty()) throw BadRequestResponse("Treffet må ha minst én arbeidsgiver")
 
         val rom = Romfordeler.fordelJevnt(aggregat.oppmøte, kontekst.antallRom)
-        skrivRepository.erstattRomfordeling(connection, kontekst.treffDbId, rom, kontekst)
+        repository.erstattRomfordeling(connection, kontekst.treffDbId, rom, kontekst)
 
         val rotasjon = kontekst.arbeidsgiverIder.mapIndexed { indeks, arbeidsgiver ->
             ArbeidsgiverRotasjon(arbeidsgiver, indeks)
         }
-        skrivRepository.lagreRotasjon(connection, rotasjon, kontekst)
+        repository.lagreRotasjon(connection, rotasjon, kontekst)
         rotasjon.forEach {
             hendelser.arbeidsgiver(
                 connection, it.arbeidsgiverTreffId, ArbeidsgiverHendelsestype.ROTASJON_TILDELT, navIdent,
@@ -145,20 +139,19 @@ class TreffgjennomforingService(
                 "antallFremmøtte" to aggregat.oppmøte.size,
             ),
         )
-        skrivRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.ROM)
+        repository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.ROM)
     }
 
     fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>, navIdent: String): TreffgjennomforingDto =
         skriv(treffId) { connection, kontekst, _ ->
             krevWorkOp(kontekst)
-            val aggregat = lesRepository.hentAggregat(connection, kontekst)
+            val aggregat = repository.hentAggregat(connection, kontekst)
             val ny = TreffgjennomforingValidering.romfordeling(rom, kontekst.antallRom, aggregat.oppmøte)
 
-            skrivRepository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)
+            repository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)
             skrivRomhendelser(connection, aggregat.rom, ny, navIdent)
         }
 
-    /** Manuell flytting av én person gir PLASSERT_I_ROM, slik at vi vet hvem som ble flyttet. */
     private fun skrivRomhendelser(
         connection: Connection,
         før: List<Rom>,
@@ -191,12 +184,12 @@ class TreffgjennomforingService(
             val arbeidsgiverId = kontekst.arbeidsgiverId(arbeidsgiver)
                 ?: throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
 
-            val aggregat = lesRepository.hentAggregat(connection, kontekst)
+            val aggregat = repository.hentAggregat(connection, kontekst)
             if (dto.interessert && person !in aggregat.oppmøte) {
                 throw BadRequestResponse("Bare fremmøtte jobbsøkere kan registrere interesse")
             }
 
-            if (!skrivRepository.settInteresse(connection, jobbsøkerId, arbeidsgiverId, dto.interessert)) return@skriv
+            if (!repository.settInteresse(connection, jobbsøkerId, arbeidsgiverId, dto.interessert)) return@skriv
 
             hendelser.par(
                 connection, person, arbeidsgiver,
@@ -208,13 +201,9 @@ class TreffgjennomforingService(
             )
 
             speilInteresseIFordeling(connection, kontekst, aggregat, person, arbeidsgiver, dto.interessert)
-            skrivRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.INTERESSE)
+            repository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.INTERESSE)
         }
 
-    /**
-     * Ny interesse legges bakerst blant de inkluderte, trukket interesse fjernes
-     * fra begge lister. Uten dette ville fordelingen pekt på interesser som ikke finnes.
-     */
     private fun speilInteresseIFordeling(
         connection: Connection,
         kontekst: Treffkontekst,
@@ -235,7 +224,7 @@ class TreffgjennomforingService(
                 ekskludertePersonTreffIder = eksisterende.ekskludertePersonTreffIder - person,
             )
         }
-        skrivRepository.erstattIntervjufordelinger(connection, listOf(oppdatert), kontekst)
+        repository.erstattIntervjufordelinger(connection, listOf(oppdatert), kontekst)
     }
 
     fun lagreIntervjufordeling(
@@ -254,12 +243,12 @@ class TreffgjennomforingService(
             inkludertePersonTreffIder = dto.inkludertePersonTreffIder.map(::PersonTreffId).krevPåTreff(kontekst),
             ekskludertePersonTreffIder = dto.ekskludertePersonTreffIder.map(::PersonTreffId).krevPåTreff(kontekst),
         )
-        val før = lesRepository.hentAggregat(connection, kontekst).intervjufordelinger
+        val før = repository.hentAggregat(connection, kontekst).intervjufordelinger
             .firstOrNull { it.arbeidsgiverTreffId == arbeidsgiver }
 
-        skrivRepository.erstattIntervjufordelinger(connection, listOf(ny), kontekst)
+        repository.erstattIntervjufordelinger(connection, listOf(ny), kontekst)
         skrivFordelingshendelser(connection, før, ny, navIdent)
-        skrivRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
+        repository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
     }
 
     private fun List<PersonTreffId>.krevPåTreff(kontekst: Treffkontekst): List<PersonTreffId> = also {
@@ -293,20 +282,16 @@ class TreffgjennomforingService(
         }
     }
 
-    /**
-     * Samme servicefunksjon som førstegangsopprettelsen — det skal ikke finnes to
-     * kodeveier. Erstatter hele fordelingen i én transaksjon.
-     */
     fun fordelIntervjuer(treffId: TreffId, navIdent: String): TreffgjennomforingDto =
         skriv(treffId) { connection, kontekst, rad ->
             krevWorkOp(kontekst)
-            val aggregat = lesRepository.hentAggregat(connection, kontekst)
+            val aggregat = repository.hentAggregat(connection, kontekst)
             val fordelinger = Intervjufordeler.fordel(
                 interesser = aggregat.interesser,
                 eksisterendeFordelinger = aggregat.intervjufordelinger,
                 arbeidsgivere = kontekst.arbeidsgiverIder,
             )
-            skrivRepository.erstattIntervjufordelinger(connection, fordelinger, kontekst)
+            repository.erstattIntervjufordelinger(connection, fordelinger, kontekst)
 
             hendelser.treff(
                 connection, treffId,
@@ -316,7 +301,7 @@ class TreffgjennomforingService(
                     "antallPlasseringer" to fordelinger.sumOf { it.inkludertePersonTreffIder.size },
                 ),
             )
-            skrivRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
+            repository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
         }
 
     fun lagreVurdering(treffId: TreffId, dto: VurderingDto, navIdent: String): TreffgjennomforingDto =
@@ -327,21 +312,17 @@ class TreffgjennomforingService(
             val arbeidsgiverId = kontekst.arbeidsgiverId(ny.arbeidsgiverTreffId)
                 ?: throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
 
-            val før = lesRepository.hentAggregat(connection, kontekst).vurderinger.firstOrNull {
+            val før = repository.hentAggregat(connection, kontekst).vurderinger.firstOrNull {
                 it.personTreffId == ny.personTreffId && it.arbeidsgiverTreffId == ny.arbeidsgiverTreffId
             }
 
-            if (ny.harRegistrertNoe()) skrivRepository.lagreVurdering(connection, jobbsøkerId, arbeidsgiverId, ny)
-            else skrivRepository.slettVurdering(connection, jobbsøkerId, arbeidsgiverId)
+            if (ny.harRegistrertNoe()) repository.lagreVurdering(connection, jobbsøkerId, arbeidsgiverId, ny)
+            else repository.slettVurdering(connection, jobbsøkerId, arbeidsgiverId)
 
             skrivVurderingshendelser(connection, før, ny, navIdent)
-            skrivRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.VURDERING)
+            repository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.VURDERING)
         }
 
-    /**
-     * Én hendelse per faktisk endring. Autolagring sender ofte samme verdi på nytt,
-     * og uten denne regelen ville tidslinja blitt ubrukelig.
-     */
     private fun skrivVurderingshendelser(
         connection: Connection,
         før: Vurdering?,
@@ -409,17 +390,13 @@ class TreffgjennomforingService(
         kontekstRepository.hent(connection, treffId)
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
 
-    /**
-     * Alle skriveoperasjoner låser treffgjennomføringsraden først, og svarer med
-     * hele aggregatet slik frontend forventer.
-     */
     private fun skriv(
         treffId: TreffId,
         block: (Connection, Treffkontekst, Treffgjennomforingsrad) -> Unit,
     ): TreffgjennomforingDto = dataSource.executeInTransaction { connection ->
         val kontekst = hentKontekst(connection, treffId)
-        val rad = skrivRepository.sikreOgLås(connection, kontekst.treffDbId)
+        val rad = repository.sikreOgLås(connection, kontekst.treffDbId)
         block(connection, kontekst, rad)
-        lesRepository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
+        repository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
     }
 }
