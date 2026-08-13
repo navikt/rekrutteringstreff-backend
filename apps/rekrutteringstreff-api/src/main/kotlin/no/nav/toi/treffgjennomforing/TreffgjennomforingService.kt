@@ -1,13 +1,18 @@
 package no.nav.toi.treffgjennomforing
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.javalin.http.BadRequestResponse
 import io.javalin.http.NotFoundResponse
+import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.executeInTransaction
+import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomforing.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomforing.dto.InteresseRequestDto
@@ -24,7 +29,10 @@ class TreffgjennomforingService(
     private val dataSource: DataSource,
     private val kontekstRepository: TreffkontekstRepository,
     private val repository: TreffgjennomforingRepository,
-    private val hendelser: TreffgjennomforingHendelser,
+    private val jobbsøkerRepository: JobbsøkerRepository,
+    private val arbeidsgiverRepository: ArbeidsgiverRepository,
+    private val rekrutteringstreffRepository: RekrutteringstreffRepository,
+    private val mapper: ObjectMapper,
 ) {
 
     /** Rent lesende. Finnes ingen lagret treffgjennomføring, er svaret tomtilstanden. */
@@ -57,7 +65,7 @@ class TreffgjennomforingService(
             if (kontekst.erWorkOp) repository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
             else null
 
-        hendelser.jobbsøker(
+        leggTilHendelseForJobbsøker(
             connection, person, JobbsøkerHendelsestype.MØTT_OPP, navIdent,
             deltakernummer?.let { mapOf("deltakernummer" to it) } ?: emptyMap(),
         )
@@ -74,7 +82,7 @@ class TreffgjennomforingService(
         if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
 
         repository.slettRegistreringerFor(connection, jobbsøkerId)
-        hendelser.jobbsøker(
+        leggTilHendelseForJobbsøker(
             connection, person, JobbsøkerHendelsestype.ANGRE_MØTT_OPP, navIdent,
             mapOf(
                 "interesser" to registreringer.interesser,
@@ -92,7 +100,7 @@ class TreffgjennomforingService(
             repository.lagreMøteoppsett(connection, rad.id, møteoppsett)
 
             if (aggregat.rom.isNotEmpty()) {
-                hendelser.treff(
+                leggTilHendelseForTreff(
                     connection, treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFORING_OPPSETT_ENDRET, navIdent,
                     mapOf(
                         "starttidspunkt" to dto.starttidspunkt,
@@ -124,13 +132,13 @@ class TreffgjennomforingService(
         }
         repository.lagreRotasjon(connection, rotasjon, kontekst)
         rotasjon.forEach {
-            hendelser.arbeidsgiver(
+            leggTilHendelseForArbeidsgiver(
                 connection, it.arbeidsgiverTreffId, ArbeidsgiverHendelsestype.ROTASJON_TILDELT, navIdent,
                 mapOf("startPosisjon" to it.startPosisjon),
             )
         }
 
-        hendelser.treff(
+        leggTilHendelseForTreff(
             connection, kontekst.treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFORING_OPPRETTET, navIdent,
             mapOf(
                 "antallRom" to kontekst.antallRom,
@@ -163,7 +171,7 @@ class TreffgjennomforingService(
             rom.jobbsøkere.forEach { person ->
                 val forrige = tidligere[person]
                 if (forrige == rom.romnummer) return@forEach
-                hendelser.jobbsøker(
+                leggTilHendelseForJobbsøker(
                     connection, person, JobbsøkerHendelsestype.PLASSERT_I_ROM, navIdent,
                     mapOf("romnummer" to rom.romnummer, "forrigeRomnummer" to forrige),
                 )
@@ -191,7 +199,7 @@ class TreffgjennomforingService(
 
             if (!repository.settInteresse(connection, jobbsøkerId, arbeidsgiverId, dto.interessert)) return@skriv
 
-            hendelser.par(
+            leggTilHendelseForPar(
                 connection, person, arbeidsgiver,
                 if (dto.interessert) JobbsøkerHendelsestype.INTERESSE_REGISTRERT
                 else JobbsøkerHendelsestype.ANGRE_INTERESSE_REGISTRERT,
@@ -267,14 +275,14 @@ class TreffgjennomforingService(
         val inkludertEtter = etter.inkludertePersonTreffIder.toSet()
 
         (inkludertEtter - inkludertFør).forEach { person ->
-            hendelser.par(
+            leggTilHendelseForPar(
                 connection, person, etter.arbeidsgiverTreffId,
                 JobbsøkerHendelsestype.SATT_OPP_TIL_INTERVJU,
                 ArbeidsgiverHendelsestype.SATT_OPP_TIL_INTERVJU, navIdent,
             )
         }
         (inkludertFør - inkludertEtter).forEach { person ->
-            hendelser.par(
+            leggTilHendelseForPar(
                 connection, person, etter.arbeidsgiverTreffId,
                 JobbsøkerHendelsestype.ANGRE_SATT_OPP_TIL_INTERVJU,
                 ArbeidsgiverHendelsestype.ANGRE_SATT_OPP_TIL_INTERVJU, navIdent,
@@ -293,7 +301,7 @@ class TreffgjennomforingService(
             )
             repository.erstattIntervjufordelinger(connection, fordelinger, kontekst)
 
-            hendelser.treff(
+            leggTilHendelseForTreff(
                 connection, treffId,
                 RekrutteringstreffHendelsestype.TREFFGJENNOMFORING_INTERVJUFORDELING_FORDELT, navIdent,
                 mapOf(
@@ -336,7 +344,7 @@ class TreffgjennomforingService(
             jobbsøkertype: JobbsøkerHendelsestype,
             arbeidsgivertype: ArbeidsgiverHendelsestype,
             ekstra: Map<String, Any?> = emptyMap(),
-        ) = hendelser.par(connection, person, arbeidsgiver, jobbsøkertype, arbeidsgivertype, navIdent, ekstra)
+        ) = leggTilHendelseForPar(connection, person, arbeidsgiver, jobbsøkertype, arbeidsgivertype, navIdent, ekstra)
 
         // VURDERT erstatter forrige verdi. Uten forrigeVurdering kan ikke tidslinja
         // fortelle at noen gikk fra «Aktuell» til «Ikke aktuell».
@@ -389,6 +397,85 @@ class TreffgjennomforingService(
     private fun hentKontekst(connection: Connection, treffId: TreffId): Treffkontekst =
         kontekstRepository.hent(connection, treffId)
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
+
+    /**
+     * Hendelsene skrives på samme connection som operasjonen de hører til, og alt
+     * kalles fra [skriv]. Da kan ikke en registrering bli stående uten hendelse,
+     * eller motsatt, om noe feiler underveis.
+     *
+     * Aktøren er alltid den som klikket, også når noe registreres på vegne av en
+     * arbeidsgiver. Ingen personopplysninger i hendelsedata — bare ID-er og enkle verdier.
+     */
+    private fun hendelseData(felt: Map<String, Any?>): String? =
+        if (felt.isEmpty()) null else mapper.writeValueAsString(felt)
+
+    private fun leggTilHendelseForJobbsøker(
+        connection: Connection,
+        personTreffId: PersonTreffId,
+        hendelsestype: JobbsøkerHendelsestype,
+        navIdent: String,
+        data: Map<String, Any?> = emptyMap(),
+    ) = jobbsøkerRepository.leggTilHendelse(
+        connection = connection,
+        personTreffId = personTreffId,
+        hendelsestype = hendelsestype,
+        aktørType = AktørType.MARKEDSKONTAKT_ELLER_VEILEDER,
+        opprettetAv = navIdent,
+        hendelseData = hendelseData(data),
+    )
+
+    private fun leggTilHendelseForArbeidsgiver(
+        connection: Connection,
+        arbeidsgiverTreffId: ArbeidsgiverTreffId,
+        hendelsestype: ArbeidsgiverHendelsestype,
+        navIdent: String,
+        data: Map<String, Any?> = emptyMap(),
+    ) = arbeidsgiverRepository.leggTilHendelse(
+        connection = connection,
+        arbeidsgiverTreffId = arbeidsgiverTreffId,
+        hendelsestype = hendelsestype,
+        opprettetAvAktørType = AktørType.MARKEDSKONTAKT_ELLER_VEILEDER,
+        aktøridentifikasjon = navIdent,
+        hendelseData = hendelseData(data),
+    )
+
+    private fun leggTilHendelseForTreff(
+        connection: Connection,
+        treffId: TreffId,
+        hendelsestype: RekrutteringstreffHendelsestype,
+        navIdent: String,
+        data: Map<String, Any?> = emptyMap(),
+    ) = rekrutteringstreffRepository.leggTilHendelseForTreff(
+        connection = connection,
+        treff = treffId,
+        hendelsestype = hendelsestype,
+        ident = navIdent,
+        hendelseData = hendelseData(data),
+    )
+
+    /**
+     * Registreringer i steg 3, 4 og 5 gjelder et par, og skrives derfor begge
+     * steder. Begge parter har en reell historikk, og begge skal kunne lese sin
+     * egen uten å kjenne den andres.
+     */
+    private fun leggTilHendelseForPar(
+        connection: Connection,
+        personTreffId: PersonTreffId,
+        arbeidsgiverTreffId: ArbeidsgiverTreffId,
+        jobbsøkertype: JobbsøkerHendelsestype,
+        arbeidsgivertype: ArbeidsgiverHendelsestype,
+        navIdent: String,
+        ekstra: Map<String, Any?> = emptyMap(),
+    ) {
+        leggTilHendelseForJobbsøker(
+            connection, personTreffId, jobbsøkertype, navIdent,
+            ekstra + ("arbeidsgiverTreffId" to arbeidsgiverTreffId.somString),
+        )
+        leggTilHendelseForArbeidsgiver(
+            connection, arbeidsgiverTreffId, arbeidsgivertype, navIdent,
+            ekstra + ("personTreffId" to personTreffId.somString),
+        )
+    }
 
     private fun skriv(
         treffId: TreffId,

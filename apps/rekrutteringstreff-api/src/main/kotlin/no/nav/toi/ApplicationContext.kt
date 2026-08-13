@@ -35,7 +35,6 @@ import no.nav.toi.statistikk.StatistikkController
 import no.nav.toi.statistikk.StatistikkRepository
 import no.nav.toi.statistikk.StatistikkService
 import no.nav.toi.treffgjennomforing.TreffgjennomforingController
-import no.nav.toi.treffgjennomforing.TreffgjennomforingHendelser
 import no.nav.toi.treffgjennomforing.TreffgjennomforingRepository
 import no.nav.toi.treffgjennomforing.TreffgjennomforingService
 import no.nav.toi.treffgjennomforing.TreffkontekstRepository
@@ -95,12 +94,10 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         dataSource = infra.dataSource,
         kontekstRepository = treffkontekstRepository,
         repository = treffgjennomforingRepository,
-        hendelser = TreffgjennomforingHendelser(
-            jobbsøkerRepository = jobbsøkerRepository,
-            arbeidsgiverRepository = arbeidsgiverRepository,
-            rekrutteringstreffRepository = rekrutteringstreffRepository,
-            mapper = JacksonConfig.mapper,
-        ),
+        jobbsøkerRepository = jobbsøkerRepository,
+        arbeidsgiverRepository = arbeidsgiverRepository,
+        rekrutteringstreffRepository = rekrutteringstreffRepository,
+        mapper = JacksonConfig.mapper,
     )
 
     val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService)
