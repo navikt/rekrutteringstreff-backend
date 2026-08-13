@@ -1,9 +1,12 @@
 package no.nav.toi.treffgjennomforing
 
+import no.nav.toi.JacksonConfig
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
+import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
@@ -30,8 +33,8 @@ class TreffgjennomforingRepositoryTest {
     private val kontekstRepository = TreffkontekstRepository()
     private val repository = TreffgjennomforingRepository()
     private val sokRepository = JobbsøkerSokRepository(db.dataSource)
+    private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, JacksonConfig.mapper)
 
-    /** TestDatabase starter bare containeren — skjemaet må opprettes her. */
     @BeforeAll
     fun migrer() {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
@@ -57,31 +60,28 @@ class TreffgjennomforingRepositoryTest {
     }
 
     @Test
-    fun `siste oppmøtehendelse bestemmer tilstanden`() {
+    fun `oppmøtehendelse uten kolonneverdi gir ikke fremmøtt`() {
         val treff = opprettTreff()
         val person = jobbsøker(treff)
 
-        leggTilOppmøtehendelse(person, "MØTT_OPP", Instant.now().minusSeconds(60))
-        assertThat(les(treff).oppmøte).containsExactly(person)
+        leggTilOppmøtehendelse(person, "REGISTRERT_OPPMØTE", Instant.now())
 
-        leggTilOppmøtehendelse(person, "ANGRE_MØTT_OPP", Instant.now().minusSeconds(30))
         assertThat(les(treff).oppmøte).isEmpty()
-
-        leggTilOppmøtehendelse(person, "MØTT_OPP", Instant.now())
-        assertThat(les(treff).oppmøte).containsExactly(person)
     }
 
     @Test
-    fun `ved likt tidspunkt avgjør hendelses-ID, ikke tilfeldig rekkefølge`() {
+    fun `kolonnen bestemmer tilstanden, uavhengig av hendelsesrekkefølge`() {
         val treff = opprettTreff()
         val person = jobbsøker(treff)
-        val samtidig = Instant.now()
 
-        leggTilOppmøtehendelse(person, "MØTT_OPP", samtidig)
-        leggTilOppmøtehendelse(person, "ANGRE_MØTT_OPP", samtidig)
+        registrerOppmøte(person)
+        assertThat(les(treff).oppmøte).containsExactly(person)
 
-        // Den sist innsatte vinner, og svaret er det samme for hvert kall.
-        repeat(3) { assertThat(les(treff).oppmøte).isEmpty() }
+        registrerOppmøte(person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
+        assertThat(les(treff).oppmøte).isEmpty()
+
+        registrerOppmøte(person)
+        assertThat(les(treff).oppmøte).containsExactly(person)
     }
 
     @Test
@@ -113,7 +113,7 @@ class TreffgjennomforingRepositoryTest {
         arbeidsgiver(treff, "999999992")
         val p1 = jobbsøker(treff, "11111111111")
         val p2 = jobbsøker(treff, "22222222222")
-        listOf(p1, p2).forEach { leggTilOppmøtehendelse(it, "MØTT_OPP", Instant.now()) }
+        listOf(p1, p2).forEach { registrerOppmøte(it) }
 
         db.dataSource.connection.use { conn ->
             val kontekst = kontekstRepository.hent(conn, treff)!!
@@ -134,7 +134,7 @@ class TreffgjennomforingRepositoryTest {
     fun `jobbsøkersøket beriker bare personene på den returnerte siden`() {
         val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
         val personer = (1..5).map { jobbsøker(treff, "1111111111$it", etternavn = "Person$it") }
-        personer.forEach { leggTilOppmøtehendelse(it, "MØTT_OPP", Instant.now()) }
+        personer.forEach { registrerOppmøte(it) }
 
         val side = sokRepository.sok(treff, JobbsøkerSøkRequest(side = 1, antallPerSide = 2))
 
@@ -151,7 +151,7 @@ class TreffgjennomforingRepositoryTest {
         val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
         val arbeidsgiverId = arbeidsgiver(treff, "999999991")
         val person = jobbsøker(treff)
-        leggTilOppmøtehendelse(person, "MØTT_OPP", Instant.now())
+        registrerOppmøte(person)
 
         db.dataSource.connection.use { conn ->
             repository.settInteresse(conn, jobbsøkerDbId(person), arbeidsgiverId, true)
@@ -232,6 +232,13 @@ class TreffgjennomforingRepositoryTest {
                 stmt.setString(4, type)
                 stmt.executeUpdate()
             }
+        }
+    }
+
+    private fun registrerOppmøte(personTreffId: PersonTreffId, oppmøte: Oppmøte = Oppmøte.REGISTRERT_OPPMØTE) {
+        leggTilOppmøtehendelse(personTreffId, oppmøte.hendelsestype.name, Instant.now())
+        db.dataSource.connection.use { conn ->
+            jobbsøkerRepository.settOppmøte(conn, personTreffId, oppmøte)
         }
     }
 }

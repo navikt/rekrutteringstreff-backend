@@ -87,6 +87,19 @@ CREATE INDEX idx_intervju_fordeling_arbeidsgiver ON intervju_fordeling (arbeidsg
 CREATE INDEX idx_vurdering_arbeidsgiver ON vurdering (arbeidsgiver_id);
 CREATE INDEX idx_vurdering_notat_vurdering ON vurdering_notat (vurdering_id);
 
-CREATE INDEX idx_jobbsoker_hendelse_oppmote
-    ON jobbsoker_hendelse (jobbsoker_id, tidspunkt DESC, jobbsoker_hendelse_id DESC)
-    WHERE hendelsestype IN ('MØTT_OPP', 'ANGRE_MØTT_OPP');
+DELETE
+FROM aktivitetskort_polling
+WHERE jobbsoker_hendelse_id IN (SELECT jobbsoker_hendelse_id
+                                FROM jobbsoker_hendelse
+                                WHERE hendelsestype IN ('MØTT_OPP', 'IKKE_MØTT_OPP'));
+
+DELETE
+FROM jobbsoker_hendelse
+WHERE hendelsestype IN ('MØTT_OPP', 'IKKE_MØTT_OPP');
+
+ALTER TABLE jobbsoker
+    ADD COLUMN oppmote text;
+
+CREATE INDEX idx_jobbsoker_oppmote
+    ON jobbsoker (rekrutteringstreff_id)
+    WHERE oppmote = 'REGISTRERT_OPPMØTE';

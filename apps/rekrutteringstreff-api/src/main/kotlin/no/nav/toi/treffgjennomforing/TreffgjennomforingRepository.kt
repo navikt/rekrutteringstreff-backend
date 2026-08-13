@@ -1,6 +1,7 @@
 package no.nav.toi.treffgjennomforing
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
+import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -71,22 +72,15 @@ class TreffgjennomforingRepository {
         val sql = """
             SELECT j.id::text
             FROM jobbsoker j
-            JOIN LATERAL (
-                SELECT jh.hendelsestype
-                FROM jobbsoker_hendelse jh
-                WHERE jh.jobbsoker_id = j.jobbsoker_id
-                  AND jh.hendelsestype IN ('MØTT_OPP', 'ANGRE_MØTT_OPP')
-                ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
-                LIMIT 1
-            ) siste ON TRUE
             LEFT JOIN deltakernummer d ON d.jobbsoker_id = j.jobbsoker_id
             WHERE j.rekrutteringstreff_id = ?
               AND j.status != 'SLETTET'
-              AND siste.hendelsestype = 'MØTT_OPP'
+              AND j.oppmote = ?
             ORDER BY d.nummer NULLS LAST, j.jobbsoker_id
         """.trimIndent()
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
+            stmt.setString(2, Oppmøte.REGISTRERT_OPPMØTE.name)
             stmt.executeQuery().use { rs -> rs.tilListe { PersonTreffId(it.getString(1)) } }
         }
     }

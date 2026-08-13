@@ -594,6 +594,20 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
+    fun settOppmøte(connection: Connection, personTreffId: PersonTreffId, oppmøte: Oppmøte) {
+        connection.prepareStatement(
+            """
+            UPDATE jobbsoker
+            SET oppmote=?
+            WHERE id=?
+            """
+        ).use { stmt ->
+            stmt.setString(1, oppmøte.name)
+            stmt.setObject(2, personTreffId.somUuid)
+            stmt.executeUpdate()
+        }
+    }
+
     /**
      * Henter distinkte fødselsnumre for jobbsøkere der synlighet ikke er evaluert ennå.
      * Brukes av SynlighetsBehovScheduler for å trigge need-meldinger for de som mangler synlighetsstatus.

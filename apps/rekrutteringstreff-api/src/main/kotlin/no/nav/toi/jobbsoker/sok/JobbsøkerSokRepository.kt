@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker.sok
 import no.nav.toi.JacksonConfig
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerStatus
+import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -281,19 +282,11 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
         val placeholders = personTreffIds.joinToString(",") { "?" }
         val sql = """
             SELECT j.id::text AS person_treff_id,
-                   siste.hendelsestype AS siste_oppmote,
+                   j.oppmote AS oppmote,
                    (SELECT COUNT(*) FROM interesse i WHERE i.jobbsoker_id = j.jobbsoker_id) AS interesser,
                    (SELECT COUNT(*) FROM intervju_fordeling f WHERE f.jobbsoker_id = j.jobbsoker_id) AS intervjuplasser,
                    (SELECT COUNT(*) FROM vurdering v WHERE v.jobbsoker_id = j.jobbsoker_id) AS vurderinger
             FROM jobbsoker j
-            LEFT JOIN LATERAL (
-                SELECT jh.hendelsestype
-                FROM jobbsoker_hendelse jh
-                WHERE jh.jobbsoker_id = j.jobbsoker_id
-                  AND jh.hendelsestype IN ('MØTT_OPP', 'ANGRE_MØTT_OPP')
-                ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
-                LIMIT 1
-            ) siste ON TRUE
             WHERE j.id IN ($placeholders)
         """.trimIndent()
 
@@ -304,7 +297,7 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 val result = mutableMapOf<String, OppmøteSammendragDto>()
                 while (rs.next()) {
                     result[rs.getString("person_treff_id")] = OppmøteSammendragDto(
-                        møtt = rs.getString("siste_oppmote") == "MØTT_OPP",
+                        møtt = Oppmøte.harMøtt(rs.getString("oppmote")),
                         registreringerSomSlettes = RegistreringerSammendragDto(
                             interesser = rs.getInt("interesser"),
                             intervjuplasser = rs.getInt("intervjuplasser"),

@@ -283,9 +283,11 @@ Se [planen](../9-planer/workop/treffgjennomforing-oppmote-rom-og-fordeling.md).
 
 To ting skjemaet ikke viser av seg selv:
 
-- **Oppmøte har ingen tabell.** Tilstanden utledes av `MØTT_OPP` /
-  `ANGRE_MØTT_OPP` i `jobbsoker_hendelse`, der den siste hendelsen bestemmer.
-  Ved likt tidspunkt brukes `jobbsoker_hendelse_id` som tie-breaker.
+- **Oppmøte har ingen egen tabell.** Tilstanden ligger i kolonnen
+  `jobbsoker.oppmote`, med verdiene `REGISTRERT_OPPMØTE` og
+  `REGISTRERT_OPPMØTE_FJERNET` fra enumen `Oppmøte`. `NULL` betyr at oppmøte aldri er
+  registrert. Hendelsene `REGISTRERT_OPPMØTE` / `REGISTRERT_OPPMØTE_FJERNET` skrives
+  i samme transaksjon og utgjør revisjonssporet, men lesevegen ser bare på kolonnen.
 - **Antall rom har ingen kolonne.** Det er alltid antall arbeidsgivere på
   treffet (minst 1), og beregnes ved lesing. En lagret kolonne ville vært et
   frosset øyeblikksbilde av noe som endrer seg når en arbeidsgiver legges til.

@@ -158,7 +158,7 @@ class TreffgjennomforingKomponentTest {
         oppmøte(treff, person, møtt = true)
         oppmøte(treff, person, møtt = true)
 
-        assertThat(antallHendelser(treff, "MØTT_OPP")).isEqualTo(1)
+        assertThat(antallHendelser(treff, "REGISTRERT_OPPMØTE")).isEqualTo(1)
     }
 
     @Test
@@ -298,8 +298,7 @@ class TreffgjennomforingKomponentTest {
         val svar = aggregat(treff)
         assertThat(svar["oppmøte"]).isEmpty()
         assertThat(svar["interesser"]).isEmpty()
-        assertThat(antallHendelser(treff, "ANGRE_MØTT_OPP")).isEqualTo(1)
-        // Kaskaden er systemets slutning, ikke brukerens avgjørelse.
+        assertThat(antallHendelser(treff, "REGISTRERT_OPPMØTE_FJERNET")).isEqualTo(1)
         assertThat(antallHendelser(treff, "ANGRE_INTERESSE_REGISTRERT")).isZero()
     }
 

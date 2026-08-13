@@ -545,17 +545,88 @@ låser dagens oppførsel.
 > Kjør med `TESTCONTAINERS_HOST_OVERRIDE=localhost` hvis testene feiler med
 > «Could not connect to Ryuk» eller «Failed to initialize pool».
 
-### Fase 1 – oppmøte i tabell
+### Fase 1 – oppmøte i tabell ✅ implementert
 
-1. `V15__jobbsoker_mott_tidspunkt.sql`: legg til kolonnen.
-2. Backfill fra hendelsene med samme `LATERAL`-spørring som i dag. Idempotent.
-3. Skriv til kolonnen i tillegg til hendelsen. Les fortsatt fra hendelsene.
-4. Verifiser i dev at kolonne og utledning gir samme svar for alle treff.
-5. Bytt lesevegen i `TreffgjennomforingRepository` og `JobbsøkerSokRepository` til kolonnen.
-6. Fjern det partielle indekset på `jobbsoker_hendelse` i en senere migrasjon.
+**Kolonnen heter `oppmote`, er nullable tekst, og har `NULL` som standardverdi.**
+Verdiene defineres av enumen `Oppmøte` i koden:
 
-Steg 3–5 er bevisst delt: en periode med dobbeltskriving gjør at feil oppdages før
-lesevegen er avhengig av den nye kolonnen. Steg 6 tas etter at 5 har stått i prod.
+| Verdi | Betyr |
+| ----- | ----- |
+| `NULL` | Oppmøte er aldri registrert |
+| `REGISTRERT_OPPMØTE` | Personen møtte opp |
+| `REGISTRERT_OPPMØTE_FJERNET` | Oppmøtet ble registrert og deretter angret |
+
+Ikke tidspunkt. Når noe skjedde kan utledes fra hendelsene, og en `timestamptz` ville
+duplisert data hendelsesloggen allerede eier. Kolonnen svarer bare på *hva* som gjelder nå.
+
+`REGISTRERT_OPPMØTE_FJERNET` og `NULL` gir samme svar på «møtte personen opp?». De
+holdes likevel fra hverandre, fordi de sier ulike ting: den ene er en angret
+registrering, den andre er fravær av registrering.
+
+Ingen `CHECK`-constraint. `jobbsoker.status` er også tekst uten constraint, og enumen
+håndheves i koden. Samme mønster, minst kode.
+
+**Kolonnen ligger i `V14__treffgjennomforing.sql`,** ikke i en egen migrasjon.
+Treffgjennomføringa er ikke deployet ennå, så oppmøtekolonnen hører hjemme i samme
+migrasjon som resten av funksjonaliteten.
+
+#### Den gamle oppmøtefunksjonen er ryddet bort
+
+Den opprinnelige planen hadde en backfill fra `jobbsoker_hendelse`. Den er fjernet, og
+i stedet sletter `V14` de gamle radene.
+
+`jobbsoker_hendelse` inneholdt `MØTT_OPP`- og `IKKE_MØTT_OPP`-rader fra **en
+oppmøtefunksjon som ble fjernet i oktober 2025** (commit `d013441b`, «Fjern
+oppmøtelogikk»). Den var deployet og skrev hendelser via `registrerOppmøte`, med en
+egen scheduler mot aktivitetskortet.
+
+De radene henger ikke sammen med treffgjennomføringa:
+
+- **Ingen aktiv kode leser dem.** `JobbsøkerhendelserScheduler` poller dem ikke, og
+  koden som gjorde det ble slettet sammen med funksjonen.
+- **`IKKE_MØTT_OPP` finnes ikke lenger i `JobbsøkerHendelsestype`.** En slik rad ville
+  kastet `IllegalArgumentException` i `valueOf` ved lesing av jobbsøkeren.
+- **`MØTT_OPP` betyr noe annet nå.** Hendelsestypene for oppmøte er samtidig døpt om
+  til `REGISTRERT_OPPMØTE` og `REGISTRERT_OPPMØTE_FJERNET`, så de gamle navnene
+  tilhører utelukkende den nedlagte funksjonen.
+
+`V14` sletter derfor radene, og de tilhørende radene i `aktivitetskort_polling` som
+peker på dem via fremmednøkkel. Slettinga skjer før den nye funksjonaliteten tas i
+bruk, så alle `MØTT_OPP`-rader fra nå av tilhører treffgjennomføringa.
+
+Oppmøte starter tomt: alle får `NULL`. Det er riktig utgangspunkt for en funksjon som
+ikke har vært i drift.
+
+Tell radene før deploy, så dere vet hva slettinga faktisk fjerner:
+
+```sql
+SELECT hendelsestype, COUNT(*)
+FROM jobbsoker_hendelse
+WHERE hendelsestype IN ('MØTT_OPP', 'IKKE_MØTT_OPP')
+GROUP BY hendelsestype;
+```
+
+Indekset `idx_jobbsoker_hendelse_oppmote` er samtidig fjernet fra `V14`. Det støttet
+`LATERAL`-utledninga som ikke finnes lenger.
+
+**Gjort:**
+
+1. `V14__treffgjennomforing.sql` sletter de gamle oppmøtehendelsene, legger til
+   kolonnen og indekset `idx_jobbsoker_oppmote`.
+2. Enumen `Oppmøte` i `no.nav.toi.jobbsoker`. Hendelsestypene er døpt om til
+   `REGISTRERT_OPPMØTE` og `REGISTRERT_OPPMØTE_FJERNET`, slik at de heter det samme
+   som oppmøteverdiene. Koblinga står i `Oppmøte.hendelsestype`, så de to enumene ikke
+   kan komme fra hverandre.
+3. `JobbsøkerRepository.settOppmøte` skriver kolonnen i samme transaksjon som hendelsen.
+4. Lesevegen bytta i både `TreffgjennomforingRepository` og `JobbsøkerSokRepository`.
+   Den dupliserte `LATERAL`-spørringa er borte begge steder.
+
+Hendelsene skrives fortsatt, nå som `REGISTRERT_OPPMØTE` og
+`REGISTRERT_OPPMØTE_FJERNET`. Kolonnen er en projeksjon av dem, ikke en erstatning, og
+hele revisjonssporet står igjen.
+
+> **Lokale databaser må resettes.** `V14` har endret innhold, og Flyway vil avvise en
+> database der den gamle versjonen allerede er kjørt.
 
 ### Fase 2 – oppmøteoperasjonen til JobbsøkerService
 
@@ -626,16 +697,13 @@ To regler som gjelder gjennom hele arbeidet:
 | Kolonne og hendelser divergerer | Oppmøte vises ulikt i søk og i treffgjennomføring | Dobbeltskriving i en periode, og en avstemmingsspørring som sammenligner kolonne mot utledning |
 | Kaskadeslettinga glipper etter oppdelinga | Vurdering blir stående for en person som ikke møtte | Karakteriseringstest i fase 0, kjøres etter hver fase |
 | Antall spørringer øker i lesevegen | Tregere `GET` på treff med mange deltakere | Tell spørringer i test. Mål på et treff med minst 100 jobbsøkere. |
-| Backfill treffer feil rader | Feil oppmøte i prod | Migrasjonen er idempotent og kun `UPDATE`. Kjør telling i dev og sammenlign mot utledningen før prod. |
+| Sletting av gamle hendelser treffer for bredt | Revisjonsspor forsvinner | `DELETE` er avgrenset til `MØTT_OPP` og `IKKE_MØTT_OPP`, som begge tilhører den nedlagte funksjonen. Kjør tellinga under før prod. |
 
 **Rollback per fase:**
 
-- Fase 1 steg 1–4: kolonnen er ubrukt av lesevegen. Rull tilbake koden, la kolonnen stå.
-- Fase 1 steg 5: rull tilbake koden. Kolonnen er fortsatt korrekt fordi hendelsene skrives uendret.
+- Fase 1: kolonnen ligger i `V14`, som ikke er deployet. Ingen data å rulle tilbake –
+  treffgjennomføringa deployes som en enhet, eller ikke i det hele tatt.
 - Fase 2–6: ren kodeendring uten skjemaendring. Vanlig tilbakerulling av deploy.
-
-Fase 1 steg 6 – å fjerne indekset – er det eneste irreversible steget, og bør vente
-til lesevegen har stått i prod en stund.
 
 ## Rød sone
 
@@ -647,8 +715,9 @@ Deler den som implementerer bør skrive selv og forstå i dybden, ikke generere:
 - **Oppmøtetransaksjonen i `JobbsøkerService`.** Status, hendelse og deltakernummer
   må stå og falle sammen. En delvis registrering gir en person som er møtt uten
   kortnummer, eller motsatt.
-- **Backfill-migrasjonen.** Skriver til produksjonsdata om personers oppmøte. Må være
-  idempotent og verifisert mot utledningen før den kjøres.
+- **Slettinga av gamle oppmøtehendelser i `V14`.** Sletting av produksjonsdata er
+  irreversibel. Tell radene i dev og prod før deploy, og bekreft at ingen av dem
+  tilhører noe som fortsatt er i bruk.
 - **Kaskadeslettinga etter oppdelinga.** Regelen om at angret oppmøte fjerner alle
   registreringer er forretningslogikk, ikke teknisk detalj. Den skal ikke gå tapt i
   en flytting.

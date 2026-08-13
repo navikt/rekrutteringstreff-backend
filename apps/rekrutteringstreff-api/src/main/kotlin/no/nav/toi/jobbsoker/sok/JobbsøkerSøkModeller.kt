@@ -137,10 +137,6 @@ data class JobbsøkerSøkTreff(
     val oppmøte: OppmøteSammendragDto? = null,
 )
 
-/**
- * Oppmøtet slik det er utledet av hendelsene, sammen med hva som forsvinner om
- * det fjernes. Frontend konstruerer ikke tellingene selv.
- */
 data class OppmøteSammendragDto(
     val møtt: Boolean,
     val registreringerSomSlettes: RegistreringerSammendragDto,

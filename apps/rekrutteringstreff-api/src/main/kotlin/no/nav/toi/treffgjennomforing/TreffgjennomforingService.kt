@@ -11,6 +11,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -35,7 +36,6 @@ class TreffgjennomforingService(
     private val mapper: ObjectMapper,
 ) {
 
-    /** Rent lesende. Finnes ingen lagret treffgjennomføring, er svaret tomtilstanden. */
     fun hent(treffId: TreffId): TreffgjennomforingDto = dataSource.executeInTransaction { connection ->
         val kontekst = hentKontekst(connection, treffId)
         repository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
@@ -65,8 +65,9 @@ class TreffgjennomforingService(
             if (kontekst.erWorkOp) repository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
             else null
 
+        jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE)
         leggTilHendelseForJobbsøker(
-            connection, person, JobbsøkerHendelsestype.MØTT_OPP, navIdent,
+            connection, person, Oppmøte.REGISTRERT_OPPMØTE.hendelsestype, navIdent,
             deltakernummer?.let { mapOf("deltakernummer" to it) } ?: emptyMap(),
         )
     }
@@ -82,8 +83,9 @@ class TreffgjennomforingService(
         if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
 
         repository.slettRegistreringerFor(connection, jobbsøkerId)
+        jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
         leggTilHendelseForJobbsøker(
-            connection, person, JobbsøkerHendelsestype.ANGRE_MØTT_OPP, navIdent,
+            connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET.hendelsestype, navIdent,
             mapOf(
                 "interesser" to registreringer.interesser,
                 "intervjuplasser" to registreringer.intervjuplasser,

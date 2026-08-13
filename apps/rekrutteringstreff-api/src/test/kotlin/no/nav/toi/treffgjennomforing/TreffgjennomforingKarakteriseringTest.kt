@@ -11,6 +11,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
+import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -271,12 +272,12 @@ class TreffgjennomforingKarakteriseringTest {
         val person = jobbsøker(treffId)
 
         møtt(treffId, person)
-        assertThat(jobbsøkerhendelser(treffId).filter { it == "MØTT_OPP" }).hasSize(1)
-        assertThat(hendelsedata("MØTT_OPP").single()).contains("\"deltakernummer\": 1")
+        assertThat(jobbsøkerhendelser(treffId).filter { it == "REGISTRERT_OPPMØTE" }).hasSize(1)
+        assertThat(hendelsedata("REGISTRERT_OPPMØTE").single()).contains("\"deltakernummer\": 1")
 
         ikkeMøtt(treffId, person)
-        assertThat(jobbsøkerhendelser(treffId).filter { it == "ANGRE_MØTT_OPP" }).hasSize(1)
-        assertThat(hendelsedata("ANGRE_MØTT_OPP").single())
+        assertThat(jobbsøkerhendelser(treffId).filter { it == "REGISTRERT_OPPMØTE_FJERNET" }).hasSize(1)
+        assertThat(hendelsedata("REGISTRERT_OPPMØTE_FJERNET").single())
             .contains("\"interesser\"", "\"intervjuplasser\"", "\"vurderinger\"")
     }
 
@@ -417,6 +418,42 @@ class TreffgjennomforingKarakteriseringTest {
             .hasMessageContaining("Steget finnes bare på treff av kategorien WORKOP")
     }
 
+    @Test
+    fun `oppmøtekolonnen settes ved registrering og angring`() {
+        val treffId = workOpTreff()
+        val person = jobbsøker(treffId)
+        assertThat(oppmøtekolonne(person)).isNull()
+
+        møtt(treffId, person)
+        assertThat(oppmøtekolonne(person)).isEqualTo(Oppmøte.REGISTRERT_OPPMØTE)
+
+        ikkeMøtt(treffId, person)
+        assertThat(oppmøtekolonne(person)).isEqualTo(Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
+
+        møtt(treffId, person)
+        assertThat(oppmøtekolonne(person)).isEqualTo(Oppmøte.REGISTRERT_OPPMØTE)
+    }
+
+    @Test
+    fun `kolonnen og hendelsene gir samme svar for alle jobbsøkere`() {
+        val s = fulltScenario()
+        ikkeMøtt(s.treffId, s.p2)
+
+        assertThat(antallAvvikMellomKolonneOgHendelser()).isZero()
+    }
+
+    @Test
+    fun `jobbsøker uten oppmøteregistrering har null i kolonnen og er ikke fremmøtt`() {
+        val treffId = workOpTreff()
+        val registrert = jobbsøker(treffId, "11111111111")
+        val urørt = jobbsøker(treffId, "22222222222")
+
+        møtt(treffId, registrert)
+
+        assertThat(oppmøtekolonne(urørt)).isNull()
+        assertThat(service.hent(treffId).oppmøte).containsExactly(registrert.somString)
+    }
+
     private fun fulltScenario(): Scenario {
         val treffId = workOpTreff(antallArbeidsgivere = 2)
         val ag = arbeidsgivere(treffId)
@@ -537,6 +574,36 @@ class TreffgjennomforingKarakteriseringTest {
     private fun antallTreffgjennomforingsrader(): Int = db.dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT COUNT(*) FROM treffgjennomforing").executeQuery().use {
             it.next(); it.getInt(1)
+        }
+    }
+
+    private fun oppmøtekolonne(person: PersonTreffId): Oppmøte? = db.dataSource.connection.use { conn ->
+        conn.prepareStatement("SELECT oppmote FROM jobbsoker WHERE id = ?").use { stmt ->
+            stmt.setObject(1, java.util.UUID.fromString(person.somString))
+            stmt.executeQuery().use { rs ->
+                rs.next()
+                Oppmøte.fraDatabase(rs.getString(1))
+            }
+        }
+    }
+
+    private fun antallAvvikMellomKolonneOgHendelser(): Int = db.dataSource.connection.use { conn ->
+        val sql = """
+            SELECT COUNT(*)
+            FROM jobbsoker j
+            LEFT JOIN LATERAL (
+                SELECT jh.hendelsestype
+                FROM jobbsoker_hendelse jh
+                WHERE jh.jobbsoker_id = j.jobbsoker_id
+                  AND jh.hendelsestype IN ('REGISTRERT_OPPMØTE', 'REGISTRERT_OPPMØTE_FJERNET')
+                ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
+                LIMIT 1
+            ) h ON TRUE
+            WHERE (h.hendelsestype = 'REGISTRERT_OPPMØTE') IS DISTINCT FROM (j.oppmote = ?)
+        """.trimIndent()
+        conn.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, Oppmøte.REGISTRERT_OPPMØTE.name)
+            stmt.executeQuery().use { it.next(); it.getInt(1) }
         }
     }
 
