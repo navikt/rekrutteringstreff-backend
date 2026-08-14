@@ -46,11 +46,15 @@ class TreffgjennomforingKarakteriseringTest {
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
     private val arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
+    private val kontekstRepository = TreffkontekstRepository()
+    private val repository = TreffgjennomforingRepository()
+    private val reader = TreffgjennomføringReader(repository)
 
     private val service = TreffgjennomforingService(
         dataSource = db.dataSource,
-        kontekstRepository = TreffkontekstRepository(),
-        repository = TreffgjennomforingRepository(),
+        kontekstRepository = kontekstRepository,
+        repository = repository,
+        reader = reader,
         jobbsøkerRepository = jobbsøkerRepository,
         arbeidsgiverRepository = arbeidsgiverRepository,
         rekrutteringstreffRepository = rekrutteringstreffRepository,
@@ -60,8 +64,9 @@ class TreffgjennomforingKarakteriseringTest {
     private val jobbsøkerService = JobbsøkerService(
         dataSource = db.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
-        treffkontekstRepository = TreffkontekstRepository(),
-        treffgjennomforingRepository = TreffgjennomforingRepository(),
+        treffkontekstRepository = kontekstRepository,
+        treffgjennomforingRepository = repository,
+        treffgjennomføringReader = reader,
         mapper = mapper,
     )
 

@@ -16,12 +16,12 @@ import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.låsTreff
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomforing.OppmøteHarRegistreringerException
+import no.nav.toi.treffgjennomforing.TreffgjennomføringReader
 import no.nav.toi.treffgjennomforing.TreffgjennomforingRepository
 import no.nav.toi.treffgjennomforing.Treffkontekst
 import no.nav.toi.treffgjennomforing.TreffkontekstRepository
 import no.nav.toi.treffgjennomforing.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
-import no.nav.toi.treffgjennomforing.dto.tilDto
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
@@ -40,6 +40,7 @@ class JobbsøkerService(
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
     private val treffkontekstRepository: TreffkontekstRepository = TreffkontekstRepository(),
     private val treffgjennomforingRepository: TreffgjennomforingRepository = TreffgjennomforingRepository(),
+    private val treffgjennomføringReader: TreffgjennomføringReader = TreffgjennomføringReader(treffgjennomforingRepository),
     private val mapper: ObjectMapper = JacksonConfig.mapper,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
@@ -498,7 +499,7 @@ class JobbsøkerService(
                 else fjernOppmøte(connection, person, jobbsøkerId, dto.bekreftSlettRegistreringer, navIdent)
             }
 
-            treffgjennomforingRepository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
+            treffgjennomføringReader.les(connection, kontekst)
         }
 
     private fun registrerOppmøte(

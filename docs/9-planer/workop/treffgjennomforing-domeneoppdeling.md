@@ -1,6 +1,6 @@
 # Plan: Domeneoppdeling av treffgjennomføring i backend
 
-**Status:** Besluttet. Fase 0–2 implementert, fase 3–6 gjenstår  
+**Status:** Besluttet. Fase 0–3 implementert, fase 4–6 gjenstår  
 **Omfang:** `rekrutteringstreff-api`, pakken `no.nav.toi.treffgjennomforing`  
 **Gjelder ikke:** frontendkontrakten. Alle forslagene her skal være usynlige for `rekrutteringsbistand-frontend`.
 
@@ -434,25 +434,25 @@ Ett leselag som eier sammensettinga:
 
 ```
 no.nav.toi.treffgjennomforing/
-└── TreffgjennomforingLeser.kt
+└── TreffgjennomføringReader.kt
 ```
 
-Leseren spør hvert subdomene om sin del og setter sammen `TreffgjennomforingDto`.
+Readeren spør hvert subdomene om sin del og setter sammen `TreffgjennomforingDto`.
 Hvert subdomene eksponerer én lesemetode for sin egen del, og kjenner ikke DTO-en.
 
 Konsekvenser å ta stilling til:
 
-- **Leseren avhenger av alle subdomenene.** Det er greit, så lenge avhengigheten går
-  én vei og ingen subdomener avhenger av leseren.
+- **Readeren avhenger av alle subdomenene.** Det er greit, så lenge avhengigheten går
+  én vei og ingen subdomener avhenger av readeren.
 - **Normaliseringa av rom må ha oppmøte.** `Romfordeler.oppdaterEtterOppmøte` kjører
   ved lesing. Enten tar møteplanens lesemetode oppmøte som argument – anbefales – eller
-  så flyttes normaliseringa opp i leseren.
+  så flyttes normaliseringa opp i readeren.
 - **Antall spørringer må ikke øke.** `hentAggregat` gjør i dag ti spørringer på én
   connection. Oppdelinga skal gi like mange, ikke flere. Verifiser med en test som
   teller spørringer, eller med `pg_stat_statements` i test.
 - **Store lesekall er et mål, ikke en bivirkning.** Hvert subdomene skal eksponere
   én lesemetode som henter hele sin del i så få spørringer som mulig. Ingen
-  N+1-mønstre der leseren kaller subdomenet én gang per jobbsøker eller arbeidsgiver.
+  N+1-mønstre der readeren kaller subdomenet én gang per jobbsøker eller arbeidsgiver.
 
 ### Alternativet vi ikke velger
 
@@ -476,7 +476,7 @@ no.nav.toi.jobbsoker/
 no.nav.toi.treffgjennomforing/
 ├── Treffgjennomforing.kt          aggregatmodell, TreffgjennomføringFase
 ├── Treffkontekst.kt               uendret
-├── TreffgjennomforingLeser.kt     setter sammen aggregat-DTO-en
+├── TreffgjennomføringReader.kt    setter sammen aggregat-DTO-en
 ├── TreffgjennomforingController.kt  uendret sti, delegerer videre
 ├── FaseRepository.kt              treffgjennomforing-raden: sikreRad og settFase
 ├── moteplan/
@@ -652,22 +652,48 @@ låse hverandre fast.
 kolonnen direkte i stedet for å hente hele aggregatet. Fase 1 gjorde det mulig, og det
 sparer ti spørringer på en operasjon som ofte er et no-op.
 
-**To ting som er bevisst midlertidige:**
+**To ting som var bevisst midlertidige:**
 
-- `JobbsøkerService` returnerer `TreffgjennomforingDto`, fordi endepunktet svarer med
-  hele aggregatet. Fase 3 flytter den byggingen til `TreffgjennomforingLeser`, og da
-  kaller jobbsøker-domenet leseren i stedet for repositoryet.
+- ~~`JobbsøkerService` returnerer `TreffgjennomforingDto` bygget fra repositoryet.~~
+  Løst i fase 3: tjenesten kaller `TreffgjennomføringReader`.
 - Kaskadeslettinga står fortsatt som direkte tabellsletting via
   `TreffgjennomforingRepository`. Fase 4 og 5 gir eierne noe å kalle på.
 
-Begge betyr at `JobbsøkerService` foreløpig kjenner `TreffgjennomforingRepository`.
-Det er en kjent, avgrenset kobling som krymper i fase 3–5, ikke et sluttbilde.
+`JobbsøkerService` kjenner derfor fortsatt `TreffgjennomforingRepository`, men nå bare
+for deltakernummeret og kaskaden. Det er en kjent, avgrenset kobling som krymper i
+fase 4–5, ikke et sluttbilde.
 
-### Fase 3 – leselaget
+### Fase 3 – leselaget ✅ implementert
 
-Innfør `TreffgjennomforingLeser` uten å flytte noe annet. `hentAggregat` blir
-kalt fra leseren i stedet for fra `skriv`. Ingen adferdsendring, men strukturen
-som fase 4 og 5 trenger kommer på plass.
+`TreffgjennomføringReader` eier nå sammensettinga av svaret. Ingenting annet er flyttet.
+
+**Gjort:**
+
+1. `TreffgjennomføringReader.les(connection, kontekst)` bygger `TreffgjennomforingDto`.
+2. `TreffgjennomforingService.hent` og `skriv` kaller readeren i stedet for å bygge
+   DTO-en selv.
+3. `JobbsøkerService` kaller readeren. Den bygger ikke lenger DTO-en fra
+   `TreffgjennomforingRepository` – én av de to midlertidige koblingene fra fase 2 er
+   dermed borte. Igjen står bare kaskadeslettinga og deltakernummeret.
+
+Readeren tar `Treffkontekst`, ikke `TreffId`. Skriveoperasjonene har allerede konteksten,
+og slipper å lese den to ganger i samme transaksjon.
+
+**Vakt på antall spørringer.** Planen krevde en test som teller spørringer.
+`TreffgjennomføringReaderTest` bruker en proxy-`Connection` som teller
+`prepareStatement`, og slår fast at lesevegen bruker **ti** spørringer: fase,
+møteoppsett, oppmøte, deltakernummer, rom, rotasjon, interesser, fordelinger,
+vurderinger og notater.
+
+En egen test kjører samme lesing mot et lite og et stort treff og krever likt antall.
+Den fanger N+1-mønstre i fase 4 og 5, der hvert subdomene får sin egen lesemetode og
+det er lett å ende opp med én spørring per jobbsøker.
+
+Feiler de testene etter en oppdeling, er det oppdelinga som er feil – ikke tallet.
+
+**Merk:** `Treffkontekst` koster tre spørringer i tillegg (treff, jobbsøkere,
+arbeidsgivere). De ligger utenfor readeren og telles ikke, siden konteksten hentes én
+gang per transaksjon uansett hvor mange lesinger som skjer.
 
 ### Fase 4 – skill ut oppfølging
 

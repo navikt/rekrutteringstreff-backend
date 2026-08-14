@@ -21,7 +21,6 @@ import no.nav.toi.treffgjennomforing.dto.MøteoppsettRequestDto
 import no.nav.toi.treffgjennomforing.dto.RomDto
 import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
 import no.nav.toi.treffgjennomforing.dto.VurderingDto
-import no.nav.toi.treffgjennomforing.dto.tilDto
 import java.sql.Connection
 import javax.sql.DataSource
 
@@ -29,6 +28,7 @@ class TreffgjennomforingService(
     private val dataSource: DataSource,
     private val kontekstRepository: TreffkontekstRepository,
     private val repository: TreffgjennomforingRepository,
+    private val reader: TreffgjennomføringReader,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
     private val rekrutteringstreffRepository: RekrutteringstreffRepository,
@@ -37,7 +37,7 @@ class TreffgjennomforingService(
 
     fun hent(treffId: TreffId): TreffgjennomforingDto = dataSource.executeInTransaction { connection ->
         val kontekst = hentKontekst(connection, treffId)
-        repository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
+        reader.les(connection, kontekst)
     }
 
     fun lagreMøteoppsett(treffId: TreffId, dto: MøteoppsettRequestDto, navIdent: String): TreffgjennomforingDto =
@@ -433,6 +433,6 @@ class TreffgjennomforingService(
         connection.låsTreff(kontekst.treffDbId)
         val rad = repository.sikreRad(connection, kontekst.treffDbId)
         block(connection, kontekst, rad)
-        repository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
+        reader.les(connection, kontekst)
     }
 }
