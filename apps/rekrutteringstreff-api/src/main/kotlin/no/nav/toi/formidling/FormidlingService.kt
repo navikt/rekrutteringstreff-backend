@@ -276,7 +276,7 @@ class FormidlingService(
             throw NotFoundResponse("Formidling med id $formidlingId finnes ikke på treffet")
         }
 
-        if(formidling.opprettetAvNavIdent != navIdent) {
+        if (formidling.opprettetAvNavIdent?.trim()?.uppercase() != navIdent.trim().uppercase()) {
             throw ForbiddenResponse("Kan ikke slette formidling uten å eie den")
         }
 
