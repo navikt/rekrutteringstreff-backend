@@ -364,6 +364,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         kandidatlisteId = getObject("kandidatliste_id", UUID::class.java),
         utfallSendtTidspunkt = getTimestamp("utfall_sendt_tidspunkt")?.toInstant()?.atZone(ZoneId.of("Europe/Oslo")),
         opprettetTidspunkt = getTimestamp("opprettet_tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
+        opprettetAvNavIdent = getString("opprettet_av_veileder_navident")
     )
 
     private fun PreparedStatement.setNullableUuid(index: Int, value: UUID?) {
