@@ -14,6 +14,7 @@ import no.nav.toi.RuteRegistrerer
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.eier.krevEierEllerUtvikler
+import no.nav.toi.treffgjennomføring.TreffgjennomføringController.Companion.AGGREGAT_EKSEMPEL
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import java.util.*
@@ -38,8 +39,11 @@ class OppfølgingController(
         operationId = "lagreVurdering",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = VurderingDto::class)]),
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(
+            from = VurderingDto::class,
+            example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "arbeidsgiverTreffId": "22222222-2222-2222-2222-222222222222", "vurdering": "AKTUELL", "notater": ["AG_GODT_INNTRYKK"], "andregangsintervju": true, "andregangsintervjuDato": "2026-09-01", "jobbtilbud": false}""",
+        )]),
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = VURDERINGER,
         methods = [HttpMethod.PUT],
     )

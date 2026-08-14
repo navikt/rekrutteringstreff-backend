@@ -1,6 +1,5 @@
 package no.nav.toi.treffgjennomføring.dto
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
 import no.nav.toi.treffgjennomføring.møteplan.ArbeidsgiverRotasjon
 import no.nav.toi.jobbsoker.oppmøte.Deltakernummer
@@ -16,21 +15,18 @@ private val KLOKKESLETT = DateTimeFormatter.ofPattern("HH:mm")
 
 data class DeltakernummerDto(val personTreffId: String, val nummer: Int)
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class RomDto(val romnummer: Int, val jobbsøkere: List<String>)
 
 data class ArbeidsgiverRotasjonDto(val arbeidsgiverTreffId: String, val startPosisjon: Int)
 
 data class InteresseDto(val personTreffId: String, val arbeidsgiverTreffId: String)
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class ArbeidsgiverIntervjufordelingDto(
     val arbeidsgiverTreffId: String,
     val inkludertePersonTreffIder: List<String> = emptyList(),
     val ekskludertePersonTreffIder: List<String> = emptyList(),
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class VurderingDto(
     val personTreffId: String,
     val arbeidsgiverTreffId: String,
@@ -56,20 +52,17 @@ data class TreffgjennomføringDto(
     val vurderinger: List<VurderingDto>,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class OppmøteRequestDto(
     val personTreffId: String,
     val møtt: Boolean,
     val bekreftSlettRegistreringer: Boolean = false,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class MøteoppsettRequestDto(
     val starttidspunkt: String,
     val varighetPerMøteMinutter: Int,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class InteresseRequestDto(
     val personTreffId: String,
     val arbeidsgiverTreffId: String,

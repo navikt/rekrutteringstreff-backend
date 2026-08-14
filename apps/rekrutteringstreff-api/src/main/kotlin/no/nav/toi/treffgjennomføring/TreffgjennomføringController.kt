@@ -20,6 +20,7 @@ import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.eier.krevEierEllerUtvikler
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
+import no.nav.toi.treffgjennomføring.dto.KaskadeAdvarselDto
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomføring.dto.RomDto
@@ -47,6 +48,36 @@ class TreffgjennomføringController(
         const val INTERVJUFORDELING = "$skrivPath/intervjufordeling"
         const val FORDEL = "$INTERVJUFORDELING/fordel"
         const val HENT = lesPath
+
+        private const val PERSON_ID = "11111111-1111-1111-1111-111111111111"
+        private const val ARBEIDSGIVER_ID = "22222222-2222-2222-2222-222222222222"
+
+        const val AGGREGAT_EKSEMPEL = """{
+  "rekrutteringstreffId": "33333333-3333-3333-3333-333333333333",
+  "fase": "VURDERING",
+  "antallRom": 1,
+  "starttidspunkt": "09:00",
+  "varighetPerMøteMinutter": 15,
+  "oppmøte": ["$PERSON_ID"],
+  "deltakernummer": [{"personTreffId": "$PERSON_ID", "nummer": 1}],
+  "rom": [{"romnummer": 1, "jobbsøkere": ["$PERSON_ID"]}],
+  "arbeidsgiverRekkefølge": [{"arbeidsgiverTreffId": "$ARBEIDSGIVER_ID", "startPosisjon": 0}],
+  "interesser": [{"personTreffId": "$PERSON_ID", "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID"}],
+  "intervjufordelinger": [{
+    "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID",
+    "inkludertePersonTreffIder": ["$PERSON_ID"],
+    "ekskludertePersonTreffIder": []
+  }],
+  "vurderinger": [{
+    "personTreffId": "$PERSON_ID",
+    "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID",
+    "vurdering": "AKTUELL",
+    "notater": ["AG_GODT_INNTRYKK"],
+    "andregangsintervju": true,
+    "andregangsintervjuDato": "2026-09-01",
+    "jobbtilbud": false
+  }]
+}"""
     }
 
     override fun registrer(routes: JavalinDefaultRoutingApi) {
@@ -68,7 +99,7 @@ class TreffgjennomføringController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
         responses = [
-            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)]),
+            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)]),
             OpenApiResponse(status = "403", description = "Bruker er ikke eier av treffet."),
         ],
         path = lesPath,
@@ -87,10 +118,20 @@ class TreffgjennomføringController(
         operationId = "oppdaterOppmote",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = OppmøteRequestDto::class)]),
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(
+            from = OppmøteRequestDto::class,
+            example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "møtt": true, "bekreftSlettRegistreringer": false}""",
+        )]),
         responses = [
-            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)]),
-            OpenApiResponse(status = "409", description = "Oppmøtet har registreringer som må bekreftes slettet."),
+            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)]),
+            OpenApiResponse(
+                status = "409",
+                description = "Oppmøtet har registreringer som må bekreftes slettet.",
+                content = [OpenApiContent(
+                    from = KaskadeAdvarselDto::class,
+                    example = """{"feil": "Jobbsøkeren har registreringer som slettes hvis oppmøtet fjernes.", "hint": "Bekreft med bekreftSlettRegistreringer=true.", "registreringer": {"interesser": 2, "intervjuplasser": 1, "vurderinger": 0}}""",
+                )],
+            ),
         ],
         path = OPPMØTE,
         methods = [HttpMethod.PUT],
@@ -107,8 +148,8 @@ class TreffgjennomføringController(
         operationId = "lagreMoteoppsett",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = MøteoppsettRequestDto::class)]),
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = MøteoppsettRequestDto::class, example = """{"starttidspunkt": "09:00", "varighetPerMøteMinutter": 15}""")]),
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = MØTEOPPSETT,
         methods = [HttpMethod.PUT],
     )
@@ -125,8 +166,11 @@ class TreffgjennomføringController(
         operationId = "lagreRomfordeling",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = Array<RomDto>::class)]),
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(
+            from = Array<RomDto>::class,
+            example = """[{"romnummer": 1, "jobbsøkere": ["11111111-1111-1111-1111-111111111111"]}, {"romnummer": 2, "jobbsøkere": []}]""",
+        )]),
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = ROMFORDELING,
         methods = [HttpMethod.PUT],
     )
@@ -142,8 +186,8 @@ class TreffgjennomføringController(
         operationId = "settInteresse",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = InteresseRequestDto::class)]),
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = InteresseRequestDto::class, example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "arbeidsgiverTreffId": "22222222-2222-2222-2222-222222222222", "interessert": true}""")]),
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = INTERESSE,
         methods = [HttpMethod.PUT],
     )
@@ -159,8 +203,11 @@ class TreffgjennomføringController(
         operationId = "lagreIntervjufordeling",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = ArbeidsgiverIntervjufordelingDto::class)]),
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(
+            from = ArbeidsgiverIntervjufordelingDto::class,
+            example = """{"arbeidsgiverTreffId": "22222222-2222-2222-2222-222222222222", "inkludertePersonTreffIder": ["11111111-1111-1111-1111-111111111111"], "ekskludertePersonTreffIder": []}""",
+        )]),
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = INTERVJUFORDELING,
         methods = [HttpMethod.PUT],
     )
@@ -177,7 +224,7 @@ class TreffgjennomføringController(
         operationId = "fordelIntervjuer",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = FORDEL,
         methods = [HttpMethod.POST],
     )
