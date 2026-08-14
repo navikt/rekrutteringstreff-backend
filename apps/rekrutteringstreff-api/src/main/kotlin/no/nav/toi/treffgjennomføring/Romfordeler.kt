@@ -1,22 +1,15 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.jobbsoker.PersonTreffId
 
-/** Rene funksjoner for romfordelinga. Speiler hjelperne med samme navn i frontend. */
 object Romfordeler {
 
-    /** Runde robin, slik at rommene blir jevnstore og rekkefølgen i lista beholdes. */
     fun fordelJevnt(jobbsøkere: List<PersonTreffId>, antallRom: Int): List<Rom> =
         if (antallRom <= 0) emptyList()
         else (1..antallRom).map { romnummer ->
             Rom(romnummer, jobbsøkere.filterIndexed { indeks, _ -> indeks % antallRom == romnummer - 1 })
         }
 
-    /**
-     * Fremmøtte som mangler rom havner i det minste rommet, og de som ikke lenger
-     * er møtt faller ut. Uten dette ville et oppmøte registrert etter fordelinga
-     * gitt en person uten rom.
-     */
     fun oppdaterEtterOppmøte(rom: List<Rom>, oppmøte: List<PersonTreffId>): List<Rom> {
         if (rom.isEmpty()) return emptyList()
 
@@ -33,7 +26,6 @@ object Romfordeler {
         return oppdatert.map { (romnummer, jobbsøkere) -> Rom(romnummer, jobbsøkere) }
     }
 
-    /** Sikrer nøyaktig `antallRom` rom nummerert 1..n. Hjemløse flyttes til minste rom. */
     fun normaliser(rom: List<Rom>, antallRom: Int): List<Rom> {
         if (antallRom <= 0) return emptyList()
 

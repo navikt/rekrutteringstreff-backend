@@ -299,7 +299,7 @@ Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/mig
 | Versjon | Fil                            | Beskrivelse                                        |
 | ------- | ------------------------------ | -------------------------------------------------- |
 | V1      | `V1__init.sql`                 | Initiell opprettelse av alle tabeller              |
-| V14     | `V14__treffgjennomforing.sql`  | Ni nye tabeller for treffgjennomføring. Kun `CREATE TABLE` |
+| V14     | `V14__treffgjennomforing.sql`  | Ni nye tabeller for treffgjennomføring, kolonnen `jobbsoker.oppmote`, og sletting av hendelser fra den gamle oppmøtefunksjonen |
 
 ## Indekser
 

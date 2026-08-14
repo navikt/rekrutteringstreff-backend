@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
@@ -14,7 +14,7 @@ import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.treffgjennomforing.dto.OppmøteRequestDto
+import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
@@ -36,7 +36,7 @@ class TreffgjennomføringReaderTest {
     private val navIdent = "Z999999"
 
     private val kontekstRepository = TreffkontekstRepository()
-    private val repository = TreffgjennomforingRepository()
+    private val repository = TreffgjennomføringRepository()
     private val reader = TreffgjennomføringReader(repository)
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
 
@@ -44,7 +44,7 @@ class TreffgjennomføringReaderTest {
         dataSource = db.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
         treffkontekstRepository = kontekstRepository,
-        treffgjennomforingRepository = repository,
+        treffgjennomføringRepository = repository,
         treffgjennomføringReader = reader,
         mapper = mapper,
     )

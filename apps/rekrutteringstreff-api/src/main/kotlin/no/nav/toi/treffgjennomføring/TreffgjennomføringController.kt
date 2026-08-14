@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
@@ -18,17 +18,17 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
-import no.nav.toi.treffgjennomforing.dto.ArbeidsgiverIntervjufordelingDto
-import no.nav.toi.treffgjennomforing.dto.InteresseRequestDto
-import no.nav.toi.treffgjennomforing.dto.MøteoppsettRequestDto
-import no.nav.toi.treffgjennomforing.dto.OppmøteRequestDto
-import no.nav.toi.treffgjennomforing.dto.RomDto
-import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
-import no.nav.toi.treffgjennomforing.dto.VurderingDto
+import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
+import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
+import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
+import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
+import no.nav.toi.treffgjennomføring.dto.RomDto
+import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
+import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import java.util.*
 
-class TreffgjennomforingController(
-    private val treffgjennomforingService: TreffgjennomforingService,
+class TreffgjennomføringController(
+    private val treffgjennomføringService: TreffgjennomføringService,
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
 ) : RuteRegistrerer {
@@ -83,7 +83,7 @@ class TreffgjennomforingController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
         responses = [
-            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomforingDto::class)]),
+            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)]),
             OpenApiResponse(status = "403", description = "Bruker er ikke eier av treffet."),
         ],
         path = lesPath,
@@ -93,7 +93,7 @@ class TreffgjennomforingController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevTilgang(treffId)
         AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
-        ctx.status(200).json(treffgjennomforingService.hent(treffId))
+        ctx.status(200).json(treffgjennomføringService.hent(treffId))
     }
 
     @OpenApi(
@@ -103,7 +103,7 @@ class TreffgjennomforingController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
         responses = [
-            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomforingDto::class)]),
+            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)]),
             OpenApiResponse(status = "409", description = "Oppmøtet har registreringer som må bekreftes slettet."),
         ],
         path = OPPMØTE,
@@ -121,7 +121,7 @@ class TreffgjennomforingController(
         operationId = "lagreMoteoppsett",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomforingDto::class)])],
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = MØTEOPPSETT,
         methods = [HttpMethod.PUT],
     )
@@ -129,7 +129,7 @@ class TreffgjennomforingController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevTilgang(treffId)
         val dto = ctx.bodyAsClass<MøteoppsettRequestDto>()
-        ctx.status(200).json(treffgjennomforingService.lagreMøteoppsett(treffId, dto, navIdent))
+        ctx.status(200).json(treffgjennomføringService.lagreMøteoppsett(treffId, dto, navIdent))
     }
 
     @OpenApi(
@@ -138,7 +138,7 @@ class TreffgjennomforingController(
         operationId = "lagreRomfordeling",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomforingDto::class)])],
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = ROMFORDELING,
         methods = [HttpMethod.PUT],
     )
@@ -146,7 +146,7 @@ class TreffgjennomforingController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevTilgang(treffId)
         val rom = ctx.bodyAsClass<Array<RomDto>>().toList()
-        ctx.status(200).json(treffgjennomforingService.lagreRomfordeling(treffId, rom, navIdent))
+        ctx.status(200).json(treffgjennomføringService.lagreRomfordeling(treffId, rom, navIdent))
     }
 
     @OpenApi(
@@ -154,7 +154,7 @@ class TreffgjennomforingController(
         operationId = "settInteresse",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomforingDto::class)])],
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = INTERESSE,
         methods = [HttpMethod.PUT],
     )
@@ -162,7 +162,7 @@ class TreffgjennomforingController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevTilgang(treffId)
         val dto = ctx.bodyAsClass<InteresseRequestDto>()
-        ctx.status(200).json(treffgjennomforingService.settInteresse(treffId, dto, navIdent))
+        ctx.status(200).json(treffgjennomføringService.settInteresse(treffId, dto, navIdent))
     }
 
     @OpenApi(
@@ -170,7 +170,7 @@ class TreffgjennomforingController(
         operationId = "lagreIntervjufordeling",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomforingDto::class)])],
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = INTERVJUFORDELING,
         methods = [HttpMethod.PUT],
     )
@@ -178,7 +178,7 @@ class TreffgjennomforingController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevTilgang(treffId)
         val dto = ctx.bodyAsClass<ArbeidsgiverIntervjufordelingDto>()
-        ctx.status(200).json(treffgjennomforingService.lagreIntervjufordeling(treffId, dto, navIdent))
+        ctx.status(200).json(treffgjennomføringService.lagreIntervjufordeling(treffId, dto, navIdent))
     }
 
     @OpenApi(
@@ -187,14 +187,14 @@ class TreffgjennomforingController(
         operationId = "fordelIntervjuer",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomforingDto::class)])],
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = FORDEL,
         methods = [HttpMethod.POST],
     )
     private fun fordelHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
         val navIdent = ctx.krevTilgang(treffId)
-        ctx.status(200).json(treffgjennomforingService.fordelIntervjuer(treffId, navIdent))
+        ctx.status(200).json(treffgjennomføringService.fordelIntervjuer(treffId, navIdent))
     }
 
     @OpenApi(
@@ -203,7 +203,7 @@ class TreffgjennomforingController(
         operationId = "lagreVurdering",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomforingDto::class)])],
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = VURDERINGER,
         methods = [HttpMethod.PUT],
     )
@@ -211,6 +211,6 @@ class TreffgjennomforingController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevTilgang(treffId)
         val dto = ctx.bodyAsClass<VurderingDto>()
-        ctx.status(200).json(treffgjennomforingService.lagreVurdering(treffId, dto, navIdent))
+        ctx.status(200).json(treffgjennomføringService.lagreVurdering(treffId, dto, navIdent))
     }
 }

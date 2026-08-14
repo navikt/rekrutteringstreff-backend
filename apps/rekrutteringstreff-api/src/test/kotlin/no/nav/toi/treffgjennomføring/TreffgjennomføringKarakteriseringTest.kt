@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
@@ -18,13 +18,13 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.treffgjennomforing.dto.ArbeidsgiverIntervjufordelingDto
-import no.nav.toi.treffgjennomforing.dto.InteresseRequestDto
-import no.nav.toi.treffgjennomforing.dto.MøteoppsettRequestDto
-import no.nav.toi.treffgjennomforing.dto.OppmøteRequestDto
-import no.nav.toi.treffgjennomforing.dto.RomDto
-import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
-import no.nav.toi.treffgjennomforing.dto.VurderingDto
+import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
+import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
+import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
+import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
+import no.nav.toi.treffgjennomføring.dto.RomDto
+import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
+import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
@@ -37,7 +37,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TreffgjennomforingKarakteriseringTest {
+class TreffgjennomføringKarakteriseringTest {
 
     private val db = TestDatabase()
     private val mapper = JacksonConfig.mapper
@@ -47,10 +47,10 @@ class TreffgjennomforingKarakteriseringTest {
     private val arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
     private val kontekstRepository = TreffkontekstRepository()
-    private val repository = TreffgjennomforingRepository()
+    private val repository = TreffgjennomføringRepository()
     private val reader = TreffgjennomføringReader(repository)
 
-    private val service = TreffgjennomforingService(
+    private val service = TreffgjennomføringService(
         dataSource = db.dataSource,
         kontekstRepository = kontekstRepository,
         repository = repository,
@@ -65,7 +65,7 @@ class TreffgjennomforingKarakteriseringTest {
         dataSource = db.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
         treffkontekstRepository = kontekstRepository,
-        treffgjennomforingRepository = repository,
+        treffgjennomføringRepository = repository,
         treffgjennomføringReader = reader,
         mapper = mapper,
     )
@@ -84,7 +84,7 @@ class TreffgjennomforingKarakteriseringTest {
     fun `aggregatet med data i alle ni tabeller har uendret innhold`() {
         val s = fulltScenario()
 
-        val aggregat: TreffgjennomforingDto = service.hent(s.treffId)
+        val aggregat: TreffgjennomføringDto = service.hent(s.treffId)
 
         assertThat(aggregat.rekrutteringstreffId).isEqualTo(s.treffId.somString)
         assertThat(aggregat.fase).isEqualTo(TreffgjennomføringFase.VURDERING)
@@ -145,7 +145,7 @@ class TreffgjennomforingKarakteriseringTest {
         assertThat(aggregat.interesser).isEmpty()
         assertThat(aggregat.intervjufordelinger).isEmpty()
         assertThat(aggregat.vurderinger).isEmpty()
-        assertThat(antallTreffgjennomforingsrader()).isEqualTo(0)
+        assertThat(antallTreffgjennomføringsrader()).isEqualTo(0)
     }
 
     @Test
@@ -585,7 +585,7 @@ class TreffgjennomforingKarakteriseringTest {
         }
     }
 
-    private fun antallTreffgjennomforingsrader(): Int = db.dataSource.connection.use { conn ->
+    private fun antallTreffgjennomføringsrader(): Int = db.dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT COUNT(*) FROM treffgjennomforing").executeQuery().use {
             it.next(); it.getInt(1)
         }

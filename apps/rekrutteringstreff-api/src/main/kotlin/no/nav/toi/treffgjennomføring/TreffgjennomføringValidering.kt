@@ -1,19 +1,16 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import io.javalin.http.BadRequestResponse
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
-import no.nav.toi.treffgjennomforing.dto.MøteoppsettRequestDto
-import no.nav.toi.treffgjennomforing.dto.RomDto
-import no.nav.toi.treffgjennomforing.dto.VurderingDto
+import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
+import no.nav.toi.treffgjennomføring.dto.RomDto
+import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeParseException
-/**
- * Invarianter backend må håndheve selv, ikke bare stole på fra frontend.
- * Frontend rydder allerede — dette er vernet mot andre klienter.
- */
-object TreffgjennomforingValidering {
+
+object TreffgjennomføringValidering {
 
     private val KLOKKESLETT = Regex("^([01]\\d|2[0-3]):[0-5]\\d$")
 
@@ -27,10 +24,6 @@ object TreffgjennomforingValidering {
         return Møteoppsett(LocalTime.parse(dto.starttidspunkt), dto.varighetPerMøteMinutter)
     }
 
-    /**
-     * Romfordelingen sendes komplett, inkludert tomme rom. Et rom uten jobbsøkere
-     * er et uttrykt valg, ikke et hull backend skal gjette seg til.
-     */
     fun romfordeling(rom: List<RomDto>, antallRom: Int, oppmøte: List<PersonTreffId>): List<Rom> {
         if (rom.size != antallRom) {
             throw BadRequestResponse("Romfordelingen må inneholde nøyaktig $antallRom rom, fikk ${rom.size}")

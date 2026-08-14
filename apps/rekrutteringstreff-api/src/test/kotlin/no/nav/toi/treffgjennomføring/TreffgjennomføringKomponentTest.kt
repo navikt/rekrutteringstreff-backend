@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
@@ -38,7 +38,7 @@ import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
-class TreffgjennomforingKomponentTest {
+class TreffgjennomføringKomponentTest {
 
     private val db = TestDatabase()
     private val appPort = ubruktPortnrFra10000.ubruktPortnr()
@@ -120,10 +120,10 @@ class TreffgjennomforingKomponentTest {
         assertThat(første["varighetPerMøteMinutter"].asInt()).isEqualTo(10)
         assertThat(første["oppmøte"]).isEmpty()
         assertThat(første["rom"]).isEmpty()
-        assertThat(antallTreffgjennomforingsrader()).isZero()
+        assertThat(antallTreffgjennomføringsrader()).isZero()
 
         hent(treff, eier)
-        assertThat(antallTreffgjennomforingsrader()).isZero()
+        assertThat(antallTreffgjennomføringsrader()).isZero()
     }
 
     @Test
@@ -509,7 +509,7 @@ class TreffgjennomforingKomponentTest {
         aggregat(treffId)["deltakernummer"]
             .associate { it["personTreffId"].asText() to it["nummer"].asInt() }
 
-    private fun antallTreffgjennomforingsrader(): Int = db.dataSource.connection.use { conn ->
+    private fun antallTreffgjennomføringsrader(): Int = db.dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT COUNT(*) FROM treffgjennomforing").executeQuery().use {
             it.next(); it.getInt(1)
         }

@@ -1,7 +1,7 @@
 # Plan: Domeneoppdeling av treffgjennomføring i backend
 
 **Status:** Besluttet. Fase 0–3 implementert, fase 4–6 gjenstår  
-**Omfang:** `rekrutteringstreff-api`, pakken `no.nav.toi.treffgjennomforing`  
+**Omfang:** `rekrutteringstreff-api`, pakken `no.nav.toi.treffgjennomføring`  
 **Gjelder ikke:** frontendkontrakten. Alle forslagene her skal være usynlige for `rekrutteringsbistand-frontend`.
 
 Dette er et vurderingsdokument. Det svarer på fire spørsmål:
@@ -22,7 +22,7 @@ for hver anbefaling.
 | # | Forslag | Anbefaling | Kort begrunnelse |
 | - | ------- | ---------- | ---------------- |
 | 1 | Flytt oppmøte til jobbsøker-domenet, med status i tabell | **Ja – gjør dette først** | Avledningslogikken er allerede duplisert to steder. Kolonnen fjerner duplikatet og åpner for filtrering på oppmøte i jobbsøkersøket. |
-| 2 | Del i `treffgjennomforing` og `oppfolging` | **Ja** | Oppfølging (vurdering) har null utgående avhengigheter til resten. Reneste snittet i hele domenet. |
+| 2 | Del i `treffgjennomføring` og `oppfolging` | **Ja** | Oppfølging (vurdering) har null utgående avhengigheter til resten. Reneste snittet i hele domenet. |
 | 3 | Egne subdomener for interesse og romfordeling | **Nei, ikke slik** | Interesse og intervjufordeling skriver til hverandre i samme transaksjon. Romfordeling hører sammen med møteoppsett og rotasjon, ikke alene. |
 | 4 | Alternativ oppdeling: **møteplan** og **matching** | **Ja – valgt i stedet for #3** | Følger de faktiske skrivetransaksjonene, og skiller samtidig WorkOp-spesifikk kode fra kode alle treff bruker. |
 | 5 | Eget lesetjeneste-lag for aggregatet | **Ja – forutsetning for #2 og #4** | Alle åtte endepunkter returnerer hele aggregatet. Uten et samlende leselag blir enhver oppdeling reversert av lesevegen. |
@@ -42,25 +42,25 @@ Avklart. Resten av dokumentet forutsetter disse valgene.
 | Låsen | Sikres i jobbsøker, men som en **delt låseprimitiv på `rekrutteringstreff`-raden** som begge domenene tar. Analysen under viser at låsen trengs fire steder, ikke bare i oppmøte. |
 | Feilhåndtering | **Enklest mulig, minst mulig kode.** Låsen serialiserer, databasen håndhever unik-constraintene. Ingen retry-løkker, ingen nye exception-typer. |
 | Deltakernummer | **Behold egen tabell.** WorkOp er trolig et mindretall av treffene, og en kolonne på `jobbsoker` ville gitt en tom kolonne for de fleste rader. |
-| Subdomener | **Vurdering 4: `moteplan` og `matching`**, begge som underpakker av `treffgjennomforing`. |
+| Subdomener | **Vurdering 4: `moteplan` og `matching`**, begge som underpakker av `treffgjennomføring`. |
 | Leselag | **Ja.** Vi ønsker store lesekall som henter mye i én runde, framfor mange små. |
 
 ---
 
 ## Utgangspunktet
 
-Pakken `no.nav.toi.treffgjennomforing` er på ca. 1800 linjer fordelt på ti filer:
+Pakken `no.nav.toi.treffgjennomføring` er på ca. 1800 linjer fordelt på ti filer:
 
 | Fil | Linjer | Ansvar |
 | --- | -----: | ------ |
-| `TreffgjennomforingRepository.kt` | 512 | All lesing og skriving mot ni tabeller |
-| `TreffgjennomforingService.kt` | 489 | All forretningslogikk og all hendelseskriving |
-| `TreffgjennomforingController.kt` | 214 | Åtte endepunkter, felles tilgangskontroll |
-| `dto/TreffgjennomforingDto.kt` | 128 | Én DTO for hele aggregatet |
-| `Treffgjennomforing.kt` | 113 | Domenemodell og faseenum |
+| `TreffgjennomføringRepository.kt` | 512 | All lesing og skriving mot ni tabeller |
+| `TreffgjennomføringService.kt` | 489 | All forretningslogikk og all hendelseskriving |
+| `TreffgjennomføringController.kt` | 214 | Åtte endepunkter, felles tilgangskontroll |
+| `dto/TreffgjennomføringDto.kt` | 128 | Én DTO for hele aggregatet |
+| `Treffgjennomføring.kt` | 113 | Domenemodell og faseenum |
 | `Intervjufordeler.kt` | 95 | Ren fordelingsalgoritme |
 | `Treffkontekst.kt` | 94 | ID-oversetting treff-ID ↔ database-ID |
-| `TreffgjennomforingValidering.kt` | 93 | Validering av innkommende DTO-er |
+| `TreffgjennomføringValidering.kt` | 93 | Validering av innkommende DTO-er |
 | `Romfordeler.kt` | 49 | Ren romfordelingsalgoritme |
 | `OppmøteHarRegistreringerException.kt` | 10 | Kaskadeadvarsel |
 
@@ -143,7 +143,7 @@ Oppmøte har ingen lagret tilstand. Det utledes fra hendelsene `MØTT_OPP` og
 `ANGRE_MØTT_OPP`, der den siste vinner. Den utledningen finnes **to steder**, med
 identisk `LATERAL`-spørring:
 
-- `TreffgjennomforingRepository.hentOppmøte`
+- `TreffgjennomføringRepository.hentOppmøte`
 - `JobbsøkerSokRepository.hentOppmøte`
 
 Duplisert avledningslogikk over samme datagrunnlag divergerer før eller siden. Endrer
@@ -283,7 +283,7 @@ Oppfølging eier `vurdering` og `vurdering_notat`, og betjener ett endepunkt:
 | ------- | -----: | --- |
 | Ut av oppfølging | **0** | Ingen annen operasjon leser eller skriver vurderinger |
 | Inn i oppfølging | 2 | Kaskadeslettinga ved angret oppmøte, og den delte fasen |
-| Delt lesevei | 1 | `vurderinger` er ett felt i `TreffgjennomforingDto` |
+| Delt lesevei | 1 | `vurderinger` er ett felt i `TreffgjennomføringDto` |
 
 Null utgående kanter er uvanlig godt. Til sammenligning har interesse tre.
 
@@ -361,8 +361,8 @@ sammen og gir ikke mening hver for seg. De er ett subdomene, ikke tre.
 
 ### Hva forslaget likevel peker på
 
-Ønsket om å dele opp er riktig. `TreffgjennomforingService` på 489 linjer og
-`TreffgjennomforingRepository` på 512 er for mye i én fil, og grensene finnes –
+Ønsket om å dele opp er riktig. `TreffgjennomføringService` på 489 linjer og
+`TreffgjennomføringRepository` på 512 er for mye i én fil, og grensene finnes –
 de går bare ikke der forslaget plasserer dem. Se vurdering 4.
 
 ---
@@ -371,7 +371,7 @@ de går bare ikke der forslaget plasserer dem. Se vurdering 4.
 
 **Valgt.** Denne oppdelinga følger transaksjonsgrensene i stedet for å bryte dem, og
 gir samtidig et skille som allerede finnes i domenet: WorkOp-spesifikk kode mot kode
-alle treff bruker. Begge blir underpakker av `treffgjennomforing`.
+alle treff bruker. Begge blir underpakker av `treffgjennomføring`.
 
 | Subdomene | Tabeller | Endepunkter | Gjelder |
 | --------- | -------- | ----------- | ------- |
@@ -418,7 +418,7 @@ Leselaget er samtidig forutsetningen for at vurdering 2 og 4 skal gi gevinst.
 ### Problemet enhver oppdeling støter på
 
 Alle åtte endepunkter, også skriveoperasjonene, returnerer hele
-`TreffgjennomforingDto`. Metoden `skriv` avslutter alltid med:
+`TreffgjennomføringDto`. Metoden `skriv` avslutter alltid med:
 
 ```kotlin
 repository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
@@ -433,11 +433,11 @@ subdomener uten å gjøre noe med lesesida, ender hvert subdomene med å kalle
 Ett leselag som eier sammensettinga:
 
 ```
-no.nav.toi.treffgjennomforing/
+no.nav.toi.treffgjennomføring/
 └── TreffgjennomføringReader.kt
 ```
 
-Readeren spør hvert subdomene om sin del og setter sammen `TreffgjennomforingDto`.
+Readeren spør hvert subdomene om sin del og setter sammen `TreffgjennomføringDto`.
 Hvert subdomene eksponerer én lesemetode for sin egen del, og kjenner ikke DTO-en.
 
 Konsekvenser å ta stilling til:
@@ -473,11 +473,11 @@ no.nav.toi.jobbsoker/
 └── oppmote/
     └── OppmoteRepository.kt       jobbsoker.mott_tidspunkt, deltakernummer
 
-no.nav.toi.treffgjennomforing/
-├── Treffgjennomforing.kt          aggregatmodell, TreffgjennomføringFase
+no.nav.toi.treffgjennomføring/
+├── Treffgjennomføring.kt          aggregatmodell, TreffgjennomføringFase
 ├── Treffkontekst.kt               uendret
 ├── TreffgjennomføringReader.kt    setter sammen aggregat-DTO-en
-├── TreffgjennomforingController.kt  uendret sti, delegerer videre
+├── TreffgjennomføringController.kt  uendret sti, delegerer videre
 ├── FaseRepository.kt              treffgjennomforing-raden: sikreRad og settFase
 ├── moteplan/
 │   ├── Moteplan.kt                Møteoppsett, Rom, ArbeidsgiverRotasjon
@@ -502,9 +502,9 @@ Oppmøte får et repository under `jobbsoker/oppmote/`, men **ingen egen service
 deltakernummer skjer i én transaksjon uten et ekstra lag imellom.
 
 Hendelseskrivinga (`leggTilHendelseForJobbsøker`, `-Arbeidsgiver`, `-Treff`, `-Par`)
-ligger i dag privat i `TreffgjennomforingService` og brukes av alle subdomenene.
+ligger i dag privat i `TreffgjennomføringService` og brukes av alle subdomenene.
 Den må ut i en delt komponent som hvert subdomene får injisert – for eksempel
-`TreffgjennomforingHendelser`, som fantes i en tidligere versjon av koden. Den skal
+`TreffgjennomføringHendelser`, som fantes i en tidligere versjon av koden. Den skal
 fortsatt skrive på samme connection som operasjonen, slik at ingen registrering kan
 bli stående uten hendelse.
 
@@ -517,7 +517,7 @@ frontendkontrakten.
 
 ### Fase 0 – karakteriseringstester ✅ implementert
 
-`TreffgjennomforingKarakteriseringTest.kt`, 20 tester. Låser dagens oppførsel før
+`TreffgjennomføringKarakteriseringTest.kt`, 20 tester. Låser dagens oppførsel før
 noe flyttes. Testene sier ikke at oppførselen er riktig – de sier at refaktoreringa
 ikke skal endre den.
 
@@ -618,7 +618,7 @@ Indekset `idx_jobbsoker_hendelse_oppmote` er samtidig fjernet fra `V14`. Det st�
    som oppmøteverdiene. Koblinga står i `Oppmøte.hendelsestype`, så de to enumene ikke
    kan komme fra hverandre.
 3. `JobbsøkerRepository.settOppmøte` skriver kolonnen i samme transaksjon som hendelsen.
-4. Lesevegen bytta i både `TreffgjennomforingRepository` og `JobbsøkerSokRepository`.
+4. Lesevegen bytta i både `TreffgjennomføringRepository` og `JobbsøkerSokRepository`.
    Den dupliserte `LATERAL`-spørringa er borte begge steder.
 
 Hendelsene skrives fortsatt, nå som `REGISTRERT_OPPMØTE` og
@@ -641,8 +641,8 @@ deltakernummer i **samme transaksjon**.
    møteoppsettet trenger på grunn av fremmednøkkelen. `skriv` kaller begge, i den
    rekkefølgen.
 3. Oppmøtet flyttet til `JobbsøkerService`, som kaller `låsTreff` først.
-   `TreffgjennomforingService` har ikke lenger noe med oppmøte å gjøre.
-4. `TreffgjennomforingController` beholder ruta `PUT /treffgjennomforing/oppmote` og
+   `TreffgjennomføringService` har ikke lenger noe med oppmøte å gjøre.
+4. `TreffgjennomføringController` beholder ruta `PUT /treffgjennomforing/oppmote` og
    delegerer til `JobbsøkerService`. Frontendkontrakten er uendret.
 
 Begge domenene tar låsen i samme rekkefølge (`låsTreff` → `sikreRad`), så de kan ikke
@@ -654,12 +654,12 @@ sparer ti spørringer på en operasjon som ofte er et no-op.
 
 **To ting som var bevisst midlertidige:**
 
-- ~~`JobbsøkerService` returnerer `TreffgjennomforingDto` bygget fra repositoryet.~~
+- ~~`JobbsøkerService` returnerer `TreffgjennomføringDto` bygget fra repositoryet.~~
   Løst i fase 3: tjenesten kaller `TreffgjennomføringReader`.
 - Kaskadeslettinga står fortsatt som direkte tabellsletting via
-  `TreffgjennomforingRepository`. Fase 4 og 5 gir eierne noe å kalle på.
+  `TreffgjennomføringRepository`. Fase 4 og 5 gir eierne noe å kalle på.
 
-`JobbsøkerService` kjenner derfor fortsatt `TreffgjennomforingRepository`, men nå bare
+`JobbsøkerService` kjenner derfor fortsatt `TreffgjennomføringRepository`, men nå bare
 for deltakernummeret og kaskaden. Det er en kjent, avgrenset kobling som krymper i
 fase 4–5, ikke et sluttbilde.
 
@@ -669,11 +669,11 @@ fase 4–5, ikke et sluttbilde.
 
 **Gjort:**
 
-1. `TreffgjennomføringReader.les(connection, kontekst)` bygger `TreffgjennomforingDto`.
-2. `TreffgjennomforingService.hent` og `skriv` kaller readeren i stedet for å bygge
+1. `TreffgjennomføringReader.les(connection, kontekst)` bygger `TreffgjennomføringDto`.
+2. `TreffgjennomføringService.hent` og `skriv` kaller readeren i stedet for å bygge
    DTO-en selv.
 3. `JobbsøkerService` kaller readeren. Den bygger ikke lenger DTO-en fra
-   `TreffgjennomforingRepository` – én av de to midlertidige koblingene fra fase 2 er
+   `TreffgjennomføringRepository` – én av de to midlertidige koblingene fra fase 2 er
    dermed borte. Igjen står bare kaskadeslettinga og deltakernummeret.
 
 Readeren tar `Treffkontekst`, ikke `TreffId`. Skriveoperasjonene har allerede konteksten,

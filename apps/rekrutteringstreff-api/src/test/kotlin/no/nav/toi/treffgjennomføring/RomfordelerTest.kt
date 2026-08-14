@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.jobbsoker.PersonTreffId
 import org.assertj.core.api.Assertions.assertThat

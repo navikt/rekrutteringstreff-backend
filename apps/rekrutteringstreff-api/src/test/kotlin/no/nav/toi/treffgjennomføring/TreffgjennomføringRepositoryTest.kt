@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.jobbsoker.Etternavn
@@ -27,11 +27,11 @@ import java.time.Instant
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TreffgjennomforingRepositoryTest {
+class TreffgjennomføringRepositoryTest {
 
     private val db = TestDatabase()
     private val kontekstRepository = TreffkontekstRepository()
-    private val repository = TreffgjennomforingRepository()
+    private val repository = TreffgjennomføringRepository()
     private val sokRepository = JobbsøkerSokRepository(db.dataSource)
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, JacksonConfig.mapper)
 

@@ -34,11 +34,11 @@ import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokService
 import no.nav.toi.statistikk.StatistikkController
 import no.nav.toi.statistikk.StatistikkRepository
 import no.nav.toi.statistikk.StatistikkService
-import no.nav.toi.treffgjennomforing.TreffgjennomforingController
-import no.nav.toi.treffgjennomforing.TreffgjennomføringReader
-import no.nav.toi.treffgjennomforing.TreffgjennomforingRepository
-import no.nav.toi.treffgjennomforing.TreffgjennomforingService
-import no.nav.toi.treffgjennomforing.TreffkontekstRepository
+import no.nav.toi.treffgjennomføring.TreffgjennomføringController
+import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
+import no.nav.toi.treffgjennomføring.TreffgjennomføringRepository
+import no.nav.toi.treffgjennomføring.TreffgjennomføringService
+import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 
 @Suppress("MemberVisibilityCanBePrivate")
 class ApplicationContext(val infra: InfrastructureContext = InfrastructureContext()) {
@@ -68,14 +68,14 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val formidlingRepository = FormidlingRepository(infra.dataSource)
     val statistikkRepository = StatistikkRepository(infra.dataSource)
     val treffkontekstRepository = TreffkontekstRepository()
-    val treffgjennomforingRepository = TreffgjennomforingRepository()
-    val treffgjennomføringReader = TreffgjennomføringReader(treffgjennomforingRepository)
+    val treffgjennomføringRepository = TreffgjennomføringRepository()
+    val treffgjennomføringReader = TreffgjennomføringReader(treffgjennomføringRepository)
 
     val jobbsøkerService = JobbsøkerService(
         dataSource = infra.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
         treffkontekstRepository = treffkontekstRepository,
-        treffgjennomforingRepository = treffgjennomforingRepository,
+        treffgjennomføringRepository = treffgjennomføringRepository,
         treffgjennomføringReader = treffgjennomføringReader,
         kandidatsøkKlient = infra.kandidatsøkKlient,
         mapper = JacksonConfig.mapper,
@@ -96,10 +96,10 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val sokService = RekrutteringstreffSokService(sokRepository)
     val formidlingService = FormidlingService(infra.dataSource, formidlingRepository, arbeidsgiverService, jobbsøkerService, rekrutteringstreffRepository, stillingKlient, kandidatKlient)
     val statistikkService = StatistikkService(statistikkRepository)
-    val treffgjennomforingService = TreffgjennomforingService(
+    val treffgjennomføringService = TreffgjennomføringService(
         dataSource = infra.dataSource,
         kontekstRepository = treffkontekstRepository,
-        repository = treffgjennomforingRepository,
+        repository = treffgjennomføringRepository,
         reader = treffgjennomføringReader,
         jobbsøkerRepository = jobbsøkerRepository,
         arbeidsgiverRepository = arbeidsgiverRepository,
@@ -119,7 +119,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val healthController = HealthController(healthRepository)
     val formidlingController = FormidlingController(formidlingService, eierService, infra.modiaKlient)
     val statistikkController = StatistikkController(statistikkService)
-    val treffgjennomforingController = TreffgjennomforingController(treffgjennomforingService, jobbsøkerService, eierService)
+    val treffgjennomføringController = TreffgjennomføringController(treffgjennomføringService, jobbsøkerService, eierService)
 
     val jobbsøkerhendelserScheduler by lazy {
         JobbsøkerhendelserScheduler(

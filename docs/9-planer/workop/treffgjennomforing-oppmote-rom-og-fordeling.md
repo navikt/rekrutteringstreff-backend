@@ -218,7 +218,7 @@ ikke om fanen finnes:
 
 ```ts
 const erProd = getMiljø() === Miljø.ProdGcp;
-const visTreffgjennomforing = !erProd && harTilgang;
+const visTreffgjennomføring = !erProd && harTilgang;
 const erWorkOp =
   rekrutteringstreff.kategori === RekrutteringstreffKategori.WORKOP;
 ```
@@ -721,7 +721,7 @@ aggregatet fra sitt eget endepunkt.
 
 ### MSW-mock (dynamisk for demo)
 
-Legg en `treffgjennomforingStore = new Map<string, TreffgjennomforingDTO>()` i
+Legg en `treffgjennomføringStore = new Map<string, TreffgjennomføringDTO>()` i
 [mswState.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/mswState.ts)
 (samme mønster som `arbeidsgiverStore`/`innleggStore`). Handlerne bygger svar fra
 samme store som leses, slik at oppmøte → romfordeling → interesse → fordeling →
@@ -769,15 +769,15 @@ frontend. I backend-tekst under betyr «treffet» et treff av denne kategorien.
 
 #### Ny pakke
 
-`no.nav.toi.treffgjennomforing` med `Treffgjennomforing.kt` (domenemodell), `TreffgjennomforingController.kt`,
-`TreffgjennomforingService.kt`, `TreffgjennomforingRepository.kt` og `dto/TreffgjennomforingDto.kt`.
+`no.nav.toi.treffgjennomføring` med `Treffgjennomføring.kt` (domenemodell), `TreffgjennomføringController.kt`,
+`TreffgjennomføringService.kt`, `TreffgjennomføringRepository.kt` og `dto/TreffgjennomføringDto.kt`.
 
 #### DTO-er
 
-Speiler frontend-typene 1:1. **`TreffgjennomforingDto` er svaret på samtlige endepunkter** —
+Speiler frontend-typene 1:1. **`TreffgjennomføringDto` er svaret på samtlige endepunkter** —
 også skriveoperasjonene, som alltid returnerer hele treffgjennomføringen.
 
-**`TreffgjennomforingDto`** – hele aggregatet:
+**`TreffgjennomføringDto`** – hele aggregatet:
 
 | Felt                      | Type                     | Merknad                                     |
 | ------------------------- | ------------------------ | ------------------------------------------- |
@@ -1275,7 +1275,7 @@ Oppmøte får **ingen** ny kolonne, se [Oppmøte lagret som hendelse](#oppmøte-
 
 ##### Antall rom beregnes, ikke lagres
 
-`antallRom` er med i `TreffgjennomforingDto`, men har **ingen kolonne**. Backend regner det
+`antallRom` er med i `TreffgjennomføringDto`, men har **ingen kolonne**. Backend regner det
 ut ved lesing som `max(antall arbeidsgivere på treffet, 1)` — samme uttrykk som
 frontend bruker i dag.
 
@@ -1493,19 +1493,19 @@ Nye verdier i `RekrutteringstreffHendelsestype`, om treffgjennomføringen som he
 
 | Type                                           | Når                                                  | `hendelse_data`                                                             |
 | ---------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------- |
-| `TREFFGJENNOMFORING_OPPRETTET`                 | Første gang møteoppsettet lagres – møteplanen finnes | `antallRom`, `starttidspunkt`, `varighetPerMøteMinutter`, `antallFremmøtte` |
-| `TREFFGJENNOMFORING_OPPSETT_ENDRET`            | Tidene endres senere                                 | Nye verdier for tidsfeltene                                                 |
-| `TREFFGJENNOMFORING_ROMFORDELING_ENDRET`       | «Fordel på nytt» kjøres for rom                      | `antallRom`, `antallJobbsøkere`                                             |
-| `TREFFGJENNOMFORING_INTERVJUFORDELING_FORDELT` | «Fordel på nytt» kjøres for intervjuer               | `antallArbeidsgivere`, `antallPlasseringer`                                 |
+| `TREFFGJENNOMFØRING_OPPRETTET`                 | Første gang møteoppsettet lagres – møteplanen finnes | `antallRom`, `starttidspunkt`, `varighetPerMøteMinutter`, `antallFremmøtte` |
+| `TREFFGJENNOMFØRING_OPPSETT_ENDRET`            | Tidene endres senere                                 | Nye verdier for tidsfeltene                                                 |
+| `TREFFGJENNOMFØRING_ROMFORDELING_ENDRET`       | «Fordel på nytt» kjøres for rom                      | `antallRom`, `antallJobbsøkere`                                             |
+| `TREFFGJENNOMFØRING_INTERVJUFORDELING_FORDELT` | «Fordel på nytt» kjøres for intervjuer               | `antallArbeidsgivere`, `antallPlasseringer`                                 |
 
 Alle fire er WorkOp-spesifikke – en vanlig treffgjennomføring har verken møteoppsett, rom
 eller intervjufordeling, og skriver derfor ingen av dem.
 
 Hvorfor de ligger på treffet og ikke på personene:
 
-- `TREFFGJENNOMFORING_OPPRETTET` er overgangen fra planlegging til gjennomføring, og skjer
+- `TREFFGJENNOMFØRING_OPPRETTET` er overgangen fra planlegging til gjennomføring, og skjer
   én gang.
-- `TREFFGJENNOMFORING_OPPSETT_ENDRET` endrer timeplanen for alle på treffet, ikke for én
+- `TREFFGJENNOMFØRING_OPPSETT_ENDRET` endrer timeplanen for alle på treffet, ikke for én
   person.
 - De to fordelingshendelsene **overskriver manuelle plasseringer** i én
   operasjon. De krever allerede bekreftelse i UI-et, og er nettopp de
@@ -1667,7 +1667,7 @@ igjen ved å reversere én linje.
 
 Skrives av utvikler selv, ikke generert:
 
-- Tilgangssjekken i `TreffgjennomforingController` — sikkerhetskritisk.
+- Tilgangssjekken i `TreffgjennomføringController` — sikkerhetskritisk.
 - `V14__treffgjennomforing.sql` — irreversibel i produksjon.
 
 ## Kobling til Excel master
@@ -1798,7 +1798,7 @@ ikke å teste selve mock-laget.
 
 ### MSW med state (ikke stub-svar)
 
-- `treffgjennomforingStore` (se «MSW-mock») **muteres** av PUT-handlerne og leses av
+- `treffgjennomføringStore` (se «MSW-mock») **muteres** av PUT-handlerne og leses av
   GET-handleren, slik at oppmøte → romfordeling → interesse → fordeling → vurdering henger sammen
   som ekte tilstandsoverganger.
 - Testene skal drive flyten via UI-et og verifisere at tilstanden **utvikler seg

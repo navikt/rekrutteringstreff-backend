@@ -1,15 +1,10 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 
-/**
- * Oversettelsen mellom utadvendte treff-ID-er og interne database-ID-er skjer
- * kun her. Kartene leses én gang per transaksjon, slik at ingen skriveoperasjon
- * trenger et oppslag per rad.
- */
 data class Treffkontekst(
     val treffId: TreffId,
     val treffDbId: Long,
@@ -27,7 +22,6 @@ data class Treffkontekst(
 
     fun kjenner(arbeidsgiverTreffId: ArbeidsgiverTreffId) = arbeidsgivere.containsKey(arbeidsgiverTreffId)
 
-    /** Rekkefølgen er stabil (arbeidsgiver_id), og er utgangspunktet for rotasjonen. */
     val arbeidsgiverIder: List<ArbeidsgiverTreffId> get() = arbeidsgivere.keys.toList()
 }
 

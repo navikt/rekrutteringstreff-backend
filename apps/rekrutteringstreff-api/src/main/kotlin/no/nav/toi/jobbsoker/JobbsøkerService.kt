@@ -15,13 +15,13 @@ import no.nav.toi.jobbsoker.sok.*
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.låsTreff
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.treffgjennomforing.OppmøteHarRegistreringerException
-import no.nav.toi.treffgjennomforing.TreffgjennomføringReader
-import no.nav.toi.treffgjennomforing.TreffgjennomforingRepository
-import no.nav.toi.treffgjennomforing.Treffkontekst
-import no.nav.toi.treffgjennomforing.TreffkontekstRepository
-import no.nav.toi.treffgjennomforing.dto.OppmøteRequestDto
-import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
+import no.nav.toi.treffgjennomføring.OppmøteHarRegistreringerException
+import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
+import no.nav.toi.treffgjennomføring.TreffgjennomføringRepository
+import no.nav.toi.treffgjennomføring.Treffkontekst
+import no.nav.toi.treffgjennomføring.TreffkontekstRepository
+import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
+import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
@@ -39,8 +39,8 @@ class JobbsøkerService(
     private val jobbsøkerFormidlingSokRepository: JobbsøkerFormidlingSokRepository = JobbsøkerFormidlingSokRepository(dataSource),
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
     private val treffkontekstRepository: TreffkontekstRepository = TreffkontekstRepository(),
-    private val treffgjennomforingRepository: TreffgjennomforingRepository = TreffgjennomforingRepository(),
-    private val treffgjennomføringReader: TreffgjennomføringReader = TreffgjennomføringReader(treffgjennomforingRepository),
+    private val treffgjennomføringRepository: TreffgjennomføringRepository = TreffgjennomføringRepository(),
+    private val treffgjennomføringReader: TreffgjennomføringReader = TreffgjennomføringReader(treffgjennomføringRepository),
     private val mapper: ObjectMapper = JacksonConfig.mapper,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
@@ -482,12 +482,12 @@ class JobbsøkerService(
         return opprettedePersonTreffIder + gjenopprettedePersonTreffIder
     }
 
-    fun oppdaterOppmøte(treffId: TreffId, dto: OppmøteRequestDto, navIdent: String): TreffgjennomforingDto =
+    fun oppdaterOppmøte(treffId: TreffId, dto: OppmøteRequestDto, navIdent: String): TreffgjennomføringDto =
         dataSource.executeInTransaction { connection ->
             val kontekst = treffkontekstRepository.hent(connection, treffId)
                 ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
             connection.låsTreff(kontekst.treffDbId)
-            treffgjennomforingRepository.sikreRad(connection, kontekst.treffDbId)
+            treffgjennomføringRepository.sikreRad(connection, kontekst.treffDbId)
 
             val person = PersonTreffId(dto.personTreffId)
             val jobbsøkerId = kontekst.jobbsøkerId(person)
@@ -511,7 +511,7 @@ class JobbsøkerService(
     ) {
         val deltakernummer =
             if (kontekst.erWorkOp) {
-                treffgjennomforingRepository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
+                treffgjennomføringRepository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
             } else null
 
         jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE)
@@ -528,10 +528,10 @@ class JobbsøkerService(
         bekreftet: Boolean,
         navIdent: String,
     ) {
-        val registreringer = treffgjennomforingRepository.tellRegistreringer(connection, jobbsøkerId)
+        val registreringer = treffgjennomføringRepository.tellRegistreringer(connection, jobbsøkerId)
         if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
 
-        treffgjennomforingRepository.slettRegistreringerFor(connection, jobbsøkerId)
+        treffgjennomføringRepository.slettRegistreringerFor(connection, jobbsøkerId)
         jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
         leggTilOppmøtehendelse(
             connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET, navIdent,

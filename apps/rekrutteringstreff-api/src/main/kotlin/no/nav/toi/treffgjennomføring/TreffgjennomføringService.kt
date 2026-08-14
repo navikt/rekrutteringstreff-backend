@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.javalin.http.BadRequestResponse
@@ -15,19 +15,19 @@ import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.låsTreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.treffgjennomforing.dto.ArbeidsgiverIntervjufordelingDto
-import no.nav.toi.treffgjennomforing.dto.InteresseRequestDto
-import no.nav.toi.treffgjennomforing.dto.MøteoppsettRequestDto
-import no.nav.toi.treffgjennomforing.dto.RomDto
-import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
-import no.nav.toi.treffgjennomforing.dto.VurderingDto
+import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
+import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
+import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
+import no.nav.toi.treffgjennomføring.dto.RomDto
+import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
+import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import java.sql.Connection
 import javax.sql.DataSource
 
-class TreffgjennomforingService(
+class TreffgjennomføringService(
     private val dataSource: DataSource,
     private val kontekstRepository: TreffkontekstRepository,
-    private val repository: TreffgjennomforingRepository,
+    private val repository: TreffgjennomføringRepository,
     private val reader: TreffgjennomføringReader,
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
@@ -35,21 +35,21 @@ class TreffgjennomforingService(
     private val mapper: ObjectMapper,
 ) {
 
-    fun hent(treffId: TreffId): TreffgjennomforingDto = dataSource.executeInTransaction { connection ->
+    fun hent(treffId: TreffId): TreffgjennomføringDto = dataSource.executeInTransaction { connection ->
         val kontekst = hentKontekst(connection, treffId)
         reader.les(connection, kontekst)
     }
 
-    fun lagreMøteoppsett(treffId: TreffId, dto: MøteoppsettRequestDto, navIdent: String): TreffgjennomforingDto =
+    fun lagreMøteoppsett(treffId: TreffId, dto: MøteoppsettRequestDto, navIdent: String): TreffgjennomføringDto =
         skriv(treffId) { connection, kontekst, rad ->
             krevWorkOp(kontekst)
-            val møteoppsett = TreffgjennomforingValidering.møteoppsett(dto)
+            val møteoppsett = TreffgjennomføringValidering.møteoppsett(dto)
             val aggregat = repository.hentAggregat(connection, kontekst)
             repository.lagreMøteoppsett(connection, rad.id, møteoppsett)
 
             if (aggregat.rom.isNotEmpty()) {
                 leggTilHendelseForTreff(
-                    connection, treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFORING_OPPSETT_ENDRET, navIdent,
+                    connection, treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFØRING_OPPSETT_ENDRET, navIdent,
                     mapOf(
                         "starttidspunkt" to dto.starttidspunkt,
                         "varighetPerMøteMinutter" to dto.varighetPerMøteMinutter,
@@ -66,7 +66,7 @@ class TreffgjennomforingService(
         kontekst: Treffkontekst,
         aggregat: Treffgjennomføring,
         dto: MøteoppsettRequestDto,
-        rad: Treffgjennomforingsrad,
+        rad: Treffgjennomføringsrad,
         navIdent: String,
     ) {
         if (aggregat.oppmøte.isEmpty()) throw BadRequestResponse("Minst én jobbsøker må være registrert møtt")
@@ -87,7 +87,7 @@ class TreffgjennomforingService(
         }
 
         leggTilHendelseForTreff(
-            connection, kontekst.treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFORING_OPPRETTET, navIdent,
+            connection, kontekst.treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFØRING_OPPRETTET, navIdent,
             mapOf(
                 "antallRom" to kontekst.antallRom,
                 "starttidspunkt" to dto.starttidspunkt,
@@ -98,11 +98,11 @@ class TreffgjennomforingService(
         repository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.ROM)
     }
 
-    fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>, navIdent: String): TreffgjennomforingDto =
+    fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>, navIdent: String): TreffgjennomføringDto =
         skriv(treffId) { connection, kontekst, _ ->
             krevWorkOp(kontekst)
             val aggregat = repository.hentAggregat(connection, kontekst)
-            val ny = TreffgjennomforingValidering.romfordeling(rom, kontekst.antallRom, aggregat.oppmøte)
+            val ny = TreffgjennomføringValidering.romfordeling(rom, kontekst.antallRom, aggregat.oppmøte)
 
             repository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)
             skrivRomhendelser(connection, aggregat.rom, ny, navIdent)
@@ -131,7 +131,7 @@ class TreffgjennomforingService(
         if (!kontekst.erWorkOp) throw BadRequestResponse("Steget finnes bare på treff av kategorien WORKOP")
     }
 
-    fun settInteresse(treffId: TreffId, dto: InteresseRequestDto, navIdent: String): TreffgjennomforingDto =
+    fun settInteresse(treffId: TreffId, dto: InteresseRequestDto, navIdent: String): TreffgjennomføringDto =
         skriv(treffId) { connection, kontekst, rad ->
             val person = PersonTreffId(dto.personTreffId)
             val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
@@ -187,9 +187,9 @@ class TreffgjennomforingService(
         treffId: TreffId,
         dto: ArbeidsgiverIntervjufordelingDto,
         navIdent: String,
-    ): TreffgjennomforingDto = skriv(treffId) { connection, kontekst, rad ->
+    ): TreffgjennomføringDto = skriv(treffId) { connection, kontekst, rad ->
         krevWorkOp(kontekst)
-        TreffgjennomforingValidering.intervjufordeling(dto.inkludertePersonTreffIder, dto.ekskludertePersonTreffIder)
+        TreffgjennomføringValidering.intervjufordeling(dto.inkludertePersonTreffIder, dto.ekskludertePersonTreffIder)
 
         val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
         if (!kontekst.kjenner(arbeidsgiver)) throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
@@ -238,7 +238,7 @@ class TreffgjennomforingService(
         }
     }
 
-    fun fordelIntervjuer(treffId: TreffId, navIdent: String): TreffgjennomforingDto =
+    fun fordelIntervjuer(treffId: TreffId, navIdent: String): TreffgjennomføringDto =
         skriv(treffId) { connection, kontekst, rad ->
             krevWorkOp(kontekst)
             val aggregat = repository.hentAggregat(connection, kontekst)
@@ -251,7 +251,7 @@ class TreffgjennomforingService(
 
             leggTilHendelseForTreff(
                 connection, treffId,
-                RekrutteringstreffHendelsestype.TREFFGJENNOMFORING_INTERVJUFORDELING_FORDELT, navIdent,
+                RekrutteringstreffHendelsestype.TREFFGJENNOMFØRING_INTERVJUFORDELING_FORDELT, navIdent,
                 mapOf(
                     "antallArbeidsgivere" to fordelinger.size,
                     "antallPlasseringer" to fordelinger.sumOf { it.inkludertePersonTreffIder.size },
@@ -260,9 +260,9 @@ class TreffgjennomforingService(
             repository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
         }
 
-    fun lagreVurdering(treffId: TreffId, dto: VurderingDto, navIdent: String): TreffgjennomforingDto =
+    fun lagreVurdering(treffId: TreffId, dto: VurderingDto, navIdent: String): TreffgjennomføringDto =
         skriv(treffId) { connection, kontekst, rad ->
-            val ny = TreffgjennomforingValidering.vurdering(dto)
+            val ny = TreffgjennomføringValidering.vurdering(dto)
             val jobbsøkerId = kontekst.jobbsøkerId(ny.personTreffId)
                 ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
             val arbeidsgiverId = kontekst.arbeidsgiverId(ny.arbeidsgiverTreffId)
@@ -427,8 +427,8 @@ class TreffgjennomforingService(
 
     private fun skriv(
         treffId: TreffId,
-        block: (Connection, Treffkontekst, Treffgjennomforingsrad) -> Unit,
-    ): TreffgjennomforingDto = dataSource.executeInTransaction { connection ->
+        block: (Connection, Treffkontekst, Treffgjennomføringsrad) -> Unit,
+    ): TreffgjennomføringDto = dataSource.executeInTransaction { connection ->
         val kontekst = hentKontekst(connection, treffId)
         connection.låsTreff(kontekst.treffDbId)
         val rad = repository.sikreRad(connection, kontekst.treffDbId)

@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.Oppmøte
@@ -8,9 +8,9 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.time.LocalTime
 
-data class Treffgjennomforingsrad(val id: Long, val fase: TreffgjennomføringFase)
+data class Treffgjennomføringsrad(val id: Long, val fase: TreffgjennomføringFase)
 
-class TreffgjennomforingRepository {
+class TreffgjennomføringRepository {
 
     fun hentAggregat(connection: Connection, kontekst: Treffkontekst): Treffgjennomføring {
         val treffDbId = kontekst.treffDbId
@@ -246,7 +246,7 @@ class TreffgjennomforingRepository {
         }
     }
 
-    fun sikreRad(connection: Connection, treffDbId: Long): Treffgjennomforingsrad {
+    fun sikreRad(connection: Connection, treffDbId: Long): Treffgjennomføringsrad {
         val sql = """
             INSERT INTO treffgjennomforing (rekrutteringstreff_id, fase)
             VALUES (?, ?)
@@ -258,7 +258,7 @@ class TreffgjennomforingRepository {
             stmt.setString(2, TreffgjennomføringFase.OPPMØTE.name)
             stmt.executeQuery().use { rs ->
                 rs.next()
-                Treffgjennomforingsrad(
+                Treffgjennomføringsrad(
                     rs.getLong(1),
                     TreffgjennomføringFase.entries.firstOrNull { it.name == rs.getString(2) }
                         ?: TreffgjennomføringFase.OPPMØTE,
@@ -276,7 +276,7 @@ class TreffgjennomforingRepository {
         }
     }
 
-    fun lagreMøteoppsett(connection: Connection, treffgjennomforingId: Long, møteoppsett: Møteoppsett) {
+    fun lagreMøteoppsett(connection: Connection, treffgjennomføringId: Long, møteoppsett: Møteoppsett) {
         val sql = """
             INSERT INTO moteoppsett (treffgjennomforing_id, start_tidspunkt, varighet_min)
             VALUES (?, ?, ?)
@@ -284,16 +284,16 @@ class TreffgjennomforingRepository {
             DO UPDATE SET start_tidspunkt = EXCLUDED.start_tidspunkt, varighet_min = EXCLUDED.varighet_min
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
-            stmt.setLong(1, treffgjennomforingId)
+            stmt.setLong(1, treffgjennomføringId)
             stmt.setTime(2, møteoppsett.starttidspunkt.tilSqlTime())
             stmt.setInt(3, møteoppsett.varighetPerMøteMinutter)
             stmt.executeUpdate()
         }
     }
 
-    fun harMøteoppsett(connection: Connection, treffgjennomforingId: Long): Boolean =
+    fun harMøteoppsett(connection: Connection, treffgjennomføringId: Long): Boolean =
         connection.prepareStatement("SELECT 1 FROM moteoppsett WHERE treffgjennomforing_id = ?").use { stmt ->
-            stmt.setLong(1, treffgjennomforingId)
+            stmt.setLong(1, treffgjennomføringId)
             stmt.executeQuery().use { it.next() }
         }
 

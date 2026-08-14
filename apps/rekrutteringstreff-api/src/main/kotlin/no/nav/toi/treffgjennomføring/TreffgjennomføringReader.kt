@@ -1,7 +1,7 @@
-package no.nav.toi.treffgjennomforing
+package no.nav.toi.treffgjennomføring
 
-import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
-import no.nav.toi.treffgjennomforing.dto.tilDto
+import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
+import no.nav.toi.treffgjennomføring.dto.tilDto
 import java.sql.Connection
 
 /**
@@ -13,12 +13,12 @@ import java.sql.Connection
  * kunne svare, og da ville oppdelinga vært reversert av lesevegen.
  *
  * Lesinga skal skje i få, store kall. I dag er det ti spørringer på én connection,
- * og [no.nav.toi.treffgjennomforing.TreffgjennomføringReaderTest] holder tallet i sjakk.
+ * og [no.nav.toi.treffgjennomføring.TreffgjennomføringReaderTest] holder tallet i sjakk.
  */
 class TreffgjennomføringReader(
-    private val repository: TreffgjennomforingRepository,
+    private val repository: TreffgjennomføringRepository,
 ) {
 
-    fun les(connection: Connection, kontekst: Treffkontekst): TreffgjennomforingDto =
+    fun les(connection: Connection, kontekst: Treffkontekst): TreffgjennomføringDto =
         repository.hentAggregat(connection, kontekst).tilDto(kontekst.treffId.somString)
 }

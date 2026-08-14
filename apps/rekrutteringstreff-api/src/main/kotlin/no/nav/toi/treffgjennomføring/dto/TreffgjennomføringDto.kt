@@ -1,15 +1,15 @@
-package no.nav.toi.treffgjennomforing.dto
+package no.nav.toi.treffgjennomføring.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import no.nav.toi.treffgjennomforing.ArbeidsgiverIntervjufordeling
-import no.nav.toi.treffgjennomforing.ArbeidsgiverRotasjon
-import no.nav.toi.treffgjennomforing.Deltakernummer
-import no.nav.toi.treffgjennomforing.Interesse
-import no.nav.toi.treffgjennomforing.Rom
-import no.nav.toi.treffgjennomforing.Treffgjennomføring
-import no.nav.toi.treffgjennomforing.TreffgjennomføringFase
-import no.nav.toi.treffgjennomforing.Vurdering
-import no.nav.toi.treffgjennomforing.Vurderingsvalg
+import no.nav.toi.treffgjennomføring.ArbeidsgiverIntervjufordeling
+import no.nav.toi.treffgjennomføring.ArbeidsgiverRotasjon
+import no.nav.toi.treffgjennomføring.Deltakernummer
+import no.nav.toi.treffgjennomføring.Interesse
+import no.nav.toi.treffgjennomføring.Rom
+import no.nav.toi.treffgjennomføring.Treffgjennomføring
+import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
+import no.nav.toi.treffgjennomføring.Vurdering
+import no.nav.toi.treffgjennomføring.Vurderingsvalg
 import java.time.format.DateTimeFormatter
 
 private val KLOKKESLETT = DateTimeFormatter.ofPattern("HH:mm")
@@ -40,7 +40,7 @@ data class VurderingDto(
 )
 
 /** Svaret på samtlige endepunkter, også skriveoperasjonene. */
-data class TreffgjennomforingDto(
+data class TreffgjennomføringDto(
     val rekrutteringstreffId: String,
     val fase: TreffgjennomføringFase,
     val antallRom: Int,
@@ -88,7 +88,7 @@ data class KaskadeAdvarselDto(
     val registreringer: RegistreringerDto,
 )
 
-fun Treffgjennomføring.tilDto(rekrutteringstreffId: String) = TreffgjennomforingDto(
+fun Treffgjennomføring.tilDto(rekrutteringstreffId: String) = TreffgjennomføringDto(
     rekrutteringstreffId = rekrutteringstreffId,
     fase = fase,
     antallRom = antallRom,
