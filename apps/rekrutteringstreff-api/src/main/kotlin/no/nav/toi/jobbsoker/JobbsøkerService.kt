@@ -1,6 +1,10 @@
 package no.nav.toi.jobbsoker
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import io.javalin.http.BadRequestResponse
+import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
+import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.SecureLog
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
@@ -9,7 +13,15 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.*
 import no.nav.toi.kandidatsok.KandidatsøkKlient
+import no.nav.toi.låsTreff
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.treffgjennomforing.OppmøteHarRegistreringerException
+import no.nav.toi.treffgjennomforing.TreffgjennomforingRepository
+import no.nav.toi.treffgjennomforing.Treffkontekst
+import no.nav.toi.treffgjennomforing.TreffkontekstRepository
+import no.nav.toi.treffgjennomforing.dto.OppmøteRequestDto
+import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
+import no.nav.toi.treffgjennomforing.dto.tilDto
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
@@ -26,6 +38,9 @@ class JobbsøkerService(
     private val jobbsøkerSokRepository: JobbsøkerSokRepository = JobbsøkerSokRepository(dataSource),
     private val jobbsøkerFormidlingSokRepository: JobbsøkerFormidlingSokRepository = JobbsøkerFormidlingSokRepository(dataSource),
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
+    private val treffkontekstRepository: TreffkontekstRepository = TreffkontekstRepository(),
+    private val treffgjennomforingRepository: TreffgjennomforingRepository = TreffgjennomforingRepository(),
+    private val mapper: ObjectMapper = JacksonConfig.mapper,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val secureLogger: Logger = SecureLog(logger)
@@ -465,6 +480,82 @@ class JobbsøkerService(
         }
         return opprettedePersonTreffIder + gjenopprettedePersonTreffIder
     }
+
+    fun oppdaterOppmøte(treffId: TreffId, dto: OppmøteRequestDto, navIdent: String): TreffgjennomforingDto =
+        dataSource.executeInTransaction { connection ->
+            val kontekst = treffkontekstRepository.hent(connection, treffId)
+                ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
+            connection.låsTreff(kontekst.treffDbId)
+            treffgjennomforingRepository.sikreRad(connection, kontekst.treffDbId)
+
+            val person = PersonTreffId(dto.personTreffId)
+            val jobbsøkerId = kontekst.jobbsøkerId(person)
+                ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
+
+            val harMøtt = jobbsøkerRepository.hentOppmøte(connection, person)?.harMøtt == true
+            if (dto.møtt != harMøtt) {
+                if (dto.møtt) registrerOppmøte(connection, kontekst, person, jobbsøkerId, navIdent)
+                else fjernOppmøte(connection, person, jobbsøkerId, dto.bekreftSlettRegistreringer, navIdent)
+            }
+
+            treffgjennomforingRepository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
+        }
+
+    private fun registrerOppmøte(
+        connection: Connection,
+        kontekst: Treffkontekst,
+        person: PersonTreffId,
+        jobbsøkerId: Long,
+        navIdent: String,
+    ) {
+        val deltakernummer =
+            if (kontekst.erWorkOp) {
+                treffgjennomforingRepository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
+            } else null
+
+        jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE)
+        leggTilOppmøtehendelse(
+            connection, person, Oppmøte.REGISTRERT_OPPMØTE, navIdent,
+            deltakernummer?.let { mapOf("deltakernummer" to it) } ?: emptyMap(),
+        )
+    }
+
+    private fun fjernOppmøte(
+        connection: Connection,
+        person: PersonTreffId,
+        jobbsøkerId: Long,
+        bekreftet: Boolean,
+        navIdent: String,
+    ) {
+        val registreringer = treffgjennomforingRepository.tellRegistreringer(connection, jobbsøkerId)
+        if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
+
+        treffgjennomforingRepository.slettRegistreringerFor(connection, jobbsøkerId)
+        jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
+        leggTilOppmøtehendelse(
+            connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET, navIdent,
+            mapOf(
+                "interesser" to registreringer.interesser,
+                "intervjuplasser" to registreringer.intervjuplasser,
+                "vurderinger" to registreringer.vurderinger,
+            ),
+        )
+    }
+
+    private fun leggTilOppmøtehendelse(
+        connection: Connection,
+        person: PersonTreffId,
+        oppmøte: Oppmøte,
+        navIdent: String,
+        data: Map<String, Any?>,
+    ) = jobbsøkerRepository.leggTilHendelse(
+        connection = connection,
+        personTreffId = person,
+        hendelsestype = oppmøte.hendelsestype,
+        aktørType = AktørType.MARKEDSKONTAKT_ELLER_VEILEDER,
+        opprettetAv = navIdent,
+        hendelseData = if (data.isEmpty()) null else mapper.writeValueAsString(data),
+    )
 }
 
 enum class MarkerSlettetResultat {

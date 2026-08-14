@@ -1,6 +1,6 @@
 # Plan: Domeneoppdeling av treffgjennomføring i backend
 
-**Status:** Besluttet. Fase 0 implementert, fase 1–6 gjenstår  
+**Status:** Besluttet. Fase 0–2 implementert, fase 3–6 gjenstår  
 **Omfang:** `rekrutteringstreff-api`, pakken `no.nav.toi.treffgjennomforing`  
 **Gjelder ikke:** frontendkontrakten. Alle forslagene her skal være usynlige for `rekrutteringsbistand-frontend`.
 
@@ -628,22 +628,40 @@ hele revisjonssporet står igjen.
 > **Lokale databaser må resettes.** `V14` har endret innhold, og Flyway vil avvise en
 > database der den gamle versjonen allerede er kjørt.
 
-### Fase 2 – oppmøteoperasjonen til JobbsøkerService
+### Fase 2 – oppmøteoperasjonen til JobbsøkerService ✅ implementert
 
-Flytt registrering og angring av oppmøte til `JobbsøkerService`, som en operasjon:
-statusoppdatering, hendelse og deltakernummer i **samme transaksjon**.
+`JobbsøkerService.oppdaterOppmøte` eier nå operasjonen, og gjør kolonne, hendelse og
+deltakernummer i **samme transaksjon**.
 
-1. Innfør `Connection.låsTreff(treffDbId)` i `no.nav.toi/treffLås.kt`.
-2. Bytt `sikreOgLås` i `skriv` til `låsTreff` + `sikreRad`. Ingen adferdsendring.
-3. Flytt oppmøteoperasjonen til `JobbsøkerService`, som kaller `låsTreff` først.
+**Gjort:**
+
+1. `Connection.låsTreff(treffDbId)` i `no.nav.toi/treffLås.kt`. Én `SELECT … FOR UPDATE`
+   mot `rekrutteringstreff`-raden.
+2. `sikreOgLås` delt i to: `låsTreff` tar låsen, `sikreRad` oppretter raden som
+   møteoppsettet trenger på grunn av fremmednøkkelen. `skriv` kaller begge, i den
+   rekkefølgen.
+3. Oppmøtet flyttet til `JobbsøkerService`, som kaller `låsTreff` først.
+   `TreffgjennomforingService` har ikke lenger noe med oppmøte å gjøre.
 4. `TreffgjennomforingController` beholder ruta `PUT /treffgjennomforing/oppmote` og
-   delegerer til `JobbsøkerService`. Frontend merker ingenting.
+   delegerer til `JobbsøkerService`. Frontendkontrakten er uendret.
 
-Steg 1–2 er den risikofylte delen og bør være en egen PR med samtidighetstesten fra
-fase 0 som portvakt. Steg 3–4 er ren flytting etterpå.
+Begge domenene tar låsen i samme rekkefølge (`låsTreff` → `sikreRad`), så de kan ikke
+låse hverandre fast.
 
-Kaskadeslettinga følger med oppmøtet, og blir stående som direkte tabellsletting
-fram til fase 4 og 5 gir eierne noe å kalle på.
+**Endring underveis:** sjekken på om oppmøtet allerede har ønsket verdi leser nå
+kolonnen direkte i stedet for å hente hele aggregatet. Fase 1 gjorde det mulig, og det
+sparer ti spørringer på en operasjon som ofte er et no-op.
+
+**To ting som er bevisst midlertidige:**
+
+- `JobbsøkerService` returnerer `TreffgjennomforingDto`, fordi endepunktet svarer med
+  hele aggregatet. Fase 3 flytter den byggingen til `TreffgjennomforingLeser`, og da
+  kaller jobbsøker-domenet leseren i stedet for repositoryet.
+- Kaskadeslettinga står fortsatt som direkte tabellsletting via
+  `TreffgjennomforingRepository`. Fase 4 og 5 gir eierne noe å kalle på.
+
+Begge betyr at `JobbsøkerService` foreløpig kjenner `TreffgjennomforingRepository`.
+Det er en kjent, avgrenset kobling som krymper i fase 3–5, ikke et sluttbilde.
 
 ### Fase 3 – leselaget
 
@@ -709,12 +727,12 @@ To regler som gjelder gjennom hele arbeidet:
 
 Deler den som implementerer bør skrive selv og forstå i dybden, ikke generere:
 
-- **Låseprimitiven `låsTreff`.** Samtidighet med synlig konsekvens for brukeren, og
-  den beskytter fire ulike kappløp – ikke bare deltakernummer. Forstå hvorfor
-  `sikreOgLås` finnes før du erstatter den.
-- **Oppmøtetransaksjonen i `JobbsøkerService`.** Status, hendelse og deltakernummer
-  må stå og falle sammen. En delvis registrering gir en person som er møtt uten
-  kortnummer, eller motsatt.
+- **Låseprimitiven `låsTreff`** (implementert i fase 2). Samtidighet med synlig
+  konsekvens for brukeren, og den beskytter fire ulike kappløp – ikke bare
+  deltakernummer. Gå gjennom den før du endrer noe rundt transaksjonene.
+- **Oppmøtetransaksjonen i `JobbsøkerService`** (implementert i fase 2). Kolonne,
+  hendelse og deltakernummer må stå og falle sammen. En delvis registrering gir en
+  person som er møtt uten kortnummer, eller motsatt.
 - **Slettinga av gamle oppmøtehendelser i `V14`.** Sletting av produksjonsdata er
   irreversibel. Tell radene i dev og prod før deploy, og bekreft at ingen av dem
   tilhører noe som fortsatt er i bruk.

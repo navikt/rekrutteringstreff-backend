@@ -608,6 +608,14 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
         }
     }
 
+    fun hentOppmøte(connection: Connection, personTreffId: PersonTreffId): Oppmøte? =
+        connection.prepareStatement("SELECT oppmote FROM jobbsoker WHERE id=?").use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) Oppmøte.fraDatabase(rs.getString("oppmote")) else null
+            }
+        }
+
     /**
      * Henter distinkte fødselsnumre for jobbsøkere der synlighet ikke er evaluert ennå.
      * Brukes av SynlighetsBehovScheduler for å trigge need-meldinger for de som mangler synlighetsstatus.

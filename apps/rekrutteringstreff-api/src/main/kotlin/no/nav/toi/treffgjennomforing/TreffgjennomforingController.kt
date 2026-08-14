@@ -15,6 +15,7 @@ import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
 import no.nav.toi.Rolle
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.authenticatedUser
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.treffgjennomforing.dto.ArbeidsgiverIntervjufordelingDto
@@ -28,6 +29,7 @@ import java.util.*
 
 class TreffgjennomforingController(
     private val treffgjennomforingService: TreffgjennomforingService,
+    private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
 ) : RuteRegistrerer {
 
@@ -111,7 +113,7 @@ class TreffgjennomforingController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevTilgang(treffId)
         val dto = ctx.bodyAsClass<OppmøteRequestDto>()
-        ctx.status(200).json(treffgjennomforingService.oppdaterOppmøte(treffId, dto, navIdent))
+        ctx.status(200).json(jobbsøkerService.oppdaterOppmøte(treffId, dto, navIdent))
     }
 
     @OpenApi(

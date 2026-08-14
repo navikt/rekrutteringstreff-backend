@@ -246,7 +246,7 @@ class TreffgjennomforingRepository {
         }
     }
 
-    fun sikreOgLås(connection: Connection, treffDbId: Long): Treffgjennomforingsrad {
+    fun sikreRad(connection: Connection, treffDbId: Long): Treffgjennomforingsrad {
         val sql = """
             INSERT INTO treffgjennomforing (rekrutteringstreff_id, fase)
             VALUES (?, ?)

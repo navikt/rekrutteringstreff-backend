@@ -11,14 +11,13 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.låsTreff
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomforing.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomforing.dto.InteresseRequestDto
 import no.nav.toi.treffgjennomforing.dto.MøteoppsettRequestDto
-import no.nav.toi.treffgjennomforing.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomforing.dto.RomDto
 import no.nav.toi.treffgjennomforing.dto.TreffgjennomforingDto
 import no.nav.toi.treffgjennomforing.dto.VurderingDto
@@ -39,59 +38,6 @@ class TreffgjennomforingService(
     fun hent(treffId: TreffId): TreffgjennomforingDto = dataSource.executeInTransaction { connection ->
         val kontekst = hentKontekst(connection, treffId)
         repository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
-    }
-
-    fun oppdaterOppmøte(treffId: TreffId, dto: OppmøteRequestDto, navIdent: String): TreffgjennomforingDto =
-        skriv(treffId) { connection, kontekst, rad ->
-            val person = PersonTreffId(dto.personTreffId)
-            val jobbsøkerId = kontekst.jobbsøkerId(person)
-                ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
-            val aggregat = repository.hentAggregat(connection, kontekst)
-
-            if (dto.møtt == aggregat.oppmøte.contains(person)) return@skriv
-            if (dto.møtt) registrerOppmøte(connection, kontekst, person, jobbsøkerId, navIdent)
-            else fjernOppmøte(connection, person, jobbsøkerId, dto.bekreftSlettRegistreringer, navIdent)
-        }
-
-    private fun registrerOppmøte(
-        connection: Connection,
-        kontekst: Treffkontekst,
-        person: PersonTreffId,
-        jobbsøkerId: Long,
-        navIdent: String,
-    ) {
-
-        val deltakernummer =
-            if (kontekst.erWorkOp) repository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
-            else null
-
-        jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE)
-        leggTilHendelseForJobbsøker(
-            connection, person, Oppmøte.REGISTRERT_OPPMØTE.hendelsestype, navIdent,
-            deltakernummer?.let { mapOf("deltakernummer" to it) } ?: emptyMap(),
-        )
-    }
-
-    private fun fjernOppmøte(
-        connection: Connection,
-        person: PersonTreffId,
-        jobbsøkerId: Long,
-        bekreftet: Boolean,
-        navIdent: String,
-    ) {
-        val registreringer = repository.tellRegistreringer(connection, jobbsøkerId)
-        if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
-
-        repository.slettRegistreringerFor(connection, jobbsøkerId)
-        jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
-        leggTilHendelseForJobbsøker(
-            connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET.hendelsestype, navIdent,
-            mapOf(
-                "interesser" to registreringer.interesser,
-                "intervjuplasser" to registreringer.intervjuplasser,
-                "vurderinger" to registreringer.vurderinger,
-            ),
-        )
     }
 
     fun lagreMøteoppsett(treffId: TreffId, dto: MøteoppsettRequestDto, navIdent: String): TreffgjennomforingDto =
@@ -484,7 +430,8 @@ class TreffgjennomforingService(
         block: (Connection, Treffkontekst, Treffgjennomforingsrad) -> Unit,
     ): TreffgjennomforingDto = dataSource.executeInTransaction { connection ->
         val kontekst = hentKontekst(connection, treffId)
-        val rad = repository.sikreOgLås(connection, kontekst.treffDbId)
+        connection.låsTreff(kontekst.treffDbId)
+        val rad = repository.sikreRad(connection, kontekst.treffDbId)
         block(connection, kontekst, rad)
         repository.hentAggregat(connection, kontekst).tilDto(treffId.somString)
     }

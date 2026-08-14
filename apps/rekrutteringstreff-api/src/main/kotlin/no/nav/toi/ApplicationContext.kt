@@ -72,7 +72,10 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val jobbsøkerService = JobbsøkerService(
         dataSource = infra.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
+        treffkontekstRepository = treffkontekstRepository,
+        treffgjennomforingRepository = treffgjennomforingRepository,
         kandidatsøkKlient = infra.kandidatsøkKlient,
+        mapper = JacksonConfig.mapper,
     )
     val arbeidsgiverService = ArbeidsgiverService(infra.dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
     val eierService = EierService(eierRepository, rekrutteringstreffRepository, infra.dataSource)
@@ -112,7 +115,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val healthController = HealthController(healthRepository)
     val formidlingController = FormidlingController(formidlingService, eierService, infra.modiaKlient)
     val statistikkController = StatistikkController(statistikkService)
-    val treffgjennomforingController = TreffgjennomforingController(treffgjennomforingService, eierService)
+    val treffgjennomforingController = TreffgjennomforingController(treffgjennomforingService, jobbsøkerService, eierService)
 
     val jobbsøkerhendelserScheduler by lazy {
         JobbsøkerhendelserScheduler(

@@ -10,6 +10,7 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -53,6 +54,14 @@ class TreffgjennomforingKarakteriseringTest {
         jobbsøkerRepository = jobbsøkerRepository,
         arbeidsgiverRepository = arbeidsgiverRepository,
         rekrutteringstreffRepository = rekrutteringstreffRepository,
+        mapper = mapper,
+    )
+
+    private val jobbsøkerService = JobbsøkerService(
+        dataSource = db.dataSource,
+        jobbsøkerRepository = jobbsøkerRepository,
+        treffkontekstRepository = TreffkontekstRepository(),
+        treffgjennomforingRepository = TreffgjennomforingRepository(),
         mapper = mapper,
     )
 
@@ -541,10 +550,10 @@ class TreffgjennomforingKarakteriseringTest {
         }
 
     private fun møtt(treffId: TreffId, person: PersonTreffId) =
-        service.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, true), navIdent)
+        jobbsøkerService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, true), navIdent)
 
     private fun ikkeMøtt(treffId: TreffId, person: PersonTreffId, bekreft: Boolean = true) =
-        service.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, false, bekreft), navIdent)
+        jobbsøkerService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, false, bekreft), navIdent)
 
     private fun interesse(
         treffId: TreffId,
