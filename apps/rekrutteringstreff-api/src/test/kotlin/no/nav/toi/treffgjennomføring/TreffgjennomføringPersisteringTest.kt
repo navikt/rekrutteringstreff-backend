@@ -1,6 +1,11 @@
 package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.JacksonConfig
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
+import no.nav.toi.oppfølging.OppfølgingRepository
+import no.nav.toi.treffgjennomføring.matching.MatchingRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.treffgjennomføring.møteplan.Rom
 import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
@@ -27,11 +32,18 @@ import java.time.Instant
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TreffgjennomføringRepositoryTest {
+class TreffgjennomføringPersisteringTest {
 
     private val db = TestDatabase()
     private val kontekstRepository = TreffkontekstRepository()
-    private val repository = TreffgjennomføringRepository()
+    private val faseRepository = FaseRepository()
+    private val oppmøteRepository = OppmøteRepository()
+    private val møteplanRepository = MøteplanRepository()
+    private val matchingRepository = MatchingRepository()
+    private val oppfølgingRepository = OppfølgingRepository()
+    private val reader = TreffgjennomføringReader(
+        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+    )
     private val sokRepository = JobbsøkerSokRepository(db.dataSource)
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, JacksonConfig.mapper)
 
@@ -52,8 +64,8 @@ class TreffgjennomføringRepositoryTest {
         val aggregat = les(treff)
 
         assertThat(aggregat.fase).isEqualTo(TreffgjennomføringFase.OPPMØTE)
-        assertThat(aggregat.møteoppsett.starttidspunkt).isEqualTo(Treffgjennomføring.STANDARD_STARTTIDSPUNKT)
-        assertThat(aggregat.møteoppsett.varighetPerMøteMinutter).isEqualTo(10)
+        assertThat(aggregat.starttidspunkt).isEqualTo("10:00")
+        assertThat(aggregat.varighetPerMøteMinutter).isEqualTo(10)
         assertThat(aggregat.oppmøte).isEmpty()
         assertThat(aggregat.rom).isEmpty()
     }
@@ -74,13 +86,13 @@ class TreffgjennomføringRepositoryTest {
         val person = jobbsøker(treff)
 
         registrerOppmøte(person)
-        assertThat(les(treff).oppmøte).containsExactly(person)
+        assertThat(les(treff).oppmøte).containsExactly(person.somString)
 
         registrerOppmøte(person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
         assertThat(les(treff).oppmøte).isEmpty()
 
         registrerOppmøte(person)
-        assertThat(les(treff).oppmøte).containsExactly(person)
+        assertThat(les(treff).oppmøte).containsExactly(person.somString)
     }
 
     @Test
@@ -91,13 +103,13 @@ class TreffgjennomføringRepositoryTest {
 
         val nummerFørste = db.dataSource.connection.use { conn ->
             val treffDbId = treffDbId(treff)
-            repository.tildelDeltakernummer(conn, treffDbId, jobbsøkerDbId(første))
+            oppmøteRepository.tildelDeltakernummer(conn, treffDbId, jobbsøkerDbId(første))
         }
         val nummerFørsteIgjen = db.dataSource.connection.use { conn ->
-            repository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(første))
+            oppmøteRepository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(første))
         }
         val nummerAndre = db.dataSource.connection.use { conn ->
-            repository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(andre))
+            oppmøteRepository.tildelDeltakernummer(conn, treffDbId(treff), jobbsøkerDbId(andre))
         }
 
         assertThat(nummerFørste).isEqualTo(1)
@@ -116,7 +128,7 @@ class TreffgjennomføringRepositoryTest {
 
         db.dataSource.connection.use { conn ->
             val kontekst = kontekstRepository.hent(conn, treff)!!
-            repository.erstattRomfordeling(
+            møteplanRepository.erstattRomfordeling(
                 conn, kontekst.treffDbId,
                 listOf(Rom(1, listOf(p2, p1)), Rom(2, emptyList())),
                 kontekst,
@@ -125,7 +137,7 @@ class TreffgjennomføringRepositoryTest {
 
         val rom = les(treff).rom
         assertThat(rom).hasSize(2)
-        assertThat(rom.first { it.romnummer == 1 }.jobbsøkere).containsExactly(p2, p1)
+        assertThat(rom.first { it.romnummer == 1 }.jobbsøkere).containsExactly(p2.somString, p1.somString)
         assertThat(rom.first { it.romnummer == 2 }.jobbsøkere).isEmpty()
     }
 
@@ -153,7 +165,7 @@ class TreffgjennomføringRepositoryTest {
         registrerOppmøte(person)
 
         db.dataSource.connection.use { conn ->
-            repository.settInteresse(conn, jobbsøkerDbId(person), arbeidsgiverId, true)
+            matchingRepository.settInteresse(conn, jobbsøkerDbId(person), arbeidsgiverId, true)
         }
 
         val rad = sokRepository.sok(treff, JobbsøkerSøkRequest()).jobbsøkere.single()
@@ -173,8 +185,8 @@ class TreffgjennomføringRepositoryTest {
         assertThat(rad.oppmøte!!.møtt).isFalse()
     }
 
-    private fun les(treff: TreffId): Treffgjennomføring = db.dataSource.connection.use { conn ->
-        repository.hentAggregat(conn, kontekstRepository.hent(conn, treff)!!)
+    private fun les(treff: TreffId) = db.dataSource.connection.use { conn ->
+        reader.les(conn, kontekstRepository.hent(conn, treff)!!)
     }
 
     private fun opprettTreff(

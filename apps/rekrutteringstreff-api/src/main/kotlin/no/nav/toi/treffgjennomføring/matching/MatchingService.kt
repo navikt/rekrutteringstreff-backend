@@ -1,0 +1,159 @@
+package no.nav.toi.treffgjennomføring.matching
+
+import io.javalin.http.BadRequestResponse
+import no.nav.toi.ArbeidsgiverHendelsestype
+import no.nav.toi.HendelseWriter
+import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
+import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
+import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.treffgjennomføring.FaseRepository
+import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
+import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
+import no.nav.toi.treffgjennomføring.Treffkontekst
+import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
+import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
+import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
+import java.sql.Connection
+
+class MatchingService(
+    private val writer: TreffgjennomføringWriter,
+    private val repository: MatchingRepository,
+    private val oppmøteRepository: OppmøteRepository,
+    private val faseRepository: FaseRepository,
+    private val hendelseWriter: HendelseWriter,
+) {
+
+    fun settInteresse(treffId: TreffId, dto: InteresseRequestDto, navIdent: String): TreffgjennomføringDto =
+        writer.skriv(treffId) { connection, kontekst, rad ->
+            val person = PersonTreffId(dto.personTreffId)
+            val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
+            val jobbsøkerId = kontekst.jobbsøkerId(person)
+                ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
+            val arbeidsgiverId = kontekst.arbeidsgiverId(arbeidsgiver)
+                ?: throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
+
+            if (dto.interessert && person !in oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)) {
+                throw BadRequestResponse("Bare fremmøtte jobbsøkere kan registrere interesse")
+            }
+
+            if (!repository.settInteresse(connection, jobbsøkerId, arbeidsgiverId, dto.interessert)) return@skriv
+
+            hendelseWriter.forJobbsøkerOgArbeidsgiver(
+                connection, person, arbeidsgiver,
+                if (dto.interessert) JobbsøkerHendelsestype.INTERESSE_REGISTRERT
+                else JobbsøkerHendelsestype.ANGRE_INTERESSE_REGISTRERT,
+                if (dto.interessert) ArbeidsgiverHendelsestype.INTERESSE_REGISTRERT
+                else ArbeidsgiverHendelsestype.ANGRE_INTERESSE_REGISTRERT,
+                navIdent,
+            )
+
+            speilInteresseIFordeling(connection, kontekst, person, arbeidsgiver, dto.interessert)
+            faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.INTERESSE)
+        }
+
+    private fun speilInteresseIFordeling(
+        connection: Connection,
+        kontekst: Treffkontekst,
+        person: PersonTreffId,
+        arbeidsgiver: ArbeidsgiverTreffId,
+        interessert: Boolean,
+    ) {
+        val eksisterende = repository.hentFor(connection, kontekst).intervjufordelinger
+            .firstOrNull { it.arbeidsgiverTreffId == arbeidsgiver } ?: return
+
+        val oppdatert = if (interessert) {
+            if (person in eksisterende.inkludertePersonTreffIder || person in eksisterende.ekskludertePersonTreffIder) return
+            eksisterende.copy(inkludertePersonTreffIder = eksisterende.inkludertePersonTreffIder + person)
+        } else {
+            eksisterende.copy(
+                inkludertePersonTreffIder = eksisterende.inkludertePersonTreffIder - person,
+                ekskludertePersonTreffIder = eksisterende.ekskludertePersonTreffIder - person,
+            )
+        }
+        repository.erstattIntervjufordelinger(connection, listOf(oppdatert), kontekst)
+    }
+
+    fun lagreIntervjufordeling(
+        treffId: TreffId,
+        dto: ArbeidsgiverIntervjufordelingDto,
+        navIdent: String,
+    ): TreffgjennomføringDto = writer.skriv(treffId) { connection, kontekst, rad ->
+        krevWorkOp(kontekst)
+        MatchingValidering.intervjufordeling(dto.inkludertePersonTreffIder, dto.ekskludertePersonTreffIder)
+
+        val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
+        if (!kontekst.kjenner(arbeidsgiver)) throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
+
+        val ny = ArbeidsgiverIntervjufordeling(
+            arbeidsgiverTreffId = arbeidsgiver,
+            inkludertePersonTreffIder = dto.inkludertePersonTreffIder.map(::PersonTreffId).krevPåTreff(kontekst),
+            ekskludertePersonTreffIder = dto.ekskludertePersonTreffIder.map(::PersonTreffId).krevPåTreff(kontekst),
+        )
+        val før = repository.hentFor(connection, kontekst).intervjufordelinger
+            .firstOrNull { it.arbeidsgiverTreffId == arbeidsgiver }
+
+        repository.erstattIntervjufordelinger(connection, listOf(ny), kontekst)
+        skrivFordelingshendelser(connection, før, ny, navIdent)
+        faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
+    }
+
+    private fun List<PersonTreffId>.krevPåTreff(kontekst: Treffkontekst): List<PersonTreffId> = also {
+        firstOrNull { !kontekst.kjenner(it) }?.let {
+            throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
+        }
+    }
+
+    private fun skrivFordelingshendelser(
+        connection: Connection,
+        før: ArbeidsgiverIntervjufordeling?,
+        etter: ArbeidsgiverIntervjufordeling,
+        navIdent: String,
+    ) {
+        val inkludertFør = før?.inkludertePersonTreffIder.orEmpty().toSet()
+        val inkludertEtter = etter.inkludertePersonTreffIder.toSet()
+
+        (inkludertEtter - inkludertFør).forEach { person ->
+            hendelseWriter.forJobbsøkerOgArbeidsgiver(
+                connection, person, etter.arbeidsgiverTreffId,
+                JobbsøkerHendelsestype.SATT_OPP_TIL_INTERVJU,
+                ArbeidsgiverHendelsestype.SATT_OPP_TIL_INTERVJU, navIdent,
+            )
+        }
+        (inkludertFør - inkludertEtter).forEach { person ->
+            hendelseWriter.forJobbsøkerOgArbeidsgiver(
+                connection, person, etter.arbeidsgiverTreffId,
+                JobbsøkerHendelsestype.ANGRE_SATT_OPP_TIL_INTERVJU,
+                ArbeidsgiverHendelsestype.ANGRE_SATT_OPP_TIL_INTERVJU, navIdent,
+            )
+        }
+    }
+
+    fun fordelIntervjuer(treffId: TreffId, navIdent: String): TreffgjennomføringDto =
+        writer.skriv(treffId) { connection, kontekst, rad ->
+            krevWorkOp(kontekst)
+            val matching = repository.hentFor(connection, kontekst)
+            val fordelinger = Intervjufordeler.fordel(
+                interesser = matching.interesser,
+                eksisterendeFordelinger = matching.intervjufordelinger,
+                arbeidsgivere = kontekst.arbeidsgiverIder,
+            )
+            repository.erstattIntervjufordelinger(connection, fordelinger, kontekst)
+
+            hendelseWriter.forTreff(
+                connection, treffId,
+                RekrutteringstreffHendelsestype.TREFFGJENNOMFØRING_INTERVJUFORDELING_FORDELT, navIdent,
+                mapOf(
+                    "antallArbeidsgivere" to fordelinger.size,
+                    "antallPlasseringer" to fordelinger.sumOf { it.inkludertePersonTreffIder.size },
+                ),
+            )
+            faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
+        }
+
+    private fun krevWorkOp(kontekst: Treffkontekst) {
+        if (!kontekst.erWorkOp) throw BadRequestResponse("Steget finnes bare på treff av kategorien WORKOP")
+    }
+}

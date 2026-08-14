@@ -1,6 +1,6 @@
 # Plan: Domeneoppdeling av treffgjennomføring i backend
 
-**Status:** Besluttet. Fase 0–4 implementert, fase 5 gjenstår (fase 6 delvis gjort i fase 4)  
+**Status:** Ferdig. Alle faser implementert  
 **Omfang:** `rekrutteringstreff-api`, pakken `no.nav.toi.treffgjennomføring`  
 **Gjelder ikke:** frontendkontrakten. Alle forslagene her skal være usynlige for `rekrutteringsbistand-frontend`.
 
@@ -462,40 +462,44 @@ løser ingenting frontend har bedt om. Kontrakten står.
 
 ---
 
-## Målstruktur
+## Målstruktur ✅ nådd
 
 ```
 no.nav.toi/
 ├── treffLås.kt                    delt låseprimitiv, ved siden av executeInTransaction
-└── HendelseWriter.kt               delt hendelseskriving
+└── HendelseWriter.kt              delt hendelseskriving
 
 no.nav.toi.jobbsoker/
 ├── JobbsøkerService.kt            eier oppmøtetransaksjonen: status + hendelse + deltakernummer
-└── oppmote/
-    └── OppmoteRepository.kt       jobbsoker.mott_tidspunkt, deltakernummer
+└── oppmøte/
+    └── OppmøteRepository.kt       jobbsoker.oppmote, deltakernummer
 
 no.nav.toi.treffgjennomføring/
 ├── Treffgjennomføring.kt          aggregatmodell, TreffgjennomføringFase
 ├── Treffkontekst.kt               uendret
 ├── TreffgjennomføringReader.kt    setter sammen aggregat-DTO-en
 ├── TreffgjennomføringController.kt  uendret sti, delegerer videre
+├── TreffgjennomføringWriter.kt    transaksjon + lås, felles for subdomenene
 ├── FaseRepository.kt              treffgjennomforing-raden: sikreRad, settFase, meldFramdrift
-├── moteplan/
-│   ├── Moteplan.kt                Møteoppsett, Rom, ArbeidsgiverRotasjon
+├── møteplan/
+│   ├── Møteplan.kt                Møteoppsett, Rom, ArbeidsgiverRotasjon
 │   ├── Romfordeler.kt             flyttet, uendret
-│   ├── MoteplanRepository.kt      moteoppsett, rom, rotasjon
-│   └── MoteplanService.kt
+│   ├── MøteplanRepository.kt      moteoppsett, rom, rotasjon
+│   ├── MøteplanService.kt
+│   └── MøteplanValidering.kt
 └── matching/
     ├── Matching.kt                Interesse, ArbeidsgiverIntervjufordeling
     ├── Intervjufordeler.kt        flyttet, uendret
     ├── MatchingRepository.kt      interesse, intervju_fordeling
-    └── MatchingService.kt
+    ├── MatchingService.kt
+    └── MatchingValidering.kt
 
 no.nav.toi.oppfølging/
 ├── Vurdering.kt
 ├── OppfølgingRepository.kt
 ├── OppfølgingService.kt
-└── OppfølgingController.kt
+├── OppfølgingController.kt
+└── OppfølgingValidering.kt
 ```
 
 Oppmøte får et repository under `jobbsoker/oppmote/`, men **ingen egen service**.
@@ -751,9 +755,57 @@ er en syklus på pakkenivå, og den er bevisst: endepunktet svarer med hele aggr
 og alternativet er to transaksjoner eller en delt DTO-pakke. Samme mønster som
 `JobbsøkerService` allerede har.
 
-### Fase 5 – skill ut møteplan og matching
+### Fase 5 – skill ut møteplan og matching ✅ implementert
 
-Gjøres til slutt, fordi den er størst og har minst risiko når 0–4 er på plass.
+Ingen fil i domenet eier lenger mer enn ett subdomene.
+
+```
+no.nav.toi.jobbsoker/
+└── oppmøte/OppmøteRepository.kt   jobbsoker.oppmote, deltakernummer
+
+no.nav.toi.treffgjennomføring/
+├── Treffgjennomføring.kt          delene satt sammen, fase, Registreringer
+├── Treffkontekst.kt
+├── FaseRepository.kt              treffgjennomforing-raden: sikreRad, settFase, meldFramdrift
+├── TreffgjennomføringWriter.kt    transaksjon + lås + svar, felles for subdomenene
+├── TreffgjennomføringReader.kt    setter sammen aggregat-DTO-en
+├── TreffgjennomføringService.kt   kun GET
+├── TreffgjennomføringController.kt  uendrede ruter, delegerer videre
+├── møteplan/                      moteoppsett, rom, rotasjon
+└── matching/                      interesse, intervju_fordeling
+```
+
+**Speilinga og møteplanopprettelsen er nå interne.** De to kantene som gjorde
+vurdering 3 uframkommelig ligger begge inne i ett subdomene: `speilInteresseIFordeling`
+i matching, `opprettMøteplan` i møteplan.
+
+**`TreffgjennomføringWriter`** er rammen alle skriveoperasjoner deler: én transaksjon,
+`låsTreff` først, `sikreRad`, og hele aggregatet som svar. Subdomenene fyller inn
+skrivinga og slipper å gjenta transaksjonshåndteringa.
+
+**Kaskadeslettinga er tre navngitte kall**, slik planen beskrev. `JobbsøkerService`
+kaller `matchingRepository.slettForJobbsøker`, `møteplanRepository.slettRomForJobbsøker`
+og `oppfølgingRepository.slettForJobbsøker`. Tellinga følger samme mønster.
+
+**Oppmøte og deltakernummer flyttet til `jobbsoker/oppmøte/`.** Uten det ville kjernen
+blitt en samlepose. `TreffgjennomføringRepository` finnes ikke lenger.
+
+**Antall spørringer er uendret.** Readeren spør fire repositories i stedet for ett, men
+hvert subdomene henter sin del i ett kall. `TreffgjennomføringReaderTest` står på ti,
+og testen som sammenligner lite og stort treff fanger N+1.
+
+#### Kanter som står igjen
+
+- Kaskaden fra oppmøte treffer alle tre subdomenene. Det er en reell forretningsregel,
+  ikke en tilfeldig kobling — den er nå eksplisitt i stedet for skjult i én metode.
+- `MøteplanService` og `MatchingService` leser oppmøte via `OppmøteRepository`.
+  Møteplanen kan ikke normaliseres uten å vite hvem som møtte.
+- Subdomenene kaller `FaseRepository.settFase`. Fasen er delt tilstand, og det synes.
+
+#### Merk
+
+`PUT /moteoppsett` gjør fortsatt to ting: oppretter hele møteplanen første gang, og
+endrer bare tidene senere. Oppdelinga gjør det tydelig — se åpent spørsmål 2.
 
 ### Fase 6 – rydd i hendelseskrivinga ✅ gjort i fase 4
 

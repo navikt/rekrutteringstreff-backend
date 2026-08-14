@@ -39,7 +39,13 @@ import no.nav.toi.oppfølging.OppfølgingController
 import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.oppfølging.OppfølgingService
 import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
-import no.nav.toi.treffgjennomføring.TreffgjennomføringRepository
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
+import no.nav.toi.treffgjennomføring.FaseRepository
+import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
+import no.nav.toi.treffgjennomføring.matching.MatchingRepository
+import no.nav.toi.treffgjennomføring.matching.MatchingService
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
 import no.nav.toi.treffgjennomføring.TreffgjennomføringService
 import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 
@@ -71,16 +77,27 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val formidlingRepository = FormidlingRepository(infra.dataSource)
     val statistikkRepository = StatistikkRepository(infra.dataSource)
     val treffkontekstRepository = TreffkontekstRepository()
-    val treffgjennomføringRepository = TreffgjennomføringRepository()
+    val faseRepository = FaseRepository()
+    val oppmøteRepository = OppmøteRepository()
+    val møteplanRepository = MøteplanRepository()
+    val matchingRepository = MatchingRepository()
     val oppfølgingRepository = OppfølgingRepository()
-    val treffgjennomføringReader = TreffgjennomføringReader(treffgjennomføringRepository, oppfølgingRepository)
+    val treffgjennomføringReader = TreffgjennomføringReader(
+        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+    )
+    val treffgjennomføringWriter = TreffgjennomføringWriter(
+        infra.dataSource, treffkontekstRepository, faseRepository, treffgjennomføringReader,
+    )
     val hendelseWriter = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, JacksonConfig.mapper)
 
     val jobbsøkerService = JobbsøkerService(
         dataSource = infra.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
         treffkontekstRepository = treffkontekstRepository,
-        treffgjennomføringRepository = treffgjennomføringRepository,
+        faseRepository = faseRepository,
+        oppmøteRepository = oppmøteRepository,
+        møteplanRepository = møteplanRepository,
+        matchingRepository = matchingRepository,
         oppfølgingRepository = oppfølgingRepository,
         treffgjennomføringReader = treffgjennomføringReader,
         kandidatsøkKlient = infra.kandidatsøkKlient,
@@ -104,16 +121,28 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val statistikkService = StatistikkService(statistikkRepository)
     val treffgjennomføringService = TreffgjennomføringService(
         dataSource = infra.dataSource,
-        kontekstRepository = treffkontekstRepository,
-        repository = treffgjennomføringRepository,
+        writer = treffgjennomføringWriter,
         reader = treffgjennomføringReader,
-        hendelser = hendelseWriter,
+    )
+    val møteplanService = MøteplanService(
+        writer = treffgjennomføringWriter,
+        repository = møteplanRepository,
+        oppmøteRepository = oppmøteRepository,
+        faseRepository = faseRepository,
+        hendelseWriter = hendelseWriter,
+    )
+    val matchingService = MatchingService(
+        writer = treffgjennomføringWriter,
+        repository = matchingRepository,
+        oppmøteRepository = oppmøteRepository,
+        faseRepository = faseRepository,
+        hendelseWriter = hendelseWriter,
     )
     val oppfølgingService = OppfølgingService(
         dataSource = infra.dataSource,
         repository = oppfølgingRepository,
         kontekstRepository = treffkontekstRepository,
-        treffgjennomføringRepository = treffgjennomføringRepository,
+        faseRepository = faseRepository,
         reader = treffgjennomføringReader,
         hendelser = hendelseWriter,
     )
@@ -130,7 +159,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val healthController = HealthController(healthRepository)
     val formidlingController = FormidlingController(formidlingService, eierService, infra.modiaKlient)
     val statistikkController = StatistikkController(statistikkService)
-    val treffgjennomføringController = TreffgjennomføringController(treffgjennomføringService, jobbsøkerService, eierService)
+    val treffgjennomføringController = TreffgjennomføringController(treffgjennomføringService, møteplanService, matchingService, jobbsøkerService, eierService)
     val oppfølgingController = OppfølgingController(oppfølgingService, eierService)
 
     val jobbsøkerhendelserScheduler by lazy {

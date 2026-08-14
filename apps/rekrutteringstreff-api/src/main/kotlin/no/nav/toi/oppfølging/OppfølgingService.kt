@@ -10,7 +10,7 @@ import no.nav.toi.låsTreff
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
 import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
-import no.nav.toi.treffgjennomføring.TreffgjennomføringRepository
+import no.nav.toi.treffgjennomføring.FaseRepository
 import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.dto.VurderingDto
@@ -21,7 +21,7 @@ class OppfølgingService(
     private val dataSource: DataSource,
     private val repository: OppfølgingRepository,
     private val kontekstRepository: TreffkontekstRepository,
-    private val treffgjennomføringRepository: TreffgjennomføringRepository,
+    private val faseRepository: FaseRepository,
     private val reader: TreffgjennomføringReader,
     private val hendelser: HendelseWriter,
 ) {
@@ -46,7 +46,7 @@ class OppfølgingService(
             else repository.slett(connection, jobbsøkerId, arbeidsgiverId)
 
             skrivHendelser(connection, før, ny, navIdent)
-            treffgjennomføringRepository.meldFramdrift(connection, kontekst.treffDbId, TreffgjennomføringFase.VURDERING)
+            faseRepository.meldFramdrift(connection, kontekst.treffDbId, TreffgjennomføringFase.VURDERING)
 
             reader.les(connection, kontekst)
         }

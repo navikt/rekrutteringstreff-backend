@@ -2,7 +2,12 @@ package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JacksonConfig
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.oppfølging.OppfølgingRepository
+import no.nav.toi.treffgjennomføring.matching.MatchingRepository
+import no.nav.toi.treffgjennomføring.matching.MatchingService
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
 import no.nav.toi.oppfølging.OppfølgingService
 import no.nav.toi.oppfølging.Vurderingsvalg
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
@@ -51,24 +56,27 @@ class TreffgjennomføringKarakteriseringTest {
     private val arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
     private val kontekstRepository = TreffkontekstRepository()
-    private val repository = TreffgjennomføringRepository()
+    private val faseRepository = FaseRepository()
+    private val oppmøteRepository = OppmøteRepository()
+    private val møteplanRepository = MøteplanRepository()
+    private val matchingRepository = MatchingRepository()
     private val oppfølgingRepository = OppfølgingRepository()
-    private val reader = TreffgjennomføringReader(repository, oppfølgingRepository)
+    private val reader = TreffgjennomføringReader(
+        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+    )
+    private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, faseRepository, reader)
     private val hendelser = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, mapper)
 
-    private val service = TreffgjennomføringService(
-        dataSource = db.dataSource,
-        kontekstRepository = kontekstRepository,
-        repository = repository,
-        reader = reader,
-        hendelser = hendelser,
-    )
+    private val service = TreffgjennomføringService(db.dataSource, writer, reader)
+
+    private val møteplanService = MøteplanService(writer, møteplanRepository, oppmøteRepository, faseRepository, hendelser)
+    private val matchingService = MatchingService(writer, matchingRepository, oppmøteRepository, faseRepository, hendelser)
 
     private val oppfølgingService = OppfølgingService(
         dataSource = db.dataSource,
         repository = oppfølgingRepository,
         kontekstRepository = kontekstRepository,
-        treffgjennomføringRepository = repository,
+        faseRepository = faseRepository,
         reader = reader,
         hendelser = hendelser,
     )
@@ -77,7 +85,10 @@ class TreffgjennomføringKarakteriseringTest {
         dataSource = db.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
         treffkontekstRepository = kontekstRepository,
-        treffgjennomføringRepository = repository,
+        faseRepository = faseRepository,
+        oppmøteRepository = oppmøteRepository,
+        møteplanRepository = møteplanRepository,
+        matchingRepository = matchingRepository,
         oppfølgingRepository = oppfølgingRepository,
         treffgjennomføringReader = reader,
         mapper = mapper,
@@ -223,13 +234,13 @@ class TreffgjennomføringKarakteriseringTest {
         møtt(treffId, person)
         assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.OPPMØTE)
 
-        service.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent)
+        møteplanService.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent)
         assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.ROM)
 
         interesse(treffId, person, ag)
         assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.INTERESSE)
 
-        service.fordelIntervjuer(treffId, navIdent)
+        matchingService.fordelIntervjuer(treffId, navIdent)
         assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.FORDELING)
 
         oppfølgingService.lagreVurdering(
@@ -396,7 +407,7 @@ class TreffgjennomføringKarakteriseringTest {
         møtt(treffId, p1)
         møtt(treffId, p2)
         interesse(treffId, p1, ag)
-        service.fordelIntervjuer(treffId, navIdent)
+        matchingService.fordelIntervjuer(treffId, navIdent)
 
         interesse(treffId, p2, ag)
 
@@ -417,7 +428,7 @@ class TreffgjennomføringKarakteriseringTest {
         val p2 = jobbsøker(treffId, "22222222222")
         møtt(treffId, p1)
         møtt(treffId, p2)
-        service.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent)
+        møteplanService.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent)
         assertThat(service.hent(treffId).rom.flatMap { it.jobbsøkere }).hasSize(2)
 
         ikkeMøtt(treffId, p2)
@@ -441,7 +452,7 @@ class TreffgjennomføringKarakteriseringTest {
         val treffId = vanligTreff()
         jobbsøker(treffId).also { møtt(treffId, it) }
 
-        assertThatThrownBy { service.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent) }
+        assertThatThrownBy { møteplanService.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent) }
             .hasMessageContaining("Steget finnes bare på treff av kategorien WORKOP")
     }
 
@@ -489,15 +500,15 @@ class TreffgjennomføringKarakteriseringTest {
 
         møtt(treffId, p1)
         møtt(treffId, p2)
-        service.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent)
-        service.lagreRomfordeling(
+        møteplanService.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent)
+        møteplanService.lagreRomfordeling(
             treffId,
             listOf(RomDto(1, listOf(p1.somString)), RomDto(2, listOf(p2.somString))),
             navIdent,
         )
         interesse(treffId, p1, ag[0])
         interesse(treffId, p2, ag[0])
-        service.lagreIntervjufordeling(
+        matchingService.lagreIntervjufordeling(
             treffId,
             ArbeidsgiverIntervjufordelingDto(ag[0].somString, listOf(p1.somString), listOf(p2.somString)),
             navIdent,
@@ -578,7 +589,7 @@ class TreffgjennomføringKarakteriseringTest {
         person: PersonTreffId,
         arbeidsgiver: ArbeidsgiverTreffId,
         interessert: Boolean = true,
-    ) = service.settInteresse(
+    ) = matchingService.settInteresse(
         treffId,
         InteresseRequestDto(person.somString, arbeidsgiver.somString, interessert),
         navIdent,

@@ -1,7 +1,10 @@
 package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.JacksonConfig
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.oppfølging.OppfølgingRepository
+import no.nav.toi.treffgjennomføring.matching.MatchingRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
@@ -37,16 +40,24 @@ class TreffgjennomføringReaderTest {
     private val navIdent = "Z999999"
 
     private val kontekstRepository = TreffkontekstRepository()
-    private val repository = TreffgjennomføringRepository()
+    private val faseRepository = FaseRepository()
+    private val oppmøteRepository = OppmøteRepository()
+    private val møteplanRepository = MøteplanRepository()
+    private val matchingRepository = MatchingRepository()
     private val oppfølgingRepository = OppfølgingRepository()
-    private val reader = TreffgjennomføringReader(repository, oppfølgingRepository)
+    private val reader = TreffgjennomføringReader(
+        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+    )
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
 
     private val jobbsøkerService = JobbsøkerService(
         dataSource = db.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
         treffkontekstRepository = kontekstRepository,
-        treffgjennomføringRepository = repository,
+        faseRepository = faseRepository,
+        oppmøteRepository = oppmøteRepository,
+        møteplanRepository = møteplanRepository,
+        matchingRepository = matchingRepository,
         oppfølgingRepository = oppfølgingRepository,
         treffgjennomføringReader = reader,
         mapper = mapper,
@@ -84,20 +95,19 @@ class TreffgjennomføringReaderTest {
     }
 
     @Test
-    fun `readeren gir samme svar som en direkte lesing av aggregatet`() {
+    fun `readeren setter sammen delene fra hvert subdomene`() {
         val treff = treffMedData()
+        val kontekst = hentKontekst(treff)
 
-        val fraReader = db.dataSource.connection.use { conn ->
-            reader.les(conn, kontekstRepository.hent(conn, treff)!!)
-        }
-        val fraRepository = db.dataSource.connection.use { conn ->
-            repository.hentAggregat(conn, kontekstRepository.hent(conn, treff)!!)
+        val dto = db.dataSource.connection.use { conn -> reader.les(conn, kontekst) }
+        val oppmøte = db.dataSource.connection.use { conn ->
+            oppmøteRepository.hentFremmøtte(conn, kontekst.treffDbId)
         }
 
-        assertThat(fraReader.rekrutteringstreffId).isEqualTo(treff.somString)
-        assertThat(fraReader.oppmøte).containsExactlyElementsOf(fraRepository.oppmøte.map { it.somString })
-        assertThat(fraReader.fase).isEqualTo(fraRepository.fase)
-        assertThat(fraReader.antallRom).isEqualTo(fraRepository.antallRom)
+        assertThat(dto.rekrutteringstreffId).isEqualTo(treff.somString)
+        assertThat(dto.oppmøte).containsExactlyElementsOf(oppmøte.map { it.somString })
+        assertThat(dto.antallRom).isEqualTo(kontekst.antallRom)
+        assertThat(dto.starttidspunkt).isEqualTo("10:00")
     }
 
     private fun tellSpørringer(block: (Connection) -> Unit): Int = db.dataSource.connection.use { ekte ->

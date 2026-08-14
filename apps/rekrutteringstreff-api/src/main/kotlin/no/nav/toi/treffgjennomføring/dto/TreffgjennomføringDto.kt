@@ -1,11 +1,11 @@
 package no.nav.toi.treffgjennomføring.dto
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import no.nav.toi.treffgjennomføring.ArbeidsgiverIntervjufordeling
-import no.nav.toi.treffgjennomføring.ArbeidsgiverRotasjon
-import no.nav.toi.treffgjennomføring.Deltakernummer
-import no.nav.toi.treffgjennomføring.Interesse
-import no.nav.toi.treffgjennomføring.Rom
+import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
+import no.nav.toi.treffgjennomføring.møteplan.ArbeidsgiverRotasjon
+import no.nav.toi.jobbsoker.oppmøte.Deltakernummer
+import no.nav.toi.treffgjennomføring.matching.Interesse
+import no.nav.toi.treffgjennomføring.møteplan.Rom
 import no.nav.toi.treffgjennomføring.Treffgjennomføring
 import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
 import no.nav.toi.oppfølging.Vurdering
@@ -39,7 +39,6 @@ data class VurderingDto(
     val jobbtilbud: Boolean = false,
 )
 
-/** Svaret på samtlige endepunkter, også skriveoperasjonene. */
 data class TreffgjennomføringDto(
     val rekrutteringstreffId: String,
     val fase: TreffgjennomføringFase,
@@ -62,10 +61,6 @@ data class OppmøteRequestDto(
     val bekreftSlettRegistreringer: Boolean = false,
 )
 
-/**
- * `antallRom` sendes ikke inn. En klient som likevel gjør det skal ignoreres —
- * antall rom er ikke en klientavgjørelse.
- */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class MøteoppsettRequestDto(
     val starttidspunkt: String,
@@ -79,7 +74,6 @@ data class InteresseRequestDto(
     val interessert: Boolean,
 )
 
-/** Svaret når oppmøte fjernes for en som har registreringer, uten bekreftelse. */
 data class RegistreringerDto(val interesser: Int, val intervjuplasser: Int, val vurderinger: Int)
 
 data class KaskadeAdvarselDto(
@@ -92,14 +86,14 @@ fun Treffgjennomføring.tilDto(rekrutteringstreffId: String, vurderinger: List<V
     rekrutteringstreffId = rekrutteringstreffId,
     fase = fase,
     antallRom = antallRom,
-    starttidspunkt = møteoppsett.starttidspunkt.format(KLOKKESLETT),
-    varighetPerMøteMinutter = møteoppsett.varighetPerMøteMinutter,
+    starttidspunkt = møteplan.møteoppsett.starttidspunkt.format(KLOKKESLETT),
+    varighetPerMøteMinutter = møteplan.møteoppsett.varighetPerMøteMinutter,
     oppmøte = oppmøte.map { it.somString },
     deltakernummer = deltakernummer.map { it.tilDto() },
-    rom = rom.map { it.tilDto() },
-    arbeidsgiverRekkefølge = arbeidsgiverRekkefølge.map { it.tilDto() },
-    interesser = interesser.map { it.tilDto() },
-    intervjufordelinger = intervjufordelinger.map { it.tilDto() },
+    rom = møteplan.rom.map { it.tilDto() },
+    arbeidsgiverRekkefølge = møteplan.arbeidsgiverRekkefølge.map { it.tilDto() },
+    interesser = matching.interesser.map { it.tilDto() },
+    intervjufordelinger = matching.intervjufordelinger.map { it.tilDto() },
     vurderinger = vurderinger.map { it.tilDto() },
 )
 

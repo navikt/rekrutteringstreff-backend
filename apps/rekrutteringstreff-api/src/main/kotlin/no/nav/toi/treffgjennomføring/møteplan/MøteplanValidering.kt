@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomføring
+package no.nav.toi.treffgjennomføring.møteplan
 
 import io.javalin.http.BadRequestResponse
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -6,7 +6,7 @@ import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
 import no.nav.toi.treffgjennomføring.dto.RomDto
 import java.time.LocalTime
 
-object TreffgjennomføringValidering {
+object MøteplanValidering {
 
     private val KLOKKESLETT = Regex("^([01]\\d|2[0-3]):[0-5]\\d$")
 
@@ -43,14 +43,5 @@ object TreffgjennomføringValidering {
 
         return rom.sortedBy { it.romnummer }
             .map { Rom(it.romnummer, it.jobbsøkere.map(::PersonTreffId)) }
-    }
-
-    fun intervjufordeling(inkluderte: List<String>, ekskluderte: List<String>) {
-        if (inkluderte.size != inkluderte.toSet().size || ekskluderte.size != ekskluderte.toSet().size) {
-            throw BadRequestResponse("En jobbsøker kan bare forekomme én gang i hver liste")
-        }
-        if (inkluderte.toSet().intersect(ekskluderte.toSet()).isNotEmpty()) {
-            throw BadRequestResponse("En jobbsøker kan ikke være både inkludert og ekskludert")
-        }
     }
 }

@@ -19,7 +19,10 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.OppmøteHarRegistreringerException
 import no.nav.toi.treffgjennomføring.Registreringer
 import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
-import no.nav.toi.treffgjennomføring.TreffgjennomføringRepository
+import no.nav.toi.treffgjennomføring.FaseRepository
+import no.nav.toi.treffgjennomføring.matching.MatchingRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
@@ -41,9 +44,14 @@ class JobbsøkerService(
     private val jobbsøkerFormidlingSokRepository: JobbsøkerFormidlingSokRepository = JobbsøkerFormidlingSokRepository(dataSource),
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
     private val treffkontekstRepository: TreffkontekstRepository = TreffkontekstRepository(),
-    private val treffgjennomføringRepository: TreffgjennomføringRepository = TreffgjennomføringRepository(),
+    private val faseRepository: FaseRepository = FaseRepository(),
+    private val oppmøteRepository: OppmøteRepository = OppmøteRepository(),
+    private val møteplanRepository: MøteplanRepository = MøteplanRepository(),
+    private val matchingRepository: MatchingRepository = MatchingRepository(),
     private val oppfølgingRepository: OppfølgingRepository = OppfølgingRepository(),
-    private val treffgjennomføringReader: TreffgjennomføringReader = TreffgjennomføringReader(treffgjennomføringRepository, oppfølgingRepository),
+    private val treffgjennomføringReader: TreffgjennomføringReader = TreffgjennomføringReader(
+        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+    ),
     private val mapper: ObjectMapper = JacksonConfig.mapper,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
@@ -490,7 +498,7 @@ class JobbsøkerService(
             val kontekst = treffkontekstRepository.hent(connection, treffId)
                 ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
             connection.låsTreff(kontekst.treffDbId)
-            treffgjennomføringRepository.sikreRad(connection, kontekst.treffDbId)
+            faseRepository.sikreRad(connection, kontekst.treffDbId)
 
             val person = PersonTreffId(dto.personTreffId)
             val jobbsøkerId = kontekst.jobbsøkerId(person)
@@ -514,7 +522,7 @@ class JobbsøkerService(
     ) {
         val deltakernummer =
             if (kontekst.erWorkOp) {
-                treffgjennomføringRepository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
+                oppmøteRepository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
             } else null
 
         jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE)
@@ -531,7 +539,7 @@ class JobbsøkerService(
         bekreftet: Boolean,
         navIdent: String,
     ) {
-        val (interesser, intervjuplasser) = treffgjennomføringRepository.tellRegistreringer(connection, jobbsøkerId)
+        val (interesser, intervjuplasser) = matchingRepository.tellForJobbsøker(connection, jobbsøkerId)
         val registreringer = Registreringer(
             interesser = interesser,
             intervjuplasser = intervjuplasser,
@@ -539,7 +547,8 @@ class JobbsøkerService(
         )
         if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
 
-        treffgjennomføringRepository.slettRegistreringerFor(connection, jobbsøkerId)
+        matchingRepository.slettForJobbsøker(connection, jobbsøkerId)
+        møteplanRepository.slettRomForJobbsøker(connection, jobbsøkerId)
         oppfølgingRepository.slettForJobbsøker(connection, jobbsøkerId)
         jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
         leggTilOppmøtehendelse(

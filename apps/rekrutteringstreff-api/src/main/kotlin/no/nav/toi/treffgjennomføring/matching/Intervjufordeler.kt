@@ -1,4 +1,4 @@
-package no.nav.toi.treffgjennomføring
+package no.nav.toi.treffgjennomføring.matching
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId

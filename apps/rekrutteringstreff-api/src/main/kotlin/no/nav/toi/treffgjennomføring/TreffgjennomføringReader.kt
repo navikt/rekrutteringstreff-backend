@@ -1,30 +1,34 @@
 package no.nav.toi.treffgjennomføring
 
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.dto.tilDto
+import no.nav.toi.treffgjennomføring.matching.MatchingRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import java.sql.Connection
 
-/**
- * Eier sammensettinga av svaret. Samtlige endepunkter – også skriveoperasjonene –
- * returnerer hele aggregatet, og det er denne ene veien inn til det.
- *
- * Poenget er å ha ett sted som kjenner DTO-en når domenet deles opp i møteplan,
- * matching og oppfølging. Uten readeren ville hvert subdomene måttet lese alt for å
- * kunne svare, og da ville oppdelinga vært reversert av lesevegen.
- *
- * Lesinga skal skje i få, store kall. I dag er det ti spørringer på én connection,
- * og [no.nav.toi.treffgjennomføring.TreffgjennomføringReaderTest] holder tallet i sjakk.
- */
 class TreffgjennomføringReader(
-    private val repository: TreffgjennomføringRepository,
+    private val faseRepository: FaseRepository,
+    private val oppmøteRepository: OppmøteRepository,
+    private val møteplanRepository: MøteplanRepository,
+    private val matchingRepository: MatchingRepository,
     private val oppfølgingRepository: OppfølgingRepository,
 ) {
 
-    fun les(connection: Connection, kontekst: Treffkontekst): TreffgjennomføringDto =
-        repository.hentAggregat(connection, kontekst)
-            .tilDto(
-                rekrutteringstreffId = kontekst.treffId.somString,
-                vurderinger = oppfølgingRepository.hentForTreff(connection, kontekst.treffDbId),
-            )
+    fun les(connection: Connection, kontekst: Treffkontekst): TreffgjennomføringDto {
+        val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
+
+        return Treffgjennomføring(
+            fase = faseRepository.hentFase(connection, kontekst.treffDbId) ?: TreffgjennomføringFase.OPPMØTE,
+            antallRom = kontekst.antallRom,
+            oppmøte = oppmøte,
+            deltakernummer = oppmøteRepository.hentDeltakernummer(connection, kontekst.treffDbId),
+            møteplan = møteplanRepository.hentFor(connection, kontekst, oppmøte),
+            matching = matchingRepository.hentFor(connection, kontekst),
+        ).tilDto(
+            rekrutteringstreffId = kontekst.treffId.somString,
+            vurderinger = oppfølgingRepository.hentForTreff(connection, kontekst.treffDbId),
+        )
+    }
 }

@@ -16,6 +16,8 @@ import no.nav.toi.Rolle
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.treffgjennomføring.matching.MatchingService
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.eier.krevEierEllerUtvikler
@@ -30,6 +32,8 @@ import java.util.*
 
 class TreffgjennomføringController(
     private val treffgjennomføringService: TreffgjennomføringService,
+    private val møteplanService: MøteplanService,
+    private val matchingService: MatchingService,
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
 ) : RuteRegistrerer {
@@ -113,7 +117,7 @@ class TreffgjennomføringController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<MøteoppsettRequestDto>()
-        ctx.status(200).json(treffgjennomføringService.lagreMøteoppsett(treffId, dto, navIdent))
+        ctx.status(200).json(møteplanService.lagreMøteoppsett(treffId, dto, navIdent))
     }
 
     @OpenApi(
@@ -130,7 +134,7 @@ class TreffgjennomføringController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val rom = ctx.bodyAsClass<Array<RomDto>>().toList()
-        ctx.status(200).json(treffgjennomføringService.lagreRomfordeling(treffId, rom, navIdent))
+        ctx.status(200).json(møteplanService.lagreRomfordeling(treffId, rom, navIdent))
     }
 
     @OpenApi(
@@ -146,7 +150,7 @@ class TreffgjennomføringController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<InteresseRequestDto>()
-        ctx.status(200).json(treffgjennomføringService.settInteresse(treffId, dto, navIdent))
+        ctx.status(200).json(matchingService.settInteresse(treffId, dto, navIdent))
     }
 
     @OpenApi(
@@ -162,7 +166,7 @@ class TreffgjennomføringController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<ArbeidsgiverIntervjufordelingDto>()
-        ctx.status(200).json(treffgjennomføringService.lagreIntervjufordeling(treffId, dto, navIdent))
+        ctx.status(200).json(matchingService.lagreIntervjufordeling(treffId, dto, navIdent))
     }
 
     @OpenApi(
@@ -178,7 +182,7 @@ class TreffgjennomføringController(
     private fun fordelHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
-        ctx.status(200).json(treffgjennomføringService.fordelIntervjuer(treffId, navIdent))
+        ctx.status(200).json(matchingService.fordelIntervjuer(treffId, navIdent))
     }
 
 }
