@@ -691,9 +691,9 @@ class TestDatabase {
     /**
      * Oppretter en formidling via repository.
      */
-    fun opprettFormidling(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId, stillingId: UUID, kandidatlisteId: UUID?, yrkestittel: String? = null, janzzKonseptId: String? = null): Long {
+    fun opprettFormidling(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId, stillingId: UUID, kandidatlisteId: UUID?, yrkestittel: String? = null, janzzKonseptId: String? = null, opprettetAvNavIdent: String? = null): Long {
         return dataSource.executeInTransaction { connection ->
-            formidlingRepository.opprett(connection, treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId, yrkestittel = yrkestittel, janzzKonseptId = janzzKonseptId)
+            formidlingRepository.opprett(connection, treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId, yrkestittel = yrkestittel, janzzKonseptId = janzzKonseptId, opprettetAvNavIdent = opprettetAvNavIdent)
         }
     }
 
