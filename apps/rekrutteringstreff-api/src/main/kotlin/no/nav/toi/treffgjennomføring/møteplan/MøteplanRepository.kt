@@ -2,9 +2,9 @@ package no.nav.toi.treffgjennomføring.møteplan
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.tilListe
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import java.sql.Connection
-import java.sql.ResultSet
 import java.time.LocalTime
 
 class MøteplanRepository {
@@ -79,6 +79,12 @@ class MøteplanRepository {
         }
     }
 
+    fun harMøteoppsett(connection: Connection, treffgjennomføringId: Long): Boolean =
+        connection.prepareStatement("SELECT 1 FROM moteoppsett WHERE treffgjennomforing_id = ?").use { stmt ->
+            stmt.setLong(1, treffgjennomføringId)
+            stmt.executeQuery().use { it.next() }
+        }
+
     fun lagreMøteoppsett(connection: Connection, treffgjennomføringId: Long, møteoppsett: Møteoppsett) {
         val sql = """
             INSERT INTO moteoppsett (treffgjennomforing_id, start_tidspunkt, varighet_min)
@@ -142,8 +148,5 @@ class MøteplanRepository {
         }
     }
 }
-
-private fun <T> ResultSet.tilListe(les: (ResultSet) -> T): List<T> =
-    generateSequence { if (next()) les(this) else null }.toList()
 
 private fun LocalTime.tilSqlTime(): java.sql.Time = java.sql.Time.valueOf(this)

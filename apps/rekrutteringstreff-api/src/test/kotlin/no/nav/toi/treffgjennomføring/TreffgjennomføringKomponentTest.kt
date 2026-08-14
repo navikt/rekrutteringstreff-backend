@@ -227,6 +227,21 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `møteoppsett kan endres selv om alle oppmøter er fjernet`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+        oppmøte(treff, person, møtt = false)
+
+        assertThat(møteoppsett(treff, start = "12:00").statusCode()).isEqualTo(200)
+
+        assertThat(aggregat(treff)["starttidspunkt"].asText()).isEqualTo("12:00")
+        assertThat(antallTreffHendelser(treff, "TREFFGJENNOMFØRING_OPPRETTET")).isEqualTo(1)
+        assertThat(antallTreffHendelser(treff, "TREFFGJENNOMFØRING_OPPSETT_ENDRET")).isEqualTo(1)
+    }
+
+    @Test
     fun `møteoppsett avvises på et vanlig treff`() {
         val treff = vanligTreff()
         val person = jobbsøker(treff)
@@ -407,6 +422,75 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `romfordeling erstatter plasseringene`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        oppmøte(treff, p1, møtt = true)
+        oppmøte(treff, p2, møtt = true)
+        møteoppsett(treff)
+
+        val nyFordeling = """[{"romnummer":1,"jobbsøkere":["${p1.somString}","${p2.somString}"]},{"romnummer":2,"jobbsøkere":[]}]"""
+        assertThat(put(treff, "/treffgjennomforing/romfordeling", nyFordeling).statusCode()).isEqualTo(200)
+
+        val rom = aggregat(treff)["rom"]
+        assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p1.somString, p2.somString)
+        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"]).isEmpty()
+    }
+
+    @Test
+    fun `romfordeling avvises med feil antall rom`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff)
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+
+        val ettRom = """[{"romnummer":1,"jobbsøkere":["${person.somString}"]}]"""
+        assertThat(put(treff, "/treffgjennomforing/romfordeling", ettRom).statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `romfordeling avviser samme person i to rom`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff)
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+
+        val dobbelt = """
+            [{"romnummer":1,"jobbsøkere":["${person.somString}"]},{"romnummer":2,"jobbsøkere":["${person.somString}"]}]
+        """.trimIndent()
+        assertThat(put(treff, "/treffgjennomforing/romfordeling", dobbelt).statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `romfordeling avviser person som ikke er fremmøtt`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff)
+        val hjemme = jobbsøker(treff, "22222222222")
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+
+        val medHjemme = """
+            [{"romnummer":1,"jobbsøkere":["${person.somString}","${hjemme.somString}"]},{"romnummer":2,"jobbsøkere":[]}]
+        """.trimIndent()
+        assertThat(put(treff, "/treffgjennomforing/romfordeling", medHjemme).statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `intervjufordeling avviser person som er både inkludert og ekskludert`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+
+        val overlapp = """
+            {"arbeidsgiverTreffId":"${ag.somString}","inkludertePersonTreffIder":["${person.somString}"],"ekskludertePersonTreffIder":["${person.somString}"]}
+        """.trimIndent()
+        assertThat(put(treff, "/treffgjennomforing/intervjufordeling", overlapp).statusCode()).isEqualTo(400)
+    }
+
+    @Test
     fun `fasen går bare framover`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
@@ -476,6 +560,9 @@ class TreffgjennomføringKomponentTest {
 
     private fun antallArbeidsgiverhendelser(treffId: TreffId, hendelsestype: String): Int =
         db.hentArbeidsgiverHendelser(treffId).count { it.hendelsestype.name == hendelsestype }
+
+    private fun antallTreffHendelser(treffId: TreffId, hendelsestype: String): Int =
+        db.hentHendelser(treffId).count { it.hendelsestype.name == hendelsestype }
 
     private fun workOpTreff(antallArbeidsgivere: Int = 1): TreffId =
         treff(RekrutteringstreffKategori.WORKOP, antallArbeidsgivere)

@@ -1,6 +1,5 @@
 package no.nav.toi.treffgjennomføring
 
-import io.javalin.http.NotFoundResponse
 import no.nav.toi.executeInTransaction
 import no.nav.toi.låsTreff
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -8,6 +7,10 @@ import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import java.sql.Connection
 import javax.sql.DataSource
 
+/**
+ * Den ene skriveveien for treffgjennomføringen: lås treffet, sikre faseraden,
+ * kjør operasjonen og les hele aggregatet som returneres til frontend.
+ */
 class TreffgjennomføringWriter(
     private val dataSource: DataSource,
     private val kontekstRepository: TreffkontekstRepository,
@@ -17,16 +20,12 @@ class TreffgjennomføringWriter(
 
     fun skriv(
         treffId: TreffId,
-        block: (Connection, Treffkontekst, Treffgjennomføringsrad) -> Unit,
+        operasjon: (Connection, Treffkontekst, Treffgjennomføringsrad) -> Unit,
     ): TreffgjennomføringDto = dataSource.executeInTransaction { connection ->
-        val kontekst = hentKontekst(connection, treffId)
-        connection.låsTreff(kontekst.treffDbId)
+        connection.låsTreff(treffId)
+        val kontekst = kontekstRepository.krevKontekst(connection, treffId)
         val rad = faseRepository.sikreRad(connection, kontekst.treffDbId)
-        block(connection, kontekst, rad)
+        operasjon(connection, kontekst, rad)
         reader.les(connection, kontekst)
     }
-
-    fun hentKontekst(connection: Connection, treffId: TreffId): Treffkontekst =
-        kontekstRepository.hent(connection, treffId)
-            ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
 }

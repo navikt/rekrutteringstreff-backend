@@ -9,7 +9,7 @@ import io.javalin.http.HttpStatus
 import io.javalin.router.JavalinDefaultRoutingApi
 import io.opentelemetry.api.trace.Span
 import no.nav.toi.exception.*
-import no.nav.toi.treffgjennomføring.OppmøteHarRegistreringerException
+import no.nav.toi.jobbsoker.oppmøte.OppmøteHarRegistreringerException
 import no.nav.toi.treffgjennomføring.dto.KaskadeAdvarselDto
 import no.nav.toi.treffgjennomføring.dto.RegistreringerDto
 import java.sql.SQLException

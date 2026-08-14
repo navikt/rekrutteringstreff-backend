@@ -2,10 +2,10 @@ package no.nav.toi.treffgjennomføring.matching
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.tilListe
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import java.sql.Connection
 import java.sql.PreparedStatement
-import java.sql.ResultSet
 
 class MatchingRepository {
 
@@ -149,6 +149,3 @@ class MatchingRepository {
         }
     }
 }
-
-private fun <T> ResultSet.tilListe(les: (ResultSet) -> T): List<T> =
-    generateSequence { if (next()) les(this) else null }.toList()

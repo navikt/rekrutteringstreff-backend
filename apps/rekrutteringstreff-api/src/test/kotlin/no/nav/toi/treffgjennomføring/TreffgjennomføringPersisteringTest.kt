@@ -1,6 +1,5 @@
 package no.nav.toi.treffgjennomføring
 
-import no.nav.toi.JacksonConfig
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.treffgjennomføring.matching.MatchingRepository
@@ -10,7 +9,6 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
-import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
@@ -45,7 +43,6 @@ class TreffgjennomføringPersisteringTest {
         faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
     )
     private val sokRepository = JobbsøkerSokRepository(db.dataSource)
-    private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, JacksonConfig.mapper)
 
     @BeforeAll
     fun migrer() {
@@ -249,7 +246,7 @@ class TreffgjennomføringPersisteringTest {
     private fun registrerOppmøte(personTreffId: PersonTreffId, oppmøte: Oppmøte = Oppmøte.REGISTRERT_OPPMØTE) {
         leggTilOppmøtehendelse(personTreffId, oppmøte.hendelsestype.name, Instant.now())
         db.dataSource.connection.use { conn ->
-            jobbsøkerRepository.settOppmøte(conn, personTreffId, oppmøte)
+            oppmøteRepository.settOppmøte(conn, personTreffId, oppmøte)
         }
     }
 }

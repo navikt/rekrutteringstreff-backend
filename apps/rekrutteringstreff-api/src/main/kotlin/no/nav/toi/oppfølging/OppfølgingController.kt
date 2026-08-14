@@ -6,6 +6,7 @@ import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiParam
+import io.javalin.openapi.OpenApiRequestBody
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import io.javalin.router.JavalinDefaultRoutingApi
@@ -37,6 +38,7 @@ class OppfølgingController(
         operationId = "lagreVurdering",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = VurderingDto::class)]),
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = VURDERINGER,
         methods = [HttpMethod.PUT],

@@ -1,21 +1,18 @@
 package no.nav.toi.treffgjennomføring
 
 import io.javalin.http.Context
-import io.javalin.http.ForbiddenResponse
 import io.javalin.http.bodyAsClass
 import io.javalin.openapi.HttpMethod
 import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiParam
+import io.javalin.openapi.OpenApiRequestBody
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.openapi.OpenApiSecurity
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuditLog
-import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
-import no.nav.toi.Rolle
 import no.nav.toi.RuteRegistrerer
-import no.nav.toi.authenticatedUser
-import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.oppmøte.OppmøteService
 import no.nav.toi.treffgjennomføring.matching.MatchingService
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -34,7 +31,7 @@ class TreffgjennomføringController(
     private val treffgjennomføringService: TreffgjennomføringService,
     private val møteplanService: MøteplanService,
     private val matchingService: MatchingService,
-    private val jobbsøkerService: JobbsøkerService,
+    private val oppmøteService: OppmøteService,
     private val eierService: EierService,
 ) : RuteRegistrerer {
 
@@ -90,6 +87,7 @@ class TreffgjennomføringController(
         operationId = "oppdaterOppmote",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = OppmøteRequestDto::class)]),
         responses = [
             OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)]),
             OpenApiResponse(status = "409", description = "Oppmøtet har registreringer som må bekreftes slettet."),
@@ -101,7 +99,7 @@ class TreffgjennomføringController(
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<OppmøteRequestDto>()
-        ctx.status(200).json(jobbsøkerService.oppdaterOppmøte(treffId, dto, navIdent))
+        ctx.status(200).json(oppmøteService.oppdaterOppmøte(treffId, dto, navIdent))
     }
 
     @OpenApi(
@@ -109,6 +107,7 @@ class TreffgjennomføringController(
         operationId = "lagreMoteoppsett",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = MøteoppsettRequestDto::class)]),
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = MØTEOPPSETT,
         methods = [HttpMethod.PUT],
@@ -126,6 +125,7 @@ class TreffgjennomføringController(
         operationId = "lagreRomfordeling",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = Array<RomDto>::class)]),
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = ROMFORDELING,
         methods = [HttpMethod.PUT],
@@ -142,6 +142,7 @@ class TreffgjennomføringController(
         operationId = "settInteresse",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = InteresseRequestDto::class)]),
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = INTERESSE,
         methods = [HttpMethod.PUT],
@@ -158,6 +159,7 @@ class TreffgjennomføringController(
         operationId = "lagreIntervjufordeling",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = ArbeidsgiverIntervjufordelingDto::class)]),
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
         path = INTERVJUFORDELING,
         methods = [HttpMethod.PUT],

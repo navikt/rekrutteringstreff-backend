@@ -1,37 +1,26 @@
 package no.nav.toi.oppfølging
 
 import io.javalin.http.BadRequestResponse
-import io.javalin.http.NotFoundResponse
 import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.executeInTransaction
-import no.nav.toi.låsTreff
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
-import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
 import no.nav.toi.treffgjennomføring.FaseRepository
-import no.nav.toi.treffgjennomføring.TreffkontekstRepository
+import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
+import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import java.sql.Connection
-import javax.sql.DataSource
 
 class OppfølgingService(
-    private val dataSource: DataSource,
+    private val writer: TreffgjennomføringWriter,
     private val repository: OppfølgingRepository,
-    private val kontekstRepository: TreffkontekstRepository,
     private val faseRepository: FaseRepository,
-    private val reader: TreffgjennomføringReader,
     private val hendelser: HendelseWriter,
 ) {
 
     fun lagreVurdering(treffId: TreffId, dto: VurderingDto, navIdent: String): TreffgjennomføringDto =
-        dataSource.executeInTransaction { connection ->
-            val kontekst = kontekstRepository.hent(connection, treffId)
-                ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
-            connection.låsTreff(kontekst.treffDbId)
-
+        writer.skriv(treffId) { connection, kontekst, rad ->
             val ny = OppfølgingValidering.vurdering(dto)
             val jobbsøkerId = kontekst.jobbsøkerId(ny.personTreffId)
                 ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
@@ -46,16 +35,8 @@ class OppfølgingService(
             else repository.slett(connection, jobbsøkerId, arbeidsgiverId)
 
             skrivHendelser(connection, før, ny, navIdent)
-            faseRepository.meldFramdrift(connection, kontekst.treffDbId, TreffgjennomføringFase.VURDERING)
-
-            reader.les(connection, kontekst)
+            faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.VURDERING)
         }
-
-    fun slettForJobbsøker(connection: Connection, jobbsøkerId: Long) =
-        repository.slettForJobbsøker(connection, jobbsøkerId)
-
-    fun tellForJobbsøker(connection: Connection, jobbsøkerId: Long): Int =
-        repository.tellForJobbsøker(connection, jobbsøkerId)
 
     private fun skrivHendelser(connection: Connection, før: Vurdering?, etter: Vurdering, navIdent: String) {
         fun par(

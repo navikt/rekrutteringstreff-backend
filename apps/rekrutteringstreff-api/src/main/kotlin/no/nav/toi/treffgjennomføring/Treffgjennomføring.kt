@@ -23,11 +23,3 @@ data class Treffgjennomføring(
         fun beregnAntallRom(antallArbeidsgivere: Int) = maxOf(antallArbeidsgivere, 1)
     }
 }
-
-data class Registreringer(val interesser: Int, val intervjuplasser: Int, val vurderinger: Int) {
-    fun finnesNoen() = interesser + intervjuplasser + vurderinger > 0
-
-    companion object {
-        val INGEN = Registreringer(0, 0, 0)
-    }
-}

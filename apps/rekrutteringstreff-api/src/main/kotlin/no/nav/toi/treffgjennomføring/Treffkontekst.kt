@@ -1,5 +1,7 @@
 package no.nav.toi.treffgjennomføring
 
+import io.javalin.http.BadRequestResponse
+import io.javalin.http.NotFoundResponse
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -23,7 +25,15 @@ data class Treffkontekst(
     fun kjenner(arbeidsgiverTreffId: ArbeidsgiverTreffId) = arbeidsgivere.containsKey(arbeidsgiverTreffId)
 
     val arbeidsgiverIder: List<ArbeidsgiverTreffId> get() = arbeidsgivere.keys.toList()
+
+    fun krevWorkOp() {
+        if (!erWorkOp) throw BadRequestResponse("Steget finnes bare på treff av kategorien WORKOP")
+    }
 }
+
+fun TreffkontekstRepository.krevKontekst(connection: Connection, treffId: TreffId): Treffkontekst =
+    hent(connection, treffId)
+        ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
 
 class TreffkontekstRepository {
 

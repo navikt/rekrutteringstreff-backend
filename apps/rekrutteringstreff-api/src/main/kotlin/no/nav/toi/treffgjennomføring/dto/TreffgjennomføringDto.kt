@@ -16,12 +16,14 @@ private val KLOKKESLETT = DateTimeFormatter.ofPattern("HH:mm")
 
 data class DeltakernummerDto(val personTreffId: String, val nummer: Int)
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class RomDto(val romnummer: Int, val jobbsøkere: List<String>)
 
 data class ArbeidsgiverRotasjonDto(val arbeidsgiverTreffId: String, val startPosisjon: Int)
 
 data class InteresseDto(val personTreffId: String, val arbeidsgiverTreffId: String)
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class ArbeidsgiverIntervjufordelingDto(
     val arbeidsgiverTreffId: String,
     val inkludertePersonTreffIder: List<String> = emptyList(),

@@ -26,13 +26,12 @@ class MøteplanService(
 
     fun lagreMøteoppsett(treffId: TreffId, dto: MøteoppsettRequestDto, navIdent: String): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
-            krevWorkOp(kontekst)
+            kontekst.krevWorkOp()
             val møteoppsett = MøteplanValidering.møteoppsett(dto)
-            val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
-            val eksisterende = repository.hentFor(connection, kontekst, oppmøte)
+            val erEndring = repository.harMøteoppsett(connection, rad.id)
             repository.lagreMøteoppsett(connection, rad.id, møteoppsett)
 
-            if (eksisterende.rom.isNotEmpty()) {
+            if (erEndring) {
                 hendelseWriter.forTreff(
                     connection, treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFØRING_OPPSETT_ENDRET, navIdent,
                     mapOf(
@@ -43,17 +42,17 @@ class MøteplanService(
                 return@skriv
             }
 
-            opprettMøteplan(connection, kontekst, oppmøte, dto, rad.fase, navIdent)
+            opprettMøteplan(connection, kontekst, dto, rad.fase, navIdent)
         }
 
     private fun opprettMøteplan(
         connection: Connection,
         kontekst: Treffkontekst,
-        oppmøte: List<no.nav.toi.jobbsoker.PersonTreffId>,
         dto: MøteoppsettRequestDto,
         nåværendeFase: TreffgjennomføringFase,
         navIdent: String,
     ) {
+        val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
         if (oppmøte.isEmpty()) throw BadRequestResponse("Minst én jobbsøker må være registrert møtt")
         if (kontekst.arbeidsgivere.isEmpty()) throw BadRequestResponse("Treffet må ha minst én arbeidsgiver")
 
@@ -85,7 +84,7 @@ class MøteplanService(
 
     fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>, navIdent: String): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, _ ->
-            krevWorkOp(kontekst)
+            kontekst.krevWorkOp()
             val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
             val eksisterende = repository.hentFor(connection, kontekst, oppmøte)
             val ny = MøteplanValidering.romfordeling(rom, kontekst.antallRom, oppmøte)
@@ -106,9 +105,5 @@ class MøteplanService(
                 )
             }
         }
-    }
-
-    private fun krevWorkOp(kontekst: Treffkontekst) {
-        if (!kontekst.erWorkOp) throw BadRequestResponse("Steget finnes bare på treff av kategorien WORKOP")
     }
 }

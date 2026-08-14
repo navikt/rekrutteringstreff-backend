@@ -81,7 +81,7 @@ class MatchingService(
         dto: ArbeidsgiverIntervjufordelingDto,
         navIdent: String,
     ): TreffgjennomføringDto = writer.skriv(treffId) { connection, kontekst, rad ->
-        krevWorkOp(kontekst)
+        kontekst.krevWorkOp()
         MatchingValidering.intervjufordeling(dto.inkludertePersonTreffIder, dto.ekskludertePersonTreffIder)
 
         val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
@@ -133,7 +133,7 @@ class MatchingService(
 
     fun fordelIntervjuer(treffId: TreffId, navIdent: String): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
-            krevWorkOp(kontekst)
+            kontekst.krevWorkOp()
             val matching = repository.hentFor(connection, kontekst)
             val fordelinger = Intervjufordeler.fordel(
                 interesser = matching.interesser,
@@ -152,8 +152,4 @@ class MatchingService(
             )
             faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
         }
-
-    private fun krevWorkOp(kontekst: Treffkontekst) {
-        if (!kontekst.erWorkOp) throw BadRequestResponse("Steget finnes bare på treff av kategorien WORKOP")
-    }
 }

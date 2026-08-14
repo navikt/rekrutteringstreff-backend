@@ -19,7 +19,8 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.oppmøte.OppmøteHarRegistreringerException
+import no.nav.toi.jobbsoker.oppmøte.OppmøteService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -67,31 +68,25 @@ class TreffgjennomføringKarakteriseringTest {
     private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, faseRepository, reader)
     private val hendelser = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, mapper)
 
-    private val service = TreffgjennomføringService(db.dataSource, writer, reader)
+    private val service = TreffgjennomføringService(db.dataSource, kontekstRepository, reader)
 
     private val møteplanService = MøteplanService(writer, møteplanRepository, oppmøteRepository, faseRepository, hendelser)
     private val matchingService = MatchingService(writer, matchingRepository, oppmøteRepository, faseRepository, hendelser)
 
     private val oppfølgingService = OppfølgingService(
-        dataSource = db.dataSource,
+        writer = writer,
         repository = oppfølgingRepository,
-        kontekstRepository = kontekstRepository,
         faseRepository = faseRepository,
-        reader = reader,
         hendelser = hendelser,
     )
 
-    private val jobbsøkerService = JobbsøkerService(
-        dataSource = db.dataSource,
-        jobbsøkerRepository = jobbsøkerRepository,
-        treffkontekstRepository = kontekstRepository,
-        faseRepository = faseRepository,
+    private val oppmøteService = OppmøteService(
+        writer = writer,
         oppmøteRepository = oppmøteRepository,
-        møteplanRepository = møteplanRepository,
         matchingRepository = matchingRepository,
+        møteplanRepository = møteplanRepository,
         oppfølgingRepository = oppfølgingRepository,
-        treffgjennomføringReader = reader,
-        mapper = mapper,
+        hendelseWriter = hendelser,
     )
 
     @BeforeAll
@@ -579,10 +574,10 @@ class TreffgjennomføringKarakteriseringTest {
         }
 
     private fun møtt(treffId: TreffId, person: PersonTreffId) =
-        jobbsøkerService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, true), navIdent)
+        oppmøteService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, true), navIdent)
 
     private fun ikkeMøtt(treffId: TreffId, person: PersonTreffId, bekreft: Boolean = true) =
-        jobbsøkerService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, false, bekreft), navIdent)
+        oppmøteService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, false, bekreft), navIdent)
 
     private fun interesse(
         treffId: TreffId,

@@ -38,7 +38,7 @@ Avklart. Resten av dokumentet forutsetter disse valgene.
 
 | Tema | Valg |
 | ---- | ---- |
-| Eierskap til oppmøte | `JobbsøkerService` eier hele oppmøteoperasjonen og gjør **statusoppdatering, hendelse og deltakernummer i samme transaksjon**. Ingen delvis registrering skal kunne bli stående. |
+| Eierskap til oppmøte | `OppmøteService` i `jobbsoker/oppmøte` eier hele oppmøteoperasjonen og gjør **statusoppdatering, hendelse og deltakernummer i samme transaksjon**. Ingen delvis registrering skal kunne bli stående. |
 | Låsen | Sikres i jobbsøker, men som en **delt låseprimitiv på `rekrutteringstreff`-raden** som begge domenene tar. Analysen under viser at låsen trengs fire steder, ikke bare i oppmøte. |
 | Feilhåndtering | **Enklest mulig, minst mulig kode.** Låsen serialiserer, databasen håndhever unik-constraintene. Ingen retry-løkker, ingen nye exception-typer. |
 | Deltakernummer | **Behold egen tabell.** WorkOp er trolig et mindretall av treffene, og en kolonne på `jobbsoker` ville gitt en tom kolonne for de fleste rader. |
@@ -470,9 +470,10 @@ no.nav.toi/
 └── HendelseWriter.kt              delt hendelseskriving
 
 no.nav.toi.jobbsoker/
-├── JobbsøkerService.kt            eier oppmøtetransaksjonen: status + hendelse + deltakernummer
 └── oppmøte/
-    └── OppmøteRepository.kt       jobbsoker.oppmote, deltakernummer
+    ├── OppmøteService.kt          eier oppmøtetransaksjonen: status + hendelse + deltakernummer
+    ├── OppmøteRepository.kt       jobbsoker.oppmote-kolonnen, deltakernummer
+    └── OppmøteHarRegistreringerException.kt  Registreringer + 409-signalet
 
 no.nav.toi.treffgjennomføring/
 ├── Treffgjennomføring.kt          aggregatmodell, TreffgjennomføringFase
@@ -502,9 +503,12 @@ no.nav.toi.oppfølging/
 └── OppfølgingValidering.kt
 ```
 
-Oppmøte får et repository under `jobbsoker/oppmote/`, men **ingen egen service**.
-`JobbsøkerService` eier operasjonen, slik at statusoppdatering, hendelse og
-deltakernummer skjer i én transaksjon uten et ekstra lag imellom.
+Oppmøte har fått en egen `OppmøteService` under `jobbsoker/oppmøte/`, etter en
+runde med `JobbsøkerService` som eier. `JobbsøkerService` bar alle
+subdomenerepositoryene, og uttrekket samlet hele operasjonen – statusoppdatering,
+hendelse, deltakernummer og kaskadesletting – på ett sted. Transaksjonen er den
+samme: `OppmøteService` bruker `TreffgjennomføringWriter.skriv` som alle andre
+skriveoperasjoner.
 
 Hendelseskrivinga (`leggTilHendelseForJobbsøker`, `-Arbeidsgiver`, `-Treff`, `-Par`)
 ligger i dag privat i `TreffgjennomføringService` og brukes av alle subdomenene.
@@ -753,7 +757,7 @@ ut åpent spørsmål 2.
 `TreffgjennomføringReader`, samtidig som readeren bruker `OppfølgingRepository`. Det
 er en syklus på pakkenivå, og den er bevisst: endepunktet svarer med hele aggregatet,
 og alternativet er to transaksjoner eller en delt DTO-pakke. Samme mønster som
-`JobbsøkerService` allerede har.
+`OppmøteService` har.
 
 ### Fase 5 – skill ut møteplan og matching ✅ implementert
 
@@ -761,13 +765,13 @@ Ingen fil i domenet eier lenger mer enn ett subdomene.
 
 ```
 no.nav.toi.jobbsoker/
-└── oppmøte/OppmøteRepository.kt   jobbsoker.oppmote, deltakernummer
+└── oppmøte/                       OppmøteService, OppmøteRepository, 409-signalet
 
 no.nav.toi.treffgjennomføring/
-├── Treffgjennomføring.kt          delene satt sammen, fase, Registreringer
+├── Treffgjennomføring.kt          delene satt sammen, fase
 ├── Treffkontekst.kt
-├── FaseRepository.kt              treffgjennomforing-raden: sikreRad, settFase, meldFramdrift
-├── TreffgjennomføringWriter.kt    transaksjon + lås + svar, felles for subdomenene
+├── FaseRepository.kt              treffgjennomforing-raden: sikreRad, settFase
+├── TreffgjennomføringWriter.kt    transaksjon + lås + svar, felles for alle skrivinger
 ├── TreffgjennomføringReader.kt    setter sammen aggregat-DTO-en
 ├── TreffgjennomføringService.kt   kun GET
 ├── TreffgjennomføringController.kt  uendrede ruter, delegerer videre
@@ -783,12 +787,14 @@ i matching, `opprettMøteplan` i møteplan.
 `låsTreff` først, `sikreRad`, og hele aggregatet som svar. Subdomenene fyller inn
 skrivinga og slipper å gjenta transaksjonshåndteringa.
 
-**Kaskadeslettinga er tre navngitte kall**, slik planen beskrev. `JobbsøkerService`
+**Kaskadeslettinga er tre navngitte kall**, slik planen beskrev. `OppmøteService`
 kaller `matchingRepository.slettForJobbsøker`, `møteplanRepository.slettRomForJobbsøker`
 og `oppfølgingRepository.slettForJobbsøker`. Tellinga følger samme mønster.
 
 **Oppmøte og deltakernummer flyttet til `jobbsoker/oppmøte/`.** Uten det ville kjernen
-blitt en samlepose. `TreffgjennomføringRepository` finnes ikke lenger.
+blitt en samlepose. `TreffgjennomføringRepository` finnes ikke lenger. I den endelige
+strukturen eier `OppmøteService` hele operasjonen (uttrekket fra `JobbsøkerService`),
+og `settOppmøte`/`hentOppmøte` ligger i `OppmøteRepository`.
 
 **Antall spørringer er uendret.** Readeren spør fire repositories i stedet for ett, men
 hvert subdomene henter sin del i ett kall. `TreffgjennomføringReaderTest` står på ti,

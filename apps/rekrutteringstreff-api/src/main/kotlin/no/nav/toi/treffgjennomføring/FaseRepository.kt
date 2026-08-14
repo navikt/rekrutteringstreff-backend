@@ -37,12 +37,7 @@ class FaseRepository {
         }
     }
 
-    /** For domener som eier sitt eget steg, men ikke fasen. */
-    fun meldFramdrift(connection: Connection, treffDbId: Long, ny: TreffgjennomføringFase) {
-        val rad = sikreRad(connection, treffDbId)
-        settFase(connection, treffDbId, rad.fase, ny)
-    }
-
+    /** Fasen går bare framover — en lavere fase enn den lagrede er en no-op. */
     fun settFase(
         connection: Connection,
         treffDbId: Long,

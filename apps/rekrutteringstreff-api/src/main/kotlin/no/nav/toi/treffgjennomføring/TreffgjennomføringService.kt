@@ -7,11 +7,11 @@ import javax.sql.DataSource
 
 class TreffgjennomføringService(
     private val dataSource: DataSource,
-    private val writer: TreffgjennomføringWriter,
+    private val kontekstRepository: TreffkontekstRepository,
     private val reader: TreffgjennomføringReader,
 ) {
 
     fun hent(treffId: TreffId): TreffgjennomføringDto = dataSource.executeInTransaction { connection ->
-        reader.les(connection, writer.hentKontekst(connection, treffId))
+        reader.les(connection, kontekstRepository.krevKontekst(connection, treffId))
     }
 }

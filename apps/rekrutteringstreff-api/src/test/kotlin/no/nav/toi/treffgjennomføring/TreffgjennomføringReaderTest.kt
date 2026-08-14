@@ -1,8 +1,12 @@
 package no.nav.toi.treffgjennomføring
 
+import no.nav.toi.HendelseWriter
 import no.nav.toi.JacksonConfig
+import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
+import no.nav.toi.jobbsoker.oppmøte.OppmøteService
 import no.nav.toi.oppfølging.OppfølgingRepository
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.treffgjennomføring.matching.MatchingRepository
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
@@ -12,7 +16,6 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
@@ -50,17 +53,20 @@ class TreffgjennomføringReaderTest {
     )
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
 
-    private val jobbsøkerService = JobbsøkerService(
-        dataSource = db.dataSource,
-        jobbsøkerRepository = jobbsøkerRepository,
-        treffkontekstRepository = kontekstRepository,
-        faseRepository = faseRepository,
+    private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, faseRepository, reader)
+    private val hendelser = HendelseWriter(
+        jobbsøkerRepository,
+        ArbeidsgiverRepository(db.dataSource, mapper),
+        RekrutteringstreffRepository(db.dataSource),
+        mapper,
+    )
+    private val oppmøteService = OppmøteService(
+        writer = writer,
         oppmøteRepository = oppmøteRepository,
-        møteplanRepository = møteplanRepository,
         matchingRepository = matchingRepository,
+        møteplanRepository = møteplanRepository,
         oppfølgingRepository = oppfølgingRepository,
-        treffgjennomføringReader = reader,
-        mapper = mapper,
+        hendelseWriter = hendelser,
     )
 
     @BeforeAll
@@ -161,7 +167,7 @@ class TreffgjennomføringReaderTest {
     }
 
     private fun møtt(treffId: TreffId, person: PersonTreffId) =
-        jobbsøkerService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, true), navIdent)
+        oppmøteService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, true), navIdent)
 
     private fun hentKontekst(treffId: TreffId): Treffkontekst = db.dataSource.connection.use { conn ->
         kontekstRepository.hent(conn, treffId)!!

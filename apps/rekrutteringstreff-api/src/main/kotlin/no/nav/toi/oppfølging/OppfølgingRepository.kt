@@ -2,8 +2,8 @@ package no.nav.toi.oppfølging
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.tilListe
 import java.sql.Connection
-import java.sql.ResultSet
 
 class OppfølgingRepository {
 
@@ -117,6 +117,3 @@ class OppfølgingRepository {
             stmt.executeQuery().use { it.next(); it.getInt(1) }
         }
 }
-
-private fun <T> ResultSet.tilListe(les: (ResultSet) -> T): List<T> =
-    generateSequence { if (next()) les(this) else null }.toList()

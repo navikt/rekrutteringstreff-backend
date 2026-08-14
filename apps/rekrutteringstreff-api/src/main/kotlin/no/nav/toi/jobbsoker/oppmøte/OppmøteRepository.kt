@@ -2,8 +2,8 @@ package no.nav.toi.jobbsoker.oppmøte
 
 import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.tilListe
 import java.sql.Connection
-import java.sql.ResultSet
 
 data class Deltakernummer(val personTreffId: PersonTreffId, val nummer: Int)
 
@@ -66,7 +66,26 @@ class OppmøteRepository {
             stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
         }
     }
-}
 
-private fun <T> ResultSet.tilListe(les: (ResultSet) -> T): List<T> =
-    generateSequence { if (next()) les(this) else null }.toList()
+    fun settOppmøte(connection: Connection, personTreffId: PersonTreffId, oppmøte: Oppmøte) {
+        connection.prepareStatement(
+            """
+            UPDATE jobbsoker
+            SET oppmote=?
+            WHERE id=?
+            """
+        ).use { stmt ->
+            stmt.setString(1, oppmøte.name)
+            stmt.setObject(2, personTreffId.somUuid)
+            stmt.executeUpdate()
+        }
+    }
+
+    fun hentOppmøte(connection: Connection, personTreffId: PersonTreffId): Oppmøte? =
+        connection.prepareStatement("SELECT oppmote FROM jobbsoker WHERE id=?").use { stmt ->
+            stmt.setObject(1, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) Oppmøte.fraDatabase(rs.getString("oppmote")) else null
+            }
+        }
+}
