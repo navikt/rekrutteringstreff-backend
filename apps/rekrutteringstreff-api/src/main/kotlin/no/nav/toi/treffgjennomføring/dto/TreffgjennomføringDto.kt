@@ -8,8 +8,8 @@ import no.nav.toi.treffgjennomføring.Interesse
 import no.nav.toi.treffgjennomføring.Rom
 import no.nav.toi.treffgjennomføring.Treffgjennomføring
 import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
-import no.nav.toi.treffgjennomføring.Vurdering
-import no.nav.toi.treffgjennomføring.Vurderingsvalg
+import no.nav.toi.oppfølging.Vurdering
+import no.nav.toi.oppfølging.Vurderingsvalg
 import java.time.format.DateTimeFormatter
 
 private val KLOKKESLETT = DateTimeFormatter.ofPattern("HH:mm")
@@ -88,7 +88,7 @@ data class KaskadeAdvarselDto(
     val registreringer: RegistreringerDto,
 )
 
-fun Treffgjennomføring.tilDto(rekrutteringstreffId: String) = TreffgjennomføringDto(
+fun Treffgjennomføring.tilDto(rekrutteringstreffId: String, vurderinger: List<Vurdering>) = TreffgjennomføringDto(
     rekrutteringstreffId = rekrutteringstreffId,
     fase = fase,
     antallRom = antallRom,

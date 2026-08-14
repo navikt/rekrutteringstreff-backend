@@ -14,8 +14,10 @@ import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.*
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.låsTreff
+import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.OppmøteHarRegistreringerException
+import no.nav.toi.treffgjennomføring.Registreringer
 import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
 import no.nav.toi.treffgjennomføring.TreffgjennomføringRepository
 import no.nav.toi.treffgjennomføring.Treffkontekst
@@ -40,7 +42,8 @@ class JobbsøkerService(
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
     private val treffkontekstRepository: TreffkontekstRepository = TreffkontekstRepository(),
     private val treffgjennomføringRepository: TreffgjennomføringRepository = TreffgjennomføringRepository(),
-    private val treffgjennomføringReader: TreffgjennomføringReader = TreffgjennomføringReader(treffgjennomføringRepository),
+    private val oppfølgingRepository: OppfølgingRepository = OppfølgingRepository(),
+    private val treffgjennomføringReader: TreffgjennomføringReader = TreffgjennomføringReader(treffgjennomføringRepository, oppfølgingRepository),
     private val mapper: ObjectMapper = JacksonConfig.mapper,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
@@ -528,10 +531,16 @@ class JobbsøkerService(
         bekreftet: Boolean,
         navIdent: String,
     ) {
-        val registreringer = treffgjennomføringRepository.tellRegistreringer(connection, jobbsøkerId)
+        val (interesser, intervjuplasser) = treffgjennomføringRepository.tellRegistreringer(connection, jobbsøkerId)
+        val registreringer = Registreringer(
+            interesser = interesser,
+            intervjuplasser = intervjuplasser,
+            vurderinger = oppfølgingRepository.tellForJobbsøker(connection, jobbsøkerId),
+        )
         if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
 
         treffgjennomføringRepository.slettRegistreringerFor(connection, jobbsøkerId)
+        oppfølgingRepository.slettForJobbsøker(connection, jobbsøkerId)
         jobbsøkerRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
         leggTilOppmøtehendelse(
             connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET, navIdent,

@@ -1,6 +1,6 @@
 # Plan: Domeneoppdeling av treffgjennomføring i backend
 
-**Status:** Besluttet. Fase 0–3 implementert, fase 4–6 gjenstår  
+**Status:** Besluttet. Fase 0–4 implementert, fase 5 gjenstår (fase 6 delvis gjort i fase 4)  
 **Omfang:** `rekrutteringstreff-api`, pakken `no.nav.toi.treffgjennomføring`  
 **Gjelder ikke:** frontendkontrakten. Alle forslagene her skal være usynlige for `rekrutteringsbistand-frontend`.
 
@@ -22,7 +22,7 @@ for hver anbefaling.
 | # | Forslag | Anbefaling | Kort begrunnelse |
 | - | ------- | ---------- | ---------------- |
 | 1 | Flytt oppmøte til jobbsøker-domenet, med status i tabell | **Ja – gjør dette først** | Avledningslogikken er allerede duplisert to steder. Kolonnen fjerner duplikatet og åpner for filtrering på oppmøte i jobbsøkersøket. |
-| 2 | Del i `treffgjennomføring` og `oppfolging` | **Ja** | Oppfølging (vurdering) har null utgående avhengigheter til resten. Reneste snittet i hele domenet. |
+| 2 | Del i `treffgjennomføring` og `oppfølging` | **Ja** | Oppfølging (vurdering) har null utgående avhengigheter til resten. Reneste snittet i hele domenet. |
 | 3 | Egne subdomener for interesse og romfordeling | **Nei, ikke slik** | Interesse og intervjufordeling skriver til hverandre i samme transaksjon. Romfordeling hører sammen med møteoppsett og rotasjon, ikke alene. |
 | 4 | Alternativ oppdeling: **møteplan** og **matching** | **Ja – valgt i stedet for #3** | Følger de faktiske skrivetransaksjonene, og skiller samtidig WorkOp-spesifikk kode fra kode alle treff bruker. |
 | 5 | Eget lesetjeneste-lag for aggregatet | **Ja – forutsetning for #2 og #4** | Alle åtte endepunkter returnerer hele aggregatet. Uten et samlende leselag blir enhver oppdeling reversert av lesevegen. |
@@ -292,7 +292,7 @@ Null utgående kanter er uvanlig godt. Til sammenligning har interesse tre.
 **Kaskadeslettinga.** `slettRegistreringerFor` sletter i fire tabeller når et oppmøte
 angres, inkludert `vurdering`. Etter oppdelinga må treffgjennomføring be oppfølging om
 å rydde, i stedet for å slette i en tabell den ikke eier. Løses med et smalt kall:
-`oppfolgingService.slettForJobbsøker(connection, jobbsøkerId)`, på samme connection.
+`oppfølgingService.slettForJobbsøker(connection, jobbsøkerId)`, på samme connection.
 Det samme gjelder tellinga i `tellRegistreringer`.
 
 **Fasen.** `settFase(… VURDERING)` skriver til `treffgjennomforing.fase`. Fasen er
@@ -311,12 +311,12 @@ tabelleierskapet, og lar et leselag sette sammen svaret. Se vurdering 5.
 ### Forslag til pakkestruktur
 
 ```
-no.nav.toi.oppfolging/
+no.nav.toi.oppfølging/
 ├── Vurdering.kt              domenemodell, Vurderingsvalg, Vurderingsnotat
-├── OppfolgingRepository.kt   vurdering + vurdering_notat
-├── OppfolgingService.kt      lagreVurdering, slettForJobbsøker, tellForJobbsøker
-├── OppfolgingController.kt   PUT /oppfolging/vurderinger
-└── OppfolgingValidering.kt
+├── OppfølgingRepository.kt   vurdering + vurdering_notat
+├── OppfølgingService.kt      lagreVurdering, slettForJobbsøker, tellForJobbsøker
+├── OppfølgingController.kt   PUT /oppfolging/vurderinger
+└── OppfølgingValidering.kt
 ```
 
 Toppnivå-pakke, ikke underpakke av treffgjennomføring. Endepunktstien og
@@ -466,7 +466,8 @@ løser ingenting frontend har bedt om. Kontrakten står.
 
 ```
 no.nav.toi/
-└── treffLås.kt                    delt låseprimitiv, ved siden av executeInTransaction
+├── treffLås.kt                    delt låseprimitiv, ved siden av executeInTransaction
+└── HendelseWriter.kt               delt hendelseskriving
 
 no.nav.toi.jobbsoker/
 ├── JobbsøkerService.kt            eier oppmøtetransaksjonen: status + hendelse + deltakernummer
@@ -478,7 +479,7 @@ no.nav.toi.treffgjennomføring/
 ├── Treffkontekst.kt               uendret
 ├── TreffgjennomføringReader.kt    setter sammen aggregat-DTO-en
 ├── TreffgjennomføringController.kt  uendret sti, delegerer videre
-├── FaseRepository.kt              treffgjennomforing-raden: sikreRad og settFase
+├── FaseRepository.kt              treffgjennomforing-raden: sikreRad, settFase, meldFramdrift
 ├── moteplan/
 │   ├── Moteplan.kt                Møteoppsett, Rom, ArbeidsgiverRotasjon
 │   ├── Romfordeler.kt             flyttet, uendret
@@ -490,11 +491,11 @@ no.nav.toi.treffgjennomføring/
     ├── MatchingRepository.kt      interesse, intervju_fordeling
     └── MatchingService.kt
 
-no.nav.toi.oppfolging/
+no.nav.toi.oppfølging/
 ├── Vurdering.kt
-├── OppfolgingRepository.kt
-├── OppfolgingService.kt
-└── OppfolgingController.kt
+├── OppfølgingRepository.kt
+├── OppfølgingService.kt
+└── OppfølgingController.kt
 ```
 
 Oppmøte får et repository under `jobbsoker/oppmote/`, men **ingen egen service**.
@@ -695,19 +696,68 @@ Feiler de testene etter en oppdeling, er det oppdelinga som er feil – ikke tal
 arbeidsgivere). De ligger utenfor readeren og telles ikke, siden konteksten hentes én
 gang per transaksjon uansett hvor mange lesinger som skjer.
 
-### Fase 4 – skill ut oppfølging
+### Fase 4 – skill ut oppfølging ✅ implementert
 
-Flytt `vurdering` og `vurdering_notat` med tilhørende service, repository og
-controller. Erstatt de to innkommende kantene med eksplisitte kall.
+`vurdering` og `vurdering_notat` eies nå av `no.nav.toi.oppfølging`.
+
+```
+no.nav.toi.oppfølging/
+├── Vurdering.kt              Vurdering, Vurderingsvalg, Vurderingsnotat
+├── OppfølgingRepository.kt   vurdering + vurdering_notat
+├── OppfølgingService.kt      lagreVurdering, slettForJobbsøker, tellForJobbsøker
+├── OppfølgingController.kt   PUT /oppfolging/vurderinger
+└── OppfølgingValidering.kt
+```
+
+**De to innkommende kantene er erstattet med eksplisitte kall:**
+
+- **Kaskadeslettinga.** `TreffgjennomføringRepository.slettRegistreringerFor` sletter
+  ikke lenger i `vurdering`. `JobbsøkerService` kaller
+  `oppfølgingRepository.slettForJobbsøker` på samme connection. Tilsvarende for
+  tellinga: `tellRegistreringer` returnerer nå bare interesser og intervjuplasser, og
+  jobbsøker-domenet setter sammen `Registreringer` med `tellForJobbsøker`.
+- **Fasen.** `TreffgjennomføringRepository.meldFramdrift(connection, treffDbId, fase)`
+  er den smale operasjonen oppfølging kaller. Fasen forblir treffgjennomføringens
+  tilstand, og det synes i signaturen.
+
+**Readeren setter sammen begge domenene.** `Treffgjennomføring`-aggregatet har ikke
+lenger `vurderinger`; `TreffgjennomføringReader` henter dem fra `OppfølgingRepository`
+og sender dem inn i `tilDto`. Frontendkontrakten er uendret — `GET
+/treffgjennomforing-og-oppfolging` svarer likt som før.
+
+**Antall spørringer er uendret.** Aggregatet mistet to spørringer, oppfølging la til
+to. `TreffgjennomføringReaderTest` står fortsatt på ti.
+
+#### Fase 6 hentet fram
+
+Begge domenene måtte skrive parhendelser. I stedet for å duplisere hjelperne er de
+trukket ut i `no.nav.toi.HendelseWriter` med `forJobbsøker`, `forArbeidsgiver`,
+`forTreff` og `forJobbsøkerOgArbeidsgiver`. Planen åpnet for dette: fase 6 kan gjøres
+tidligere hvis fase 4 eller 5 trenger den. `TreffgjennomføringService` mistet dermed
+fire private hjelpere og tre repository-avhengigheter.
+
+#### Delt tilgangssjekk
+
+`krevTilgang` lå privat i `TreffgjennomføringController`. Den er flyttet til
+`Context.krevEierEllerUtvikler(eierService, treffId)` i `rekrutteringstreff.eier`, slik
+at `OppfølgingController` bruker nøyaktig samme regel i stedet for en kopi. Det svarer
+ut åpent spørsmål 2.
+
+#### Kjent kobling
+
+`OppfølgingService` returnerer `TreffgjennomføringDto` og bruker derfor
+`TreffgjennomføringReader`, samtidig som readeren bruker `OppfølgingRepository`. Det
+er en syklus på pakkenivå, og den er bevisst: endepunktet svarer med hele aggregatet,
+og alternativet er to transaksjoner eller en delt DTO-pakke. Samme mønster som
+`JobbsøkerService` allerede har.
 
 ### Fase 5 – skill ut møteplan og matching
 
 Gjøres til slutt, fordi den er størst og har minst risiko når 0–4 er på plass.
 
-### Fase 6 – rydd i hendelseskrivinga
+### Fase 6 – rydd i hendelseskrivinga ✅ gjort i fase 4
 
-Trekk `leggTilHendelseFor*` ut i en delt komponent. Kan gjøres tidligere hvis
-fase 4 eller 5 trenger den først.
+`no.nav.toi.HendelseWriter` ble innført da oppfølging trengte parhendelser.
 
 ---
 
@@ -771,23 +821,17 @@ pakkeomorganisering, DTO-mapping, testskjeletter, `ApplicationContext`-kobling.
 
 ## Åpne spørsmål
 
-Avklart siden forrige versjon: eierskap til oppmøte, låsestrategi, feilhåndtering,
-plassering av deltakernummer, valg av subdomener og leselag. Se
-[Beslutninger](#beslutninger).
+Avklart: eierskap til oppmøte, låsestrategi, feilhåndtering, plassering av
+deltakernummer, valg av subdomener og leselag (se [Beslutninger](#beslutninger)), samt
+de tidligere spørsmålene om `mott_tidspunkt`-typen og egen oppfølgingscontroller.
 
 Gjenstår:
 
-1. **Skal `mott_tidspunkt` være nullable timestamp eller boolean?** Forslaget er
-   timestamp. Trenger vi «når møtte personen» til noe, eller er det bare mer data å
-   forvalte?
-2. **Skal oppfølging ha egen controller, eller beholde ruta i dagens controller?**
-   Egen controller er ryddigere, men dupliserer `krevTilgang`. Vurder å trekke
-   tilgangssjekken ut i en delt hjelper først.
-3. **Trenger vi filtrering på oppmøte i jobbsøkersøket nå,** eller er det bare en
+1. **Trenger vi filtrering på oppmøte i jobbsøkersøket nå,** eller er det bare en
    mulighet fase 1 åpner for? Svaret påvirker hvor høyt fase 1 skal prioriteres.
-4. **Skal `PUT /moteoppsett` splittes** i «opprett møteplan» og «endre tider»?
+2. **Skal `PUT /moteoppsett` splittes** i «opprett møteplan» og «endre tider»?
    Utenfor omfanget her, men oppdelinga gjør valget synlig.
-5. **Behandlingsgrunnlag for oppmøte i kolonne.** Se [Personvern](#personvern).
+3. **Behandlingsgrunnlag for oppmøte i kolonne.** Se [Personvern](#personvern).
 
 ## Videre lesing
 

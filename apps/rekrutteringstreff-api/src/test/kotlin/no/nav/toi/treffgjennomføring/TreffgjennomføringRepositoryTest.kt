@@ -56,7 +56,6 @@ class TreffgjennomføringRepositoryTest {
         assertThat(aggregat.møteoppsett.varighetPerMøteMinutter).isEqualTo(10)
         assertThat(aggregat.oppmøte).isEmpty()
         assertThat(aggregat.rom).isEmpty()
-        assertThat(aggregat.vurderinger).isEmpty()
     }
 
     @Test

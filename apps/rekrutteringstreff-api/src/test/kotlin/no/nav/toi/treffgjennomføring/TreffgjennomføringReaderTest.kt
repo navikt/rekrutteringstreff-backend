@@ -1,6 +1,7 @@
 package no.nav.toi.treffgjennomføring
 
 import no.nav.toi.JacksonConfig
+import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
@@ -37,7 +38,8 @@ class TreffgjennomføringReaderTest {
 
     private val kontekstRepository = TreffkontekstRepository()
     private val repository = TreffgjennomføringRepository()
-    private val reader = TreffgjennomføringReader(repository)
+    private val oppfølgingRepository = OppfølgingRepository()
+    private val reader = TreffgjennomføringReader(repository, oppfølgingRepository)
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
 
     private val jobbsøkerService = JobbsøkerService(
@@ -45,6 +47,7 @@ class TreffgjennomføringReaderTest {
         jobbsøkerRepository = jobbsøkerRepository,
         treffkontekstRepository = kontekstRepository,
         treffgjennomføringRepository = repository,
+        oppfølgingRepository = oppfølgingRepository,
         treffgjennomføringReader = reader,
         mapper = mapper,
     )

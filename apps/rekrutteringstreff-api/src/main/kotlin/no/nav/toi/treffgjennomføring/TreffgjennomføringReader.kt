@@ -1,5 +1,6 @@
 package no.nav.toi.treffgjennomføring
 
+import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.dto.tilDto
 import java.sql.Connection
@@ -17,8 +18,13 @@ import java.sql.Connection
  */
 class TreffgjennomføringReader(
     private val repository: TreffgjennomføringRepository,
+    private val oppfølgingRepository: OppfølgingRepository,
 ) {
 
     fun les(connection: Connection, kontekst: Treffkontekst): TreffgjennomføringDto =
-        repository.hentAggregat(connection, kontekst).tilDto(kontekst.treffId.somString)
+        repository.hentAggregat(connection, kontekst)
+            .tilDto(
+                rekrutteringstreffId = kontekst.treffId.somString,
+                vurderinger = oppfølgingRepository.hentForTreff(connection, kontekst.treffDbId),
+            )
 }

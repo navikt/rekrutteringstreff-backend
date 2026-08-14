@@ -1,6 +1,10 @@
 package no.nav.toi.treffgjennomføring
 
+import no.nav.toi.HendelseWriter
 import no.nav.toi.JacksonConfig
+import no.nav.toi.oppfølging.OppfølgingRepository
+import no.nav.toi.oppfølging.OppfølgingService
+import no.nav.toi.oppfølging.Vurderingsvalg
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
@@ -48,17 +52,25 @@ class TreffgjennomføringKarakteriseringTest {
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
     private val kontekstRepository = TreffkontekstRepository()
     private val repository = TreffgjennomføringRepository()
-    private val reader = TreffgjennomføringReader(repository)
+    private val oppfølgingRepository = OppfølgingRepository()
+    private val reader = TreffgjennomføringReader(repository, oppfølgingRepository)
+    private val hendelser = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, mapper)
 
     private val service = TreffgjennomføringService(
         dataSource = db.dataSource,
         kontekstRepository = kontekstRepository,
         repository = repository,
         reader = reader,
-        jobbsøkerRepository = jobbsøkerRepository,
-        arbeidsgiverRepository = arbeidsgiverRepository,
-        rekrutteringstreffRepository = rekrutteringstreffRepository,
-        mapper = mapper,
+        hendelser = hendelser,
+    )
+
+    private val oppfølgingService = OppfølgingService(
+        dataSource = db.dataSource,
+        repository = oppfølgingRepository,
+        kontekstRepository = kontekstRepository,
+        treffgjennomføringRepository = repository,
+        reader = reader,
+        hendelser = hendelser,
     )
 
     private val jobbsøkerService = JobbsøkerService(
@@ -66,6 +78,7 @@ class TreffgjennomføringKarakteriseringTest {
         jobbsøkerRepository = jobbsøkerRepository,
         treffkontekstRepository = kontekstRepository,
         treffgjennomføringRepository = repository,
+        oppfølgingRepository = oppfølgingRepository,
         treffgjennomføringReader = reader,
         mapper = mapper,
     )
@@ -219,7 +232,7 @@ class TreffgjennomføringKarakteriseringTest {
         service.fordelIntervjuer(treffId, navIdent)
         assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.FORDELING)
 
-        service.lagreVurdering(
+        oppfølgingService.lagreVurdering(
             treffId,
             VurderingDto(person.somString, ag.somString, Vurderingsvalg.AKTUELL),
             navIdent,
@@ -334,7 +347,7 @@ class TreffgjennomføringKarakteriseringTest {
         val person = jobbsøker(treffId)
         møtt(treffId, person)
 
-        service.lagreVurdering(
+        oppfølgingService.lagreVurdering(
             treffId,
             VurderingDto(
                 personTreffId = person.somString,
@@ -362,14 +375,14 @@ class TreffgjennomføringKarakteriseringTest {
         val person = jobbsøker(treffId)
         møtt(treffId, person)
 
-        service.lagreVurdering(
+        oppfølgingService.lagreVurdering(
             treffId,
             VurderingDto(person.somString, ag.somString, Vurderingsvalg.AKTUELL),
             navIdent,
         )
         assertThat(service.hent(treffId).vurderinger).hasSize(1)
 
-        service.lagreVurdering(treffId, VurderingDto(person.somString, ag.somString), navIdent)
+        oppfølgingService.lagreVurdering(treffId, VurderingDto(person.somString, ag.somString), navIdent)
 
         assertThat(service.hent(treffId).vurderinger).isEmpty()
     }
@@ -489,7 +502,7 @@ class TreffgjennomføringKarakteriseringTest {
             ArbeidsgiverIntervjufordelingDto(ag[0].somString, listOf(p1.somString), listOf(p2.somString)),
             navIdent,
         )
-        service.lagreVurdering(
+        oppfølgingService.lagreVurdering(
             treffId,
             VurderingDto(
                 personTreffId = p1.somString,

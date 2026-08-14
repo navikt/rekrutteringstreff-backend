@@ -18,6 +18,7 @@ import no.nav.toi.authenticatedUser
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
+import no.nav.toi.rekrutteringstreff.eier.krevEierEllerUtvikler
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
@@ -37,7 +38,6 @@ class TreffgjennomføringController(
         private const val basis = "/api/rekrutteringstreff/{id}"
         private const val lesPath = "$basis/treffgjennomforing-og-oppfolging"
         private const val skrivPath = "$basis/treffgjennomforing"
-        private const val oppfolgingPath = "$basis/oppfolging"
 
         const val OPPMØTE = "$skrivPath/oppmote"
         const val MØTEOPPSETT = "$skrivPath/moteoppsett"
@@ -45,7 +45,6 @@ class TreffgjennomføringController(
         const val INTERESSE = "$skrivPath/interesse"
         const val INTERVJUFORDELING = "$skrivPath/intervjufordeling"
         const val FORDEL = "$INTERVJUFORDELING/fordel"
-        const val VURDERINGER = "$oppfolgingPath/vurderinger"
         const val HENT = lesPath
     }
 
@@ -57,21 +56,6 @@ class TreffgjennomføringController(
         routes.put(INTERESSE, interesseHandler())
         routes.put(INTERVJUFORDELING, intervjufordelingHandler())
         routes.post(FORDEL, fordelHandler())
-        routes.put(VURDERINGER, vurderingHandler())
-    }
-
-    /**
-     * 🔴 Sikkerhetskritisk. Samme regel som resten av API-et, ingen egen mekanisme
-     * for treffgjennomføringen: eierskap er eneste vei inn. Formidlingenes
-     * kontortilgang gjenbrukes bevisst ikke — det er en innstramming.
-     */
-    private fun Context.krevTilgang(treffId: TreffId): String {
-        authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
-        val navIdent = extractNavIdent()
-        if (!eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = this)) {
-            throw ForbiddenResponse("Personen har ikke tilgang til treffgjennomføringen for rekrutteringstreffet")
-        }
-        return navIdent
     }
 
     private fun Context.treffId() = TreffId(pathParam("id"))
@@ -91,7 +75,7 @@ class TreffgjennomføringController(
     )
     private fun hentHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevTilgang(treffId)
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treffId)
         ctx.status(200).json(treffgjennomføringService.hent(treffId))
     }
@@ -111,7 +95,7 @@ class TreffgjennomføringController(
     )
     private fun oppmøteHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevTilgang(treffId)
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<OppmøteRequestDto>()
         ctx.status(200).json(jobbsøkerService.oppdaterOppmøte(treffId, dto, navIdent))
     }
@@ -127,7 +111,7 @@ class TreffgjennomføringController(
     )
     private fun møteoppsettHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevTilgang(treffId)
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<MøteoppsettRequestDto>()
         ctx.status(200).json(treffgjennomføringService.lagreMøteoppsett(treffId, dto, navIdent))
     }
@@ -144,7 +128,7 @@ class TreffgjennomføringController(
     )
     private fun romfordelingHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevTilgang(treffId)
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val rom = ctx.bodyAsClass<Array<RomDto>>().toList()
         ctx.status(200).json(treffgjennomføringService.lagreRomfordeling(treffId, rom, navIdent))
     }
@@ -160,7 +144,7 @@ class TreffgjennomføringController(
     )
     private fun interesseHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevTilgang(treffId)
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<InteresseRequestDto>()
         ctx.status(200).json(treffgjennomføringService.settInteresse(treffId, dto, navIdent))
     }
@@ -176,7 +160,7 @@ class TreffgjennomføringController(
     )
     private fun intervjufordelingHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevTilgang(treffId)
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<ArbeidsgiverIntervjufordelingDto>()
         ctx.status(200).json(treffgjennomføringService.lagreIntervjufordeling(treffId, dto, navIdent))
     }
@@ -193,24 +177,8 @@ class TreffgjennomføringController(
     )
     private fun fordelHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevTilgang(treffId)
+        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         ctx.status(200).json(treffgjennomføringService.fordelIntervjuer(treffId, navIdent))
     }
 
-    @OpenApi(
-        summary = "Sett eller fjern vurdering og oppfølging for ett par",
-        description = "En rad uten vurdering, notater, 2. intervju eller jobbtilbud slettes.",
-        operationId = "lagreVurdering",
-        security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class)])],
-        path = VURDERINGER,
-        methods = [HttpMethod.PUT],
-    )
-    private fun vurderingHandler(): (Context) -> Unit = { ctx ->
-        val treffId = ctx.treffId()
-        val navIdent = ctx.krevTilgang(treffId)
-        val dto = ctx.bodyAsClass<VurderingDto>()
-        ctx.status(200).json(treffgjennomføringService.lagreVurdering(treffId, dto, navIdent))
-    }
 }
