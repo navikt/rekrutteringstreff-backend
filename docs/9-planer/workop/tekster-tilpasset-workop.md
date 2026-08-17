@@ -68,9 +68,9 @@ og bør skilles ut som eget arbeid.
    `oppdaterRekrutteringstreffAktivitetskort` bygger ny rad med
    `SELECT ... beskrivelse ... FROM aktivitetskort` — beskrivelsen kopieres
    uendret fra forrige versjon. Kun tittel, datoer og detaljer (tid/sted)
-   endres. Konsekvens: **jobbsøkere som allerede er invitert får aldri ny
-   tekst**, uansett hvordan vi løser resten. Nye WorkOp-tekster gjelder kun
-   invitasjoner sendt etter utrulling.
+   endres. Konsekvens: **jobbsøkere som allerede er invitert får ikke ny
+   tekst uten at oppdateringsveien bygges ut eksplisitt**. Som standard
+   gjelder nye WorkOp-tekster kun invitasjoner sendt etter utrulling.
 8. **Mal-navn er koblet i tre lag.** Innfører vi nye mal-navn må alle tre
    oppdateres samtidig, ellers får vi stille feil:
    - `Maler.malerForVarselType(VarselType.REKRUTTERINGSTREFF)` i
@@ -81,12 +81,99 @@ og bør skilles ut som eget arbeid.
    - `getMalTekst(...)` i frontend (`minsideStatusUtil.ts`) er en `switch` på
      mal-navn med `default -> null`. Ukjent mal gir tom statustekst i
      jobbsøkerlisten.
+9. **Dagens modell har ett aktivitetskort per jobbsøker per treff.**
+   Tabellen `rekrutteringstreff` i aktivitetskort-appen har
+   `UNIQUE (rekrutteringstreff_id, fnr)`, og alle svar- og statusendringer
+   slår opp ett `aktivitetskort_id` via denne koblingen. Et nytt kort på T-2
+   passer derfor ikke i dagens modell. Det vil enten avvises av databasen
+   eller kreve en ny én-til-mange-modell som gjør det uklart hvilket kort som
+   skal få status `GJENNOMFORES`, `FULLFORT` eller `AVBRUTT`.
+10. **T-2-meldingen kan ikke uten videre være første invitasjon.**
+    Systemet bruker invitasjonen til å opprette aktivitetskortet og samle
+    svar. T-2-meldingen er formulert til deltakere («vi gleder oss til å møte
+    dere») og bør kun gå til dem som har svart ja. Hvis første invitasjon
+    sendes T-2, finnes det ikke et tidligere svargrunnlag, og jobbsøkeren får
+    svært kort tid til å svare og forberede seg. Dette kolliderer også med
+    workshop/formøte før WorkOp. Det kan bare velges hvis WorkOp bekrefter at
+    deltakelse avklares utenfor løsningen og at svarfristen kan ligge så sent.
+    Det er ikke funnet et teknisk krav om et bestemt antall dager mellom
+    invitasjon og treff; backend krever bare at svarfrist finnes, mens
+    frontend hindrer at den settes etter treffstart. Begrensningen er derfor
+    primært funksjonell, ikke teknisk.
+11. **Treffet har allerede et rikt «innlegg» på jobbsøkersiden.**
+    Innlegget kan inneholde programmet og vises via lenken fra
+    aktivitetskortet. Feltet `sendesTilJobbsokerTidspunkt` finnes, men brukes
+    ikke til å filtrere eller planlegge visning i dagens kode; frontend setter
+    det til nåtid, og minside-api henter alle innlegg. Det kan derfor brukes
+    til å vise informasjon fra første publisering, men ikke som en fungerende
+    T-2-planlegger uten ny utvikling.
+12. **Trello-tekstene samsvarer ikke fullt ut med dagens brukerflyt.**
+    Første tekst sier «Svar her i dialogen», men dagens aktivitetskort lenker
+    til rekrutteringstreff-bruker, der jobbsøkeren svarer på invitasjonen.
+    Samme tekst omtaler workshop med dato og sted, selv om støtte for
+    formøte/workshop er utsatt. Tekstene må derfor funksjonelt tilpasses før
+    språkvask; de kan ikke kopieres direkte inn.
+
+---
+
+## Anbefalt enkleste tilpasning
+
+Skill mellom **innhold** og **varslingstidspunkt**. Trello-kortet blander en
+første invitasjon, informasjon før møtet og påminnelser. De trenger ikke
+løses med samme mekanisme.
+
+### Minste leveranse
+
+1. Inviter jobbsøkere tidlig nok til at de kan svare og forberede seg, slik
+   dagens flyt er laget for.
+2. Legg `treffkategori` kun på `rekrutteringstreffinvitasjon`.
+3. La aktivitetskort-appen velge en egen WorkOp-beskrivelse ved opprettelse av
+   det **ene eksisterende aktivitetskortet**.
+4. Behold dagens generiske invitasjons-SMS/e-post
+   (`KANDIDAT_INVITERT_TREFF`) inntil WorkOp eksplisitt ber om en egen tekst
+   også der. Trello-tekst 1 gjelder aktivitetsplanen, ikke invitasjons-SMS.
+5. Legg program og praktisk informasjon i eksisterende `innlegg` på
+   jobbsøkersiden. Informasjonen kan vises fra første publisering hvis kravet
+   om nøyaktig T-2-tidspunkt kan slippes.
+
+WorkOp-beskrivelsen bør være kort og stabil. Dato, klokkeslett og sted finnes
+allerede som strukturerte detaljer på aktivitetskortet og bør ikke
+dupliseres i friteksten. Beskrivelsen må be jobbsøkeren åpne lenken og svare
+der — ikke «svare i dialogen». Workshop-avsnittet tas ut inntil
+formøte/workshop er støttet.
+
+Dette krever endringer i rekrutteringstreff-api og aktivitetskort-appen, men
+**ingen endring i kandidatvarsel-api, ingen ny scheduler og ingen nye
+aktivitetskort**.
+
+### Hvis T-2-tidspunktet er et absolutt krav
+
+Oppdater det eksisterende aktivitetskortet; ikke opprett et nytt. Da må vi:
+
+- innføre en idempotent T-2-hendelse/scheduler for jobbsøkere med
+  `SVART_JA`,
+- utvide aktivitetskortets oppdateringsvei slik at den kan endre
+  `beskrivelse`,
+- avklare om T-2-teksten skal **erstatte** eller **legges til** den opprinnelige
+  invitasjonsteksten,
+- avklare om en aktivitetskort-oppdatering faktisk varsler jobbsøkeren. Hvis
+  ikke, må oppdateringen kombineres med et MinSide-varsel/SMS.
+
+### Alternativer vurdert
+
+| Alternativ | Fordeler | Ulemper | Vurdering |
+| ---------- | -------- | -------- | --------- |
+| A: Én tidlig invitasjon, WorkOp-kort + program på jobbsøkersiden | Minst utvikling, bruker dagens svar- og statusflyt | Programmet kommer ikke som ny melding T-2 | **Anbefalt hvis tidspunktet kan avklares bort** |
+| B: Tidlig invitasjon + oppdater samme kort T-2 | Oppfyller tidspunkt og unngår duplikat | Ny scheduler, oppdateringskontrakt og avklaringer om varsling | Velg kun hvis T-2 er et absolutt krav |
+| C: Første invitasjon T-2 | Ingen egen påminnelsesflyt | For kort svartid; ingen tidligere SVART_JA; kolliderer med workshop | Ikke anbefalt uten eksplisitt prosessavklaring |
+| D: Nytt aktivitetskort T-2 | Kan holde tekstene separat | Bryter én-kort-modellen og gir uklar statusflyt | Forkastes |
 
 ---
 
 ## Designvalg: hvordan skille WorkOp-tekst fra vanlig tekst
 
-Dette er hovedbeslutningen i oppgaven, og den bør tas før implementering.
+Dette designvalget er bare relevant dersom **SMS/e-post/MinSide-varselet**
+også skal få WorkOp-tekst. Det trengs ikke for minste leveranse over.
 
 **Viktig premiss:** meldingsteksten genereres **ikke** når lytteren mottar
 eventet, men når varselet sendes. `VarselScheduler` leser raden fra
@@ -125,16 +212,17 @@ ut fra en persistert kategori.
 
 ### Anbefaling
 
-**Alternativ A**, forutsatt at rollback-risikoen fjernes først:
+**Alternativ A**, men uten en generell fallback for ukjente mal-navn. En
+fallback kan skjule kontraktsfeil og sende feil tekst. Gjør i stedet
+utrullingen i to bakoverkompatible steg:
 
-1. Gjør `Maler.valueOf(...)` tolerant for ukjente mal-navn (returner en
-   fallback i stedet for å kaste `IllegalArgumentException`). Dette er en
-   liten, isolert endring som kan deployes alene, og som fjerner alternativ
-   A-ens eneste reelle ulempe. Den gjør også fremtidige mal-utvidelser
-   trygge.
-2. Deretter innføres WorkOp-malene, med nøkkelfunn 8-sjekklisten som krav i
-   samme leveranse.
+1. Deploy støtte for de nye WorkOp-malnavnene i `Maler.valueOf`,
+   `malerForVarselType`, `MeldingsmalApi` og frontend, uten at lytterne tar
+   dem i bruk.
+2. Deploy deretter lytterne som velger WorkOp-mal når
+   `treffkategori = WORKOP`.
 
+Da kan steg 2 rulles tilbake til en versjon som allerede kjenner mal-navnene.
 A gir best sporbarhet, unngår databaseendring og passer arkitekturen som
 allerede finnes. Velges B likevel, bør kategorien få egen kolonne — ikke
 legges i `flettedata`.
@@ -146,10 +234,10 @@ legges i `flettedata`.
 
 | # | Trello-tekst | Dekkes av dagens løp? | Forslag |
 | - | ------------ | --------------------- | ------- |
-| 1 | Første melding i aktivitetsplanen («ER DU KLAR FOR NYE JOBBMULIGHETER?») | ✅ Ja — invitasjonsløpet | Ny WorkOp-beskrivelse på aktivitetskortet. Avklar om invitasjons-SMS/e-post også skal ha WorkOp-variant (Trello har ingen egen invitasjons-SMS) |
+| 1 | Første melding i aktivitetsplanen («ER DU KLAR FOR NYE JOBBMULIGHETER?») | ✅ Ja — invitasjonsløpet | Ny, kort WorkOp-beskrivelse på aktivitetskortet. Bruk kortets strukturerte tid/sted, endre «svar i dialogen» til svar via lenken, og ta ut workshop-avsnittet inntil formøte støttes. Avklar om invitasjons-SMS/e-post også skal ha WorkOp-variant |
 | 2 | SMS om kontaktforsøk («Jeg har forsøkt å ringe deg …») | ❌ Nei — ingen trigger | Sendes manuelt i dag. Avklar: skal dette automatiseres (ny handling i frontend → nytt endepunkt + ny mal), eller forblir den manuell? Anbefaler å holde utenfor første leveranse |
 | 3 | Workshop-SMS (dagen før workshop) | ⛔ Blokkert | Workshop = formøte, som er utsatt («vi venter med støtte for formøte»). Tas når formøte-støtte landes |
-| 4 | Melding i aktivitetsplan 2 dager før WorkOp (program for dagen) | ❌ Nei — nytt løp | Ny scheduler-hendelse (f.eks. `PÅMINNELSE_2_DAGER_FØR`) for jobbsøkere med SVART_JA. Merk: dagens oppdateringsvei kan ikke endre beskrivelsen på et eksisterende kort (nøkkelfunn 7), så dette krever enten et eget kort eller en utvidelse av `oppdaterRekrutteringstreffAktivitetskort` |
+| 4 | Melding i aktivitetsplan 2 dager før WorkOp (program for dagen) | ❌ Nei — nytt løp | Avklar først om programmet kan vises fra første invitasjon på jobbsøkersiden. Hvis T-2 er absolutt: oppdater eksisterende kort for SVART_JA; ikke opprett et nytt kort (nøkkelfunn 9) |
 | 5 | SMS-påminnelse (dagen før WorkOp) | ❌ Nei — nytt løp | Ny scheduler-hendelse (`PÅMINNELSE_1_DAG_FØR`) → ny SMS-mal i kandidatvarsel-api. Kun til SVART_JA |
 
 I tillegg bør **endring**- og **avlysning**-malene vurderes for WorkOp-varianter
@@ -193,9 +281,11 @@ flettedata på samme måte som endringsløpet (`hendelse_data` → Rapids).
 
 ### 2. rekrutteringsbistand-kandidatvarsel-api
 
+- **Ingen endring i minste leveranse** hvis dagens generiske
+  invitasjons-SMS/e-post beholdes.
 - WorkOp-tekster i `Mal.kt` etter valgt alternativ (se «Designvalg»).
-  Anbefalingen er alternativ A: egne mal-objekter, med `Maler.valueOf` gjort
-  tolerant først.
+  Anbefalingen er alternativ A: egne mal-objekter, innført i to
+  bakoverkompatible deployer.
 - Lytterne (`KandidatInvitertLytter`, `KandidatInvitertTreffEndretLytter`,
   `KandidatTreffAvlystLytter`) leser `treffkategori` med `interestedIn(...)`,
   ikke `requireKey(...)` — ellers slutter lytteren å plukke opp meldinger fra
@@ -245,6 +335,10 @@ flettedata på samme måte som endringsløpet (`hendelse_data` → Rapids).
   WorkOp-tekster kan rendres betinget uten nye API-endringer. Avklar med
   WorkOp om landingssidens tekster inngår i denne oppgaven, eller om
   aktivitetsplan + SMS er tilstrekkelig.
+- Programmet kan allerede legges i treffets `innlegg` og vises på denne
+  siden. Dette er enklere enn en ny aktivitetskortmelding dersom innholdet
+  kan være synlig fra første publisering. `sendesTilJobbsokerTidspunkt` må
+  ikke omtales som planlegging før feltet faktisk håndheves ved uthenting.
 
 ### 6. Nye påminnelsesløp (tekst 4 og 5) — skilles ut
 
@@ -254,7 +348,11 @@ Krever ny infrastruktur og bør være egen leveranse:
   finner WorkOp-treff som nærmer seg og oppretter hendelser for
   SVART_JA-jobbsøkere (T-2 dager for aktivitetsplan-melding, T-1 dag for SMS).
   Eksisterende `DefaultScheduler` + leader election kan gjenbrukes.
-- Nye maler i kandidatvarsel-api og ny/oppdatert aktivitetskort-melding.
+- T-2 skal oppdatere det eksisterende aktivitetskortet. Et nytt kort er ikke
+  kompatibelt med dagens én-kort-modell.
+- T-1 krever ny mal i kandidatvarsel-api. T-2 krever utvidet
+  aktivitetskort-oppdatering, og eventuelt et eget varsel dersom en
+  kortoppdatering ikke varsler jobbsøkeren.
 - Idempotens må sikres (samme mønster som dagens `hendelseId`/`varselId`).
 - Avklar hva som skjer når treffet flyttes, avlyses eller jobbsøker trekker
   svaret sitt etter at påminnelsen er planlagt, men før den er sendt.
@@ -265,17 +363,20 @@ Krever ny infrastruktur og bør være egen leveranse:
 
 Rekkefølgen er viktig fordi produsent og konsumenter deployes uavhengig:
 
-1. **Tolerant mal-lesing først** (ved alternativ A) — `Maler.valueOf` må tåle
-   ukjente mal-navn før nye maler tas i bruk. Egen, liten deploy.
-2. **Konsumentene** — lytterne må tåle både med og uten `treffkategori`
-   (`interestedIn`, ikke `requireKey`). Deploy før produsenten sender feltet.
-3. **Produsenten** — rekrutteringstreff-api begynner å sende `treffkategori`.
-4. **Frontend** når malene er tilgjengelige fra `MeldingsmalApi`.
+1. **Konsumentene** — lytterne må tåle både med og uten `treffkategori`
+   (`interestedIn`, ikke `requireKey`). For minste leveranse gjelder dette
+   aktivitetskort-appen. Kandidatvarsel-api trenger først endring hvis det
+   skal velge en egen WorkOp-mal. Deploy før produsenten sender feltet.
+2. **Produsenten** — rekrutteringstreff-api begynner å sende `treffkategori`.
+   Dette er nok for minste leveranse til aktivitetskortet.
+3. **Kun ved nye varselmaler:** deploy først kode som kjenner de nye
+   mal-navnene i kandidatvarsel-api og frontend, uten å bruke dem.
+4. Deploy deretter lytteren som begynner å persistere WorkOp-malnavnet.
 
-**Rollback:** Med steg 1 på plass er rollback trygt i begge alternativer.
-Uten steg 1 vil rader skrevet med nye mal-navn gi
-`IllegalArgumentException` hvis kandidatvarsel-api rulles tilbake, og da må
-rollback kombineres med opprydding i `minside_varsel`.
+**Rollback:** Steg 2 kan rulles tilbake fordi manglende kategori tolkes som
+vanlig treff. Steg 4 kan rulles tilbake til versjonen fra steg 3, som allerede
+kjenner mal-navnene. Ikke bruk en generell fallback for ukjente maler; det
+kan skjule feil og sende feil melding.
 
 **Ingen etterfylling:** Allerede opprettede aktivitetskort beholder gammel
 beskrivelse (nøkkelfunn 7). Hvis WorkOp trenger at også eksisterende
@@ -290,7 +391,20 @@ bieffekt av denne endringen.
 - Logg valgt mal/tekstvariant på info-nivå ved utsending (uten persondata) —
   dagens lyttere logger allerede `rekrutteringstreffId`.
 - Første WorkOp-treff etter utrulling bør verifiseres manuelt: sjekk at
-  aktivitetskortet og SMS-en faktisk har WorkOp-tekst.
+  aktivitetskortet har WorkOp-tekst. Sjekk også SMS-en hvis del J leveres.
+
+## Review fra fire perspektiver
+
+| Perspektiv | Vurdering | Funn |
+| ----------- | --------- | ---- |
+| Arkitektur | ✅ for minste leveranse | Gjenbruk ett aktivitetskort og eksisterende jobbside. Unngå ny scheduler før tidspunktkravet er bekreftet |
+| Sikkerhet/personvern | ✅ med avklaring | Ingen ny mottakergruppe eller auth. Ikke ta med konkrete arbeidsgivere eller unødvendig kontaktinformasjon |
+| Plattform | ✅ | Minste leveranse krever ingen nye Nais-ressurser eller topics. T-2/T-1 krever schedulering, idempotens og metrikker |
+| Endringssikkerhet | ⚠️ | Deploy konsument før produsent. Nye mal-navn må innføres i to steg. T-2-flyten er blokkert på spørsmål 9–13 |
+
+**Konklusjon:** Godkjent med endringer. Gjennomfør minste leveranse A–C først.
+Ikke bygg T-2/T-1-automatisering eller flere aktivitetskort før de åpne
+produktspørsmålene er avklart.
 
 ---
 
@@ -324,7 +438,27 @@ bieffekt av denne endringen.
 7. Trenger allerede inviterte jobbsøkere å få oppdatert tekst, eller holder
    det at nye invitasjoner får WorkOp-tekst? (Se nøkkelfunn 7 — etterfylling
    er ikke gratis.)
-8. Teknisk, til teamet: velger vi alternativ A eller B i «Designvalg»?
+8. Hvis invitasjons-SMS/e-post skal tilpasses: velger vi alternativ A eller B
+   i «Designvalg»?
+9. **Når inviteres jobbsøkerne i den reelle WorkOp-prosessen, og hvor lang
+   svartid trenger de?** Hvis de skal inviteres før workshop/formøte, kan
+   T-2-meldingen ikke være første invitasjon.
+10. **Må programmet publiseres nøyaktig to dager før, eller kan det være
+    synlig fra første invitasjon?** Hvis det kan vises tidlig, kan eksisterende
+    `innlegg` brukes uten scheduler.
+11. **Betyr «melding i aktivitetsplan» at selve aktivitetskortet skal
+    oppdateres, eller er det tilstrekkelig at programmet ligger på den lenkede
+    WorkOp-siden?**
+12. **Skal T-2-hendelsen aktivt varsle jobbsøkeren, eller er det nok at
+    informasjonen blir synlig?** En oppdatering av aktivitetskortet må ikke
+    antas å utløse et varsel før dette er verifisert mot aktivitetsplanen.
+13. Hvis eksisterende aktivitetskort oppdateres T-2: skal programmet erstatte
+    invitasjonsteksten, eller legges til slik at opprinnelig informasjon
+    beholdes?
+14. Er bransjene i første tekst (produksjon, lager, service, butikk og kontor)
+    faste for alle WorkOp, eller varierer de per treff? Hvis de varierer, skal
+    de ligge i treffets redigerbare `innlegg`, ikke hardkodes i
+    aktivitetskort-malen.
 
 ---
 
@@ -332,34 +466,39 @@ bieffekt av denne endringen.
 
 | Del | Innhold | Avhengigheter |
 | --- | ------- | ------------- |
-| A0 | Gjør `Maler.valueOf` tolerant for ukjente mal-navn (kandidatvarsel-api) | Ingen — kan deployes alene |
-| A | Konsumentene tåler valgfri `treffkategori` (kandidatvarsel-api, aktivitetskort) | Ingen |
+| A | Aktivitetskort-appen tåler valgfri `treffkategori` | Ingen |
 | B | `treffkategori` på `rekrutteringstreffinvitasjon` + opprydding av `beskrivelse: "TODO"` | Del A utrullet |
-| C | WorkOp-tekst for invitasjon: aktivitetskort-beskrivelse + SMS/e-post/MinSide (tekst 1) | Del A0 + B |
-| D | Forhåndsvisning av WorkOp-mal i frontend + `getMalTekst` | Del C |
+| C | WorkOp-beskrivelse på aktivitetskortet ved første invitasjon (tekst 1) | Del B |
+| D | Vis program/praktisk informasjon i eksisterende `innlegg` fra første publisering | Avklaring 10 og 11 |
 | E | WorkOp-varianter av endring- og avlyst-tekster + `treffkategori` på de to øvrige eventene | Avklaring 6 |
 | F | WorkOp-tekster på landingssiden i rekrutteringstreff-bruker | Avklaring 5 |
-| G | Påminnelsesløp T-2 og T-1 (tekst 4 og 5) | Ny scheduler, egen oppgave |
+| G | T-2: oppdater eksisterende aktivitetskort, eventuelt med separat varsel | Avklaring 10–13; ny scheduler, egen oppgave |
+| G2 | T-1: SMS-påminnelse (tekst 5) | Ny scheduler og varselmal, egen oppgave |
 | H | Workshop-SMS (tekst 3) | Formøte-støtte (utsatt) |
 | I | Kontaktforsøk-SMS (tekst 2) | Avklaring 3, evt. nytt manuelt varsel-endepunkt |
+| J | Egen WorkOp-invitasjons-SMS/e-post + forhåndsvisning | Avklaring 1; nye mal-navn deployes i to steg |
 
-Del A0–D er den minste leveransen som oppfyller Trello-kortets DoD for tekst 1.
+Del A–C er den minste tekniske leveransen for tekst 1. Del D bør tas med hvis
+WorkOp godtar at programmet vises fra første publisering. G og G2 er bare
+nødvendige dersom tidspunktkravene opprettholdes.
 
 ## Definition of done (forslag)
 
-- WorkOp-treff (`kategori = WORKOP`) gir WorkOp-tekster i aktivitetsplanen og
-  i SMS/e-post/MinSide ved invitasjon; vanlige treff er uendret.
-- Konsumenter tåler eventer både med og uten `treffkategori`, i begge
-  rekkefølger av deploy (bakoverkompatibelt).
+- WorkOp-treff (`kategori = WORKOP`) gir WorkOp-tekst på det eksisterende
+  aktivitetskortet ved invitasjon; vanlige treff er uendret.
+- Det opprettes ikke flere aktivitetskort for samme jobbsøker og treff.
+- Aktivitetskort-appen tåler invitasjonseventer både med og uten
+  `treffkategori` (bakoverkompatibelt).
 - Testdekning, med eksisterende testfiler som utgangspunkt:
   - `RekrutteringstreffInvitasjonTest.kt` (aktivitetskort) — én test per
     kategori, pluss én uten `treffkategori` i meldingen.
-  - `RekrutteringstreffRapidTest.kt` / `MeldingsmalTest.kt`
+  - Bare hvis invitasjonsvarselet også tilpasses:
+    `RekrutteringstreffRapidTest.kt` / `MeldingsmalTest.kt`
     (kandidatvarsel-api) — riktig tekst per kategori, og at
     `MeldingsmalApi` returnerer WorkOp-varianten.
-  - Ved alternativ A: test at `Maler.valueOf` kjenner de nye navnene og at
+  - Ved nye mal-navn: test at `Maler.valueOf` kjenner dem og at
     `malerForVarselType` inkluderer dem.
+- For T-2/T-1 er DoD ikke fastsatt før spørsmål 9–13 er besvart.
 - Tekstene er kvalitetssikret av WorkOp og språkvasket (klarspråk) før
   produksjonssetting.
 - Åpne spørsmål over er besvart.
-
