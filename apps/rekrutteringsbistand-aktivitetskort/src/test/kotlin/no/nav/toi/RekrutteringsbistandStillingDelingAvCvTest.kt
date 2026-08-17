@@ -12,7 +12,6 @@ import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
 import org.apache.kafka.clients.producer.MockProducer
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -276,6 +275,115 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         )
     }
 
+    @Test
+    fun `registrert fått jobben skal flytte aktivitetskort til fullført når kandidat har svart ja`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        val navIdent = "Z123456"
+
+        rapid.sendTestMessage(
+            rapidPeriodeMelding(
+                fnr = fnr,
+                stillingId = stillingId,
+                tittel = "Test Stilling",
+                opprettetAv = navIdent,
+                arbeidsgiver = "Test Arbeidsgiver",
+                arbeidssted = "Oslo",
+            )
+        )
+        rapid.sendTestMessage(
+            svarMelding(
+                eventName = "rekrutteringsbistandstilling-bruker-svarer-ja-til-deling-av-cv",
+                fnr = fnr,
+                stillingId = stillingId,
+                svar = true,
+            )
+        )
+        rapid.sendTestMessage(
+            registrertFattJobbenMelding(
+                stillingId = stillingId,
+                fnr = fnr,
+                navIdent = navIdent,
+            )
+        )
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger().filter { it.fnr == fnr }
+        assertThat(hendelser).hasSize(3)
+        hendelser.last().also { hendelse ->
+            assertThat(hendelse.aktivitetsStatus).isEqualTo(AktivitetsStatus.FULLFORT.name)
+            assertThat(hendelse.opprettetAv).isEqualTo(navIdent)
+            assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
+        }
+    }
+
+    @Test
+    fun `lukket kandidatliste skal avbryte bare kandidater som har svart ja`() {
+        val stillingId = UUID.randomUUID()
+        val navIdent = "Z999999"
+        val kandidatSomHarSvartJa = "01010012345"
+        val kandidatSomHarSvartNei = "02020012345"
+
+        rapid.sendTestMessage(
+            rapidPeriodeMelding(
+                fnr = kandidatSomHarSvartJa,
+                stillingId = stillingId,
+                tittel = "Test Stilling",
+                opprettetAv = navIdent,
+                arbeidsgiver = "Test Arbeidsgiver",
+                arbeidssted = "Oslo",
+            )
+        )
+        rapid.sendTestMessage(
+            rapidPeriodeMelding(
+                fnr = kandidatSomHarSvartNei,
+                stillingId = stillingId,
+                tittel = "Test Stilling",
+                opprettetAv = navIdent,
+                arbeidsgiver = "Test Arbeidsgiver",
+                arbeidssted = "Oslo",
+            )
+        )
+
+        rapid.sendTestMessage(
+            svarMelding(
+                eventName = "rekrutteringsbistandstilling-bruker-svarer-ja-til-deling-av-cv",
+                fnr = kandidatSomHarSvartJa,
+                stillingId = stillingId,
+                svar = true,
+            )
+        )
+        rapid.sendTestMessage(
+            svarMelding(
+                eventName = "rekrutteringsbistandstilling-bruker-svarer-nei-til-deling-av-cv",
+                fnr = kandidatSomHarSvartNei,
+                stillingId = stillingId,
+                svar = false,
+            )
+        )
+
+        rapid.sendTestMessage(
+            lukketKandidatlisteMelding(
+                stillingId = stillingId,
+                navIdent = navIdent,
+                fnrFikkJobben = listOf("9999"),
+                fnrFikkIkkeJobben = listOf(kandidatSomHarSvartJa, kandidatSomHarSvartNei),
+            )
+        )
+
+        val jaKandidatHendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+            .filter { it.fnr == kandidatSomHarSvartJa }
+        val neiKandidatHendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+            .filter { it.fnr == kandidatSomHarSvartNei }
+
+        assertThat(jaKandidatHendelser).hasSize(3)
+        assertThat(jaKandidatHendelser.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.FULLFORT.name)
+        assertThat(jaKandidatHendelser.last().opprettetAv).isEqualTo(navIdent)
+        assertThat(jaKandidatHendelser.last().opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
+
+        // Kandidat med NEI skal ikke oppdateres pa nytt ved lukking av liste.
+        assertThat(neiKandidatHendelser).hasSize(2)
+    }
+
     private fun testSvarPåDelingAvCv(
         eventName: String,
         svar: Boolean,
@@ -343,4 +451,34 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "aktørId": "Dummy aktørId"
         }
         """.trimIndent()
+
+    private fun registrertFattJobbenMelding(
+        stillingId: UUID,
+        fnr: String,
+        navIdent: String,
+    ) = """
+        {
+            "@event_name": "RegistrertFåttJobben",
+            "stillingsId": "$stillingId",
+            "fnr": "$fnr",
+            "utførtAvNavIdent": "$navIdent",
+            "tidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}"
+        }
+    """.trimIndent()
+
+    private fun lukketKandidatlisteMelding(
+        stillingId: UUID,
+        navIdent: String,
+        fnrFikkJobben: List<String>,
+        fnrFikkIkkeJobben: List<String>,
+    ) = """
+        {
+            "@event_name": "LukketKandidatliste",
+            "stillingsId": "$stillingId",
+            "utførtAvNavIdent": "$navIdent",
+            "tidspunkt": "${ZonedDateTime.now().truncatedTo(ChronoUnit.MILLIS)}",
+            "fnrFikkJobben": [${fnrFikkJobben.joinToString(",") { "\"$it\"" }}],
+            "fnrFikkIkkeJobben": [${fnrFikkIkkeJobben.joinToString(",") { "\"$it\"" }}]
+        }
+    """.trimIndent()
 }

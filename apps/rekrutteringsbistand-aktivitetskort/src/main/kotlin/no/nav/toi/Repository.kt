@@ -297,6 +297,25 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         }
     }
 
+    fun hentSisteAktivitetsstatus(aktivitetskortId: UUID): AktivitetsStatus? = dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+                SELECT aktivitets_status
+                FROM aktivitetskort
+                WHERE aktivitetskort_id = ?
+                ORDER BY endret_tidspunkt DESC, db_id DESC
+                LIMIT 1
+            """.trimIndent()
+        ).apply {
+            setObject(1, aktivitetskortId)
+        }.executeQuery().use { resultSet ->
+            if (!resultSet.next()) {
+                return@use null
+            }
+            resultSet.getString("aktivitets_status").let(::enumValueOf)
+        }
+    }
+
     fun oppdaterAktivitetsstatus(
         aktivitetskortId: UUID,
         aktivitetsStatus: AktivitetsStatus,

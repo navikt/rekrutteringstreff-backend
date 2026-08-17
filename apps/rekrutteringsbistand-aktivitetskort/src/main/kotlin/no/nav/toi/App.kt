@@ -12,8 +12,10 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.SchedulerContext
 import no.nav.toi.aktivitetskort.scheduler
-import no.nav.toi.rekrutteringstreff.RekrutteringsbistandDelCvLytter
-import no.nav.toi.rekrutteringstreff.RekrutteringsbistandDelCvSvarLytter
+import no.nav.toi.rekrutteringsbistand.RekrutteringsbistandDelCvLytter
+import no.nav.toi.rekrutteringsbistand.RekrutteringsbistandDelCvSvarLytter
+import no.nav.toi.rekrutteringsbistand.KandidatlisteLukketLytter
+import no.nav.toi.rekrutteringsbistand.RegistrertFattJobbenLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffSvarOgStatusLytter
@@ -72,6 +74,8 @@ class App(
         log.info("Starter RapidsConnection")
         RekrutteringsbistandDelCvLytter(rapidsConnection, repository)
         RekrutteringsbistandDelCvSvarLytter.registrer(rapidsConnection, repository)
+        RegistrertFattJobbenLytter(rapidsConnection, repository)
+        KandidatlisteLukketLytter(rapidsConnection, repository)
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
