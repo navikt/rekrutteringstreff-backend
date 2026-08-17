@@ -20,6 +20,21 @@ og bør skilles ut som eget arbeid.
 
 ---
 
+## Begreper
+
+- **T**: Kalenderdatoen WorkOp starter (`fraTid`), tolket i tidssonen
+  `Europe/Oslo`.
+- **T-2**: Kalenderdagen to dager før T. Dette betyr ikke nødvendigvis
+  nøyaktig 48 timer før start.
+- **T-1**: Kalenderdagen én dag før T. Dette betyr ikke nødvendigvis
+  nøyaktig 24 timer før start.
+
+Planen bruker T-2 og T-1 som kortformer for formuleringene «2 dager før
+WorkOp» og «dagen før WorkOp» i Trello-kortet. Klokkeslett for utsending er
+ikke oppgitt og må avklares før en eventuell scheduler implementeres.
+
+---
+
 ## Dagens løsning: hvor tekstene ligger
 
 | Tekst | System | Fil | Merknad |
@@ -459,6 +474,9 @@ produktspørsmålene er avklart.
     faste for alle WorkOp, eller varierer de per treff? Hvis de varierer, skal
     de ligge i treffets redigerbare `innlegg`, ikke hardkodes i
     aktivitetskort-malen.
+15. Hvilket klokkeslett skal T-2- og T-1-meldingene sendes? Planen tolker dem
+    som kalenderdager i `Europe/Oslo`, ikke som nøyaktig 48/24 timer før
+    `fraTid`.
 
 ---
 
