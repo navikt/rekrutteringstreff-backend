@@ -185,6 +185,153 @@ Oppdater det eksisterende aktivitetskortet; ikke opprett et nytt. Da må vi:
 
 ---
 
+## Mulig liten, generell utvidelse: formøte
+
+Formøte kan avgrenses fra hovedmodellen med en valgfri én-til-én-relasjon.
+Modellen bør være generell for alle rekrutteringstreff, selv om WorkOp er
+første bruker. Det gir et godt grunnlag for workshop-avsnittet i WorkOp-
+invitasjonen og kan senere brukes av vanlige treff uten ny datamodell.
+
+### Anbefalt datamodell
+
+Bruk en generell tabell med navnet `rekrutteringstreff_formote`:
+
+```text
+rekrutteringstreff_formote
+├── rekrutteringstreff_id  bigint, PK + FK → rekrutteringstreff.rekrutteringstreff_id
+├── fra_tid                timestamptz, NOT NULL
+├── til_tid                timestamptz, NULL
+├── gateadresse            text, NOT NULL
+├── postnummer             text, NOT NULL
+├── poststed               text, NOT NULL
+├── sist_endret            timestamptz, NOT NULL
+└── sist_endret_av         text, NOT NULL
+```
+
+Kardinaliteten er `rekrutteringstreff 1 — 0..1 rekrutteringstreff_formote`:
+
+- Ingen rad betyr at treffet ikke har formøte.
+- Én rad betyr at formøte er konfigurert.
+- Primærnøkkelen på `rekrutteringstreff_id` hindrer flere formøter for samme
+  treff.
+- Tabellen er uavhengig av `kategori`. WorkOp bruker funksjonen først, men
+  et vanlig rekrutteringstreff kan bruke samme modell senere.
+
+En ren dato er ikke nok til tekstene i Trello. Invitasjonen og
+SMS-påminnelsen trenger minst dato, klokkeslett og sted. `fra_tid` bør derfor
+være et tidspunkt i stedet for et `date`-felt. `til_tid` kan være valgfritt
+hvis sluttid ikke skal vises.
+
+### Regler
+
+- `fra_tid` må være før treffets `fraTid`.
+- Hvis `til_tid` finnes, må den være etter formøtets `fra_tid` og før eller
+  lik treffets `fraTid`.
+- Alle tidspunkt tolkes og vises i `Europe/Oslo`, men lagres som
+  `timestamptz`.
+- Første versjon bør ikke lagre navn eller telefon til hovedansvarlig. Bruk
+  heller en generell kontakttekst inntil behov og personvern er avklart.
+
+Valideringen gjøres i `FormøteService`; databasen håndhever
+én-til-én-relasjonen og obligatoriske felt. Kategorien trenger ikke
+valideres fordi modellen er generell.
+
+### API og tilgang
+
+En egen vertikal flyt holder formøtefeltene ute av hoved-DTO-en:
+
+```text
+GET    /api/rekrutteringstreff/{id}/formote
+PUT    /api/rekrutteringstreff/{id}/formote
+DELETE /api/rekrutteringstreff/{id}/formote
+```
+
+Foreslåtte klasser:
+
+- `FormøteController`
+- `FormøteService`
+- `FormøteRepository`
+
+Endepunktene bruker eksisterende Azure AD-autentisering. Skrivetilgang bør
+kreve arbeidsgiverrettet rolle **og eierskap til treffet**, på samme måte som
+andre administrative treff-funksjoner. Formøtedata inneholder i
+utgangspunktet ikke personopplysninger, men tidspunkt og sted skal bare
+vises til relevante brukere.
+
+### Hvordan invitasjonen bygges
+
+Når en jobbsøker inviteres:
+
+1. `JobbsøkerhendelserScheduler` henter treffet og valgfritt formøte.
+2. `rekrutteringstreffinvitasjon` får `treffkategori` og et valgfritt,
+   strukturert `formote`-objekt med tidspunkt og sted.
+3. Aktivitetskort-appen velger grunntekst ut fra treffkategori.
+4. Hvis `formote` finnes, legges et formøteavsnitt til uavhengig av kategori.
+   WorkOp kan omtale det som workshop i sin tekstvariant.
+
+Bruk strukturerte felter i eventet, ikke en ferdig flettet tekst. Da kan
+aktivitetskort-appen formatere tidspunkt konsistent og teksten kan endres
+uten å endre datakontrakten.
+
+### Viktigste konsekvens
+
+Tabellen er enkel; **endringer etter at noen er invitert er den vanskelige
+delen**. Dagens aktivitetskort beholder den opprinnelige beskrivelsen.
+
+### Anbefaling: gjenbruk dagens endringsflyt
+
+Formøte bør behandles som andre viktige endringer på et publisert treff:
+
+1. Legg `FORMØTE` til `Endringsfelttype` i backend og frontend.
+2. Vis «Nytt formøte» i dagens republiseringsdialog, med valg om varsling.
+3. La `registrerEndring(...)` gjenbruke dagens mottakerregler:
+   - Alle inviterte får hendelsen
+     `TREFF_ENDRET_ETTER_PUBLISERING`, slik at aktivitetskortet oppdateres.
+   - Bare jobbsøkere med aktivt svar ja får
+     `TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON` og MinSide-varsel.
+4. Utvid `rekrutteringstreffoppdatering` med et strukturert `formote`-objekt.
+   Ved sletting må eventet uttrykkelig inneholde `formote: null`, slik at
+   konsumenten kan skille sletting fra en eldre produsent som ikke sender
+   feltet.
+5. Aktivitetskort-appen bygger beskrivelsen på nytt med eller uten
+   formøteavsnitt og oppdaterer kortet.
+6. Legg `FORMØTE("formøte")` til `EndringFlettedata` i kandidatvarsel-api.
+   Dagens generiske endringsmelding kan da gjenbrukes.
+
+Dette er **moderat ekstraarbeid**, ikke en ny varslingsarkitektur. Det meste
+av mottakerutvalg, hendelser, idempotens og MinSide-varsling finnes allerede.
+Ekstraarbeidet ligger primært i å føre formøtedata gjennom oppdateringseventet
+og bygge aktivitetskortbeskrivelsen på nytt.
+
+Hvis dette vurderes som for stort i første versjon, er et trygt minimum å
+kreve at formøte er ferdig konfigurert før første invitasjon og blokkere
+endring/sletting etterpå. Ikke tillat stille endringer som gjør at
+aktivitetskortene viser gammel informasjon.
+
+### Omfang
+
+Grunnfunksjonen er en liten til middels utvidelse:
+
+- én Flyway-migrasjon,
+- én liten controller/service/repository-flyt,
+- en valgfri formøteseksjon (vises først i WorkOp-skjemaet),
+- utvidelse av invitasjonseventet,
+- betinget tekst i aktivitetskort-appen,
+- komponenttester for treff med og uten formøte.
+
+Støtte for endring etter invitasjon gjør omfanget middels og legger til:
+
+- `FORMØTE` i eksisterende endringsfelt og republiseringsdialog,
+- formøtedata i `rekrutteringstreffoppdatering`,
+- oppdatering av aktivitetskortbeskrivelse,
+- `FORMØTE` som flettedata i dagens generiske endringsvarsel.
+
+Det krever ingen ny app, Kafka-topic, Nais-ressurs eller auth-mekanisme.
+Workshop-SMS dagen før krever fortsatt en egen scheduler og varselmal, men
+kan bygges senere på dataene i `rekrutteringstreff_formote`.
+
+---
+
 ## Designvalg: hvordan skille WorkOp-tekst fra vanlig tekst
 
 Dette designvalget er bare relevant dersom **SMS/e-post/MinSide-varselet**
@@ -251,7 +398,7 @@ legges i `flettedata`.
 | - | ------------ | --------------------- | ------- |
 | 1 | Første melding i aktivitetsplanen («ER DU KLAR FOR NYE JOBBMULIGHETER?») | ✅ Ja — invitasjonsløpet | Ny, kort WorkOp-beskrivelse på aktivitetskortet. Bruk kortets strukturerte tid/sted, endre «svar i dialogen» til svar via lenken, og ta ut workshop-avsnittet inntil formøte støttes. Avklar om invitasjons-SMS/e-post også skal ha WorkOp-variant |
 | 2 | SMS om kontaktforsøk («Jeg har forsøkt å ringe deg …») | ❌ Nei — ingen trigger | Sendes manuelt i dag. Avklar: skal dette automatiseres (ny handling i frontend → nytt endepunkt + ny mal), eller forblir den manuell? Anbefaler å holde utenfor første leveranse |
-| 3 | Workshop-SMS (dagen før workshop) | ⛔ Blokkert | Workshop = formøte, som er utsatt («vi venter med støtte for formøte»). Tas når formøte-støtte landes |
+| 3 | Workshop-SMS (dagen før workshop) | ⏸️ Avhengig | Kan bygges når `rekrutteringstreff_formote` finnes, men krever fortsatt egen scheduler og varselmal. Uten formøte-støtte forblir den utsatt |
 | 4 | Melding i aktivitetsplan 2 dager før WorkOp (program for dagen) | ❌ Nei — nytt løp | Avklar først om programmet kan vises fra første invitasjon på jobbsøkersiden. Hvis T-2 er absolutt: oppdater eksisterende kort for SVART_JA; ikke opprett et nytt kort (nøkkelfunn 9) |
 | 5 | SMS-påminnelse (dagen før WorkOp) | ❌ Nei — nytt løp | Ny scheduler-hendelse (`PÅMINNELSE_1_DAG_FØR`) → ny SMS-mal i kandidatvarsel-api. Kun til SVART_JA |
 
@@ -477,6 +624,20 @@ produktspørsmålene er avklart.
 15. Hvilket klokkeslett skal T-2- og T-1-meldingene sendes? Planen tolker dem
     som kalenderdager i `Europe/Oslo`, ikke som nøyaktig 48/24 timer før
     `fraTid`.
+16. Er det alltid maksimalt ett formøte per treff? Forslaget
+    `rekrutteringstreff_formote` forutsetter `0..1`.
+17. Er formøte valgfritt for WorkOp, eller skal WorkOp ikke kunne
+    publiseres/invitere uten at formøte er konfigurert? Modellen er generell,
+    men denne regelen kan fortsatt være WorkOp-spesifikk.
+18. Kan formøte endres eller slettes etter at første jobbsøker er invitert?
+    Hvis ja, skal eksisterende aktivitetskort oppdateres og mottakerne
+    varsles?
+19. Har formøtet alltid eget tidspunkt og sted, eller kan stedet arves fra
+    WorkOp-dagen?
+20. Skal formøtedetaljene også vises på den lenkede siden i
+    rekrutteringstreff-bruker, eller er aktivitetskortet tilstrekkelig?
+21. Er arbeidsgiverrettet rolle + eierskap riktig tilgang for å endre
+    formøte? Forslaget legger dette til grunn.
 
 ---
 
@@ -492,7 +653,9 @@ produktspørsmålene er avklart.
 | F | WorkOp-tekster på landingssiden i rekrutteringstreff-bruker | Avklaring 5 |
 | G | T-2: oppdater eksisterende aktivitetskort, eventuelt med separat varsel | Avklaring 10–13; ny scheduler, egen oppgave |
 | G2 | T-1: SMS-påminnelse (tekst 5) | Ny scheduler og varselmal, egen oppgave |
-| H | Workshop-SMS (tekst 3) | Formøte-støtte (utsatt) |
+| H0 | Formøte: generell `rekrutteringstreff_formote`, eget API/skjema og formøte i invitasjon | Avklaring 16–21 |
+| H1 | Endring av formøte etter invitasjon via dagens republiserings- og varslingsflyt | Del H0; kan erstattes av låsing i første versjon |
+| H | Workshop-SMS (tekst 3) | Del H0 + ny scheduler og varselmal |
 | I | Kontaktforsøk-SMS (tekst 2) | Avklaring 3, evt. nytt manuelt varsel-endepunkt |
 | J | Egen WorkOp-invitasjons-SMS/e-post + forhåndsvisning | Avklaring 1; nye mal-navn deployes i to steg |
 
