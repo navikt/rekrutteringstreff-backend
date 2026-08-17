@@ -23,7 +23,7 @@ class RekrutteringstreffOppdateringLytter(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", "rekrutteringstreffoppdatering")
-                it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
+                it.requireKey("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
                 it.requireKey(

@@ -22,7 +22,7 @@ class RekrutteringsbistandDelCvLytter(
             precondition {
                 it.requireValue("@event_name", "rekrutteringsbistandstilling-deling-av-cv")
                 it.forbid("aktivitetskortuuid")
-                it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
+                it.requireKey("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
                 it.requireKey("fnr", "stillingId", "tittel", "opprettetAv", "arbeidsgiver", "arbeidssted")

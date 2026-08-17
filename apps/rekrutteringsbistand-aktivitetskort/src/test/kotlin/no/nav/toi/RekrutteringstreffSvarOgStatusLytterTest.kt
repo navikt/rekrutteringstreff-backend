@@ -394,7 +394,8 @@ class RekrutteringstreffSvarOgStatusLytterTest {
           $svarJson
           $treffstatusJson
           "endretAv": "$endretAv",
-          "endretAvPersonbruker": $endretAvPersonbruker
+          "endretAvPersonbruker": $endretAvPersonbruker,
+          "aktørId": "Dummy aktørId"
         }
         """.trimIndent()
     }

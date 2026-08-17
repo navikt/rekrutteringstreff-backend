@@ -42,7 +42,7 @@ class RekrutteringsbistandDelCvSvarLytter private constructor(
         River(rapidsConnection).apply {
             precondition {
                 it.requireValue("@event_name", delCvSvar.eventName)
-                it.forbid("aktørId")
+                it.requireKey("aktørId")
             }
             validate {
                 it.requireKey("fnr", "stillingId", "svar")

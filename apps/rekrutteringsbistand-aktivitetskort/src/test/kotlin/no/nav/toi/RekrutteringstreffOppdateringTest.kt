@@ -230,7 +230,8 @@ class RekrutteringstreffOppdateringTest {
             "opprettetTidspunkt": "$opprettetTidspunkt",
             "gateadresse": "$gateadresse",
             "postnummer": "$postnummer",
-            "poststed": "$poststed"
+            "poststed": "$poststed",
+            "aktørId": "Dummy aktørId"
         }
     """.trimIndent()
 
@@ -253,7 +254,8 @@ class RekrutteringstreffOppdateringTest {
             "tilTid": "$tilTid",
             "gateadresse": "$gateadresse",
             "postnummer": "$postnummer",
-            "poststed": "$poststed"
+            "poststed": "$poststed",
+            "aktørId": "Dummy aktørId"
         }
     """.trimIndent()
 }

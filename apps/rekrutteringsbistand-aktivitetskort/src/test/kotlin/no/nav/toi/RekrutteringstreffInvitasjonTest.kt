@@ -282,7 +282,8 @@ class RekrutteringstreffInvitasjonTest {
             "opprettetTidspunkt": "$opprettetTidspunkt",
             "gateadresse": "$gateadresse",
             "postnummer": "$postnummer",
-            "poststed": "$poststed"
+            "poststed": "$poststed",
+            "aktørId": "Dummy aktørId"
         }
         """.trimIndent()
 }

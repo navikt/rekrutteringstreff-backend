@@ -319,7 +319,8 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "@event_name": "$eventName",
             "fnr": "$fnr",
             "stillingId": "$stillingId",
-            "svar": $svar
+            "svar": $svar,
+            "aktørId": "Dummy aktørId"
         }
     """.trimIndent()
 
@@ -338,7 +339,8 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             "tittel": "$tittel",
             "opprettetAv": "$opprettetAv",
             "arbeidsgiver":"$arbeidsgiver",
-            "arbeidssted":"$arbeidssted"
+            "arbeidssted":"$arbeidssted",
+            "aktørId": "Dummy aktørId"
         }
         """.trimIndent()
 }
