@@ -6,6 +6,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.AktivitetskortType
+import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
@@ -44,10 +45,11 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     private val rapid = TestRapid()
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
+    private val repository = Repository(databaseConfig, "http://url", "topic")
     private val app = App(
         port = appPort,
         rapidsConnection = rapid,
-        repository = Repository(databaseConfig, "http://url", "topic"),
+        repository = repository,
         producer = MockProducer(),
         consumer = MockConsumer(StrategyType.EARLIEST.toString()),
         dabAktivitetskortFeilTopic = "topic",
@@ -185,6 +187,142 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(message["arbeidsgiver"].asText()).isEqualTo(arbeidsgiver)
         }
     }
+
+    @Test
+    fun `svar ja til deling av CV skal flytte aktivitetskort til gjennomføres`() {
+        testSvarPåDelingAvCv(
+            eventName = "rekrutteringsbistandstilling-bruker-svarer-ja-til-deling-av-cv",
+            svar = true,
+            forventetAktivitetsStatus = AktivitetsStatus.GJENNOMFORES,
+        )
+    }
+
+    @Test
+    fun `svar nei til deling av CV skal flytte aktivitetskort til avbrutt`() {
+        testSvarPåDelingAvCv(
+            eventName = "rekrutteringsbistandstilling-bruker-svarer-nei-til-deling-av-cv",
+            svar = false,
+            forventetAktivitetsStatus = AktivitetsStatus.AVBRUTT,
+        )
+    }
+
+    @Test
+    fun `samme svar skal bare lagres én gang`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        repository.opprettDeltStilling(
+            fnr = fnr,
+            stillingId = stillingId.toString(),
+            tittel = "Test Stilling",
+            opprettetAv = "Z123456",
+            arbeidsgiver = "Test Arbeidsgiver",
+            arbeidssted = "Oslo",
+        )
+        val melding = svarMelding(
+            eventName = "rekrutteringsbistandstilling-bruker-svarer-ja-til-deling-av-cv",
+            fnr = fnr,
+            stillingId = stillingId,
+            svar = true,
+        )
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(1)
+
+        rapid.sendTestMessage(melding)
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
+
+        rapid.sendTestMessage(melding)
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).hasSize(2)
+    }
+
+    @Test
+    fun `nytt svar skal lagres når aktivitetsstatus er endret`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        val navIdent = "Z123456"
+        repository.opprettDeltStilling(
+            fnr = fnr,
+            stillingId = stillingId.toString(),
+            tittel = "Test Stilling",
+            opprettetAv = navIdent,
+            arbeidsgiver = "Test Arbeidsgiver",
+            arbeidssted = "Oslo",
+        )
+
+        rapid.sendTestMessage(
+            svarMelding(
+                eventName = "rekrutteringsbistandstilling-bruker-svarer-ja-til-deling-av-cv",
+                fnr = fnr,
+                stillingId = stillingId,
+                svar = true,
+            )
+        )
+        rapid.sendTestMessage(
+            svarMelding(
+                eventName = "rekrutteringsbistandstilling-bruker-svarer-nei-til-deling-av-cv",
+                fnr = fnr,
+                stillingId = stillingId,
+                svar = false,
+            )
+        )
+
+        val statusendringer = testRepository.hentAlleRekrutteringsbistandStillinger().map {
+            Triple(it.aktivitetsStatus, it.opprettetAv, it.opprettetAvType)
+        }
+        assertThat(statusendringer).containsExactlyInAnyOrder(
+            Triple(AktivitetsStatus.FORSLAG.name, navIdent, EndretAvType.NAVIDENT.name),
+            Triple(AktivitetsStatus.GJENNOMFORES.name, fnr, EndretAvType.PERSONBRUKERIDENT.name),
+            Triple(AktivitetsStatus.AVBRUTT.name, fnr, EndretAvType.PERSONBRUKERIDENT.name),
+        )
+    }
+
+    private fun testSvarPåDelingAvCv(
+        eventName: String,
+        svar: Boolean,
+        forventetAktivitetsStatus: AktivitetsStatus,
+    ) {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        repository.opprettDeltStilling(
+            fnr = fnr,
+            stillingId = stillingId.toString(),
+            tittel = "Test Stilling",
+            opprettetAv = "Z123456",
+            arbeidsgiver = "Test Arbeidsgiver",
+            arbeidssted = "Oslo",
+        )
+        rapid.sendTestMessage(
+            svarMelding(
+                eventName = eventName,
+                fnr = fnr,
+                stillingId = stillingId,
+                svar = svar,
+            )
+        )
+
+        val aktivitetskortHendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+        assertThat(aktivitetskortHendelser).hasSize(2)
+        aktivitetskortHendelser.last().also { hendelse ->
+            assertThat(hendelse.aktivitetsStatus).isEqualTo(forventetAktivitetsStatus.name)
+            assertThat(hendelse.opprettetAv).isEqualTo(fnr)
+            assertThat(hendelse.opprettetAvType).isEqualTo(EndretAvType.PERSONBRUKERIDENT.name)
+        }
+        assertThat(rapid.inspektør.size).isEqualTo(0)
+    }
+    private fun svarMelding(
+        eventName: String,
+        fnr: String,
+        stillingId: UUID,
+        svar: Boolean,
+    ) = """
+        {
+            "@event_name": "$eventName",
+            "fnr": "$fnr",
+            "stillingId": "$stillingId",
+            "svar": $svar
+        }
+    """.trimIndent()
+
     private fun rapidPeriodeMelding(
         fnr: String,
         stillingId: UUID,

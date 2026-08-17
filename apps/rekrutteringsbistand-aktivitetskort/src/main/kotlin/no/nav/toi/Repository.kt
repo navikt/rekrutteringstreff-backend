@@ -280,11 +280,28 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         }
     }
 
+    fun hentAktivitetskortIdForDeltStilling(fnr: String, stillingId: UUID) = dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+                SELECT aktivitetskort_id FROM delt_stilling
+                WHERE fnr = ? AND stilling_id = ?
+            """.trimIndent()
+        ).apply {
+            setString(1, fnr)
+            setObject(2, stillingId)
+        }.executeQuery().use { resultSet ->
+            if (!resultSet.next()) {
+                return@use null
+            }
+            resultSet.getString("aktivitetskort_id")?.let(UUID::fromString)
+        }
+    }
+
     fun oppdaterAktivitetsstatus(
         aktivitetskortId: UUID,
         aktivitetsStatus: AktivitetsStatus,
         endretAv: String,
-        endretAvType: EndretAvType
+        endretAvType: EndretAvType,
     ) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
@@ -295,27 +312,33 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 endret_av_type, endret_tidspunkt, aktivitetskort_type)
                 SELECT
                     ?,
-                    aktivitetskort_id,
-                    fnr,
-                    tittel,
+                    siste_aktivitetskort.aktivitetskort_id,
+                    siste_aktivitetskort.fnr,
+                    siste_aktivitetskort.tittel,
                     ?,
-                    beskrivelse,
-                    start_dato,
-                    slutt_dato,
-                    detaljer,
-                    handlinger,
-                    etiketter,
-                    oppgave,
-                    action_type,
-                    avtalt_med_nav,
+                    siste_aktivitetskort.beskrivelse,
+                    siste_aktivitetskort.start_dato,
+                    siste_aktivitetskort.slutt_dato,
+                    siste_aktivitetskort.detaljer,
+                    siste_aktivitetskort.handlinger,
+                    siste_aktivitetskort.etiketter,
+                    siste_aktivitetskort.oppgave,
+                    siste_aktivitetskort.action_type,
+                    siste_aktivitetskort.avtalt_med_nav,
                     ?,
                     ?,
                     ?,
-                    aktivitetskort_type
-                FROM aktivitetskort
-                WHERE aktivitetskort_id = ?
-                ORDER BY endret_tidspunkt DESC
-                LIMIT 1
+                    siste_aktivitetskort.aktivitetskort_type
+                FROM (
+                    SELECT *
+                    FROM aktivitetskort
+                    WHERE aktivitetskort_id = ?
+                    ORDER BY endret_tidspunkt DESC, db_id DESC
+                    LIMIT 1
+                ) siste_aktivitetskort
+                WHERE siste_aktivitetskort.aktivitets_status IS DISTINCT FROM ?
+                   OR siste_aktivitetskort.endret_av IS DISTINCT FROM ?
+                   OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?
                 """.trimIndent()
             ).apply {
                 setObject(1, UUID.randomUUID())
@@ -324,9 +347,14 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 setString(4, endretAvType.name)
                 setTimestamp(5, Timestamp.valueOf(ZonedDateTime.now().toLocalDateTime()))
                 setObject(6, aktivitetskortId)
+                setString(7, aktivitetsStatus.name)
+                setString(8, endretAv)
+                setString(9, endretAvType.name)
             }.executeUpdate()
         }.let { rowsUpdated ->
-            if (rowsUpdated != 1) {
+            if (rowsUpdated == 0) {
+                secureLog.warn("Aktivitetskort $aktivitetskortId har allerede aktivitetsstatus $aktivitetsStatus med samme endretAv og endretAvType")
+            } else if (rowsUpdated != 1) {
                 secureLog.error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
             } else {
                 secureLog.info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
