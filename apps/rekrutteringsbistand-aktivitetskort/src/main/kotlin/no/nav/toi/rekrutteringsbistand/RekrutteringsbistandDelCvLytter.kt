@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringsbistand
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
+import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
@@ -26,6 +27,7 @@ class RekrutteringsbistandDelCvLytter(
             }
             validate {
                 it.requireKey("fnr", "stillingId", "tittel", "opprettetAv", "arbeidsgiver", "arbeidssted")
+                it.require("stillingId") { node -> node.asText().toUUID() }
             }
 
         }.register(this)
