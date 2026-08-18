@@ -6,9 +6,7 @@ import no.nav.toi.treffgjennomføring.matching.Matching
 import no.nav.toi.treffgjennomføring.møteplan.Møteplan
 
 enum class TreffgjennomføringFase {
-    OPPMØTE, ROM, INTERESSE, FORDELING, VURDERING;
-
-    fun senesteAv(annen: TreffgjennomføringFase) = if (ordinal >= annen.ordinal) this else annen
+    OPPMØTE, ROM, INTERESSE, FORDELING, VURDERING
 }
 
 data class Treffgjennomføring(
