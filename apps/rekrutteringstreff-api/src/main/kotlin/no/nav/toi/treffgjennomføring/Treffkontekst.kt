@@ -20,11 +20,11 @@ data class Treffkontekst(
 
     fun arbeidsgiverId(arbeidsgiverTreffId: ArbeidsgiverTreffId): Long? = arbeidsgivere[arbeidsgiverTreffId]
 
-    fun kjenner(personTreffId: PersonTreffId) = jobbsøkere.containsKey(personTreffId)
+    fun erPersonPåTreff(personTreffId: PersonTreffId) = jobbsøkere.containsKey(personTreffId)
 
-    fun kjenner(arbeidsgiverTreffId: ArbeidsgiverTreffId) = arbeidsgivere.containsKey(arbeidsgiverTreffId)
+    fun erArbeidsgiverPåTreff(arbeidsgiverTreffId: ArbeidsgiverTreffId) = arbeidsgivere.containsKey(arbeidsgiverTreffId)
 
-    val arbeidsgiverIder: List<ArbeidsgiverTreffId> get() = arbeidsgivere.keys.toList()
+    val arbeidsgiverTreffIder: List<ArbeidsgiverTreffId> get() = arbeidsgivere.keys.toList()
 
     fun krevWorkOp() {
         if (!erWorkOp) throw BadRequestResponse("Steget finnes bare på treff av kategorien WORKOP")
@@ -32,12 +32,12 @@ data class Treffkontekst(
 }
 
 fun TreffkontekstRepository.krevKontekst(connection: Connection, treffId: TreffId): Treffkontekst =
-    hent(connection, treffId)
+    hentTreffkontekst(connection, treffId)
         ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
 
 class TreffkontekstRepository {
 
-    fun hent(connection: Connection, treffId: TreffId): Treffkontekst? {
+    fun hentTreffkontekst(connection: Connection, treffId: TreffId): Treffkontekst? {
         val (treffDbId, erWorkOp) = hentTreff(connection, treffId) ?: return null
         return Treffkontekst(
             treffId = treffId,

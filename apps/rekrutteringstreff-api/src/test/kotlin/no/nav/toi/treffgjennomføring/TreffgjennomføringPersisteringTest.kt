@@ -124,7 +124,7 @@ class TreffgjennomføringPersisteringTest {
         listOf(p1, p2).forEach { registrerOppmøte(it) }
 
         db.dataSource.connection.use { conn ->
-            val kontekst = kontekstRepository.hent(conn, treff)!!
+            val kontekst = kontekstRepository.hentTreffkontekst(conn, treff)!!
             møteplanRepository.erstattRomfordeling(
                 conn, kontekst.treffDbId,
                 listOf(Rom(1, listOf(p2, p1)), Rom(2, emptyList())),
@@ -168,8 +168,8 @@ class TreffgjennomføringPersisteringTest {
         val rad = sokRepository.sok(treff, JobbsøkerSøkRequest()).jobbsøkere.single()
 
         assertThat(rad.oppmøte!!.møtt).isTrue()
-        assertThat(rad.oppmøte!!.registreringerSomSlettes.interesser).isEqualTo(1)
-        assertThat(rad.oppmøte!!.registreringerSomSlettes.vurderinger).isZero()
+        assertThat(rad.oppmøte.registreringerSomSlettes.interesser).isEqualTo(1)
+        assertThat(rad.oppmøte.registreringerSomSlettes.vurderinger).isZero()
     }
 
     @Test
@@ -183,7 +183,7 @@ class TreffgjennomføringPersisteringTest {
     }
 
     private fun les(treff: TreffId) = db.dataSource.connection.use { conn ->
-        reader.les(conn, kontekstRepository.hent(conn, treff)!!)
+        reader.les(conn, kontekstRepository.hentTreffkontekst(conn, treff)!!)
     }
 
     private fun opprettTreff(

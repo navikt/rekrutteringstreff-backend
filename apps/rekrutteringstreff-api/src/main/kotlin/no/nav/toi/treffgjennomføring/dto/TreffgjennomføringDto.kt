@@ -84,7 +84,7 @@ fun Treffgjennomføring.tilDto(rekrutteringstreffId: String, vurderinger: List<V
     starttidspunkt = møteplan.møteoppsett.starttidspunkt.format(KLOKKESLETT),
     varighetPerMøteMinutter = møteplan.møteoppsett.varighetPerMøteMinutter,
     oppmøte = oppmøte.map { it.somString },
-    deltakernummer = deltakernummer.map { it.tilDto() },
+    deltakernummer = deltakernumre.map { it.tilDto() },
     rom = møteplan.rom.map { it.tilDto() },
     arbeidsgiverRekkefølge = møteplan.arbeidsgiverRekkefølge.map { it.tilDto() },
     interesser = matching.interesser.map { it.tilDto() },
@@ -96,7 +96,7 @@ private fun Deltakernummer.tilDto() = DeltakernummerDto(personTreffId.somString,
 
 private fun Rom.tilDto() = RomDto(romnummer, jobbsøkere.map { it.somString })
 
-private fun ArbeidsgiverRotasjon.tilDto() = ArbeidsgiverRotasjonDto(arbeidsgiverTreffId.somString, startPosisjon)
+private fun ArbeidsgiverRotasjon.tilDto() = ArbeidsgiverRotasjonDto(arbeidsgiverTreffId.somString, startposisjon)
 
 private fun Interesse.tilDto() = InteresseDto(personTreffId.somString, arbeidsgiverTreffId.somString)
 

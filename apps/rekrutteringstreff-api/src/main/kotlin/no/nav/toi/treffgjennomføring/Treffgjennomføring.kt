@@ -7,15 +7,13 @@ import no.nav.toi.treffgjennomføring.møteplan.Møteplan
 
 enum class TreffgjennomføringFase {
     OPPMØTE, ROM, INTERESSE, FORDELING, VURDERING;
-
-    fun senesteAv(annen: TreffgjennomføringFase) = if (ordinal >= annen.ordinal) this else annen
 }
 
 data class Treffgjennomføring(
     val fase: TreffgjennomføringFase,
     val antallRom: Int,
     val oppmøte: List<PersonTreffId>,
-    val deltakernummer: List<Deltakernummer>,
+    val deltakernumre: List<Deltakernummer>,
     val møteplan: Møteplan,
     val matching: Matching,
 ) {

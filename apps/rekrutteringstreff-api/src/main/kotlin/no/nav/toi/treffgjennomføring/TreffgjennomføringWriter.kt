@@ -7,10 +7,6 @@ import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import java.sql.Connection
 import javax.sql.DataSource
 
-/**
- * Den ene skriveveien for treffgjennomføringen: lås treffet, sikre faseraden,
- * kjør operasjonen og les hele aggregatet som returneres til frontend.
- */
 class TreffgjennomføringWriter(
     private val dataSource: DataSource,
     private val kontekstRepository: TreffkontekstRepository,

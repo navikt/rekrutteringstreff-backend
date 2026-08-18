@@ -17,14 +17,14 @@ class TreffgjennomføringReader(
 ) {
 
     fun les(connection: Connection, kontekst: Treffkontekst): TreffgjennomføringDto {
-        val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
+        val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
 
         return Treffgjennomføring(
             fase = faseRepository.hentFase(connection, kontekst.treffDbId) ?: TreffgjennomføringFase.OPPMØTE,
             antallRom = kontekst.antallRom,
             oppmøte = oppmøte,
-            deltakernummer = oppmøteRepository.hentDeltakernummer(connection, kontekst.treffDbId),
-            møteplan = møteplanRepository.hentFor(connection, kontekst, oppmøte),
+            deltakernumre = oppmøteRepository.hentDeltakernumre(connection, kontekst.treffDbId),
+            møteplan = møteplanRepository.hentMøteplan(connection, kontekst, oppmøte),
             matching = matchingRepository.hentFor(connection, kontekst),
         ).tilDto(
             rekrutteringstreffId = kontekst.treffId.somString,

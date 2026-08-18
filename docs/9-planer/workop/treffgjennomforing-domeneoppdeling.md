@@ -65,7 +65,7 @@ Pakken `no.nav.toi.treffgjennomføring` er på ca. 1800 linjer fordelt på ti fi
 | `OppmøteHarRegistreringerException.kt` | 10 | Kaskadeadvarsel |
 
 Ni tabeller fra `V14__treffgjennomforing.sql`: `treffgjennomforing`, `moteoppsett`,
-`deltakernummer`, `jobbsoker_rom_tildeling`, `arbeidsgiver_rotasjon`, `interesse`,
+`deltakernumre`, `jobbsoker_rom_tildeling`, `arbeidsgiver_rotasjon`, `interesse`,
 `intervju_fordeling`, `vurdering`, `vurdering_notat`.
 
 Åtte endepunkter, allerede delt i tre stier:
@@ -93,7 +93,7 @@ Grunnlaget for alle vurderingene under. Kolonnen «Skriver til» viser hvilke ta
 
 | Operasjon | Skriver til | Leser i tillegg |
 | --------- | ----------- | --------------- |
-| Oppmøte (møtt) | `jobbsoker_hendelse`, `deltakernummer` | hele aggregatet |
+| Oppmøte (møtt) | `jobbsoker_hendelse`, `deltakernumre` | hele aggregatet |
 | Oppmøte (angre) | `jobbsoker_hendelse`, sletter i `interesse`, `intervju_fordeling`, `vurdering`, `jobbsoker_rom_tildeling` | telling i tre tabeller |
 | Møteoppsett | `moteoppsett`, `jobbsoker_rom_tildeling`, `arbeidsgiver_rotasjon`, `treffgjennomforing.fase`, to hendelsestabeller | hele aggregatet |
 | Romfordeling | `jobbsoker_rom_tildeling`, `jobbsoker_hendelse` | rom og oppmøte |
@@ -257,7 +257,7 @@ ekte feil som skal boble opp, ikke noe som skal fanges og prøves på nytt.
 
 ### Deltakernummer beholder egen tabell
 
-**Beslutning: `deltakernummer` blir liggende som egen tabell.**
+**Beslutning: `deltakernumre` blir liggende som egen tabell.**
 
 Deltakernummer tildeles bare på WorkOp-treff, og WorkOp er trolig et mindretall av
 møtene. En kolonne på `jobbsoker` ville stått tom for de fleste rader, og dratt et
@@ -379,7 +379,7 @@ alle treff bruker. Begge blir underpakker av `treffgjennomføring`.
 | **Matching** | `interesse`, `intervju_fordeling` | `PUT /interesse`, `PUT /intervjufordeling`, `POST /fordel` | Interesse: alle treff. Fordeling: kun WorkOp |
 | **Kjerne** | `treffgjennomforing` (fase, lås) | `GET` | Alle treff |
 | **Oppfølging** | `vurdering`, `vurdering_notat` | `PUT /oppfolging/vurderinger` | Alle treff |
-| **Oppmøte** | `jobbsoker.mott_tidspunkt`, `deltakernummer` | `PUT /oppmote` | Alle treff |
+| **Oppmøte** | `jobbsoker.mott_tidspunkt`, `deltakernumre` | `PUT /oppmote` | Alle treff |
 
 ### Kanter som gjenstår etter oppdelinga
 

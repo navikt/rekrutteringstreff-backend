@@ -52,21 +52,21 @@ class MøteplanService(
         nåværendeFase: TreffgjennomføringFase,
         navIdent: String,
     ) {
-        val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
+        val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
         if (oppmøte.isEmpty()) throw BadRequestResponse("Minst én jobbsøker må være registrert møtt")
         if (kontekst.arbeidsgivere.isEmpty()) throw BadRequestResponse("Treffet må ha minst én arbeidsgiver")
 
         val rom = Romfordeler.fordelJevnt(oppmøte, kontekst.antallRom)
         repository.erstattRomfordeling(connection, kontekst.treffDbId, rom, kontekst)
 
-        val rotasjon = kontekst.arbeidsgiverIder.mapIndexed { indeks, arbeidsgiver ->
+        val rotasjon = kontekst.arbeidsgiverTreffIder.mapIndexed { indeks, arbeidsgiver ->
             ArbeidsgiverRotasjon(arbeidsgiver, indeks)
         }
-        repository.lagreRotasjon(connection, rotasjon, kontekst)
+        repository.lagreArbeidsgiverRotasjon(connection, rotasjon, kontekst)
         rotasjon.forEach {
             hendelseWriter.forArbeidsgiver(
                 connection, it.arbeidsgiverTreffId, ArbeidsgiverHendelsestype.ROTASJON_TILDELT, navIdent,
-                mapOf("startPosisjon" to it.startPosisjon),
+                mapOf("startPosisjon" to it.startposisjon),
             )
         }
 
@@ -85,8 +85,8 @@ class MøteplanService(
     fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>, navIdent: String): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, _ ->
             kontekst.krevWorkOp()
-            val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
-            val eksisterende = repository.hentFor(connection, kontekst, oppmøte)
+            val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
+            val eksisterende = repository.hentMøteplan(connection, kontekst, oppmøte)
             val ny = MøteplanValidering.romfordeling(rom, kontekst.antallRom, oppmøte)
 
             repository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)
