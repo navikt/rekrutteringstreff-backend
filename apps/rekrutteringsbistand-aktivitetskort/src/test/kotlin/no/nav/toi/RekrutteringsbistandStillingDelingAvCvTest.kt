@@ -317,7 +317,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
-    fun `lukket kandidatliste skal avbryte bare kandidater som har svart ja`() {
+    fun `lukket kandidatliste skal fullføre bare kandidater som har svart ja`() {
         val stillingId = UUID.randomUUID()
         val navIdent = "Z999999"
         val kandidatSomHarSvartJa = "01010012345"
