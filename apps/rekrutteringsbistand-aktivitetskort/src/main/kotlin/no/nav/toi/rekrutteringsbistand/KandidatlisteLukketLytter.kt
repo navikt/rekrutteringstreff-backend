@@ -36,6 +36,8 @@ class KandidatlisteLukketLytter(
                     "tidspunkt",
                 )
                 it.require("stillingsId") { node -> node.asText().toUUID() }
+                it.require("fnrFikkJobben") { node -> if(!node.isArray) throw IllegalStateException("fnrFikkJobben må være en array") }
+                it.require("fnrFikkIkkeJobben") { node -> if(!node.isArray) throw IllegalStateException("fnrFikkIkkeJobben må være en array") }
             }
         }.register(this)
     }
