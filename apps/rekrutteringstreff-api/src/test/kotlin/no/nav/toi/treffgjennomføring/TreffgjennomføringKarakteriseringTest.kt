@@ -420,6 +420,77 @@ class TreffgjennomføringKarakteriseringTest {
     }
 
     @Test
+    fun `oppfølgingen overlever at interessen fjernes`() {
+        val treffId = workOpTreff()
+        val ag = arbeidsgivere(treffId).single()
+        val person = jobbsøker(treffId)
+        møtt(treffId, person)
+        interesse(treffId, person, ag)
+        matchingService.fordelIntervjuer(treffId, navIdent)
+        oppfølgingService.lagreVurdering(
+            treffId,
+            VurderingDto(
+                personTreffId = person.somString,
+                arbeidsgiverTreffId = ag.somString,
+                vurdering = Vurderingsvalg.AKTUELL,
+                notater = listOf("AG_GODT_INNTRYKK", "JS_POSITIV"),
+                andregangsintervju = true,
+                andregangsintervjuDato = "2026-09-01",
+                jobbtilbud = true,
+            ),
+            navIdent,
+        )
+
+        interesse(treffId, person, ag, interessert = false)
+
+        val etter = service.hent(treffId)
+        assertThat(etter.interesser).isEmpty()
+        assertThat(etter.intervjufordelinger.flatMap { it.inkludertePersonTreffIder + it.ekskludertePersonTreffIder })
+            .doesNotContain(person.somString)
+
+        val vurdering = etter.vurderinger.single()
+        assertThat(vurdering.personTreffId).isEqualTo(person.somString)
+        assertThat(vurdering.arbeidsgiverTreffId).isEqualTo(ag.somString)
+        assertThat(vurdering.vurdering).isEqualTo(Vurderingsvalg.AKTUELL)
+        assertThat(vurdering.notater).containsExactlyInAnyOrder("AG_GODT_INNTRYKK", "JS_POSITIV")
+        assertThat(vurdering.andregangsintervju).isTrue()
+        assertThat(vurdering.andregangsintervjuDato).isEqualTo("2026-09-01")
+        assertThat(vurdering.jobbtilbud).isTrue()
+        assertThat(antallRader("vurdering", jobbsøkerDbId(person))).isEqualTo(1)
+    }
+
+    @Test
+    fun `oppfølgingen overlever at jobbsøkeren tas ut av intervjufordelingen`() {
+        val treffId = workOpTreff()
+        val ag = arbeidsgivere(treffId).single()
+        val person = jobbsøker(treffId)
+        møtt(treffId, person)
+        interesse(treffId, person, ag)
+        matchingService.fordelIntervjuer(treffId, navIdent)
+        oppfølgingService.lagreVurdering(
+            treffId,
+            VurderingDto(
+                personTreffId = person.somString,
+                arbeidsgiverTreffId = ag.somString,
+                notater = listOf("AG_VIL_MØTE_FLERE"),
+            ),
+            navIdent,
+        )
+
+        matchingService.lagreIntervjufordeling(
+            treffId,
+            ArbeidsgiverIntervjufordelingDto(
+                arbeidsgiverTreffId = ag.somString,
+                inkludertePersonTreffIder = emptyList(),
+                ekskludertePersonTreffIder = listOf(person.somString),
+            ),
+        )
+
+        val vurdering = service.hent(treffId).vurderinger.single()
+        assertThat(vurdering.notater).containsExactly("AG_VIL_MØTE_FLERE")
+    }
+
+    @Test
     fun `rom normaliseres etter oppmøte ved lesing`() {
         val treffId = workOpTreff()
         val p1 = jobbsøker(treffId, "11111111111")

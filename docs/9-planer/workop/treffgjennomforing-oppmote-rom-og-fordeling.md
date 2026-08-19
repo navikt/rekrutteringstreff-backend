@@ -981,8 +981,9 @@ Invarianter backend må håndheve, ikke bare stole på fra frontend:
   Antall rom sendes ikke inn — det beregnes av backend, se
   [Antall rom beregnes, ikke lagres](#antall-rom-beregnes-ikke-lagres).
 - Bare fremmøtte kan få interesser og intervjufordeling. En vurdering kan bestå
-  etter at interesse og intervjufordeling fjernes. En vurderingsrad der vurdering er `null`
-  og begge boolean-feltene er `false`, slettes.
+  etter at interesse og intervjufordeling fjernes. En vurderingsrad slettes bare
+  når den er helt tom — ingen vurdering, ingen notater, ingen 2. intervju-dato og
+  begge boolean-feltene `false`. Et påbegynt notat holder altså raden i live.
 - Fjerning av oppmøte når det finnes interesser, intervjufordeling eller vurderinger
   krever eksplisitt bekreftelse; data må aldri bli hengende igjen inkonsistent.
   Se [Bekreftet kaskadesletting](#bekreftet-kaskadesletting).
