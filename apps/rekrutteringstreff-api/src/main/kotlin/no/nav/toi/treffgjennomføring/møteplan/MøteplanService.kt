@@ -1,9 +1,7 @@
 package no.nav.toi.treffgjennomføring.møteplan
 
 import io.javalin.http.BadRequestResponse
-import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.HendelseWriter
-import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -63,12 +61,6 @@ class MøteplanService(
             ArbeidsgiverRotasjon(arbeidsgiver, indeks)
         }
         repository.lagreRotasjon(connection, rotasjon, kontekst)
-        rotasjon.forEach {
-            hendelseWriter.forArbeidsgiver(
-                connection, it.arbeidsgiverTreffId, ArbeidsgiverHendelsestype.ROTASJON_TILDELT, navIdent,
-                mapOf("startPosisjon" to it.startPosisjon),
-            )
-        }
 
         hendelseWriter.forTreff(
             connection, kontekst.treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFØRING_OPPRETTET, navIdent,
@@ -82,28 +74,12 @@ class MøteplanService(
         faseRepository.settFase(connection, kontekst.treffDbId, nåværendeFase, TreffgjennomføringFase.ROM)
     }
 
-    fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>, navIdent: String): TreffgjennomføringDto =
+    fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, _ ->
             kontekst.krevWorkOp()
             val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
-            val eksisterende = repository.hentFor(connection, kontekst, oppmøte)
             val ny = MøteplanValidering.romfordeling(rom, kontekst.antallRom, oppmøte)
 
             repository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)
-            skrivRomhendelser(connection, eksisterende.rom, ny, navIdent)
         }
-
-    private fun skrivRomhendelser(connection: Connection, før: List<Rom>, etter: List<Rom>, navIdent: String) {
-        val tidligere = før.flatMap { rom -> rom.jobbsøkere.map { it to rom.romnummer } }.toMap()
-        etter.forEach { rom ->
-            rom.jobbsøkere.forEach { person ->
-                val forrige = tidligere[person]
-                if (forrige == rom.romnummer) return@forEach
-                hendelseWriter.forJobbsøker(
-                    connection, person, JobbsøkerHendelsestype.PLASSERT_I_ROM, navIdent,
-                    mapOf("romnummer" to rom.romnummer, "forrigeRomnummer" to forrige),
-                )
-            }
-        }
-    }
 }

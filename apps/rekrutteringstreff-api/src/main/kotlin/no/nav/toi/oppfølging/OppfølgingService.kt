@@ -1,7 +1,6 @@
 package no.nav.toi.oppfølging
 
 import io.javalin.http.BadRequestResponse
-import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -39,19 +38,20 @@ class OppfølgingService(
         }
 
     private fun skrivHendelser(connection: Connection, før: Vurdering?, etter: Vurdering, navIdent: String) {
-        fun par(
-            jobbsøkertype: JobbsøkerHendelsestype,
-            arbeidsgivertype: ArbeidsgiverHendelsestype,
+        // Registreringene gjelder paret jobbsøker × arbeidsgiver, men handler om personen.
+        // Hendelsen skrives derfor bare på jobbsøkeren, med arbeidsgiveren som kontekst i hendelse_data.
+        fun hendelse(
+            hendelsestype: JobbsøkerHendelsestype,
             ekstra: Map<String, Any?> = emptyMap(),
-        ) = hendelser.forJobbsøkerOgArbeidsgiver(
-            connection, etter.personTreffId, etter.arbeidsgiverTreffId,
-            jobbsøkertype, arbeidsgivertype, navIdent, ekstra,
+        ) = hendelser.forJobbsøker(
+            connection, etter.personTreffId, hendelsestype, navIdent,
+            ekstra + ("arbeidsgiverTreffId" to etter.arbeidsgiverTreffId.somString),
         )
 
         // Uten forrigeVurdering kan ikke tidslinja fortelle at noen gikk fra «Aktuell» til «Ikke aktuell».
         if (før?.vurdering != etter.vurdering) {
-            par(
-                JobbsøkerHendelsestype.VURDERT, ArbeidsgiverHendelsestype.VURDERT,
+            hendelse(
+                JobbsøkerHendelsestype.VURDERT,
                 mapOf("vurdering" to etter.vurdering?.name, "forrigeVurdering" to før?.vurdering?.name),
             )
         }
@@ -59,39 +59,26 @@ class OppfølgingService(
         val notaterFør = før?.notater.orEmpty().toSet()
         val notaterEtter = etter.notater.toSet()
         (notaterEtter - notaterFør).forEach {
-            par(
-                JobbsøkerHendelsestype.NOTAT_LAGT_TIL, ArbeidsgiverHendelsestype.NOTAT_LAGT_TIL,
-                mapOf("notat" to it.name),
-            )
+            hendelse(JobbsøkerHendelsestype.NOTAT_LAGT_TIL, mapOf("notat" to it.name))
         }
         (notaterFør - notaterEtter).forEach {
-            par(
-                JobbsøkerHendelsestype.NOTAT_FJERNET, ArbeidsgiverHendelsestype.NOTAT_FJERNET,
-                mapOf("notat" to it.name),
-            )
+            hendelse(JobbsøkerHendelsestype.NOTAT_FJERNET, mapOf("notat" to it.name))
         }
 
         if ((før?.andregangsintervju ?: false) != etter.andregangsintervju) {
             if (etter.andregangsintervju) {
-                par(
+                hendelse(
                     JobbsøkerHendelsestype.ANDREGANGSINTERVJU_AVTALT,
-                    ArbeidsgiverHendelsestype.ANDREGANGSINTERVJU_AVTALT,
                     mapOf("dato" to etter.andregangsintervjuDato?.toString()),
                 )
             } else {
-                par(
-                    JobbsøkerHendelsestype.ANGRE_ANDREGANGSINTERVJU_AVTALT,
-                    ArbeidsgiverHendelsestype.ANGRE_ANDREGANGSINTERVJU_AVTALT,
-                )
+                hendelse(JobbsøkerHendelsestype.ANGRE_ANDREGANGSINTERVJU_AVTALT)
             }
         }
 
         if ((før?.jobbtilbud ?: false) != etter.jobbtilbud) {
-            if (etter.jobbtilbud) {
-                par(JobbsøkerHendelsestype.JOBBTILBUD_GITT, ArbeidsgiverHendelsestype.JOBBTILBUD_GITT)
-            } else {
-                par(JobbsøkerHendelsestype.ANGRE_JOBBTILBUD_GITT, ArbeidsgiverHendelsestype.ANGRE_JOBBTILBUD_GITT)
-            }
+            if (etter.jobbtilbud) hendelse(JobbsøkerHendelsestype.JOBBTILBUD_GITT)
+            else hendelse(JobbsøkerHendelsestype.ANGRE_JOBBTILBUD_GITT)
         }
     }
 }

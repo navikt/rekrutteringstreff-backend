@@ -291,6 +291,10 @@ To ting skjemaet ikke viser av seg selv:
 - **Antall rom har ingen kolonne.** Det er alltid antall arbeidsgivere på
   treffet (minst 1), og beregnes ved lesing. En lagret kolonne ville vært et
   frosset øyeblikksbilde av noe som endrer seg når en arbeidsgiver legges til.
+- **Rom, interesse og intervjufordeling logger ingen hendelser.** Tabellene
+  over er selv fasiten, og hendelsene gjentok dem bare. Det som overlever et
+  møte - vurdering, notat, andregangsintervju og jobbtilbud - logges fortsatt,
+  og da bare på jobbsøkeren med `arbeidsgiverTreffId` i `hendelse_data`.
 
 ## Flyway-migrasjoner
 

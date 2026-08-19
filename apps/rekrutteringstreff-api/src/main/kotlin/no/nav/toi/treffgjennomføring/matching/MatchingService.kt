@@ -1,9 +1,7 @@
 package no.nav.toi.treffgjennomføring.matching
 
 import io.javalin.http.BadRequestResponse
-import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.HendelseWriter
-import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
@@ -26,7 +24,7 @@ class MatchingService(
     private val hendelseWriter: HendelseWriter,
 ) {
 
-    fun settInteresse(treffId: TreffId, dto: InteresseRequestDto, navIdent: String): TreffgjennomføringDto =
+    fun settInteresse(treffId: TreffId, dto: InteresseRequestDto): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
             val person = PersonTreffId(dto.personTreffId)
             val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
@@ -40,15 +38,6 @@ class MatchingService(
             }
 
             if (!repository.settInteresse(connection, jobbsøkerId, arbeidsgiverId, dto.interessert)) return@skriv
-
-            hendelseWriter.forJobbsøkerOgArbeidsgiver(
-                connection, person, arbeidsgiver,
-                if (dto.interessert) JobbsøkerHendelsestype.INTERESSE_REGISTRERT
-                else JobbsøkerHendelsestype.ANGRE_INTERESSE_REGISTRERT,
-                if (dto.interessert) ArbeidsgiverHendelsestype.INTERESSE_REGISTRERT
-                else ArbeidsgiverHendelsestype.ANGRE_INTERESSE_REGISTRERT,
-                navIdent,
-            )
 
             speilInteresseIFordeling(connection, kontekst, person, arbeidsgiver, dto.interessert)
             faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.INTERESSE)
@@ -79,7 +68,6 @@ class MatchingService(
     fun lagreIntervjufordeling(
         treffId: TreffId,
         dto: ArbeidsgiverIntervjufordelingDto,
-        navIdent: String,
     ): TreffgjennomføringDto = writer.skriv(treffId) { connection, kontekst, rad ->
         kontekst.krevWorkOp()
         MatchingValidering.intervjufordeling(dto.inkludertePersonTreffIder, dto.ekskludertePersonTreffIder)
@@ -92,42 +80,14 @@ class MatchingService(
             inkludertePersonTreffIder = dto.inkludertePersonTreffIder.map(::PersonTreffId).krevPåTreff(kontekst),
             ekskludertePersonTreffIder = dto.ekskludertePersonTreffIder.map(::PersonTreffId).krevPåTreff(kontekst),
         )
-        val før = repository.hentFor(connection, kontekst).intervjufordelinger
-            .firstOrNull { it.arbeidsgiverTreffId == arbeidsgiver }
 
         repository.erstattIntervjufordelinger(connection, listOf(ny), kontekst)
-        skrivFordelingshendelser(connection, før, ny, navIdent)
         faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
     }
 
     private fun List<PersonTreffId>.krevPåTreff(kontekst: Treffkontekst): List<PersonTreffId> = also {
         firstOrNull { !kontekst.kjenner(it) }?.let {
             throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
-        }
-    }
-
-    private fun skrivFordelingshendelser(
-        connection: Connection,
-        før: ArbeidsgiverIntervjufordeling?,
-        etter: ArbeidsgiverIntervjufordeling,
-        navIdent: String,
-    ) {
-        val inkludertFør = før?.inkludertePersonTreffIder.orEmpty().toSet()
-        val inkludertEtter = etter.inkludertePersonTreffIder.toSet()
-
-        (inkludertEtter - inkludertFør).forEach { person ->
-            hendelseWriter.forJobbsøkerOgArbeidsgiver(
-                connection, person, etter.arbeidsgiverTreffId,
-                JobbsøkerHendelsestype.SATT_OPP_TIL_INTERVJU,
-                ArbeidsgiverHendelsestype.SATT_OPP_TIL_INTERVJU, navIdent,
-            )
-        }
-        (inkludertFør - inkludertEtter).forEach { person ->
-            hendelseWriter.forJobbsøkerOgArbeidsgiver(
-                connection, person, etter.arbeidsgiverTreffId,
-                JobbsøkerHendelsestype.ANGRE_SATT_OPP_TIL_INTERVJU,
-                ArbeidsgiverHendelsestype.ANGRE_SATT_OPP_TIL_INTERVJU, navIdent,
-            )
         }
     }
 

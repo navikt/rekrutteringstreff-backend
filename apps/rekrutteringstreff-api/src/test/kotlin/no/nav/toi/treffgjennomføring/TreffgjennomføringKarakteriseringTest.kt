@@ -315,25 +315,29 @@ class TreffgjennomføringKarakteriseringTest {
     }
 
     @Test
-    fun `interesse skriver hendelse hos både jobbsøker og arbeidsgiver`() {
+    fun `interesse endrer bare current state, ingen hendelser skrives`() {
         val treffId = vanligTreff()
         val ag = arbeidsgivere(treffId).single()
         val person = jobbsøker(treffId)
         møtt(treffId, person)
+        val førJobbsøker = jobbsøkerhendelser(treffId).size
+        val førArbeidsgiver = arbeidsgiverhendelser(treffId).size
 
         interesse(treffId, person, ag)
 
-        assertThat(jobbsøkerhendelser(treffId).filter { it == "INTERESSE_REGISTRERT" }).hasSize(1)
-        assertThat(arbeidsgiverhendelser(treffId).filter { it == "INTERESSE_REGISTRERT" }).hasSize(1)
+        assertThat(service.hent(treffId).interesser).hasSize(1)
+        assertThat(jobbsøkerhendelser(treffId)).hasSize(førJobbsøker)
+        assertThat(arbeidsgiverhendelser(treffId)).hasSize(førArbeidsgiver)
 
         interesse(treffId, person, ag, interessert = false)
 
-        assertThat(jobbsøkerhendelser(treffId).filter { it == "ANGRE_INTERESSE_REGISTRERT" }).hasSize(1)
-        assertThat(arbeidsgiverhendelser(treffId).filter { it == "ANGRE_INTERESSE_REGISTRERT" }).hasSize(1)
+        assertThat(service.hent(treffId).interesser).isEmpty()
+        assertThat(jobbsøkerhendelser(treffId)).hasSize(førJobbsøker)
+        assertThat(arbeidsgiverhendelser(treffId)).hasSize(førArbeidsgiver)
     }
 
     @Test
-    fun `uendret interesse er idempotent og skriver ingen ny hendelse`() {
+    fun `uendret interesse er idempotent`() {
         val treffId = vanligTreff()
         val ag = arbeidsgivere(treffId).single()
         val person = jobbsøker(treffId)
@@ -342,7 +346,6 @@ class TreffgjennomføringKarakteriseringTest {
         interesse(treffId, person, ag)
         interesse(treffId, person, ag)
 
-        assertThat(jobbsøkerhendelser(treffId).filter { it == "INTERESSE_REGISTRERT" }).hasSize(1)
         assertThat(service.hent(treffId).interesser).hasSize(1)
     }
 
@@ -499,14 +502,12 @@ class TreffgjennomføringKarakteriseringTest {
         møteplanService.lagreRomfordeling(
             treffId,
             listOf(RomDto(1, listOf(p1.somString)), RomDto(2, listOf(p2.somString))),
-            navIdent,
         )
         interesse(treffId, p1, ag[0])
         interesse(treffId, p2, ag[0])
         matchingService.lagreIntervjufordeling(
             treffId,
             ArbeidsgiverIntervjufordelingDto(ag[0].somString, listOf(p1.somString), listOf(p2.somString)),
-            navIdent,
         )
         oppfølgingService.lagreVurdering(
             treffId,
@@ -587,7 +588,6 @@ class TreffgjennomføringKarakteriseringTest {
     ) = matchingService.settInteresse(
         treffId,
         InteresseRequestDto(person.somString, arbeidsgiver.somString, interessert),
-        navIdent,
     )
 
     private fun antallRader(tabell: String, jobbsøkerId: Long): Int = db.dataSource.connection.use { conn ->

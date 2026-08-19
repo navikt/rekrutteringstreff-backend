@@ -1348,6 +1348,13 @@ to tall ved siden av hverandre ikke skal forveksles.
 
 #### Hendelser på treffgjennomføringen
 
+> **Utdatert.** Prinsippet under — «hver operasjon et menneske har utløst med
+> vilje, blir en hendelse» — er reversert. Det ga 30 hendelsestyper som
+> ingen leste, og som bare gjentok det current state-tabellene allerede sa. 18 av
+> dem er fjernet, og parskrivingen mot `arbeidsgiver_hendelse` er borte helt.
+> Se [hendelser-i-treffgjennomforing.md](hendelser-i-treffgjennomforing.md).
+> Teksten står igjen som begrunnelsen den opprinnelige løsningen hadde.
+
 Treffgjennomføringen skriver til de **tre eksisterende hendelsestabellene** —
 `jobbsoker_hendelse`, `arbeidsgiver_hendelse` og `rekrutteringstreff_hendelse`.
 Ingen ny hendelsestabell. Det gir historikken ett sted å bo, og Hendelser-fanen

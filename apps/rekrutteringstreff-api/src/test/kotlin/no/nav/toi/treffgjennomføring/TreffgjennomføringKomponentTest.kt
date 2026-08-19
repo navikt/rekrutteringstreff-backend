@@ -207,7 +207,6 @@ class TreffgjennomføringKomponentTest {
         assertThat(svar["rom"].flatMap { it["jobbsøkere"] }.map { it.asText() })
             .containsExactlyInAnyOrder(p1.somString, p2.somString)
         assertThat(svar["arbeidsgiverRekkefølge"].map { it["startPosisjon"].asInt() }).containsExactly(0, 1)
-        assertThat(antallArbeidsgiverhendelser(treff, "ROTASJON_TILDELT")).isEqualTo(2)
     }
 
     @Test
@@ -301,7 +300,7 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `bekreftet fjerning sletter registreringene og gir kun én angrehendelse`() {
+    fun `bekreftet fjerning sletter registreringene og gir kun oppmøtehendelsen`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
@@ -314,25 +313,27 @@ class TreffgjennomføringKomponentTest {
         assertThat(svar["oppmøte"]).isEmpty()
         assertThat(svar["interesser"]).isEmpty()
         assertThat(antallHendelser(treff, "REGISTRERT_OPPMØTE_FJERNET")).isEqualTo(1)
-        assertThat(antallHendelser(treff, "ANGRE_INTERESSE_REGISTRERT")).isZero()
     }
 
     @Test
-    fun `interesse skriver hendelse på både jobbsøker og arbeidsgiver`() {
+    fun `interesse endrer fasen uten å skrive hendelser`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
+        val førJobbsøker = antallJobbsøkerhendelser(treff)
+        val førArbeidsgiver = antallArbeidsgiverhendelser(treff)
 
         assertThat(interesse(treff, person, ag, interessert = true).statusCode()).isEqualTo(200)
 
         assertThat(aggregat(treff)["fase"].asText()).isEqualTo("INTERESSE")
-        assertThat(antallHendelser(treff, "INTERESSE_REGISTRERT")).isEqualTo(1)
-        assertThat(antallArbeidsgiverhendelser(treff, "INTERESSE_REGISTRERT")).isEqualTo(1)
+        assertThat(aggregat(treff)["interesser"]).hasSize(1)
+        assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(førJobbsøker)
+        assertThat(antallArbeidsgiverhendelser(treff)).isEqualTo(førArbeidsgiver)
     }
 
     @Test
-    fun `interesse er idempotent og gir ingen ny hendelse ved gjentakelse`() {
+    fun `interesse er idempotent ved gjentakelse`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
@@ -342,7 +343,6 @@ class TreffgjennomføringKomponentTest {
         interesse(treff, person, ag, interessert = true)
 
         assertThat(aggregat(treff)["interesser"]).hasSize(1)
-        assertThat(antallHendelser(treff, "INTERESSE_REGISTRERT")).isEqualTo(1)
     }
 
     @Test
@@ -560,6 +560,12 @@ class TreffgjennomføringKomponentTest {
 
     private fun antallArbeidsgiverhendelser(treffId: TreffId, hendelsestype: String): Int =
         db.hentArbeidsgiverHendelser(treffId).count { it.hendelsestype.name == hendelsestype }
+
+    private fun antallArbeidsgiverhendelser(treffId: TreffId): Int =
+        db.hentArbeidsgiverHendelser(treffId).size
+
+    private fun antallJobbsøkerhendelser(treffId: TreffId): Int =
+        db.hentJobbsøkerHendelser(treffId).size
 
     private fun antallTreffHendelser(treffId: TreffId, hendelsestype: String): Int =
         db.hentHendelser(treffId).count { it.hendelsestype.name == hendelsestype }
