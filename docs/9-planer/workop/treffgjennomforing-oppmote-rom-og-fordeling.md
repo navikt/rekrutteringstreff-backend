@@ -47,28 +47,28 @@ endepunkter.
 
 ## Beslutninger (avklart)
 
-| Tema                   | Valg                                                                                                                                                                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Omfang                 | **Alle treff** har en treffgjennomføring. WorkOp (`kategori === WORKOP`) er den samme treffgjennomføringen utvidet med møteoppsett, rom og intervjufordeling – de tre stegene som forutsetter rotasjon mellom rom.                                                        |
-| Feature toggle         | Samme mønster som Formidlinger-fanen: `getMiljø() !== Miljø.ProdGcp` (vises i lokalt/dev/test, skjult i prod), gated i både `TabsNav.tsx` og `TabsPanels.tsx`. Kategorien styrer nå hvilke steg som vises, ikke om fanen finnes.                                          |
-| Inngang                | To innganger: (a) **burgermeny** på jobbsøkerkortet for å registrere oppmøte, og (b) en egen **«Treffgjennomføring og oppfølging»-fane**. Fanen heter det samme for begge variantene.                                                                                     |
-| Stegnavigasjon         | Aksel **Stepper** med seks steg for WorkOp og fire for et vanlig treff. Brukeren kan gå tilbake til steg der forutsetningene er oppfylt. Stegnummeret i URL-en er stegets identitet, ikke plassen i rekka.                                                                |
-| Aksel-prinsipp         | Bruk Aksel layout-primitives (`VStack`, `HStack`, `HGrid`, `Box`) med spacing tokens. Nye lokale meldinger bruker `LocalAlert` der det passer.                                                                                                                            |
-| Persistering           | Én komplett målkontrakt og stateful MSW-handlere dekker alle seks steg. Backend implementerer den samme kontrakten uten å endre frontendtypene.                                                                                                                           |
-| Antall rom             | **Avledet: ett rom per arbeidsgiver.** Det er alltid nok rom tilgjengelig, så antallet oppgis ikke manuelt og vises ikke i skjemaet. Rotasjonslogikken håndterer fortsatt ubalanse, men den oppstår ikke i praksis.                                                       |
-| Romfordeling           | **Automatisk** første gang via «Opprett møteplan». I steg 2 kan jobbsøkere flyttes manuelt med dra-og-slipp eller direkte romvalg. «Fordel på nytt» erstatter alle manuelle plasseringer med ny round-robin-fordeling etter bekreftelse.                                  |
-| Oppmøte-omfang         | Første versjon dekker **kun selve WorkOp-dagen**. Formøte er utenfor omfanget.                                                                                                                                                                                            |
-| Oppmøte-lagring        | **Erstattet:** oppmøte lå opprinnelig kun i hendelsene. Det ligger nå i kolonnen `jobbsoker.oppmote`, se [treffgjennomforing-domeneoppdeling.md](treffgjennomforing-domeneoppdeling.md). Egen `JobbsøkerStatus` er fortsatt utenfor omfanget fordi den også krever oppdatering av aktivitetsplanen.                                                                                                             |
-| Hvem kan markeres møtt | **Alle** jobbsøkere på lista (ikke begrenset til svarstatus).                                                                                                                                                                                                             |
-| Redigerbarhet          | Steg er redigerbare når forutsetningene finnes. Møteoppsettet kan endres også etter opprettelse – tidene styrer bare timeplanen, ikke hvem som sitter hvor – og romplasseringene kan endres i samme steg. Første versjon har ingen egen låse- eller gjenåpningsmekanisme. |
-| Oppmøte etter oppsett  | Endret oppmøte skal ikke stille om alle rom i det skjulte. Eksisterende romplasseringer beholdes, ny deltaker legges i rommet med færrest personer, og fjerning berører bare den personen. Brukeren kan deretter flytte manuelt eller velge «Fordel på nytt».             |
-| Møteoppsett            | **Starttidspunkt** og **varighet per møte** settes først i steg 2 (kun WorkOp). Standardverdier er `10:00` og `10`. Siste minutt av hvert møte brukes til forflytning, så det finnes ingen egen pause. Antall rom er avledet fra antall arbeidsgivere.                    |
-| Rotasjonsplan          | Vises som sammendrag og full matrise i steg 2. To separate utskrifter: **én til arbeidsgiverne** (hvilket rom de skal til, per klokkeslett) og **én til jobbsøkerne** (hvem som kommer til rommet, per klokkeslett). Én mottaker per side.                                |
-| Steg 3 (interesse)     | Registrer hvilke arbeidsgivere jobbsøkeren er **interessert i** å møte. Kun fremmøtte jobbsøkere inngår. Gjelder begge variantene.                                                                                                                                        |
-| Steg 4 (fordeling)     | Arrangør lager intervjurekkefølge per arbeidsgiver. Jobbsøkere kan flyttes over og under sperrelinjen. Rekkefølgen lagres, men ikke konkrete tidspunkter. Kun WorkOp.                                                                                                     |
-| Steg 5 (registrering)  | **Registrering av status** per jobbsøker × arbeidsgiver: oppsummering av interesse og intervju, vurdering (**Aktuell / Kanskje / Ikke aktuell**), **2. intervju**, **Jobbtilbud** og skrivebeskyttet **Formidlet** fra Formidlinger. Gjelder begge variantene.            |
-| Steg 6 (oppsummering)  | **Oppsummering** av hele treffet: nøkkeltall for aktuelle kandidater, andregangsintervju, øvrige statuser og formidling, samt en tabell per arbeidsgiver. Hver kandidat telles én gang, med den mest positive vurderinga hen har fått. Gjelder begge variantene.          |
-| Tilgang                | **Avklart:** samme eier-regel som resten av API-et. Eier eller utvikler har tilgang, kontortilgang alene gir ikke tilgang. Egen hovedansvarlig-modell er forkastet som unødvendig kompleksitet.                                                                           |
+| Tema                   | Valg                                                                                                                                                                                                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Omfang                 | **Alle treff** har en treffgjennomføring. WorkOp (`kategori === WORKOP`) er den samme treffgjennomføringen utvidet med møteoppsett, rom og intervjufordeling – de tre stegene som forutsetter rotasjon mellom rom.                                                                                  |
+| Feature toggle         | Samme mønster som Formidlinger-fanen: `getMiljø() !== Miljø.ProdGcp` (vises i lokalt/dev/test, skjult i prod), gated i både `TabsNav.tsx` og `TabsPanels.tsx`. Kategorien styrer nå hvilke steg som vises, ikke om fanen finnes.                                                                    |
+| Inngang                | To innganger: (a) **burgermeny** på jobbsøkerkortet for å registrere oppmøte, og (b) en egen **«Treffgjennomføring og oppfølging»-fane**. Fanen heter det samme for begge variantene.                                                                                                               |
+| Stegnavigasjon         | Aksel **Stepper** med seks steg for WorkOp og fire for et vanlig treff. Brukeren kan gå tilbake til steg der forutsetningene er oppfylt. Stegnummeret i URL-en er stegets identitet, ikke plassen i rekka.                                                                                          |
+| Aksel-prinsipp         | Bruk Aksel layout-primitives (`VStack`, `HStack`, `HGrid`, `Box`) med spacing tokens. Nye lokale meldinger bruker `LocalAlert` der det passer.                                                                                                                                                      |
+| Persistering           | Én komplett målkontrakt og stateful MSW-handlere dekker alle seks steg. Backend implementerer den samme kontrakten uten å endre frontendtypene.                                                                                                                                                     |
+| Antall rom             | **Avledet: ett rom per arbeidsgiver.** Det er alltid nok rom tilgjengelig, så antallet oppgis ikke manuelt og vises ikke i skjemaet. Rotasjonslogikken håndterer fortsatt ubalanse, men den oppstår ikke i praksis.                                                                                 |
+| Romfordeling           | **Automatisk** første gang via «Opprett møteplan». I steg 2 kan jobbsøkere flyttes manuelt med dra-og-slipp eller direkte romvalg. «Fordel på nytt» erstatter alle manuelle plasseringer med ny round-robin-fordeling etter bekreftelse.                                                            |
+| Oppmøte-omfang         | Første versjon dekker **kun selve WorkOp-dagen**. Formøte er utenfor omfanget.                                                                                                                                                                                                                      |
+| Oppmøte-lagring        | **Erstattet:** oppmøte lå opprinnelig kun i hendelsene. Det ligger nå i kolonnen `jobbsoker.oppmote`, se [treffgjennomforing-domeneoppdeling.md](treffgjennomforing-domeneoppdeling.md). Egen `JobbsøkerStatus` er fortsatt utenfor omfanget fordi den også krever oppdatering av aktivitetsplanen. |
+| Hvem kan markeres møtt | **Alle** jobbsøkere på lista (ikke begrenset til svarstatus).                                                                                                                                                                                                                                       |
+| Redigerbarhet          | Steg er redigerbare når forutsetningene finnes. Møteoppsettet kan endres også etter opprettelse – tidene styrer bare timeplanen, ikke hvem som sitter hvor – og romplasseringene kan endres i samme steg. Første versjon har ingen egen låse- eller gjenåpningsmekanisme.                           |
+| Oppmøte etter oppsett  | Endret oppmøte skal ikke stille om alle rom i det skjulte. Eksisterende romplasseringer beholdes, ny deltaker legges i rommet med færrest personer, og fjerning berører bare den personen. Brukeren kan deretter flytte manuelt eller velge «Fordel på nytt».                                       |
+| Møteoppsett            | **Starttidspunkt** og **varighet per møte** settes først i steg 2 (kun WorkOp). Standardverdier er `10:00` og `10`. Siste minutt av hvert møte brukes til forflytning, så det finnes ingen egen pause. Antall rom er avledet fra antall arbeidsgivere.                                              |
+| Rotasjonsplan          | Vises som sammendrag og full matrise i steg 2. To separate utskrifter: **én til arbeidsgiverne** (hvilket rom de skal til, per klokkeslett) og **én til jobbsøkerne** (hvem som kommer til rommet, per klokkeslett). Én mottaker per side.                                                          |
+| Steg 3 (interesse)     | Registrer hvilke arbeidsgivere jobbsøkeren er **interessert i** å møte. Kun fremmøtte jobbsøkere inngår. Gjelder begge variantene.                                                                                                                                                                  |
+| Steg 4 (fordeling)     | Arrangør lager intervjurekkefølge per arbeidsgiver. Jobbsøkere kan flyttes over og under sperrelinjen. Rekkefølgen lagres, men ikke konkrete tidspunkter. Kun WorkOp.                                                                                                                               |
+| Steg 5 (registrering)  | **Registrering av status** per jobbsøker × arbeidsgiver: oppsummering av interesse og intervju, vurdering (**Aktuell / Kanskje / Ikke aktuell**), **2. intervju**, **Jobbtilbud** og skrivebeskyttet **Formidlet** fra Formidlinger. Gjelder begge variantene.                                      |
+| Steg 6 (oppsummering)  | **Oppsummering** av hele treffet: nøkkeltall for aktuelle kandidater, andregangsintervju, øvrige statuser og formidling, samt en tabell per arbeidsgiver. Hver kandidat telles én gang, med den mest positive vurderinga hen har fått. Gjelder begge variantene.                                    |
+| Tilgang                | **Avklart:** samme eier-regel som resten av API-et. Eier eller utvikler har tilgang, kontortilgang alene gir ikke tilgang. Egen hovedansvarlig-modell er forkastet som unødvendig kompleksitet.                                                                                                     |
 
 ---
 
@@ -526,7 +526,7 @@ interessene alene.
   (`21rem`) er valgt slik at vanlige navn får plass på én linje; å presse inn en
   kolonne til ville tvunget også korte navn til å brytes.
 - Arrangøren endrer rekkefølgen med dra-og-slipp eller piler. Jobbsøkere under
-  sperrelinjen, merket **«Ikke gjennomført speedintervju»**, er ikke med på
+  sperrelinjen, merket **«Skal ikke delta på speedintervju»**, er ikke med på
   speedintervjuet.
 - **Plassen i rekkefølgen vises ikke som et eget tall.** Den er implisitt i
   rekkefølgen på lista. Navnet begynner allerede med deltakernummeret, og et
@@ -860,9 +860,9 @@ kall hører til.
 
 **Jobbsøkerlisten leses separat.** Det eksisterende søket utvides additivt:
 
-| Metode | Sti                                                   | Funksjon                                                                                         |
-| ------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| POST   | `/api/rekrutteringstreff/{id}/jobbsoker/sok`          | Returnerer paginert søkeresultat med `oppmøte` og `registreringerSomSlettes` på hver returnert rad. |
+| Metode | Sti                                          | Funksjon                                                                                            |
+| ------ | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| POST   | `/api/rekrutteringstreff/{id}/jobbsoker/sok` | Returnerer paginert søkeresultat med `oppmøte` og `registreringerSomSlettes` på hver returnert rad. |
 
 **Lesing er felles.** Hele aggregatet hentes med ett kall:
 
@@ -1646,7 +1646,7 @@ Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
    den allerede, og mocken har en forenklet variant som kan slås av her.
 9. Skru av MSW i frontend, ett endepunkt om gangen etter hvert som backend er klar.
 10. **Produksjonsaktivering** — se under. Dette er et eget, bevisst steg og skjer
-   ikke automatisk når backend er ferdig.
+    ikke automatisk når backend er ferdig.
 
 #### Produksjonsaktivering
 
