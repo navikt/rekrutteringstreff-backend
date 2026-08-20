@@ -315,25 +315,29 @@ class TreffgjennomføringKarakteriseringTest {
     }
 
     @Test
-    fun `interesse skriver hendelse hos både jobbsøker og arbeidsgiver`() {
+    fun `interesse endrer bare current state, ingen hendelser skrives`() {
         val treffId = vanligTreff()
         val ag = arbeidsgivere(treffId).single()
         val person = jobbsøker(treffId)
         møtt(treffId, person)
+        val førJobbsøker = jobbsøkerhendelser(treffId).size
+        val førArbeidsgiver = arbeidsgiverhendelser(treffId).size
 
         interesse(treffId, person, ag)
 
-        assertThat(jobbsøkerhendelser(treffId).filter { it == "INTERESSE_REGISTRERT" }).hasSize(1)
-        assertThat(arbeidsgiverhendelser(treffId).filter { it == "INTERESSE_REGISTRERT" }).hasSize(1)
+        assertThat(service.hent(treffId).interesser).hasSize(1)
+        assertThat(jobbsøkerhendelser(treffId)).hasSize(førJobbsøker)
+        assertThat(arbeidsgiverhendelser(treffId)).hasSize(førArbeidsgiver)
 
         interesse(treffId, person, ag, interessert = false)
 
-        assertThat(jobbsøkerhendelser(treffId).filter { it == "ANGRE_INTERESSE_REGISTRERT" }).hasSize(1)
-        assertThat(arbeidsgiverhendelser(treffId).filter { it == "ANGRE_INTERESSE_REGISTRERT" }).hasSize(1)
+        assertThat(service.hent(treffId).interesser).isEmpty()
+        assertThat(jobbsøkerhendelser(treffId)).hasSize(førJobbsøker)
+        assertThat(arbeidsgiverhendelser(treffId)).hasSize(førArbeidsgiver)
     }
 
     @Test
-    fun `uendret interesse er idempotent og skriver ingen ny hendelse`() {
+    fun `uendret interesse er idempotent`() {
         val treffId = vanligTreff()
         val ag = arbeidsgivere(treffId).single()
         val person = jobbsøker(treffId)
@@ -342,7 +346,6 @@ class TreffgjennomføringKarakteriseringTest {
         interesse(treffId, person, ag)
         interesse(treffId, person, ag)
 
-        assertThat(jobbsøkerhendelser(treffId).filter { it == "INTERESSE_REGISTRERT" }).hasSize(1)
         assertThat(service.hent(treffId).interesser).hasSize(1)
     }
 
@@ -414,6 +417,77 @@ class TreffgjennomføringKarakteriseringTest {
         val etter = service.hent(treffId).intervjufordelinger.single()
         assertThat(etter.inkludertePersonTreffIder).doesNotContain(p2.somString)
         assertThat(etter.ekskludertePersonTreffIder).doesNotContain(p2.somString)
+    }
+
+    @Test
+    fun `oppfølgingen overlever at interessen fjernes`() {
+        val treffId = workOpTreff()
+        val ag = arbeidsgivere(treffId).single()
+        val person = jobbsøker(treffId)
+        møtt(treffId, person)
+        interesse(treffId, person, ag)
+        matchingService.fordelIntervjuer(treffId, navIdent)
+        oppfølgingService.lagreVurdering(
+            treffId,
+            VurderingDto(
+                personTreffId = person.somString,
+                arbeidsgiverTreffId = ag.somString,
+                vurdering = Vurderingsvalg.AKTUELL,
+                notater = listOf("AG_GODT_INNTRYKK", "JS_POSITIV"),
+                andregangsintervju = true,
+                andregangsintervjuDato = "2026-09-01",
+                jobbtilbud = true,
+            ),
+            navIdent,
+        )
+
+        interesse(treffId, person, ag, interessert = false)
+
+        val etter = service.hent(treffId)
+        assertThat(etter.interesser).isEmpty()
+        assertThat(etter.intervjufordelinger.flatMap { it.inkludertePersonTreffIder + it.ekskludertePersonTreffIder })
+            .doesNotContain(person.somString)
+
+        val vurdering = etter.vurderinger.single()
+        assertThat(vurdering.personTreffId).isEqualTo(person.somString)
+        assertThat(vurdering.arbeidsgiverTreffId).isEqualTo(ag.somString)
+        assertThat(vurdering.vurdering).isEqualTo(Vurderingsvalg.AKTUELL)
+        assertThat(vurdering.notater).containsExactlyInAnyOrder("AG_GODT_INNTRYKK", "JS_POSITIV")
+        assertThat(vurdering.andregangsintervju).isTrue()
+        assertThat(vurdering.andregangsintervjuDato).isEqualTo("2026-09-01")
+        assertThat(vurdering.jobbtilbud).isTrue()
+        assertThat(antallRader("vurdering", jobbsøkerDbId(person))).isEqualTo(1)
+    }
+
+    @Test
+    fun `oppfølgingen overlever at jobbsøkeren tas ut av intervjufordelingen`() {
+        val treffId = workOpTreff()
+        val ag = arbeidsgivere(treffId).single()
+        val person = jobbsøker(treffId)
+        møtt(treffId, person)
+        interesse(treffId, person, ag)
+        matchingService.fordelIntervjuer(treffId, navIdent)
+        oppfølgingService.lagreVurdering(
+            treffId,
+            VurderingDto(
+                personTreffId = person.somString,
+                arbeidsgiverTreffId = ag.somString,
+                notater = listOf("AG_VIL_MØTE_FLERE"),
+            ),
+            navIdent,
+        )
+
+        matchingService.lagreIntervjufordeling(
+            treffId,
+            ArbeidsgiverIntervjufordelingDto(
+                arbeidsgiverTreffId = ag.somString,
+                inkludertePersonTreffIder = emptyList(),
+                ekskludertePersonTreffIder = listOf(person.somString),
+            ),
+        )
+
+        val vurdering = service.hent(treffId).vurderinger.single()
+        assertThat(vurdering.notater).containsExactly("AG_VIL_MØTE_FLERE")
     }
 
     @Test
@@ -499,14 +573,12 @@ class TreffgjennomføringKarakteriseringTest {
         møteplanService.lagreRomfordeling(
             treffId,
             listOf(RomDto(1, listOf(p1.somString)), RomDto(2, listOf(p2.somString))),
-            navIdent,
         )
         interesse(treffId, p1, ag[0])
         interesse(treffId, p2, ag[0])
         matchingService.lagreIntervjufordeling(
             treffId,
             ArbeidsgiverIntervjufordelingDto(ag[0].somString, listOf(p1.somString), listOf(p2.somString)),
-            navIdent,
         )
         oppfølgingService.lagreVurdering(
             treffId,
@@ -587,7 +659,6 @@ class TreffgjennomføringKarakteriseringTest {
     ) = matchingService.settInteresse(
         treffId,
         InteresseRequestDto(person.somString, arbeidsgiver.somString, interessert),
-        navIdent,
     )
 
     private fun antallRader(tabell: String, jobbsøkerId: Long): Int = db.dataSource.connection.use { conn ->

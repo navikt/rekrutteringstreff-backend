@@ -60,25 +60,6 @@ class HendelseWriter(
         hendelseData = hendelseData(data),
     )
 
-    fun forJobbsøkerOgArbeidsgiver(
-        connection: Connection,
-        personTreffId: PersonTreffId,
-        arbeidsgiverTreffId: ArbeidsgiverTreffId,
-        jobbsøkertype: JobbsøkerHendelsestype,
-        arbeidsgivertype: ArbeidsgiverHendelsestype,
-        navIdent: String,
-        ekstra: Map<String, Any?> = emptyMap(),
-    ) {
-        forJobbsøker(
-            connection, personTreffId, jobbsøkertype, navIdent,
-            ekstra + ("arbeidsgiverTreffId" to arbeidsgiverTreffId.somString),
-        )
-        forArbeidsgiver(
-            connection, arbeidsgiverTreffId, arbeidsgivertype, navIdent,
-            ekstra + ("personTreffId" to personTreffId.somString),
-        )
-    }
-
     private fun hendelseData(felt: Map<String, Any?>): String? =
         if (felt.isEmpty()) null else mapper.writeValueAsString(felt)
 }

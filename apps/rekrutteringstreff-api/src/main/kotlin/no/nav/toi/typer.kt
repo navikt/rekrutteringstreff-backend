@@ -22,11 +22,6 @@ enum class JobbsøkerHendelsestype {
     ANGRE_FÅTT_JOBB,
     REGISTRERT_OPPMØTE,
     REGISTRERT_OPPMØTE_FJERNET,
-    PLASSERT_I_ROM,
-    INTERESSE_REGISTRERT,
-    ANGRE_INTERESSE_REGISTRERT,
-    SATT_OPP_TIL_INTERVJU,
-    ANGRE_SATT_OPP_TIL_INTERVJU,
     VURDERT,
     NOTAT_LAGT_TIL,
     NOTAT_FJERNET,
@@ -36,20 +31,14 @@ enum class JobbsøkerHendelsestype {
     ANGRE_JOBBTILBUD_GITT,
 }
 
+/**
+ * Treffgjennomføringen skriver ikke arbeidsgiverhendelser. Registreringene i steg 3–5
+ * gjelder et par jobbsøker × arbeidsgiver, og handler om personen — arbeidsgiveren er
+ * konteksten og ligger i `hendelse_data` på jobbsøkerhendelsen. Arbeidsgiverbildet leses
+ * fra `interesse`, `intervju_fordeling` og `vurdering`.
+ */
 enum class ArbeidsgiverHendelsestype {
     OPPRETTET, OPPDATERT, SLETTET, REAKTIVERT, BEHOV_ENDRET,
-    INTERESSE_REGISTRERT,
-    ANGRE_INTERESSE_REGISTRERT,
-    SATT_OPP_TIL_INTERVJU,
-    ANGRE_SATT_OPP_TIL_INTERVJU,
-    VURDERT,
-    NOTAT_LAGT_TIL,
-    NOTAT_FJERNET,
-    ANDREGANGSINTERVJU_AVTALT,
-    ANGRE_ANDREGANGSINTERVJU_AVTALT,
-    JOBBTILBUD_GITT,
-    ANGRE_JOBBTILBUD_GITT,
-    ROTASJON_TILDELT,
 }
 
 enum class FormidlingHendelsestype {
@@ -60,7 +49,6 @@ enum class RekrutteringstreffHendelsestype {
     OPPRETTET, OPPDATERT, SLETTET, PUBLISERT, GJENÅPNET, FULLFØRT, AVLYST, AVPUBLISERT, TREFF_ENDRET_ETTER_PUBLISERING, EIER_LAGT_TIL, EIER_FJERNET, KONTOR_LAGT_TIL,
     TREFFGJENNOMFØRING_OPPRETTET,
     TREFFGJENNOMFØRING_OPPSETT_ENDRET,
-    TREFFGJENNOMFØRING_ROMFORDELING_ENDRET,
     TREFFGJENNOMFØRING_INTERVJUFORDELING_FORDELT,
 }
 

@@ -175,9 +175,9 @@ class TreffgjennomføringController(
     )
     private fun romfordelingHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
+        ctx.krevEierEllerUtvikler(eierService, treffId)
         val rom = ctx.bodyAsClass<Array<RomDto>>().toList()
-        ctx.status(200).json(møteplanService.lagreRomfordeling(treffId, rom, navIdent))
+        ctx.status(200).json(møteplanService.lagreRomfordeling(treffId, rom))
     }
 
     @OpenApi(
@@ -192,9 +192,9 @@ class TreffgjennomføringController(
     )
     private fun interesseHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
+        ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<InteresseRequestDto>()
-        ctx.status(200).json(matchingService.settInteresse(treffId, dto, navIdent))
+        ctx.status(200).json(matchingService.settInteresse(treffId, dto))
     }
 
     @OpenApi(
@@ -212,9 +212,9 @@ class TreffgjennomføringController(
     )
     private fun intervjufordelingHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
-        val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
+        ctx.krevEierEllerUtvikler(eierService, treffId)
         val dto = ctx.bodyAsClass<ArbeidsgiverIntervjufordelingDto>()
-        ctx.status(200).json(matchingService.lagreIntervjufordeling(treffId, dto, navIdent))
+        ctx.status(200).json(matchingService.lagreIntervjufordeling(treffId, dto))
     }
 
     @OpenApi(

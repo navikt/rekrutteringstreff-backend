@@ -99,10 +99,10 @@ dem som gjennomfører WorkOp.
 Legg to handlinger i `InnleggForm.tsx`, bare for treff med
 `kategori = WORKOP`:
 
-| Handling | Bruk |
-| --- | --- |
-| **Sett inn WorkOp-invitasjon** | Setter inn introduksjon, informasjon om WorkOp og formøte |
-| **Sett inn møtedetaljer** | Setter inn program og praktisk informasjon øverst i eksisterende innlegg |
+| Handling                       | Bruk                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| **Sett inn WorkOp-invitasjon** | Setter inn introduksjon, informasjon om WorkOp og formøte                |
+| **Sett inn møtedetaljer**      | Setter inn program og praktisk informasjon øverst i eksisterende innlegg |
 
 Standardtekstene bør ligge som konstanter i frontend i første versjon.
 Tekstene kan senere flyttes til backend dersom de må kunne endres uten
@@ -138,13 +138,13 @@ produksjonssetting.
 
 ## Kartlegging av tekstene fra Trello
 
-| Tekst | Første versjon |
-| --- | --- |
-| Første melding til jobbsøkeren | Legges i innlegget med **Sett inn WorkOp-invitasjon** |
-| SMS etter kontaktforsøk | Utenfor omfang; sendes manuelt |
-| SMS dagen før formøte | Utenfor omfang; krever strukturert formøte og scheduler |
+| Tekst                            | Første versjon                                                     |
+| -------------------------------- | ------------------------------------------------------------------ |
+| Første melding til jobbsøkeren   | Legges i innlegget med **Sett inn WorkOp-invitasjon**              |
+| SMS etter kontaktforsøk          | Utenfor omfang; sendes manuelt                                     |
+| SMS dagen før formøte            | Utenfor omfang; krever strukturert formøte og scheduler            |
 | Møtedetaljer to dager før WorkOp | Legges øverst i eksisterende innlegg med **Sett inn møtedetaljer** |
-| SMS dagen før WorkOp | Utenfor omfang; krever scheduler og ny varselmal |
+| SMS dagen før WorkOp             | Utenfor omfang; krever scheduler og ny varselmal                   |
 
 Tekstene kan ikke brukes ordrett:
 
@@ -191,7 +191,7 @@ useRepubliser
 
 ## Senere behov
 
-### Flere innlegg som en meldingshistorikk
+### Flere innlegg
 
 Backend støtter en liste med innlegg, men resten av løsningen antar i stor
 grad ett innlegg:
@@ -208,30 +208,6 @@ grad ett innlegg:
 Ekte meldingshistorikk krever derfor en samlet løsning for opprettelse,
 redigering, sortering, tittel, KI-logg og varsling. Dette skal ikke bygges før
 brukererfaring viser at ett samlet innlegg er utilstrekkelig.
-
-En mulig senere utvidelse er å vise flere innlegg som en enkel
-meldingshistorikk. Markedskontakten kan da publisere en første
-WorkOp-invitasjon og senere legge til møtedetaljer som et nytt innlegg.
-Jobbsøkeren ser meldingene kronologisk, men kan ikke svare. Dette blir derfor
-en **monolog**, ikke en dialog.
-
-En minimumsløsning krever:
-
-1. En «Nytt innlegg»-handling og valg av hvilket innlegg som redigeres.
-2. Tittel og publiseringstidspunkt på hvert innlegg.
-3. Nyeste innlegg først, eller en tydelig kronologisk tidslinje.
-4. KI-validering og KI-logg koblet til riktig `innlegg_id`.
-5. Registrering av `INTRODUKSJON` når et nytt innlegg publiseres, slik at
-   dagens endringsvarsel kan gjenbrukes.
-6. Avklaring av om publiserte innlegg kan redigeres eller slettes. Av hensyn
-   til historikken bør hovedregelen være at nytt innhold publiseres som et
-   nytt innlegg.
-
-Dette gir bedre oversikt for jobbsøkeren og skiller invitasjon,
-formøteinformasjon og møtedetaljer uten å introdusere en ny dialogtjeneste.
-Det er likevel mer enn en liten frontend-endring, fordi både lagring,
-KI-sporbarhet, intern redigering og visningen i
-`rekrutteringstreff-bruker` må tilpasses samlet.
 
 ### Strukturert formøte
 
@@ -358,13 +334,13 @@ Disse spørsmålene kan vente til etter utprøving:
 
 ## Leveranseplan
 
-| Steg | Leveranse | Avhengighet |
-| --- | --- | --- |
-| 1 | Godkjenn og språkvask de to standardtekstene | Åpent spørsmål 4–6 |
-| 2 | Lag innsettingshandlinger og plassholdervalidering i frontend | Steg 1 |
-| 3 | Test publisering, republisering, KI-logg og endringsvarsel | Steg 2 |
-| 4 | Prøv løsningen på ett WorkOp og samle erfaring | Steg 3 |
-| 5 | Beslutt om senere behov skal prioriteres | Erfaring fra steg 4 |
+| Steg | Leveranse                                                     | Avhengighet         |
+| ---- | ------------------------------------------------------------- | ------------------- |
+| 1    | Godkjenn og språkvask de to standardtekstene                  | Åpent spørsmål 4–6  |
+| 2    | Lag innsettingshandlinger og plassholdervalidering i frontend | Steg 1              |
+| 3    | Test publisering, republisering, KI-logg og endringsvarsel    | Steg 2              |
+| 4    | Prøv løsningen på ett WorkOp og samle erfaring                | Steg 3              |
+| 5    | Beslutt om senere behov skal prioriteres                      | Erfaring fra steg 4 |
 
 ### Utrulling og rollback
 
@@ -387,12 +363,12 @@ innsettingshandlingene. Innlegg som allerede er opprettet påvirkes ikke.
 
 ## Review
 
-| Perspektiv | Vurdering | Begrunnelse |
-| --- | --- | --- |
-| Arkitektur | ✅ | Gjenbruker eksisterende innlegg og endringsflyt |
-| Sikkerhet og personvern | ✅ med avklaring | Ingen nye mottakere eller data; kontaktinfo må avklares |
-| Plattform | ✅ | Ingen nye topics, schedulere, databaser eller Nais-ressurser |
-| Endringssikkerhet | ✅ | Avgrenset frontend-endring med enkel rollback |
+| Perspektiv              | Vurdering        | Begrunnelse                                                  |
+| ----------------------- | ---------------- | ------------------------------------------------------------ |
+| Arkitektur              | ✅               | Gjenbruker eksisterende innlegg og endringsflyt              |
+| Sikkerhet og personvern | ✅ med avklaring | Ingen nye mottakere eller data; kontaktinfo må avklares      |
+| Plattform               | ✅               | Ingen nye topics, schedulere, databaser eller Nais-ressurser |
+| Endringssikkerhet       | ✅               | Avgrenset frontend-endring med enkel rollback                |
 
 **Konklusjon:** Gjennomfør den innleggbaserte første versjonen. Ikke bygg
 flere innlegg, strukturert formøte eller automatiske påminnelser før
