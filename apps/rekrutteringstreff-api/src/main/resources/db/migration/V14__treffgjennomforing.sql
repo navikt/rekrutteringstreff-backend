@@ -86,10 +86,3 @@ CREATE INDEX idx_interesse_arbeidsgiver ON interesse (arbeidsgiver_id);
 CREATE INDEX idx_intervju_fordeling_arbeidsgiver ON intervju_fordeling (arbeidsgiver_id);
 CREATE INDEX idx_vurdering_arbeidsgiver ON vurdering (arbeidsgiver_id);
 CREATE INDEX idx_vurdering_notat_vurdering ON vurdering_notat (vurdering_id);
-
-ALTER TABLE jobbsoker
-    ADD COLUMN oppmote text;
-
-CREATE INDEX idx_jobbsoker_oppmote
-    ON jobbsoker (rekrutteringstreff_id)
-    WHERE oppmote = 'REGISTRERT_OPPMØTE';
