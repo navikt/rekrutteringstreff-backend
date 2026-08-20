@@ -87,19 +87,6 @@ CREATE INDEX idx_intervju_fordeling_arbeidsgiver ON intervju_fordeling (arbeidsg
 CREATE INDEX idx_vurdering_arbeidsgiver ON vurdering (arbeidsgiver_id);
 CREATE INDEX idx_vurdering_notat_vurdering ON vurdering_notat (vurdering_id);
 
--- Oppmøtehendelsene ble prøvd ut i dev og forkastet. Navnene MØT_OPP/IKKE_MØT_OPP
--- er gamle verdier fra før hendelsestypene ble omdøpt, og tas med for å rydde helt opp.
-DELETE
-FROM aktivitetskort_polling
-WHERE jobbsoker_hendelse_id IN (SELECT jobbsoker_hendelse_id
-                                FROM jobbsoker_hendelse
-                                WHERE hendelsestype IN
-                                      ('MØTT_OPP', 'IKKE_MØTT_OPP', 'MØT_OPP', 'IKKE_MØT_OPP'));
-
-DELETE
-FROM jobbsoker_hendelse
-WHERE hendelsestype IN ('MØTT_OPP', 'IKKE_MØTT_OPP', 'MØT_OPP', 'IKKE_MØT_OPP');
-
 ALTER TABLE jobbsoker
     ADD COLUMN oppmote text;
 
