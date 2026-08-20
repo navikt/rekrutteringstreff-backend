@@ -60,7 +60,7 @@ class MøteplanService(
         val rotasjon = kontekst.arbeidsgiverTreffIder.mapIndexed { indeks, arbeidsgiver ->
             ArbeidsgiverRotasjon(arbeidsgiver, indeks)
         }
-        repository.lagreRotasjon(connection, rotasjon, kontekst)
+        repository.lagreArbeidsgiverRotasjon(connection, rotasjon, kontekst)
 
         hendelseWriter.forTreff(
             connection, kontekst.treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFØRING_OPPRETTET, navIdent,
@@ -77,7 +77,7 @@ class MøteplanService(
     fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, _ ->
             kontekst.krevWorkOp()
-            val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
+            val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             val ny = MøteplanValidering.romfordeling(rom, kontekst.antallRom, oppmøte)
 
             repository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)
