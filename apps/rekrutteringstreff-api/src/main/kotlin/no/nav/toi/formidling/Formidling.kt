@@ -16,4 +16,5 @@ data class Formidling(
     val kandidatlisteId: UUID?,
     val utfallSendtTidspunkt: ZonedDateTime?,
     val opprettetTidspunkt: ZonedDateTime,
+    val opprettetAvNavIdent: String?,
 )
