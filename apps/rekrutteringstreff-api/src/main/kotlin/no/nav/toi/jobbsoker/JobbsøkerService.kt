@@ -394,6 +394,17 @@ class JobbsøkerService(
             tilknyttedeEnheter,
         )
 
+    fun hentJobbsøkereForMittKontorForFormidling(
+        treffId: TreffId,
+        request: JobbsøkerFormidlingRequest,
+        tilknyttedeEnheter: List<String>,
+    ): JobbsøkerFormidlingRespons =
+        jobbsøkerFormidlingSokRepository.hentForMittKontorForFormidling(
+            treffId,
+            request,
+            tilknyttedeEnheter,
+        )
+
     private fun finnJobbsøkereSomSkalLagres(
         ønskedeJobbsøkere: List<LeggTilJobbsøker>,
         eksisterendeJobbsøkere: List<Jobbsøker>,

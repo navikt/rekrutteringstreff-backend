@@ -51,6 +51,15 @@ class FormidlingService(
     ): List<FormidlingDto> =
         formidlingRepository.hentEgneForTreff(treffId, veilederNavIdent, sortering, retning, arbeidsgivere)
 
+    fun hentFormidlingerForMittKontor(
+        treffId: TreffId,
+        tilknyttedeEnheter: List<String>,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> =
+        formidlingRepository.hentForMittKontorForTreff(treffId, tilknyttedeEnheter, sortering, retning, arbeidsgivere)
+
     fun opprettFormidling(
         treffId: TreffId,
         opprettFormidling: OpprettFormidlingDto,
