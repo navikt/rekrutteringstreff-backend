@@ -558,9 +558,6 @@ class TreffgjennomføringKomponentTest {
         return mapper.readTree(respons.body())
     }
 
-    private fun antallArbeidsgiverhendelser(treffId: TreffId, hendelsestype: String): Int =
-        db.hentArbeidsgiverHendelser(treffId).count { it.hendelsestype.name == hendelsestype }
-
     private fun antallArbeidsgiverhendelser(treffId: TreffId): Int =
         db.hentArbeidsgiverHendelser(treffId).size
 

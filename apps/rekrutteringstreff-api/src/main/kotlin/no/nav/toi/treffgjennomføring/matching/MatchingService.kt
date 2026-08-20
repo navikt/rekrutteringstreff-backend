@@ -33,7 +33,7 @@ class MatchingService(
             val arbeidsgiverId = kontekst.arbeidsgiverId(arbeidsgiver)
                 ?: throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
 
-            if (dto.interessert && person !in oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)) {
+            if (dto.interessert && person !in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)) {
                 throw BadRequestResponse("Bare fremmøtte jobbsøkere kan registrere interesse")
             }
 
@@ -73,7 +73,7 @@ class MatchingService(
         MatchingValidering.intervjufordeling(dto.inkludertePersonTreffIder, dto.ekskludertePersonTreffIder)
 
         val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
-        if (!kontekst.kjenner(arbeidsgiver)) throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
+        if (!kontekst.erArbeidsgiverPåTreff(arbeidsgiver)) throw BadRequestResponse("Arbeidsgiveren finnes ikke på treffet")
 
         val ny = ArbeidsgiverIntervjufordeling(
             arbeidsgiverTreffId = arbeidsgiver,
@@ -86,7 +86,7 @@ class MatchingService(
     }
 
     private fun List<PersonTreffId>.krevPåTreff(kontekst: Treffkontekst): List<PersonTreffId> = also {
-        firstOrNull { !kontekst.kjenner(it) }?.let {
+        firstOrNull { !kontekst.erPersonPåTreff(it) }?.let {
             throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
         }
     }
@@ -98,7 +98,7 @@ class MatchingService(
             val fordelinger = Intervjufordeler.fordel(
                 interesser = matching.interesser,
                 eksisterendeFordelinger = matching.intervjufordelinger,
-                arbeidsgivere = kontekst.arbeidsgiverIder,
+                arbeidsgivere = kontekst.arbeidsgiverTreffIder,
             )
             repository.erstattIntervjufordelinger(connection, fordelinger, kontekst)
 

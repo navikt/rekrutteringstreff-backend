@@ -29,15 +29,15 @@ object MøteplanValidering {
             throw BadRequestResponse("Romnumrene må være unike og dekke 1..$antallRom")
         }
 
-        val personer = rom.flatMap { it.jobbsøkere }.map { PersonTreffId(it) }
-        if (personer.size != personer.toSet().size) {
+        val personTreffIder = rom.flatMap { it.jobbsøkere }.map { PersonTreffId(it) }
+        if (personTreffIder.size != personTreffIder.toSet().size) {
             throw BadRequestResponse("En jobbsøker kan bare stå i ett rom")
         }
         val fremmøtte = oppmøte.toSet()
-        personer.firstOrNull { it !in fremmøtte }?.let {
+        personTreffIder.firstOrNull { it !in fremmøtte }?.let {
             throw BadRequestResponse("Bare fremmøtte jobbsøkere kan plasseres i rom")
         }
-        if (personer.size != fremmøtte.size) {
+        if (personTreffIder.size != fremmøtte.size) {
             throw BadRequestResponse("Alle fremmøtte jobbsøkere må plasseres i et rom")
         }
 

@@ -118,7 +118,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         reader = treffgjennomføringReader,
     )
     val oppmøteService = OppmøteService(
-        writer = treffgjennomføringWriter,
+        treffgjennomføringWriter = treffgjennomføringWriter,
         oppmøteRepository = oppmøteRepository,
         matchingRepository = matchingRepository,
         møteplanRepository = møteplanRepository,

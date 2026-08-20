@@ -50,17 +50,17 @@ class MøteplanService(
         nåværendeFase: TreffgjennomføringFase,
         navIdent: String,
     ) {
-        val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
+        val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
         if (oppmøte.isEmpty()) throw BadRequestResponse("Minst én jobbsøker må være registrert møtt")
         if (kontekst.arbeidsgivere.isEmpty()) throw BadRequestResponse("Treffet må ha minst én arbeidsgiver")
 
         val rom = Romfordeler.fordelJevnt(oppmøte, kontekst.antallRom)
         repository.erstattRomfordeling(connection, kontekst.treffDbId, rom, kontekst)
 
-        val rotasjon = kontekst.arbeidsgiverIder.mapIndexed { indeks, arbeidsgiver ->
+        val rotasjon = kontekst.arbeidsgiverTreffIder.mapIndexed { indeks, arbeidsgiver ->
             ArbeidsgiverRotasjon(arbeidsgiver, indeks)
         }
-        repository.lagreRotasjon(connection, rotasjon, kontekst)
+        repository.lagreArbeidsgiverRotasjon(connection, rotasjon, kontekst)
 
         hendelseWriter.forTreff(
             connection, kontekst.treffId, RekrutteringstreffHendelsestype.TREFFGJENNOMFØRING_OPPRETTET, navIdent,
@@ -77,7 +77,7 @@ class MøteplanService(
     fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, _ ->
             kontekst.krevWorkOp()
-            val oppmøte = oppmøteRepository.hentFremmøtte(connection, kontekst.treffDbId)
+            val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             val ny = MøteplanValidering.romfordeling(rom, kontekst.antallRom, oppmøte)
 
             repository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)

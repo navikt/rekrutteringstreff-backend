@@ -9,12 +9,12 @@ import java.time.LocalTime
 
 class MøteplanRepository {
 
-    fun hentFor(connection: Connection, kontekst: Treffkontekst, oppmøte: List<PersonTreffId>): Møteplan {
-        val lagretRom = hentRom(connection, kontekst.treffDbId)
+    fun hentMøteplan(connection: Connection, treffkontekst: Treffkontekst, oppmøte: List<PersonTreffId>): Møteplan {
+        val lagretRom = hentRom(connection, treffkontekst.treffDbId)
         return Møteplan(
-            møteoppsett = hentMøteoppsett(connection, kontekst.treffDbId) ?: Møteoppsett.standard(),
-            rom = normaliserRom(lagretRom, oppmøte, kontekst.antallRom),
-            arbeidsgiverRekkefølge = hentRotasjon(connection, kontekst),
+            møteoppsett = hentMøteoppsett(connection, treffkontekst.treffDbId) ?: Møteoppsett.standard(),
+            rom = normaliserRom(lagretRom, oppmøte, treffkontekst.antallRom),
+            arbeidsgiverRekkefølge = hentArbeidsgiverRotasjon(connection, treffkontekst),
         )
     }
 
@@ -56,25 +56,25 @@ class MøteplanRepository {
         }
     }
 
-    private fun hentRotasjon(connection: Connection, kontekst: Treffkontekst): List<ArbeidsgiverRotasjon> {
+    private fun hentArbeidsgiverRotasjon(connection: Connection, kontekst: Treffkontekst): List<ArbeidsgiverRotasjon> {
         val sql = """
             SELECT a.id::text, r.start_posisjon
             FROM arbeidsgiver_rotasjon r
             JOIN arbeidsgiver a ON a.arbeidsgiver_id = r.arbeidsgiver_id
             WHERE a.rekrutteringstreff_id = ? AND a.status = 'AKTIV'
         """.trimIndent()
-        val lagret = connection.prepareStatement(sql).use { stmt ->
+        val rotasjon = connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, kontekst.treffDbId)
             stmt.executeQuery().use { rs ->
                 rs.tilListe { ArbeidsgiverTreffId(it.getString(1)) to it.getInt(2) }.toMap()
             }
         }
-        if (lagret.isEmpty()) return emptyList()
+        if (rotasjon.isEmpty()) return emptyList()
 
-        val brukte = lagret.values.toMutableSet()
-        return kontekst.arbeidsgiverIder.map { arbeidsgiver ->
-            val posisjon = lagret[arbeidsgiver] ?: generateSequence(0) { it + 1 }.first { it !in brukte }
-            brukte.add(posisjon)
+        val brukteStartposisjoner = rotasjon.values.toMutableSet()
+        return kontekst.arbeidsgiverTreffIder.map { arbeidsgiver ->
+            val posisjon = rotasjon[arbeidsgiver] ?: generateSequence(0) { it + 1 }.first { it !in brukteStartposisjoner }
+            brukteStartposisjoner.add(posisjon)
             ArbeidsgiverRotasjon(arbeidsgiver, posisjon)
         }
     }
@@ -124,7 +124,7 @@ class MøteplanRepository {
         }
     }
 
-    fun lagreRotasjon(connection: Connection, rotasjoner: List<ArbeidsgiverRotasjon>, kontekst: Treffkontekst) {
+    fun lagreArbeidsgiverRotasjon(connection: Connection, rotasjoner: List<ArbeidsgiverRotasjon>, kontekst: Treffkontekst) {
         val sql = """
             INSERT INTO arbeidsgiver_rotasjon (arbeidsgiver_id, start_posisjon)
             VALUES (?, ?)
@@ -134,7 +134,7 @@ class MøteplanRepository {
             rotasjoner.forEach { rotasjon ->
                 val arbeidsgiverId = kontekst.arbeidsgiverId(rotasjon.arbeidsgiverTreffId) ?: return@forEach
                 stmt.setLong(1, arbeidsgiverId)
-                stmt.setInt(2, rotasjon.startPosisjon)
+                stmt.setInt(2, rotasjon.startposisjon)
                 stmt.addBatch()
             }
             stmt.executeBatch()

@@ -405,7 +405,7 @@ av sitt rom. Brukeren kan deretter flytte enkeltpersoner manuelt eller velge
 La `R` = antall rom og `E` = antall arbeidsgivere. Rotasjonen skjer over
 `P = maks(R, E)` posisjoner: posisjon `0 … R-1` er rommene, og eventuelle
 posisjoner `R … E-1` er **venteplasser** (benk). Hver arbeidsgiver har en
-`startPosisjon` (standard: arbeidsgiver på indeks `i` starter i posisjon `i`).
+`startposisjon` (standard: arbeidsgiver på indeks `i` starter i posisjon `i`).
 
 - Runde `t` (t = 0, 1, …, P-1): arbeidsgiverens posisjon = `(startPosisjon + t) mod P`.
   Er posisjonen et rom, presenterer arbeidsgiveren der; er den en venteplass,
@@ -787,7 +787,7 @@ også skriveoperasjonene, som alltid returnerer hele treffgjennomføringen.
 | `starttidspunkt`          | tekst                    | `HH:mm`, 24-timers                          |
 | `varighetPerMøteMinutter` | heltall                  | Minst 1                                     |
 | `oppmøte`                 | liste av `personTreffId` | Hvem som er registrert møtt                 |
-| `deltakernummer`          | liste                    | Nummeret på det fysiske kortet, se under    |
+| `deltakernumre`          | liste                    | Nummeret på det fysiske kortet, se under    |
 | `rom`                     | liste                    | Romnummer med ordnet jobbsøkerliste         |
 | `arbeidsgiverRekkefølge`  | liste                    | Startposisjon i rotasjonen per arbeidsgiver |
 | `interesser`              | liste av par             | Hvem som vil snakke med hvem                |
@@ -800,7 +800,7 @@ også skriveoperasjonene, som alltid returnerer hele treffgjennomføringen.
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `DeltakernummerDto`                | `personTreffId`, `nummer`                                                                                                    | 1-basert, gjenbrukes aldri                                                                            |
 | `RomDto`                           | `romnummer`, `jobbsøkere`                                                                                                    | Romnummer er 1-basert                                                                                 |
-| `ArbeidsgiverRotasjonDto`          | `arbeidsgiverTreffId`, `startPosisjon`                                                                                       | 0-basert; er den ≥ antall rom, står arbeidsgiveren på venteplass                                      |
+| `ArbeidsgiverRotasjonDto`          | `arbeidsgiverTreffId`, `startposisjon`                                                                                       | 0-basert; er den ≥ antall rom, står arbeidsgiveren på venteplass                                      |
 | `InteresseDto`                     | `personTreffId`, `arbeidsgiverTreffId`                                                                                       | Rent par, ingen tilleggsdata                                                                          |
 | `ArbeidsgiverIntervjufordelingDto` | `arbeidsgiverTreffId`, `inkludertePersonTreffIder`, `ekskludertePersonTreffIder`                                             | **Rekkefølgen i den inkluderte lista er plassnummeret.** Den er data, ikke presentasjon               |
 | `VurderingDto`                     | `personTreffId`, `arbeidsgiverTreffId`, `vurdering`, `notater`, `andregangsintervju`, `andregangsintervjuDato`, `jobbtilbud` | `vurdering` er nullbar (`AKTUELL`/`KANSKJE`/`IKKE_AKTUELL`), `andregangsintervjuDato` er nullbar dato |
@@ -840,7 +840,7 @@ variantene, slik at én treffgjennomføring ikke trenger to tilstandsmaskiner.
 - `notater` valideres bevisst **ikke** mot en enum i frontend-skjemaet. Legger
   backend til et nytt notat, vises det som ukjent verdi framfor å velte hele
   treffgjennomføringen. Backend eier lista og bør validere den.
-- `deltakernummer` er valgfritt i frontend-skjemaet. En treffgjennomføring uten lista
+- `deltakernumre` er valgfritt i frontend-skjemaet. En treffgjennomføring uten lista
   åpnes fortsatt, og navnene vises da uten nummer.
 - Backend bør avvise `andregangsintervjuDato` når `andregangsintervju` er
   `false`. Frontend rydder allerede, så dette er et vern mot andre klienter.
@@ -1078,7 +1078,7 @@ migrasjon og uten å fjerne noe. Frontend er allerede lagt om til de nye feltene
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `treffgjennomforing`      | 1:1 med treff: `rekrutteringstreff_id` (unik FK) og `fase`. Ingenting annet                                                     | Begge   |
 | `moteoppsett`             | 1:1 med treffgjennomføring: `start_tidspunkt`, `varighet_min`                                                                   | WorkOp  |
-| `deltakernummer`          | `rekrutteringstreff_id`, `jobbsoker_id`, `nummer` — unik på (treff, nummer) og (treff, jobbsoker)                               | WorkOp  |
+| `deltakernumre`          | `rekrutteringstreff_id`, `jobbsoker_id`, `nummer` — unik på (treff, nummer) og (treff, jobbsoker)                               | WorkOp  |
 | `jobbsoker_rom_tildeling` | `rekrutteringstreff_id`, `jobbsoker_id`, `romnummer`                                                                            | WorkOp  |
 | `arbeidsgiver_rotasjon`   | `arbeidsgiver_id`, `start_posisjon`                                                                                             | WorkOp  |
 | `interesse`               | `jobbsoker_id`, `arbeidsgiver_id`                                                                                               | Begge   |
@@ -1242,13 +1242,13 @@ Noen valg diagrammet ikke viser av seg selv:
   skal ikke ha rader med `10:00` og `10` liggende som om noen hadde bestemt
   det. Fraværet av en `moteoppsett`-rad betyr «ingen møteplan», og det er en
   mer ærlig tilstand enn standardverdier ingen har valgt.
-- **`jobbsoker_rom_tildeling` og `deltakernummer` peker på treffet i tillegg til
+- **`jobbsoker_rom_tildeling` og `deltakernumre` peker på treffet i tillegg til
   jobbsøkeren**, selv om jobbsøkeren allerede tilhører ett treff. Det gjør
   unikhetskravene mulige å uttrykke direkte: ett rom per person per treff, og én
   nummerserie per treff. Uten kolonnen måtte «nummer 3 finnes bare én gang på
   dette treffet» håndheves med en join i en partiell indeks eller i
   applikasjonskoden — begge deler er svakere vern enn en `UNIQUE`.
-- **`deltakernummer` har ikke noe tildelingstidspunkt.** Kolonnen ville vært en
+- **`deltakernumre` har ikke noe tildelingstidspunkt.** Kolonnen ville vært en
   parallell, taus hendelseslogg ved siden av `jobbsoker_hendelse`. Nummeret
   deles ut i samme operasjon som oppmøtet registreres, og det tidspunktet står
   allerede på hendelsen — sammen med hvem som gjorde det, som en kolonne på
@@ -1311,7 +1311,7 @@ kolonne uten avsender.
 
 ##### Deltakernummer
 
-`deltakernummer` er en egen tabell og ikke en kolonne på oppmøtehendelsen. Det er
+`deltakernumre` er en egen tabell og ikke en kolonne på oppmøtehendelsen. Det er
 nettopp separasjonen som gir persistensen: nummeret skal overleve at oppmøtet
 fjernes og settes på nytt.
 
@@ -1324,7 +1324,7 @@ regelen:
   heller ikke late som.
 - **Neste nummer er høyeste brukte pluss én**, talt innenfor treffet — ikke
   antall rader.
-- **Aldri gjenbruk.** Fjernes oppmøtet, blir raden i `deltakernummer` stående,
+- **Aldri gjenbruk.** Fjernes oppmøtet, blir raden i `deltakernumre` stående,
   og neste person i døra får et nytt nummer. Hull i rekka er derfor forventet og
   riktig: nummeret står på et fysisk kort som allerede er delt ut, og samme
   kortnummer skal aldri peke på to personer i løpet av dagen.
@@ -1422,7 +1422,7 @@ Nye verdier i `JobbsøkerHendelsestype`:
 
 | Type                              | Når                             | `hendelse_data`                                                                       |
 | --------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `MØTT_OPP`                        | Oppmøte registreres             | `deltakernummer` – nummeret på kortet personen fikk                                   |
+| `MØTT_OPP`                        | Oppmøte registreres             | `deltakernumre` – nummeret på kortet personen fikk                                   |
 | `ANGRE_MØTT_OPP`                  | Oppmøte fjernes                 | Antall registreringer som ble slettet: `interesser`, `intervjuplasser`, `vurderinger` |
 | `PLASSERT_I_ROM`                  | Rommet settes eller endres      | `romnummer`, `forrigeRomnummer` (`null` første gang). Kun WorkOp                      |
 | `INTERESSE_REGISTRERT`            | Interesse krysses av            | `arbeidsgiverTreffId`                                                                 |
@@ -1481,7 +1481,7 @@ Nye verdier i `ArbeidsgiverHendelsestype`:
 | `ANGRE_ANDREGANGSINTERVJU_AVTALT` | Krysset fjernes                 | `personTreffId`                                                     |
 | `JOBBTILBUD_GITT`                 | Jobbtilbud krysses av           | `personTreffId`                                                     |
 | `ANGRE_JOBBTILBUD_GITT`           | Krysset fjernes                 | `personTreffId`                                                     |
-| `ROTASJON_TILDELT`                | Møteplanen opprettes            | `startPosisjon` – hvor arbeidsgiveren begynner i runden. Kun WorkOp |
+| `ROTASJON_TILDELT`                | Møteplanen opprettes            | `startposisjon` – hvor arbeidsgiveren begynner i runden. Kun WorkOp |
 
 Registreringene i steg 3, 4 og 5 gjelder et **par**, og skrives derfor begge
 steder: én rad på jobbsøkeren og én på arbeidsgiveren, i samme transaksjon. Det er bevisst

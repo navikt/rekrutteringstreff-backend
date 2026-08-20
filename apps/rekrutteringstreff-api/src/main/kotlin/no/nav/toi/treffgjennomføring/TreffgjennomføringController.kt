@@ -25,7 +25,6 @@ import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomføring.dto.RomDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
-import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import java.util.*
 
 class TreffgjennomføringController(
@@ -53,31 +52,31 @@ class TreffgjennomføringController(
         private const val ARBEIDSGIVER_ID = "22222222-2222-2222-2222-222222222222"
 
         const val AGGREGAT_EKSEMPEL = """{
-  "rekrutteringstreffId": "33333333-3333-3333-3333-333333333333",
-  "fase": "VURDERING",
-  "antallRom": 1,
-  "starttidspunkt": "09:00",
-  "varighetPerMøteMinutter": 15,
-  "oppmøte": ["$PERSON_ID"],
-  "deltakernummer": [{"personTreffId": "$PERSON_ID", "nummer": 1}],
-  "rom": [{"romnummer": 1, "jobbsøkere": ["$PERSON_ID"]}],
-  "arbeidsgiverRekkefølge": [{"arbeidsgiverTreffId": "$ARBEIDSGIVER_ID", "startPosisjon": 0}],
-  "interesser": [{"personTreffId": "$PERSON_ID", "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID"}],
-  "intervjufordelinger": [{
-    "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID",
-    "inkludertePersonTreffIder": ["$PERSON_ID"],
-    "ekskludertePersonTreffIder": []
-  }],
-  "vurderinger": [{
-    "personTreffId": "$PERSON_ID",
-    "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID",
-    "vurdering": "AKTUELL",
-    "notater": ["AG_GODT_INNTRYKK"],
-    "andregangsintervju": true,
-    "andregangsintervjuDato": "2026-09-01",
-    "jobbtilbud": false
-  }]
-}"""
+              "rekrutteringstreffId": "33333333-3333-3333-3333-333333333333",
+              "fase": "VURDERING",
+              "antallRom": 1,
+              "starttidspunkt": "09:00",
+              "varighetPerMøteMinutter": 15,
+              "oppmøte": ["$PERSON_ID"],
+              "deltakernummer": [{"personTreffId": "$PERSON_ID", "nummer": 1}],
+              "rom": [{"romnummer": 1, "jobbsøkere": ["$PERSON_ID"]}],
+              "arbeidsgiverRekkefølge": [{"arbeidsgiverTreffId": "$ARBEIDSGIVER_ID", "startPosisjon": 0}],
+              "interesser": [{"personTreffId": "$PERSON_ID", "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID"}],
+              "intervjufordelinger": [{
+                "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID",
+                "inkludertePersonTreffIder": ["$PERSON_ID"],
+                "ekskludertePersonTreffIder": []
+              }],
+              "vurderinger": [{
+                "personTreffId": "$PERSON_ID",
+                "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID",
+                "vurdering": "AKTUELL",
+                "notater": ["AG_GODT_INNTRYKK"],
+                "andregangsintervju": true,
+                "andregangsintervjuDato": "2026-09-01",
+                "jobbtilbud": false
+              }]
+            }"""
     }
 
     override fun registrer(routes: JavalinDefaultRoutingApi) {
@@ -182,7 +181,7 @@ class TreffgjennomføringController(
     }
 
     @OpenApi(
-        summary = "Sett eller fjern ett interessepar. Idempotent",
+        summary = "Sett eller fjern ett interessepar",
         operationId = "settInteresse",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],

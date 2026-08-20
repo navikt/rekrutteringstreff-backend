@@ -9,7 +9,7 @@ data class Deltakernummer(val personTreffId: PersonTreffId, val nummer: Int)
 
 class OppmøteRepository {
 
-    fun hentFremmøtte(connection: Connection, treffDbId: Long): List<PersonTreffId> {
+    fun hentFremmøtteJobbsøkere(connection: Connection, treffDbId: Long): List<PersonTreffId> {
         val sql = """
             SELECT j.id::text
             FROM jobbsoker j
@@ -26,7 +26,7 @@ class OppmøteRepository {
         }
     }
 
-    fun hentDeltakernummer(connection: Connection, treffDbId: Long): List<Deltakernummer> {
+    fun hentDeltakernumre(connection: Connection, treffDbId: Long): List<Deltakernummer> {
         val sql = """
             SELECT j.id::text, d.nummer
             FROM deltakernummer d
@@ -55,10 +55,10 @@ class OppmøteRepository {
             stmt.setLong(3, treffDbId)
             stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else null }
         }
-        return nytt ?: hentNummerFor(connection, treffDbId, jobbsøkerId)
+        return nytt ?: hentDeltakernummerFor(connection, treffDbId, jobbsøkerId)
     }
 
-    private fun hentNummerFor(connection: Connection, treffDbId: Long, jobbsøkerId: Long): Int {
+    private fun hentDeltakernummerFor(connection: Connection, treffDbId: Long, jobbsøkerId: Long): Int {
         val sql = "SELECT nummer FROM deltakernummer WHERE rekrutteringstreff_id = ? AND jobbsoker_id = ?"
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)

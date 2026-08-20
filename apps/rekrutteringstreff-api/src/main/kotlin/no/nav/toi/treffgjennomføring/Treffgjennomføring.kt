@@ -13,7 +13,7 @@ data class Treffgjennomføring(
     val fase: TreffgjennomføringFase,
     val antallRom: Int,
     val oppmøte: List<PersonTreffId>,
-    val deltakernummer: List<Deltakernummer>,
+    val deltakernumre: List<Deltakernummer>,
     val møteplan: Møteplan,
     val matching: Matching,
 ) {

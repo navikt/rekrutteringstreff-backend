@@ -53,7 +53,7 @@ class MatchingRepository {
             }
         }
         val perArbeidsgiver = rader.groupBy { it.first }
-        return kontekst.arbeidsgiverIder.mapNotNull { arbeidsgiver ->
+        return kontekst.arbeidsgiverTreffIder.mapNotNull { arbeidsgiver ->
             val egne = perArbeidsgiver[arbeidsgiver] ?: return@mapNotNull null
             ArbeidsgiverIntervjufordeling(
                 arbeidsgiverTreffId = arbeidsgiver,

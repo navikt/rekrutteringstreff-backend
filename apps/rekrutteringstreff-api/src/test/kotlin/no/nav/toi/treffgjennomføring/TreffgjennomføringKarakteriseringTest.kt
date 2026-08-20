@@ -81,7 +81,7 @@ class TreffgjennomføringKarakteriseringTest {
     )
 
     private val oppmøteService = OppmøteService(
-        writer = writer,
+        treffgjennomføringWriter = writer,
         oppmøteRepository = oppmøteRepository,
         matchingRepository = matchingRepository,
         møteplanRepository = møteplanRepository,

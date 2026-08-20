@@ -61,7 +61,7 @@ class TreffgjennomføringReaderTest {
         mapper,
     )
     private val oppmøteService = OppmøteService(
-        writer = writer,
+        treffgjennomføringWriter = writer,
         oppmøteRepository = oppmøteRepository,
         matchingRepository = matchingRepository,
         møteplanRepository = møteplanRepository,
@@ -107,7 +107,7 @@ class TreffgjennomføringReaderTest {
 
         val dto = db.dataSource.connection.use { conn -> reader.les(conn, kontekst) }
         val oppmøte = db.dataSource.connection.use { conn ->
-            oppmøteRepository.hentFremmøtte(conn, kontekst.treffDbId)
+            oppmøteRepository.hentFremmøtteJobbsøkere(conn, kontekst.treffDbId)
         }
 
         assertThat(dto.rekrutteringstreffId).isEqualTo(treff.somString)
@@ -170,6 +170,6 @@ class TreffgjennomføringReaderTest {
         oppmøteService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, true), navIdent)
 
     private fun hentKontekst(treffId: TreffId): Treffkontekst = db.dataSource.connection.use { conn ->
-        kontekstRepository.hent(conn, treffId)!!
+        kontekstRepository.hentTreffkontekst(conn, treffId)!!
     }
 }

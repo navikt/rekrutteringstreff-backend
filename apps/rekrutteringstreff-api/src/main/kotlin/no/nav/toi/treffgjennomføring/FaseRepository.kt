@@ -16,10 +16,6 @@ class FaseRepository {
         }
     }
 
-    /**
-     * Oppretter raden hvis den mangler. Møteoppsettet trenger `treffgjennomforing_id`
-     * på grunn av fremmednøkkelen. Serialiseringa tas av [no.nav.toi.låsTreff].
-     */
     fun sikreRad(connection: Connection, treffDbId: Long): Treffgjennomføringsrad {
         val sql = """
             INSERT INTO treffgjennomforing (rekrutteringstreff_id, fase)
@@ -37,16 +33,15 @@ class FaseRepository {
         }
     }
 
-    /** Fasen går bare framover — en lavere fase enn den lagrede er en no-op. */
     fun settFase(
         connection: Connection,
         treffDbId: Long,
-        nåværende: TreffgjennomføringFase,
-        ny: TreffgjennomføringFase,
+        nåværendeFase: TreffgjennomføringFase,
+        nyFase: TreffgjennomføringFase,
     ) {
-        if (ny.ordinal <= nåværende.ordinal) return
+        if (nyFase.ordinal <= nåværendeFase.ordinal) return
         connection.prepareStatement("UPDATE treffgjennomforing SET fase = ? WHERE rekrutteringstreff_id = ?").use { stmt ->
-            stmt.setString(1, ny.name)
+            stmt.setString(1, nyFase.name)
             stmt.setLong(2, treffDbId)
             stmt.executeUpdate()
         }

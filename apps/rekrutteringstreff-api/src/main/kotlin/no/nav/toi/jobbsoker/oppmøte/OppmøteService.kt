@@ -14,12 +14,8 @@ import no.nav.toi.treffgjennomføring.matching.MatchingRepository
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import java.sql.Connection
 
-/**
- * Eier hele oppmøteoperasjonen: statusoppdatering, hendelse, deltakernummer og
- * kaskadesletting skjer i én transaksjon (via [TreffgjennomføringWriter]).
- */
 class OppmøteService(
-    private val writer: TreffgjennomføringWriter,
+    private val treffgjennomføringWriter: TreffgjennomføringWriter,
     private val oppmøteRepository: OppmøteRepository,
     private val matchingRepository: MatchingRepository,
     private val møteplanRepository: MøteplanRepository,
@@ -27,41 +23,41 @@ class OppmøteService(
     private val hendelseWriter: HendelseWriter,
 ) {
 
-    fun oppdaterOppmøte(treffId: TreffId, dto: OppmøteRequestDto, navIdent: String): TreffgjennomføringDto =
-        writer.skriv(treffId) { connection, kontekst, _ ->
-            val person = PersonTreffId(dto.personTreffId)
-            val jobbsøkerId = kontekst.jobbsøkerId(person)
+    fun oppdaterOppmøte(treffId: TreffId, oppmøteRequestDto: OppmøteRequestDto, navIdent: String): TreffgjennomføringDto =
+        treffgjennomføringWriter.skriv(treffId) { connection, kontekst, _ ->
+            val personTreffId = PersonTreffId(oppmøteRequestDto.personTreffId)
+            val jobbsøkerId = kontekst.jobbsøkerId(personTreffId)
                 ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
 
-            val harMøtt = oppmøteRepository.hentOppmøte(connection, person)?.harMøtt == true
-            if (dto.møtt != harMøtt) {
-                if (dto.møtt) registrerOppmøte(connection, kontekst, person, jobbsøkerId, navIdent)
-                else fjernOppmøte(connection, person, jobbsøkerId, dto.bekreftSlettRegistreringer, navIdent)
+            val harMøtt = oppmøteRepository.hentOppmøte(connection, personTreffId)?.harMøtt == true
+            if (oppmøteRequestDto.møtt != harMøtt) {
+                if (oppmøteRequestDto.møtt) registrerOppmøte(connection, kontekst, personTreffId, jobbsøkerId, navIdent)
+                else fjernOppmøte(connection, personTreffId, jobbsøkerId, oppmøteRequestDto.bekreftSlettRegistreringer, navIdent)
             }
         }
 
     private fun registrerOppmøte(
         connection: Connection,
-        kontekst: Treffkontekst,
-        person: PersonTreffId,
+        treffkontekst: Treffkontekst,
+        personTreffId: PersonTreffId,
         jobbsøkerId: Long,
         navIdent: String,
     ) {
         val deltakernummer =
-            if (kontekst.erWorkOp) {
-                oppmøteRepository.tildelDeltakernummer(connection, kontekst.treffDbId, jobbsøkerId)
+            if (treffkontekst.erWorkOp) {
+                oppmøteRepository.tildelDeltakernummer(connection, treffkontekst.treffDbId, jobbsøkerId)
             } else null
 
-        oppmøteRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE)
+        oppmøteRepository.settOppmøte(connection, personTreffId, Oppmøte.REGISTRERT_OPPMØTE)
         hendelseWriter.forJobbsøker(
-            connection, person, Oppmøte.REGISTRERT_OPPMØTE.hendelsestype, navIdent,
+            connection, personTreffId, Oppmøte.REGISTRERT_OPPMØTE.hendelsestype, navIdent,
             deltakernummer?.let { mapOf("deltakernummer" to it) } ?: emptyMap(),
         )
     }
 
     private fun fjernOppmøte(
         connection: Connection,
-        person: PersonTreffId,
+        personTreffId: PersonTreffId,
         jobbsøkerId: Long,
         bekreftet: Boolean,
         navIdent: String,
@@ -72,14 +68,14 @@ class OppmøteService(
             intervjuplasser = intervjuplasser,
             vurderinger = oppfølgingRepository.tellForJobbsøker(connection, jobbsøkerId),
         )
-        if (registreringer.finnesNoen() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
+        if (registreringer.finnesRegistreringer() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
 
         matchingRepository.slettForJobbsøker(connection, jobbsøkerId)
         møteplanRepository.slettRomForJobbsøker(connection, jobbsøkerId)
         oppfølgingRepository.slettForJobbsøker(connection, jobbsøkerId)
-        oppmøteRepository.settOppmøte(connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
+        oppmøteRepository.settOppmøte(connection, personTreffId, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
         hendelseWriter.forJobbsøker(
-            connection, person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET.hendelsestype, navIdent,
+            connection, personTreffId, Oppmøte.REGISTRERT_OPPMØTE_FJERNET.hendelsestype, navIdent,
             mapOf(
                 "interesser" to registreringer.interesser,
                 "intervjuplasser" to registreringer.intervjuplasser,
