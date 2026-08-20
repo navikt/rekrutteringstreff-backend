@@ -11,8 +11,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.Repository
 import no.nav.toi.SecureLog
-import no.nav.toi.aktivitetskort.AktivitetsStatus
-import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.log
 
 class KandidatlisteLukketLytter(
@@ -53,18 +51,12 @@ class KandidatlisteLukketLytter(
         val stillingsId = packet["stillingsId"].asText().toUUID()
         val navIdent = packet["utførtAvNavIdent"].asText()
 
-        fnrFikkIkkeJobben
-            .mapNotNull { fnr -> repository.hentAktivitetskortIdForDeltStilling(fnr, stillingsId) }
-            // Mirror kandidat-api behavior: only candidates with JA-svar are updated when list closes.
-            .filter { aktivitetskortId -> repository.hentSisteAktivitetsstatus(aktivitetskortId) == AktivitetsStatus.GJENNOMFORES }
-            .forEach { aktivitetskortId ->
-                repository.oppdaterAktivitetsstatus(
-                    aktivitetskortId = aktivitetskortId,
-                    aktivitetsStatus = AktivitetsStatus.FULLFORT,
-                    endretAv = navIdent,
-                    endretAvType = EndretAvType.NAVIDENT,
-                )
-            }
+        // Mirror kandidat-api behavior: only candidates with JA-svar are updated when list closes.
+        repository.veilederLukkerKandidatliste(
+            stillingId = stillingsId,
+            fnr = fnrFikkIkkeJobben,
+            endretAv = navIdent,
+        )
 
         if (!noenFikkJobben) {
             log.info("Kandidatliste lukket uten treff: stillingsId=$stillingsId")

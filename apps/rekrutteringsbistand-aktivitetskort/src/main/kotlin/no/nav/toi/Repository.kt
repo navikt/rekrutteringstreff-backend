@@ -2,6 +2,7 @@ package no.nav.toi
 
 import no.nav.toi.aktivitetskort.*
 import org.flywaydb.core.Flyway
+import java.sql.Statement
 import java.sql.Timestamp
 import java.sql.Types.VARCHAR
 import java.time.LocalDate
@@ -313,6 +314,116 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 return@use null
             }
             resultSet.getString("aktivitets_status").let(::enumValueOf)
+        }
+    }
+
+    fun veilederLukkerKandidatliste(
+        stillingId: UUID,
+        fnr: List<String>,
+        endretAv: String,
+    ) {
+        val unikeFnr = fnr.distinct()
+        if (unikeFnr.isEmpty()) return
+
+        dataSource.connection.use { connection ->
+            try {
+                connection.autoCommit = false
+
+                val aktivitetskortIder = connection.prepareStatement(
+                    """
+                    SELECT DISTINCT delt_stilling.aktivitetskort_id
+                    FROM delt_stilling
+                    JOIN LATERAL (
+                        SELECT aktivitets_status
+                        FROM aktivitetskort
+                        WHERE aktivitetskort_id = delt_stilling.aktivitetskort_id
+                        ORDER BY endret_tidspunkt DESC, db_id DESC
+                        LIMIT 1
+                    ) siste_aktivitetskort ON true
+                    WHERE delt_stilling.stilling_id = ?
+                      AND delt_stilling.fnr = ANY (?)
+                      AND siste_aktivitetskort.aktivitets_status = ?
+                    """.trimIndent()
+                ).use { statement ->
+                    statement.setObject(1, stillingId)
+                    connection.createArrayOf("text", unikeFnr.toTypedArray()).let { fnrArray ->
+                        try {
+                            statement.setArray(2, fnrArray)
+                            statement.setString(3, AktivitetsStatus.GJENNOMFORES.name)
+                            statement.executeQuery().use { resultSet ->
+                                generateSequence {
+                                    if (resultSet.next()) resultSet.getObject("aktivitetskort_id", UUID::class.java) else null
+                                }.toList()
+                            }
+                        } finally {
+                            fnrArray.free()
+                        }
+                    }
+                }
+
+                if (aktivitetskortIder.isNotEmpty()) {
+                    val endretTidspunkt = Timestamp.valueOf(LocalDateTime.now())
+                    connection.prepareStatement(
+                        """
+                        INSERT INTO aktivitetskort
+                        (message_id, aktivitetskort_id, fnr, tittel, aktivitets_status, beskrivelse, start_dato,
+                        slutt_dato, detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav, endret_av,
+                        endret_av_type, endret_tidspunkt, aktivitetskort_type)
+                        SELECT
+                            ?,
+                            siste_aktivitetskort.aktivitetskort_id,
+                            siste_aktivitetskort.fnr,
+                            siste_aktivitetskort.tittel,
+                            ?,
+                            siste_aktivitetskort.beskrivelse,
+                            siste_aktivitetskort.start_dato,
+                            siste_aktivitetskort.slutt_dato,
+                            siste_aktivitetskort.detaljer,
+                            siste_aktivitetskort.handlinger,
+                            siste_aktivitetskort.etiketter,
+                            siste_aktivitetskort.oppgave,
+                            siste_aktivitetskort.action_type,
+                            siste_aktivitetskort.avtalt_med_nav,
+                            ?,
+                            ?,
+                            ?,
+                            siste_aktivitetskort.aktivitetskort_type
+                        FROM (
+                            SELECT *
+                            FROM aktivitetskort
+                            WHERE aktivitetskort_id = ?
+                            ORDER BY endret_tidspunkt DESC, db_id DESC
+                            LIMIT 1
+                        ) siste_aktivitetskort
+                        WHERE siste_aktivitetskort.aktivitets_status = ?
+                        """.trimIndent()
+                    ).use { statement ->
+                        aktivitetskortIder.forEach { aktivitetskortId ->
+                            statement.setObject(1, UUID.randomUUID())
+                            statement.setString(2, AktivitetsStatus.FULLFORT.name)
+                            statement.setString(3, endretAv)
+                            statement.setString(4, EndretAvType.NAVIDENT.name)
+                            statement.setTimestamp(5, endretTidspunkt)
+                            statement.setObject(6, aktivitetskortId)
+                            statement.setString(7, AktivitetsStatus.GJENNOMFORES.name)
+                            statement.addBatch()
+                        }
+
+                        statement.executeBatch().forEach { rowsUpdated ->
+                            check(rowsUpdated == 0 || rowsUpdated == 1 || rowsUpdated == Statement.SUCCESS_NO_INFO) {
+                                "$rowsUpdated rader oppdatert ved lukking av kandidatliste, forventet maksimalt 1 rad"
+                            }
+                        }
+                    }
+                }
+
+                connection.commit()
+            } catch (e: Exception) {
+                connection.rollback()
+                throw e
+            } finally {
+                connection.autoCommit = true
+            }
         }
     }
 

@@ -384,6 +384,82 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         assertThat(neiKandidatHendelser).hasSize(2)
     }
 
+    @Test
+    fun `lukket kandidatliste skal fullføre flere kandidater samlet og være idempotent`() {
+        val stillingId = UUID.randomUUID()
+        val fnr1 = "01010012345"
+        val fnr2 = "02020012345"
+
+        listOf(fnr1, fnr2).forEach { fnr ->
+            repository.opprettDeltStilling(
+                fnr = fnr,
+                stillingId = stillingId.toString(),
+                tittel = "Test Stilling",
+                opprettetAv = "Z123456",
+                arbeidsgiver = "Test Arbeidsgiver",
+                arbeidssted = "Oslo",
+            )
+            rapid.sendTestMessage(
+                svarMelding(
+                    eventName = "rekrutteringsbistandstilling-bruker-svarer-ja-til-deling-av-cv",
+                    fnr = fnr,
+                    stillingId = stillingId,
+                    svar = true,
+                )
+            )
+        }
+
+        rapid.sendTestMessage(
+            lukketKandidatlisteMelding(
+                stillingId = stillingId,
+                navIdent = "Z999999",
+                fnrFikkJobben = emptyList(),
+                fnrFikkIkkeJobben = listOf(fnr1, fnr1, fnr2, "ukjent-fnr"),
+            )
+        )
+
+        val fullfortHendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
+            .filter { it.aktivitetsStatus == AktivitetsStatus.FULLFORT.name }
+        assertThat(fullfortHendelser).hasSize(2)
+        assertThat(fullfortHendelser.map { it.fnr }).containsExactlyInAnyOrder(fnr1, fnr2)
+        assertThat(fullfortHendelser.map { it.opprettetAv }).containsOnly("Z999999")
+        assertThat(fullfortHendelser.map { it.opprettetAvType }).containsOnly(EndretAvType.NAVIDENT.name)
+        assertThat(fullfortHendelser.map { it.opprettetTidspunkt }.distinct()).hasSize(1)
+        assertThat(fullfortHendelser.map { it.messageId }).doesNotHaveDuplicates()
+        val opprettetTidspunkt = fullfortHendelser.map { it.opprettetTidspunkt }.distinct().first()
+
+        rapid.sendTestMessage(
+            lukketKandidatlisteMelding(
+                stillingId = stillingId,
+                navIdent = "Z888888",
+                fnrFikkJobben = emptyList(),
+                fnrFikkIkkeJobben = listOf(fnr1, fnr2),
+            )
+        )
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger())
+            .filteredOn { it.aktivitetsStatus == AktivitetsStatus.FULLFORT.name }
+            .hasSize(2)
+            .filteredOn { it.opprettetTidspunkt == opprettetTidspunkt }
+            .hasSize(2)
+    }
+
+    @Test
+    fun `lukket kandidatliste uten kandidater skal ikke oppdatere databasen men markere hendelseskjeden som ferdig`() {
+        rapid.sendTestMessage(
+            lukketKandidatlisteMelding(
+                stillingId = UUID.randomUUID(),
+                navIdent = "Z999999",
+                fnrFikkJobben = emptyList(),
+                fnrFikkIkkeJobben = emptyList(),
+            )
+        )
+
+        assertThat(testRepository.hentAlleRekrutteringsbistandStillinger()).isEmpty()
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        assertThat(rapid.inspektør.message(0)["@slutt_av_hendelseskjede"].asBoolean()).isTrue()
+    }
+
     private fun testSvarPåDelingAvCv(
         eventName: String,
         svar: Boolean,
