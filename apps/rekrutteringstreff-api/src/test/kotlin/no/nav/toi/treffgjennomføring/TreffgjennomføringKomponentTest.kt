@@ -597,7 +597,7 @@ class TreffgjennomføringKomponentTest {
 
     private fun deltakernummer(treffId: TreffId): Map<String, Int> =
         aggregat(treffId)["deltakernummer"]
-            .associate { it["personTreffId"].asText() to it["nummer"].asInt() }
+            .associate { it["personTreffId"].asText() to it["deltakernummer"].asInt() }
 
     private fun antallTreffgjennomføringsrader(): Int = db.dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT COUNT(*) FROM treffgjennomforing").executeQuery().use {

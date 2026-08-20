@@ -115,7 +115,7 @@ class TreffgjennomføringPersisteringTest {
     }
 
     @Test
-    fun `romfordeling lagres med rekkefølge og leses tilbake`() {
+    fun `romfordeling lagres og leses tilbake sortert på deltakernummer`() {
         val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
         arbeidsgiver(treff, "999999991")
         arbeidsgiver(treff, "999999992")
@@ -134,7 +134,7 @@ class TreffgjennomføringPersisteringTest {
 
         val rom = les(treff).rom
         assertThat(rom).hasSize(2)
-        assertThat(rom.first { it.romnummer == 1 }.jobbsøkere).containsExactly(p2.somString, p1.somString)
+        assertThat(rom.first { it.romnummer == 1 }.jobbsøkere).containsExactly(p1.somString, p2.somString)
         assertThat(rom.first { it.romnummer == 2 }.jobbsøkere).isEmpty()
     }
 

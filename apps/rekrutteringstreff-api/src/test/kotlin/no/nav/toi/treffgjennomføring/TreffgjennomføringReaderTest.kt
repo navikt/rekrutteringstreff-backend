@@ -37,7 +37,7 @@ import java.sql.Connection
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TreffgjennomføringReaderTest {
 
-    private val forventetAntallSpørringer = 10
+    private val forventetAntallSpørringer = 9
 
     private val db = TestDatabase()
     private val mapper = JacksonConfig.mapper
