@@ -85,7 +85,7 @@ object ExceptionMapping {
                     status = HttpStatus.BAD_REQUEST,
                     ctx = ctx,
                     feil = "Klarte ikke å lese request-body til forventet format.",
-                    hint = "Body må være JSON som matcher skjemaet for OppdaterRekrutteringstreffDto. Dato/tid må inkludere tidsone (f.eks. +02:00)."
+                    hint = "Body må være JSON som matcher skjemaet for endepunktet. Dato/tid må inkludere tidsone (f.eks. +02:00)."
                 )
             )
         }

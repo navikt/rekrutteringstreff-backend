@@ -48,5 +48,6 @@ class StegRepository {
     }
 
     private fun tilSteg(verdi: String?) =
-        TreffgjennomføringSteg.entries.firstOrNull { it.name == verdi } ?: TreffgjennomføringSteg.OPPMØTE
+        TreffgjennomføringSteg.entries.firstOrNull { it.name == verdi }
+            ?: throw IllegalStateException("Ukjent gjeldende_steg i databasen: $verdi")
 }
