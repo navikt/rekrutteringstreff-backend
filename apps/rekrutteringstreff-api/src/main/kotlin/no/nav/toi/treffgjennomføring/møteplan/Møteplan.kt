@@ -15,7 +15,7 @@ data class Møteoppsett(val starttidspunkt: LocalTime, val varighetPerMøteMinut
 
 data class Rom(val romnummer: Int, val jobbsøkere: List<PersonTreffId>)
 
-data class ArbeidsgiverRotasjon(val arbeidsgiverTreffId: ArbeidsgiverTreffId, val startposisjon: Int)
+data class ArbeidsgiverRotasjon(val arbeidsgiverTreffId: ArbeidsgiverTreffId, val førsteRomnummer: Int)
 
 data class Møteplan(
     val møteoppsett: Møteoppsett,

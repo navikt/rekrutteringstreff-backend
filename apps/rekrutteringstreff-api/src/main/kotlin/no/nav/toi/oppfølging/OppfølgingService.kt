@@ -4,8 +4,8 @@ import io.javalin.http.BadRequestResponse
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.treffgjennomføring.FaseRepository
-import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
+import no.nav.toi.treffgjennomføring.StegRepository
+import no.nav.toi.treffgjennomføring.TreffgjennomføringSteg
 import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.dto.VurderingDto
@@ -14,7 +14,7 @@ import java.sql.Connection
 class OppfølgingService(
     private val writer: TreffgjennomføringWriter,
     private val repository: OppfølgingRepository,
-    private val faseRepository: FaseRepository,
+    private val stegRepository: StegRepository,
     private val hendelser: HendelseWriter,
 ) {
 
@@ -34,7 +34,7 @@ class OppfølgingService(
             else repository.slett(connection, jobbsøkerId, arbeidsgiverId)
 
             skrivHendelser(connection, før, ny, navIdent)
-            faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.VURDERING)
+            stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, rad.gjeldendeSteg, TreffgjennomføringSteg.VURDERING)
         }
 
     private fun skrivHendelser(connection: Connection, før: Vurdering?, etter: Vurdering, navIdent: String) {
@@ -49,15 +49,15 @@ class OppfølgingService(
         )
 
         // Uten forrigeVurdering kan ikke tidslinja fortelle at noen gikk fra «Aktuell» til «Ikke aktuell».
-        if (før?.vurdering != etter.vurdering) {
+        if (før?.vurderingsstatus != etter.vurderingsstatus) {
             hendelse(
                 JobbsøkerHendelsestype.VURDERT,
-                mapOf("vurdering" to etter.vurdering?.name, "forrigeVurdering" to før?.vurdering?.name),
+                mapOf("vurdering" to etter.vurderingsstatus?.name, "forrigeVurdering" to før?.vurderingsstatus?.name),
             )
         }
 
-        val notaterFør = før?.notater.orEmpty().toSet()
-        val notaterEtter = etter.notater.toSet()
+        val notaterFør = før?.vurderingsnotat.orEmpty().toSet()
+        val notaterEtter = etter.vurderingsnotat.toSet()
         (notaterEtter - notaterFør).forEach {
             hendelse(JobbsøkerHendelsestype.NOTAT_LAGT_TIL, mapOf("notat" to it.name))
         }
@@ -65,14 +65,14 @@ class OppfølgingService(
             hendelse(JobbsøkerHendelsestype.NOTAT_FJERNET, mapOf("notat" to it.name))
         }
 
-        if ((før?.andregangsintervju ?: false) != etter.andregangsintervju) {
-            if (etter.andregangsintervju) {
+        if ((før?.avtaltIntervju ?: false) != etter.avtaltIntervju) {
+            if (etter.avtaltIntervju) {
                 hendelse(
-                    JobbsøkerHendelsestype.ANDREGANGSINTERVJU_AVTALT,
-                    mapOf("dato" to etter.andregangsintervjuDato?.toString()),
+                    JobbsøkerHendelsestype.AVTALT_INTERVJU,
+                    mapOf("dato" to etter.avtaltIntervjuDato?.toString()),
                 )
             } else {
-                hendelse(JobbsøkerHendelsestype.ANGRE_ANDREGANGSINTERVJU_AVTALT)
+                hendelse(JobbsøkerHendelsestype.AVTALT_INTERVJU_ANGRET)
             }
         }
 

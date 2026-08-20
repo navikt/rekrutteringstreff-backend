@@ -22,7 +22,8 @@ import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.oppmøte.OppmøteHarRegistreringerException
 import no.nav.toi.jobbsoker.oppmøte.OppmøteService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
-import no.nav.toi.jobbsoker.Oppmøte
+import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
@@ -57,28 +58,30 @@ class TreffgjennomføringKarakteriseringTest {
     private val arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
     private val rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
     private val kontekstRepository = TreffkontekstRepository()
-    private val faseRepository = FaseRepository()
+    private val stegRepository = StegRepository()
     private val oppmøteRepository = OppmøteRepository()
     private val møteplanRepository = MøteplanRepository()
     private val matchingRepository = MatchingRepository()
     private val oppfølgingRepository = OppfølgingRepository()
     private val reader = TreffgjennomføringReader(
-        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+        stegRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
     )
-    private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, faseRepository, reader)
+    private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, stegRepository, reader)
     private val hendelser = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, mapper)
 
     private val service = TreffgjennomføringService(db.dataSource, kontekstRepository, reader)
 
-    private val møteplanService = MøteplanService(writer, møteplanRepository, oppmøteRepository, faseRepository, hendelser)
-    private val matchingService = MatchingService(writer, matchingRepository, oppmøteRepository, faseRepository, hendelser)
+    private val møteplanService = MøteplanService(writer, møteplanRepository, oppmøteRepository, stegRepository, hendelser)
+    private val matchingService = MatchingService(writer, matchingRepository, oppmøteRepository, stegRepository, hendelser)
 
     private val oppfølgingService = OppfølgingService(
         writer = writer,
         repository = oppfølgingRepository,
-        faseRepository = faseRepository,
+        stegRepository = stegRepository,
         hendelser = hendelser,
     )
+
+    private val jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository)
 
     private val oppmøteService = OppmøteService(
         treffgjennomføringWriter = writer,
@@ -86,6 +89,7 @@ class TreffgjennomføringKarakteriseringTest {
         matchingRepository = matchingRepository,
         møteplanRepository = møteplanRepository,
         oppfølgingRepository = oppfølgingRepository,
+        jobbsøkerService = jobbsøkerService,
         hendelseWriter = hendelser,
     )
 
@@ -106,18 +110,18 @@ class TreffgjennomføringKarakteriseringTest {
         val aggregat: TreffgjennomføringDto = service.hent(s.treffId)
 
         assertThat(aggregat.rekrutteringstreffId).isEqualTo(s.treffId.somString)
-        assertThat(aggregat.fase).isEqualTo(TreffgjennomføringFase.VURDERING)
+        assertThat(aggregat.gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.VURDERING)
         assertThat(aggregat.antallRom).isEqualTo(2)
         assertThat(aggregat.starttidspunkt).isEqualTo("09:00")
         assertThat(aggregat.varighetPerMøteMinutter).isEqualTo(15)
         assertThat(aggregat.oppmøte).containsExactlyInAnyOrder(s.p1.somString, s.p2.somString)
 
-        assertThat(aggregat.deltakernummer.map { it.nummer }).containsExactly(1, 2)
+        assertThat(aggregat.deltakernummer.map { it.deltakernummer }).containsExactly(1, 2)
         assertThat(aggregat.rom.map { it.romnummer }).containsExactly(1, 2)
         assertThat(aggregat.rom.flatMap { it.jobbsøkere })
             .containsExactlyInAnyOrder(s.p1.somString, s.p2.somString)
 
-        assertThat(aggregat.arbeidsgiverRekkefølge.map { it.startPosisjon }).containsExactly(0, 1)
+        assertThat(aggregat.arbeidsgiverRekkefølge.map { it.førsteRomnummer }).containsExactly(1, 2)
         assertThat(aggregat.arbeidsgiverRekkefølge.map { it.arbeidsgiverTreffId })
             .containsExactly(s.ag1.somString, s.ag2.somString)
 
@@ -132,10 +136,10 @@ class TreffgjennomføringKarakteriseringTest {
         val vurdering = aggregat.vurderinger.single()
         assertThat(vurdering.personTreffId).isEqualTo(s.p1.somString)
         assertThat(vurdering.arbeidsgiverTreffId).isEqualTo(s.ag1.somString)
-        assertThat(vurdering.vurdering).isEqualTo(Vurderingsvalg.AKTUELL)
-        assertThat(vurdering.notater).containsExactlyInAnyOrder("AG_GODT_INNTRYKK", "JS_POSITIV")
-        assertThat(vurdering.andregangsintervju).isTrue()
-        assertThat(vurdering.andregangsintervjuDato).isEqualTo("2026-09-01")
+        assertThat(vurdering.vurderingsstatus).isEqualTo(Vurderingsvalg.AKTUELL)
+        assertThat(vurdering.vurderingsnotat).containsExactlyInAnyOrder("AG_GODT_INNTRYKK", "JS_POSITIV")
+        assertThat(vurdering.avtaltIntervju).isTrue()
+        assertThat(vurdering.avtaltIntervjuDato).isEqualTo("2026-09-01")
         assertThat(vurdering.jobbtilbud).isTrue()
     }
 
@@ -156,7 +160,7 @@ class TreffgjennomføringKarakteriseringTest {
 
         val aggregat = service.hent(treffId)
 
-        assertThat(aggregat.fase).isEqualTo(TreffgjennomføringFase.OPPMØTE)
+        assertThat(aggregat.gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.OPPMØTE)
         assertThat(aggregat.starttidspunkt).isEqualTo("10:00")
         assertThat(aggregat.varighetPerMøteMinutter).isEqualTo(10)
         assertThat(aggregat.oppmøte).isEmpty()
@@ -177,13 +181,13 @@ class TreffgjennomføringKarakteriseringTest {
         ikkeMøtt(s.treffId, s.p1)
 
         assertThat(antallRader("interesse", id1)).isEqualTo(0)
-        assertThat(antallRader("intervju_fordeling", id1)).isEqualTo(0)
+        assertThat(antallRader("intervjufordeling", id1)).isEqualTo(0)
         assertThat(antallRader("vurdering", id1)).isEqualTo(0)
-        assertThat(antallRader("jobbsoker_rom_tildeling", id1)).isEqualTo(0)
+        assertThat(antallRader("jobbsoker_romtildeling", id1)).isEqualTo(0)
 
         assertThat(antallRader("interesse", id2)).isGreaterThan(0)
-        assertThat(antallRader("intervju_fordeling", id2)).isGreaterThan(0)
-        assertThat(antallRader("jobbsoker_rom_tildeling", id2)).isEqualTo(1)
+        assertThat(antallRader("intervjufordeling", id2)).isGreaterThan(0)
+        assertThat(antallRader("jobbsoker_romtildeling", id2)).isEqualTo(1)
     }
 
     @Test
@@ -210,40 +214,40 @@ class TreffgjennomføringKarakteriseringTest {
     }
 
     @Test
-    fun `fasen går bare framover - angret oppmøte senker den ikke`() {
+    fun `gjeldende steg går bare framover - angret oppmøte senker det ikke`() {
         val s = fulltScenario()
-        assertThat(service.hent(s.treffId).fase).isEqualTo(TreffgjennomføringFase.VURDERING)
+        assertThat(service.hent(s.treffId).gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.VURDERING)
 
         ikkeMøtt(s.treffId, s.p1)
         ikkeMøtt(s.treffId, s.p2)
 
-        assertThat(service.hent(s.treffId).fase).isEqualTo(TreffgjennomføringFase.VURDERING)
+        assertThat(service.hent(s.treffId).gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.VURDERING)
     }
 
     @Test
-    fun `fasen settes av hvert steg i rekkefølge`() {
+    fun `gjeldende steg settes av hvert steg i rekkefølge`() {
         val treffId = workOpTreff()
         val ag = arbeidsgivere(treffId).single()
         val person = jobbsøker(treffId)
 
         møtt(treffId, person)
-        assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.OPPMØTE)
+        assertThat(service.hent(treffId).gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.OPPMØTE)
 
         møteplanService.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent)
-        assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.ROM)
+        assertThat(service.hent(treffId).gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.ROM)
 
         interesse(treffId, person, ag)
-        assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.INTERESSE)
+        assertThat(service.hent(treffId).gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.INTERESSE)
 
         matchingService.fordelIntervjuer(treffId, navIdent)
-        assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.FORDELING)
+        assertThat(service.hent(treffId).gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.FORDELING)
 
         oppfølgingService.lagreVurdering(
             treffId,
             VurderingDto(person.somString, ag.somString, Vurderingsvalg.AKTUELL),
             navIdent,
         )
-        assertThat(service.hent(treffId).fase).isEqualTo(TreffgjennomføringFase.VURDERING)
+        assertThat(service.hent(treffId).gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.VURDERING)
     }
 
     @Test
@@ -266,7 +270,7 @@ class TreffgjennomføringKarakteriseringTest {
             pool.shutdownNow()
         }
 
-        val numre = service.hent(treffId).deltakernummer.map { it.nummer }
+        val numre = service.hent(treffId).deltakernummer.map { it.deltakernummer }
         assertThat(numre).hasSize(personer.size)
         assertThat(numre.toSet()).hasSize(personer.size)
         assertThat(numre.sorted()).isEqualTo((1..personer.size).toList())
@@ -283,7 +287,7 @@ class TreffgjennomføringKarakteriseringTest {
         ikkeMøtt(treffId, p1)
         møtt(treffId, p1)
 
-        val numre = service.hent(treffId).deltakernummer.associate { it.personTreffId to it.nummer }
+        val numre = service.hent(treffId).deltakernummer.associate { it.personTreffId to it.deltakernummer }
         assertThat(numre[p1.somString]).isEqualTo(1)
         assertThat(numre[p2.somString]).isEqualTo(2)
     }
@@ -361,10 +365,10 @@ class TreffgjennomføringKarakteriseringTest {
             VurderingDto(
                 personTreffId = person.somString,
                 arbeidsgiverTreffId = ag.somString,
-                vurdering = Vurderingsvalg.AKTUELL,
-                notater = listOf("AG_GODT_INNTRYKK"),
-                andregangsintervju = true,
-                andregangsintervjuDato = "2026-09-01",
+                vurderingsstatus = Vurderingsvalg.AKTUELL,
+                vurderingsnotat = listOf("AG_GODT_INNTRYKK"),
+                avtaltIntervju = true,
+                avtaltIntervjuDato = "2026-09-01",
                 jobbtilbud = true,
             ),
             navIdent,
@@ -373,7 +377,7 @@ class TreffgjennomføringKarakteriseringTest {
         val hendelser = jobbsøkerhendelser(treffId)
         assertThat(hendelser.filter { it == "VURDERT" }).hasSize(1)
         assertThat(hendelser.filter { it == "NOTAT_LAGT_TIL" }).hasSize(1)
-        assertThat(hendelser.filter { it == "ANDREGANGSINTERVJU_AVTALT" }).hasSize(1)
+        assertThat(hendelser.filter { it == "AVTALT_INTERVJU" }).hasSize(1)
         assertThat(hendelser.filter { it == "JOBBTILBUD_GITT" }).hasSize(1)
     }
 
@@ -432,10 +436,10 @@ class TreffgjennomføringKarakteriseringTest {
             VurderingDto(
                 personTreffId = person.somString,
                 arbeidsgiverTreffId = ag.somString,
-                vurdering = Vurderingsvalg.AKTUELL,
-                notater = listOf("AG_GODT_INNTRYKK", "JS_POSITIV"),
-                andregangsintervju = true,
-                andregangsintervjuDato = "2026-09-01",
+                vurderingsstatus = Vurderingsvalg.AKTUELL,
+                vurderingsnotat = listOf("AG_GODT_INNTRYKK", "JS_POSITIV"),
+                avtaltIntervju = true,
+                avtaltIntervjuDato = "2026-09-01",
                 jobbtilbud = true,
             ),
             navIdent,
@@ -451,10 +455,10 @@ class TreffgjennomføringKarakteriseringTest {
         val vurdering = etter.vurderinger.single()
         assertThat(vurdering.personTreffId).isEqualTo(person.somString)
         assertThat(vurdering.arbeidsgiverTreffId).isEqualTo(ag.somString)
-        assertThat(vurdering.vurdering).isEqualTo(Vurderingsvalg.AKTUELL)
-        assertThat(vurdering.notater).containsExactlyInAnyOrder("AG_GODT_INNTRYKK", "JS_POSITIV")
-        assertThat(vurdering.andregangsintervju).isTrue()
-        assertThat(vurdering.andregangsintervjuDato).isEqualTo("2026-09-01")
+        assertThat(vurdering.vurderingsstatus).isEqualTo(Vurderingsvalg.AKTUELL)
+        assertThat(vurdering.vurderingsnotat).containsExactlyInAnyOrder("AG_GODT_INNTRYKK", "JS_POSITIV")
+        assertThat(vurdering.avtaltIntervju).isTrue()
+        assertThat(vurdering.avtaltIntervjuDato).isEqualTo("2026-09-01")
         assertThat(vurdering.jobbtilbud).isTrue()
         assertThat(antallRader("vurdering", jobbsøkerDbId(person))).isEqualTo(1)
     }
@@ -472,7 +476,7 @@ class TreffgjennomføringKarakteriseringTest {
             VurderingDto(
                 personTreffId = person.somString,
                 arbeidsgiverTreffId = ag.somString,
-                notater = listOf("AG_VIL_MØTE_FLERE"),
+                vurderingsnotat = listOf("AG_VIL_MØTE_FLERE"),
             ),
             navIdent,
         )
@@ -487,7 +491,7 @@ class TreffgjennomføringKarakteriseringTest {
         )
 
         val vurdering = service.hent(treffId).vurderinger.single()
-        assertThat(vurdering.notater).containsExactly("AG_VIL_MØTE_FLERE")
+        assertThat(vurdering.vurderingsnotat).containsExactly("AG_VIL_MØTE_FLERE")
     }
 
     @Test
@@ -526,38 +530,38 @@ class TreffgjennomføringKarakteriseringTest {
     }
 
     @Test
-    fun `oppmøtekolonnen settes ved registrering og angring`() {
+    fun `statusen settes ved registrering og tilbakestilles ved angring`() {
         val treffId = workOpTreff()
         val person = jobbsøker(treffId)
-        assertThat(oppmøtekolonne(person)).isNull()
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.LAGT_TIL)
 
         møtt(treffId, person)
-        assertThat(oppmøtekolonne(person)).isEqualTo(Oppmøte.REGISTRERT_OPPMØTE)
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
 
         ikkeMøtt(treffId, person)
-        assertThat(oppmøtekolonne(person)).isEqualTo(Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.LAGT_TIL)
 
         møtt(treffId, person)
-        assertThat(oppmøtekolonne(person)).isEqualTo(Oppmøte.REGISTRERT_OPPMØTE)
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
     }
 
     @Test
-    fun `kolonnen og hendelsene gir samme svar for alle jobbsøkere`() {
+    fun `statusen og hendelsene gir samme svar for alle jobbsøkere`() {
         val s = fulltScenario()
         ikkeMøtt(s.treffId, s.p2)
 
-        assertThat(antallAvvikMellomKolonneOgHendelser()).isZero()
+        assertThat(antallAvvikMellomStatusOgHendelser()).isZero()
     }
 
     @Test
-    fun `jobbsøker uten oppmøteregistrering har null i kolonnen og er ikke fremmøtt`() {
+    fun `jobbsøker uten oppmøteregistrering beholder statusen sin og er ikke fremmøtt`() {
         val treffId = workOpTreff()
         val registrert = jobbsøker(treffId, "11111111111")
         val urørt = jobbsøker(treffId, "22222222222")
 
         møtt(treffId, registrert)
 
-        assertThat(oppmøtekolonne(urørt)).isNull()
+        assertThat(status(urørt)).isEqualTo(JobbsøkerStatus.LAGT_TIL)
         assertThat(service.hent(treffId).oppmøte).containsExactly(registrert.somString)
     }
 
@@ -585,10 +589,10 @@ class TreffgjennomføringKarakteriseringTest {
             VurderingDto(
                 personTreffId = p1.somString,
                 arbeidsgiverTreffId = ag[0].somString,
-                vurdering = Vurderingsvalg.AKTUELL,
-                notater = listOf("AG_GODT_INNTRYKK", "JS_POSITIV"),
-                andregangsintervju = true,
-                andregangsintervjuDato = "2026-09-01",
+                vurderingsstatus = Vurderingsvalg.AKTUELL,
+                vurderingsnotat = listOf("AG_GODT_INNTRYKK", "JS_POSITIV"),
+                avtaltIntervju = true,
+                avtaltIntervjuDato = "2026-09-01",
                 jobbtilbud = true,
             ),
             navIdent,
@@ -681,17 +685,17 @@ class TreffgjennomføringKarakteriseringTest {
         }
     }
 
-    private fun oppmøtekolonne(person: PersonTreffId): Oppmøte? = db.dataSource.connection.use { conn ->
-        conn.prepareStatement("SELECT oppmote FROM jobbsoker WHERE id = ?").use { stmt ->
+    private fun status(person: PersonTreffId): JobbsøkerStatus = db.dataSource.connection.use { conn ->
+        conn.prepareStatement("SELECT status FROM jobbsoker WHERE id = ?").use { stmt ->
             stmt.setObject(1, java.util.UUID.fromString(person.somString))
             stmt.executeQuery().use { rs ->
                 rs.next()
-                Oppmøte.fraDatabase(rs.getString(1))
+                JobbsøkerStatus.valueOf(rs.getString(1))
             }
         }
     }
 
-    private fun antallAvvikMellomKolonneOgHendelser(): Int = db.dataSource.connection.use { conn ->
+    private fun antallAvvikMellomStatusOgHendelser(): Int = db.dataSource.connection.use { conn ->
         val sql = """
             SELECT COUNT(*)
             FROM jobbsoker j
@@ -703,10 +707,10 @@ class TreffgjennomføringKarakteriseringTest {
                 ORDER BY jh.tidspunkt DESC, jh.jobbsoker_hendelse_id DESC
                 LIMIT 1
             ) h ON TRUE
-            WHERE (h.hendelsestype = 'REGISTRERT_OPPMØTE') IS DISTINCT FROM (j.oppmote = ?)
+            WHERE (h.hendelsestype = 'REGISTRERT_OPPMØTE') IS DISTINCT FROM (j.status = ?)
         """.trimIndent()
         conn.prepareStatement(sql).use { stmt ->
-            stmt.setString(1, Oppmøte.REGISTRERT_OPPMØTE.name)
+            stmt.setString(1, JobbsøkerStatus.MØTT_OPP.name)
             stmt.executeQuery().use { it.next(); it.getInt(1) }
         }
     }

@@ -17,7 +17,7 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
     JsonSubTypes.Type(OppmøteFjernetDataDto::class),
     JsonSubTypes.Type(VurderingHendelseDataDto::class),
     JsonSubTypes.Type(NotatHendelseDataDto::class),
-    JsonSubTypes.Type(AndregangsintervjuHendelseDataDto::class),
+    JsonSubTypes.Type(AvtaltIntervjuHendelseDataDto::class),
     JsonSubTypes.Type(ArbeidsgiverkontekstDataDto::class),
 )
 @OneOf(
@@ -27,7 +27,7 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
     OppmøteFjernetDataDto::class,
     VurderingHendelseDataDto::class,
     NotatHendelseDataDto::class,
-    AndregangsintervjuHendelseDataDto::class,
+    AvtaltIntervjuHendelseDataDto::class,
     ArbeidsgiverkontekstDataDto::class,
 )
 sealed interface HendelseDataDto
@@ -92,8 +92,8 @@ data class NotatHendelseDataDto(
 
 /** `dato` er datoen slik den var da avtalen ble inngått. Gjeldende dato leses fra vurderingsraden. */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
-@OpenApiName("AndregangsintervjuHendelseData")
-data class AndregangsintervjuHendelseDataDto(
+@OpenApiName("AvtaltIntervjuHendelseData")
+data class AvtaltIntervjuHendelseDataDto(
     val arbeidsgiverTreffId: String? = null,
     val dato: String? = null,
 ) : HendelseDataDto
@@ -114,8 +114,8 @@ private fun målklasse(hendelsestype: JobbsøkerHendelsestype): Class<out Hendel
         JobbsøkerHendelsestype.VURDERT -> VurderingHendelseDataDto::class.java
         JobbsøkerHendelsestype.NOTAT_LAGT_TIL,
         JobbsøkerHendelsestype.NOTAT_FJERNET -> NotatHendelseDataDto::class.java
-        JobbsøkerHendelsestype.ANDREGANGSINTERVJU_AVTALT -> AndregangsintervjuHendelseDataDto::class.java
-        JobbsøkerHendelsestype.ANGRE_ANDREGANGSINTERVJU_AVTALT,
+        JobbsøkerHendelsestype.AVTALT_INTERVJU -> AvtaltIntervjuHendelseDataDto::class.java
+        JobbsøkerHendelsestype.AVTALT_INTERVJU_ANGRET,
         JobbsøkerHendelsestype.JOBBTILBUD_GITT,
         JobbsøkerHendelsestype.ANGRE_JOBBTILBUD_GITT -> ArbeidsgiverkontekstDataDto::class.java
         else -> null

@@ -5,9 +5,9 @@ import no.nav.toi.HendelseWriter
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.treffgjennomføring.FaseRepository
+import no.nav.toi.treffgjennomføring.StegRepository
 import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
-import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
+import no.nav.toi.treffgjennomføring.TreffgjennomføringSteg
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
 import no.nav.toi.treffgjennomføring.dto.RomDto
@@ -18,7 +18,7 @@ class MøteplanService(
     private val writer: TreffgjennomføringWriter,
     private val repository: MøteplanRepository,
     private val oppmøteRepository: OppmøteRepository,
-    private val faseRepository: FaseRepository,
+    private val stegRepository: StegRepository,
     private val hendelseWriter: HendelseWriter,
 ) {
 
@@ -40,14 +40,14 @@ class MøteplanService(
                 return@skriv
             }
 
-            opprettMøteplan(connection, kontekst, dto, rad.fase, navIdent)
+            opprettMøteplan(connection, kontekst, dto, rad.gjeldendeSteg, navIdent)
         }
 
     private fun opprettMøteplan(
         connection: Connection,
         kontekst: Treffkontekst,
         dto: MøteoppsettRequestDto,
-        nåværendeFase: TreffgjennomføringFase,
+        nåværendeSteg: TreffgjennomføringSteg,
         navIdent: String,
     ) {
         val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
@@ -58,7 +58,7 @@ class MøteplanService(
         repository.erstattRomfordeling(connection, kontekst.treffDbId, rom, kontekst)
 
         val rotasjon = kontekst.arbeidsgiverTreffIder.mapIndexed { indeks, arbeidsgiver ->
-            ArbeidsgiverRotasjon(arbeidsgiver, indeks)
+            ArbeidsgiverRotasjon(arbeidsgiver, indeks + 1)
         }
         repository.lagreArbeidsgiverRotasjon(connection, rotasjon, kontekst)
 
@@ -71,7 +71,7 @@ class MøteplanService(
                 "antallFremmøtte" to oppmøte.size,
             ),
         )
-        faseRepository.settFase(connection, kontekst.treffDbId, nåværendeFase, TreffgjennomføringFase.ROM)
+        stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, nåværendeSteg, TreffgjennomføringSteg.ROM)
     }
 
     fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>): TreffgjennomføringDto =

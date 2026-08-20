@@ -38,7 +38,7 @@ class MatchingRepository {
     ): List<ArbeidsgiverIntervjufordeling> {
         val sql = """
             SELECT a.id::text, j.id::text, f.inkludert
-            FROM intervju_fordeling f
+            FROM intervjufordeling f
             JOIN jobbsoker j ON j.jobbsoker_id = f.jobbsoker_id
             JOIN arbeidsgiver a ON a.arbeidsgiver_id = f.arbeidsgiver_id
             WHERE j.rekrutteringstreff_id = ? AND j.status != 'SLETTET' AND a.status = 'AKTIV'
@@ -84,13 +84,13 @@ class MatchingRepository {
         val arbeidsgiverIder = fordelinger.mapNotNull { kontekst.arbeidsgiverId(it.arbeidsgiverTreffId) }
         if (arbeidsgiverIder.isEmpty()) return
 
-        connection.prepareStatement("DELETE FROM intervju_fordeling WHERE arbeidsgiver_id = ?").use { stmt ->
+        connection.prepareStatement("DELETE FROM intervjufordeling WHERE arbeidsgiver_id = ?").use { stmt ->
             arbeidsgiverIder.forEach { stmt.setLong(1, it); stmt.addBatch() }
             stmt.executeBatch()
         }
 
         val sql = """
-            INSERT INTO intervju_fordeling (jobbsoker_id, arbeidsgiver_id, plassering, inkludert)
+            INSERT INTO intervjufordeling (jobbsoker_id, arbeidsgiver_id, plassering, inkludert)
             VALUES (?, ?, ?, ?)
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
@@ -126,7 +126,7 @@ class MatchingRepository {
         val sql = """
             SELECT
                 (SELECT COUNT(*) FROM interesse WHERE jobbsoker_id = ?),
-                (SELECT COUNT(*) FROM intervju_fordeling WHERE jobbsoker_id = ?)
+                (SELECT COUNT(*) FROM intervjufordeling WHERE jobbsoker_id = ?)
         """.trimIndent()
         return connection.prepareStatement(sql).use { stmt ->
             (1..2).forEach { stmt.setLong(it, jobbsøkerId) }
@@ -140,7 +140,7 @@ class MatchingRepository {
     fun slettForJobbsøker(connection: Connection, jobbsøkerId: Long) {
         listOf(
             "DELETE FROM interesse WHERE jobbsoker_id = ?",
-            "DELETE FROM intervju_fordeling WHERE jobbsoker_id = ?",
+            "DELETE FROM intervjufordeling WHERE jobbsoker_id = ?",
         ).forEach { sql ->
             connection.prepareStatement(sql).use { stmt ->
                 stmt.setLong(1, jobbsøkerId)

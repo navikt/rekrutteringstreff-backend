@@ -9,7 +9,7 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
-import no.nav.toi.jobbsoker.Oppmøte
+import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSøkRequest
@@ -34,13 +34,13 @@ class TreffgjennomføringPersisteringTest {
 
     private val db = TestDatabase()
     private val kontekstRepository = TreffkontekstRepository()
-    private val faseRepository = FaseRepository()
+    private val stegRepository = StegRepository()
     private val oppmøteRepository = OppmøteRepository()
     private val møteplanRepository = MøteplanRepository()
     private val matchingRepository = MatchingRepository()
     private val oppfølgingRepository = OppfølgingRepository()
     private val reader = TreffgjennomføringReader(
-        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+        stegRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
     )
     private val sokRepository = JobbsøkerSokRepository(db.dataSource)
 
@@ -60,7 +60,7 @@ class TreffgjennomføringPersisteringTest {
 
         val aggregat = les(treff)
 
-        assertThat(aggregat.fase).isEqualTo(TreffgjennomføringFase.OPPMØTE)
+        assertThat(aggregat.gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.OPPMØTE)
         assertThat(aggregat.starttidspunkt).isEqualTo("10:00")
         assertThat(aggregat.varighetPerMøteMinutter).isEqualTo(10)
         assertThat(aggregat.oppmøte).isEmpty()
@@ -68,7 +68,7 @@ class TreffgjennomføringPersisteringTest {
     }
 
     @Test
-    fun `oppmøtehendelse uten kolonneverdi gir ikke fremmøtt`() {
+    fun `oppmøtehendelse uten statusendring gir ikke fremmøtt`() {
         val treff = opprettTreff()
         val person = jobbsøker(treff)
 
@@ -78,14 +78,14 @@ class TreffgjennomføringPersisteringTest {
     }
 
     @Test
-    fun `kolonnen bestemmer tilstanden, uavhengig av hendelsesrekkefølge`() {
+    fun `statusen bestemmer tilstanden, uavhengig av hendelsesrekkefølge`() {
         val treff = opprettTreff()
         val person = jobbsøker(treff)
 
         registrerOppmøte(person)
         assertThat(les(treff).oppmøte).containsExactly(person.somString)
 
-        registrerOppmøte(person, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
+        registrerOppmøte(person, JobbsøkerStatus.LAGT_TIL)
         assertThat(les(treff).oppmøte).isEmpty()
 
         registrerOppmøte(person)
@@ -149,13 +149,12 @@ class TreffgjennomføringPersisteringTest {
         assertThat(side.totalt).isEqualTo(5L)
         assertThat(side.jobbsøkere).hasSize(2)
         side.jobbsøkere.forEach { treffrad ->
-            assertThat(treffrad.oppmøte).isNotNull
-            assertThat(treffrad.oppmøte!!.møtt).isTrue()
+            assertThat(treffrad.status).isEqualTo(JobbsøkerStatus.MØTT_OPP)
         }
     }
 
     @Test
-    fun `jobbsøkersøket teller registreringene som forsvinner ved fjernet oppmøte`() {
+    fun `jobbsøkersøket teller fremmøtte via statusen`() {
         val treff = opprettTreff(RekrutteringstreffKategori.WORKOP)
         val arbeidsgiverId = arbeidsgiver(treff, "999999991")
         val person = jobbsøker(treff)
@@ -167,9 +166,9 @@ class TreffgjennomføringPersisteringTest {
 
         val rad = sokRepository.sok(treff, JobbsøkerSøkRequest()).jobbsøkere.single()
 
-        assertThat(rad.oppmøte!!.møtt).isTrue()
-        assertThat(rad.oppmøte.registreringerSomSlettes.interesser).isEqualTo(1)
-        assertThat(rad.oppmøte.registreringerSomSlettes.vurderinger).isZero()
+        assertThat(rad.status).isEqualTo(JobbsøkerStatus.MØTT_OPP)
+        assertThat(sokRepository.sok(treff, JobbsøkerSøkRequest()).antallPerStatus[JobbsøkerStatus.MØTT_OPP])
+            .isEqualTo(1)
     }
 
     @Test
@@ -179,7 +178,7 @@ class TreffgjennomføringPersisteringTest {
 
         val rad = sokRepository.sok(treff, JobbsøkerSøkRequest()).jobbsøkere.single()
 
-        assertThat(rad.oppmøte!!.møtt).isFalse()
+        assertThat(rad.status).isNotEqualTo(JobbsøkerStatus.MØTT_OPP)
     }
 
     private fun les(treff: TreffId) = db.dataSource.connection.use { conn ->
@@ -243,10 +242,19 @@ class TreffgjennomføringPersisteringTest {
         }
     }
 
-    private fun registrerOppmøte(personTreffId: PersonTreffId, oppmøte: Oppmøte = Oppmøte.REGISTRERT_OPPMØTE) {
-        leggTilOppmøtehendelse(personTreffId, oppmøte.hendelsestype.name, Instant.now())
+    private fun registrerOppmøte(
+        personTreffId: PersonTreffId,
+        status: JobbsøkerStatus = JobbsøkerStatus.MØTT_OPP,
+    ) {
+        val hendelsestype =
+            if (status == JobbsøkerStatus.MØTT_OPP) "REGISTRERT_OPPMØTE" else "REGISTRERT_OPPMØTE_FJERNET"
+        leggTilOppmøtehendelse(personTreffId, hendelsestype, Instant.now())
         db.dataSource.connection.use { conn ->
-            oppmøteRepository.settOppmøte(conn, personTreffId, oppmøte)
+            conn.prepareStatement("UPDATE jobbsoker SET status = ? WHERE id = ?").use { stmt ->
+                stmt.setString(1, status.name)
+                stmt.setObject(2, personTreffId.somUuid)
+                stmt.executeUpdate()
+            }
         }
     }
 }

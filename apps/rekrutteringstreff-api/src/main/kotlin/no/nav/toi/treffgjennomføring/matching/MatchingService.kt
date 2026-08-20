@@ -7,9 +7,9 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.rekrutteringstreff.TreffId
-import no.nav.toi.treffgjennomføring.FaseRepository
+import no.nav.toi.treffgjennomføring.StegRepository
 import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
-import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
+import no.nav.toi.treffgjennomføring.TreffgjennomføringSteg
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
@@ -20,7 +20,7 @@ class MatchingService(
     private val writer: TreffgjennomføringWriter,
     private val repository: MatchingRepository,
     private val oppmøteRepository: OppmøteRepository,
-    private val faseRepository: FaseRepository,
+    private val stegRepository: StegRepository,
     private val hendelseWriter: HendelseWriter,
 ) {
 
@@ -40,7 +40,7 @@ class MatchingService(
             if (!repository.settInteresse(connection, jobbsøkerId, arbeidsgiverId, dto.interessert)) return@skriv
 
             speilInteresseIFordeling(connection, kontekst, person, arbeidsgiver, dto.interessert)
-            faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.INTERESSE)
+            stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, rad.gjeldendeSteg, TreffgjennomføringSteg.INTERESSE)
         }
 
     private fun speilInteresseIFordeling(
@@ -82,7 +82,7 @@ class MatchingService(
         )
 
         repository.erstattIntervjufordelinger(connection, listOf(ny), kontekst)
-        faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
+        stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, rad.gjeldendeSteg, TreffgjennomføringSteg.FORDELING)
     }
 
     private fun List<PersonTreffId>.krevPåTreff(kontekst: Treffkontekst): List<PersonTreffId> = also {
@@ -110,6 +110,6 @@ class MatchingService(
                     "antallPlasseringer" to fordelinger.sumOf { it.inkludertePersonTreffIder.size },
                 ),
             )
-            faseRepository.settFase(connection, kontekst.treffDbId, rad.fase, TreffgjennomføringFase.FORDELING)
+            stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, rad.gjeldendeSteg, TreffgjennomføringSteg.FORDELING)
         }
 }

@@ -115,7 +115,7 @@ class TreffgjennomføringKomponentTest {
 
         val første = aggregat(treff)
 
-        assertThat(første["fase"].asText()).isEqualTo("OPPMØTE")
+        assertThat(første["gjeldendeSteg"].asText()).isEqualTo("OPPMØTE")
         assertThat(første["starttidspunkt"].asText()).isEqualTo("10:00")
         assertThat(første["varighetPerMøteMinutter"].asInt()).isEqualTo(10)
         assertThat(første["oppmøte"]).isEmpty()
@@ -201,12 +201,12 @@ class TreffgjennomføringKomponentTest {
         assertThat(møteoppsett(treff).statusCode()).isEqualTo(200)
 
         val svar = aggregat(treff)
-        assertThat(svar["fase"].asText()).isEqualTo("ROM")
+        assertThat(svar["gjeldendeSteg"].asText()).isEqualTo("ROM")
         assertThat(svar["starttidspunkt"].asText()).isEqualTo("09:00")
         assertThat(svar["rom"]).hasSize(2)
         assertThat(svar["rom"].flatMap { it["jobbsøkere"] }.map { it.asText() })
             .containsExactlyInAnyOrder(p1.somString, p2.somString)
-        assertThat(svar["arbeidsgiverRekkefølge"].map { it["startPosisjon"].asInt() }).containsExactly(0, 1)
+        assertThat(svar["arbeidsgiverRekkefølge"].map { it["førsteRomnummer"].asInt() }).containsExactly(1, 2)
     }
 
     @Test
@@ -279,7 +279,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(svar["antallRom"].asInt()).isEqualTo(3)
         assertThat(svar["rom"]).hasSize(3)
         assertThat(svar["arbeidsgiverRekkefølge"]).hasSize(3)
-        assertThat(svar["arbeidsgiverRekkefølge"].map { it["startPosisjon"].asInt() }.toSet()).hasSize(3)
+        assertThat(svar["arbeidsgiverRekkefølge"].map { it["førsteRomnummer"].asInt() }.toSet()).hasSize(3)
     }
 
     @Test
@@ -316,7 +316,7 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `interesse endrer fasen uten å skrive hendelser`() {
+    fun `interesse endrer gjeldende steg uten å skrive hendelser`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
@@ -326,7 +326,7 @@ class TreffgjennomføringKomponentTest {
 
         assertThat(interesse(treff, person, ag, interessert = true).statusCode()).isEqualTo(200)
 
-        assertThat(aggregat(treff)["fase"].asText()).isEqualTo("INTERESSE")
+        assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("INTERESSE")
         assertThat(aggregat(treff)["interesser"]).hasSize(1)
         assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(førJobbsøker)
         assertThat(antallArbeidsgiverhendelser(treff)).isEqualTo(førArbeidsgiver)
@@ -369,7 +369,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(fordelinger).hasSize(1)
         assertThat(fordelinger[0]["inkludertePersonTreffIder"].map { it.asText() })
             .containsExactlyInAnyOrder(p1.somString, p2.somString)
-        assertThat(aggregat(treff)["fase"].asText()).isEqualTo("FORDELING")
+        assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("FORDELING")
     }
 
     @Test
@@ -379,27 +379,27 @@ class TreffgjennomføringKomponentTest {
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
 
-        assertThat(vurderingFor(treff, person, ag, ""","vurdering":"AKTUELL","jobbtilbud":true""").statusCode())
+        assertThat(vurderingFor(treff, person, ag, ""","vurderingsstatus":"AKTUELL","jobbtilbud":true""").statusCode())
             .isEqualTo(200)
 
         val lagret = aggregat(treff)["vurderinger"]
         assertThat(lagret).hasSize(1)
-        assertThat(lagret[0]["vurdering"].asText()).isEqualTo("AKTUELL")
+        assertThat(lagret[0]["vurderingsstatus"].asText()).isEqualTo("AKTUELL")
         assertThat(antallHendelser(treff, "VURDERT")).isEqualTo(1)
         assertThat(antallHendelser(treff, "JOBBTILBUD_GITT")).isEqualTo(1)
 
-        vurderingFor(treff, person, ag, ""","vurdering":null,"jobbtilbud":false""")
+        vurderingFor(treff, person, ag, ""","vurderingsstatus":null,"jobbtilbud":false""")
         assertThat(aggregat(treff)["vurderinger"]).isEmpty()
     }
 
     @Test
-    fun `dato for andregangsintervju uten avkryssing avvises`() {
+    fun `dato for avtalt intervju uten avkryssing avvises`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
 
-        val felter = ""","andregangsintervju":false,"andregangsintervjuDato":"2026-09-01""""
+        val felter = ""","avtaltIntervju":false,"avtaltIntervjuDato":"2026-09-01""""
         assertThat(vurderingFor(treff, person, ag, felter).statusCode()).isEqualTo(400)
     }
 
@@ -412,10 +412,10 @@ class TreffgjennomføringKomponentTest {
         oppmøte(treff, person, møtt = true)
         assertThat(interesse(treff, person, ag, interessert = true).statusCode()).isEqualTo(200)
 
-        assertThat(vurderingFor(treff, person, ag, ""","vurdering":"KANSKJE"""").statusCode()).isEqualTo(200)
+        assertThat(vurderingFor(treff, person, ag, ""","vurderingsstatus":"KANSKJE"""").statusCode()).isEqualTo(200)
 
         val svar = aggregat(treff)
-        assertThat(svar["fase"].asText()).isEqualTo("VURDERING")
+        assertThat(svar["gjeldendeSteg"].asText()).isEqualTo("VURDERING")
         assertThat(svar["rom"]).isEmpty()
         assertThat(svar["intervjufordelinger"]).isEmpty()
         assertThat(svar["vurderinger"]).hasSize(1)
@@ -491,7 +491,7 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `fasen går bare framover`() {
+    fun `gjeldende steg går bare framover`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
@@ -500,7 +500,7 @@ class TreffgjennomføringKomponentTest {
 
         interesse(treff, person, ag, interessert = false)
 
-        assertThat(aggregat(treff)["fase"].asText()).isEqualTo("INTERESSE")
+        assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("INTERESSE")
     }
 
     // --- hjelpere -------------------------------------------------------------

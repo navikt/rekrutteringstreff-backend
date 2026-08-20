@@ -6,18 +6,18 @@ import no.nav.toi.treffgjennomføring.møteplan.ArbeidsgiverRotasjon
 import no.nav.toi.treffgjennomføring.matching.Interesse
 import no.nav.toi.treffgjennomføring.møteplan.Rom
 import no.nav.toi.treffgjennomføring.Treffgjennomføring
-import no.nav.toi.treffgjennomføring.TreffgjennomføringFase
+import no.nav.toi.treffgjennomføring.TreffgjennomføringSteg
 import no.nav.toi.oppfølging.Vurdering
 import no.nav.toi.oppfølging.Vurderingsvalg
 import java.time.format.DateTimeFormatter
 
 private val KLOKKESLETT = DateTimeFormatter.ofPattern("HH:mm")
 
-data class DeltakernummerDto(val personTreffId: String, val nummer: Int)
+data class DeltakernummerDto(val personTreffId: String, val deltakernummer: Int)
 
 data class RomDto(val romnummer: Int, val jobbsøkere: List<String>)
 
-data class ArbeidsgiverRotasjonDto(val arbeidsgiverTreffId: String, val startPosisjon: Int)
+data class ArbeidsgiverRotasjonDto(val arbeidsgiverTreffId: String, val førsteRomnummer: Int)
 
 data class InteresseDto(val personTreffId: String, val arbeidsgiverTreffId: String)
 
@@ -30,16 +30,16 @@ data class ArbeidsgiverIntervjufordelingDto(
 data class VurderingDto(
     val personTreffId: String,
     val arbeidsgiverTreffId: String,
-    val vurdering: Vurderingsvalg? = null,
-    val notater: List<String> = emptyList(),
-    val andregangsintervju: Boolean = false,
-    val andregangsintervjuDato: String? = null,
+    val vurderingsstatus: Vurderingsvalg? = null,
+    val vurderingsnotat: List<String> = emptyList(),
+    val avtaltIntervju: Boolean = false,
+    val avtaltIntervjuDato: String? = null,
     val jobbtilbud: Boolean = false,
 )
 
 data class TreffgjennomføringDto(
     val rekrutteringstreffId: String,
-    val fase: TreffgjennomføringFase,
+    val gjeldendeSteg: TreffgjennomføringSteg,
     val antallRom: Int,
     val starttidspunkt: String,
     val varighetPerMøteMinutter: Int,
@@ -79,7 +79,7 @@ data class KaskadeAdvarselDto(
 
 fun Treffgjennomføring.tilDto(rekrutteringstreffId: String, vurderinger: List<Vurdering>) = TreffgjennomføringDto(
     rekrutteringstreffId = rekrutteringstreffId,
-    fase = fase,
+    gjeldendeSteg = gjeldendeSteg,
     antallRom = antallRom,
     starttidspunkt = møteplan.møteoppsett.starttidspunkt.format(KLOKKESLETT),
     varighetPerMøteMinutter = møteplan.møteoppsett.varighetPerMøteMinutter,
@@ -92,11 +92,11 @@ fun Treffgjennomføring.tilDto(rekrutteringstreffId: String, vurderinger: List<V
     vurderinger = vurderinger.map { it.tilDto() },
 )
 
-private fun Deltakernummer.tilDto() = DeltakernummerDto(personTreffId.somString, nummer)
+private fun Deltakernummer.tilDto() = DeltakernummerDto(personTreffId.somString, deltakernummer)
 
 private fun Rom.tilDto() = RomDto(romnummer, jobbsøkere.map { it.somString })
 
-private fun ArbeidsgiverRotasjon.tilDto() = ArbeidsgiverRotasjonDto(arbeidsgiverTreffId.somString, startposisjon)
+private fun ArbeidsgiverRotasjon.tilDto() = ArbeidsgiverRotasjonDto(arbeidsgiverTreffId.somString, førsteRomnummer)
 
 private fun Interesse.tilDto() = InteresseDto(personTreffId.somString, arbeidsgiverTreffId.somString)
 
@@ -109,9 +109,9 @@ private fun ArbeidsgiverIntervjufordeling.tilDto() = ArbeidsgiverIntervjufordeli
 private fun Vurdering.tilDto() = VurderingDto(
     personTreffId = personTreffId.somString,
     arbeidsgiverTreffId = arbeidsgiverTreffId.somString,
-    vurdering = vurdering,
-    notater = notater.map { it.name },
-    andregangsintervju = andregangsintervju,
-    andregangsintervjuDato = andregangsintervjuDato?.toString(),
+    vurderingsstatus = vurderingsstatus,
+    vurderingsnotat = vurderingsnotat.map { it.name },
+    avtaltIntervju = avtaltIntervju,
+    avtaltIntervjuDato = avtaltIntervjuDato?.toString(),
     jobbtilbud = jobbtilbud,
 )

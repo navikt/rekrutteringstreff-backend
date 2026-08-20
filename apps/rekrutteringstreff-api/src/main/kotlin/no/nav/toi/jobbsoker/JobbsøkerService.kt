@@ -211,24 +211,53 @@ class JobbsøkerService(
             logger.info("Jobbsøker har ikke status FÅTT_JOBB (er $nåværendeStatus), endrer ikke status ved angring av formidling")
             return
         }
-        val forrigeStatus = finnStatusFørFåttJobb(connection, personTreffId)
+        val forrigeStatus = finnStatusFør(connection, personTreffId, JobbsøkerHendelsestype.FÅTT_JOBB)
         jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
         jobbsøkerRepository.endreStatus(connection, personTreffId, forrigeStatus)
         logger.info("Tilbakestilte jobbsøker $personTreffId fra FÅTT_JOBB til $forrigeStatus ved angring av formidling")
     }
 
     /**
-     * Rekonstruerer statusen jobbsøkeren hadde rett før den siste FÅTT_JOBB-hendelsen,
-     * ved å spille av hendelsesloggen kronologisk. Faller tilbake til SVART_JA dersom
-     * ingen tidligere status kan utledes (en formidling forutsetter aktivt svar ja).
+     * Setter status MØTT_OPP. Hendelsen skrives av OppmøteService, som har deltakernummeret
+     * som skal med i hendelsedataene.
      */
-    private fun finnStatusFørFåttJobb(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
+    fun registrerOppmøte(connection: Connection, personTreffId: PersonTreffId) {
+        jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.MØTT_OPP)
+    }
+
+    /**
+     * Tilbakestiller en jobbsøker som har møtt opp tilbake til statusen den hadde rett før MØTT_OPP.
+     * Endrer kun status dersom jobbsøkeren faktisk har status MØTT_OPP, slik at en status satt
+     * senere i løpet (for eksempel FÅTT_JOBB) ikke overskrives.
+     */
+    fun fjernOppmøte(connection: Connection, personTreffId: PersonTreffId) {
+        val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+        if (nåværendeStatus != JobbsøkerStatus.MØTT_OPP) {
+            logger.info("Jobbsøker har ikke status MØTT_OPP (er $nåværendeStatus), endrer ikke status ved fjerning av oppmøte")
+            return
+        }
+        val forrigeStatus = finnStatusFør(connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE)
+        jobbsøkerRepository.endreStatus(connection, personTreffId, forrigeStatus)
+        logger.info("Tilbakestilte jobbsøker $personTreffId fra MØTT_OPP til $forrigeStatus ved fjerning av oppmøte")
+    }
+
+    /**
+     * Rekonstruerer statusen jobbsøkeren hadde rett før den siste forekomsten av [hendelsestype],
+     * ved å spille av hendelsesloggen kronologisk. Faller tilbake til SVART_JA dersom
+     * ingen tidligere status kan utledes.
+     */
+    private fun finnStatusFør(
+        connection: Connection,
+        personTreffId: PersonTreffId,
+        hendelsestype: JobbsøkerHendelsestype,
+    ): JobbsøkerStatus {
         val hendelser = jobbsøkerRepository.hentHendelsestyper(connection, personTreffId)
-        val sisteFåttJobbIndex = hendelser.indexOfLast { it == JobbsøkerHendelsestype.FÅTT_JOBB }
-        if (sisteFåttJobbIndex <= 0) return JobbsøkerStatus.SVART_JA
-        return hendelser.take(sisteFåttJobbIndex)
+        val sisteIndex = hendelser.indexOfLast { it == hendelsestype }
+        if (sisteIndex <= 0) return JobbsøkerStatus.SVART_JA
+        val statusFraHendelse = hendelsestype.tilJobbsøkerStatus()
+        return hendelser.take(sisteIndex)
             .mapNotNull { it.tilJobbsøkerStatus() }
-            .lastOrNull { it != JobbsøkerStatus.FÅTT_JOBB }
+            .lastOrNull { it != statusFraHendelse }
             ?: JobbsøkerStatus.SVART_JA
     }
 
@@ -242,6 +271,7 @@ class JobbsøkerService(
         JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> JobbsøkerStatus.SVART_NEI
         JobbsøkerHendelsestype.SLETTET -> JobbsøkerStatus.SLETTET
         JobbsøkerHendelsestype.FÅTT_JOBB -> JobbsøkerStatus.FÅTT_JOBB
+        JobbsøkerHendelsestype.REGISTRERT_OPPMØTE -> JobbsøkerStatus.MØTT_OPP
         else -> null
     }
 

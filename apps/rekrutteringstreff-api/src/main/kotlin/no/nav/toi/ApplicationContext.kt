@@ -41,7 +41,7 @@ import no.nav.toi.oppfølging.OppfølgingService
 import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.jobbsoker.oppmøte.OppmøteService
-import no.nav.toi.treffgjennomføring.FaseRepository
+import no.nav.toi.treffgjennomføring.StegRepository
 import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
 import no.nav.toi.treffgjennomføring.matching.MatchingRepository
 import no.nav.toi.treffgjennomføring.matching.MatchingService
@@ -78,16 +78,16 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val formidlingRepository = FormidlingRepository(infra.dataSource)
     val statistikkRepository = StatistikkRepository(infra.dataSource)
     val treffkontekstRepository = TreffkontekstRepository()
-    val faseRepository = FaseRepository()
+    val stegRepository = StegRepository()
     val oppmøteRepository = OppmøteRepository()
     val møteplanRepository = MøteplanRepository()
     val matchingRepository = MatchingRepository()
     val oppfølgingRepository = OppfølgingRepository()
     val treffgjennomføringReader = TreffgjennomføringReader(
-        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+        stegRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
     )
     val treffgjennomføringWriter = TreffgjennomføringWriter(
-        infra.dataSource, treffkontekstRepository, faseRepository, treffgjennomføringReader,
+        infra.dataSource, treffkontekstRepository, stegRepository, treffgjennomføringReader,
     )
     val hendelseWriter = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, JacksonConfig.mapper)
 
@@ -123,26 +123,27 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         matchingRepository = matchingRepository,
         møteplanRepository = møteplanRepository,
         oppfølgingRepository = oppfølgingRepository,
+        jobbsøkerService = jobbsøkerService,
         hendelseWriter = hendelseWriter,
     )
     val møteplanService = MøteplanService(
         writer = treffgjennomføringWriter,
         repository = møteplanRepository,
         oppmøteRepository = oppmøteRepository,
-        faseRepository = faseRepository,
+        stegRepository = stegRepository,
         hendelseWriter = hendelseWriter,
     )
     val matchingService = MatchingService(
         writer = treffgjennomføringWriter,
         repository = matchingRepository,
         oppmøteRepository = oppmøteRepository,
-        faseRepository = faseRepository,
+        stegRepository = stegRepository,
         hendelseWriter = hendelseWriter,
     )
     val oppfølgingService = OppfølgingService(
         writer = treffgjennomføringWriter,
         repository = oppfølgingRepository,
-        faseRepository = faseRepository,
+        stegRepository = stegRepository,
         hendelser = hendelseWriter,
     )
 

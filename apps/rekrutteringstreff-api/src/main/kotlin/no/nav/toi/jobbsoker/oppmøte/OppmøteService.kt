@@ -2,7 +2,9 @@ package no.nav.toi.jobbsoker.oppmøte
 
 import io.javalin.http.BadRequestResponse
 import no.nav.toi.HendelseWriter
-import no.nav.toi.jobbsoker.Oppmøte
+import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.jobbsoker.JobbsøkerService
+import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.rekrutteringstreff.TreffId
@@ -20,6 +22,7 @@ class OppmøteService(
     private val matchingRepository: MatchingRepository,
     private val møteplanRepository: MøteplanRepository,
     private val oppfølgingRepository: OppfølgingRepository,
+    private val jobbsøkerService: JobbsøkerService,
     private val hendelseWriter: HendelseWriter,
 ) {
 
@@ -29,7 +32,7 @@ class OppmøteService(
             val jobbsøkerId = kontekst.jobbsøkerId(personTreffId)
                 ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
 
-            val harMøtt = oppmøteRepository.hentOppmøte(connection, personTreffId)?.harMøtt == true
+            val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             if (oppmøteRequestDto.møtt != harMøtt) {
                 if (oppmøteRequestDto.møtt) registrerOppmøte(connection, kontekst, personTreffId, jobbsøkerId, navIdent)
                 else fjernOppmøte(connection, personTreffId, jobbsøkerId, oppmøteRequestDto.bekreftSlettRegistreringer, navIdent)
@@ -48,9 +51,9 @@ class OppmøteService(
                 oppmøteRepository.tildelDeltakernummer(connection, treffkontekst.treffDbId, jobbsøkerId)
             } else null
 
-        oppmøteRepository.settOppmøte(connection, personTreffId, Oppmøte.REGISTRERT_OPPMØTE)
+        jobbsøkerService.registrerOppmøte(connection, personTreffId)
         hendelseWriter.forJobbsøker(
-            connection, personTreffId, Oppmøte.REGISTRERT_OPPMØTE.hendelsestype, navIdent,
+            connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE, navIdent,
             deltakernummer?.let { mapOf("deltakernummer" to it) } ?: emptyMap(),
         )
     }
@@ -73,9 +76,9 @@ class OppmøteService(
         matchingRepository.slettForJobbsøker(connection, jobbsøkerId)
         møteplanRepository.slettRomForJobbsøker(connection, jobbsøkerId)
         oppfølgingRepository.slettForJobbsøker(connection, jobbsøkerId)
-        oppmøteRepository.settOppmøte(connection, personTreffId, Oppmøte.REGISTRERT_OPPMØTE_FJERNET)
+        jobbsøkerService.fjernOppmøte(connection, personTreffId)
         hendelseWriter.forJobbsøker(
-            connection, personTreffId, Oppmøte.REGISTRERT_OPPMØTE_FJERNET.hendelsestype, navIdent,
+            connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET, navIdent,
             mapOf(
                 "interesser" to registreringer.interesser,
                 "intervjuplasser" to registreringer.intervjuplasser,

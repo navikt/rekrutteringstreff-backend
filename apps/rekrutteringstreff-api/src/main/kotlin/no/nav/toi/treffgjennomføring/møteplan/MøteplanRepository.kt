@@ -24,7 +24,7 @@ class MøteplanRepository {
 
     private fun hentMøteoppsett(connection: Connection, treffDbId: Long): Møteoppsett? {
         val sql = """
-            SELECT m.start_tidspunkt, m.varighet_min
+            SELECT m.starttidspunkt, m.varighet_min
             FROM moteoppsett m
             JOIN treffgjennomforing t ON t.treffgjennomforing_id = m.treffgjennomforing_id
             WHERE t.rekrutteringstreff_id = ?
@@ -40,10 +40,12 @@ class MøteplanRepository {
     private fun hentRom(connection: Connection, treffDbId: Long): List<Rom> {
         val sql = """
             SELECT r.romnummer, j.id::text
-            FROM jobbsoker_rom_tildeling r
+            FROM jobbsoker_romtildeling r
             JOIN jobbsoker j ON j.jobbsoker_id = r.jobbsoker_id
+            LEFT JOIN deltakernummer d
+                ON d.jobbsoker_id = r.jobbsoker_id AND d.rekrutteringstreff_id = r.rekrutteringstreff_id
             WHERE r.rekrutteringstreff_id = ? AND j.status != 'SLETTET'
-            ORDER BY r.romnummer, r.plassering
+            ORDER BY r.romnummer, d.deltakernummer NULLS LAST, j.jobbsoker_id
         """.trimIndent()
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
@@ -58,7 +60,7 @@ class MøteplanRepository {
 
     private fun hentArbeidsgiverRotasjon(connection: Connection, kontekst: Treffkontekst): List<ArbeidsgiverRotasjon> {
         val sql = """
-            SELECT a.id::text, r.start_posisjon
+            SELECT a.id::text, r.forste_romnummer
             FROM arbeidsgiver_rotasjon r
             JOIN arbeidsgiver a ON a.arbeidsgiver_id = r.arbeidsgiver_id
             WHERE a.rekrutteringstreff_id = ? AND a.status = 'AKTIV'
@@ -71,11 +73,11 @@ class MøteplanRepository {
         }
         if (rotasjon.isEmpty()) return emptyList()
 
-        val brukteStartposisjoner = rotasjon.values.toMutableSet()
+        val brukteRomnumre = rotasjon.values.toMutableSet()
         return kontekst.arbeidsgiverTreffIder.map { arbeidsgiver ->
-            val posisjon = rotasjon[arbeidsgiver] ?: generateSequence(0) { it + 1 }.first { it !in brukteStartposisjoner }
-            brukteStartposisjoner.add(posisjon)
-            ArbeidsgiverRotasjon(arbeidsgiver, posisjon)
+            val romnummer = rotasjon[arbeidsgiver] ?: generateSequence(1) { it + 1 }.first { it !in brukteRomnumre }
+            brukteRomnumre.add(romnummer)
+            ArbeidsgiverRotasjon(arbeidsgiver, romnummer)
         }
     }
 
@@ -87,10 +89,10 @@ class MøteplanRepository {
 
     fun lagreMøteoppsett(connection: Connection, treffgjennomføringId: Long, møteoppsett: Møteoppsett) {
         val sql = """
-            INSERT INTO moteoppsett (treffgjennomforing_id, start_tidspunkt, varighet_min)
+            INSERT INTO moteoppsett (treffgjennomforing_id, starttidspunkt, varighet_min)
             VALUES (?, ?, ?)
             ON CONFLICT (treffgjennomforing_id)
-            DO UPDATE SET start_tidspunkt = EXCLUDED.start_tidspunkt, varighet_min = EXCLUDED.varighet_min
+            DO UPDATE SET starttidspunkt = EXCLUDED.starttidspunkt, varighet_min = EXCLUDED.varighet_min
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffgjennomføringId)
@@ -101,22 +103,21 @@ class MøteplanRepository {
     }
 
     fun erstattRomfordeling(connection: Connection, treffDbId: Long, rom: List<Rom>, kontekst: Treffkontekst) {
-        connection.prepareStatement("DELETE FROM jobbsoker_rom_tildeling WHERE rekrutteringstreff_id = ?").use { stmt ->
+        connection.prepareStatement("DELETE FROM jobbsoker_romtildeling WHERE rekrutteringstreff_id = ?").use { stmt ->
             stmt.setLong(1, treffDbId)
             stmt.executeUpdate()
         }
         val sql = """
-            INSERT INTO jobbsoker_rom_tildeling (rekrutteringstreff_id, jobbsoker_id, romnummer, plassering)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO jobbsoker_romtildeling (rekrutteringstreff_id, jobbsoker_id, romnummer)
+            VALUES (?, ?, ?)
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
             rom.forEach { r ->
-                r.jobbsøkere.forEachIndexed { plassering, person ->
-                    val jobbsøkerId = kontekst.jobbsøkerId(person) ?: return@forEachIndexed
+                r.jobbsøkere.forEach { person ->
+                    val jobbsøkerId = kontekst.jobbsøkerId(person) ?: return@forEach
                     stmt.setLong(1, treffDbId)
                     stmt.setLong(2, jobbsøkerId)
                     stmt.setInt(3, r.romnummer)
-                    stmt.setInt(4, plassering)
                     stmt.addBatch()
                 }
             }
@@ -126,15 +127,15 @@ class MøteplanRepository {
 
     fun lagreArbeidsgiverRotasjon(connection: Connection, rotasjoner: List<ArbeidsgiverRotasjon>, kontekst: Treffkontekst) {
         val sql = """
-            INSERT INTO arbeidsgiver_rotasjon (arbeidsgiver_id, start_posisjon)
+            INSERT INTO arbeidsgiver_rotasjon (arbeidsgiver_id, forste_romnummer)
             VALUES (?, ?)
-            ON CONFLICT (arbeidsgiver_id) DO UPDATE SET start_posisjon = EXCLUDED.start_posisjon
+            ON CONFLICT (arbeidsgiver_id) DO UPDATE SET forste_romnummer = EXCLUDED.forste_romnummer
         """.trimIndent()
         connection.prepareStatement(sql).use { stmt ->
             rotasjoner.forEach { rotasjon ->
                 val arbeidsgiverId = kontekst.arbeidsgiverId(rotasjon.arbeidsgiverTreffId) ?: return@forEach
                 stmt.setLong(1, arbeidsgiverId)
-                stmt.setInt(2, rotasjon.startposisjon)
+                stmt.setInt(2, rotasjon.førsteRomnummer)
                 stmt.addBatch()
             }
             stmt.executeBatch()
@@ -142,7 +143,7 @@ class MøteplanRepository {
     }
 
     fun slettRomForJobbsøker(connection: Connection, jobbsøkerId: Long) {
-        connection.prepareStatement("DELETE FROM jobbsoker_rom_tildeling WHERE jobbsoker_id = ?").use { stmt ->
+        connection.prepareStatement("DELETE FROM jobbsoker_romtildeling WHERE jobbsoker_id = ?").use { stmt ->
             stmt.setLong(1, jobbsøkerId)
             stmt.executeUpdate()
         }

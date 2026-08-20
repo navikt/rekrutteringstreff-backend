@@ -25,8 +25,8 @@ enum class JobbsøkerHendelsestype {
     VURDERT,
     NOTAT_LAGT_TIL,
     NOTAT_FJERNET,
-    ANDREGANGSINTERVJU_AVTALT,
-    ANGRE_ANDREGANGSINTERVJU_AVTALT,
+    AVTALT_INTERVJU,
+    AVTALT_INTERVJU_ANGRET,
     JOBBTILBUD_GITT,
     ANGRE_JOBBTILBUD_GITT,
 }
@@ -35,7 +35,7 @@ enum class JobbsøkerHendelsestype {
  * Treffgjennomføringen skriver ikke arbeidsgiverhendelser. Registreringene i steg 3–5
  * gjelder et par jobbsøker × arbeidsgiver, og handler om personen — arbeidsgiveren er
  * konteksten og ligger i `hendelse_data` på jobbsøkerhendelsen. Arbeidsgiverbildet leses
- * fra `interesse`, `intervju_fordeling` og `vurdering`.
+ * fra `interesse`, `intervjufordeling` og `vurdering`.
  */
 enum class ArbeidsgiverHendelsestype {
     OPPRETTET, OPPDATERT, SLETTET, REAKTIVERT, BEHOV_ENDRET,

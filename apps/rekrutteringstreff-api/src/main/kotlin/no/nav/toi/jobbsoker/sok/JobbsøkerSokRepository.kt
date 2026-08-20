@@ -3,7 +3,6 @@ package no.nav.toi.jobbsoker.sok
 import no.nav.toi.JacksonConfig
 import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.JobbsøkerStatus
-import no.nav.toi.jobbsoker.Oppmøte
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -39,12 +38,8 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                 )
             }
             val minsideHendelser = hentMinsideHendelser(conn, treff.map { it.personTreffId })
-            val oppmøte = hentOppmøte(conn, treff.map { it.personTreffId })
             val jobbsøkereMedHendelser = treff.map { t ->
-                t.copy(
-                    minsideHendelser = minsideHendelser[t.personTreffId] ?: emptyList(),
-                    oppmøte = oppmøte[t.personTreffId],
-                )
+                t.copy(minsideHendelser = minsideHendelser[t.personTreffId] ?: emptyList())
             }
             JobbsøkerSøkRespons(
                 totalt = totalt,
@@ -266,44 +261,6 @@ class JobbsøkerSokRepository(private val dataSource: DataSource) {
                         hendelseData = rawData?.let { JacksonConfig.mapper.readTree(it) },
                     )
                     result.getOrPut(personTreffId) { mutableListOf() }.add(hendelse)
-                }
-                result
-            }
-        }
-    }
-
-    /**
-     * Berikelse skjer etter filtrering, sortering og paginering, og bare for
-     * personene på den returnerte siden. Én spørring uansett sidestørrelse.
-     */
-    private fun hentOppmøte(conn: Connection, personTreffIds: List<String>): Map<String, OppmøteSammendragDto> {
-        if (personTreffIds.isEmpty()) return emptyMap()
-
-        val placeholders = personTreffIds.joinToString(",") { "?" }
-        val sql = """
-            SELECT j.id::text AS person_treff_id,
-                   j.oppmote AS oppmote,
-                   (SELECT COUNT(*) FROM interesse i WHERE i.jobbsoker_id = j.jobbsoker_id) AS interesser,
-                   (SELECT COUNT(*) FROM intervju_fordeling f WHERE f.jobbsoker_id = j.jobbsoker_id) AS intervjuplasser,
-                   (SELECT COUNT(*) FROM vurdering v WHERE v.jobbsoker_id = j.jobbsoker_id) AS vurderinger
-            FROM jobbsoker j
-            WHERE j.id IN ($placeholders)
-        """.trimIndent()
-
-        return conn.prepareStatement(sql).use { stmt ->
-            stmt.queryTimeout = QUERY_TIMEOUT_SECONDS
-            personTreffIds.forEachIndexed { index, id -> stmt.setObject(index + 1, UUID.fromString(id)) }
-            stmt.executeQuery().use { rs ->
-                val result = mutableMapOf<String, OppmøteSammendragDto>()
-                while (rs.next()) {
-                    result[rs.getString("person_treff_id")] = OppmøteSammendragDto(
-                        møtt = Oppmøte.harMøtt(rs.getString("oppmote")),
-                        registreringerSomSlettes = RegistreringerSammendragDto(
-                            interesser = rs.getInt("interesser"),
-                            intervjuplasser = rs.getInt("intervjuplasser"),
-                            vurderinger = rs.getInt("vurderinger"),
-                        ),
-                    )
                 }
                 result
             }

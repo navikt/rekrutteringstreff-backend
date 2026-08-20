@@ -16,6 +16,7 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
+import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
@@ -43,17 +44,17 @@ class TreffgjennomføringReaderTest {
     private val navIdent = "Z999999"
 
     private val kontekstRepository = TreffkontekstRepository()
-    private val faseRepository = FaseRepository()
+    private val stegRepository = StegRepository()
     private val oppmøteRepository = OppmøteRepository()
     private val møteplanRepository = MøteplanRepository()
     private val matchingRepository = MatchingRepository()
     private val oppfølgingRepository = OppfølgingRepository()
     private val reader = TreffgjennomføringReader(
-        faseRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+        stegRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
     )
     private val jobbsøkerRepository = JobbsøkerRepository(db.dataSource, mapper)
 
-    private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, faseRepository, reader)
+    private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, stegRepository, reader)
     private val hendelser = HendelseWriter(
         jobbsøkerRepository,
         ArbeidsgiverRepository(db.dataSource, mapper),
@@ -66,6 +67,7 @@ class TreffgjennomføringReaderTest {
         matchingRepository = matchingRepository,
         møteplanRepository = møteplanRepository,
         oppfølgingRepository = oppfølgingRepository,
+        jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository),
         hendelseWriter = hendelser,
     )
 

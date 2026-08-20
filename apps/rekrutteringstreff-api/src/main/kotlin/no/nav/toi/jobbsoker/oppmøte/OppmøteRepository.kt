@@ -1,11 +1,11 @@
 package no.nav.toi.jobbsoker.oppmøte
 
-import no.nav.toi.jobbsoker.Oppmøte
+import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.tilListe
 import java.sql.Connection
 
-data class Deltakernummer(val personTreffId: PersonTreffId, val nummer: Int)
+data class Deltakernummer(val personTreffId: PersonTreffId, val deltakernummer: Int)
 
 class OppmøteRepository {
 
@@ -13,26 +13,27 @@ class OppmøteRepository {
         val sql = """
             SELECT j.id::text
             FROM jobbsoker j
-            LEFT JOIN deltakernummer d ON d.jobbsoker_id = j.jobbsoker_id
+            LEFT JOIN deltakernummer d
+                ON d.jobbsoker_id = j.jobbsoker_id AND d.rekrutteringstreff_id = j.rekrutteringstreff_id
             WHERE j.rekrutteringstreff_id = ?
-              AND j.status != 'SLETTET'
-              AND j.oppmote = ?
-            ORDER BY d.nummer NULLS LAST, j.jobbsoker_id
+              AND j.status IN (?, ?)
+            ORDER BY d.deltakernummer NULLS LAST, j.jobbsoker_id
         """.trimIndent()
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
-            stmt.setString(2, Oppmøte.REGISTRERT_OPPMØTE.name)
+            stmt.setString(2, JobbsøkerStatus.MØTT_OPP.name)
+            stmt.setString(3, JobbsøkerStatus.FÅTT_JOBB.name)
             stmt.executeQuery().use { rs -> rs.tilListe { PersonTreffId(it.getString(1)) } }
         }
     }
 
     fun hentDeltakernumre(connection: Connection, treffDbId: Long): List<Deltakernummer> {
         val sql = """
-            SELECT j.id::text, d.nummer
+            SELECT j.id::text, d.deltakernummer
             FROM deltakernummer d
             JOIN jobbsoker j ON j.jobbsoker_id = d.jobbsoker_id
             WHERE d.rekrutteringstreff_id = ? AND j.status != 'SLETTET'
-            ORDER BY d.nummer
+            ORDER BY d.deltakernummer
         """.trimIndent()
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
@@ -44,10 +45,10 @@ class OppmøteRepository {
 
     fun tildelDeltakernummer(connection: Connection, treffDbId: Long, jobbsøkerId: Long): Int {
         val sql = """
-            INSERT INTO deltakernummer (rekrutteringstreff_id, jobbsoker_id, nummer)
-            SELECT ?, ?, COALESCE(MAX(nummer), 0) + 1 FROM deltakernummer WHERE rekrutteringstreff_id = ?
+            INSERT INTO deltakernummer (rekrutteringstreff_id, jobbsoker_id, deltakernummer)
+            SELECT ?, ?, COALESCE(MAX(deltakernummer), 0) + 1 FROM deltakernummer WHERE rekrutteringstreff_id = ?
             ON CONFLICT (rekrutteringstreff_id, jobbsoker_id) DO NOTHING
-            RETURNING nummer
+            RETURNING deltakernummer
         """.trimIndent()
         val nytt = connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
@@ -59,33 +60,11 @@ class OppmøteRepository {
     }
 
     private fun hentDeltakernummerFor(connection: Connection, treffDbId: Long, jobbsøkerId: Long): Int {
-        val sql = "SELECT nummer FROM deltakernummer WHERE rekrutteringstreff_id = ? AND jobbsoker_id = ?"
+        val sql = "SELECT deltakernummer FROM deltakernummer WHERE rekrutteringstreff_id = ? AND jobbsoker_id = ?"
         return connection.prepareStatement(sql).use { stmt ->
             stmt.setLong(1, treffDbId)
             stmt.setLong(2, jobbsøkerId)
             stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
         }
     }
-
-    fun settOppmøte(connection: Connection, personTreffId: PersonTreffId, oppmøte: Oppmøte) {
-        connection.prepareStatement(
-            """
-            UPDATE jobbsoker
-            SET oppmote=?
-            WHERE id=?
-            """
-        ).use { stmt ->
-            stmt.setString(1, oppmøte.name)
-            stmt.setObject(2, personTreffId.somUuid)
-            stmt.executeUpdate()
-        }
-    }
-
-    fun hentOppmøte(connection: Connection, personTreffId: PersonTreffId): Oppmøte? =
-        connection.prepareStatement("SELECT oppmote FROM jobbsoker WHERE id=?").use { stmt ->
-            stmt.setObject(1, personTreffId.somUuid)
-            stmt.executeQuery().use { rs ->
-                if (rs.next()) Oppmøte.fraDatabase(rs.getString("oppmote")) else null
-            }
-        }
 }

@@ -9,7 +9,7 @@ import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import java.sql.Connection
 
 class TreffgjennomføringReader(
-    private val faseRepository: FaseRepository,
+    private val stegRepository: StegRepository,
     private val oppmøteRepository: OppmøteRepository,
     private val møteplanRepository: MøteplanRepository,
     private val matchingRepository: MatchingRepository,
@@ -20,7 +20,7 @@ class TreffgjennomføringReader(
         val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
 
         return Treffgjennomføring(
-            fase = faseRepository.hentFase(connection, kontekst.treffDbId) ?: TreffgjennomføringFase.OPPMØTE,
+            gjeldendeSteg = stegRepository.hentGjeldendeSteg(connection, kontekst.treffDbId) ?: TreffgjennomføringSteg.OPPMØTE,
             antallRom = kontekst.antallRom,
             oppmøte = oppmøte,
             deltakernumre = oppmøteRepository.hentDeltakernumre(connection, kontekst.treffDbId),

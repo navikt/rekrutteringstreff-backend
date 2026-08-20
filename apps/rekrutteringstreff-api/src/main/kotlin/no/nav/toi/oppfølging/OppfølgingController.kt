@@ -41,7 +41,7 @@ class OppfølgingController(
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
         requestBody = OpenApiRequestBody(content = [OpenApiContent(
             from = VurderingDto::class,
-            example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "arbeidsgiverTreffId": "22222222-2222-2222-2222-222222222222", "vurdering": "AKTUELL", "notater": ["AG_GODT_INNTRYKK"], "andregangsintervju": true, "andregangsintervjuDato": "2026-09-01", "jobbtilbud": false}""",
+            example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "arbeidsgiverTreffId": "22222222-2222-2222-2222-222222222222", "vurderingsstatus": "AKTUELL", "vurderingsnotat": ["AG_GODT_INNTRYKK"], "avtaltIntervju": true, "avtaltIntervjuDato": "2026-09-01", "jobbtilbud": false}""",
         )]),
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
         path = VURDERINGER,

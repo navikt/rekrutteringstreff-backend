@@ -53,14 +53,14 @@ class TreffgjennomføringController(
 
         const val AGGREGAT_EKSEMPEL = """{
               "rekrutteringstreffId": "33333333-3333-3333-3333-333333333333",
-              "fase": "VURDERING",
+              "gjeldendeSteg": "VURDERING",
               "antallRom": 1,
               "starttidspunkt": "09:00",
               "varighetPerMøteMinutter": 15,
               "oppmøte": ["$PERSON_ID"],
-              "deltakernummer": [{"personTreffId": "$PERSON_ID", "nummer": 1}],
+              "deltakernummer": [{"personTreffId": "$PERSON_ID", "deltakernummer": 1}],
               "rom": [{"romnummer": 1, "jobbsøkere": ["$PERSON_ID"]}],
-              "arbeidsgiverRekkefølge": [{"arbeidsgiverTreffId": "$ARBEIDSGIVER_ID", "startPosisjon": 0}],
+              "arbeidsgiverRekkefølge": [{"arbeidsgiverTreffId": "$ARBEIDSGIVER_ID", "førsteRomnummer": 1}],
               "interesser": [{"personTreffId": "$PERSON_ID", "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID"}],
               "intervjufordelinger": [{
                 "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID",
@@ -70,10 +70,10 @@ class TreffgjennomføringController(
               "vurderinger": [{
                 "personTreffId": "$PERSON_ID",
                 "arbeidsgiverTreffId": "$ARBEIDSGIVER_ID",
-                "vurdering": "AKTUELL",
-                "notater": ["AG_GODT_INNTRYKK"],
-                "andregangsintervju": true,
-                "andregangsintervjuDato": "2026-09-01",
+                "vurderingsstatus": "AKTUELL",
+                "vurderingsnotat": ["AG_GODT_INNTRYKK"],
+                "avtaltIntervju": true,
+                "avtaltIntervjuDato": "2026-09-01",
                 "jobbtilbud": false
               }]
             }"""

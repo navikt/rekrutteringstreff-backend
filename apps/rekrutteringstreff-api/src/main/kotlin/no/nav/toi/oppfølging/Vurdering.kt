@@ -29,13 +29,13 @@ enum class Vurderingsnotat {
 data class Vurdering(
     val personTreffId: PersonTreffId,
     val arbeidsgiverTreffId: ArbeidsgiverTreffId,
-    val vurdering: Vurderingsvalg?,
-    val notater: List<Vurderingsnotat>,
-    val andregangsintervju: Boolean,
-    val andregangsintervjuDato: LocalDate?,
+    val vurderingsstatus: Vurderingsvalg?,
+    val vurderingsnotat: List<Vurderingsnotat>,
+    val avtaltIntervju: Boolean,
+    val avtaltIntervjuDato: LocalDate?,
     val jobbtilbud: Boolean,
 ) {
     fun harRegistrertNoe() =
-        vurdering != null || notater.isNotEmpty() || andregangsintervju ||
-            andregangsintervjuDato != null || jobbtilbud
+        vurderingsstatus != null || vurderingsnotat.isNotEmpty() || avtaltIntervju ||
+            avtaltIntervjuDato != null || jobbtilbud
 }

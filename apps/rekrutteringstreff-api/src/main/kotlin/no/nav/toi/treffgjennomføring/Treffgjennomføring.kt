@@ -5,12 +5,12 @@ import no.nav.toi.jobbsoker.oppmøte.Deltakernummer
 import no.nav.toi.treffgjennomføring.matching.Matching
 import no.nav.toi.treffgjennomføring.møteplan.Møteplan
 
-enum class TreffgjennomføringFase {
+enum class TreffgjennomføringSteg {
     OPPMØTE, ROM, INTERESSE, FORDELING, VURDERING
 }
 
 data class Treffgjennomføring(
-    val fase: TreffgjennomføringFase,
+    val gjeldendeSteg: TreffgjennomføringSteg,
     val antallRom: Int,
     val oppmøte: List<PersonTreffId>,
     val deltakernumre: List<Deltakernummer>,
