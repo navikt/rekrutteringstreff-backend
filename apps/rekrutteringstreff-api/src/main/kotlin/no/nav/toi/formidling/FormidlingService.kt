@@ -1,5 +1,6 @@
 package no.nav.toi.formidling
 
+import io.javalin.http.ForbiddenResponse
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
 import no.nav.toi.FormidlingHendelsestype
@@ -273,6 +274,10 @@ class FormidlingService(
                 return
             }
             throw NotFoundResponse("Formidling med id $formidlingId finnes ikke på treffet")
+        }
+
+        if (formidling.opprettetAvNavIdent?.trim()?.uppercase() != navIdent.trim().uppercase()) {
+            throw ForbiddenResponse("Kan ikke slette formidling uten å eie den")
         }
 
         sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)
