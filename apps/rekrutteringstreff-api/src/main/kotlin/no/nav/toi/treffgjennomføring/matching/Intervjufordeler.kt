@@ -4,14 +4,6 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
 import kotlin.math.abs
 
-/**
- * Fordeler intervjuene på tidsluker. Posisjonen i den inkluderte lista er luka:
- * alle arbeidsgivere kjører intervju 1 samtidig, så intervju 2. Står samme person
- * på samme plass hos to arbeidsgivere er det en plasskonflikt.
- *
- * Dette er ingen fullstendig løser. Den fjerner de fleste konfliktene; resten
- * vises som varsel i frontend og rettes manuelt. Ren funksjon, ingen databasetilgang.
- */
 object Intervjufordeler {
 
     fun fordel(
@@ -27,15 +19,10 @@ object Intervjufordeler {
             personer.sortedByDescending { etterspørsel[it] ?: 0 }
         }
 
-        // Ingen av strategiene vinner alltid, og å kjøre begge er billigere enn å gjette.
         return if (konflikter(mestEtterspurteFørst) < konflikter(listerekkefølge)) mestEtterspurteFørst
         else listerekkefølge
     }
 
-    /**
-     * Ekskluderte forblir ekskluderte, interesser uten plassering regnes som
-     * inkluderte, og personer det ikke lenger finnes interesse for faller ut.
-     */
     private fun utgangspunkt(
         interesser: List<Interesse>,
         eksisterendeFordelinger: List<ArbeidsgiverIntervjufordeling>,
@@ -58,8 +45,6 @@ object Intervjufordeler {
         val opptattePlasser = mutableMapOf<PersonTreffId, MutableSet<Int>>()
         val resultat = mutableMapOf<ArbeidsgiverTreffId, ArbeidsgiverIntervjufordeling>()
 
-        // Arbeidsgivere med færrest personer først: de har minst å gå på, og får
-        // velge mens det ennå er ledige luker.
         utgangspunkt.sortedBy { it.inkludertePersonTreffIder.size }.forEach { fordeling ->
             val personer = fordeling.inkludertePersonTreffIder
             val ledige = personer.indices.toMutableSet()

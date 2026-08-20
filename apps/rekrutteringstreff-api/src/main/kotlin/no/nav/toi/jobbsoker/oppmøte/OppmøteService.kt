@@ -15,7 +15,7 @@ import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import java.sql.Connection
 
 class OppmøteService(
-    private val TreffgjennomføringWriter: TreffgjennomføringWriter,
+    private val treffgjennomføringWriter: TreffgjennomføringWriter,
     private val oppmøteRepository: OppmøteRepository,
     private val matchingRepository: MatchingRepository,
     private val møteplanRepository: MøteplanRepository,
@@ -24,7 +24,7 @@ class OppmøteService(
 ) {
 
     fun oppdaterOppmøte(treffId: TreffId, oppmøteRequestDto: OppmøteRequestDto, navIdent: String): TreffgjennomføringDto =
-        TreffgjennomføringWriter.skriv(treffId) { connection, kontekst, _ ->
+        treffgjennomføringWriter.skriv(treffId) { connection, kontekst, _ ->
             val personTreffId = PersonTreffId(oppmøteRequestDto.personTreffId)
             val jobbsøkerId = kontekst.jobbsøkerId(personTreffId)
                 ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")

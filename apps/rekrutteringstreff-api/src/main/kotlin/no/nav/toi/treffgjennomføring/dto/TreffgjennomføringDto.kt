@@ -1,8 +1,8 @@
 package no.nav.toi.treffgjennomføring.dto
 
+import no.nav.toi.jobbsoker.oppmøte.Deltakernummer
 import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
 import no.nav.toi.treffgjennomføring.møteplan.ArbeidsgiverRotasjon
-import no.nav.toi.jobbsoker.oppmøte.Deltakernummer
 import no.nav.toi.treffgjennomføring.matching.Interesse
 import no.nav.toi.treffgjennomføring.møteplan.Rom
 import no.nav.toi.treffgjennomføring.Treffgjennomføring

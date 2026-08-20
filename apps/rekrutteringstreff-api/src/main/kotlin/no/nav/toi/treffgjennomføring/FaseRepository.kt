@@ -36,12 +36,12 @@ class FaseRepository {
     fun settFase(
         connection: Connection,
         treffDbId: Long,
-        nåværende: TreffgjennomføringFase,
-        ny: TreffgjennomføringFase,
+        nåværendeFase: TreffgjennomføringFase,
+        nyFase: TreffgjennomføringFase,
     ) {
-        if (ny.ordinal <= nåværende.ordinal) return
+        if (nyFase.ordinal <= nåværendeFase.ordinal) return
         connection.prepareStatement("UPDATE treffgjennomforing SET fase = ? WHERE rekrutteringstreff_id = ?").use { stmt ->
-            stmt.setString(1, ny.name)
+            stmt.setString(1, nyFase.name)
             stmt.setLong(2, treffDbId)
             stmt.executeUpdate()
         }
