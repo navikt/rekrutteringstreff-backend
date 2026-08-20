@@ -55,8 +55,9 @@ data class TreffgjennomføringDto(
 data class OppmøteRequestDto(
     val personTreffId: String,
     val møtt: Boolean,
-    val bekreftSlettRegistreringer: Boolean = false,
 )
+
+data class StegRequestDto(val steg: TreffgjennomføringSteg)
 
 data class MøteoppsettRequestDto(
     val starttidspunkt: String,
@@ -69,9 +70,9 @@ data class InteresseRequestDto(
     val interessert: Boolean,
 )
 
-data class RegistreringerDto(val interesser: Int, val intervjuplasser: Int, val vurderinger: Int)
+data class RegistreringerDto(val interesser: Int, val vurderinger: Int)
 
-data class KaskadeAdvarselDto(
+data class OppmøteBlokkertDto(
     val feil: String,
     val hint: String,
     val registreringer: RegistreringerDto,

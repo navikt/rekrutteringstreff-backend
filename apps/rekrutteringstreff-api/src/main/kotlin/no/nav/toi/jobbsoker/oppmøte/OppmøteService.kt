@@ -35,7 +35,7 @@ class OppmøteService(
             val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             if (oppmøteRequestDto.møtt != harMøtt) {
                 if (oppmøteRequestDto.møtt) registrerOppmøte(connection, kontekst, personTreffId, jobbsøkerId, navIdent)
-                else fjernOppmøte(connection, personTreffId, jobbsøkerId, oppmøteRequestDto.bekreftSlettRegistreringer, navIdent)
+                else fjernOppmøte(connection, personTreffId, jobbsøkerId, navIdent)
             }
         }
 
@@ -62,28 +62,19 @@ class OppmøteService(
         connection: Connection,
         personTreffId: PersonTreffId,
         jobbsøkerId: Long,
-        bekreftet: Boolean,
         navIdent: String,
     ) {
-        val (interesser, intervjuplasser) = matchingRepository.tellForJobbsøker(connection, jobbsøkerId)
         val registreringer = Registreringer(
-            interesser = interesser,
-            intervjuplasser = intervjuplasser,
+            interesser = matchingRepository.tellInteresserForJobbsøker(connection, jobbsøkerId),
             vurderinger = oppfølgingRepository.tellForJobbsøker(connection, jobbsøkerId),
         )
-        if (registreringer.finnesRegistreringer() && !bekreftet) throw OppmøteHarRegistreringerException(registreringer)
+        // Registreringer forutsetter oppmøte, så de må ryddes først. Da kan ingenting gå tapt her.
+        if (registreringer.finnesRegistreringer()) throw OppmøteKanIkkeFjernesException(registreringer)
 
-        matchingRepository.slettForJobbsøker(connection, jobbsøkerId)
         møteplanRepository.slettRomForJobbsøker(connection, jobbsøkerId)
-        oppfølgingRepository.slettForJobbsøker(connection, jobbsøkerId)
         jobbsøkerService.fjernOppmøte(connection, personTreffId)
         hendelseWriter.forJobbsøker(
             connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET, navIdent,
-            mapOf(
-                "interesser" to registreringer.interesser,
-                "intervjuplasser" to registreringer.intervjuplasser,
-                "vurderinger" to registreringer.vurderinger,
-            ),
         )
     }
 }

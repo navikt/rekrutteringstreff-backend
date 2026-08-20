@@ -6,7 +6,7 @@ import no.nav.toi.treffgjennomføring.matching.Matching
 import no.nav.toi.treffgjennomføring.møteplan.Møteplan
 
 enum class TreffgjennomføringSteg {
-    OPPMØTE, ROM, INTERESSE, FORDELING, VURDERING
+    OPPMØTE, ROM, INTERESSE, FORDELING, VURDERING, OPPSUMMERING
 }
 
 data class Treffgjennomføring(

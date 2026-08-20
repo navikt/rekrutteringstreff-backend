@@ -122,30 +122,12 @@ class MatchingRepository {
         addBatch()
     }
 
-    fun tellForJobbsøker(connection: Connection, jobbsøkerId: Long): Pair<Int, Int> {
-        val sql = """
-            SELECT
-                (SELECT COUNT(*) FROM interesse WHERE jobbsoker_id = ?),
-                (SELECT COUNT(*) FROM intervjufordeling WHERE jobbsoker_id = ?)
-        """.trimIndent()
-        return connection.prepareStatement(sql).use { stmt ->
-            (1..2).forEach { stmt.setLong(it, jobbsøkerId) }
+    fun tellInteresserForJobbsøker(connection: Connection, jobbsøkerId: Long): Int =
+        connection.prepareStatement("SELECT COUNT(*) FROM interesse WHERE jobbsoker_id = ?").use { stmt ->
+            stmt.setLong(1, jobbsøkerId)
             stmt.executeQuery().use { rs ->
                 rs.next()
-                rs.getInt(1) to rs.getInt(2)
+                rs.getInt(1)
             }
         }
-    }
-
-    fun slettForJobbsøker(connection: Connection, jobbsøkerId: Long) {
-        listOf(
-            "DELETE FROM interesse WHERE jobbsoker_id = ?",
-            "DELETE FROM intervjufordeling WHERE jobbsoker_id = ?",
-        ).forEach { sql ->
-            connection.prepareStatement(sql).use { stmt ->
-                stmt.setLong(1, jobbsøkerId)
-                stmt.executeUpdate()
-            }
-        }
-    }
 }

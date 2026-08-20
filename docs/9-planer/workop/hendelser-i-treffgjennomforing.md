@@ -38,7 +38,7 @@ Dette dokumentet ser på det samme i etterkant, med koden som fasit.
 | Type                              | Skrives i             | `hendelse_data`                              | Kun WorkOp |
 | --------------------------------- | --------------------- | -------------------------------------------- | ---------- |
 | `REGISTRERT_OPPMØTE`              | `OppmøteService`      | `deltakernummer` (kun WorkOp)                | Nei        |
-| `REGISTRERT_OPPMØTE_FJERNET`      | `OppmøteService`      | `interesser`, `intervjuplasser`, `vurderinger` | Nei      |
+| `REGISTRERT_OPPMØTE_FJERNET`      | `OppmøteService`      | Ingen                                        | Nei        |
 | `PLASSERT_I_ROM`                  | `MøteplanService`     | `romnummer`, `forrigeRomnummer`              | Ja         |
 | `INTERESSE_REGISTRERT`            | `MatchingService`     | `arbeidsgiverTreffId`                        | **Nei**    |
 | `ANGRE_INTERESSE_REGISTRERT`      | `MatchingService`     | `arbeidsgiverTreffId`                        | **Nei**    |
@@ -333,7 +333,7 @@ ikke finnes lenger. Derfor beholdes begge typene, ikke bare `NOTAT_LAGT_TIL`.
 | Type                                           | Hvorfor                                                                                             |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `REGISTRERT_OPPMØTE`                           | `jobbsoker.oppmote` har bare siste verdi; hendelsen bærer `deltakernummer`, som ikke finnes andre steder etter at raden slettes |
-| `REGISTRERT_OPPMØTE_FJERNET`                   | **Eneste** spor av kaskadeslettingen. Uten den finnes ingen forklaring på at interesser og vurderinger forsvant |
+| `REGISTRERT_OPPMØTE_FJERNET`                   | Eneste spor av at et oppmøte ble angret; `jobbsoker.oppmote` viser bare gjeldende tilstand |
 | `VURDERT` (jobbsøker)                          | `forrigeVurdering` er den eneste kilden til at noen gikk fra «Aktuell» til «Ikke aktuell»           |
 | `NOTAT_LAGT_TIL` / `NOTAT_FJERNET` (jobbsøker) | Notater føres ofte inn i **ettertid**, etter samtaler med arbeidsgiver eller jobbsøker. Hvem og når er da selve poenget — og `vurdering_notat` mister raden ved fjerning |
 | `ANDREGANGSINTERVJU_AVTALT` / `ANGRE_` (jobbsøker) | Utfallsnær, lavt volum, kan bli etterspurt                                                     |

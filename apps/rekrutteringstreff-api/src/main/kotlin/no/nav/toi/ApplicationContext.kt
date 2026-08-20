@@ -116,6 +116,8 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         dataSource = infra.dataSource,
         kontekstRepository = treffkontekstRepository,
         reader = treffgjennomføringReader,
+        writer = treffgjennomføringWriter,
+        stegRepository = stegRepository,
     )
     val oppmøteService = OppmøteService(
         treffgjennomføringWriter = treffgjennomføringWriter,
@@ -137,12 +139,14 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         writer = treffgjennomføringWriter,
         repository = matchingRepository,
         oppmøteRepository = oppmøteRepository,
+        oppfølgingRepository = oppfølgingRepository,
         stegRepository = stegRepository,
         hendelseWriter = hendelseWriter,
     )
     val oppfølgingService = OppfølgingService(
         writer = treffgjennomføringWriter,
         repository = oppfølgingRepository,
+        oppmøteRepository = oppmøteRepository,
         stegRepository = stegRepository,
         hendelser = hendelseWriter,
     )

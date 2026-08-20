@@ -105,7 +105,8 @@ Grunnlaget for alle vurderingene under. Kolonnen «Skriver til» viser hvilke ta
 ### Kanter som krysser en tenkt subdomenegrense
 
 ```text
-oppmøte ──kaskadesletting──► rom, interesse, fordeling, vurdering   (4 kanter, skriving)
+oppmøte ──sletter──────────► rom                                   (1 kant, skriving)
+oppmøte ──teller───────────► interesse, vurdering                  (2 kanter, lesing: blokkerer fjerning)
 oppmøte ──lesing───────────► rom (normalisering ved lesing)         (1 kant)
 interesse ──speiling───────► fordeling                              (1 kant, skriving)
 fordeling ──lesing─────────► interesse                              (1 kant)
@@ -123,8 +124,9 @@ tingen som er verdt å isolere først – ikke fordi den er løst koblet, men fo
 en forutsetning alle andre leser.
 
 **Vurdering er den eneste noden uten utgående kanter.** Ingen annen operasjon leser
-eller skriver `vurdering` eller `vurdering_notat`. De to innkommende kantene er
-kaskadeslettinga fra oppmøte og den delte fasen. Det er det reneste snittet i domenet.
+eller skriver `vurdering`. De to innkommende kantene er tellinga fra oppmøte, som
+bare avgjør om oppmøtet kan fjernes, og den delte fasen. Det er det reneste
+snittet i domenet.
 
 **Interesse og fordeling er én node, ikke to.** Interesse skriver inn i
 `intervju_fordeling` (`speilInteresseIFordeling`), og «fordel på nytt» leser
@@ -384,7 +386,7 @@ alle treff bruker. Begge blir underpakker av `treffgjennomføring`.
 ### Kanter som gjenstår etter oppdelinga
 
 ```text
-oppmøte ──► møteplan, matching, oppfølging   (kaskadesletting + telling: 3 smale kall)
+oppmøte ──► møteplan, matching, oppfølging   (romsletting + telling: 3 smale kall)
 oppmøte ──► møteplan                         (rom leses med oppmøte som argument)
 matching ──► matching                        (speiling: nå internt, ikke lenger en grense)
 møteplan ──► møteplan                        (opprettMøteplan: nå internt)
@@ -506,7 +508,7 @@ no.nav.toi.oppfølging/
 Oppmøte har fått en egen `OppmøteService` under `jobbsoker/oppmøte/`, etter en
 runde med `JobbsøkerService` som eier. `JobbsøkerService` bar alle
 subdomenerepositoryene, og uttrekket samlet hele operasjonen – statusoppdatering,
-hendelse, deltakernummer og kaskadesletting – på ett sted. Transaksjonen er den
+hendelse, deltakernummer og blokkeringssjekk – på ett sted. Transaksjonen er den
 samme: `OppmøteService` bruker `TreffgjennomføringWriter.skriv` som alle andre
 skriveoperasjoner.
 
@@ -665,11 +667,11 @@ sparer ti spørringer på en operasjon som ofte er et no-op.
 
 - ~~`JobbsøkerService` returnerer `TreffgjennomføringDto` bygget fra repositoryet.~~
   Løst i fase 3: tjenesten kaller `TreffgjennomføringReader`.
-- Kaskadeslettinga står fortsatt som direkte tabellsletting via
+- Romfrigivinga står fortsatt som direkte tabellsletting via
   `TreffgjennomføringRepository`. Fase 4 og 5 gir eierne noe å kalle på.
 
 `JobbsøkerService` kjenner derfor fortsatt `TreffgjennomføringRepository`, men nå bare
-for deltakernummeret og kaskaden. Det er en kjent, avgrenset kobling som krymper i
+for deltakernummeret og rommet. Det er en kjent, avgrenset kobling som krymper i
 fase 4–5, ikke et sluttbilde.
 
 ### Fase 3 – leselaget ✅ implementert
@@ -683,7 +685,7 @@ fase 4–5, ikke et sluttbilde.
    DTO-en selv.
 3. `JobbsøkerService` kaller readeren. Den bygger ikke lenger DTO-en fra
    `TreffgjennomføringRepository` – én av de to midlertidige koblingene fra fase 2 er
-   dermed borte. Igjen står bare kaskadeslettinga og deltakernummeret.
+   dermed borte. Igjen står bare romfrigivinga og deltakernummeret.
 
 Readeren tar `Treffkontekst`, ikke `TreffId`. Skriveoperasjonene har allerede konteksten,
 og slipper å lese den to ganger i samme transaksjon.
@@ -719,11 +721,10 @@ no.nav.toi.oppfølging/
 
 **De to innkommende kantene er erstattet med eksplisitte kall:**
 
-- **Kaskadeslettinga.** `TreffgjennomføringRepository.slettRegistreringerFor` sletter
-  ikke lenger i `vurdering`. `JobbsøkerService` kaller
-  `oppfølgingRepository.slettForJobbsøker` på samme connection. Tilsvarende for
-  tellinga: `tellRegistreringer` returnerer nå bare interesser og intervjuplasser, og
-  jobbsøker-domenet setter sammen `Registreringer` med `tellForJobbsøker`.
+- **Blokkeringstellinga.** `MatchingRepository.tellInteresserForJobbsøker` teller
+  bare i `interesse`. `OppmøteService` setter sammen `Registreringer` ved også å
+  kalle `oppfølgingRepository.tellForJobbsøker` på samme connection, og lar
+  hvert domene svare for sine egne tabeller.
 - **Fasen.** `TreffgjennomføringRepository.meldFramdrift(connection, treffDbId, fase)`
   er den smale operasjonen oppfølging kaller. Fasen forblir treffgjennomføringens
   tilstand, og det synes i signaturen.

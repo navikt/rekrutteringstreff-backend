@@ -283,7 +283,7 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `fjerning av oppmøte med registreringer gir 409 uten bekreftelse og uten sideeffekt`() {
+    fun `fjerning av oppmøte med registreringer gir 409 og ingen sideeffekt`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
@@ -300,14 +300,15 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `bekreftet fjerning sletter registreringene og gir kun oppmøtehendelsen`() {
+    fun `oppmøtet kan fjernes etter at interessen er ryddet, og gir kun oppmøtehendelsen`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)
         val ag = aktivArbeidsgiver(treff)
         oppmøte(treff, person, møtt = true)
         interesse(treff, person, ag, interessert = true)
 
-        assertThat(oppmøte(treff, person, møtt = false, bekreft = true).statusCode()).isEqualTo(200)
+        assertThat(interesse(treff, person, ag, interessert = false).statusCode()).isEqualTo(200)
+        assertThat(oppmøte(treff, person, møtt = false).statusCode()).isEqualTo(200)
 
         val svar = aggregat(treff)
         assertThat(svar["oppmøte"]).isEmpty()
@@ -623,10 +624,9 @@ class TreffgjennomføringKomponentTest {
         treffId: TreffId,
         personTreffId: PersonTreffId,
         møtt: Boolean,
-        bekreft: Boolean = false,
     ): HttpResponse<String> = put(
         treffId, "/treffgjennomforing/oppmote",
-        """{"personTreffId":"${personTreffId.somString}","møtt":$møtt,"bekreftSlettRegistreringer":$bekreft}""",
+        """{"personTreffId":"${personTreffId.somString}","møtt":$møtt}""",
     )
 
     private fun put(treffId: TreffId, sti: String, body: String): HttpResponse<String> = send(

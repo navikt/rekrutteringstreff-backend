@@ -14,7 +14,6 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
     JsonSubTypes.Type(MinsideVarselSvarDataDto::class),
     JsonSubTypes.Type(RekrutteringstreffendringerDto::class),
     JsonSubTypes.Type(OppmøteRegistrertDataDto::class),
-    JsonSubTypes.Type(OppmøteFjernetDataDto::class),
     JsonSubTypes.Type(VurderingHendelseDataDto::class),
     JsonSubTypes.Type(NotatHendelseDataDto::class),
     JsonSubTypes.Type(AvtaltIntervjuHendelseDataDto::class),
@@ -24,7 +23,6 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
     MinsideVarselSvarDataDto::class,
     RekrutteringstreffendringerDto::class,
     OppmøteRegistrertDataDto::class,
-    OppmøteFjernetDataDto::class,
     VurderingHendelseDataDto::class,
     NotatHendelseDataDto::class,
     AvtaltIntervjuHendelseDataDto::class,
@@ -59,15 +57,6 @@ data class RekrutteringstreffendringerDto(
 @OpenApiName("OppmøteRegistrertHendelseData")
 data class OppmøteRegistrertDataDto(
     val deltakernummer: Int? = null,
-) : HendelseDataDto
-
-/** Tellingen av hva kaskaden slettet. Eneste spor av registreringer som forsvant med oppmøtet. */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
-@OpenApiName("OppmøteFjernetHendelseData")
-data class OppmøteFjernetDataDto(
-    val interesser: Int? = null,
-    val intervjuplasser: Int? = null,
-    val vurderinger: Int? = null,
 ) : HendelseDataDto
 
 /** `forrigeVurdering` er det tidslinja trenger for å vise «Aktuell → Ikke aktuell». */
@@ -110,7 +99,6 @@ private fun målklasse(hendelsestype: JobbsøkerHendelsestype): Class<out Hendel
         JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE -> MinsideVarselSvarDataDto::class.java
         JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON -> RekrutteringstreffendringerDto::class.java
         JobbsøkerHendelsestype.REGISTRERT_OPPMØTE -> OppmøteRegistrertDataDto::class.java
-        JobbsøkerHendelsestype.REGISTRERT_OPPMØTE_FJERNET -> OppmøteFjernetDataDto::class.java
         JobbsøkerHendelsestype.VURDERT -> VurderingHendelseDataDto::class.java
         JobbsøkerHendelsestype.NOTAT_LAGT_TIL,
         JobbsøkerHendelsestype.NOTAT_FJERNET -> NotatHendelseDataDto::class.java

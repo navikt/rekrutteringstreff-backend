@@ -6,6 +6,7 @@ import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
+import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.StegRepository
 import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
@@ -20,6 +21,7 @@ class MatchingService(
     private val writer: TreffgjennomføringWriter,
     private val repository: MatchingRepository,
     private val oppmøteRepository: OppmøteRepository,
+    private val oppfølgingRepository: OppfølgingRepository,
     private val stegRepository: StegRepository,
     private val hendelseWriter: HendelseWriter,
 ) {
@@ -35,6 +37,9 @@ class MatchingService(
 
             if (dto.interessert && person !in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)) {
                 throw BadRequestResponse("Bare fremmøtte jobbsøkere kan registrere interesse")
+            }
+            if (!dto.interessert && oppfølgingRepository.finnesForPar(connection, jobbsøkerId, arbeidsgiverId)) {
+                throw InteresseKanIkkeFjernesException()
             }
 
             if (!repository.settInteresse(connection, jobbsøkerId, arbeidsgiverId, dto.interessert)) return@skriv

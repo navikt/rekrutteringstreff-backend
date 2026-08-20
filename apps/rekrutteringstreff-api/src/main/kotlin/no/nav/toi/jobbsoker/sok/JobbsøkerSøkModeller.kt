@@ -138,12 +138,6 @@ data class JobbsøkerSøkTreff(
     val minsideHendelser: List<MinsideHendelseSøkDto> = emptyList(),
 )
 
-data class RegistreringerSammendragDto(
-    val interesser: Int,
-    val intervjuplasser: Int,
-    val vurderinger: Int,
-)
-
 data class MinsideHendelseSøkDto(
     val id: String,
     val tidspunkt: String,

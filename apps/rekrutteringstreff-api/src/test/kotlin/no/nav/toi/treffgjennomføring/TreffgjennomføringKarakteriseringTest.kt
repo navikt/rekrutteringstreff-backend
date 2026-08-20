@@ -1,5 +1,6 @@
 package no.nav.toi.treffgjennomføring
 
+import io.javalin.http.BadRequestResponse
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JacksonConfig
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
@@ -19,7 +20,8 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerRepository
-import no.nav.toi.jobbsoker.oppmøte.OppmøteHarRegistreringerException
+import no.nav.toi.jobbsoker.oppmøte.OppmøteKanIkkeFjernesException
+import no.nav.toi.treffgjennomføring.matching.InteresseKanIkkeFjernesException
 import no.nav.toi.jobbsoker.oppmøte.OppmøteService
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.jobbsoker.JobbsøkerService
@@ -69,14 +71,15 @@ class TreffgjennomføringKarakteriseringTest {
     private val writer = TreffgjennomføringWriter(db.dataSource, kontekstRepository, stegRepository, reader)
     private val hendelser = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, mapper)
 
-    private val service = TreffgjennomføringService(db.dataSource, kontekstRepository, reader)
+    private val service = TreffgjennomføringService(db.dataSource, kontekstRepository, reader, writer, stegRepository)
 
     private val møteplanService = MøteplanService(writer, møteplanRepository, oppmøteRepository, stegRepository, hendelser)
-    private val matchingService = MatchingService(writer, matchingRepository, oppmøteRepository, stegRepository, hendelser)
+    private val matchingService = MatchingService(writer, matchingRepository, oppmøteRepository, oppfølgingRepository, stegRepository, hendelser)
 
     private val oppfølgingService = OppfølgingService(
         writer = writer,
         repository = oppfølgingRepository,
+        oppmøteRepository = oppmøteRepository,
         stegRepository = stegRepository,
         hendelser = hendelser,
     )
@@ -172,14 +175,29 @@ class TreffgjennomføringKarakteriseringTest {
     }
 
     @Test
-    fun `angret oppmøte tømmer alle fire registreringstabellene for bare den ene personen`() {
+    fun `oppmøtet kan ikke fjernes når jobbsøkeren har registreringer`() {
+        val s = fulltScenario()
+        val id1 = jobbsøkerDbId(s.p1)
+
+        assertThatThrownBy { ikkeMøtt(s.treffId, s.p1) }
+            .isInstanceOf(OppmøteKanIkkeFjernesException::class.java)
+
+        assertThat(service.hent(s.treffId).oppmøte).contains(s.p1.somString)
+        assertThat(antallRader("interesse", id1)).isGreaterThan(0)
+        assertThat(antallRader("vurdering", id1)).isEqualTo(1)
+    }
+
+    @Test
+    fun `oppmøtet kan fjernes når registreringene er ryddet, og rører ikke de andre`() {
         val s = fulltScenario()
         interesse(s.treffId, s.p2, s.ag2)
         val id1 = jobbsøkerDbId(s.p1)
         val id2 = jobbsøkerDbId(s.p2)
 
+        rydd(s.treffId, s.p1, s.ag1)
         ikkeMøtt(s.treffId, s.p1)
 
+        assertThat(service.hent(s.treffId).oppmøte).doesNotContain(s.p1.somString)
         assertThat(antallRader("interesse", id1)).isEqualTo(0)
         assertThat(antallRader("intervjufordeling", id1)).isEqualTo(0)
         assertThat(antallRader("vurdering", id1)).isEqualTo(0)
@@ -191,26 +209,45 @@ class TreffgjennomføringKarakteriseringTest {
     }
 
     @Test
-    fun `fjerning av oppmøte med registreringer krever bekreftelse`() {
-        val s = fulltScenario()
-        val id1 = jobbsøkerDbId(s.p1)
-
-        assertThatThrownBy { ikkeMøtt(s.treffId, s.p1, bekreft = false) }
-            .isInstanceOf(OppmøteHarRegistreringerException::class.java)
-
-        assertThat(service.hent(s.treffId).oppmøte).contains(s.p1.somString)
-        assertThat(antallRader("vurdering", id1)).isEqualTo(1)
-    }
-
-    @Test
-    fun `fjerning uten registreringer trenger ingen bekreftelse`() {
+    fun `oppmøtet kan fjernes uten opprydding når ingenting er registrert`() {
         val treffId = vanligTreff()
         val person = jobbsøker(treffId)
         møtt(treffId, person)
 
-        ikkeMøtt(treffId, person, bekreft = false)
+        ikkeMøtt(treffId, person)
 
         assertThat(service.hent(treffId).oppmøte).isEmpty()
+    }
+
+    @Test
+    fun `interessen kan ikke fjernes mens jobbsøkeren har en registrert status`() {
+        val s = fulltScenario()
+
+        assertThatThrownBy { interesse(s.treffId, s.p1, s.ag1, interessert = false) }
+            .isInstanceOf(InteresseKanIkkeFjernesException::class.java)
+
+        assertThat(antallRader("interesse", jobbsøkerDbId(s.p1))).isGreaterThan(0)
+    }
+
+    @Test
+    fun `interessen kan fjernes når statusen er nullstilt, og tar med intervjuplassen`() {
+        val s = fulltScenario()
+
+        nullstillVurdering(s.treffId, s.p1, s.ag1)
+        interesse(s.treffId, s.p1, s.ag1, interessert = false)
+
+        assertThat(antallRader("interesse", jobbsøkerDbId(s.p1))).isEqualTo(0)
+        assertThat(antallRader("intervjufordeling", jobbsøkerDbId(s.p1))).isEqualTo(0)
+    }
+
+    @Test
+    fun `vurdering kan ikke registreres for en jobbsøker uten oppmøte`() {
+        val treffId = workOpTreff()
+        val ag = arbeidsgivere(treffId).single()
+        val person = jobbsøker(treffId)
+
+        assertThatThrownBy { vurderAktuell(treffId, person, ag) }
+            .isInstanceOf(BadRequestResponse::class.java)
     }
 
     @Test
@@ -218,6 +255,8 @@ class TreffgjennomføringKarakteriseringTest {
         val s = fulltScenario()
         assertThat(service.hent(s.treffId).gjeldendeSteg).isEqualTo(TreffgjennomføringSteg.VURDERING)
 
+        rydd(s.treffId, s.p1, s.ag1)
+        rydd(s.treffId, s.p2, s.ag1)
         ikkeMøtt(s.treffId, s.p1)
         ikkeMøtt(s.treffId, s.p2)
 
@@ -314,8 +353,7 @@ class TreffgjennomføringKarakteriseringTest {
 
         ikkeMøtt(treffId, person)
         assertThat(jobbsøkerhendelser(treffId).filter { it == "REGISTRERT_OPPMØTE_FJERNET" }).hasSize(1)
-        assertThat(hendelsedata("REGISTRERT_OPPMØTE_FJERNET").single())
-            .contains("\"interesser\"", "\"intervjuplasser\"", "\"vurderinger\"")
+        assertThat(hendelsedata("REGISTRERT_OPPMØTE_FJERNET").single()).isEqualTo("null")
     }
 
     @Test
@@ -424,7 +462,7 @@ class TreffgjennomføringKarakteriseringTest {
     }
 
     @Test
-    fun `oppfølgingen overlever at interessen fjernes`() {
+    fun `hele kjeden må ryddes nedenfra og opp før oppmøtet kan fjernes`() {
         val treffId = workOpTreff()
         val ag = arbeidsgivere(treffId).single()
         val person = jobbsøker(treffId)
@@ -445,22 +483,20 @@ class TreffgjennomføringKarakteriseringTest {
             navIdent,
         )
 
+        assertThatThrownBy { ikkeMøtt(treffId, person) }
+            .isInstanceOf(OppmøteKanIkkeFjernesException::class.java)
+        assertThatThrownBy { interesse(treffId, person, ag, interessert = false) }
+            .isInstanceOf(InteresseKanIkkeFjernesException::class.java)
+
+        nullstillVurdering(treffId, person, ag)
+        assertThat(antallRader("vurdering", jobbsøkerDbId(person))).isEqualTo(0)
+
         interesse(treffId, person, ag, interessert = false)
+        assertThat(antallRader("interesse", jobbsøkerDbId(person))).isEqualTo(0)
+        assertThat(antallRader("intervjufordeling", jobbsøkerDbId(person))).isEqualTo(0)
 
-        val etter = service.hent(treffId)
-        assertThat(etter.interesser).isEmpty()
-        assertThat(etter.intervjufordelinger.flatMap { it.inkludertePersonTreffIder + it.ekskludertePersonTreffIder })
-            .doesNotContain(person.somString)
-
-        val vurdering = etter.vurderinger.single()
-        assertThat(vurdering.personTreffId).isEqualTo(person.somString)
-        assertThat(vurdering.arbeidsgiverTreffId).isEqualTo(ag.somString)
-        assertThat(vurdering.vurderingsstatus).isEqualTo(Vurderingsvalg.AKTUELL)
-        assertThat(vurdering.vurderingsnotat).containsExactlyInAnyOrder("AG_GODT_INNTRYKK", "JS_POSITIV")
-        assertThat(vurdering.avtaltIntervju).isTrue()
-        assertThat(vurdering.avtaltIntervjuDato).isEqualTo("2026-09-01")
-        assertThat(vurdering.jobbtilbud).isTrue()
-        assertThat(antallRader("vurdering", jobbsøkerDbId(person))).isEqualTo(1)
+        ikkeMøtt(treffId, person)
+        assertThat(service.hent(treffId).oppmøte).isEmpty()
     }
 
     @Test
@@ -548,6 +584,7 @@ class TreffgjennomføringKarakteriseringTest {
     @Test
     fun `statusen og hendelsene gir samme svar for alle jobbsøkere`() {
         val s = fulltScenario()
+        rydd(s.treffId, s.p2, s.ag1)
         ikkeMøtt(s.treffId, s.p2)
 
         assertThat(antallAvvikMellomStatusOgHendelser()).isZero()
@@ -652,8 +689,8 @@ class TreffgjennomføringKarakteriseringTest {
     private fun møtt(treffId: TreffId, person: PersonTreffId) =
         oppmøteService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, true), navIdent)
 
-    private fun ikkeMøtt(treffId: TreffId, person: PersonTreffId, bekreft: Boolean = true) =
-        oppmøteService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, false, bekreft), navIdent)
+    private fun ikkeMøtt(treffId: TreffId, person: PersonTreffId) =
+        oppmøteService.oppdaterOppmøte(treffId, OppmøteRequestDto(person.somString, false), navIdent)
 
     private fun interesse(
         treffId: TreffId,
@@ -664,6 +701,42 @@ class TreffgjennomføringKarakteriseringTest {
         treffId,
         InteresseRequestDto(person.somString, arbeidsgiver.somString, interessert),
     )
+
+    /** Rydder registreringene i motsatt rekkefølge av avhengighetene, slik oppmøtet krever. */
+    private fun rydd(treffId: TreffId, person: PersonTreffId, arbeidsgiver: ArbeidsgiverTreffId) {
+        nullstillVurdering(treffId, person, arbeidsgiver)
+        interesse(treffId, person, arbeidsgiver, interessert = false)
+    }
+
+    private fun nullstillVurdering(treffId: TreffId, person: PersonTreffId, arbeidsgiver: ArbeidsgiverTreffId) =
+        oppfølgingService.lagreVurdering(
+            treffId,
+            VurderingDto(
+                personTreffId = person.somString,
+                arbeidsgiverTreffId = arbeidsgiver.somString,
+                vurderingsstatus = null,
+                vurderingsnotat = emptyList(),
+                avtaltIntervju = false,
+                avtaltIntervjuDato = null,
+                jobbtilbud = false,
+            ),
+            navIdent,
+        )
+
+    private fun vurderAktuell(treffId: TreffId, person: PersonTreffId, arbeidsgiver: ArbeidsgiverTreffId) =
+        oppfølgingService.lagreVurdering(
+            treffId,
+            VurderingDto(
+                personTreffId = person.somString,
+                arbeidsgiverTreffId = arbeidsgiver.somString,
+                vurderingsstatus = Vurderingsvalg.AKTUELL,
+                vurderingsnotat = emptyList(),
+                avtaltIntervju = false,
+                avtaltIntervjuDato = null,
+                jobbtilbud = false,
+            ),
+            navIdent,
+        )
 
     private fun antallRader(tabell: String, jobbsøkerId: Long): Int = db.dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT COUNT(*) FROM $tabell WHERE jobbsoker_id = ?").use { stmt ->

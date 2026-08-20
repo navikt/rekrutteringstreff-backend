@@ -74,16 +74,16 @@ class OppfølgingRepository {
         }
     }
 
-    fun slettForJobbsøker(connection: Connection, jobbsøkerId: Long) {
-        connection.prepareStatement("DELETE FROM vurdering WHERE jobbsoker_id = ?").use { stmt ->
-            stmt.setLong(1, jobbsøkerId)
-            stmt.executeUpdate()
-        }
-    }
-
     fun tellForJobbsøker(connection: Connection, jobbsøkerId: Long): Int =
         connection.prepareStatement("SELECT COUNT(*) FROM vurdering WHERE jobbsoker_id = ?").use { stmt ->
             stmt.setLong(1, jobbsøkerId)
             stmt.executeQuery().use { it.next(); it.getInt(1) }
+        }
+
+    fun finnesForPar(connection: Connection, jobbsøkerId: Long, arbeidsgiverId: Long): Boolean =
+        connection.prepareStatement("SELECT 1 FROM vurdering WHERE jobbsoker_id = ? AND arbeidsgiver_id = ?").use { stmt ->
+            stmt.setLong(1, jobbsøkerId)
+            stmt.setLong(2, arbeidsgiverId)
+            stmt.executeQuery().use { it.next() }
         }
 }

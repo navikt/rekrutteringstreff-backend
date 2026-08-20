@@ -3,6 +3,7 @@ package no.nav.toi.oppfølging
 import io.javalin.http.BadRequestResponse
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.StegRepository
 import no.nav.toi.treffgjennomføring.TreffgjennomføringSteg
@@ -14,6 +15,7 @@ import java.sql.Connection
 class OppfølgingService(
     private val writer: TreffgjennomføringWriter,
     private val repository: OppfølgingRepository,
+    private val oppmøteRepository: OppmøteRepository,
     private val stegRepository: StegRepository,
     private val hendelser: HendelseWriter,
 ) {
@@ -30,8 +32,14 @@ class OppfølgingService(
                 it.personTreffId == ny.personTreffId && it.arbeidsgiverTreffId == ny.arbeidsgiverTreffId
             }
 
-            if (ny.harRegistrertNoe()) repository.lagre(connection, jobbsøkerId, arbeidsgiverId, ny)
-            else repository.slett(connection, jobbsøkerId, arbeidsgiverId)
+            if (ny.harRegistrertNoe()) {
+                if (ny.personTreffId !in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)) {
+                    throw BadRequestResponse("Bare fremmøtte jobbsøkere kan få registrert vurdering")
+                }
+                repository.lagre(connection, jobbsøkerId, arbeidsgiverId, ny)
+            } else {
+                repository.slett(connection, jobbsøkerId, arbeidsgiverId)
+            }
 
             skrivHendelser(connection, før, ny, navIdent)
             stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, rad.gjeldendeSteg, TreffgjennomføringSteg.VURDERING)

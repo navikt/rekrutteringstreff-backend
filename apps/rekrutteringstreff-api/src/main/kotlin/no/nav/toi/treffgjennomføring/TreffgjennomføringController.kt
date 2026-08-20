@@ -20,10 +20,11 @@ import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.eier.krevEierEllerUtvikler
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
-import no.nav.toi.treffgjennomføring.dto.KaskadeAdvarselDto
+import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomføring.dto.RomDto
+import no.nav.toi.treffgjennomføring.dto.StegRequestDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import java.util.*
 
@@ -46,6 +47,7 @@ class TreffgjennomføringController(
         const val INTERESSE = "$skrivPath/interesse"
         const val INTERVJUFORDELING = "$skrivPath/intervjufordeling"
         const val FORDEL = "$INTERVJUFORDELING/fordel"
+        const val STEG = "$skrivPath/steg"
         const val HENT = lesPath
 
         private const val PERSON_ID = "11111111-1111-1111-1111-111111111111"
@@ -87,6 +89,7 @@ class TreffgjennomføringController(
         routes.put(INTERESSE, interesseHandler())
         routes.put(INTERVJUFORDELING, intervjufordelingHandler())
         routes.post(FORDEL, fordelHandler())
+        routes.put(STEG, stegHandler())
     }
 
     private fun Context.treffId() = TreffId(pathParam("id"))
@@ -113,22 +116,22 @@ class TreffgjennomføringController(
 
     @OpenApi(
         summary = "Registrer eller angre oppmøte for én jobbsøker",
-        description = "Fjerning når det finnes registreringer krever bekreftSlettRegistreringer=true, ellers 409.",
+        description = "Oppmøtet kan bare fjernes når jobbsøkeren ikke har interesser eller registrert status, ellers 409.",
         operationId = "oppdaterOppmote",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
         requestBody = OpenApiRequestBody(content = [OpenApiContent(
             from = OppmøteRequestDto::class,
-            example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "møtt": true, "bekreftSlettRegistreringer": false}""",
+            example = """{"personTreffId": "11111111-1111-1111-1111-111111111111", "møtt": true}""",
         )]),
         responses = [
             OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)]),
             OpenApiResponse(
                 status = "409",
-                description = "Oppmøtet har registreringer som må bekreftes slettet.",
+                description = "Jobbsøkeren har registreringer som må ryddes før oppmøtet kan fjernes.",
                 content = [OpenApiContent(
-                    from = KaskadeAdvarselDto::class,
-                    example = """{"feil": "Jobbsøkeren har registreringer som slettes hvis oppmøtet fjernes.", "hint": "Bekreft med bekreftSlettRegistreringer=true.", "registreringer": {"interesser": 2, "intervjuplasser": 1, "vurderinger": 0}}""",
+                    from = OppmøteBlokkertDto::class,
+                    example = """{"feil": "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.", "hint": "Fjern interessene og nullstill statusen først.", "registreringer": {"interesser": 2, "vurderinger": 0}}""",
                 )],
             ),
         ],
@@ -190,6 +193,23 @@ class TreffgjennomføringController(
         path = INTERESSE,
         methods = [HttpMethod.PUT],
     )
+    @OpenApi(
+        summary = "Flytt gjeldende steg framover. Brukes når arrangøren går videre til et steg som ikke skriver data",
+        operationId = "settGjeldendeSteg",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(content = [OpenApiContent(from = StegRequestDto::class, example = """{"steg": "OPPSUMMERING"}""")]),
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
+        path = STEG,
+        methods = [HttpMethod.PUT],
+    )
+    private fun stegHandler(): (Context) -> Unit = { ctx ->
+        val treffId = ctx.treffId()
+        ctx.krevEierEllerUtvikler(eierService, treffId)
+        val dto = ctx.bodyAsClass<StegRequestDto>()
+        ctx.status(200).json(treffgjennomføringService.settGjeldendeSteg(treffId, dto.steg))
+    }
+
     private fun interesseHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
         ctx.krevEierEllerUtvikler(eierService, treffId)

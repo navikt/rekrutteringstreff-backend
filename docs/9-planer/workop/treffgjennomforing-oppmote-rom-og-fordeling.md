@@ -189,10 +189,9 @@ punktene «Endre svar» og «Slett»). Vi legger til:
   burgermenyen) og tømmer valget når alle er registrert. Tellerne viser bare de
   valgte som faktisk endres, så «Marker som møtt» hopper over dem som allerede
   er møtt, og omvendt.
-- Fjerning krever bekreftelse, siden den sletter interesser, intervjuplasser og
-  vurderinger. Dialogen er den samme `FjernOppmøteBekreftelse` som brukes for
-  én person, men får **summen** av registreringene for alle de valgte, slik at
-  konsekvensen vises samlet før noe kjøres.
+- Fjerning trenger ingen bekreftelse, siden ingenting slettes i kaskade. De
+  valgte som har registreringer blir stående urørt, og etterpå forteller en
+  melding hvor mange som ble hoppet over og hvorfor.
 - Avkrysningsboksen i `JobbsøkerKort` var låst til `status === LAGT_TIL` (den
   var laget for invitasjonsflyten). På WorkOp-treff åpnes den for alle
   statuser, siden oppmøte er ortogonalt til svarstatus. «Inviter»-knappen
@@ -697,14 +696,7 @@ Hver søkerad utvides additivt med:
 
 ```json
 {
-  "oppmøte": {
-    "møtt": true,
-    "registreringerSomSlettes": {
-      "interesser": 2,
-      "intervjuplasser": 1,
-      "vurderinger": 0
-    }
-  }
+  "oppmøte": { "møtt": true }
 }
 ```
 
@@ -715,9 +707,9 @@ finnes på søkeradene. API-feltet kan beholdes selv om visningen senere
 feature-toggles bort.
 
 Etter en vellykket oppmøtemutasjon revaliderer frontend jobbsøkersøket, slik at
-`møtt` og `registreringerSomSlettes` alltid kommer fra backend. Frontend
-konstruerer ikke tellingene selv. Treffgjennomføringsfanen fortsetter å lese hele
-aggregatet fra sitt eget endepunkt.
+`møtt` alltid kommer fra backend. Hva som eventuelt blokkerer en fjerning leses
+av `409`-svaret, ikke av søkeraden. Treffgjennomføringsfanen fortsetter å lese
+hele aggregatet fra sitt eget endepunkt.
 
 ### MSW-mock (dynamisk for demo)
 
@@ -817,10 +809,14 @@ brukeren har nådd**:
 | `INTERESSE` | 3    | Første interesse er registrert              |
 | `FORDELING` | 4    | Intervjufordelingen er lagret               |
 | `VURDERING` | 5    | Første vurdering er registrert              |
+| `OPPSUMMERING` | 6 | Arrangøren trykker «Neste» i steg 5        |
 
 Fasen går bare framover: et angret oppmøte eller en slettet vurdering skal ikke
-lukke steg brukeren allerede har vært innom. Oppsummeringen (steg 6) er ikke en
-fase – der registreres ingenting, den leser bare det som allerede finnes.
+lukke steg brukeren allerede har vært innom. Oppsummeringen registrerer
+ingenting og leser bare det som allerede finnes, men den trenger likevel en egen
+fase: uten den hadde steget vært umulig å nå igjen etter et besøk, siden det
+ikke setter noe spor i dataene. Derfor kalles `PUT /treffgjennomforing/steg` med
+`{"steg": "OPPSUMMERING"}` når arrangøren går videre fra steg 5.
 
 Det finnes **ingen egen `OPPSETT`-fase**. Den ville betydd «noen er møtt, men
 møteplanen er ikke laget», og siden møteoppsettet og romfordelingen er samme
@@ -862,7 +858,7 @@ kall hører til.
 
 | Metode | Sti                                          | Funksjon                                                                                            |
 | ------ | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| POST   | `/api/rekrutteringstreff/{id}/jobbsoker/sok` | Returnerer paginert søkeresultat med `oppmøte` og `registreringerSomSlettes` på hver returnert rad. |
+| POST   | `/api/rekrutteringstreff/{id}/jobbsoker/sok` | Returnerer paginert søkeresultat med `oppmøte` på hver returnert rad.                               |
 
 **Lesing er felles.** Hele aggregatet hentes med ett kall:
 
@@ -880,12 +876,13 @@ Alle returnerer hele aggregatet:
 
 | Metode | Sti                                            | Funksjon                                                                                                                                                          |
 | ------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PUT    | `/treffgjennomforing/oppmote`                  | Registrer eller angre oppmøte for én jobbsøker. Fjerning med registreringer krever `bekreftSlettRegistreringer`.                                                  |
+| PUT    | `/treffgjennomforing/oppmote`                  | Registrer eller angre oppmøte for én jobbsøker. Fjerning blokkeres med `409` hvis personen har interesser eller vurdering.                                                  |
 | PUT    | `/treffgjennomforing/moteoppsett`              | Sett tider. Første gang: opprett full round-robin-fordeling + rotasjon, fase = ROM. Senere: oppdater tidene uten å regenerere. Kun WorkOp.                        |
 | PUT    | `/treffgjennomforing/romfordeling`             | Erstatt komplett romfordeling etter manuell flytting eller «Fordel på nytt». Kun WorkOp.                                                                          |
-| PUT    | `/treffgjennomforing/interesse`                | Sett eller fjern ett interessepar, idempotent. Ny interesse legges bakerst blant de inkluderte i intervjufordelingen; trukket interesse fjernes fra begge lister. |
+| PUT    | `/treffgjennomforing/interesse`                | Sett eller fjern ett interessepar, idempotent. Ny interesse legges bakerst blant de inkluderte i intervjufordelingen; trukket interesse fjernes fra begge lister. Fjerning blokkeres med `409` hvis paret har en registrert status. |
 | PUT    | `/treffgjennomforing/intervjufordeling`        | Lagre rekkefølge over og under sperrelinjen for én arbeidsgiver. Brukes ved manuell dra-og-slipp. Kun WorkOp.                                                     |
 | POST   | `/treffgjennomforing/intervjufordeling/fordel` | Fordel intervjuene på nytt. Tom body — alt som trengs er lagret. Erstatter hele fordelingen i én transaksjon. Kun WorkOp.                                         |
+| PUT    | `/treffgjennomforing/steg`                     | Flytt fasen framover uten å skrive data. Brukes når arrangøren går fra steg 5 til oppsummeringen.                                                                 |
 | PUT    | `/oppfolging/vurderinger`                      | Sett eller fjern vurdering og oppfølging for ett par.                                                                                                             |
 
 Oppfølgingsdelen har foreløpig bare ett skriveendepunkt. Grupperinga er likevel
@@ -897,7 +894,7 @@ selvsagt plass.
 
 | Endepunkt                                           | Body                                           | Felt                                                                     |
 | --------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
-| `PUT /treffgjennomforing/oppmote`                   | eget objekt                                    | `personTreffId`, `møtt`, `bekreftSlettRegistreringer` (standard `false`) |
+| `PUT /treffgjennomforing/oppmote`                   | eget objekt                                    | `personTreffId`, `møtt`                                                 |
 | `PUT /treffgjennomforing/moteoppsett`               | eget objekt                                    | `starttidspunkt` (`HH:mm`), `varighetPerMøteMinutter` (minst 1)          |
 | `PUT /treffgjennomforing/romfordeling`              | **`[RomDto]` direkte**                         | Ikke innpakket                                                           |
 | `PUT /treffgjennomforing/interesse`                 | eget objekt                                    | `personTreffId`, `arbeidsgiverTreffId`, `interessert`                    |
@@ -980,34 +977,50 @@ Invarianter backend må håndheve, ikke bare stole på fra frontend:
   `ROM`. Senere kall oppdaterer bare de tre tidsfeltene.
   Antall rom sendes ikke inn — det beregnes av backend, se
   [Antall rom beregnes, ikke lagres](#antall-rom-beregnes-ikke-lagres).
-- Bare fremmøtte kan få interesser og intervjufordeling. En vurdering kan bestå
-  etter at interesse og intervjufordeling fjernes. En vurderingsrad slettes bare
-  når den er helt tom — ingen vurdering, ingen notater, ingen 2. intervju-dato og
-  begge boolean-feltene `false`. Et påbegynt notat holder altså raden i live.
-- Fjerning av oppmøte når det finnes interesser, intervjufordeling eller vurderinger
-  krever eksplisitt bekreftelse; data må aldri bli hengende igjen inkonsistent.
-  Se [Bekreftet kaskadesletting](#bekreftet-kaskadesletting).
+- Bare fremmøtte kan få interesser, intervjufordeling og vurdering. En
+  vurderingsrad slettes når den er helt tom — ingen vurdering, ingen notater,
+  ingen 2. intervju-dato og begge boolean-feltene `false`. Et påbegynt notat
+  holder altså raden i live.
+- Ingenting slettes i kaskade. Du kan ikke fjerne noe som noe annet bygger på.
+  Se [Rydd før du fjerner](#rydd-før-du-fjerner).
 
-#### Bekreftet kaskadesletting
+#### Rydd før du fjerner
 
-`PUT /treffgjennomforing/oppmote` tar feltet `bekreftSlettRegistreringer: Boolean = false`.
-Når oppmøte fjernes for en person som har interesser, intervjufordeling eller
-vurderinger, og feltet er `false`, svarer backend `409 Conflict` uten å endre
-noe:
+Avhengighetskjeden er `oppmøte → interesse → status`, og den ryddes i motsatt
+rekkefølge. Backend nekter å bryte kjeden, slik at ingen registreringer kan
+forsvinne som sideeffekt av en annen handling.
+
+1. **Oppmøte** kan ikke fjernes når personen har interesser eller en vurdering
+   med innhold. Romtildeling og deltakernummer er konsekvenser av oppmøtet og
+   blokkerer ikke; rommet frigis, og deltakernummeret beholdes slik at samme
+   person får samme nummer igjen.
+2. **Interesse** kan ikke fjernes mens det finnes en vurdering med innhold for
+   samme par av jobbsøker og arbeidsgiver. Intervjuplassen blokkerer ikke — den
+   er en konsekvens av interessen, og forsvinner sammen med den.
+3. **Vurdering** kan alltid nullstilles, siden ingenting bygger på den, men kan
+   bare registreres for en fremmøtt person.
+
+Brudd på 1 og 2 gir `409 Conflict` uten sideeffekt:
 
 ```json
 {
-  "feil": "Jobbsøkeren har registreringer som slettes hvis oppmøtet fjernes.",
-  "hint": "Bekreft med bekreftSlettRegistreringer=true.",
-  "registreringer": { "interesser": 2, "intervjuplasser": 1, "vurderinger": 1 }
+  "feil": "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.",
+  "hint": "Fjern interessene og nullstill statusen først.",
+  "registreringer": { "interesser": 2, "vurderinger": 1 }
 }
 ```
 
-Frontend bruker tallene i `registreringer` til å beskrive konsekvensen i
-bekreftelsesdialogen, og sender deretter samme kall med
-`bekreftSlettRegistreringer: true`. Da slettes oppmøtet og de avhengige radene i
-én transaksjon. MSW-mocken i frontend implementerer allerede nøyaktig denne
-oppførselen og er referansen for backend.
+```json
+{
+  "feil": "Jobbsøkeren har en registrert status og interessen kan derfor ikke fjernes.",
+  "hint": "Nullstill statusen for jobbsøkeren hos denne arbeidsgiveren først."
+}
+```
+
+Frontend forhindrer normalt bruddet før kallet: avkrysningsboksen i steg 3 er
+låst med en forklarende tooltip når statusen er registrert, og «Fjern oppmøte»
+viser en dialog som lister opp hva som må ryddes og i hvilket steg. MSW-mocken
+håndhever de samme reglene.
 
 #### Samtidighet
 
@@ -1213,7 +1226,7 @@ erDiagram
 ```
 
 Verdiene bak de korte beskrivelsene står i tabellen over: `fase` er
-`OPPMØTE`/`ROM`/`INTERESSE`/`FORDELING`/`VURDERING`, `vurdering` er
+`OPPMØTE`/`ROM`/`INTERESSE`/`FORDELING`/`VURDERING`/`OPPSUMMERING`, `vurdering` er
 `AKTUELL`/`KANSKJE`/`IKKE_AKTUELL` eller `NULL`, og `notat` er kodeverdier med
 `AG_`-prefiks for arbeidsgiverens notater og `JS_` for jobbsøkerens.
 
@@ -1423,7 +1436,7 @@ Nye verdier i `JobbsøkerHendelsestype`:
 | Type                              | Når                             | `hendelse_data`                                                                       |
 | --------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
 | `MØTT_OPP`                        | Oppmøte registreres             | `deltakernumre` – nummeret på kortet personen fikk                                   |
-| `ANGRE_MØTT_OPP`                  | Oppmøte fjernes                 | Antall registreringer som ble slettet: `interesser`, `intervjuplasser`, `vurderinger` |
+| `ANGRE_MØTT_OPP`                  | Oppmøte fjernes                 | Ingen. Fjerning er bare tillatt når det ikke finnes registreringer å telle           |
 | `PLASSERT_I_ROM`                  | Rommet settes eller endres      | `romnummer`, `forrigeRomnummer` (`null` første gang). Kun WorkOp                      |
 | `INTERESSE_REGISTRERT`            | Interesse krysses av            | `arbeidsgiverTreffId`                                                                 |
 | `ANGRE_INTERESSE_REGISTRERT`      | Krysset fjernes                 | `arbeidsgiverTreffId`                                                                 |
@@ -1458,11 +1471,10 @@ null`, ikke en egen angrehendelse; det finnes ingen «forrige tilstand» å
   sannhetskilden for at noen faktisk har fått jobb. De skal ikke slås sammen,
   og det ene skal ikke utløse det andre.
 
-**Kaskader gir ingen hendelser.** Fjernes et oppmøte, slettes interesser,
-intervjuplasser og vurderinger for personen — uten en hendelse per slettet rad.
-Brukeren utførte én handling, og `ANGRE_MØTT_OPP` bærer tellingen av hva som
-forsvant. Dette er den eneste unntaket fra hovedregelen, og det følger av den:
-kaskaden er systemets slutning, ikke brukerens avgjørelse.
+**Ingen kaskader, ingen skjulte slettinger.** Et oppmøte kan bare fjernes når
+interessene og vurderingen alt er ryddet, så `REGISTRERT_OPPMØTE_FJERNET` står
+aldri for tapte registreringer. Hver rydding er en egen brukerhandling og får
+sin egen hendelse der hendelsestypen finnes.
 
 ##### Arbeidsgiverhendelser
 
@@ -1557,8 +1569,6 @@ Backend skal først filtrere, sortere og paginere jobbsøkersøket. Deretter
 berikes bare `personTreffId`-ene på den returnerte siden:
 
 - `møtt` hentes fra siste `MØTT_OPP`/`ANGRE_MØTT_OPP` per person.
-- `interesser`, `intervjuplasser` og `vurderinger` telles samlet fra
-  `interesse`, `intervju_fordeling` og `vurdering`.
 - Berikelsen gjøres med batchspørringer eller én samlet spørring, aldri én
   spørring per søkerad.
 
@@ -1636,7 +1646,7 @@ Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
 1. Behold frontend bakoverkompatibel: `oppmøte` er valgfritt og handlingene
    skjules når feltet mangler.
 2. `V14__treffgjennomforing.sql` og repository for lesing.
-3. Oppmøtehendelsene, inkludert `bekreftSlettRegistreringer` og 409-svaret.
+3. Oppmøtehendelsene, inkludert 409-svaret når registreringene ikke er ryddet.
 4. Utvid `POST /jobbsoker/sok` med page-first oppmøteberikelse, komponenttester
    og ytelsestest.
 5. `GET /treffgjennomforing-og-oppfolging` med tilgangssjekk. Frontend kan da lese ekte data.
