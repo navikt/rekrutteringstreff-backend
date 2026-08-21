@@ -54,6 +54,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 }.executeUpdate()
 
                 if (endredeLinjer == 0) {
+                    connection.rollback()
                     log.error("Prøvde å opprette aktivitetskort for person på treff som allerede har aktivitetskort: $rekrutteringstreffId")
                     return null
                 } else {
