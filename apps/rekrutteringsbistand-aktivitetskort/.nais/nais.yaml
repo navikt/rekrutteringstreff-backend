@@ -41,6 +41,8 @@ spec:
         diskAutoresize: {{ gcp_disk_autoresize }}
         databases:
           - name: aktivitetskort-db
+  strategy:
+    type: Recreate
   accessPolicy:
     outbound:
       rules:

@@ -3,6 +3,7 @@ package no.nav.toi
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
@@ -107,7 +108,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
                 endretAvPersonbruker = true
             )
         )
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(0)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -169,7 +170,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
                 endretAvPersonbruker = false
             )
         )
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(0)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -218,7 +219,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             )
         )
 
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(2)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -234,6 +235,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             assertThat(this[1].aktivitetskortId).isEqualTo(this[0].aktivitetskortId)
             assertThat(this[1].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[1].aktivitetsStatus).isEqualTo(forventetAktivitetsStatus.name)
+            assertThat(this[1].aktivitetsType).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
             assertThat(this[1].opprettetAv).isEqualTo(endretAv)
             assertThat(this[1].opprettetAvType).isEqualTo(forventetEndretAvType.name)
             assertThat(this[1].opprettetTidspunkt).isCloseTo(nowFørSendTestmessage, within(100, ChronoUnit.MILLIS))
@@ -284,7 +286,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             )
         )
 
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(2)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -300,6 +302,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             assertThat(this[1].aktivitetskortId).isEqualTo(this[0].aktivitetskortId)
             assertThat(this[1].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[1].aktivitetsStatus).isEqualTo(forventetAktivitetsStatus.name)
+            assertThat(this[1].aktivitetsType).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
             assertThat(this[1].opprettetAv).isEqualTo(endretAv)
             assertThat(this[1].opprettetAvType).isEqualTo(forventetEndretAvType.name)
             assertThat(this[1].opprettetTidspunkt).isCloseTo(nowFørSendTestmessage, within(100, ChronoUnit.MILLIS))
@@ -349,7 +352,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             )
         )
 
-        val rekrutteringstreffHendelser = testRepository.hentAlle()
+        val rekrutteringstreffHendelser = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffHendelser).hasSize(2)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(0)
@@ -365,6 +368,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             assertThat(this[1].aktivitetskortId).isEqualTo(this[0].aktivitetskortId)
             assertThat(this[1].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[1].aktivitetsStatus).isEqualTo(forventetAktivitetsStatus.name)
+            assertThat(this[1].aktivitetsType).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
             assertThat(this[1].opprettetAv).isEqualTo(endretAv)
             assertThat(this[1].opprettetAvType).isEqualTo(forventetEndretAvType.name)
             assertThat(this[1].opprettetTidspunkt).isCloseTo(nowFørSendTestmessage, within(100, ChronoUnit.MILLIS))
@@ -390,9 +394,9 @@ class RekrutteringstreffSvarOgStatusLytterTest {
           $svarJson
           $treffstatusJson
           "endretAv": "$endretAv",
-          "endretAvPersonbruker": $endretAvPersonbruker
+          "endretAvPersonbruker": $endretAvPersonbruker,
+          "aktørId": "Dummy aktørId"
         }
         """.trimIndent()
     }
 }
-

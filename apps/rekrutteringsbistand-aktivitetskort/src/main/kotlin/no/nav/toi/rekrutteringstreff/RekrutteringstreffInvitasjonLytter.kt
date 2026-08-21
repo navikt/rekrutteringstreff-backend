@@ -21,7 +21,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             precondition {
                 it.requireValue("@event_name", "rekrutteringstreffinvitasjon")
                 it.forbid("aktivitetskortuuid")
-                it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
+                it.requireKey("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
                 it.requireKey(

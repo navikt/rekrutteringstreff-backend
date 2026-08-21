@@ -2,6 +2,7 @@ package no.nav.toi
 
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy
@@ -98,7 +99,7 @@ class RekrutteringstreffOppdateringTest {
             )
         )
 
-        val invitasjoner = testRepository.hentAlle()
+        val invitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(invitasjoner).hasSize(1)
         val aktivitetskortId = invitasjoner[0].aktivitetskortId
 
@@ -124,13 +125,14 @@ class RekrutteringstreffOppdateringTest {
         )
 
         // Hent alle aktivitetskort og verifiser oppdatering
-        val aktivitetskort = testRepository.hentAlle()
+        val aktivitetskort = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(aktivitetskort).hasSize(2) // Original + oppdatert versjon
 
         val oppdatertKort = aktivitetskort.last()
 
         // Verify the update was applied
         assertThat(oppdatertKort.aktivitetskortId).isEqualTo(aktivitetskortId)
+        assertThat(oppdatertKort.aktivitetsType).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
         assertThat(oppdatertKort.tittel).isEqualTo(nyTittel)
         assertThat(oppdatertKort.fraTid).isEqualTo(nyFraTid.toLocalDate())
         assertThat(oppdatertKort.tilTid).isEqualTo(nyTilTid.toLocalDate())
@@ -190,7 +192,7 @@ class RekrutteringstreffOppdateringTest {
             )
         )
 
-        val aktivitetskort = testRepository.hentAlle()
+        val aktivitetskort = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         val oppdatertKort = aktivitetskort.last()
 
         assertThat(oppdatertKort.fraTid).isEqualTo(nyFraTid.toLocalDate())
@@ -228,7 +230,8 @@ class RekrutteringstreffOppdateringTest {
             "opprettetTidspunkt": "$opprettetTidspunkt",
             "gateadresse": "$gateadresse",
             "postnummer": "$postnummer",
-            "poststed": "$poststed"
+            "poststed": "$poststed",
+            "aktørId": "Dummy aktørId"
         }
     """.trimIndent()
 
@@ -251,8 +254,8 @@ class RekrutteringstreffOppdateringTest {
             "tilTid": "$tilTid",
             "gateadresse": "$gateadresse",
             "postnummer": "$postnummer",
-            "poststed": "$poststed"
+            "poststed": "$poststed",
+            "aktørId": "Dummy aktørId"
         }
     """.trimIndent()
 }
-

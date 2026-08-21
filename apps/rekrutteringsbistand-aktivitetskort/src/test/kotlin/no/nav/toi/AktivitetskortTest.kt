@@ -9,6 +9,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
 import no.nav.toi.aktivitetskort.AktivitetskortJobb
+import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.ErrorType
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
@@ -121,6 +122,60 @@ class AktivitetskortTest {
     }
 
     @Test
+    fun `bestill aktivitetskort for delt stilling`() {
+        val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
+        val expectedFnr = "12345678910"
+        val expectedStillingId = UUID.randomUUID()
+        val expectedTittel = "Teststilling"
+        val expectedOpprettetAv = "testuser"
+        val expectedArbeidsgiver = "Testarbeidsgiver"
+        val expectedArbeidssted = "Oslo"
+        val expectedAktivitetskortId = repository.opprettDeltStilling(
+            fnr = expectedFnr,
+            stillingId = expectedStillingId.toString(),
+            tittel = expectedTittel,
+            opprettetAv = expectedOpprettetAv,
+            arbeidsgiver = expectedArbeidsgiver,
+            arbeidssted = expectedArbeidssted,
+        )
+
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+
+        assertThat(expectedAktivitetskortId).isNotNull()
+        assertThat(producer.history()).hasSize(1)
+        val record = producer.history().first()
+        record.value().let(objectMapper::readTree).apply {
+            assertThat(this["messageId"].asText()).isNotBlank()
+            assertThat(this["source"].asText()).isEqualTo("REKRUTTERINGSBISTAND")
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELTSTILLING.name)
+            assertThat(this["actionType"].asText()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
+            assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
+            assertThat(this["aktivitetskort"]["personIdent"].asText()).isEqualTo(expectedFnr)
+            assertThat(this["aktivitetskort"]["tittel"].asText()).isEqualTo(expectedTittel)
+            assertThat(this["aktivitetskort"]["aktivitetStatus"].asText()).isEqualTo("FORSLAG")
+            assertThat(this["aktivitetskort"]["startDato"].isNull).isTrue()
+            assertThat(this["aktivitetskort"]["sluttDato"].isNull).isTrue()
+            assertThat(this["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(
+                "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
+            )
+            assertThat(this["aktivitetskort"]["endretAv"]["ident"].asText()).isEqualTo(expectedOpprettetAv)
+            assertThat(this["aktivitetskort"]["endretAv"]["identType"].asText()).isEqualTo("NAVIDENT")
+            assertThat(this["aktivitetskort"]["endretTidspunkt"].isMissingNode()).isFalse
+            assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
+            assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
+            val expectedDetaljer = objectMapper.readTree(
+                """[{"label":"Arbeidsgiver","verdi":"$expectedArbeidsgiver"},{"label":"Arbeidssted","verdi":"$expectedArbeidssted"}]"""
+            )
+            assertThat(this["aktivitetskort"]["detaljer"]).containsExactlyInAnyOrder(*expectedDetaljer.toList().toTypedArray())
+            assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
+            assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
+            assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
+            assertThat(this["aktivitetskort"]["handlinger"]).isEmpty()
+            assertThat(this["aktivitetskort"]["oppgave"].isNull).isTrue()
+        }
+    }
+
+    @Test
     fun `tittel med spesialtegn skal gi gyldig json og bevares uendret`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         val expectedFnr = "12345678910"
@@ -194,7 +249,7 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val invitasjon = testRepository.hentAlle()[0]
+        val invitasjon = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0]
         val messageId = invitasjon.messageId
 
         val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
@@ -233,7 +288,7 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
 
         val jobb = AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
@@ -262,7 +317,7 @@ class AktivitetskortTest {
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
         val timestamp = ZonedDateTime.now()
         val failingMessage = """{"messageId":"$messageId"}"""
         val errorMessage = "DuplikatMeldingFeil Melding allerede handtert, ignorer"
@@ -281,7 +336,7 @@ class AktivitetskortTest {
     """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
         jobb.run()
-        val meldinger = testRepository.hentAlle()
+        val meldinger = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(meldinger).hasSize(1)
         assertThat(meldinger[0].feil).isNotNull
         meldinger[0].feil!!.apply {
@@ -299,7 +354,7 @@ class AktivitetskortTest {
         consumer.assign(listOf(topicPartition))
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
 
         val jobb = AktivitetskortFeilJobb(repository,consumer, LeaderElectionMock(), "feil-kø", {_,_->})
         val value = """
@@ -314,15 +369,15 @@ class AktivitetskortTest {
         """.trimIndent()
         consumer.addRecord(ConsumerRecord(topicPartition.topic(), topicPartition.partition(), 0, UUID.randomUUID().toString(), value))
         jobb.run()
-        val meldinger = testRepository.hentAlle()
+        val meldinger = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(meldinger).hasSize(1)
         assertThat(meldinger[0].feil).isNull()
     }
 
     @Test
-    fun `feilkø-hendelse skal føre til melding på rapid`() {
+    fun `feilkø-hendelse for rekrutteringstreffinvitasjon skal føre til melding på rapid`() {
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val invitasjon = testRepository.hentAlle().first()
+        val invitasjon = testRepository.hentAlleRekrutteringstreffInvitasjoner().first()
         val errorMessage = "Duplikat prøvd opprettet"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
         repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
@@ -332,9 +387,11 @@ class AktivitetskortTest {
         AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).run()
         assertThat(rapid.inspektør.size).isEqualTo(1)
         rapid.inspektør.message(0).apply {
-            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil")
+            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-rekrutteringstreff")
             assertThat(this["fnr"].asText()).isEqualTo(invitasjon.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(invitasjon.aktivitetskortId.toString())
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
+            assertThat(this.has("stillingId")).isFalse()
             assertThat(this["rekrutteringstreffId"].asText()).isEqualTo(invitasjon.rekrutteringstreffId.toString())
             assertThat(this["endretAv"].asText()).isEqualTo(invitasjon.endretAv)
             assertThat(this["messageId"].asText()).isEqualTo(invitasjon.messageId.toString())
@@ -345,9 +402,44 @@ class AktivitetskortTest {
     }
 
     @Test
+    fun `feilkø-hendelse for delt stilling skal føre til melding på rapid`() {
+        val stillingId = UUID.randomUUID()
+        repository.opprettDeltStilling(
+            fnr = "12345678910",
+            stillingId = stillingId.toString(),
+            tittel = "Teststilling",
+            opprettetAv = "testuser",
+            arbeidsgiver = "Testarbeidsgiver",
+            arbeidssted = "Oslo"
+        )
+        val deltStilling = testRepository.hentAlleRekrutteringsbistandStillinger().single()
+        val errorMessage = "Aktivitetskortet ble avvist"
+        val errorType = ErrorType.ULOVLIG_ENDRING
+        repository.lagreFeilkøHendelse(deltStilling.messageId, "{}", errorMessage, errorType)
+
+        val rapid = TestRapid()
+        val consumer = MockConsumer<String, String>(StrategyType.EARLIEST.toString())
+        AktivitetskortFeilJobb(repository, consumer, LeaderElectionMock(), "feil-kø", rapid::publish).run()
+
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        rapid.inspektør.message(0).apply {
+            assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-deltstilling")
+            assertThat(this["fnr"].asText()).isEqualTo(deltStilling.fnr)
+            assertThat(this["aktivitetskortId"].asText()).isEqualTo(deltStilling.aktivitetskortId.toString())
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELTSTILLING.name)
+            assertThat(this["stillingId"].asText()).isEqualTo(stillingId.toString())
+            assertThat(this.has("rekrutteringstreffId")).isFalse()
+            assertThat(this["endretAv"].asText()).isEqualTo(deltStilling.endretAv)
+            assertThat(this["messageId"].asText()).isEqualTo(deltStilling.messageId.toString())
+            assertThat(this["errorMessage"].asText()).isEqualTo(errorMessage)
+            assertThat(this["errorType"].asText()).isEqualTo(errorType.name)
+        }
+    }
+
+    @Test
     fun `feilkø-hendelse skal bare sendes 1 gang på rapid`() {
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val invitasjon = testRepository.hentAlle().first()
+        val invitasjon = testRepository.hentAlleRekrutteringstreffInvitasjoner().first()
         val errorMessage = "Duplikat prøvd opprettet"
         val errorType = ErrorType.DUPLIKATMELDINGFEIL
         repository.lagreFeilkøHendelse(invitasjon.messageId, "{}", errorMessage, errorType)
@@ -369,7 +461,7 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
 
         val gyldigMelding = """
             {
@@ -392,7 +484,7 @@ class AktivitetskortTest {
         val committedOffset = consumer.committed(setOf(topicPartition))[topicPartition]?.offset()
         assertThat(committedOffset).isEqualTo(1L)
 
-        val lagredeFeilmeldinger = testRepository.hentAlle().mapNotNull { it.feil }
+        val lagredeFeilmeldinger = testRepository.hentAlleRekrutteringstreffInvitasjoner().mapNotNull { it.feil }
         assertThat(lagredeFeilmeldinger).hasSize(1)
     }
 
@@ -404,7 +496,7 @@ class AktivitetskortTest {
         consumer.updateBeginningOffsets(mapOf(topicPartition to 0L))
 
         repository.opprettTestRekrutteringstreffInvitasjon()
-        val messageId = testRepository.hentAlle()[0].messageId
+        val messageId = testRepository.hentAlleRekrutteringstreffInvitasjoner()[0].messageId
 
         val gyldigMelding = """
             {
@@ -444,7 +536,7 @@ class AktivitetskortTest {
         val committedOffset = consumer.committed(setOf(topicPartition))[topicPartition]?.offset()
         assertThat(committedOffset).isEqualTo(0L)
 
-        val lagredeFeilmeldinger = testRepository.hentAlle().mapNotNull { it.feil }
+        val lagredeFeilmeldinger = testRepository.hentAlleRekrutteringstreffInvitasjoner().mapNotNull { it.feil }
         assertThat(lagredeFeilmeldinger).isEmpty()
     }
 }

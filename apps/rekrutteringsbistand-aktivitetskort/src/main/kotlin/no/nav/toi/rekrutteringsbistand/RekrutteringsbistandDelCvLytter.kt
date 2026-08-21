@@ -1,4 +1,4 @@
-package no.nav.toi.rekrutteringstreff
+package no.nav.toi.rekrutteringsbistand
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
@@ -12,28 +12,26 @@ import no.nav.toi.Repository
 import no.nav.toi.SecureLog
 import no.nav.toi.log
 
-
-class RekrutteringstreffOppdateringLytter(
+class RekrutteringsbistandDelCvLytter(
     rapidsConnection: RapidsConnection,
     private val repository: Repository
-) : River.PacketListener {
+): River.PacketListener {
     private val secureLog = SecureLog(log)
 
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "rekrutteringstreffoppdatering")
+                it.requireValue("@event_name", "rekrutteringsbistandstilling-deling-av-cv")
+                it.forbid("aktivitetskortuuid")
                 it.requireKey("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
-                it.requireKey(
-                    "fnr", "rekrutteringstreffId", "tittel", "fraTid", "tilTid",
-                    "gateadresse", "postnummer", "poststed"
-                )
+                it.requireKey("fnr", "stillingId", "tittel", "opprettetAv", "arbeidsgiver", "arbeidssted")
+                it.require("stillingId") { node -> node.asText().toUUID() }
             }
+
         }.register(this)
     }
-
     override fun onPacket(
         packet: JsonMessage,
         context: MessageContext,
@@ -41,24 +39,23 @@ class RekrutteringstreffOppdateringLytter(
         meterRegistry: MeterRegistry
     ) {
         val fnr = packet["fnr"].asText()
-        val rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID()
+        val stillingId = packet["stillingId"].asText()
+        val tittel = packet["tittel"].asText()
+        val opprettetAv = packet["opprettetAv"].asText()
+        val arbeidsgiver = packet["arbeidsgiver"].asText()
+        val arbeidssted = packet["arbeidssted"].asText()
 
-        val startDato = packet["fraTid"].asZonedDateTime()
-        val sluttDato = packet["tilTid"].asZonedDateTime()
-
-        repository.oppdaterRekrutteringstreffAktivitetskort(
-            fnr = fnr,
-            rekrutteringstreffId = rekrutteringstreffId,
-            tittel = packet["tittel"].asText(),
-            startDato = startDato.toLocalDate(),
-            sluttDato = sluttDato.toLocalDate(),
-            tid = formaterTidsperiode(startDato, sluttDato),
-            gateAdresse = packet["gateadresse"].asText(),
-            postnummer = packet["postnummer"].asText(),
-            poststed = packet["poststed"].asText()
-        )
-
-        log.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
+        repository.opprettDeltStilling(
+            fnr,
+            stillingId,
+            tittel,
+            opprettetAv,
+            arbeidsgiver,
+            arbeidssted
+        )?.let { aktivitetskortId ->
+            packet["aktivitetskortuuid"] = aktivitetskortId
+            context.publish(fnr, packet.toJson())
+        }
     }
 
     override fun onError(
@@ -66,9 +63,8 @@ class RekrutteringstreffOppdateringLytter(
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
-        log.error("Feil ved behandling av rekrutteringstreffoppdatering: $problems")
-        secureLog.error("Feil ved behandling av rekrutteringstreffoppdatering: ${problems.toExtendedReport()}")
+        log.error("Feil ved behandling av rekrutteringsbistandstilling-deling-av-cv: $problems")
+        secureLog.error("Feil ved behandling av rekrutteringsbistandstilling-deling-av-cv: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }
-
