@@ -50,6 +50,7 @@ class RegistrertFattJobbenLytter(
                 aktivitetsStatus = AktivitetsStatus.FULLFORT,
                 endretAv = navIdent,
                 endretAvType = EndretAvType.NAVIDENT,
+                forventetSisteAktivitetsstatus = AktivitetsStatus.GJENNOMFORES,
             )
         }
 

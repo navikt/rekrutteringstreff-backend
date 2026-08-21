@@ -434,6 +434,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         aktivitetsStatus: AktivitetsStatus,
         endretAv: String,
         endretAvType: EndretAvType,
+        forventetSisteAktivitetsstatus: AktivitetsStatus? = null,
     ) {
         dataSource.connection.use { connection ->
             connection.prepareStatement(
@@ -468,10 +469,14 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     ORDER BY endret_tidspunkt DESC, db_id DESC
                     LIMIT 1
                 ) siste_aktivitetskort
-                WHERE siste_aktivitetskort.aktivitets_status IS DISTINCT FROM ?
+                WHERE (siste_aktivitetskort.aktivitets_status IS DISTINCT FROM ?
                    OR siste_aktivitetskort.endret_av IS DISTINCT FROM ?
-                   OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?
-                """.trimIndent()
+                   OR siste_aktivitetskort.endret_av_type IS DISTINCT FROM ?)
+                """.trimIndent() + if (forventetSisteAktivitetsstatus != null) {
+                    " AND siste_aktivitetskort.aktivitets_status = ?"
+                } else {
+                    ""
+                }
             ).apply {
                 setObject(1, UUID.randomUUID())
                 setString(2, aktivitetsStatus.name)
@@ -482,6 +487,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 setString(7, aktivitetsStatus.name)
                 setString(8, endretAv)
                 setString(9, endretAvType.name)
+                if (forventetSisteAktivitetsstatus != null) {
+                    setString(10, forventetSisteAktivitetsstatus.name)
+                }
             }.executeUpdate()
         }.let { rowsUpdated ->
             if (rowsUpdated == 0) {
