@@ -313,7 +313,7 @@ class TestDatabase {
 
             conn.createStatement().use { stmt ->
                 tabeller.forEach { tabell ->
-                    // Må bruke gåseøyne ("double quotes") fordi tabellnavn (f.eks. ki_spørring_logg) inneholder ikke-ASCII-tegn (æ. ø eller å).
+                    // Må bruke gåseøyne ("double quotes") fordi tabellnavn (f.eks. ki_spørring_logg) inneholder ikke-ASCII-tegn (æ, ø eller å).
                     stmt.addBatch("""DELETE FROM "${tabell.replace("\"", "\"\"")}"""")
                 }
                 stmt.executeBatch()
