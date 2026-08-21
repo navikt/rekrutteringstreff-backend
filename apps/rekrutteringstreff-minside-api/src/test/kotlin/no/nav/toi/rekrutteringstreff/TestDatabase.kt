@@ -7,15 +7,12 @@ import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.minside.JacksonConfig
-import no.nav.toi.rekrutteringstreff.Rekrutteringstreff
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
-import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
-import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.*
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import org.flywaydb.core.Flyway
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
+import java.sql.Connection
 import java.sql.ResultSet
 import java.time.Instant
 import java.time.ZoneId
@@ -55,19 +52,79 @@ class TestDatabase {
         }
     }
 
-    fun slettAlt() = dataSource.connection.use {c ->
-        listOf(
-            "DELETE FROM aktivitetskort_polling",
-            "DELETE FROM jobbsoker_hendelse",
-            "DELETE FROM arbeidsgiver_hendelse",
-            "DELETE FROM rekrutteringstreff_hendelse",
-            "DELETE FROM naringskode",
-            "DELETE FROM innlegg",
-            "DELETE FROM arbeidsgiver",
-            "DELETE FROM jobbsoker",
-            "DELETE FROM ki_spørring_logg",
-            "DELETE FROM rekrutteringstreff"
-        ).forEach { c.prepareStatement(it).executeUpdate() }
+    /**
+     * Tømmer alle tabeller i public-skjemaet. Funksjonen er komplisert for å oppnå to ting:
+     * 1) Bedre ytelse/høyere hastighet i teardown av ytelsestester med mye data
+     * 2) Nye tabeller som opprettes i framtida skal også bli slettet, uten at vi trenge rå hardkode dem inn i noen
+     * liste over tabeller som skal slettes.
+     *
+     * Tabellista utledes fra skjemaet via pg_tables i stedet for å være hardkodet. Den hardkodede
+     * lista som var i bruk fram til 21. august 2026  manglet formidling, formidling_hendelse, arbeidsgivers_behov og alle åtte
+     * V14-tabellene.
+     */
+    fun slettAlt() = dataSource.connection.use { conn ->
+        /*
+        * Å utlede tabellene fra skjemaet er farligere enn en fast liste hvis dataSource peker et
+        * annet sted enn Testcontainers.
+        */
+        fun krevTestdatabase(conn: Connection) {
+            val url = conn.metaData.url
+            require("localhost" in url || "127.0.0.1" in url) {
+                "slettAlt() nektet: forventet testdatabase, men jdbcUrl var $url"
+            }
+        }
+
+        krevTestdatabase(conn)
+        val opprinneligAutoCommit = conn.autoCommit
+        conn.autoCommit = false
+        try {
+            /*
+             * Slår av fremmednøkkel-triggerne for denne transaksjonen. Gjør slettingen
+             * rekkefølgeuavhengig — som er det som gjør det mulig å utlede tabellista fra
+             * skjemaet — og fjerner én RI-sjekk per rad per fremmednøkkel.
+             *
+             * SET LOCAL, ikke SET: verdien nullstilles ved COMMIT/ROLLBACK og kan derfor ikke
+             * lekke videre til neste test via HikariCPs tilkoblingspool. Krever superbruker.
+             */
+            conn.createStatement().use { it.execute("SET LOCAL session_replication_role = 'replica'") }
+
+            // SET LOCAL er en stille no-op utenfor en transaksjon (kun en WARNING, som JDBC
+            // svelger). Les tilbake verdien så det feiler her i stedet for som FK-brudd senere.
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery("SHOW session_replication_role").use { rs ->
+                    rs.next()
+                    check(rs.getString(1) == "replica") {
+                        "session_replication_role ble ikke satt. Kjører slettAlt() utenfor en transaksjon?"
+                    }
+                }
+            }
+
+            val tabeller = conn.createStatement().use { stmt ->
+                stmt.executeQuery(
+                    """
+                    SELECT tablename
+                    FROM pg_tables
+                    WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history'
+                    """.trimIndent()
+                ).use { rs ->
+                    generateSequence { if (rs.next()) rs.getString("tablename") else null }.toList()
+                }
+            }
+
+            conn.createStatement().use { stmt ->
+                tabeller.forEach { tabell ->
+                    // Må bruke gåseøyne (double quotes) fordi tabellnavn (f.eks. ki_spørring_logg) inneholder ikke-ASCII-tegn (æ, ø eller å).
+                    stmt.addBatch("""DELETE FROM "${tabell.replace("\"", "\"\"")}"""")
+                }
+                stmt.executeBatch()
+            }
+            conn.commit()
+        } catch (e: Exception) {
+            conn.rollback()
+            throw e
+        } finally {
+            conn.autoCommit = opprinneligAutoCommit
+        }
     }
 
     fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) = dataSource.connection.use {
@@ -118,19 +175,20 @@ class TestDatabase {
             stmt.executeQuery().use { rs ->
                 generateSequence {
                     if (rs.next()) JobbsøkerHendelse(
-                        id                    = UUID.fromString(rs.getString("id")),
-                        tidspunkt             = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                        hendelsestype         = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
-                        opprettetAvAktørType  = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
-                        aktørIdentifikasjon   = rs.getString("aktøridentifikasjon")
+                        id = UUID.fromString(rs.getString("id")),
+                        tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
+                        hendelsestype = JobbsøkerHendelsestype.valueOf(rs.getString("hendelsestype")),
+                        opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                        aktørIdentifikasjon = rs.getString("aktøridentifikasjon")
                     ) else null
                 }.toList()
             }
         }
     }
 
-    fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> = dataSource.connection.use { connection ->
-        val sql = """
+    fun hentArbeidsgiverHendelser(treff: TreffId): List<ArbeidsgiverHendelse> =
+        dataSource.connection.use { connection ->
+            val sql = """
             SELECT ah.id,
                    ah.tidspunkt,
                    ah.hendelsestype,
@@ -142,21 +200,21 @@ class TestDatabase {
              WHERE rt.id = ?
              ORDER BY ah.tidspunkt
         """.trimIndent()
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setObject(1, treff.somUuid)
-            stmt.executeQuery().use { rs ->
-                generateSequence {
-                    if (rs.next()) ArbeidsgiverHendelse(
-                        id                    = UUID.fromString(rs.getString("id")),
-                        tidspunkt             = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
-                        hendelsestype         = ArbeidsgiverHendelsestype.valueOf(rs.getString("hendelsestype")),
-                        opprettetAvAktørType  = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
-                        aktøridentifikasjon   = rs.getString("aktøridentifikasjon")
-                    ) else null
-                }.toList()
+            connection.prepareStatement(sql).use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                stmt.executeQuery().use { rs ->
+                    generateSequence {
+                        if (rs.next()) ArbeidsgiverHendelse(
+                            id = UUID.fromString(rs.getString("id")),
+                            tidspunkt = rs.getTimestamp("tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
+                            hendelsestype = ArbeidsgiverHendelsestype.valueOf(rs.getString("hendelsestype")),
+                            opprettetAvAktørType = AktørType.valueOf(rs.getString("opprettet_av_aktortype")),
+                            aktøridentifikasjon = rs.getString("aktøridentifikasjon")
+                        ) else null
+                    }.toList()
+                }
             }
         }
-    }
 
     fun hentAlleJobbsøkere(): List<Jobbsøker> = dataSource.connection.use {
         val sql = """
@@ -202,24 +260,24 @@ class TestDatabase {
     )
 
     private fun konverterTilArbeidsgiver(rs: ResultSet) = Arbeidsgiver(
-        arbeidsgiverTreffId      = ArbeidsgiverTreffId(UUID.fromString(rs.getString("id"))),
+        arbeidsgiverTreffId = ArbeidsgiverTreffId(UUID.fromString(rs.getString("id"))),
         treffId = TreffId(rs.getString("treff_id")),
-        orgnr   = Orgnr(rs.getString("orgnr")),
+        orgnr = Orgnr(rs.getString("orgnr")),
         orgnavn = Orgnavn(rs.getString("orgnavn")),
         status = ArbeidsgiverStatus.valueOf(rs.getString("status")),
         gateadresse = rs.getString("gateadresse"),
-        postnummer  = rs.getString("postnummer"),
-        poststed    = rs.getString("poststed"),
+        postnummer = rs.getString("postnummer"),
+        poststed = rs.getString("poststed"),
     )
 
     private fun konverterTilJobbsøker(rs: ResultSet) = Jobbsøker(
-        personTreffId             = PersonTreffId(UUID.fromString(rs.getString("fodselsnummer"))),
-        treffId        = TreffId(rs.getString("treff_id")),
-        fødselsnummer  = Fødselsnummer(rs.getString("fodselsnummer")),
-        fornavn        = Fornavn(rs.getString("fornavn")),
-        etternavn      = Etternavn(rs.getString("etternavn")),
-        kontor         = rs.getString("kontornummer")?.let { nr -> Kontor(nr, rs.getString("kontornavn")) },
-        veilederNavn   = rs.getString("veileder_navn")?.let(::VeilederNavn),
+        personTreffId = PersonTreffId(UUID.fromString(rs.getString("fodselsnummer"))),
+        treffId = TreffId(rs.getString("treff_id")),
+        fødselsnummer = Fødselsnummer(rs.getString("fodselsnummer")),
+        fornavn = Fornavn(rs.getString("fornavn")),
+        etternavn = Etternavn(rs.getString("etternavn")),
+        kontor = rs.getString("kontornummer")?.let { nr -> Kontor(nr, rs.getString("kontornavn")) },
+        veilederNavn = rs.getString("veileder_navn")?.let(::VeilederNavn),
         veilederNavIdent = rs.getString("veileder_navident")?.let(::VeilederNavIdent),
         status = JobbsøkerStatus.LAGT_TIL,
     )
@@ -266,13 +324,18 @@ class TestDatabase {
             }
     }
 
-    fun leggTilRekrutteringstreffHendelse(treffId: TreffId, hendelsestype: RekrutteringstreffHendelsestype, aktørIdent: String) =
+    fun leggTilRekrutteringstreffHendelse(
+        treffId: TreffId,
+        hendelsestype: RekrutteringstreffHendelsestype,
+        aktørIdent: String
+    ) =
         dataSource.connection.use { c ->
-            val treffDbId = c.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").apply {
-                setObject(1, treffId.somUuid)
-            }.executeQuery().let {
-                if (it.next()) it.getLong(1) else error("Treff $treffId finnes ikke i test-DB")
-            }
+            val treffDbId =
+                c.prepareStatement("SELECT rekrutteringstreff_id FROM rekrutteringstreff WHERE id = ?").apply {
+                    setObject(1, treffId.somUuid)
+                }.executeQuery().let {
+                    if (it.next()) it.getLong(1) else error("Treff $treffId finnes ikke i test-DB")
+                }
 
             c.prepareStatement(
                 """
@@ -283,7 +346,7 @@ class TestDatabase {
                 """.trimIndent()
             ).apply {
                 setObject(1, UUID.randomUUID())
-                setLong  (2, treffDbId)
+                setLong(2, treffDbId)
                 setString(3, hendelsestype.name)
                 setString(4, AktørType.ARRANGØR.name)
                 setString(5, aktørIdent)
@@ -304,12 +367,12 @@ class TestDatabase {
     val dataSource: DataSource = HikariDataSource(
         HikariConfig().apply {
             val pg = getLokalPostgres()
-            jdbcUrl                   = pg.jdbcUrl
-            username                  = pg.username
-            password                  = pg.password
-            driverClassName           = "org.postgresql.Driver"
-            minimumIdle               = 1
-            maximumPoolSize           = 10
+            jdbcUrl = pg.jdbcUrl
+            username = pg.username
+            password = pg.password
+            driverClassName = "org.postgresql.Driver"
+            minimumIdle = 1
+            maximumPoolSize = 10
             initializationFailTimeout = 5_000
             validate()
         }
