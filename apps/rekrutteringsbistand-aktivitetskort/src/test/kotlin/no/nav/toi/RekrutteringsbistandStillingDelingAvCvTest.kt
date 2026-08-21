@@ -317,6 +317,43 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
+    fun `registrert fått jobben skal ikke endre status når kandidat har svart nei`() {
+        val fnr = "01010012345"
+        val stillingId = UUID.randomUUID()
+        val navIdent = "Z123456"
+
+        rapid.sendTestMessage(
+            rapidPeriodeMelding(
+                fnr = fnr,
+                stillingId = stillingId,
+                tittel = "Test Stilling",
+                opprettetAv = navIdent,
+                arbeidsgiver = "Test Arbeidsgiver",
+                arbeidssted = "Oslo",
+            )
+        )
+        rapid.sendTestMessage(
+            svarMelding(
+                eventName = "rekrutteringsbistandstilling-bruker-svarer-nei-til-deling-av-cv",
+                fnr = fnr,
+                stillingId = stillingId,
+                svar = false,
+            )
+        )
+        rapid.sendTestMessage(
+            registrertFattJobbenMelding(
+                stillingId = stillingId,
+                fnr = fnr,
+                navIdent = navIdent,
+            )
+        )
+
+        val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger().filter { it.fnr == fnr }
+        assertThat(hendelser).hasSize(2)
+        assertThat(hendelser.last().aktivitetsStatus).isEqualTo(AktivitetsStatus.AVBRUTT.name)
+    }
+
+    @Test
     fun `lukket kandidatliste skal fullføre bare kandidater som har svart ja`() {
         val stillingId = UUID.randomUUID()
         val navIdent = "Z999999"
