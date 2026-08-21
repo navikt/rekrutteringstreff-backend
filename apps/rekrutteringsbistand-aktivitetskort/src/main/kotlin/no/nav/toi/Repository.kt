@@ -122,6 +122,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
             SELECT *
             FROM aktivitetskort
             WHERE sendt_tidspunkt IS NULL
+            ORDER BY endret_tidspunkt ASC, db_id ASC
             """.trimIndent()
         ).executeQuery().use { resultSet ->
             generateSequence {
