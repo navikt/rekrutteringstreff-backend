@@ -55,7 +55,7 @@ class TestDatabase {
     /**
      * Tømmer alle tabeller i public-skjemaet. Funksjonen er komplisert for å oppnå to ting:
      * 1) Bedre ytelse/høyere hastighet i teardown av ytelsestester med mye data
-     * 2) Nye tabeller som opprettes i framtida skal også bli slettet, uten at vi trenge rå hardkode dem inn i noen
+     * 2) Nye tabeller som opprettes i framtida skal også bli slettet, uten at vi trenger å hardkode dem inn i noen
      * liste over tabeller som skal slettes.
      *
      * Tabellista utledes fra skjemaet via pg_tables i stedet for å være hardkodet. Den hardkodede
