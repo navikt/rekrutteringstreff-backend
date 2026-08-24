@@ -78,7 +78,7 @@ når møteplanen opprettes, med `startPosisjon` i `hendelse_data`.
 | Planen sier                                | Koden gjør                                                         |
 | ------------------------------------------ | ------------------------------------------------------------------ |
 | `MØTT_OPP` / `ANGRE_MØTT_OPP`              | `REGISTRERT_OPPMØTE` / `REGISTRERT_OPPMØTE_FJERNET`                |
-| Oppmøte utledes av hendelser               | Oppmøte ligger i kolonnen `jobbsoker.oppmote` (V14)                |
+| Oppmøte utledes av hendelser               | Oppmøte lagres som `jobbsoker.status = MØTT_OPP`; `REGISTRERT_OPPMØTE` brukes som revisjons­spor |
 | Interesse og vurdering er WorkOp-spesifikt | Ingen `krevWorkOp()` — de skrives på **alle** treff                |
 | `TREFFGJENNOMFØRING_ROMFORDELING_ENDRET`   | Aldri implementert                                                 |
 
