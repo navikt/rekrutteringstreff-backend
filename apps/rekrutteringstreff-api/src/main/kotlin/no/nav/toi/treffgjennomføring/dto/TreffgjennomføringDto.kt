@@ -91,7 +91,7 @@ fun Treffgjennomføring.tilDto(rekrutteringstreffId: String, vurderinger: List<V
     interesser = matching.interesser.map { it.tilDto() },
     intervjufordelinger = matching.intervjufordelinger.map { it.tilDto() },
     vurderinger = vurderinger.map { it.tilDto() },
-)
+) 
 
 private fun Deltakernummer.tilDto() = DeltakernummerDto(personTreffId.somString, deltakernummer)
 
