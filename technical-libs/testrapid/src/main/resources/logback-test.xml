@@ -1,0 +1,11 @@
+<configuration>
+    <appender name="STDOUT_HUMAN" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %logger{50}%replace( [%marker]){'^ \[\]$', ''} - %msg%n%throwable</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT_HUMAN"/>
+    </root>
+</configuration>
