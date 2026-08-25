@@ -127,6 +127,7 @@ class AutentiseringAlleEndepunkterTest {
         SettInteresse(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/interesse"),
         LagreIntervjufordeling(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/intervjufordeling"),
         FordelIntervjuer(Metode.POST, "/api/rekrutteringstreff/{id}/treffgjennomforing/intervjufordeling/fordel"),
+        SettGjeldendeSteg(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/steg"),
         LagreVurdering(Metode.PUT, "/api/rekrutteringstreff/{id}/oppfolging/vurderinger"),
 
     }
