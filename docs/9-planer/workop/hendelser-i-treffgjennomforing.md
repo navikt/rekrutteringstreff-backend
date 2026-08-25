@@ -406,15 +406,14 @@ Rekkefølgen betyr noe — slutt å skrive før du sletter.
 6. **`parseHendelseData` ser nå `hendelse_data`.** Både backend
    (`HendelseDataDto`) og frontend (`useRekrutteringstreff.ts`) har fått
    DTO-er/skjemaer for `REGISTRERT_OPPMØTE`, `REGISTRERT_OPPMØTE_FJERNET`,
-   `VURDERT`, `NOTAT_LAGT_TIL`, `NOTAT_FJERNET`, `ANDREGANGSINTERVJU_AVTALT`,
-   `ANGRE_ANDREGANGSINTERVJU_AVTALT`, `JOBBTILBUD_GITT` og
+   `VURDERT`, `NOTAT_LAGT_TIL`, `NOTAT_FJERNET`, `AVTALT_INTERVJU`,
+   `AVTALT_INTERVJU_ANGRET`, `JOBBTILBUD_GITT` og
    `ANGRE_JOBBTILBUD_GITT`.
 7. **Frontend viser de beholdte typene.** `constants.ts` har fått enum-verdier og
    etiketter for de 9 jobbsøkertypene og 3 trefftypene. `HendelseLabel.tsx` viser
    i tillegg en detaljlinje under etiketten: notatet med part
    («Arbeidsgiveren sier: savner språknivå») via `finnNotat` og `PARTSETIKETT`,
-   vurderingsovergangen, deltakernummeret, og hvor mange registreringer en
-   oppmøtefjerning slettet.
+   vurderingsovergangen og deltakernummeret.
 
 ---
 

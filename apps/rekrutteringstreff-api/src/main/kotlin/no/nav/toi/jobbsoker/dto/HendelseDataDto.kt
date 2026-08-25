@@ -59,7 +59,6 @@ data class OppmøteRegistrertDataDto(
     val deltakernummer: Int? = null,
 ) : HendelseDataDto
 
-/** `forrigeVurdering` er det tidslinja trenger for å vise «Aktuell → Ikke aktuell». */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 @OpenApiName("VurderingHendelseData")
 data class VurderingHendelseDataDto(
@@ -68,10 +67,6 @@ data class VurderingHendelseDataDto(
     val forrigeVurdering: String? = null,
 ) : HendelseDataDto
 
-/**
- * `notat` er kodeverdien fra `Vurderingsnotat`, aldri fritekst. Prefikset `AG_`/`JS_` sier hvem
- * uttalelsen kom fra; hendelsen handler uansett om jobbsøkeren.
- */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 @OpenApiName("NotatHendelseData")
 data class NotatHendelseDataDto(
@@ -79,7 +74,6 @@ data class NotatHendelseDataDto(
     val notat: String? = null,
 ) : HendelseDataDto
 
-/** `dato` er datoen slik den var da avtalen ble inngått. Gjeldende dato leses fra vurderingsraden. */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 @OpenApiName("AvtaltIntervjuHendelseData")
 data class AvtaltIntervjuHendelseDataDto(
@@ -87,7 +81,6 @@ data class AvtaltIntervjuHendelseDataDto(
     val dato: String? = null,
 ) : HendelseDataDto
 
-/** For hendelser der arbeidsgiveren er hele konteksten, som jobbtilbud og angring. */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
 @OpenApiName("ArbeidsgiverkontekstHendelseData")
 data class ArbeidsgiverkontekstDataDto(

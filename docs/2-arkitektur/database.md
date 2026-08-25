@@ -278,16 +278,14 @@ Se [planen](../9-planer/workop/treffgjennomforing-oppmote-rom-og-fordeling.md).
 | **arbeidsgiver_rotasjon**     | Hvor arbeidsgiveren starter i rotasjonen                            | WorkOp  |
 | **interesse**                 | Hvilke arbeidsgivere en jobbsøker vil møte                          | Begge   |
 | **intervjufordeling**         | Plassering (tidsluke) og om jobbsøkeren er over sperrelinjen        | WorkOp  |
-| **vurdering**                 | Resultatet av møtet: vurdering, 2. intervju og jobbtilbud           | Begge   |
-| **vurdering_notat**           | Én rad per notat, siden et par kan ha flere                         | Begge   |
+| **vurdering**                 | Resultatet av møtet; notater lagres i kolonnen `vurderingsnotat` (`text[]`) | Begge   |
 
 To ting skjemaet ikke viser av seg selv:
 
-- **Oppmøte har ingen egen tabell.** Tilstanden ligger i kolonnen
-  `jobbsoker.oppmote`, med verdiene `REGISTRERT_OPPMØTE` og
-  `REGISTRERT_OPPMØTE_FJERNET` fra enumen `Oppmøte`. `NULL` betyr at oppmøte aldri er
-  registrert. Hendelsene `REGISTRERT_OPPMØTE` / `REGISTRERT_OPPMØTE_FJERNET` skrives
-  i samme transaksjon og utgjør revisjonssporet, men lesevegen ser bare på kolonnen.
+- **Oppmøte har ingen egen tabell eller kolonne.** Gjeldende tilstand representeres av
+  `jobbsoker.status = 'MØTT_OPP'`. Hendelsene `REGISTRERT_OPPMØTE` og
+  `REGISTRERT_OPPMØTE_FJERNET` skrives i samme transaksjon og utgjør
+  revisjonssporet, mens leseveien bruker statusen.
 - **Antall rom har ingen kolonne.** Det er alltid antall arbeidsgivere på
   treffet (minst 1), og beregnes ved lesing. En lagret kolonne ville vært et
   frosset øyeblikksbilde av noe som endrer seg når en arbeidsgiver legges til.
@@ -303,7 +301,7 @@ Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/mig
 | Versjon | Fil                            | Beskrivelse                                        |
 | ------- | ------------------------------ | -------------------------------------------------- |
 | V1      | `V1__init.sql`                 | Initiell opprettelse av alle tabeller              |
-| V14     | `V14__treffgjennomforing.sql`  | Ni nye tabeller for treffgjennomføring, kolonnen `jobbsoker.oppmote`, og sletting av hendelser fra den gamle oppmøtefunksjonen |
+| V14     | `V14__treffgjennomforing.sql`  | Åtte nye tabeller for treffgjennomføring           |
 
 ## Indekser
 
@@ -319,7 +317,8 @@ Viktige indekser for ytelse:
 | `naringskode_arbeidsgiver_id_idx`                       | naringskode                 | FK-indeks                                       |
 | `idx_jobbsoker_synlig`                                  | jobbsoker                   | Delvis indeks der `er_synlig = TRUE` (V9)       |
 | `idx_jobbsoker_fodselsnummer`                           | jobbsoker                   | Indeks for oppslag ved synlighetsmeldinger (V9) |
-| `idx_jobbsoker_hendelse_oppmote`                        | jobbsoker_hendelse          | Delvis indeks for oppmøteutledningen (V14). Uten den blir jobbsøkersøkets berikelse en full scan |
+| `idx_deltakernummer_jobbsoker`                          | deltakernummer              | FK-indeks (V14)                                 |
+| `idx_jobbsoker_romtildeling_treff`                      | jobbsoker_romtildeling      | FK-indeks (V14)                                 |
 | `idx_interesse_arbeidsgiver`                            | interesse                   | FK-indeks (V14)                                 |
 | `idx_intervjufordeling_arbeidsgiver`                    | intervjufordeling           | FK-indeks (V14)                                 |
 | `idx_vurdering_arbeidsgiver`                            | vurdering                   | FK-indeks (V14)                                 |

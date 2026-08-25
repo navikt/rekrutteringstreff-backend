@@ -68,7 +68,6 @@ class OppmøteService(
             interesser = matchingRepository.tellInteresserForJobbsøker(connection, jobbsøkerId),
             vurderinger = oppfølgingRepository.tellForJobbsøker(connection, jobbsøkerId),
         )
-        // Registreringer forutsetter oppmøte, så de må ryddes først. Da kan ingenting gå tapt her.
         if (registreringer.finnesRegistreringer()) throw OppmøteKanIkkeFjernesException(registreringer)
 
         møteplanRepository.slettRomForJobbsøker(connection, jobbsøkerId)

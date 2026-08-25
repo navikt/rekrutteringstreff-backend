@@ -31,12 +31,6 @@ enum class JobbsøkerHendelsestype {
     ANGRE_JOBBTILBUD_GITT,
 }
 
-/**
- * Treffgjennomføringen skriver ikke arbeidsgiverhendelser. Registreringene i steg 3–5
- * gjelder et par jobbsøker × arbeidsgiver, og handler om personen — arbeidsgiveren er
- * konteksten og ligger i `hendelse_data` på jobbsøkerhendelsen. Arbeidsgiverbildet leses
- * fra `interesse`, `intervjufordeling` og `vurdering`.
- */
 enum class ArbeidsgiverHendelsestype {
     OPPRETTET, OPPDATERT, SLETTET, REAKTIVERT, BEHOV_ENDRET,
 }
