@@ -58,15 +58,16 @@ class TestDatabase {
      * 2) Nye tabeller som opprettes i framtida skal også bli slettet, uten at vi trenger å hardkode dem inn i noen
      * liste over tabeller som skal slettes.
      *
-     * Tabellista utledes fra skjemaet via pg_tables i stedet for å være hardkodet. Den hardkodede
-     * lista som var i bruk fram til 21. august 2026  manglet formidling, formidling_hendelse, arbeidsgivers_behov og alle åtte
-     * V14-tabellene.
+     * Tabellista utledes fra skjemaet via pg_tables i stedet for å være hardkodet, fordi en
+     * hardkodet liste drifter fra skjemaet: V14 la til åtte tabeller som aldri ble lagt inn her,
+     * og fem av dem har fremmednøkkel mot jobbsoker.
+     * Første test som tar dem i bruk ville fått FK-brudd (Foreign Key, fremmednøkkel).
      */
     fun slettAlt() = dataSource.connection.use { conn ->
-        /*
-        * Å utlede tabellene fra skjemaet er farligere enn en fast liste hvis dataSource peker et
-        * annet sted enn Testcontainers.
-        */
+        /**
+         * En «slett alt» som utleder tabellene fra skjemaet er farligere enn en hardkodet liste hvis
+         * dataSource noen gang peker et annet sted enn Testcontainers.
+         */
         fun krevTestdatabase(conn: Connection) {
             val url = conn.metaData.url
             require("localhost" in url || "127.0.0.1" in url) {
@@ -74,22 +75,12 @@ class TestDatabase {
             }
         }
 
-        krevTestdatabase(conn)
-        val opprinneligAutoCommit = conn.autoCommit
-        conn.autoCommit = false
-        try {
-            /*
-             * Slår av fremmednøkkel-triggerne for denne transaksjonen. Gjør slettingen
-             * rekkefølgeuavhengig — som er det som gjør det mulig å utlede tabellista fra
-             * skjemaet — og fjerner én RI-sjekk per rad per fremmednøkkel.
-             *
-             * SET LOCAL, ikke SET: verdien nullstilles ved COMMIT/ROLLBACK og kan derfor ikke
-             * lekke videre til neste test via HikariCPs tilkoblingspool. Krever superbruker.
-             */
-            conn.createStatement().use { it.execute("SET LOCAL session_replication_role = 'replica'") }
-
-            // SET LOCAL er en stille no-op utenfor en transaksjon (kun en WARNING, som JDBC
-            // svelger). Les tilbake verdien så det feiler her i stedet for som FK-brudd senere.
+        /*
+         * Utenfor en transaksjon er SET LOCAL en stille no-op — Postgres gir bare en WARNING,
+         * som JDBC svelger. Da ville slettingen blitt rekkefølgeavhengig igjen og feilet med
+         * uforklarlige FK-brudd. Les tilbake verdien så det feiler her i stedet.
+         */
+        fun verifiserReplicaModusSatt(conn: Connection) {
             conn.createStatement().use { stmt ->
                 stmt.executeQuery("SHOW session_replication_role").use { rs ->
                     rs.next()
@@ -98,8 +89,10 @@ class TestDatabase {
                     }
                 }
             }
+        }
 
-            val tabeller = conn.createStatement().use { stmt ->
+        fun hentAlleTabellnavn(conn: Connection): List<String> =
+            conn.createStatement().use { stmt ->
                 stmt.executeQuery(
                     """
                     SELECT tablename
@@ -111,10 +104,31 @@ class TestDatabase {
                 }
             }
 
+        krevTestdatabase(conn)
+        val opprinneligAutoCommit = conn.autoCommit
+        conn.autoCommit = false
+        try {
+            /*
+             * session_replication_role='replica' slår av fremmednøkkel-triggerne for denne
+             * transaksjonen. Det gir to ting:
+             *   1. Slettingen blir rekkefølgeuavhengig, som er det som gjør det mulig å utlede
+             *      tabellista fra skjemaet i det hele tatt.
+             *   2. Postgres slipper å kjøre én RI-sjekk per rad per fremmednøkkel. jobbsoker
+             *      har sju barnetabeller, så 600 000 rader ga 4,2 millioner trigger-kall.
+             *
+             * SET LOCAL — ikke SET — er kritisk: verdien nullstilles automatisk ved COMMIT eller
+             * ROLLBACK. Med vanlig SET ville «replica» blitt liggende igjen på tilkoblingen når
+             * HikariCP resirkulerer den, og neste test ville kjørt uten fremmednøkkelsjekk uten
+             * at noen merket det. Krever superbruker, som Testcontainers-brukeren er.
+             */
+            conn.createStatement().use { it.execute("SET LOCAL session_replication_role = 'replica'") }
+            verifiserReplicaModusSatt(conn)
+
+            val tabeller = hentAlleTabellnavn(conn)
+
             conn.createStatement().use { stmt ->
-                tabeller.forEach { tabell ->
-                    // Må bruke gåseøyne (double quotes) fordi tabellnavn (f.eks. ki_spørring_logg) inneholder ikke-ASCII-tegn (æ, ø eller å).
-                    stmt.addBatch("""DELETE FROM "${tabell.replace("\"", "\"\"")}"""")
+                tabeller.forEach {
+                    stmt.addBatch("""DELETE FROM "$it"""")
                 }
                 stmt.executeBatch()
             }

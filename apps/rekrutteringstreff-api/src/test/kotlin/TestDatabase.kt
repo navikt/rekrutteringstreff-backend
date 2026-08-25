@@ -266,6 +266,35 @@ class TestDatabase {
             }
         }
 
+        /*
+         * Utenfor en transaksjon er SET LOCAL en stille no-op — Postgres gir bare en WARNING,
+         * som JDBC svelger. Da ville slettingen blitt rekkefølgeavhengig igjen og feilet med
+         * uforklarlige FK-brudd. Les tilbake verdien så det feiler her i stedet.
+         */
+        fun verifiserReplicaModusSatt(conn: Connection) {
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery("SHOW session_replication_role").use { rs ->
+                    rs.next()
+                    check(rs.getString(1) == "replica") {
+                        "session_replication_role ble ikke satt. Kjører slettAlt() utenfor en transaksjon?"
+                    }
+                }
+            }
+        }
+
+        fun hentAlleTabellnavn(conn: Connection): List<String> =
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery(
+                    """
+                    SELECT tablename
+                    FROM pg_tables
+                    WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history'
+                    """.trimIndent()
+                ).use { rs ->
+                    generateSequence { if (rs.next()) rs.getString("tablename") else null }.toList()
+                }
+            }
+
         krevTestdatabase(conn)
         val opprinneligAutoCommit = conn.autoCommit
         conn.autoCommit = false
@@ -284,37 +313,13 @@ class TestDatabase {
              * at noen merket det. Krever superbruker, som Testcontainers-brukeren er.
              */
             conn.createStatement().use { it.execute("SET LOCAL session_replication_role = 'replica'") }
+            verifiserReplicaModusSatt(conn)
 
-            /*
-             * Utenfor en transaksjon er SET LOCAL en stille no-op — Postgres gir bare en WARNING,
-             * som JDBC svelger. Da ville slettingen blitt rekkefølgeavhengig igjen og feilet med
-             * uforklarlige FK-brudd. Les tilbake verdien så det feiler her i stedet.
-             */
-            conn.createStatement().use { stmt ->
-                stmt.executeQuery("SHOW session_replication_role").use { rs ->
-                    rs.next()
-                    check(rs.getString(1) == "replica") {
-                        "session_replication_role ble ikke satt. Kjører slettAlt() utenfor en transaksjon?"
-                    }
-                }
-            }
-
-            val tabeller = conn.createStatement().use { stmt ->
-                stmt.executeQuery(
-                    """
-                    SELECT tablename
-                    FROM pg_tables
-                    WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history'
-                    """.trimIndent()
-                ).use { rs ->
-                    generateSequence { if (rs.next()) rs.getString("tablename") else null }.toList()
-                }
-            }
+            val tabeller = hentAlleTabellnavn(conn)
 
             conn.createStatement().use { stmt ->
-                tabeller.forEach { tabell ->
-                    // Må bruke gåseøyne ("double quotes") fordi tabellnavn (f.eks. ki_spørring_logg) inneholder ikke-ASCII-tegn (æ, ø eller å).
-                    stmt.addBatch("""DELETE FROM "${tabell.replace("\"", "\"\"")}"""")
+                tabeller.forEach {
+                    stmt.addBatch("""DELETE FROM "$it"""")
                 }
                 stmt.executeBatch()
             }
