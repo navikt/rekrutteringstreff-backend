@@ -479,6 +479,33 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
+    fun `fordelRomPåNytt fordeler alle fremmøtte jevnt på rom`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        val p3 = jobbsøker(treff, "33333333333")
+        oppmøte(treff, p1, møtt = true)
+        oppmøte(treff, p2, møtt = true)
+        oppmøte(treff, p3, møtt = true)
+        møteoppsett(treff)
+
+        // Manuelt legg alle i rom 1
+        val manuelt = """[{"romnummer":1,"jobbsøkere":["${p1.somString}","${p2.somString}","${p3.somString}"]},{"romnummer":2,"jobbsøkere":[]}]"""
+        assertThat(put(treff, "/treffgjennomforing/romfordeling", manuelt).statusCode()).isEqualTo(200)
+
+        // Kall fordel på nytt
+        val respons = post(treff, "/treffgjennomforing/romfordeling/fordel", "{}")
+        assertThat(respons.statusCode()).isEqualTo(200)
+
+        val rom = aggregat(treff)["rom"]
+        val r1 = rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() }
+        val r2 = rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() }
+        assertThat(r1).hasSize(2)
+        assertThat(r2).hasSize(1)
+        assertThat(r1 + r2).containsExactlyInAnyOrder(p1.somString, p2.somString, p3.somString)
+    }
+
+    @Test
     fun `intervjufordeling avviser person som er både inkludert og ekskludert`() {
         val treff = workOpTreff()
         val person = jobbsøker(treff)

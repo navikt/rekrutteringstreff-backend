@@ -124,6 +124,7 @@ class AutentiseringAlleEndepunkterTest {
         OppdaterOppmøte(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/oppmote"),
         LagreMøteoppsett(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/moteoppsett"),
         LagreRomfordeling(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/romfordeling"),
+        FordelRomPåNytt(Metode.POST, "/api/rekrutteringstreff/{id}/treffgjennomforing/romfordeling/fordel"),
         SettInteresse(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/interesse"),
         LagreIntervjufordeling(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/intervjufordeling"),
         FordelIntervjuer(Metode.POST, "/api/rekrutteringstreff/{id}/treffgjennomforing/intervjufordeling/fordel"),

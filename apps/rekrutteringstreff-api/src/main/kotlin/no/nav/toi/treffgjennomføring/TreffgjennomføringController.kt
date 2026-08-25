@@ -44,9 +44,10 @@ class TreffgjennomføringController(
         const val OPPMØTE = "$skrivPath/oppmote"
         const val MØTEOPPSETT = "$skrivPath/moteoppsett"
         const val ROMFORDELING = "$skrivPath/romfordeling"
+        const val FORDEL_ROM = "$ROMFORDELING/fordel"
         const val INTERESSE = "$skrivPath/interesse"
         const val INTERVJUFORDELING = "$skrivPath/intervjufordeling"
-        const val FORDEL = "$INTERVJUFORDELING/fordel"
+        const val FORDEL_INTERVJUER = "$INTERVJUFORDELING/fordel"
         const val STEG = "$skrivPath/steg"
         const val HENT = lesPath
 
@@ -86,9 +87,10 @@ class TreffgjennomføringController(
         routes.put(OPPMØTE, oppmøteHandler())
         routes.put(MØTEOPPSETT, møteoppsettHandler())
         routes.put(ROMFORDELING, romfordelingHandler())
+        routes.post(FORDEL_ROM, fordelRomHandler())
         routes.put(INTERESSE, interesseHandler())
         routes.put(INTERVJUFORDELING, intervjufordelingHandler())
-        routes.post(FORDEL, fordelHandler())
+        routes.post(FORDEL_INTERVJUER, fordelIntervjuerHandler())
         routes.put(STEG, stegHandler())
     }
 
@@ -184,6 +186,22 @@ class TreffgjennomføringController(
     }
 
     @OpenApi(
+        summary = "Fordel fremmøtte jobbsøkere på rom på nytt. Kun WorkOp",
+        description = "Tom body. Fordeler alle fremmøtte jevnt på treffets rom og erstatter romfordelingen.",
+        operationId = "fordelRomPåNytt",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
+        path = FORDEL_ROM,
+        methods = [HttpMethod.POST],
+    )
+    private fun fordelRomHandler(): (Context) -> Unit = { ctx ->
+        val treffId = ctx.treffId()
+        ctx.krevEierEllerUtvikler(eierService, treffId)
+        ctx.status(200).json(møteplanService.fordelRomPåNytt(treffId))
+    }
+
+    @OpenApi(
         summary = "Sett eller fjern ett interessepar",
         operationId = "settInteresse",
         security = [OpenApiSecurity(name = "BearerAuth")],
@@ -244,10 +262,10 @@ class TreffgjennomføringController(
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
         responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
-        path = FORDEL,
+        path = FORDEL_INTERVJUER,
         methods = [HttpMethod.POST],
     )
-    private fun fordelHandler(): (Context) -> Unit = { ctx ->
+    private fun fordelIntervjuerHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
         val navIdent = ctx.krevEierEllerUtvikler(eierService, treffId)
         ctx.status(200).json(matchingService.fordelIntervjuer(treffId, navIdent))

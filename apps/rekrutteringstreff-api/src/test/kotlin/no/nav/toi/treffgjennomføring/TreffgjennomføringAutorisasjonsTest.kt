@@ -93,6 +93,7 @@ class TreffgjennomføringAutorisasjonsTest {
             """[{"romnummer":1,"jobbsøkere":[]}]""",
             true,
         ),
+        FordelRom(Metode.POST, "/treffgjennomforing/romfordeling/fordel", "{}", true),
         Interesse(
             Metode.PUT,
             "/treffgjennomforing/interesse",
@@ -105,7 +106,7 @@ class TreffgjennomføringAutorisasjonsTest {
             """{"arbeidsgiverTreffId":"22222222-2222-2222-2222-222222222222","inkludertePersonTreffIder":[],"ekskludertePersonTreffIder":[]}""",
             true,
         ),
-        Fordel(Metode.POST, "/treffgjennomforing/intervjufordeling/fordel", "{}", true),
+        FordelIntervjuer(Metode.POST, "/treffgjennomforing/intervjufordeling/fordel", "{}", true),
         Steg(Metode.PUT, "/treffgjennomforing/steg", """{"steg":"OPPSUMMERING"}""", false),
         Vurdering(
             Metode.PUT,
@@ -218,7 +219,7 @@ class TreffgjennomføringAutorisasjonsTest {
     }
 
     @ParameterizedTest(name = "{0} er stengt på et vanlig treff")
-    @EnumSource(Endepunkt::class, names = ["Møteoppsett", "Romfordeling", "Intervjufordeling", "Fordel"])
+    @EnumSource(Endepunkt::class, names = ["Møteoppsett", "Romfordeling", "FordelRom", "Intervjufordeling", "FordelIntervjuer"])
     fun `WorkOp-steg avvises på et vanlig treff`(endepunkt: Endepunkt) {
         val treff = vanligTreff()
 

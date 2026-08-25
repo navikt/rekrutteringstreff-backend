@@ -82,4 +82,12 @@ class MøteplanService(
 
             repository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)
         }
+
+    fun fordelRomPåNytt(treffId: TreffId): TreffgjennomføringDto =
+        writer.skriv(treffId) { connection, kontekst, _ ->
+            kontekst.krevWorkOp()
+            val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
+            val rom = Romfordeler.fordelJevnt(oppmøte, kontekst.antallRom)
+            repository.erstattRomfordeling(connection, kontekst.treffDbId, rom, kontekst)
+        }
 }
