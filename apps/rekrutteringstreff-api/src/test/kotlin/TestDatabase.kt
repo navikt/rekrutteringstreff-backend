@@ -82,6 +82,24 @@ class TestDatabase {
     }
 
     /**
+     * Registrerer svar nei via repository - legger til hendelse og oppdaterer status.
+     */
+    fun svarNeiTilInvitasjon(fnr: Fødselsnummer, treffId: TreffId, svarAv: String) {
+        dataSource.connection.use { connection ->
+            val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
+                ?: throw IllegalArgumentException("Jobbsøker ikke funnet for fnr og treffId")
+            jobbsøkerRepository.leggTilHendelserForJobbsøkere(
+                connection,
+                JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON,
+                listOf(personTreffId),
+                svarAv,
+                AktørType.JOBBSØKER
+            )
+            jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SVART_NEI)
+        }
+    }
+
+    /**
      * Henter jobbsøkere via repository.
      */
     fun hentJobbsøkereViaRepository(treffId: TreffId): List<Jobbsøker> {

@@ -580,6 +580,98 @@ class TreffgjennomføringKarakteriseringTest {
         møtt(treffId, person)
         assertThat(status(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
     }
+diskuter alternativ a
+    /**
+     * MØTT_OPP ligger på samme akse som svarstatusene og overskriver dem mens
+     * oppmøtet står. Tellingene på Om treffet leser `antallPerStatus`, så det
+     * er avgjørende at angringa gir svaret tilbake — ikke bare LAGT_TIL.
+     */
+    @Test
+    fun `svaret kommer tilbake når oppmøtet fjernes`() {
+        val treffId = workOpTreff()
+        val person = jobbsøker(treffId)
+        db.inviterJobbsøkere(listOf(person), treffId)
+        db.svarJaTilInvitasjon(Fødselsnummer("12345678901"), treffId, "testperson")
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.SVART_JA)
+
+        møtt(treffId, person)
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
+
+        ikkeMøtt(treffId, person)
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.SVART_JA)
+    }
+
+    @Test
+    fun `invitasjonen kommer tilbake når oppmøtet fjernes for en som ikke har svart`() {
+        val treffId = workOpTreff()
+        val person = jobbsøker(treffId)
+        db.inviterJobbsøkere(listOf(person), treffId)
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.INVITERT)
+
+        møtt(treffId, person)
+        ikkeMøtt(treffId, person)
+
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.INVITERT)
+    }
+
+    /**
+     * Fanger at rekonstruksjonen ikke plukker et tidligere oppmøte når
+     * jobbsøkeren har vært innom MØTT_OPP flere ganger.
+     */
+    @Test
+    fun `gjentatt registrering og angring lander fortsatt på svaret`() {
+        val treffId = workOpTreff()
+        val person = jobbsøker(treffId)
+        db.inviterJobbsøkere(listOf(person), treffId)
+        db.svarJaTilInvitasjon(Fødselsnummer("12345678901"), treffId, "testperson")
+
+        repeat(3) {
+            møtt(treffId, person)
+            ikkeMøtt(treffId, person)
+        }
+
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.SVART_JA)
+    }
+
+    @Test
+    fun `svart nei blir ikke til svart ja av et oppmøte som angres`() {
+        val treffId = workOpTreff()
+        val person = jobbsøker(treffId)
+        db.inviterJobbsøkere(listOf(person), treffId)
+        db.svarNeiTilInvitasjon(Fødselsnummer("12345678901"), treffId, "testperson")
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.SVART_NEI)
+
+        møtt(treffId, person)
+        ikkeMøtt(treffId, person)
+
+        assertThat(status(person)).isEqualTo(JobbsøkerStatus.SVART_NEI)
+    }
+
+    /**
+     * Fastholder at MØTT_OPP overskriver svaret så lenge oppmøtet står. Tellinga
+     * av «svart ja» på Om treffet leser `antallPerStatus`, så den går ned med én
+     * for hver som registreres møtt. Det er ikke tapt data — svaret ligger i
+     * hendelsesloggen og kommer tilbake ved angring — men tallet stemmer ikke
+     * mens oppmøtet er registrert.
+     */
+    @Test
+    fun `svart ja telles ikke lenger når jobbsøkeren er registrert møtt`() {
+        val treffId = workOpTreff()
+        val person = jobbsøker(treffId)
+        db.inviterJobbsøkere(listOf(person), treffId)
+        db.svarJaTilInvitasjon(Fødselsnummer("12345678901"), treffId, "testperson")
+        assertThat(antallMedStatus(treffId, JobbsøkerStatus.SVART_JA)).isEqualTo(1)
+
+        møtt(treffId, person)
+
+        assertThat(antallMedStatus(treffId, JobbsøkerStatus.SVART_JA)).isZero()
+        assertThat(antallMedStatus(treffId, JobbsøkerStatus.MØTT_OPP)).isEqualTo(1)
+
+        ikkeMøtt(treffId, person)
+
+        assertThat(antallMedStatus(treffId, JobbsøkerStatus.SVART_JA)).isEqualTo(1)
+        assertThat(antallMedStatus(treffId, JobbsøkerStatus.MØTT_OPP)).isZero()
+    }
 
     @Test
     fun `statusen og hendelsene gir samme svar for alle jobbsøkere`() {
@@ -737,6 +829,25 @@ class TreffgjennomføringKarakteriseringTest {
             ),
             navIdent,
         )
+
+    /**
+     * Teller på `jobbsoker.status`, som er den samme kolonna jobbsøkersøket
+     * aggregerer til `antallPerStatus`, og som tellingene på Om treffet leser.
+     */
+    private fun antallMedStatus(treffId: TreffId, status: JobbsøkerStatus): Int =
+        db.dataSource.connection.use { conn ->
+            val sql = """
+                SELECT COUNT(*)
+                FROM jobbsoker j
+                JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
+                WHERE rt.id = ? AND j.status = ?
+            """.trimIndent()
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.setObject(1, treffId.somUuid)
+                stmt.setString(2, status.name)
+                stmt.executeQuery().use { it.next(); it.getInt(1) }
+            }
+        }
 
     private fun antallRader(tabell: String, jobbsøkerId: Long): Int = db.dataSource.connection.use { conn ->
         conn.prepareStatement("SELECT COUNT(*) FROM $tabell WHERE jobbsoker_id = ?").use { stmt ->
