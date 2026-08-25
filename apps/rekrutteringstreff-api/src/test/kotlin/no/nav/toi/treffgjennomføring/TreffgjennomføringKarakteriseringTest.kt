@@ -580,7 +580,7 @@ class TreffgjennomføringKarakteriseringTest {
         møtt(treffId, person)
         assertThat(status(person)).isEqualTo(JobbsøkerStatus.MØTT_OPP)
     }
-diskuter alternativ a
+
     /**
      * MØTT_OPP ligger på samme akse som svarstatusene og overskriver dem mens
      * oppmøtet står. Tellingene på Om treffet leser `antallPerStatus`, så det

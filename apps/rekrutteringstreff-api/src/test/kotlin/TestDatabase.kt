@@ -5,8 +5,8 @@ import com.zaxxer.hikari.HikariDataSource
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
-import no.nav.toi.formidling.FormidlingRepository
 import no.nav.toi.formidling.Formidling
+import no.nav.toi.formidling.FormidlingRepository
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelse
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
@@ -17,8 +17,8 @@ import org.testcontainers.utility.DockerImageName
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
-import java.time.OffsetDateTime
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.*
@@ -35,7 +35,12 @@ class TestDatabase {
     /**
      * Legger til jobbsøkere med OPPRETTET-hendelse via repository.
      */
-    fun leggTilJobbsøkereMedHendelse(jobbsøkere: List<LeggTilJobbsøker>, treffId: TreffId, opprettetAv: String = "testperson", lagtTilAvNavn: String? = null): List<PersonTreffId> {
+    fun leggTilJobbsøkereMedHendelse(
+        jobbsøkere: List<LeggTilJobbsøker>,
+        treffId: TreffId,
+        opprettetAv: String = "testperson",
+        lagtTilAvNavn: String? = null
+    ): List<PersonTreffId> {
         return dataSource.executeInTransaction { connection ->
             val now = Instant.now()
             val opprettedeJobbsøkere = jobbsøkerRepository.leggTil(connection, jobbsøkere, treffId)
@@ -109,7 +114,11 @@ class TestDatabase {
     /**
      * Legger til arbeidsgiver med OPPRETTET-hendelse via repository.
      */
-    fun leggTilArbeidsgiverMedHendelse(input: LeggTilArbeidsgiver, treffId: TreffId, opprettetAv: String = "testperson"): ArbeidsgiverTreffId {
+    fun leggTilArbeidsgiverMedHendelse(
+        input: LeggTilArbeidsgiver,
+        treffId: TreffId,
+        opprettetAv: String = "testperson"
+    ): ArbeidsgiverTreffId {
         dataSource.connection.use { connection ->
             val arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(connection, input, treffId)
             arbeidsgiverRepository.leggTilNaringskoder(connection, arbeidsgiverTreffId, input.næringskoder)
@@ -135,7 +144,13 @@ class TestDatabase {
         dataSource.connection.use { connection ->
             val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
             arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId)
-            arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
+            arbeidsgiverRepository.leggTilHendelse(
+                connection,
+                arbeidsgiverTreffId,
+                ArbeidsgiverHendelsestype.SLETTET,
+                AktørType.ARRANGØR,
+                navIdent
+            )
         }
         return true
     }
@@ -247,34 +262,93 @@ class TestDatabase {
     }
 
     /**
-     * Én TRUNCATE framfor én DELETE per tabell: Postgres slipper å gå gjennom radene,
-     * og tømmingen tar konstant tid uansett hvor mye testen har seedet.
+     * Tømmer alle tabeller i public-skjemaet. Funksjonen er komplisert for å oppnå to ting:
+     * 1) Bedre ytelse/høyere hastighet i teardown av ytelsestester med mye data
+     * 2) Nye tabeller som opprettes i framtida skal også bli slettet, uten at vi trenger å hardkode dem inn i noen
+     * liste over tabeller som skal slettes.
      *
-     * Tabellene hentes fra katalogen slik at en ny Flyway-migrasjon ikke kan bli
-     * glemt her. Blir en tabell stående igjen, lekker data over i neste test og gir
-     * feil som avhenger av rekkefølgen testene kjøres i.
+     * Tabellista utledes fra skjemaet via pg_tables i stedet for å være hardkodet, fordi en
+     * hardkodet liste drifter fra skjemaet: V14 la til åtte tabeller som aldri ble lagt inn her,
+     * og fem av dem har fremmednøkkel mot jobbsoker.
+     * Første test som tar dem i bruk ville fått FK-brudd (Foreign Key, fremmednøkkel).
      */
     fun slettAlt() = dataSource.connection.use { conn ->
-        val tabeller = tabellerSomKanTømmes(conn)
-        if (tabeller.isNotEmpty()) {
-            conn.createStatement().use { it.execute("TRUNCATE TABLE $tabeller CASCADE") }
+        /**
+         * En «slett alt» som utleder tabellene fra skjemaet er farligere enn en hardkodet liste hvis
+         * dataSource noen gang peker et annet sted enn Testcontainers.
+         */
+        fun krevTestdatabase(conn: Connection) {
+            val url = conn.metaData.url
+            require("localhost" in url || "127.0.0.1" in url) {
+                "slettAlt() nektet: forventet testdatabase, men jdbcUrl var $url"
+            }
+        }
+
+        /*
+         * Utenfor en transaksjon er SET LOCAL en stille no-op — Postgres gir bare en WARNING,
+         * som JDBC svelger. Da ville slettingen blitt rekkefølgeavhengig igjen og feilet med
+         * uforklarlige FK-brudd. Les tilbake verdien så det feiler her i stedet.
+         */
+        fun verifiserReplicaModusSatt(conn: Connection) {
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery("SHOW session_replication_role").use { rs ->
+                    rs.next()
+                    check(rs.getString(1) == "replica") {
+                        "session_replication_role ble ikke satt. Kjører slettAlt() utenfor en transaksjon?"
+                    }
+                }
+            }
+        }
+
+        fun hentAlleTabellnavn(conn: Connection): List<String> =
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery(
+                    """
+                    SELECT tablename
+                    FROM pg_tables
+                    WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history'
+                    """.trimIndent()
+                ).use { rs ->
+                    generateSequence { if (rs.next()) rs.getString("tablename") else null }.toList()
+                }
+            }
+
+        krevTestdatabase(conn)
+        val opprinneligAutoCommit = conn.autoCommit
+        conn.autoCommit = false
+        try {
+            /*
+             * session_replication_role='replica' slår av fremmednøkkel-triggerne for denne
+             * transaksjonen. Det gir to ting:
+             *   1. Slettingen blir rekkefølgeuavhengig, som er det som gjør det mulig å utlede
+             *      tabellista fra skjemaet i det hele tatt.
+             *   2. Postgres slipper å kjøre én RI-sjekk per rad per fremmednøkkel. jobbsoker
+             *      har sju barnetabeller, så 600 000 rader ga 4,2 millioner trigger-kall.
+             *
+             * SET LOCAL — ikke SET — er kritisk: verdien nullstilles automatisk ved COMMIT eller
+             * ROLLBACK. Med vanlig SET ville «replica» blitt liggende igjen på tilkoblingen når
+             * HikariCP resirkulerer den, og neste test ville kjørt uten fremmednøkkelsjekk uten
+             * at noen merket det. Krever superbruker, som Testcontainers-brukeren er.
+             */
+            conn.createStatement().use { it.execute("SET LOCAL session_replication_role = 'replica'") }
+            verifiserReplicaModusSatt(conn)
+
+            val tabeller = hentAlleTabellnavn(conn)
+
+            conn.createStatement().use { stmt ->
+                tabeller.forEach {
+                    stmt.addBatch("""DELETE FROM "$it"""")
+                }
+                stmt.executeBatch()
+            }
+            conn.commit()
+        } catch (e: Exception) {
+            conn.rollback()
+            throw e
+        } finally {
+            conn.autoCommit = opprinneligAutoCommit
         }
     }
-
-    private fun tabellerSomKanTømmes(conn: Connection): String =
-        conn.prepareStatement(
-            """
-            SELECT quote_ident(table_name)
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-              AND table_type = 'BASE TABLE'
-              AND table_name <> 'flyway_schema_history'
-            """.trimIndent()
-        ).use { stmt ->
-            stmt.executeQuery().use { rs ->
-                generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
-            }
-        }.joinToString(", ")
 
     fun settSynlighet(personTreffId: PersonTreffId, erSynlig: Boolean) = dataSource.connection.use { conn ->
         conn.prepareStatement("UPDATE jobbsoker SET er_synlig = ? WHERE id = ?").apply {
@@ -374,7 +448,7 @@ class TestDatabase {
         // Hent jobbsøker_id
         val jobbsøkerId = conn.prepareStatement(
             """
-            SELECT js.jobbsoker_id 
+            SELECT js.jobbsoker_id
             FROM jobbsoker js
             JOIN rekrutteringstreff rt ON js.rekrutteringstreff_id = rt.rekrutteringstreff_id
             WHERE rt.id = ? AND js.fodselsnummer = ?
@@ -396,7 +470,7 @@ class TestDatabase {
 
         conn.prepareStatement(
             """
-        INSERT INTO jobbsoker_hendelse 
+        INSERT INTO jobbsoker_hendelse
           (id, jobbsoker_id, tidspunkt, hendelsestype, opprettet_av_aktortype, aktøridentifikasjon, hendelse_data)
         VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)
         """
@@ -500,8 +574,9 @@ class TestDatabase {
 
     fun hentJobbsøkereForTreff(treffId: TreffId): List<Jobbsøker> = jobbsøkerRepository.hentJobbsøkere(treffId)
 
-    fun hentNæringskodeForArbeidsgiverPåTreff(treffId: TreffId, orgnr: Orgnr): List<Næringskode> = dataSource.connection.use {
-        val sql = """
+    fun hentNæringskodeForArbeidsgiverPåTreff(treffId: TreffId, orgnr: Orgnr): List<Næringskode> =
+        dataSource.connection.use {
+            val sql = """
             SELECT nk.kode, nk.beskrivelse
               FROM naringskode nk
               JOIN arbeidsgiver ag ON ag.arbeidsgiver_id = nk.arbeidsgiver_id
@@ -509,13 +584,13 @@ class TestDatabase {
              WHERE rt.id = ? AND ag.orgnr = ?
              ORDER BY nk.naringskode_id
         """.trimIndent()
-        val ps = it.prepareStatement(sql).apply {
-            setObject(1, treffId.somUuid)
-            setString(2, orgnr.asString)
+            val ps = it.prepareStatement(sql).apply {
+                setObject(1, treffId.somUuid)
+                setString(2, orgnr.asString)
+            }
+            val rs = ps.executeQuery()
+            generateSequence { if (rs.next()) konverterTilNæringskoder(rs) else null }.toList()
         }
-        val rs = ps.executeQuery()
-        generateSequence { if (rs.next()) konverterTilNæringskoder(rs) else null }.toList()
-    }
 
     private fun konverterTilNæringskoder(rs: ResultSet) = Næringskode(
         kode = rs.getString("kode"),
@@ -538,7 +613,8 @@ class TestDatabase {
                     ag.poststed
                 ),
                 ag.treffId,
-                "testperson")
+                "testperson"
+            )
         }
     }
 
@@ -650,10 +726,17 @@ class TestDatabase {
         val rekrutteringstreff = rekrutteringstreffRepository.hent(treffId)
             ?: throw RekrutteringstreffIkkeFunnetException("Treff $treffId finnes ikke")
         val oppdaterRekrutteringstreffTilTidPassert = OppdaterRekrutteringstreffDto.opprettFra(
-            rekrutteringstreff.tilRekrutteringstreffDto(1,1, 1, 1)).copy(tilTid = nowOslo().minusDays(1)
+            rekrutteringstreff.tilRekrutteringstreffDto(1, 1, 1, 1)
+        ).copy(
+            tilTid = nowOslo().minusDays(1)
         )
         dataSource.connection.use { connection ->
-            rekrutteringstreffRepository.oppdater(connection, treffId, oppdaterRekrutteringstreffTilTidPassert, navIdent)
+            rekrutteringstreffRepository.oppdater(
+                connection,
+                treffId,
+                oppdaterRekrutteringstreffTilTidPassert,
+                navIdent
+            )
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.OPPDATERT, navIdent
             )
@@ -724,9 +807,28 @@ class TestDatabase {
     /**
      * Oppretter en formidling via repository.
      */
-    fun opprettFormidling(treffId: TreffId, personTreffId: PersonTreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId, stillingId: UUID, kandidatlisteId: UUID?, yrkestittel: String? = null, janzzKonseptId: String? = null, opprettetAvNavIdent: String? = null): Long {
+    fun opprettFormidling(
+        treffId: TreffId,
+        personTreffId: PersonTreffId,
+        arbeidsgiverTreffId: ArbeidsgiverTreffId,
+        stillingId: UUID,
+        kandidatlisteId: UUID?,
+        yrkestittel: String? = null,
+        janzzKonseptId: String? = null,
+        opprettetAvNavIdent: String? = null
+    ): Long {
         return dataSource.executeInTransaction { connection ->
-            formidlingRepository.opprett(connection, treffId, personTreffId, arbeidsgiverTreffId, stillingId, kandidatlisteId, yrkestittel = yrkestittel, janzzKonseptId = janzzKonseptId, opprettetAvNavIdent = opprettetAvNavIdent)
+            formidlingRepository.opprett(
+                connection,
+                treffId,
+                personTreffId,
+                arbeidsgiverTreffId,
+                stillingId,
+                kandidatlisteId,
+                yrkestittel = yrkestittel,
+                janzzKonseptId = janzzKonseptId,
+                opprettetAvNavIdent = opprettetAvNavIdent
+            )
         }
     }
 
