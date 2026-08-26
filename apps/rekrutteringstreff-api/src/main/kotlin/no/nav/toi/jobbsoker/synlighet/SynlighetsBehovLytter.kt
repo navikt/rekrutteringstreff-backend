@@ -8,9 +8,8 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
-import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.arbeidsgiver.toi.logging.log
-import org.slf4j.Logger
+import no.nav.toi.jobbsoker.JobbsøkerService
 
 /**
  * Lytter på svar fra need-meldinger (synlighetRekrutteringstreff).
@@ -63,7 +62,7 @@ class SynlighetsBehovLytter(
         val ferdigBeregnet = synlighetNode["ferdigBeregnet"]?.asBoolean() ?: false
         val erSynligNode = synlighetNode["erSynlig"]
         val sperret = synlighetNode["sperret"]?.asBoolean() ?: false
-        
+
         // Hvis ikke ferdigBeregnet eller erSynlig mangler, behandle som ikke-synlig (fail-safe)
         val erSynlig = if (ferdigBeregnet && erSynligNode != null && !erSynligNode.isNull) {
             erSynligNode.asBoolean()

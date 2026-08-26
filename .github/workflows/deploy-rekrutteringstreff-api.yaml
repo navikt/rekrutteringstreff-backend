@@ -7,6 +7,8 @@ on:
       - .github/workflows/deploy-rekrutteringstreff-api.yaml
       - .github/workflows/deploy-template.yaml
       - buildSrc/**
+      - technical-libs/logging/**
+      - technical-libs/testrapid/**
   workflow_dispatch:
 
 jobs:
@@ -14,7 +16,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/raskere-tester
+      deploy_dev_branch: refs/heads/loggelib-som-i-toirapidsandrivers
     permissions:
       contents: read
       id-token: write

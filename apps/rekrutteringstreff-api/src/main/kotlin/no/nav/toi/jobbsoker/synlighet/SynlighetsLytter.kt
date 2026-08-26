@@ -8,9 +8,8 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
-import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.arbeidsgiver.toi.logging.log
-import org.slf4j.Logger
+import no.nav.toi.jobbsoker.JobbsøkerService
 
 /**
  * Lytter på synlighetsmeldinger fra event-strømmen (toi-synlighetsmotor).
