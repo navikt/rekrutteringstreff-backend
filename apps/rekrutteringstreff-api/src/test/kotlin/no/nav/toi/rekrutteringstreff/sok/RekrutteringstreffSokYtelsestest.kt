@@ -3,11 +3,7 @@ package no.nav.toi.rekrutteringstreff.sok
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Timestamp
@@ -15,7 +11,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.system.measureTimeMillis
 
-//@Disabled("TODO Are: Enable før merge til main. Supertreig.")
+@Tag("slow") // Samarbeider med build.gradle.kts
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokYtelsestest {
     companion object {
@@ -93,7 +89,10 @@ class RekrutteringstreffSokYtelsestest {
                         statement.setTimestamp(6, Timestamp.from(opprettetTid))
                         statement.setTimestamp(7, svarfrist)
                         statement.setArray(8, conn.createArrayOf("text", arrayOf("A123456", "B654321")))
-                        statement.setArray(9, conn.createArrayOf("text", arrayOf(if (index % 2 == 0) "0315" else "1201")))
+                        statement.setArray(
+                            9,
+                            conn.createArrayOf("text", arrayOf(if (index % 2 == 0) "0315" else "1201"))
+                        )
                         statement.setTimestamp(10, Timestamp.from(opprettetTid.plusSeconds(3_600)))
                         statement.addBatch()
 
