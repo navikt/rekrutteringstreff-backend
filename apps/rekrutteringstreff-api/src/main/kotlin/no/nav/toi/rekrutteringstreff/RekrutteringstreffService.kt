@@ -1,5 +1,6 @@
 package no.nav.toi.rekrutteringstreff
 
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.*
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId

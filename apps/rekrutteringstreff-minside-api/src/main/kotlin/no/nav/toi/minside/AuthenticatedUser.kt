@@ -14,6 +14,7 @@ import io.javalin.http.Header
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.http.UnauthorizedResponse
 import io.javalin.router.JavalinDefaultRoutingApi
+import no.nav.arbeidsgiver.toi.logging.noClassLogger
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
 import java.util.*

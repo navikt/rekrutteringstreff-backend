@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker.aktivitetskort
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.opentelemetry.instrumentation.annotations.WithSpan
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.*
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
 import no.nav.toi.rekrutteringstreff.Rekrutteringstreff

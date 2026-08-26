@@ -3,6 +3,7 @@ package no.nav.toi
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
+import no.nav.arbeidsgiver.toi.logging.log
 import org.ehcache.CacheManager
 import org.ehcache.config.builders.CacheConfigurationBuilder
 import org.ehcache.config.builders.CacheManagerBuilder

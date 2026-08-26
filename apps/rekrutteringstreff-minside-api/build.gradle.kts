@@ -26,6 +26,7 @@ val wiremockVersion = "3.12.0"
 val opentelemetryLogbackMdcVersion = "2.25.0-alpha"
 
 dependencies {
+    implementation(project(":technical-libs:logging"))
 
     implementation("com.github.kittinunf.fuel:fuel:$fuelVersion")
     implementation("com.github.kittinunf.fuel:fuel-jackson:$fuelVersion")

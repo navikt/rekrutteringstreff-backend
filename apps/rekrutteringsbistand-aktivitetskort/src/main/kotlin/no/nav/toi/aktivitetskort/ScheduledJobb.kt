@@ -5,8 +5,8 @@ import io.opentelemetry.instrumentation.annotations.WithSpan
 import kotlinx.coroutines.runBlocking
 import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.Repository
-import no.nav.toi.SecureLog
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.objectMapper
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerRecords
@@ -65,7 +65,7 @@ fun scheduler(
 }
 
 class AktivitetskortJobb(private val repository: Repository, private val producer: Producer<String, String>, private val leaderElection: LeaderElectionInterface): Runnable {
-   private val secureLog = SecureLog(log)
+   private val teamLog = TeamLogLogger.teamlog(log)
 
     @WithSpan
     override fun run() {
@@ -79,12 +79,12 @@ class AktivitetskortJobb(private val repository: Repository, private val produce
                 try {
                     usendtHendelse.send(producer)
                 } catch (e: Exception) {
-                    secureLog.error("Feil ved sending av Aktivitetskorthendelse", e)
+                    teamLog.error("Feil ved sending av Aktivitetskorthendelse", e)
                 }
             }
         } catch (e: Exception) {
             log.error("Uventet feil i AktivitetskortJobb – scheduleren fortsetter ved neste kjøring. (se securelog)")
-            secureLog.error("Uventet feil i AktivitetskortJobb – scheduleren fortsetter ved neste kjøring.", e)
+            teamLog.error("Uventet feil i AktivitetskortJobb – scheduleren fortsetter ved neste kjøring.", e)
         }
     }
 }
@@ -96,7 +96,7 @@ class AktivitetskortFeilJobb(
     private val dabAktivitetskortFeilTopic: String,
     private val rapidPublish: (String, String) -> Unit
 ): Runnable {
-    private val secureLog = SecureLog(log)
+    private val teamLog = TeamLogLogger.teamlog(log)
 
     @WithSpan
     override fun run() {
@@ -119,7 +119,7 @@ class AktivitetskortFeilJobb(
             sendFeilKøHendelserPåRapid()
         } catch (e: Exception) {
             log.error("Uventet feil i AktivitetskortFeilJobb – scheduleren fortsetter ved neste kjøring. (se securelog)")
-            secureLog.error("Uventet feil i AktivitetskortFeilJobb – scheduleren fortsetter ved neste kjøring.", e)
+            teamLog.error("Uventet feil i AktivitetskortFeilJobb – scheduleren fortsetter ved neste kjøring.", e)
         }
     }
 
@@ -141,7 +141,7 @@ class AktivitetskortFeilJobb(
                         val hendelse = objectMapper.readValue(it, FeilKøHendelse::class.java)
                         if (hendelse.source == "REKRUTTERINGSBISTAND") {
                             log.error("Feil ved bestilling av aktivitetskort: (se securelog)")
-                            secureLog.error("Feil ved bestilling av aktivitetskort: $it")
+                            teamLog.error("Feil ved bestilling av aktivitetskort: $it")
                             log.info("Skal lagre feil ved bestilling av aktivitetskort i databasen")
 
                             val failingMessageUtenEscaping = hendelse.failingMessage.replace("\\n", "").replace("\\\"", "\"")
@@ -160,7 +160,7 @@ class AktivitetskortFeilJobb(
             }
         } catch (e: Exception) {
             log.error("Feil ved kjøring av AktivitetskortFeilJobb: (se securelog)")
-            secureLog.error("Feil ved kjøring av AktivitetskortFeilJobb", e)
+            teamLog.error("Feil ved kjøring av AktivitetskortFeilJobb", e)
         } finally {
             try {
                 if (currentPositions.isNotEmpty()) {
@@ -168,7 +168,7 @@ class AktivitetskortFeilJobb(
                 }
             } catch (e: Exception) {
                 log.error("Feil ved commit av offsets i AktivitetskortFeilJobb: (se securelog)")
-                secureLog.error("Feil ved commit av offsets i AktivitetskortFeilJobb", e)
+                teamLog.error("Feil ved commit av offsets i AktivitetskortFeilJobb", e)
             } finally {
                 // Må kunne søke seg tilbake til riktig offset hvis ikke alle meldingene i batchen har blitt prosessert
                 currentPositions.forEach { (tp, offset) -> consumer.seek(tp, offset) }

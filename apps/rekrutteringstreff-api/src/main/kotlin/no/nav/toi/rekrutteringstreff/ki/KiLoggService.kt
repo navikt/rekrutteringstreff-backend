@@ -1,15 +1,14 @@
 package no.nav.toi.rekrutteringstreff.ki
 
 import no.nav.toi.exception.KiValideringsException
-import no.nav.toi.log
-import no.nav.toi.SecureLog
+import no.nav.arbeidsgiver.toi.logging.log
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import java.text.Normalizer
 import java.util.*
 
 class KiLoggService(
     private val kiLoggRepository: KiLoggRepository,
 ) {
-    private val secureLog = SecureLog(log)
 
     companion object {
         private const val MANGLER_VALIDERING = "KI_VALIDERING_MANGLER"
@@ -74,7 +73,7 @@ class KiLoggService(
         val normalisertLoggetTekst = normaliserTekst(kiLogg.spørringFraFrontend)
         if (normalisertTekst != normalisertLoggetTekst) {
             log.warn("Lagring avvist: Tekst endret etter KI-validering for $feltType")
-            secureLog.warn(
+            teamlog(log).warn(
                 "KI_TEKST_ENDRET for $feltType, loggId=$loggId.\n" +
                     "Lagret tekst (rå): ${kiLogg.spørringFraFrontend}\n" +
                     "Ny tekst (rå): $tekst\n" +

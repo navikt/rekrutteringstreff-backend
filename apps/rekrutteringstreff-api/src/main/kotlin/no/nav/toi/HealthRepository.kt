@@ -1,5 +1,6 @@
 package no.nav.toi
 
+import no.nav.arbeidsgiver.toi.logging.log
 import java.sql.SQLException
 import javax.sql.DataSource
 

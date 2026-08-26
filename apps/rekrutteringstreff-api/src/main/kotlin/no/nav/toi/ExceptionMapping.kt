@@ -8,6 +8,8 @@ import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
 import io.javalin.router.JavalinDefaultRoutingApi
 import io.opentelemetry.api.trace.Span
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.exception.*
 import java.sql.SQLException
 import java.time.LocalDateTime
@@ -60,7 +62,6 @@ data class ProblemDetails(
 }
 
 object ExceptionMapping {
-    private val secureLog = SecureLog(log)
 
     fun JavalinDefaultRoutingApi.exceptionMapping() {
         // TODO exceptions kan også skje steder hvor disse feilmeldingene ikke gir mening.
@@ -116,7 +117,7 @@ object ExceptionMapping {
                     )
                 )
             } else {
-                secureLog.error("SQL-feil", e)
+                teamlog(log).error("SQL-feil", e)
                 ctx.status(500).json(
                     ProblemDetails.fromThrowable(
                         throwable = e,

@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff.opprydning
 
 import io.opentelemetry.instrumentation.annotations.WithSpan
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.*
 import no.nav.toi.rekrutteringstreff.ki.KiLoggService
 import java.util.concurrent.TimeUnit
