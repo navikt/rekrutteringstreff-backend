@@ -35,11 +35,25 @@ import no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokService
 import no.nav.toi.statistikk.StatistikkController
 import no.nav.toi.statistikk.StatistikkRepository
 import no.nav.toi.statistikk.StatistikkService
+import no.nav.toi.treffgjennomføring.TreffgjennomføringController
+import no.nav.toi.oppfølging.OppfølgingController
+import no.nav.toi.oppfølging.OppfølgingRepository
+import no.nav.toi.oppfølging.OppfølgingService
+import no.nav.toi.treffgjennomføring.TreffgjennomføringReader
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
+import no.nav.toi.jobbsoker.oppmøte.OppmøteService
+import no.nav.toi.treffgjennomføring.StegRepository
+import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
+import no.nav.toi.treffgjennomføring.matching.MatchingRepository
+import no.nav.toi.treffgjennomføring.matching.MatchingService
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
+import no.nav.toi.treffgjennomføring.TreffgjennomføringService
+import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 
 @Suppress("MemberVisibilityCanBePrivate")
 class ApplicationContext(val infra: InfrastructureContext = InfrastructureContext()) {
 
-    // Infrastruktur (delegert fra InfrastructureContext)
     val dataSource get() = infra.dataSource
     val rapidsConnection get() = infra.rapidsConnection
     val authConfigs get() = infra.authConfigs
@@ -53,7 +67,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val stillingKlient get() = infra.stillingKlient
     val kandidatKlient get() = infra.kandidatKlient
 
-    // Repositories
     val jobbsøkerRepository = JobbsøkerRepository(infra.dataSource, JacksonConfig.mapper)
     val arbeidsgiverRepository = ArbeidsgiverRepository(infra.dataSource, JacksonConfig.mapper)
     val rekrutteringstreffRepository = RekrutteringstreffRepository(infra.dataSource)
@@ -65,8 +78,20 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val healthRepository = HealthRepository(infra.dataSource)
     val formidlingRepository = FormidlingRepository(infra.dataSource)
     val statistikkRepository = StatistikkRepository(infra.dataSource)
+    val treffkontekstRepository = TreffkontekstRepository()
+    val stegRepository = StegRepository()
+    val oppmøteRepository = OppmøteRepository()
+    val møteplanRepository = MøteplanRepository()
+    val matchingRepository = MatchingRepository()
+    val oppfølgingRepository = OppfølgingRepository()
+    val treffgjennomføringReader = TreffgjennomføringReader(
+        stegRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
+    )
+    val treffgjennomføringWriter = TreffgjennomføringWriter(
+        infra.dataSource, treffkontekstRepository, stegRepository, treffgjennomføringReader,
+    )
+    val hendelseWriter = HendelseWriter(jobbsøkerRepository, arbeidsgiverRepository, rekrutteringstreffRepository, JacksonConfig.mapper)
 
-    // Services
     val jobbsøkerService = JobbsøkerService(
         dataSource = infra.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
@@ -88,8 +113,45 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val sokService = RekrutteringstreffSokService(sokRepository)
     val formidlingService = FormidlingService(infra.dataSource, formidlingRepository, arbeidsgiverService, jobbsøkerService, rekrutteringstreffRepository, stillingKlient, kandidatKlient)
     val statistikkService = StatistikkService(statistikkRepository)
+    val treffgjennomføringService = TreffgjennomføringService(
+        dataSource = infra.dataSource,
+        kontekstRepository = treffkontekstRepository,
+        reader = treffgjennomføringReader,
+        writer = treffgjennomføringWriter,
+        stegRepository = stegRepository,
+    )
+    val oppmøteService = OppmøteService(
+        treffgjennomføringWriter = treffgjennomføringWriter,
+        oppmøteRepository = oppmøteRepository,
+        matchingRepository = matchingRepository,
+        møteplanRepository = møteplanRepository,
+        oppfølgingRepository = oppfølgingRepository,
+        jobbsøkerService = jobbsøkerService,
+        hendelseWriter = hendelseWriter,
+    )
+    val møteplanService = MøteplanService(
+        writer = treffgjennomføringWriter,
+        repository = møteplanRepository,
+        oppmøteRepository = oppmøteRepository,
+        stegRepository = stegRepository,
+        hendelseWriter = hendelseWriter,
+    )
+    val matchingService = MatchingService(
+        writer = treffgjennomføringWriter,
+        repository = matchingRepository,
+        oppmøteRepository = oppmøteRepository,
+        oppfølgingRepository = oppfølgingRepository,
+        stegRepository = stegRepository,
+        hendelseWriter = hendelseWriter,
+    )
+    val oppfølgingService = OppfølgingService(
+        writer = treffgjennomføringWriter,
+        repository = oppfølgingRepository,
+        oppmøteRepository = oppmøteRepository,
+        stegRepository = stegRepository,
+        hendelser = hendelseWriter,
+    )
 
-    // Controllere
     val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService)
     val rekrutteringstreffController = RekrutteringstreffController(rekrutteringstreffService, eierService, kiLoggService)
     val eierController = EierController(eierService)
@@ -102,8 +164,9 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val healthController = HealthController(healthRepository)
     val formidlingController = FormidlingController(formidlingService, eierService, infra.modiaKlient)
     val statistikkController = StatistikkController(statistikkService)
+    val treffgjennomføringController = TreffgjennomføringController(treffgjennomføringService, møteplanService, matchingService, oppmøteService, eierService)
+    val oppfølgingController = OppfølgingController(oppfølgingService, eierService)
 
-    // Schedulere (lazy — har sideeffekter ved start, brukes kun i produksjon)
     val jobbsøkerhendelserScheduler by lazy {
         JobbsøkerhendelserScheduler(
             dataSource = infra.dataSource,
@@ -131,7 +194,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         RekrutteringstreffScheduler(rekrutteringstreffService, infra.leaderElection)
     }
 
-    // Rapids & Rivers-lyttere (lazy — registrerer seg selv mot rapidsConnection ved opprettelse)
     private val aktivitetskortFeilLytter by lazy { AktivitetskortFeilLytter(infra.rapidsConnection, jobbsøkerService) }
     private val minsideVarselSvarLytter by lazy { MinsideVarselSvarLytter(infra.rapidsConnection, jobbsøkerService, JacksonConfig.mapper) }
     private val synlighetsLytter by lazy { SynlighetsLytter(infra.rapidsConnection, jobbsøkerService) }

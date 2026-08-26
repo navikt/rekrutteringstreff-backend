@@ -11,6 +11,10 @@ import io.opentelemetry.api.trace.Span
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.exception.*
+import no.nav.toi.jobbsoker.oppmøte.OppmøteKanIkkeFjernesException
+import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
+import no.nav.toi.treffgjennomføring.dto.RegistreringerDto
+import no.nav.toi.treffgjennomføring.matching.InteresseKanIkkeFjernesException
 import java.sql.SQLException
 import java.time.LocalDateTime
 
@@ -35,7 +39,7 @@ data class ProblemDetails(
             throwable: Throwable,
             status: HttpStatus,
             ctx: Context,
-            timestamp : LocalDateTime = LocalDateTime.now(),
+            timestamp: LocalDateTime = LocalDateTime.now(),
             type: String = "about:blank",
             traceid: String = traceIdFraOpenTelemetry(),
             hint: String? = null,
@@ -83,14 +87,14 @@ object ExceptionMapping {
                     status = HttpStatus.BAD_REQUEST,
                     ctx = ctx,
                     feil = "Klarte ikke å lese request-body til forventet format.",
-                    hint = "Body må være JSON som matcher skjemaet for OppdaterRekrutteringstreffDto. Dato/tid må inkludere tidsone (f.eks. +02:00)."
+                    hint = "Body må være JSON som matcher skjemaet for endepunktet. Dato/tid må inkludere tidsone (f.eks. +02:00)."
                 )
             )
         }
         // I enkelte Javalin-versjoner pakkes Jackson-feil i JsonMapperException
         try {
-            val k = Class.forName("io.javalin.json.JsonMapperException") as Class<out Exception>
             @Suppress("UNCHECKED_CAST")
+            val k = Class.forName("io.javalin.json.JsonMapperException") as Class<out Exception>
             exception(k) { e, ctx ->
                 ctx.status(400).json(
                     ProblemDetails.fromThrowable(
@@ -139,6 +143,31 @@ object ExceptionMapping {
             )
         }
 
+        exception(OppmøteKanIkkeFjernesException::class.java) { e, ctx ->
+            ctx.status(409).json(
+                OppmøteBlokkertDto(
+                    feil = "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.",
+                    hint = "Fjern interessene og nullstill statusen først.",
+                    registreringer = RegistreringerDto(
+                        interesser = e.registreringer.interesser,
+                        vurderinger = e.registreringer.vurderinger,
+                    ),
+                )
+            )
+        }
+
+        exception(InteresseKanIkkeFjernesException::class.java) { e, ctx ->
+            ctx.status(409).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.CONFLICT,
+                    ctx = ctx,
+                    feil = "Jobbsøkeren har en registrert status og interessen kan derfor ikke fjernes.",
+                    hint = "Nullstill statusen for jobbsøkeren hos denne arbeidsgiveren først.",
+                )
+            )
+        }
+
         exception(UlovligOppdateringException::class.java) { e, ctx ->
             ctx.status(409).json(
                 ProblemDetails.fromThrowable(
@@ -161,7 +190,7 @@ object ExceptionMapping {
             )
         }
 
-        exception(`SvarfristUtløptException`::class.java) { e, ctx ->
+        exception(SvarfristUtløptException::class.java) { e, ctx ->
             ctx.status(400).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,
@@ -183,7 +212,7 @@ object ExceptionMapping {
             )
         }
 
-        exception(`JobbsøkerIkkeFunnetException`::class.java) { e, ctx ->
+        exception(JobbsøkerIkkeFunnetException::class.java) { e, ctx ->
             ctx.status(404).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,
@@ -194,7 +223,7 @@ object ExceptionMapping {
             )
         }
 
-        exception(`JobbsøkerIkkeSynligException`::class.java) { e, ctx ->
+        exception(JobbsøkerIkkeSynligException::class.java) { e, ctx ->
             ctx.status(403).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,
@@ -205,7 +234,7 @@ object ExceptionMapping {
             )
         }
 
-        exception(`JobbsøkerSperretException`::class.java) { e, ctx ->
+        exception(JobbsøkerSperretException::class.java) { e, ctx ->
             ctx.status(403).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,

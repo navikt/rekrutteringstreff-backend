@@ -48,6 +48,8 @@ enum class JobbsøkerSorteringsfelt {
 
     private fun statusSorteringSql(retning: JobbsøkerSorteringsretning): String {
         val sortertStatusrekkefølge = listOf(
+            JobbsøkerStatus.MØTT_OPP,
+            JobbsøkerStatus.FÅTT_JOBB,
             JobbsøkerStatus.SVART_JA,
             JobbsøkerStatus.SVART_NEI,
             JobbsøkerStatus.INVITERT,

@@ -92,16 +92,15 @@ class JobbsøkerService(
     fun inviter(personTreffIds: List<PersonTreffId>, treffId: TreffId, navIdent: String) {
         dataSource.executeInTransaction { connection ->
             personTreffIds.forEach { personTreffId ->
-                // Sjekk om jobbsøker er synlig - hopp over usynlige jobbsøkere
                 val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
                 if (erSynlig == false) {
                     teamLog.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig i rekrutteringstreff - hopper over")
                     return@forEach
                 }
 
-                val `jobbsøkerstatus` = jobbsøkerRepository.hentStatus(connection, personTreffId)
-                if (`jobbsøkerstatus` != null && `jobbsøkerstatus` != JobbsøkerStatus.LAGT_TIL) {
-                    logger.info("Jobbsøker $personTreffId har allerede status $`jobbsøkerstatus`, hopper over invitasjon")
+                val jobbsøkerstatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+                if (jobbsøkerstatus != null && jobbsøkerstatus != JobbsøkerStatus.LAGT_TIL) {
+                    logger.info("Jobbsøker $personTreffId har allerede status $jobbsøkerstatus, hopper over invitasjon")
                     return@forEach
                 }
 
@@ -121,7 +120,6 @@ class JobbsøkerService(
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
 
-            // Sjekk om jobbsøker er synlig
             val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
             if (erSynlig == false) {
                 throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
@@ -143,7 +141,6 @@ class JobbsøkerService(
             val personTreffId = jobbsøkerRepository.hentPersonTreffId(connection, treffId, fnr)
                 ?: throw JobbsøkerIkkeFunnetException("Jobbsøker finnes ikke for dette treffet.")
 
-            // Sjekk om jobbsøker er synlig
             val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
             if (erSynlig == false) {
                 throw JobbsøkerIkkeSynligException("Jobbsøker er ikke lenger synlig og kan ikke svare på invitasjonen.")
@@ -200,35 +197,45 @@ class JobbsøkerService(
         jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.FÅTT_JOBB)
     }
 
-    /**
-     * Tilbakestiller en jobbsøker som har fått jobb tilbake til statusen den hadde rett før FÅTT_JOBB.
-     * Brukes når en formidling slettes. Endrer kun status dersom jobbsøkeren faktisk har status FÅTT_JOBB,
-     * slik at andre statuser ikke overskrives.
-     */
     fun angreFåttJobb(connection: Connection, personTreffId: PersonTreffId, navIdent: String) {
         val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
         if (nåværendeStatus != JobbsøkerStatus.FÅTT_JOBB) {
             logger.info("Jobbsøker har ikke status FÅTT_JOBB (er $nåværendeStatus), endrer ikke status ved angring av formidling")
             return
         }
-        val forrigeStatus = finnStatusFørFåttJobb(connection, personTreffId)
+        val forrigeStatus = finnStatusFør(connection, personTreffId, JobbsøkerHendelsestype.FÅTT_JOBB)
         jobbsøkerRepository.leggTilHendelse(connection, personTreffId, JobbsøkerHendelsestype.ANGRE_FÅTT_JOBB, AktørType.ARRANGØR, navIdent)
         jobbsøkerRepository.endreStatus(connection, personTreffId, forrigeStatus)
         logger.info("Tilbakestilte jobbsøker $personTreffId fra FÅTT_JOBB til $forrigeStatus ved angring av formidling")
     }
 
-    /**
-     * Rekonstruerer statusen jobbsøkeren hadde rett før den siste FÅTT_JOBB-hendelsen,
-     * ved å spille av hendelsesloggen kronologisk. Faller tilbake til SVART_JA dersom
-     * ingen tidligere status kan utledes (en formidling forutsetter aktivt svar ja).
-     */
-    private fun finnStatusFørFåttJobb(connection: Connection, personTreffId: PersonTreffId): JobbsøkerStatus {
+    fun registrerOppmøte(connection: Connection, personTreffId: PersonTreffId) {
+        jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.MØTT_OPP)
+    }
+
+    fun fjernOppmøte(connection: Connection, personTreffId: PersonTreffId) {
+        val nåværendeStatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+        if (nåværendeStatus != JobbsøkerStatus.MØTT_OPP) {
+            logger.info("Jobbsøker har ikke status MØTT_OPP (er $nåværendeStatus), endrer ikke status ved fjerning av oppmøte")
+            return
+        }
+        val forrigeStatus = finnStatusFør(connection, personTreffId, JobbsøkerHendelsestype.REGISTRERT_OPPMØTE)
+        jobbsøkerRepository.endreStatus(connection, personTreffId, forrigeStatus)
+        logger.info("Tilbakestilte jobbsøker $personTreffId fra MØTT_OPP til $forrigeStatus ved fjerning av oppmøte")
+    }
+
+    private fun finnStatusFør(
+        connection: Connection,
+        personTreffId: PersonTreffId,
+        hendelsestype: JobbsøkerHendelsestype,
+    ): JobbsøkerStatus {
         val hendelser = jobbsøkerRepository.hentHendelsestyper(connection, personTreffId)
-        val sisteFåttJobbIndex = hendelser.indexOfLast { it == JobbsøkerHendelsestype.FÅTT_JOBB }
-        if (sisteFåttJobbIndex <= 0) return JobbsøkerStatus.SVART_JA
-        return hendelser.take(sisteFåttJobbIndex)
+        val sisteIndex = hendelser.indexOfLast { it == hendelsestype }
+        if (sisteIndex <= 0) return JobbsøkerStatus.SVART_JA
+        val statusFraHendelse = hendelsestype.tilJobbsøkerStatus()
+        return hendelser.take(sisteIndex)
             .mapNotNull { it.tilJobbsøkerStatus() }
-            .lastOrNull { it != JobbsøkerStatus.FÅTT_JOBB }
+            .lastOrNull { it != statusFraHendelse }
             ?: JobbsøkerStatus.SVART_JA
     }
 
@@ -242,6 +249,7 @@ class JobbsøkerService(
         JobbsøkerHendelsestype.SVART_NEI_TIL_INVITASJON_AV_EIER -> JobbsøkerStatus.SVART_NEI
         JobbsøkerHendelsestype.SLETTET -> JobbsøkerStatus.SLETTET
         JobbsøkerHendelsestype.FÅTT_JOBB -> JobbsøkerStatus.FÅTT_JOBB
+        JobbsøkerHendelsestype.REGISTRERT_OPPMØTE -> JobbsøkerStatus.MØTT_OPP
         else -> null
     }
 
@@ -337,19 +345,10 @@ class JobbsøkerService(
         logger.info("Registrerte hendelse MOTTATT_SVAR_FRA_MINSIDE for rekrutteringstreffId: ${treffId.somString}")
     }
 
-    /**
-     * Filtrerer jobbsøkere som har aktivt svar ja, basert på gjeldende status.
-     * Dekker både svar fra jobbsøker selv og svar lagt inn av eier på vegne av jobbsøker.
-     */
     fun finnJobbsøkereMedAktivtSvarJa(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
         return jobbsøkere.filter { it.harAktivtSvarJa() }
     }
 
-    /**
-     * Filtrerer jobbsøkere som er invitert men ikke har svart, basert på gjeldende status.
-     * Status overskrives av svar (også svar via eier), så `INVITERT` representerer
-     * nettopp jobbsøkere som er invitert og ennå ikke har svart.
-     */
     fun finnJobbsøkereSomIkkeSvart(jobbsøkere: List<Jobbsøker>): List<Jobbsøker> {
         return jobbsøkere.filter { it.status == JobbsøkerStatus.INVITERT }
     }
@@ -416,7 +415,7 @@ class JobbsøkerService(
     }
 
     private fun leggTilJobbsøkerBatch(
-        connection: java.sql.Connection,
+        connection: Connection,
         batch: List<LeggTilJobbsøker>,
         personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,
         treffId: TreffId,
@@ -441,7 +440,7 @@ class JobbsøkerService(
     }
 
     private fun leggTilEllerGjenopprett(
-        connection: java.sql.Connection,
+        connection: Connection,
         batch: List<LeggTilJobbsøker>,
         treffId: TreffId,
         personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,

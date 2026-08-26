@@ -240,7 +240,9 @@ class FormidlingRepository(private val dataSource: DataSource) {
                     CASE WHEN j.sperret THEN NULL ELSE j.etternavn END AS etternavn,
                     j.sperret,
                     ag.orgnr,
-                    ag.orgnavn
+                    ag.orgnavn,
+                    j.id::text AS person_treff_id,
+                    ag.id::text AS arbeidsgiver_treff_id
                 FROM formidling f
                 JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 JOIN jobbsoker j ON f.jobbsoker_id = j.jobbsoker_id
@@ -290,6 +292,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
         sperret = getBoolean("sperret"),
         opprettetAvNavn = getString("opprettet_av_veileder_navn"),
         opprettetAvNavIdent = getString("opprettet_av_veileder_navident"),
+        personTreffId = getString("person_treff_id"),
+        arbeidsgiverTreffId = getString("arbeidsgiver_treff_id"),
     )
 
     private data class WhereClause(
