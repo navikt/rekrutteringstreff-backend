@@ -9,6 +9,10 @@ import io.javalin.http.HttpStatus
 import io.javalin.router.JavalinDefaultRoutingApi
 import io.opentelemetry.api.trace.Span
 import no.nav.toi.exception.*
+import no.nav.toi.jobbsoker.oppmøte.OppmøteKanIkkeFjernesException
+import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
+import no.nav.toi.treffgjennomføring.dto.RegistreringerDto
+import no.nav.toi.treffgjennomføring.matching.InteresseKanIkkeFjernesException
 import java.sql.SQLException
 import java.time.LocalDateTime
 
@@ -82,7 +86,7 @@ object ExceptionMapping {
                     status = HttpStatus.BAD_REQUEST,
                     ctx = ctx,
                     feil = "Klarte ikke å lese request-body til forventet format.",
-                    hint = "Body må være JSON som matcher skjemaet for OppdaterRekrutteringstreffDto. Dato/tid må inkludere tidsone (f.eks. +02:00)."
+                    hint = "Body må være JSON som matcher skjemaet for endepunktet. Dato/tid må inkludere tidsone (f.eks. +02:00)."
                 )
             )
         }
@@ -134,6 +138,31 @@ object ExceptionMapping {
                     status = HttpStatus.CONFLICT,
                     ctx = ctx,
                     feil = e.message
+                )
+            )
+        }
+
+        exception(OppmøteKanIkkeFjernesException::class.java) { e, ctx ->
+            ctx.status(409).json(
+                OppmøteBlokkertDto(
+                    feil = "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.",
+                    hint = "Fjern interessene og nullstill statusen først.",
+                    registreringer = RegistreringerDto(
+                        interesser = e.registreringer.interesser,
+                        vurderinger = e.registreringer.vurderinger,
+                    ),
+                )
+            )
+        }
+
+        exception(InteresseKanIkkeFjernesException::class.java) { e, ctx ->
+            ctx.status(409).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.CONFLICT,
+                    ctx = ctx,
+                    feil = "Jobbsøkeren har en registrert status og interessen kan derfor ikke fjernes.",
+                    hint = "Nullstill statusen for jobbsøkeren hos denne arbeidsgiveren først.",
                 )
             )
         }

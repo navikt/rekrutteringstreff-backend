@@ -263,13 +263,45 @@ Samleendepunktet `GET /api/rekrutteringstreff/{id}/hendelser` gjør en `UNION AL
 - **naringskode**: Næringskoder for arbeidsgivere (kan ha flere per arbeidsgiver)
 - **ki_spørring_logg**: Logger AI/KI-spørringer med metadata og modereringsinfo - se [KI-tekstvalidering](../5-ki/ki-tekstvalidering.md)
 
+### Treffgjennomføring (V14)
+
+Selve dagen deltakerne møtes. Kolonnen «Variant» sier bare hvilke tabeller en
+vanlig treffgjennomføring lar stå tomme - skjemaet er det samme for begge.
+Se [planen](../9-planer/workop/treffgjennomforing-oppmote-rom-og-fordeling.md).
+
+| Tabell                        | Innhold                                                             | Variant |
+| ----------------------------- | ------------------------------------------------------------------- | ------- |
+| **treffgjennomforing**        | 1:1 med treff: unik FK til treffet, og hvilken fase dagen står i    | Begge   |
+| **moteoppsett**               | 1:1 med treffgjennomføring: starttidspunkt og varighet per møte     | WorkOp  |
+| **deltakernummer**            | Nummeret på det fysiske kortet. Unikt per treff, gjenbrukes aldri   | WorkOp  |
+| **jobbsoker_romtildeling**    | Hvem som sitter i hvilket rom, med rekkefølge i rommet              | WorkOp  |
+| **arbeidsgiver_rotasjon**     | Hvor arbeidsgiveren starter i rotasjonen                            | WorkOp  |
+| **interesse**                 | Hvilke arbeidsgivere en jobbsøker vil møte                          | Begge   |
+| **intervjufordeling**         | Plassering (tidsluke) og om jobbsøkeren er over sperrelinjen        | WorkOp  |
+| **vurdering**                 | Resultatet av møtet; notater lagres i kolonnen `vurderingsnotat` (`text[]`) | Begge   |
+
+To ting skjemaet ikke viser av seg selv:
+
+- **Oppmøte har ingen egen tabell eller kolonne.** Gjeldende tilstand representeres av
+  `jobbsoker.status = 'MØTT_OPP'`. Hendelsene `REGISTRERT_OPPMØTE` og
+  `REGISTRERT_OPPMØTE_FJERNET` skrives i samme transaksjon og utgjør
+  revisjonssporet, mens leseveien bruker statusen.
+- **Antall rom har ingen kolonne.** Det er alltid antall arbeidsgivere på
+  treffet (minst 1), og beregnes ved lesing. En lagret kolonne ville vært et
+  frosset øyeblikksbilde av noe som endrer seg når en arbeidsgiver legges til.
+- **Rom, interesse og intervjufordeling logger ingen hendelser.** Tabellene
+  over er selv fasiten, og hendelsene gjentok dem bare. Det som overlever et
+  møte - vurdering, notat, andregangsintervju og jobbtilbud - logges fortsatt,
+  og da bare på jobbsøkeren med `arbeidsgiverTreffId` i `hendelse_data`.
+
 ## Flyway-migrasjoner
 
 Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/migration/`.
 
-| Versjon | Fil            | Beskrivelse                           |
-| ------- | -------------- | ------------------------------------- |
-| V1      | `V1__init.sql` | Initiell opprettelse av alle tabeller |
+| Versjon | Fil                            | Beskrivelse                                        |
+| ------- | ------------------------------ | -------------------------------------------------- |
+| V1      | `V1__init.sql`                 | Initiell opprettelse av alle tabeller              |
+| V14     | `V14__treffgjennomforing.sql`  | Åtte nye tabeller for treffgjennomføring           |
 
 ## Indekser
 
@@ -285,6 +317,11 @@ Viktige indekser for ytelse:
 | `naringskode_arbeidsgiver_id_idx`                       | naringskode                 | FK-indeks                                       |
 | `idx_jobbsoker_synlig`                                  | jobbsoker                   | Delvis indeks der `er_synlig = TRUE` (V9)       |
 | `idx_jobbsoker_fodselsnummer`                           | jobbsoker                   | Indeks for oppslag ved synlighetsmeldinger (V9) |
+| `idx_deltakernummer_jobbsoker`                          | deltakernummer              | FK-indeks (V14)                                 |
+| `idx_jobbsoker_romtildeling_treff`                      | jobbsoker_romtildeling      | FK-indeks (V14)                                 |
+| `idx_interesse_arbeidsgiver`                            | interesse                   | FK-indeks (V14)                                 |
+| `idx_intervjufordeling_arbeidsgiver`                    | intervjufordeling           | FK-indeks (V14)                                 |
+| `idx_vurdering_arbeidsgiver`                            | vurdering                   | FK-indeks (V14)                                 |
 
 ## Constraints
 
