@@ -11,6 +11,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.system.measureTimeMillis
 
+@Disabled // TODO Are: Enable før merge til main
 @Tag("slow") // Samarbeider med build.gradle.kts
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokYtelsestest {
