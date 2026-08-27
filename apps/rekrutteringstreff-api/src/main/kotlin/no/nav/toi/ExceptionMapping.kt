@@ -8,6 +8,8 @@ import io.javalin.http.ForbiddenResponse
 import io.javalin.http.HttpStatus
 import io.javalin.router.JavalinDefaultRoutingApi
 import io.opentelemetry.api.trace.Span
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.exception.*
 import no.nav.toi.jobbsoker.oppmøte.OppmøteKanIkkeFjernesException
 import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
@@ -37,7 +39,7 @@ data class ProblemDetails(
             throwable: Throwable,
             status: HttpStatus,
             ctx: Context,
-            timestamp : LocalDateTime = LocalDateTime.now(),
+            timestamp: LocalDateTime = LocalDateTime.now(),
             type: String = "about:blank",
             traceid: String = traceIdFraOpenTelemetry(),
             hint: String? = null,
@@ -64,7 +66,6 @@ data class ProblemDetails(
 }
 
 object ExceptionMapping {
-    private val secureLog = SecureLog(log)
 
     fun JavalinDefaultRoutingApi.exceptionMapping() {
         // TODO exceptions kan også skje steder hvor disse feilmeldingene ikke gir mening.
@@ -92,8 +93,8 @@ object ExceptionMapping {
         }
         // I enkelte Javalin-versjoner pakkes Jackson-feil i JsonMapperException
         try {
-            val k = Class.forName("io.javalin.json.JsonMapperException") as Class<out Exception>
             @Suppress("UNCHECKED_CAST")
+            val k = Class.forName("io.javalin.json.JsonMapperException") as Class<out Exception>
             exception(k) { e, ctx ->
                 ctx.status(400).json(
                     ProblemDetails.fromThrowable(
@@ -120,7 +121,7 @@ object ExceptionMapping {
                     )
                 )
             } else {
-                secureLog.error("SQL-feil", e)
+                teamlog(log).error("SQL-feil", e)
                 ctx.status(500).json(
                     ProblemDetails.fromThrowable(
                         throwable = e,
@@ -189,7 +190,7 @@ object ExceptionMapping {
             )
         }
 
-        exception(`SvarfristUtløptException`::class.java) { e, ctx ->
+        exception(SvarfristUtløptException::class.java) { e, ctx ->
             ctx.status(400).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,
@@ -211,7 +212,7 @@ object ExceptionMapping {
             )
         }
 
-        exception(`JobbsøkerIkkeFunnetException`::class.java) { e, ctx ->
+        exception(JobbsøkerIkkeFunnetException::class.java) { e, ctx ->
             ctx.status(404).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,
@@ -222,7 +223,7 @@ object ExceptionMapping {
             )
         }
 
-        exception(`JobbsøkerIkkeSynligException`::class.java) { e, ctx ->
+        exception(JobbsøkerIkkeSynligException::class.java) { e, ctx ->
             ctx.status(403).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,
@@ -233,7 +234,7 @@ object ExceptionMapping {
             )
         }
 
-        exception(`JobbsøkerSperretException`::class.java) { e, ctx ->
+        exception(JobbsøkerSperretException::class.java) { e, ctx ->
             ctx.status(403).json(
                 ProblemDetails.fromThrowable(
                     throwable = e,

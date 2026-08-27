@@ -4,7 +4,6 @@ import io.javalin.http.BadRequestResponse
 import no.nav.toi.HendelseWriter
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.rekrutteringstreff.TreffId

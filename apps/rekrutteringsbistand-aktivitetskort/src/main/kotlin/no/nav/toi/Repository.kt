@@ -1,5 +1,7 @@
 package no.nav.toi
 
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.*
 import org.flywaydb.core.Flyway
 import java.sql.Timestamp
@@ -11,7 +13,7 @@ import java.util.*
 
 class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String, private val dabAktivitetskortTopic: String) {
     private val dataSource = databaseConfig.lagDatasource()
-    private val secureLog = SecureLog(log)
+    private val teamLog = TeamLogLogger.teamlog(log)
 
     init {
         Flyway.configure()
@@ -311,9 +313,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
             }.executeUpdate()
         }.let { rowsUpdated ->
             if (rowsUpdated != 1) {
-                secureLog.error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
+                teamLog.error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
             } else {
-                secureLog.info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
+                teamLog.info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
             }
         }
     }
@@ -382,9 +384,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
             }.executeUpdate()
         }.let { rowsUpdated ->
             if (rowsUpdated != 1) {
-                secureLog.error("$rowsUpdated rader oppdatert i aktivitetskort for rekrutteringstreff $rekrutteringstreffId, forventet 1 rad oppdatert")
+                teamLog.error("$rowsUpdated rader oppdatert i aktivitetskort for rekrutteringstreff $rekrutteringstreffId, forventet 1 rad oppdatert")
             } else {
-                secureLog.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
+                teamLog.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
             }
         }
     }

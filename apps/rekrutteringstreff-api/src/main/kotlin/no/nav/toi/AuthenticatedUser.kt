@@ -10,6 +10,7 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import com.auth0.jwt.interfaces.RSAKeyProvider
 import io.javalin.http.*
 import io.javalin.router.JavalinDefaultRoutingApi
+import no.nav.arbeidsgiver.toi.logging.noClassLogger
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import java.net.URI
 import java.security.interfaces.RSAPublicKey

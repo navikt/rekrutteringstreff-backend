@@ -2,7 +2,7 @@ package no.nav.toi.jobbsoker
 
 import no.nav.toi.AktørType
 import no.nav.toi.JobbsøkerHendelsestype
-import no.nav.toi.SecureLog
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
@@ -28,7 +28,7 @@ class JobbsøkerService(
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
-    private val secureLogger: Logger = SecureLog(logger)
+    private val teamLog = TeamLogLogger.teamlog(logger)
 
     fun leggTilJobbsøkere(
         jobbsøkere: List<LeggTilJobbsøker>,
@@ -94,13 +94,13 @@ class JobbsøkerService(
             personTreffIds.forEach { personTreffId ->
                 val erSynlig = jobbsøkerRepository.erSynlig(connection, personTreffId)
                 if (erSynlig == false) {
-                    secureLogger.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig i rekrutteringstreff - hopper over")
+                    teamLog.warn("Forsøkte å invitere jobbsøker $personTreffId som ikke er synlig i rekrutteringstreff - hopper over")
                     return@forEach
                 }
 
-                val `jobbsøkerstatus` = jobbsøkerRepository.hentStatus(connection, personTreffId)
-                if (`jobbsøkerstatus` != null && `jobbsøkerstatus` != JobbsøkerStatus.LAGT_TIL) {
-                    logger.info("Jobbsøker $personTreffId har allerede status $`jobbsøkerstatus`, hopper over invitasjon")
+                val jobbsøkerstatus = jobbsøkerRepository.hentStatus(connection, personTreffId)
+                if (jobbsøkerstatus != null && jobbsøkerstatus != JobbsøkerStatus.LAGT_TIL) {
+                    logger.info("Jobbsøker $personTreffId har allerede status $jobbsøkerstatus, hopper over invitasjon")
                     return@forEach
                 }
 
@@ -300,12 +300,12 @@ class JobbsøkerService(
 
     fun registrerAktivitetskortOpprettelseFeilet(fnr: Fødselsnummer, treffId: TreffId, endretAv: String) {
         logger.info("Skal oppdatere hendelse for aktivitetskortfeil for TreffId: $treffId")
-        secureLogger.info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+        teamLog.info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
 
         val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
         if (personTreffId == null) {
             logger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: (se securelog)")
-            secureLogger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+            teamLog.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
             return
         }
 
@@ -323,12 +323,12 @@ class JobbsøkerService(
 
     fun registrerMinsideVarselSvar(fnr: Fødselsnummer, treffId: TreffId, opprettetAv: String, hendelseData: String) {
         logger.info("Skal oppdatere hendelse for minside varsel svar for TreffId: $treffId")
-        secureLogger.info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+        teamLog.info("Henter jobbsøker persontreffid for treff: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
 
         val personTreffId = jobbsøkerRepository.hentPersonTreffId(treffId, fnr)
         if (personTreffId == null) {
             logger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} for minside varsel svar (fødselsnummer i securelog)")
-            secureLogger.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
+            teamLog.error("Fant ingen jobbsøker med treffId: ${treffId.somString} og fødselsnummer: ${fnr.asString}")
             return
         }
 
@@ -415,7 +415,7 @@ class JobbsøkerService(
     }
 
     private fun leggTilJobbsøkerBatch(
-        connection: java.sql.Connection,
+        connection: Connection,
         batch: List<LeggTilJobbsøker>,
         personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,
         treffId: TreffId,
@@ -440,7 +440,7 @@ class JobbsøkerService(
     }
 
     private fun leggTilEllerGjenopprett(
-        connection: java.sql.Connection,
+        connection: Connection,
         batch: List<LeggTilJobbsøker>,
         treffId: TreffId,
         personTreffIdForGjenoppretting: Map<Fødselsnummer, PersonTreffId>,

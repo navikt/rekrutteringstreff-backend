@@ -11,6 +11,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.system.measureTimeMillis
 
+//@org.junit.jupiter.api.Disabled
 @Tag("slow") // Samarbeider med build.gradle.kts
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokYtelsestest {
