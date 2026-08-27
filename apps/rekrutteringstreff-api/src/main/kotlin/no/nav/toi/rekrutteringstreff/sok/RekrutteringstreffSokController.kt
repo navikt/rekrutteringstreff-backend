@@ -31,6 +31,7 @@ class RekrutteringstreffSokController(
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
             OpenApiParam(name = "fylkesnumre", type = String::class, required = false, description = "Kommaseparert liste av fylkesnumre, for eksempel 03,11", example = "03,11"),
             OpenApiParam(name = "kommunenumre", type = String::class, required = false, description = "Kommaseparert liste av kommunenumre, for eksempel 0301,1103", example = "0301,1103"),
+            OpenApiParam(name = "fritekst", type = String::class, required = false, description = "Streng med søkeord skrevet av brukeren", example = "bygg og anlegg"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
             OpenApiParam(name = "antallPerSide", type = Int::class, required = false, description = "Antall treff per side, må være mellom 1 og 100", example = "20"),
@@ -166,6 +167,11 @@ class RekrutteringstreffSokController(
             throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
         }
 
+        val fritekst = ctx.queryParam("fritekst")?.trim()?.takeIf { it.isNotEmpty() }
+        if (fritekst != null && fritekst.length > 200) { // 200 tegn er omtrent 30–40 ord. Grensen er valgt for å stoppe for store requester
+            throw IllegalArgumentException("fritekst kan ikke være lengre enn 200 tegn")
+        }
+
         val request = RekrutteringstreffSokRequest(
             kategorier = kategorier,
             statuser = statuser,
@@ -174,6 +180,7 @@ class RekrutteringstreffSokController(
             kontorer = if (visning == Visning.MITT_KONTOR) null else kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = kommunenumre,
+            fritekst = fritekst,
             visning = visning,
             sortering = sortering,
             side = side,

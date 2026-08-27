@@ -1,5 +1,8 @@
 package no.nav.toi.rekrutteringstreff.sok
 
+import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
@@ -10,6 +13,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.sql.Timestamp
+import java.time.Instant
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RekrutteringstreffSokRepositoryTest {
@@ -52,6 +57,56 @@ class RekrutteringstreffSokRepositoryTest {
             kommunenummer = kommunenummer,
         )
 
+    private fun sok(
+        navIdent: String = "A123456",
+        kontorId: String = "0315",
+        statuser: List<SokStatus>? = null,
+        fritekst: String? = null,
+        visning: Visning = Visning.ALLE,
+        sortering: Sortering = Sortering.SIST_OPPDATERTE,
+        side: Int = 1,
+        antallPerSide: Int = 25,
+    ) = repository.sokMedAggregering(
+        navIdent = navIdent,
+        kontorId = kontorId,
+        kategorier = null,
+        statuser = statuser,
+        publisertStatuser = null,
+        kontorer = null,
+        fylkesnumre = null,
+        kommunenumre = null,
+        fritekst = fritekst,
+        visning = visning,
+        sortering = sortering,
+        side = side,
+        antallPerSide = antallPerSide,
+    )
+
+    private fun leggTilArbeidsgiver(
+        treffId: TreffId,
+        orgnavn: String,
+        orgnr: String = "123456789",
+    ) = db.leggTilArbeidsgiverMedHendelse(
+        LeggTilArbeidsgiver(
+            orgnr = Orgnr(orgnr),
+            orgnavn = Orgnavn(orgnavn),
+            næringskoder = emptyList(),
+            gateadresse = "Gatenavn 1",
+            postnummer = "0123",
+            poststed = "Oslo",
+        ),
+        treffId,
+    )
+
+    private fun settSistEndret(treffId: TreffId, tidspunkt: Instant) {
+        db.dataSource.connection.use { conn ->
+            conn.prepareStatement("UPDATE rekrutteringstreff SET sist_endret = ? WHERE id = ?").apply {
+                setTimestamp(1, Timestamp.from(tidspunkt))
+                setObject(2, treffId.somUuid)
+            }.executeUpdate()
+        }
+    }
+
     @Test
     fun `sok returnerer tomme resultater når ingen treff finnes`() {
         val resultat = repository.sokMedAggregering(
@@ -62,6 +117,7 @@ class RekrutteringstreffSokRepositoryTest {
             kontorer = null,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE,
             side = 1,
             antallPerSide = 25
@@ -83,6 +139,7 @@ class RekrutteringstreffSokRepositoryTest {
             kontorer = null,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE,
             side = 1,
             antallPerSide = 25
@@ -104,6 +161,7 @@ class RekrutteringstreffSokRepositoryTest {
             kontorer = null,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = null,
             visning = Visning.MINE,
             side = 1,
             antallPerSide = 25
@@ -125,6 +183,7 @@ class RekrutteringstreffSokRepositoryTest {
             kontorer = null,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = null,
             visning = Visning.MITT_KONTOR,
             side = 1,
             antallPerSide = 25
@@ -145,6 +204,7 @@ class RekrutteringstreffSokRepositoryTest {
             kontorer = null,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE,
             side = 1, antallPerSide = 25
         )
@@ -165,6 +225,7 @@ class RekrutteringstreffSokRepositoryTest {
             kontorer = null,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE,
             side = 1, antallPerSide = 25
         )
@@ -184,6 +245,7 @@ class RekrutteringstreffSokRepositoryTest {
             kontorer = null,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE,
             side = 1,
             antallPerSide = 25
@@ -212,6 +274,7 @@ class RekrutteringstreffSokRepositoryTest {
             kontorer = listOf("0315"),
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE,
             side = 1,
             antallPerSide = 25
@@ -227,10 +290,18 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Bergen", fylkesnummer = "46", kommunenummer = "4601")
 
         val resultat = repository.sokMedAggregering(
-            navIdent = "A123456", kontorId = "0315",
-            kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
-            fylkesnumre = listOf("03"), kommunenumre = null,
-            visning = Visning.ALLE, side = 1, antallPerSide = 25
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = listOf("03"),
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(1)
         assertThat(resultat.treff.first().tittel).isEqualTo("Oslo")
@@ -243,10 +314,18 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Bergen", fylkesnummer = "46", kommunenummer = "4601")
 
         val resultat = repository.sokMedAggregering(
-            navIdent = "A123456", kontorId = "0315",
-            kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
-            fylkesnumre = null, kommunenumre = listOf("4601"),
-            visning = Visning.ALLE, side = 1, antallPerSide = 25
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = listOf("4601"),
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(1)
         assertThat(resultat.treff.first().tittel).isEqualTo("Bergen")
@@ -259,10 +338,18 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Trondheim", fylkesnummer = "50")
 
         val resultat = repository.sokMedAggregering(
-            navIdent = "A123456", kontorId = "0315",
-            kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
-            fylkesnumre = listOf("03", "46"), kommunenumre = null,
-            visning = Visning.ALLE, side = 1, antallPerSide = 25
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = listOf("03", "46"),
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(2)
         assertThat(resultat.treff).extracting("tittel").containsExactlyInAnyOrder("Oslo", "Bergen")
@@ -278,6 +365,7 @@ class RekrutteringstreffSokRepositoryTest {
             navIdent = "A123456", kontorId = "0315",
             kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
             fylkesnumre = listOf("03"), kommunenumre = listOf("0301"),
+            fritekst = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(1)
@@ -294,6 +382,7 @@ class RekrutteringstreffSokRepositoryTest {
             navIdent = "A123456", kontorId = "0315",
             kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
             fylkesnumre = null, kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         val oslo = resultat.geografiaggregering.fylkesnummeraggregering.find { it.verdi == "03" }
@@ -312,6 +401,7 @@ class RekrutteringstreffSokRepositoryTest {
             navIdent = "A123456", kontorId = "0315",
             kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
             fylkesnumre = null, kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         val oslo = resultat.geografiaggregering.kommunenummeraggregering.find { it.verdi == "0301" }
@@ -329,10 +419,12 @@ class RekrutteringstreffSokRepositoryTest {
             navIdent = "A123456", kontorId = "0315",
             kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
             fylkesnumre = listOf("03"), kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(resultat.treff).hasSize(1)
-        assertThat(resultat.geografiaggregering.fylkesnummeraggregering).extracting("verdi").containsExactlyInAnyOrder("03", "46")
+        assertThat(resultat.geografiaggregering.fylkesnummeraggregering).extracting("verdi")
+            .containsExactlyInAnyOrder("03", "46")
     }
 
     @Test
@@ -344,10 +436,13 @@ class RekrutteringstreffSokRepositoryTest {
             navIdent = "A123456", kontorId = "0315",
             kategorier = null, statuser = null, publisertStatuser = null, kontorer = null,
             fylkesnumre = listOf("03"), kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(resultat.geografiaggregering.kommunenummeraggregering).extracting("verdi").containsExactly("0301")
-        assertThat(resultat.geografiaggregering.kommunenummeraggregering.find { it.verdi == "0301" }?.antall).isEqualTo(1)
+        assertThat(resultat.geografiaggregering.kommunenummeraggregering.find { it.verdi == "0301" }?.antall).isEqualTo(
+            1
+        )
     }
 
     @Test
@@ -360,329 +455,402 @@ class RekrutteringstreffSokRepositoryTest {
             navIdent = "A123456", kontorId = "0315",
             kategorier = null, statuser = null, publisertStatuser = null, kontorer = listOf("0315"),
             fylkesnumre = null, kommunenumre = null,
+            fritekst = null,
             visning = Visning.ALLE, side = 1, antallPerSide = 25
         )
         assertThat(resultat.geografiaggregering.fylkesnummeraggregering.find { it.verdi == "03" }?.antall).isEqualTo(1)
         assertThat(resultat.geografiaggregering.fylkesnummeraggregering.find { it.verdi == "46" }?.antall).isEqualTo(1)
     }
 
-        @Test
-        fun `sok ekskluderer slettede treff`() {
-            opprettTreff(tittel = "Synlig", status = RekrutteringstreffStatus.PUBLISERT)
-            opprettTreff(tittel = "Slettet", status = RekrutteringstreffStatus.SLETTET)
+    @Test
+    fun `sok ekskluderer slettede treff`() {
+        opprettTreff(tittel = "Synlig", status = RekrutteringstreffStatus.PUBLISERT)
+        opprettTreff(tittel = "Slettet", status = RekrutteringstreffStatus.SLETTET)
 
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456", kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-            assertThat(resultat.treff).hasSize(1)
-            assertThat(resultat.antallTotalt).isEqualTo(1)
-            assertThat(resultat.treff.first().tittel).isEqualTo("Synlig")
-        }
-
-        @Test
-        fun `sok paginerer korrekt`() {
-            repeat(5) { opprettTreff(tittel = "Treff $it") }
-
-            val resultat1 = repository.sokMedAggregering(
-                navIdent = "A123456", kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 2
-            )
-            assertThat(resultat1.treff).hasSize(2)
-            assertThat(resultat1.antallTotalt).isEqualTo(5)
-
-            val resultat3 = repository.sokMedAggregering(
-                navIdent = "A123456",
-                kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 3,
-                antallPerSide = 2
-            )
-            assertThat(resultat3.treff).hasSize(1)
-        }
-
-        @Test
-        fun `sok handterer store sidetall uten overflow`() {
-            opprettTreff(tittel = "Treff 1")
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456", kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = Int.MAX_VALUE,
-                antallPerSide = 100
-            )
-
-            assertThat(resultat.treff).isEmpty()
-            assertThat(resultat.antallTotalt).isEqualTo(1)
-        }
-
-        @Test
-        fun `sok mapper alle felter korrekt`() {
-            opprettTreff(tittel = "Fullt treff", navIdent = "A123456", kontorId = "0315")
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456", kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-            assertThat(resultat.treff).hasSize(1)
-            val t = resultat.treff.first()
-            assertThat(t.tittel).isEqualTo("Fullt treff")
-            assertThat(t.beskrivelse).isNotNull()
-            assertThat(t.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
-            assertThat(t.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
-            assertThat(t.fraTid).isNotNull()
-            assertThat(t.tilTid).isNotNull()
-            assertThat(t.gateadresse).isEqualTo("Testgata 123")
-            assertThat(t.postnummer).isEqualTo("0484")
-            assertThat(t.poststed).isEqualTo("OSLO")
-            assertThat(t.eiere).contains("A123456")
-            assertThat(t.kontorer).contains("0315")
-            assertThat(t.opprettetAv).isEqualTo("A123456")
-            assertThat(t.opprettetAvTidspunkt).isNotNull()
-            assertThat(t.sistEndret).isNotNull()
-        }
-
-        @Test
-        fun `statusaggregering teller per status`() {
-            opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
-            opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
-            opprettTreff(status = RekrutteringstreffStatus.UTKAST)
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456",
-                kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-            val publisert = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
-            val utkast = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
-            assertThat(publisert?.antall).isEqualTo(2)
-            assertThat(utkast?.antall).isEqualTo(1)
-        }
-
-        @Test
-        fun `statusaggregering respekterer kontorfilter`() {
-            opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "0315")
-            opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
-            opprettTreff(status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456",
-                kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = listOf("0315"),
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-            val publisert = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
-            val utkast = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
-            assertThat(publisert?.antall).isEqualTo(1)
-            assertThat(utkast?.antall).isEqualTo(1)
-        }
-
-        @Test
-        fun `statusaggregering ekskluderer statusfilter`() {
-            opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
-            opprettTreff(status = RekrutteringstreffStatus.UTKAST)
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456",
-                kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-            assertThat(resultat.statusaggregering).hasSize(2)
-        }
-
-        @Test
-        fun `sok filtrerer på kategori`() {
-            opprettTreff(tittel = "Rekrutteringstreff", kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
-            opprettTreff(tittel = "WorkOp", kategori = RekrutteringstreffKategori.WORKOP)
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456",
-                kontorId = "0315",
-                kategorier = listOf(SokKategori.WORKOP),
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-            assertThat(resultat.treff).hasSize(1)
-            assertThat(resultat.treff.first().tittel).isEqualTo("WorkOp")
-        }
-
-        @Test
-        fun `kategoriaggregering teller per kategori og ekskluderer kategorifilter`() {
-            opprettTreff(kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
-            opprettTreff(kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
-            opprettTreff(kategori = RekrutteringstreffKategori.WORKOP)
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456",
-                kontorId = "0315",
-                kategorier = listOf(SokKategori.WORKOP),
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-            val rekrutteringstreff =
-                resultat.kategoriaggregering.find { it.verdi == SokKategori.REKRUTTERINGSTREFF.name }
-            val workOp = resultat.kategoriaggregering.find { it.verdi == SokKategori.WORKOP.name }
-            assertThat(rekrutteringstreff?.antall).isEqualTo(2)
-            assertThat(workOp?.antall).isEqualTo(1)
-        }
-
-        @Test
-        fun `skal kun returnere egne utkast og skjule andres utkast fra aggregeringen`() {
-            val egetUtkast =
-                opprettTreff(navIdent = "A123456", tittel = "Mitt utkast", status = RekrutteringstreffStatus.UTKAST)
-            val egetPublisert = opprettTreff(
-                navIdent = "A123456",
-                tittel = "Mitt publiserte treff",
-                status = RekrutteringstreffStatus.PUBLISERT
-            )
-            val noenAndresUtkastId = opprettTreff(
-                navIdent = "B654321",
-                tittel = "Noen andres utkast",
-                status = RekrutteringstreffStatus.UTKAST
-            )
-            val noenAndresPublisert = opprettTreff(
-                navIdent = "B654321",
-                tittel = "Noen andres publiserte treff",
-                status = RekrutteringstreffStatus.PUBLISERT
-            )
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456",
-                kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-
-            assertThat(resultat.treff).extracting("id").doesNotContain(noenAndresUtkastId.toString())
-            assertThat(resultat.treff).extracting("id")
-                .contains(egetUtkast.toString(), egetPublisert.toString(), noenAndresPublisert.toString())
-
-            val utkastAggregering = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
-            val publisertAggregering = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
-
-            assertThat(utkastAggregering?.antall).isEqualTo(1)
-            assertThat(publisertAggregering?.antall).isEqualTo(2)
-        }
-
-        @Test
-        fun `skal kun returnere egne WorkOp og skjule andres WorkOp fra aggregeringen`() {
-            val egetWorkOp = opprettTreff(
-                navIdent = "A123456", tittel = "Mitt WorkOp",
-                kategori = RekrutteringstreffKategori.WORKOP
-            )
-            val egetRekrutteringstreff = opprettTreff(
-                navIdent = "A123456", tittel = "Mitt rekrutteringstreff",
-                kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
-            )
-            val andresWorkOp = opprettTreff(
-                navIdent = "B654321", tittel = "Andres WorkOp",
-                kategori = RekrutteringstreffKategori.WORKOP
-            )
-            val andresRekrutteringstreff = opprettTreff(
-                navIdent = "B654321", tittel = "Andres rekrutteringstreff",
-                kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
-            )
-
-            val resultat = repository.sokMedAggregering(
-                navIdent = "A123456", kontorId = "0315",
-                kategorier = null,
-                statuser = null,
-                publisertStatuser = null,
-                kontorer = null,
-                fylkesnumre = null,
-                kommunenumre = null,
-                visning = Visning.ALLE,
-                side = 1,
-                antallPerSide = 25
-            )
-
-            assertThat(resultat.treff).extracting("id").doesNotContain(andresWorkOp.toString())
-            assertThat(resultat.treff).extracting("id")
-                .contains(egetWorkOp.toString(), egetRekrutteringstreff.toString(), andresRekrutteringstreff.toString())
-
-            val workOpAggregering = resultat.kategoriaggregering.find { it.verdi == SokKategori.WORKOP.name }
-            val rekrutteringstreffAggregering =
-                resultat.kategoriaggregering.find { it.verdi == SokKategori.REKRUTTERINGSTREFF.name }
-
-            assertThat(workOpAggregering?.antall).isEqualTo(1)
-            assertThat(rekrutteringstreffAggregering?.antall).isEqualTo(2)
-        }
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+        assertThat(resultat.treff).hasSize(1)
+        assertThat(resultat.antallTotalt).isEqualTo(1)
+        assertThat(resultat.treff.first().tittel).isEqualTo("Synlig")
     }
+
+    @Test
+    fun `sok paginerer korrekt`() {
+        repeat(5) { opprettTreff(tittel = "Treff $it") }
+
+        val resultat1 = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 2
+        )
+        assertThat(resultat1.treff).hasSize(2)
+        assertThat(resultat1.antallTotalt).isEqualTo(5)
+
+        val resultat3 = repository.sokMedAggregering(
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 3,
+            antallPerSide = 2
+        )
+        assertThat(resultat3.treff).hasSize(1)
+    }
+
+    @Test
+    fun `sok handterer store sidetall uten overflow`() {
+        opprettTreff(tittel = "Treff 1")
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = Int.MAX_VALUE,
+            antallPerSide = 100
+        )
+
+        assertThat(resultat.treff).isEmpty()
+        assertThat(resultat.antallTotalt).isEqualTo(1)
+    }
+
+    @Test
+    fun `sok mapper alle felter korrekt`() {
+        opprettTreff(tittel = "Fullt treff", navIdent = "A123456", kontorId = "0315")
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+        assertThat(resultat.treff).hasSize(1)
+        val t = resultat.treff.first()
+        assertThat(t.tittel).isEqualTo("Fullt treff")
+        assertThat(t.beskrivelse).isNotNull()
+        assertThat(t.kategori).isEqualTo(RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        assertThat(t.status).isEqualTo(RekrutteringstreffStatus.PUBLISERT)
+        assertThat(t.fraTid).isNotNull()
+        assertThat(t.tilTid).isNotNull()
+        assertThat(t.gateadresse).isEqualTo("Testgata 123")
+        assertThat(t.postnummer).isEqualTo("0484")
+        assertThat(t.poststed).isEqualTo("OSLO")
+        assertThat(t.eiere).contains("A123456")
+        assertThat(t.kontorer).contains("0315")
+        assertThat(t.opprettetAv).isEqualTo("A123456")
+        assertThat(t.opprettetAvTidspunkt).isNotNull()
+        assertThat(t.sistEndret).isNotNull()
+    }
+
+    @Test
+    fun `statusaggregering teller per status`() {
+        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
+        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
+        opprettTreff(status = RekrutteringstreffStatus.UTKAST)
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+        val publisert = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
+        val utkast = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
+        assertThat(publisert?.antall).isEqualTo(2)
+        assertThat(utkast?.antall).isEqualTo(1)
+    }
+
+    @Test
+    fun `statusaggregering respekterer kontorfilter`() {
+        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "0315")
+        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT, kontorId = "1201")
+        opprettTreff(status = RekrutteringstreffStatus.UTKAST, kontorId = "0315")
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = listOf("0315"),
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+        val publisert = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
+        val utkast = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
+        assertThat(publisert?.antall).isEqualTo(1)
+        assertThat(utkast?.antall).isEqualTo(1)
+    }
+
+    @Test
+    fun `statusaggregering ekskluderer statusfilter`() {
+        opprettTreff(status = RekrutteringstreffStatus.PUBLISERT)
+        opprettTreff(status = RekrutteringstreffStatus.UTKAST)
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+        assertThat(resultat.statusaggregering).hasSize(2)
+    }
+
+    @Test
+    fun `sok filtrerer på kategori`() {
+        opprettTreff(tittel = "Rekrutteringstreff", kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        opprettTreff(tittel = "WorkOp", kategori = RekrutteringstreffKategori.WORKOP)
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = listOf(SokKategori.WORKOP),
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+        assertThat(resultat.treff).hasSize(1)
+        assertThat(resultat.treff.first().tittel).isEqualTo("WorkOp")
+    }
+
+    @Test
+    fun `kategoriaggregering teller per kategori og ekskluderer kategorifilter`() {
+        opprettTreff(kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        opprettTreff(kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+        opprettTreff(kategori = RekrutteringstreffKategori.WORKOP)
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = listOf(SokKategori.WORKOP),
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+        val rekrutteringstreff =
+            resultat.kategoriaggregering.find { it.verdi == SokKategori.REKRUTTERINGSTREFF.name }
+        val workOp = resultat.kategoriaggregering.find { it.verdi == SokKategori.WORKOP.name }
+        assertThat(rekrutteringstreff?.antall).isEqualTo(2)
+        assertThat(workOp?.antall).isEqualTo(1)
+    }
+
+    @Test
+    fun `skal kun returnere egne utkast og skjule andres utkast fra aggregeringen`() {
+        val egetUtkast =
+            opprettTreff(navIdent = "A123456", tittel = "Mitt utkast", status = RekrutteringstreffStatus.UTKAST)
+        val egetPublisert = opprettTreff(
+            navIdent = "A123456",
+            tittel = "Mitt publiserte treff",
+            status = RekrutteringstreffStatus.PUBLISERT
+        )
+        val noenAndresUtkastId = opprettTreff(
+            navIdent = "B654321",
+            tittel = "Noen andres utkast",
+            status = RekrutteringstreffStatus.UTKAST
+        )
+        val noenAndresPublisert = opprettTreff(
+            navIdent = "B654321",
+            tittel = "Noen andres publiserte treff",
+            status = RekrutteringstreffStatus.PUBLISERT
+        )
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456",
+            kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+
+        assertThat(resultat.treff).extracting("id").doesNotContain(noenAndresUtkastId.toString())
+        assertThat(resultat.treff).extracting("id")
+            .contains(egetUtkast.toString(), egetPublisert.toString(), noenAndresPublisert.toString())
+
+        val utkastAggregering = resultat.statusaggregering.find { it.verdi == SokStatus.UTKAST.name }
+        val publisertAggregering = resultat.statusaggregering.find { it.verdi == SokStatus.PUBLISERT.name }
+
+        assertThat(utkastAggregering?.antall).isEqualTo(1)
+        assertThat(publisertAggregering?.antall).isEqualTo(2)
+    }
+
+    @Test
+    fun `skal kun returnere egne WorkOp og skjule andres WorkOp fra aggregeringen`() {
+        val egetWorkOp = opprettTreff(
+            navIdent = "A123456", tittel = "Mitt WorkOp",
+            kategori = RekrutteringstreffKategori.WORKOP
+        )
+        val egetRekrutteringstreff = opprettTreff(
+            navIdent = "A123456", tittel = "Mitt rekrutteringstreff",
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
+        )
+        val andresWorkOp = opprettTreff(
+            navIdent = "B654321", tittel = "Andres WorkOp",
+            kategori = RekrutteringstreffKategori.WORKOP
+        )
+        val andresRekrutteringstreff = opprettTreff(
+            navIdent = "B654321", tittel = "Andres rekrutteringstreff",
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
+        )
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            fritekst = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25
+        )
+
+        assertThat(resultat.treff).extracting("id").doesNotContain(andresWorkOp.toString())
+        assertThat(resultat.treff).extracting("id")
+            .contains(egetWorkOp.toString(), egetRekrutteringstreff.toString(), andresRekrutteringstreff.toString())
+
+        val workOpAggregering = resultat.kategoriaggregering.find { it.verdi == SokKategori.WORKOP.name }
+        val rekrutteringstreffAggregering =
+            resultat.kategoriaggregering.find { it.verdi == SokKategori.REKRUTTERINGSTREFF.name }
+
+        assertThat(workOpAggregering?.antall).isEqualTo(1)
+        assertThat(rekrutteringstreffAggregering?.antall).isEqualTo(2)
+    }
+
+    @Test
+    fun `fritekst matcher tittel`() {
+        opprettTreff(tittel = "Rekrutteringstreff for sveisere")
+        opprettTreff(tittel = "Jobbtreff for helsefagarbeidere")
+
+        val resultat = sok(fritekst = "sveisere")
+
+        assertThat(resultat.antallTotalt).isEqualTo(1)
+        assertThat(resultat.treff).extracting<String> { it.tittel }.containsExactly("Rekrutteringstreff for sveisere")
+    }
+
+    @Test
+    fun `fritekst matcher beskrivelse`() {
+        db.opprettRekrutteringstreffMedEierOgKontor(
+            tittel = "Treff A",
+            beskrivelse = "Vi trenger folk til lagerarbeid og truckkjøring",
+        )
+        db.opprettRekrutteringstreffMedEierOgKontor(tittel = "Treff B", beskrivelse = "Noe helt annet")
+
+        val resultat = sok(fritekst = "lagerarbeid")
+
+        assertThat(resultat.treff).extracting<String> { it.tittel }.containsExactly("Treff A")
+    }
+
+    @Test
+    fun `fritekst stemmer ord slik at kokk finner kokker`() {
+        opprettTreff(tittel = "Vi søker kokker til hotell")
+
+        assertThat(sok(fritekst = "kokk").antallTotalt).isEqualTo(1)
+        assertThat(sok(fritekst = "kokker").antallTotalt).isEqualTo(1)
+    }
+
+    @Test
+    fun `fritekst håndterer norske tegn`() {
+        opprettTreff(tittel = "Rekrutteringstreff i Tromsø for lærlinger")
+
+        assertThat(sok(fritekst = "Tromsø").antallTotalt).isEqualTo(1)
+        assertThat(sok(fritekst = "lærling").antallTotalt).isEqualTo(1)
+    }
+
+    @Test
+    fun `fritekst matcher arbeidsgivers orgnavn`() {
+        val treffMedArbeidsgiver = opprettTreff(tittel = "Treff A")
+        opprettTreff(tittel = "Treff B")
+        leggTilArbeidsgiver(treffMedArbeidsgiver, orgnavn = "Nordsjø Sveiseservice")
+
+        val resultat = sok(fritekst = "Nordsjø")
+
+        assertThat(resultat.antallTotalt).isEqualTo(1)
+        assertThat(resultat.treff.single().tittel).isEqualTo("Treff A")
+    }
+
+    @Test
+    fun `fritekst matcher arbeidsgivers orgnr`() {
+        val treffId = opprettTreff(tittel = "Treff A")
+        leggTilArbeidsgiver(treffId, orgnavn = "Et Firma", orgnr = "912345678")
+
+        assertThat(sok(fritekst = "912345678").antallTotalt).isEqualTo(1)
+    }
+}

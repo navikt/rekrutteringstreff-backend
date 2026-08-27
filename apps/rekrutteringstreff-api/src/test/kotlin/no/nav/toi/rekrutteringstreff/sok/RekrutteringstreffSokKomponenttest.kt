@@ -5,14 +5,19 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
+import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
+import no.nav.toi.arbeidsgiver.Orgnavn
+import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.*
@@ -73,6 +78,25 @@ class RekrutteringstreffSokKomponenttest {
             .build()
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
+
+    private fun fritekstSøk(fritekst: String, ekstra: String = "", navIdent: String = "A123456") =
+        sokGet("?fritekst=${URLEncoder.encode(fritekst, StandardCharsets.UTF_8)}$ekstra", navIdent = navIdent)
+
+    private fun HttpResponse<String>.tilRespons(): RekrutteringstreffSokRespons =
+        mapper.readValue(body())
+
+    private fun leggTilArbeidsgiver(treffId: no.nav.toi.rekrutteringstreff.TreffId, orgnavn: String) =
+        db.leggTilArbeidsgiverMedHendelse(
+            LeggTilArbeidsgiver(
+                orgnr = Orgnr("912345678"),
+                orgnavn = Orgnavn(orgnavn),
+                næringskoder = emptyList(),
+                gateadresse = "Fyrstikkalleen 1",
+                postnummer = "0661",
+                poststed = "Oslo",
+            ),
+            treffId,
+        )
 
     private fun opprettTreffMedEier(
         navIdent: String = "A123456",
@@ -177,6 +201,121 @@ class RekrutteringstreffSokKomponenttest {
         val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
         assertThat(respons.treff).hasSize(1)
         assertThat(respons.treff.first().tittel).isEqualTo("Kontor A")
+    }
+
+    @Test
+    fun `fritekst filtrerer trefflisten`() {
+        opprettTreffMedEier(tittel = "Rekrutteringstreff for sveisere")
+        opprettTreffMedEier(tittel = "Jobbmesse for kokker")
+
+        val response = fritekstSøk("sveisere")
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val respons = response.tilRespons()
+        assertThat(respons.antallTotalt).isEqualTo(1)
+        assertThat(respons.treff.single().tittel).isEqualTo("Rekrutteringstreff for sveisere")
+    }
+
+    @Test
+    fun `fritekst matcher arbeidsgivernavn`() {
+        val treffAId = opprettTreffMedEier(tittel = "Treff A")
+        opprettTreffMedEier(tittel = "Treff B")
+        leggTilArbeidsgiver(treffAId, orgnavn = "Nordsjø Sveiseservice")
+
+        val respons = fritekstSøk("Nordsjø").tilRespons()
+
+        assertThat(respons.treff).extracting<String> { it.tittel }.containsExactly("Treff A")
+    }
+
+    @Test
+    fun `blank fritekst gir samme resultat som ingen fritekst`() {
+        opprettTreffMedEier(tittel = "Treff A")
+        opprettTreffMedEier(tittel = "Treff B")
+
+        assertThat(fritekstSøk("   ").tilRespons().antallTotalt).isEqualTo(2)
+        assertThat(sokGet().tilRespons().antallTotalt).isEqualTo(2)
+    }
+
+    @Test
+    fun `for lang fritekst gir 400`() {
+        val response = fritekstSøk("a".repeat(201))
+        assertThat(response.statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `fritekst på lengde-grensen gir 200`() {
+        val response = fritekstSøk("a".repeat(200))
+        assertThat(response.statusCode()).isEqualTo(200)
+    }
+
+    @Test
+    fun `fritekst med spesialtegn gir 200 og ikke 500`() {
+        opprettTreffMedEier(tittel = "Treff A")
+
+        listOf("\"kokk", "kokk & sveiser", "!()|&:*", "-kokk", "or", "'; DROP TABLE rekrutteringstreff; --")
+            .forEach { fritekst ->
+                assertThat(fritekstSøk(fritekst).statusCode())
+                    .describedAs("fritekst=%s", fritekst)
+                    .isEqualTo(200)
+            }
+    }
+
+    @Test
+    fun `fritekst kombinert med statusfilter`() {
+        opprettTreffMedEier(tittel = "Sveiser publisert", status = RekrutteringstreffStatus.PUBLISERT)
+        opprettTreffMedEier(tittel = "Sveiser avlyst", status = RekrutteringstreffStatus.AVLYST)
+
+        val respons = fritekstSøk("sveiser", ekstra = "&statuser=PUBLISERT").tilRespons()
+
+        assertThat(respons.treff).extracting<String> { it.tittel }.containsExactly("Sveiser publisert")
+    }
+
+    @Test
+    fun `aggregeringene summerer til antallTotalt ved fritekstsok`() {
+        opprettTreffMedEier(tittel = "Sveiser 1", status = RekrutteringstreffStatus.PUBLISERT)
+        opprettTreffMedEier(tittel = "Sveiser 2", status = RekrutteringstreffStatus.AVLYST)
+        opprettTreffMedEier(tittel = "Noe annet")
+
+        val respons = fritekstSøk("sveiser").tilRespons()
+
+        assertThat(respons.antallTotalt).isEqualTo(2)
+        assertThat(respons.statusaggregering.sumOf { it.antall }).isEqualTo(respons.antallTotalt)
+    }
+
+    @Test
+    fun `fritekst avslører ikke andres utkast`() {
+        opprettTreffMedEier(navIdent = "B654321", tittel = "Hemmelig treff for sveiser", status = RekrutteringstreffStatus.UTKAST)
+
+        assertThat(fritekstSøk("sveise", navIdent = "A123456").tilRespons().antallTotalt).isEqualTo(0)
+        assertThat(fritekstSøk("sveise", navIdent = "B654321").tilRespons().antallTotalt).isEqualTo(1)
+    }
+
+    @Test
+    fun `fritekst respekterer sortering nyeste`() {
+        val eldst = opprettTreffMedEier(tittel = "Sveiser eldst")
+        val nyest = opprettTreffMedEier(tittel = "Sveiser nyest")
+        settTidspunkter(eldst, Instant.parse("2026-01-01T10:00:00Z"), Instant.parse("2026-01-01T10:00:00Z"))
+        settTidspunkter(nyest, Instant.parse("2026-06-01T10:00:00Z"), Instant.parse("2026-06-01T10:00:00Z"))
+
+        val respons = fritekstSøk("sveiser", ekstra = "&sortering=nyeste").tilRespons()
+
+        assertThat(respons.treff).extracting<String> { it.tittel }
+            .containsExactly("Sveiser nyest", "Sveiser eldst")
+    }
+
+    @Test
+    fun `paginering er stabil når sist_endret er identisk`() {
+        val identisk = Instant.parse("2026-01-01T12:00:00Z")
+        (1..25).forEach { i ->
+            settTidspunkter(opprettTreffMedEier(tittel = "Treff $i"), identisk, identisk)
+        }
+
+        val alleIder = (1..3).flatMap { side ->
+            sokGet("?side=$side&antallPerSide=10").tilRespons().treff.map { it.id }
+        }
+
+        assertThat(alleIder).doesNotHaveDuplicates()
+        assertThat(alleIder).hasSize(25)
     }
 
     @Test

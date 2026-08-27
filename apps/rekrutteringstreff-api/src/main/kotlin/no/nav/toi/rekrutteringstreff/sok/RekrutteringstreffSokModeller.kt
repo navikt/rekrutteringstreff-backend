@@ -91,6 +91,7 @@ data class RekrutteringstreffSokRequest(
     val kontorer: List<String>? = null,
     val fylkesnumre: List<String>? = null,
     val kommunenumre: List<String>? = null,
+    val fritekst: String? = null,
     val visning: Visning = Visning.ALLE,
     val sortering: Sortering = Sortering.SIST_OPPDATERTE,
     val side: Int = 1,
