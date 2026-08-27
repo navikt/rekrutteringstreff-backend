@@ -56,6 +56,22 @@ class TeamLogConfigurationValidationTest {
     }
 
     @Test
+    fun `tillat bruk av alle appendernavn som starter med 'team-logs'`() {
+        val appendernavnMedPostfix = "$teamlogsAppenderName-OTEL"
+        val rootLogger = nyRootLogger().apply {
+            addAppender(
+                nyAppender(loggerContext, appendernavnMedPostfix).apply {
+                    addFilter(nyTeamLogsAksepterendeFilter(loggerContext))
+                }
+            )
+        }
+
+        assertThatCode {
+            TeamLogLogger.validateTeamlogConfiguration(rootLogger)
+        }.doesNotThrowAnyException()
+    }
+
+    @Test
     fun `bruk av TeamLogLogger utenfor Nais-cluster tillates uten teamlog-konfigurasjon`() {
         assumeTrue(System.getenv("NAIS_CLUSTER_NAME") == null, "Testen gjelder kun utenfor NAIS-cluster")
         val logger = org.slf4j.LoggerFactory.getLogger("test")

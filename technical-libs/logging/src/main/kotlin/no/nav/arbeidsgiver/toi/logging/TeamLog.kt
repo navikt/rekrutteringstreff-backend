@@ -136,7 +136,7 @@ class TeamLogLogger private constructor(private val l: Logger) {
 
 
         private fun teamlogsAppender(logger: ch.qos.logback.classic.Logger): Appender<ILoggingEvent?>? =
-            appenders(logger).firstOrNull { it.name == teamlogsAppenderName }
+            appenders(logger).firstOrNull { it.name.startsWith(teamlogsAppenderName) }
 
 
         private fun hasTeamlogsMarkerFilter(appender: Appender<ILoggingEvent?>): Boolean {
@@ -150,7 +150,7 @@ class TeamLogLogger private constructor(private val l: Logger) {
 
         private fun allNonTeamlogsAppendersDenyTeamlogsMarker(rootLogger: ch.qos.logback.classic.Logger): Boolean {
             fun isNonTeamlogsAppender(appender: Appender<ILoggingEvent?>): Boolean =
-                appender.name != teamlogsAppenderName
+                !appender.name.startsWith(teamlogsAppenderName)
 
             fun firstApplicableDecisionForTeamlogsMarker(appender: Appender<ILoggingEvent?>): FilterReply? =
                 filters(appender).firstNotNullOfOrNull { decisionForMarker(it, teamlogsMarkerName) }
