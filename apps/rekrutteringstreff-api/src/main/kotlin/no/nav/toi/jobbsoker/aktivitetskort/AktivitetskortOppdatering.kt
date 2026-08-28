@@ -31,6 +31,7 @@ class AktivitetskortOppdatering(
 ) {
 
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
+        val eventName = if (kategori == RekrutteringstreffKategori.WORKOP) "workopoppdatering" else "rekrutteringstreffoppdatering"
         val messageMap = mutableMapOf<String, Any>(
             "fnr" to fnr,
             "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
@@ -48,7 +49,7 @@ class AktivitetskortOppdatering(
         endredeFelter?.let { messageMap["endredeFelter"] = it.map { felt -> felt.name } }
 
         val message = JsonMessage.newMessage(
-            eventName = "rekrutteringstreffoppdatering",
+            eventName = eventName,
             map = messageMap
         )
 

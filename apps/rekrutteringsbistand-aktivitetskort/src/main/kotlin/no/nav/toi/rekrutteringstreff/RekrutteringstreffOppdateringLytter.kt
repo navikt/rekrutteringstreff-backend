@@ -15,14 +15,15 @@ import no.nav.toi.log
 
 class RekrutteringstreffOppdateringLytter(
     rapidsConnection: RapidsConnection,
-    private val repository: Repository
+    private val repository: Repository,
+    private val eventName: String = "rekrutteringstreffoppdatering"
 ) : River.PacketListener {
     private val secureLog = SecureLog(log)
 
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "rekrutteringstreffoppdatering")
+                it.requireValue("@event_name", eventName)
                 it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
@@ -66,8 +67,8 @@ class RekrutteringstreffOppdateringLytter(
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
-        log.error("Feil ved behandling av rekrutteringstreffoppdatering: $problems")
-        secureLog.error("Feil ved behandling av rekrutteringstreffoppdatering: ${problems.toExtendedReport()}")
+        log.error("Feil ved behandling av $eventName: $problems")
+        secureLog.error("Feil ved behandling av $eventName: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }

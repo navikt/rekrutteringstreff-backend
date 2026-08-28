@@ -33,7 +33,46 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         gateAdresse: String,
         postnummer: String,
         poststed: String,
-        erWorkOp: Boolean = false
+        handlingTittel: String = "Sjekk ut treffet",
+        handlingSubtekst: String = "Sjekk ut treffet og svar",
+        etiketter: List<AktivitetskortEtikett> = emptyList()
+    ): UUID? = opprettAktivitetskort(
+        fnr = fnr,
+        rekrutteringstreffId = rekrutteringstreffId,
+        tittel = tittel,
+        beskrivelse = beskrivelse,
+        startDato = startDato,
+        sluttDato = sluttDato,
+        tid = tid,
+        endretAv = endretAv,
+        gateAdresse = gateAdresse,
+        postnummer = postnummer,
+        poststed = poststed,
+        handlinger = listOf(
+            AktivitetskortHandling(
+                handlingTittel,
+                handlingSubtekst,
+                "$minsideUrl/$rekrutteringstreffId",
+                LenkeType.FELLES
+            )
+        ),
+        etiketter = etiketter
+    )
+
+    private fun opprettAktivitetskort(
+        fnr: String,
+        rekrutteringstreffId: UUID,
+        tittel: String,
+        beskrivelse: String,
+        startDato: LocalDate,
+        sluttDato: LocalDate,
+        tid: String,
+        endretAv: String,
+        gateAdresse: String,
+        postnummer: String,
+        poststed: String,
+        handlinger: List<AktivitetskortHandling>,
+        etiketter: List<AktivitetskortEtikett>
     ): UUID? {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -86,28 +125,13 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                                 )
                             )
                         )
-                        val typeTreffTekst = if (erWorkOp) "WorkOp-en" else "treffet"
                         setString(
                             11,
-                            objectMapper.writeValueAsString(
-                                listOf(
-                                    AktivitetskortHandling(
-                                        "Sjekk ut $typeTreffTekst",
-                                        "Sjekk ut $typeTreffTekst og svar",
-                                        "$minsideUrl/$rekrutteringstreffId",
-                                        LenkeType.FELLES
-                                    )
-                                )
-                            )
+                            objectMapper.writeValueAsString(handlinger)
                         )
                         setString(
                             12,
-                            objectMapper.writeValueAsString(
-                                if (erWorkOp)
-                                    listOf(AktivitetskortEtikett("WorkOp", Sentiment.NEUTRAL))
-                                else
-                                    emptyList()
-                            )
+                            objectMapper.writeValueAsString(etiketter)
                         )
                         setNull(13, VARCHAR)
                     }.executeUpdate()

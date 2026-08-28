@@ -7,9 +7,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
 import no.nav.toi.aktivitetskort.AktivitetskortJobb
 import no.nav.toi.aktivitetskort.ErrorType
+import no.nav.toi.aktivitetskort.Sentiment
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
@@ -135,7 +137,9 @@ class AktivitetskortTest {
             gateAdresse = "Test Sted",
             postnummer = "1234",
             poststed = "Test Poststed",
-            erWorkOp = true
+            handlingTittel = "Sjekk ut WorkOp-en",
+            handlingSubtekst = "Sjekk ut WorkOp-en og svar",
+            etiketter = listOf(AktivitetskortEtikett("WorkOp", Sentiment.NEUTRAL))
         )
 
         AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()

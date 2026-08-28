@@ -257,6 +257,63 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(message["poststed"].asText()).isEqualTo(poststed)
         }
     }
+
+    @Test
+    fun `lesing av workopinvitasjon fra rapid skal lagres med tilpasset beskrivelse i databasen`() {
+        val fnr = "01010012345"
+        val rekrutteringstreffId = UUID.randomUUID()
+        val tittel = "Test WorkOp"
+        val fraTid = ZonedDateTime.of(2025, 10, 1, 8, 0, 0, 0, ZoneId.of("Europe/Oslo"))
+        val tilTid = fraTid.plusHours(2)
+        val opprettetAv = "testuser"
+        val opprettetTidspunkt = ZonedDateTime.now()
+        val gateadresse = "Test Sted"
+        val postnummer = "1234"
+        val poststed = "Test Poststed"
+
+        rapid.sendTestMessage(
+            rapidPeriodeMelding(
+                fnr = fnr,
+                rekrutteringstreffId = rekrutteringstreffId,
+                tittel = tittel,
+                fraTid = fraTid,
+                tilTid = tilTid,
+                opprettetAv = opprettetAv,
+                opprettetTidspunkt = opprettetTidspunkt,
+                gateadresse = gateadresse,
+                postnummer = postnummer,
+                poststed = poststed,
+                eventName = "workopinvitasjon"
+            )
+        )
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
+        val inspektør = rapid.inspektør
+        assertThat(inspektør.size).isEqualTo(1)
+
+        val expectedDetaljer = """[{"label":"Tid","verdi":"01. oktober 2025, kl. 08:00–10:00"},{"label":"Sted","verdi":"Test Sted, 1234 Test Poststed"}]"""
+        rekrutteringstreffInvitasjoner.apply {
+            assertThat(this[0].tittel).isEqualTo(tittel)
+            assertThat(this[0].beskrivelse).isEqualTo("Nav arrangerer WorkOp. På WorkOp-en møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.")
+            assertThat(this[0].fraTid).isEqualTo(fraTid.toLocalDate())
+            assertThat(this[0].tilTid).isEqualTo(tilTid.toLocalDate())
+            assertThat(this[0].detaljer).isEqualToIgnoringWhitespace(expectedDetaljer)
+            assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
+            assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
+            assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
+            assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
+            assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
+        }
+
+        inspektør.message(0).also { message ->
+            assertThat(message["@event_name"].asText()).isEqualTo("workopinvitasjon")
+            assertThat(message["fnr"].asText()).isEqualTo(fnr)
+            assertThat(message["rekrutteringstreffId"].asText()).isEqualTo(rekrutteringstreffId.toString())
+            assertThat(message["tittel"].asText()).isEqualTo(tittel)
+            assertThat(message["aktivitetskortuuid"].isMissingOrNull()).isFalse
+        }
+    }
+
     private fun rapidPeriodeMelding(
         fnr: String,
         rekrutteringstreffId: UUID,
@@ -267,10 +324,11 @@ class RekrutteringstreffInvitasjonTest {
         opprettetTidspunkt: ZonedDateTime,
         gateadresse: String,
         postnummer: String,
-        poststed: String
+        poststed: String,
+        eventName: String = "rekrutteringstreffinvitasjon"
     ): String = """
         {
-            "@event_name": "rekrutteringstreffinvitasjon",
+            "@event_name": "$eventName",
             "fnr":"$fnr",
             "rekrutteringstreffId":"$rekrutteringstreffId",
             "tittel": "$tittel",

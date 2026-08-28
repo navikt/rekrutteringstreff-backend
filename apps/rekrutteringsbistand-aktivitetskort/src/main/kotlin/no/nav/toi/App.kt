@@ -10,7 +10,9 @@ import io.javalin.json.JavalinJackson
 import io.javalin.micrometer.MicrometerPlugin
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.SchedulerContext
+import no.nav.toi.aktivitetskort.Sentiment
 import no.nav.toi.aktivitetskort.scheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
@@ -68,9 +70,24 @@ class App(
 
     private fun startRapidsAndRivers() {
         log.info("Starter RapidsConnection")
+        // Rekrutteringstreff
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
+
+        // WorkOp
+        RekrutteringstreffInvitasjonLytter(
+            rapidsConnection = rapidsConnection,
+            repository = repository,
+            eventName = "workopinvitasjon",
+            beskrivelse = "Nav arrangerer WorkOp. På WorkOp-en møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
+            handlingTittel = "Sjekk ut WorkOp-en",
+            handlingSubtekst = "Sjekk ut WorkOp-en og svar",
+            etiketter = listOf(AktivitetskortEtikett("WorkOp", Sentiment.NEUTRAL))
+        )
+        RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository, eventName = "workopSvarOgStatus")
+        RekrutteringstreffOppdateringLytter(rapidsConnection, repository, eventName = "workopoppdatering")
+
         Thread {
             try {
                 rapidsConnection.start()

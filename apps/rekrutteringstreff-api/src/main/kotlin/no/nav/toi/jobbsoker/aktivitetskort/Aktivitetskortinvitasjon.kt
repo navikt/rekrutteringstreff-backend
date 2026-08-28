@@ -55,8 +55,9 @@ class Aktivitetskortinvitasjon private constructor(
     }
 
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
+        val eventName = if (kategori == RekrutteringstreffKategori.WORKOP) "workopinvitasjon" else "rekrutteringstreffinvitasjon"
         val message = JsonMessage.newMessage(
-            eventName = "rekrutteringstreffinvitasjon",
+            eventName = eventName,
             map = mapOf<String, Any>(
                 "fnr" to fnr,
                 "rekrutteringstreffId" to rekrutteringstreffId.somUuid,

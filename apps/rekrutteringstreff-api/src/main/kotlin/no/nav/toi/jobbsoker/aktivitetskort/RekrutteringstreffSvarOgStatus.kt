@@ -26,6 +26,7 @@ class RekrutteringstreffSvarOgStatus(
     private val treffstatus: AktivitetskortTreffstatus? = null,
 ) {
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
+        val eventName = if (kategori == RekrutteringstreffKategori.WORKOP) "workopSvarOgStatus" else "rekrutteringstreffSvarOgStatus"
         val messageMap = mutableMapOf<String, Any>(
             "fnr" to fnr,
             "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
@@ -39,7 +40,7 @@ class RekrutteringstreffSvarOgStatus(
         treffstatus?.let { messageMap["treffstatus"] = it.rapidVerdi }
 
         val message = JsonMessage.newMessage(
-            eventName = "rekrutteringstreffSvarOgStatus",
+            eventName = eventName,
             map = messageMap
         )
 
