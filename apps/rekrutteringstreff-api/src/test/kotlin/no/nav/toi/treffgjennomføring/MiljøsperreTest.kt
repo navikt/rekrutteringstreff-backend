@@ -26,7 +26,9 @@ class MiljøsperreTest {
         assertThat(Miljø.fraClusterNavn("prod-gcp")).isEqualTo(Miljø.PROD_GCP)
         assertThat(Miljø.fraClusterNavn("dev-gcp")).isEqualTo(Miljø.DEV_GCP)
         assertThat(Miljø.fraClusterNavn(null)).isEqualTo(Miljø.LOKALT)
-        assertThat(Miljø.fraClusterNavn("noe-annet")).isEqualTo(Miljø.LOKALT)
+        assertThat(Miljø.fraClusterNavn("")).isEqualTo(Miljø.LOKALT)
+        assertThat(Miljø.fraClusterNavn("local")).isEqualTo(Miljø.LOKALT)
+        assertThat(Miljø.fraClusterNavn("noe-annet")).isEqualTo(Miljø.PROD_GCP)
     }
 
     @Test

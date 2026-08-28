@@ -42,6 +42,8 @@ interface AuthenticatedUser {
     fun extractPid(): String
     fun innkommendeToken(): String
     fun erUtvikler(): Boolean = false
+    val erBorger: Boolean get() = false
+    val erNavAnsatt: Boolean get() = false
 
     companion object {
         fun fromJwt(
@@ -100,6 +102,7 @@ private class AuthenticatedNavUser(
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
     override fun innkommendeToken() = token
     override fun erUtvikler() = roller.any { it == Rolle.UTVIKLER }
+    override val erNavAnsatt = true
 }
 
 private class AuthenticatedCitizenUser(
@@ -114,6 +117,7 @@ private class AuthenticatedCitizenUser(
 
     override fun extractPid(): String = pid
     override fun innkommendeToken() = token
+    override val erBorger = true
 }
 
 

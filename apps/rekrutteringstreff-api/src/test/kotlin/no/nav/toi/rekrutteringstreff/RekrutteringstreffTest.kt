@@ -190,7 +190,7 @@ class RekrutteringstreffTest {
     }
 
     @Test
-    fun `borger skal kunne hente WorkOp den er invitert til`() {
+    fun `borger skal kunne hente WorkOp`() {
         val treffId = db.opprettRekrutteringstreffMedEierOgKontor(
             navIdent = "A123456",
             kategori = RekrutteringstreffKategori.WORKOP,

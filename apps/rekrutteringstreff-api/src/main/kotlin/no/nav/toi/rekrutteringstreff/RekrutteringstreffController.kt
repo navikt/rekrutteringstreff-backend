@@ -41,8 +41,9 @@ class RekrutteringstreffController(
         kategori: RekrutteringstreffKategori,
     ): Boolean {
         if (kategori != RekrutteringstreffKategori.WORKOP) return true
-        val navIdent = runCatching { ctx.authenticatedUser().extractNavIdent() }.getOrNull()
-            ?: return true // Borger/jobbsøker har lesetilgang
+        val user = ctx.authenticatedUser()
+        if (user.erBorger) return true // Borger/jobbsøker har lesetilgang
+        val navIdent = user.extractNavIdent()
         return eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)
     }
     companion object {

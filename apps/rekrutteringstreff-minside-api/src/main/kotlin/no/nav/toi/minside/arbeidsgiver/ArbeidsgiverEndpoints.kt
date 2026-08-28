@@ -53,26 +53,16 @@ private fun hentArbeidsgivereHandler(treffKlient: RekrutteringstreffKlient): (Co
     val treff = treffKlient.hent(id, jwt) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     if (treff.erWorkOp()) {
         // På et WorkOp møter jobbsøkeren arbeidsgiverne uten å vite hvem de er på forhånd.
-        ctx.status(200).json(emptyList<ArbeidsgiverOutboundDto>().json())
+        ctx.status(200).json(emptyList<ArbeidsgiverOutboundDto>())
     } else {
-        treffKlient.hentArbeidsgivere(id, jwt)?.let { ctx.status(200).json(it.map { it.tilDTOForBruker() }.json()) }
+        treffKlient.hentArbeidsgivere(id, jwt)?.let { ctx.status(200).json(it.map { it.tilDTOForBruker() }) }
             ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
     }
 }
 
 fun JavalinDefaultRoutingApi.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(arbeidsgiverPath, hentArbeidsgivereHandler(treffKlient))
 
-
 data class ArbeidsgiverOutboundDto(
     val organisasjonsnummer: String,
     val navn: String
-) {
-    fun json() = """
-        {
-            "organisasjonsnummer": "$organisasjonsnummer",
-            "navn": "$navn"
-        }
-    """.trimIndent()
-}
-
-private fun List<ArbeidsgiverOutboundDto>.json() = joinToString{ it.json() }
+)
