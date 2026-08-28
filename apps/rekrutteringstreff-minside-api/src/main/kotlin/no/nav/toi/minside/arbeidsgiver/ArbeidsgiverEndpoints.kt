@@ -49,8 +49,15 @@ private const val arbeidsgiverPath = "$endepunktRekrutteringstreff/{$pathParamTr
 )
 private fun hentArbeidsgivereHandler(treffKlient: RekrutteringstreffKlient): (Context) -> Unit = { ctx ->
     val id = ctx.pathParam(pathParamTreffId)
-    treffKlient.hentArbeidsgivere(id, ctx.authenticatedUser().jwt)?.let { ctx.status(200).json(it.map { it.tilDTOForBruker() }.json() ) }
-        ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    val jwt = ctx.authenticatedUser().jwt
+    val treff = treffKlient.hent(id, jwt) ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    if (treff.erWorkOp()) {
+        // På et WorkOp møter jobbsøkeren arbeidsgiverne uten å vite hvem de er på forhånd.
+        ctx.status(200).json(emptyList<ArbeidsgiverOutboundDto>().json())
+    } else {
+        treffKlient.hentArbeidsgivere(id, jwt)?.let { ctx.status(200).json(it.map { it.tilDTOForBruker() }.json()) }
+            ?: throw NotFoundResponse("Rekrutteringstreff ikke funnet")
+    }
 }
 
 fun JavalinDefaultRoutingApi.arbeidsgiverendepunkt(treffKlient: RekrutteringstreffKlient) = get(arbeidsgiverPath, hentArbeidsgivereHandler(treffKlient))

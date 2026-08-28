@@ -150,6 +150,59 @@ class RekrutteringstreffTest {
     }
 
     @Test
+    fun `eier skal kunne hente eget workop`() {
+        val eier = "A123456"
+        val treffId = db.opprettRekrutteringstreffMedEierOgKontor(
+            navIdent = eier,
+            kategori = RekrutteringstreffKategori.WORKOP,
+        )
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = eier)
+
+        val response = httpGet("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somString}", token.serialize())
+
+        assertThat(response.statusCode()).isEqualTo(200)
+    }
+
+    @Test
+    fun `veileder uten eierskap skal ikke se andres workop`() {
+        val treffId = db.opprettRekrutteringstreffMedEierOgKontor(
+            navIdent = "A123456",
+            kategori = RekrutteringstreffKategori.WORKOP,
+        )
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "B654321")
+
+        val response = httpGet("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somString}", token.serialize())
+
+        assertThat(response.statusCode()).isEqualTo(404)
+    }
+
+    @Test
+    fun `veileder uten eierskap skal fortsatt se ordinaert rekrutteringstreff`() {
+        val treffId = db.opprettRekrutteringstreffMedEierOgKontor(
+            navIdent = "A123456",
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
+        )
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = "B654321")
+
+        val response = httpGet("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somString}", token.serialize())
+
+        assertThat(response.statusCode()).isEqualTo(200)
+    }
+
+    @Test
+    fun `borger skal kunne hente WorkOp den er invitert til`() {
+        val treffId = db.opprettRekrutteringstreffMedEierOgKontor(
+            navIdent = "A123456",
+            kategori = RekrutteringstreffKategori.WORKOP,
+        )
+        val token = infra.authServer.lagTokenBorger(infra.authPort)
+
+        val response = httpGet("http://localhost:$appPort$endepunktRekrutteringstreff/${treffId.somString}", token.serialize())
+
+        assertThat(response.statusCode()).isEqualTo(200)
+    }
+
+    @Test
     fun oppdaterRekrutteringstreff() {
         val navIdent = "A123456"
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)

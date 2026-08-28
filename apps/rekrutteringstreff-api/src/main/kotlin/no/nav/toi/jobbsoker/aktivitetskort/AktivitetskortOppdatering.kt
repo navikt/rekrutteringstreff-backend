@@ -3,6 +3,7 @@ package no.nav.toi.jobbsoker.aktivitetskort
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.toi.rekrutteringstreff.Endringsfelttype
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.ZonedDateTime
 import java.util.*
@@ -17,6 +18,7 @@ class AktivitetskortOppdatering(
     private val fnr: String,
     private val rekrutteringstreffId: TreffId,
     private val hendelseId: UUID,
+    private val kategori: RekrutteringstreffKategori,
     private val tittel: String,
     private val fraTid: ZonedDateTime,
     private val tilTid: ZonedDateTime,
@@ -33,6 +35,7 @@ class AktivitetskortOppdatering(
             "fnr" to fnr,
             "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
             "hendelseId" to hendelseId,
+            "kategori" to kategori.name,
             "tittel" to tittel,
             "fraTid" to fraTid,
             "tilTid" to tilTid,

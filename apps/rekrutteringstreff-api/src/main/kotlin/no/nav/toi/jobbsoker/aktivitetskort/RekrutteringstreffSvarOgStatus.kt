@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.util.*
 
@@ -20,6 +21,7 @@ class RekrutteringstreffSvarOgStatus(
     private val endretAv: String,
     private val endretAvPersonbruker: Boolean,
     private val hendelseId: UUID,
+    private val kategori: RekrutteringstreffKategori,
     private val svar: Boolean? = null,
     private val treffstatus: AktivitetskortTreffstatus? = null,
 ) {
@@ -30,6 +32,7 @@ class RekrutteringstreffSvarOgStatus(
             "endretAv" to endretAv,
             "endretAvPersonbruker" to endretAvPersonbruker,
             "hendelseId" to hendelseId,
+            "kategori" to kategori.name,
         )
 
         svar?.let { messageMap["svar"] = it }

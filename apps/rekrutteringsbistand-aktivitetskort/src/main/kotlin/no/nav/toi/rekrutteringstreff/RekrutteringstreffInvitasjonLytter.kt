@@ -28,6 +28,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
                     "fnr", "rekrutteringstreffId", "tittel", "fraTid", "tilTid",
                     "opprettetAv", "opprettetTidspunkt", "gateadresse", "postnummer", "poststed"
                 )
+                it.interestedIn("kategori")
             }
 
         }.register(this)
@@ -56,7 +57,8 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             endretAv = packet["opprettetAv"].asText(),
             gateAdresse = packet["gateadresse"].asText(),
             postnummer = packet["postnummer"].asText(),
-            poststed = packet["poststed"].asText()
+            poststed = packet["poststed"].asText(),
+            erWorkOp = packet["kategori"].takeIf { !it.isMissingNode && !it.isNull }?.asText() == "WORKOP"
         )
         if (aktivitetskortId != null) {
             packet["aktivitetskortuuid"] = aktivitetskortId

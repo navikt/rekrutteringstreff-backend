@@ -121,6 +121,39 @@ class AktivitetskortTest {
     }
 
     @Test
+    fun `workop skal gi etikett paa aktivitetskortet`() {
+        val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
+        repository.opprettRekrutteringstreffInvitasjon(
+            fnr = "12345678910",
+            rekrutteringstreffId = UUID.randomUUID(),
+            tittel = "Test WorkOp",
+            beskrivelse = "Beskrivelse",
+            startDato = LocalDate.now().plusDays(1),
+            sluttDato = LocalDate.now().plusDays(2),
+            tid = "18.08.25 kl 08:00-10:00",
+            endretAv = "testuser",
+            gateAdresse = "Test Sted",
+            postnummer = "1234",
+            poststed = "Test Poststed",
+            erWorkOp = true
+        )
+
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+
+        val tree = producer.history().first().value().let(objectMapper::readTree)
+        val etiketter = tree["aktivitetskort"]["etiketter"]
+        assertThat(etiketter).hasSize(1)
+        assertThat(etiketter[0]["tekst"].asText()).isEqualTo("WorkOp")
+        assertThat(etiketter[0]["sentiment"].asText()).isEqualTo("NEUTRAL")
+        assertThat(etiketter[0].has("label")).isFalse()
+
+        val handlinger = tree["aktivitetskort"]["handlinger"]
+        assertThat(handlinger).hasSize(1)
+        assertThat(handlinger[0]["tekst"].asText()).isEqualTo("Sjekk ut WorkOp-en")
+        assertThat(handlinger[0]["subtekst"].asText()).isEqualTo("Sjekk ut WorkOp-en og svar")
+    }
+
+    @Test
     fun `tittel med spesialtegn skal gi gyldig json og bevares uendret`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         val expectedFnr = "12345678910"

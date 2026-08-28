@@ -163,7 +163,7 @@ class AktivitetskortHandling(
 
 class AktivitetskortEtikett(
     val tekst: String,
-    val label: Sentiment,
+    val sentiment: Sentiment,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =

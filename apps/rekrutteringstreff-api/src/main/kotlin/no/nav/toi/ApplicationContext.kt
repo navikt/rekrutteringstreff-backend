@@ -104,7 +104,8 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         jobbsøkerRepository,
         arbeidsgiverRepository,
         jobbsøkerService,
-        eierService
+        eierService,
+        infra.miljø
     )
     val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
     val openAiService = OpenAiService(openAiKlient, kiLoggRepository, openAiProperties)
@@ -142,6 +143,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         oppfølgingRepository = oppfølgingRepository,
         stegRepository = stegRepository,
         hendelseWriter = hendelseWriter,
+        miljø = infra.miljø,
     )
     val oppfølgingService = OppfølgingService(
         writer = treffgjennomføringWriter,
@@ -149,6 +151,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         oppmøteRepository = oppmøteRepository,
         stegRepository = stegRepository,
         hendelser = hendelseWriter,
+        miljø = infra.miljø,
     )
 
     val arbeidsgiverController = ArbeidsgiverController(arbeidsgiverService, eierService)

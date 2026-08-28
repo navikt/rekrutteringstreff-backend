@@ -11,6 +11,7 @@ import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import no.nav.toi.treffgjennomføring.dto.VurderingDto
 import java.sql.Connection
+import no.nav.toi.Miljø
 
 class OppfølgingService(
     private val writer: TreffgjennomføringWriter,
@@ -18,10 +19,12 @@ class OppfølgingService(
     private val oppmøteRepository: OppmøteRepository,
     private val stegRepository: StegRepository,
     private val hendelser: HendelseWriter,
+    private val miljø: Miljø = Miljø.LOKALT,
 ) {
 
     fun lagreVurdering(treffId: TreffId, dto: VurderingDto, navIdent: String): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
+            kontekst.krevStegUnderUtvikling(miljø)
             val ny = OppfølgingValidering.vurdering(dto)
             val jobbsøkerId = kontekst.jobbsøkerId(ny.personTreffId)
                 ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")

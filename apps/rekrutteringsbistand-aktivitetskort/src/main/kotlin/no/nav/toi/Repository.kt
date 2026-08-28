@@ -32,7 +32,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         endretAv: String,
         gateAdresse: String,
         postnummer: String,
-        poststed: String
+        poststed: String,
+        erWorkOp: Boolean = false
     ): UUID? {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -89,16 +90,32 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                             11,
                             objectMapper.writeValueAsString(
                                 listOf(
-                                    AktivitetskortHandling(
-                                        "Sjekk ut treffet",
-                                        "Sjekk ut treffet og svar",
-                                        "$minsideUrl/$rekrutteringstreffId",
-                                        LenkeType.FELLES
-                                    )
+                                    if (erWorkOp)
+                                        AktivitetskortHandling(
+                                            "Sjekk ut WorkOp-en",
+                                            "Sjekk ut WorkOp-en og svar",
+                                            "$minsideUrl/$rekrutteringstreffId",
+                                            LenkeType.FELLES
+                                        )
+                                    else
+                                        AktivitetskortHandling(
+                                            "Sjekk ut treffet",
+                                            "Sjekk ut treffet og svar",
+                                            "$minsideUrl/$rekrutteringstreffId",
+                                            LenkeType.FELLES
+                                        )
                                 )
                             )
                         )
-                        setString(12, "[]")
+                        setString(
+                            12,
+                            objectMapper.writeValueAsString(
+                                if (erWorkOp)
+                                    listOf(AktivitetskortEtikett("WorkOp", Sentiment.NEUTRAL))
+                                else
+                                    emptyList()
+                            )
+                        )
                         setNull(13, VARCHAR)
                     }.executeUpdate()
 

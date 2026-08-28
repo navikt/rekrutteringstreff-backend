@@ -101,6 +101,8 @@ data class Rekrutteringstreff(
     private val status: String?,
     private val kategori: RekrutteringstreffKategori,
 ) {
+    fun erWorkOp() = kategori == RekrutteringstreffKategori.WORKOP
+
     fun tilDTOForBruker() = RekrutteringstreffOutboundDto(
         id,
         tittel,
