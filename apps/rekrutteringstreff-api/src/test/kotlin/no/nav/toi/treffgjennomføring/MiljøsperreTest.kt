@@ -31,23 +31,23 @@ class MiljøsperreTest {
 
     @Test
     fun `treffgjennomføring-steg under utvikling er stengt i prod ogsaa for workop`() {
-        assertThatThrownBy { kontekst(erWorkOp = true).krevStegUnderUtvikling(Miljø.PROD_GCP) }
+        assertThatThrownBy { kontekst(erWorkOp = true).krevWorkOpEllerLokalUtvikling(Miljø.PROD_GCP) }
             .isInstanceOf(BadRequestResponse::class.java)
-        assertThatThrownBy { kontekst(erWorkOp = false).krevStegUnderUtvikling(Miljø.PROD_GCP) }
+        assertThatThrownBy { kontekst(erWorkOp = false).krevWorkOpEllerLokalUtvikling(Miljø.PROD_GCP) }
             .isInstanceOf(BadRequestResponse::class.java)
     }
 
     @Test
     fun `treffgjennomføring-steg under utvikling krever workop i dev`() {
-        assertThatCode { kontekst(erWorkOp = true).krevStegUnderUtvikling(Miljø.DEV_GCP) }
+        assertThatCode { kontekst(erWorkOp = true).krevWorkOpEllerLokalUtvikling(Miljø.DEV_GCP) }
             .doesNotThrowAnyException()
-        assertThatThrownBy { kontekst(erWorkOp = false).krevStegUnderUtvikling(Miljø.DEV_GCP) }
+        assertThatThrownBy { kontekst(erWorkOp = false).krevWorkOpEllerLokalUtvikling(Miljø.DEV_GCP) }
             .isInstanceOf(BadRequestResponse::class.java)
     }
 
     @Test
     fun `treffgjennomføring-steg under utvikling er aapne lokalt`() {
-        assertThatCode { kontekst(erWorkOp = false).krevStegUnderUtvikling(Miljø.LOKALT) }
+        assertThatCode { kontekst(erWorkOp = false).krevWorkOpEllerLokalUtvikling(Miljø.LOKALT) }
             .doesNotThrowAnyException()
     }
 }

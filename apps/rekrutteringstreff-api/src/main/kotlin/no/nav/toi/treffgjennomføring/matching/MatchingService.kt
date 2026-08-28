@@ -30,7 +30,7 @@ class MatchingService(
 
     fun settInteresse(treffId: TreffId, dto: InteresseRequestDto): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
-            kontekst.krevStegUnderUtvikling(miljø)
+            kontekst.krevWorkOpEllerLokalUtvikling(miljø)
             val person = PersonTreffId(dto.personTreffId)
             val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
             val jobbsøkerId = kontekst.jobbsøkerId(person)

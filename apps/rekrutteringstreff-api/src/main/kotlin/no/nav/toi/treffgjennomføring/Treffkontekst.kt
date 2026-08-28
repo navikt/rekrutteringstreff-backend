@@ -32,11 +32,10 @@ data class Treffkontekst(
     }
 
     /**
-     * Steg som fortsatt er under utvikling. De skal aldri kunne skrives til i produksjon,
-     * og i dev bare på WorkOp. Lokalt er de åpne også for ordinære treff, slik at de kan
-     * prøves ut uten å måtte opprette et WorkOp.
+     * Krever at treffet er et WorkOp.
+     * For ordinære treff er dette kun tilgjengelig under lokal utvikling/testing.
      */
-    fun krevStegUnderUtvikling(miljø: Miljø) {
+    fun krevWorkOpEllerLokalUtvikling(miljø: Miljø) {
         when (miljø) {
             Miljø.PROD_GCP -> throw BadRequestResponse("Steget er ikke tilgjengelig i produksjon")
             Miljø.DEV_GCP -> krevWorkOp()

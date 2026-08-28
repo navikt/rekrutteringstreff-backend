@@ -24,7 +24,7 @@ class OppfølgingService(
 
     fun lagreVurdering(treffId: TreffId, dto: VurderingDto, navIdent: String): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
-            kontekst.krevStegUnderUtvikling(miljø)
+            kontekst.krevWorkOpEllerLokalUtvikling(miljø)
             val ny = OppfølgingValidering.vurdering(dto)
             val jobbsøkerId = kontekst.jobbsøkerId(ny.personTreffId)
                 ?: throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
