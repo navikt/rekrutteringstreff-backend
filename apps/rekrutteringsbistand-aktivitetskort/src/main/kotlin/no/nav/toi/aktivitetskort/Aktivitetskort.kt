@@ -161,9 +161,11 @@ class AktivitetskortHandling(
     }
 }
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 class AktivitetskortEtikett(
     val tekst: String,
     val sentiment: Sentiment,
+    val kode: String? = null,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =

@@ -145,6 +145,7 @@ class AktivitetskortTest {
         assertThat(etiketter).hasSize(1)
         assertThat(etiketter[0]["tekst"].asText()).isEqualTo("WorkOp")
         assertThat(etiketter[0]["sentiment"].asText()).isEqualTo("NEUTRAL")
+        assertThat(etiketter[0].has("kode")).isFalse()
         assertThat(etiketter[0].has("label")).isFalse()
 
         val handlinger = tree["aktivitetskort"]["handlinger"]

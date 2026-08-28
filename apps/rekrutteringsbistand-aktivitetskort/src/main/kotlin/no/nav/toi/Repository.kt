@@ -86,24 +86,17 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                                 )
                             )
                         )
+                        val typeTreffTekst = if (erWorkOp) "WorkOp-en" else "treffet"
                         setString(
                             11,
                             objectMapper.writeValueAsString(
                                 listOf(
-                                    if (erWorkOp)
-                                        AktivitetskortHandling(
-                                            "Sjekk ut WorkOp-en",
-                                            "Sjekk ut WorkOp-en og svar",
-                                            "$minsideUrl/$rekrutteringstreffId",
-                                            LenkeType.FELLES
-                                        )
-                                    else
-                                        AktivitetskortHandling(
-                                            "Sjekk ut treffet",
-                                            "Sjekk ut treffet og svar",
-                                            "$minsideUrl/$rekrutteringstreffId",
-                                            LenkeType.FELLES
-                                        )
+                                    AktivitetskortHandling(
+                                        "Sjekk ut $typeTreffTekst",
+                                        "Sjekk ut $typeTreffTekst og svar",
+                                        "$minsideUrl/$rekrutteringstreffId",
+                                        LenkeType.FELLES
+                                    )
                                 )
                             )
                         )
