@@ -25,7 +25,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         fnr: String,
         rekrutteringstreffId: UUID,
         tittel: String,
-        beskrivelse: String,
+        beskrivelse: String = aktivitetskortType.beskrivelse,
         startDato: LocalDate,
         sluttDato: LocalDate,
         tid: String,
@@ -33,10 +33,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         gateAdresse: String,
         postnummer: String,
         poststed: String,
-        handlingTittel: String = "Sjekk ut treffet",
-        handlingSubtekst: String = "Sjekk ut treffet og svar",
         aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
-        etiketter: List<AktivitetskortEtikett> = emptyList()
     ): UUID? {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -94,8 +91,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                             objectMapper.writeValueAsString(
                                 listOf(
                                     AktivitetskortHandling(
-                                        handlingTittel,
-                                        handlingSubtekst,
+                                        aktivitetskortType.handlingTittel,
+                                        aktivitetskortType.handlingSubtekst,
                                         "$minsideUrl/$rekrutteringstreffId",
                                         LenkeType.FELLES
                                     )
@@ -104,7 +101,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         )
                         setString(
                             12,
-                            objectMapper.writeValueAsString(etiketter)
+                            objectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
                         )
                         setNull(13, VARCHAR)
                         setString(14, aktivitetskortType.name)

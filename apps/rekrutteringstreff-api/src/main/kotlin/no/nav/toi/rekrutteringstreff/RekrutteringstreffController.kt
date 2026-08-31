@@ -26,16 +26,16 @@ class RekrutteringstreffController(
 ) : RuteRegistrerer {
 
     /**
-     * Sjekker om innlogget bruker har tilgang til å se et WorkOp.
+     * Sjekker om innlogget bruker har tilgang til å se et rekrutteringstreff.
      *
-     * Tilgangsregler for WorkOp:
-     * - Eiere / utviklere (Nav-ansatte registrert som eiere): full tilgang (les + skriv)
-     * - Jobbsøkere / borgere (personbrukere uten Nav-ident): lesetilgang til treffet (arbeidsgivere skjules i minside-api)
-     * - Andre veiledere / Nav-ansatte uten eierskap: har IKKE tilgang (skjult i søk og ved direkte oppslag)
-     *
-     * For ordinære rekrutteringstreff har alle autoriserte veiledere/markedskontakter og borgere lesetilgang.
+     * Tilgangsregler:
+     * - Ordinære rekrutteringstreff: alle autoriserte veiledere/markedskontakter og borgere har lesetilgang.
+     * - WorkOp:
+     *   - Eiere / utviklere (Nav-ansatte registrert som eiere): full tilgang (les + skriv)
+     *   - Jobbsøkere / borgere (personbrukere uten Nav-ident): lesetilgang til treffet (arbeidsgivere skjules i minside-api)
+     *   - Andre veiledere / Nav-ansatte uten eierskap: har IKKE tilgang (skjult i søk og ved direkte oppslag)
      */
-    private fun harInnloggetBrukerTilgangTilWorkOp(
+    private fun harInnloggetBrukerTilgangTil(
         ctx: Context,
         treffId: TreffId,
         kategori: RekrutteringstreffKategori,
@@ -165,7 +165,7 @@ class RekrutteringstreffController(
             if (rekrutteringstreff == null) {
                 log.info("Fant ikke rekrutteringstreff med id $treffId")
                 ctx.status(404)
-            } else if (!harInnloggetBrukerTilgangTilWorkOp(ctx, treffId, rekrutteringstreff.kategori)) {
+            } else if (!harInnloggetBrukerTilgangTil(ctx, treffId, rekrutteringstreff.kategori)) {
                 log.info("Nav-ansatt uten eierskap forsøkte å hente WorkOp med id $treffId")
                 ctx.status(404)
             } else {

@@ -12,20 +12,15 @@ import no.nav.toi.Repository
 import no.nav.toi.SecureLog
 import no.nav.toi.log
 
-import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.AktivitetskortType
 
 class RekrutteringstreffInvitasjonLytter(
     rapidsConnection: RapidsConnection,
     private val repository: Repository,
-    private val eventName: String = "rekrutteringstreffinvitasjon",
-    private val beskrivelse: String = "Nav arrangerer rekrutteringstreff. På treffet møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
-    private val handlingTittel: String = "Sjekk ut treffet",
-    private val handlingSubtekst: String = "Sjekk ut treffet og svar",
     private val aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
-    private val etiketter: List<AktivitetskortEtikett> = emptyList()
 ) : River.PacketListener {
     private val secureLog = SecureLog(log)
+    private val eventName = aktivitetskortType.eventName
 
     init {
         River(rapidsConnection).apply {
@@ -60,7 +55,7 @@ class RekrutteringstreffInvitasjonLytter(
             fnr = fnr,
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
-            beskrivelse = beskrivelse,
+            beskrivelse = aktivitetskortType.beskrivelse,
             startDato = startDato.toLocalDate(),
             sluttDato = sluttDato.toLocalDate(),
             tid = formaterTidsperiode(startDato, sluttDato),
@@ -68,10 +63,7 @@ class RekrutteringstreffInvitasjonLytter(
             gateAdresse = packet["gateadresse"].asText(),
             postnummer = packet["postnummer"].asText(),
             poststed = packet["poststed"].asText(),
-            handlingTittel = handlingTittel,
-            handlingSubtekst = handlingSubtekst,
             aktivitetskortType = aktivitetskortType,
-            etiketter = etiketter
         )
         if (aktivitetskortId != null) {
             packet["aktivitetskortuuid"] = aktivitetskortId

@@ -196,9 +196,24 @@ enum class Sentiment {
     NEUTRAL
 }
 
-enum class AktivitetskortType {
-    REKRUTTERINGSTREFF,
-    WORKOP
+enum class AktivitetskortType(
+    val eventName: String,
+    val beskrivelse: String,
+    val handlingTittel: String,
+    val handlingSubtekst: String,
+) {
+    REKRUTTERINGSTREFF(
+        eventName = "rekrutteringstreffinvitasjon",
+        beskrivelse = "Nav arrangerer rekrutteringstreff. På treffet møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
+        handlingTittel = "Sjekk ut treffet",
+        handlingSubtekst = "Sjekk ut treffet og svar",
+    ),
+    WORKOP(
+        eventName = "workopinvitasjon",
+        beskrivelse = "Nav arrangerer WorkOp. På WorkOp-en møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
+        handlingTittel = "Sjekk ut WorkOp-en",
+        handlingSubtekst = "Sjekk ut WorkOp-en og svar",
+    )
 }
 
 enum class LenkeType {

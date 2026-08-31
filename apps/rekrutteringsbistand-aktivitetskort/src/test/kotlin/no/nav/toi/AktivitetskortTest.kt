@@ -130,7 +130,7 @@ class AktivitetskortTest {
             fnr = "12345678910",
             rekrutteringstreffId = UUID.randomUUID(),
             tittel = "Test WorkOp",
-            beskrivelse = "Beskrivelse",
+            beskrivelse = AktivitetskortType.WORKOP.beskrivelse,
             startDato = LocalDate.now().plusDays(1),
             sluttDato = LocalDate.now().plusDays(2),
             tid = "18.08.25 kl 08:00-10:00",
@@ -138,8 +138,6 @@ class AktivitetskortTest {
             gateAdresse = "Test Sted",
             postnummer = "1234",
             poststed = "Test Poststed",
-            handlingTittel = "Sjekk ut WorkOp-en",
-            handlingSubtekst = "Sjekk ut WorkOp-en og svar",
             aktivitetskortType = AktivitetskortType.WORKOP
         )
 
@@ -147,6 +145,7 @@ class AktivitetskortTest {
 
         val tree = producer.history().first().value().let(objectMapper::readTree)
         assertThat(tree["aktivitetskortType"].asText()).isEqualTo("WORKOP")
+        assertThat(tree["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(AktivitetskortType.WORKOP.beskrivelse)
 
         val etiketter = tree["aktivitetskort"]["etiketter"]
         assertThat(etiketter).isEmpty()

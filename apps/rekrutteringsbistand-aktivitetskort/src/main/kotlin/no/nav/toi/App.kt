@@ -75,15 +75,7 @@ class App(
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
 
         // WorkOp
-        RekrutteringstreffInvitasjonLytter(
-            rapidsConnection = rapidsConnection,
-            repository = repository,
-            eventName = "workopinvitasjon",
-            beskrivelse = "Nav arrangerer WorkOp. På WorkOp-en møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
-            handlingTittel = "Sjekk ut WorkOp-en",
-            handlingSubtekst = "Sjekk ut WorkOp-en og svar",
-            aktivitetskortType = AktivitetskortType.WORKOP
-        )
+        RekrutteringstreffInvitasjonLytter(rapidsConnection, repository, AktivitetskortType.WORKOP)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository, eventName = "workopSvarOgStatus")
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository, eventName = "workopoppdatering")
 
