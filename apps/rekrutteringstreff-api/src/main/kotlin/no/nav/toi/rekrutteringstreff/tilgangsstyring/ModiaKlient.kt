@@ -5,7 +5,7 @@ import io.github.resilience4j.retry.RetryConfig
 import no.nav.toi.AccessTokenClient
 import no.nav.toi.JacksonConfig
 import no.nav.toi.exception.ModiaOppslagFeiletException
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.log
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest

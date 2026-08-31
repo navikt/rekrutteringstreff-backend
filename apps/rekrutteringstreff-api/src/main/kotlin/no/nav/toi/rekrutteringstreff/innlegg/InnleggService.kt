@@ -1,7 +1,7 @@
 package no.nav.toi.rekrutteringstreff.innlegg
 
 import no.nav.toi.exception.RekrutteringstreffIkkeFunnetException
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TreffId

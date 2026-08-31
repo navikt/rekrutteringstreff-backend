@@ -6,6 +6,7 @@ import io.javalin.config.JavalinConfig
 import io.javalin.json.JavalinJackson
 import io.javalin.openapi.plugin.OpenApiPlugin
 import io.javalin.openapi.plugin.swagger.SwaggerPlugin
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.ExceptionMapping.exceptionMapping
 import org.flywaydb.core.Flyway
 import java.time.Instant

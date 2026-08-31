@@ -27,6 +27,7 @@ val openTelemetryAnnotationsVersion = "2.26.0"
 val kotestVersion = "6.1.4"
 
 dependencies {
+    implementation(project(":technical-libs:logging"))
     implementation("org.flywaydb:flyway-core:$flywayVersion")
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")

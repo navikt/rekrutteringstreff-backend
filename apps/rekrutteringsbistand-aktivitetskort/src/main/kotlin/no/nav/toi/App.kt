@@ -11,6 +11,8 @@ import io.javalin.micrometer.MicrometerPlugin
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetskortType
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.SchedulerContext
 import no.nav.toi.aktivitetskort.scheduler
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
@@ -42,7 +44,6 @@ class App(
 ) {
     private lateinit var javalin: Javalin
     private lateinit var schedulerContext: SchedulerContext
-    private val secureLog = SecureLog(log)
 
     fun start() {
         startJavalin()
@@ -52,7 +53,7 @@ class App(
 
     private fun startJavalin() {
         log.info("Starter app")
-        secureLog.info("Starter app. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
+        teamlog(log).info("Starter app. Dette er ment å logges til Securelogs. Hvis du ser dette i den ordinære apploggen er noe galt, og sensitive data kan havne i feil logg.")
 
         val micrometerPlugin = MicrometerPlugin { micrometerConfig ->
             micrometerConfig.registry = meterRegistry

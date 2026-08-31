@@ -17,6 +17,7 @@ val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.0"
 
 dependencies {
+    implementation(project(":technical-libs:logging"))
     implementation("io.javalin:javalin:${javalinVersion}")
     implementation("io.javalin:javalin-micrometer:${javalinVersion}")
     implementation("io.prometheus:simpleclient_common:0.16.0")

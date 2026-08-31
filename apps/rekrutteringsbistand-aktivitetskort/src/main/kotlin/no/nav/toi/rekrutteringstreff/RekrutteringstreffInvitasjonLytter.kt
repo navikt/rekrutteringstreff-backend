@@ -9,8 +9,8 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.Repository
-import no.nav.toi.SecureLog
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 
 import no.nav.toi.aktivitetskort.AktivitetskortType
 
@@ -19,7 +19,6 @@ class RekrutteringstreffInvitasjonLytter(
     private val repository: Repository,
     private val aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
 ) : River.PacketListener {
-    private val secureLog = SecureLog(log)
     private val eventName = aktivitetskortType.eventName
 
     init {
@@ -62,8 +61,7 @@ class RekrutteringstreffInvitasjonLytter(
             endretAv = packet["opprettetAv"].asText(),
             gateAdresse = packet["gateadresse"].asText(),
             postnummer = packet["postnummer"].asText(),
-            poststed = packet["poststed"].asText(),
-            aktivitetskortType = aktivitetskortType,
+            poststed = packet["poststed"].asText()
         )
         if (aktivitetskortId != null) {
             packet["aktivitetskortuuid"] = aktivitetskortId
@@ -77,7 +75,7 @@ class RekrutteringstreffInvitasjonLytter(
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av $eventName: $problems")
-        secureLog.error("Feil ved behandling av $eventName: ${problems.toExtendedReport()}")
+        teamlog(log).error("Feil ved behandling av $eventName: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }

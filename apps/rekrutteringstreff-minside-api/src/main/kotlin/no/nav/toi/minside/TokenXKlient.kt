@@ -11,6 +11,7 @@ import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import no.nav.arbeidsgiver.toi.logging.log
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
