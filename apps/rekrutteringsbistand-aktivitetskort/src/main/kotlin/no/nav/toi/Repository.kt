@@ -36,43 +36,6 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         handlingTittel: String = "Sjekk ut treffet",
         handlingSubtekst: String = "Sjekk ut treffet og svar",
         etiketter: List<AktivitetskortEtikett> = emptyList()
-    ): UUID? = opprettAktivitetskort(
-        fnr = fnr,
-        rekrutteringstreffId = rekrutteringstreffId,
-        tittel = tittel,
-        beskrivelse = beskrivelse,
-        startDato = startDato,
-        sluttDato = sluttDato,
-        tid = tid,
-        endretAv = endretAv,
-        gateAdresse = gateAdresse,
-        postnummer = postnummer,
-        poststed = poststed,
-        handlinger = listOf(
-            AktivitetskortHandling(
-                handlingTittel,
-                handlingSubtekst,
-                "$minsideUrl/$rekrutteringstreffId",
-                LenkeType.FELLES
-            )
-        ),
-        etiketter = etiketter
-    )
-
-    private fun opprettAktivitetskort(
-        fnr: String,
-        rekrutteringstreffId: UUID,
-        tittel: String,
-        beskrivelse: String,
-        startDato: LocalDate,
-        sluttDato: LocalDate,
-        tid: String,
-        endretAv: String,
-        gateAdresse: String,
-        postnummer: String,
-        poststed: String,
-        handlinger: List<AktivitetskortHandling>,
-        etiketter: List<AktivitetskortEtikett>
     ): UUID? {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -127,7 +90,16 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         )
                         setString(
                             11,
-                            objectMapper.writeValueAsString(handlinger)
+                            objectMapper.writeValueAsString(
+                                listOf(
+                                    AktivitetskortHandling(
+                                        handlingTittel,
+                                        handlingSubtekst,
+                                        "$minsideUrl/$rekrutteringstreffId",
+                                        LenkeType.FELLES
+                                    )
+                                )
+                            )
                         )
                         setString(
                             12,
