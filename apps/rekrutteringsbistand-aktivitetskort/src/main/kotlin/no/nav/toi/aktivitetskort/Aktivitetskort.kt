@@ -30,7 +30,8 @@ class Aktivitetskort (
     private val endretAv: String,
     private val endretAvType: EndretAvType,
     private val endretTidspunkt: ZonedDateTime,
-    private val sendtTidspunkt: ZonedDateTime?
+    private val sendtTidspunkt: ZonedDateTime?,
+    private val aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF
 ) {
 
     fun send(producer: Producer<String, String>) {
@@ -51,7 +52,7 @@ class Aktivitetskort (
         val melding = AkaasMelding(
             messageId = messageId,
             source = "REKRUTTERINGSBISTAND",
-            aktivitetskortType = "REKRUTTERINGSTREFF",
+            aktivitetskortType = aktivitetskortType.name,
             actionType = actionType.name,
             aktivitetskort = AkaasAktivitetskort(
                 id = aktivitetskortId,
@@ -193,6 +194,11 @@ enum class Sentiment {
     POSITIVE,
     NEGATIVE,
     NEUTRAL
+}
+
+enum class AktivitetskortType {
+    REKRUTTERINGSTREFF,
+    WORKOP
 }
 
 enum class LenkeType {

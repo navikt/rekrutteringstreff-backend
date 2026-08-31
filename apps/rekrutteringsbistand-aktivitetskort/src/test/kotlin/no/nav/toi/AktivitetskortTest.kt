@@ -10,6 +10,7 @@ import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
 import no.nav.toi.aktivitetskort.AktivitetskortJobb
+import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.ErrorType
 import no.nav.toi.aktivitetskort.Sentiment
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -123,7 +124,7 @@ class AktivitetskortTest {
     }
 
     @Test
-    fun `workop skal gi etikett paa aktivitetskortet`() {
+    fun `workop skal gi type WORKOP og tilpassede tekster paa aktivitetskortet`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         repository.opprettRekrutteringstreffInvitasjon(
             fnr = "12345678910",
@@ -139,18 +140,16 @@ class AktivitetskortTest {
             poststed = "Test Poststed",
             handlingTittel = "Sjekk ut WorkOp-en",
             handlingSubtekst = "Sjekk ut WorkOp-en og svar",
-            etiketter = listOf(AktivitetskortEtikett("WorkOp", Sentiment.NEUTRAL))
+            aktivitetskortType = AktivitetskortType.WORKOP
         )
 
         AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
 
         val tree = producer.history().first().value().let(objectMapper::readTree)
+        assertThat(tree["aktivitetskortType"].asText()).isEqualTo("WORKOP")
+
         val etiketter = tree["aktivitetskort"]["etiketter"]
-        assertThat(etiketter).hasSize(1)
-        assertThat(etiketter[0]["tekst"].asText()).isEqualTo("WorkOp")
-        assertThat(etiketter[0]["sentiment"].asText()).isEqualTo("NEUTRAL")
-        assertThat(etiketter[0].has("kode")).isFalse()
-        assertThat(etiketter[0].has("label")).isFalse()
+        assertThat(etiketter).isEmpty()
 
         val handlinger = tree["aktivitetskort"]["handlinger"]
         assertThat(handlinger).hasSize(1)

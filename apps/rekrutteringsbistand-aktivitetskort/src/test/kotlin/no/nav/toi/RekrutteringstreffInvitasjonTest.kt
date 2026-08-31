@@ -118,6 +118,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
+            assertThat(this[0].aktivitetskortType).isEqualTo("REKRUTTERINGSTREFF")
         }
     }
 
@@ -303,6 +304,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
+            assertThat(this[0].aktivitetskortType).isEqualTo("WORKOP")
         }
 
         inspektør.message(0).also { message ->
