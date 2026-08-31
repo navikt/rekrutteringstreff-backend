@@ -61,7 +61,8 @@ class RekrutteringstreffInvitasjonLytter(
             endretAv = packet["opprettetAv"].asText(),
             gateAdresse = packet["gateadresse"].asText(),
             postnummer = packet["postnummer"].asText(),
-            poststed = packet["poststed"].asText()
+            poststed = packet["poststed"].asText(),
+            aktivitetskortType = aktivitetskortType,
         )
         if (aktivitetskortId != null) {
             packet["aktivitetskortuuid"] = aktivitetskortId
