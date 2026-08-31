@@ -39,7 +39,7 @@ class TeamLogConfigurationValidationTest {
             TeamLogLogger.validateTeamlogConfiguration(rootLogger)
         }
             .isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessageContaining("logback.xml mangler markerfilter på ROOT-appender")
+            .hasMessageContaining("logback.xml mangler markerfilter")
     }
 
     @Test
@@ -98,7 +98,7 @@ class TeamLogConfigurationValidationTest {
             TeamLogLogger.validateTeamlogConfiguration(rootLogger)
         }
             .isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessageContaining("Alle ROOT-appendere unntatt 'team-logs' må avvise marker 'TEAM_LOGS'")
+            .hasMessageContaining("Alle ROOT-appendere unntatt de med navn som starter med 'team-logs' må avvise marker 'TEAM_LOGS'")
     }
 
     @Test
@@ -160,7 +160,7 @@ class TeamLogConfigurationValidationTest {
             TeamLogLogger.validateTeamlogConfiguration(rootLogger)
         }
             .isInstanceOf(IllegalArgumentException::class.java)
-            .hasMessageContaining("Alle ROOT-appendere unntatt 'team-logs' må avvise marker 'TEAM_LOGS'")
+            .hasMessageContaining("Alle ROOT-appendere unntatt de med navn som starter med 'team-logs' må avvise marker 'TEAM_LOGS'")
     }
 
     private fun nyRootLogger(): ch.qos.logback.classic.Logger =
