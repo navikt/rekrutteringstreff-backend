@@ -41,6 +41,7 @@ class App(
     private val meterRegistry: PrometheusMeterRegistry,
     private val isRunning: () -> Boolean,
     private val isReady: () -> Boolean,
+    private val workOpLyttereAktivert: Boolean,
 ) {
     private lateinit var javalin: Javalin
     private lateinit var schedulerContext: SchedulerContext
@@ -75,10 +76,13 @@ class App(
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
 
-        // WorkOp
-        RekrutteringstreffInvitasjonLytter(rapidsConnection, repository, AktivitetskortType.WORKOP)
-        RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository, eventName = "workopSvarOgStatus")
-        RekrutteringstreffOppdateringLytter(rapidsConnection, repository, eventName = "workopoppdatering")
+        if (workOpLyttereAktivert) {
+            RekrutteringstreffInvitasjonLytter(rapidsConnection, repository, AktivitetskortType.WORKOP)
+            RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository, eventName = "workopSvarOgStatus")
+            RekrutteringstreffOppdateringLytter(rapidsConnection, repository, eventName = "workopoppdatering")
+        } else {
+            log.info("WorkOp-lyttere er deaktivert i dette miljøet")
+        }
 
         Thread {
             try {
@@ -124,13 +128,17 @@ fun main() {
         leaderElection = LeaderElection(),
         meterRegistry = meterRegistry,
         isRunning = rapidsConnection::isRunning,
-        isReady = rapidsConnection::isReady
+        isReady = rapidsConnection::isReady,
+        workOpLyttereAktivert = skalRegistrereWorkOpLyttere(env["NAIS_CLUSTER_NAME"]),
     )
     Runtime.getRuntime().addShutdownHook(Thread {
         app.stop()
     })
     app.start()
 }
+
+internal fun skalRegistrereWorkOpLyttere(clusterNavn: String?): Boolean =
+    clusterNavn.isNullOrBlank() || clusterNavn == "local" || clusterNavn == "lokalt" || clusterNavn == "dev-gcp"
 
 fun producerConfig(env: Map<String, String>) = mapOf(
     CommonClientConfigs.CLIENT_ID_CONFIG to "rekrutteringsbistand-aktivitetskort",

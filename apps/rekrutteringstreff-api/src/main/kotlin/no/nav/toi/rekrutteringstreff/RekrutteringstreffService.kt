@@ -25,7 +25,7 @@ class RekrutteringstreffService(
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
     private val jobbsøkerService: JobbsøkerService,
     private val eierService: EierService,
-    private val miljø: Miljø = Miljø.LOKALT,
+    private val miljø: Miljø,
 ) {
     private val logger: Logger = log
 

@@ -69,7 +69,7 @@ class AktivitetskortTest {
         val expectedFnr = "12345678910"
         val expectedRekrutteringstreffId = UUID.randomUUID()
         val expectedTittel = "Test Rekrutteringstreff"
-        val expectedBeskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff."
+        val expectedBeskrivelse = AktivitetskortType.REKRUTTERINGSTREFF.beskrivelse
         val expectedStartDato = LocalDate.now().plusDays(1)
         val expectedSluttDato = LocalDate.now().plusDays(2)
         val expectedEndretAv = "testuser"
@@ -81,7 +81,6 @@ class AktivitetskortTest {
             fnr = expectedFnr,
             rekrutteringstreffId = expectedRekrutteringstreffId,
             tittel = expectedTittel,
-            beskrivelse = expectedBeskrivelse,
             startDato = expectedStartDato,
             sluttDato = expectedSluttDato,
             tid = expectedTid,
@@ -130,7 +129,6 @@ class AktivitetskortTest {
             fnr = "12345678910",
             rekrutteringstreffId = UUID.randomUUID(),
             tittel = "Test WorkOp",
-            beskrivelse = AktivitetskortType.WORKOP.beskrivelse,
             startDato = LocalDate.now().plusDays(1),
             sluttDato = LocalDate.now().plusDays(2),
             tid = "18.08.25 kl 08:00-10:00",
@@ -166,7 +164,6 @@ class AktivitetskortTest {
             fnr = expectedFnr,
             rekrutteringstreffId = expectedRekrutteringstreffId,
             tittel = expectedTittel,
-            beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
             startDato = LocalDate.now().plusDays(1),
             sluttDato = LocalDate.now().plusDays(2),
             tid = "18.08.25 kl 08:00-10:00",
@@ -194,7 +191,6 @@ class AktivitetskortTest {
             fnr = "12345678910",
             rekrutteringstreffId = UUID.randomUUID(),
             tittel = "Test Rekrutteringstreff",
-            beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
             startDato = LocalDate.now().plusDays(1),
             sluttDato = LocalDate.now().plusDays(2),
             tid = "Whatever",
@@ -490,7 +486,6 @@ private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
         fnr = "12345678910",
         rekrutteringstreffId = UUID.randomUUID(),
         tittel = "Test Rekrutteringstreff",
-        beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
         startDato = LocalDate.now().plusDays(1),
         sluttDato = LocalDate.now().plusDays(2),
         tid = "Whatever",

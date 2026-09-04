@@ -27,7 +27,6 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         fnr: String,
         rekrutteringstreffId: UUID,
         tittel: String,
-        beskrivelse: String = aktivitetskortType.beskrivelse,
         startDato: LocalDate,
         sluttDato: LocalDate,
         tid: String,
@@ -73,7 +72,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     ).apply {
                         setString(1, fnr)
                         setString(2, tittel)
-                        setString(3, beskrivelse)
+                        setString(3, aktivitetskortType.beskrivelse)
                         setObject(4, startDato)
                         setObject(5, sluttDato)
                         setObject(6, messageId)

@@ -48,7 +48,8 @@ class RekrutteringstreffServiceTest {
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
                 jobbsøkerService,
-                EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource)
+                EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource),
+                Miljø.LOKALT,
             )
         }
     }

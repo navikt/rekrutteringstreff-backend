@@ -55,6 +55,7 @@ class RekrutteringstreffInvitasjonTest {
         meterRegistry = meterRegistry,
         isRunning = {true},
         isReady = {true},
+        workOpLyttereAktivert = true,
     )
 
     @BeforeAll
@@ -217,7 +218,6 @@ class RekrutteringstreffInvitasjonTest {
         val fnr = "01010012345"
         val rekrutteringstreffId = UUID.randomUUID()
         val tittel = "Test Rekrutteringstreff"
-        val beskrivelse = "Beskrivelse av rekrutteringstreff"
         val fraTid = ZonedDateTime.now().plusDays(1)
         val tilTid = fraTid.plusHours(2)
         val opprettetAv = "testuser"

@@ -54,7 +54,6 @@ class RekrutteringstreffInvitasjonLytter(
             fnr = fnr,
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
-            beskrivelse = aktivitetskortType.beskrivelse,
             startDato = startDato.toLocalDate(),
             sluttDato = sluttDato.toLocalDate(),
             tid = formaterTidsperiode(startDato, sluttDato),
