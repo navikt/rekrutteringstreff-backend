@@ -91,6 +91,7 @@ class AutentiseringAlleEndepunkterTest {
         HentJobbsøkerHendelser(Metode.GET, "/api/rekrutteringstreff/{id}/jobbsoker/hendelser"),
         InviterJobbsøkere(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/inviter"),
         FormidlingEgne(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/egne"),
+        FormidlingMittKontor(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/mittkontor"),
         FormidlingAlle(Metode.POST, "/api/rekrutteringstreff/{id}/jobbsoker/formidling/alle"),
 
         // JobbsøkerInnloggetBorgerController
@@ -112,10 +113,23 @@ class AutentiseringAlleEndepunkterTest {
         OpprettFormidling(Metode.POST, "/api/rekrutteringstreff/{id}/formidling"),
         HentAlleFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/alle"),
         HentEgneFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/egne"),
+        HentMittKontoreFormidlinger(Metode.GET, "/api/rekrutteringstreff/{id}/formidling/liste/mittkontor"),
         SlettFormidling(Metode.DELETE, "/api/rekrutteringstreff/{id}/formidling/{formidlingId}"),
 
         // Statistikk controller
         HentFåttJobbStatistikk(Metode.GET, "/api/rekrutteringstreff/statistikk/fatt-jobben"),
+
+        // TreffgjennomføringController
+        HentTreffgjennomføring(Metode.GET, "/api/rekrutteringstreff/{id}/treffgjennomforing-og-oppfolging"),
+        OppdaterOppmøte(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/oppmote"),
+        LagreMøteoppsett(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/moteoppsett"),
+        LagreRomfordeling(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/romfordeling"),
+        FordelRomPåNytt(Metode.POST, "/api/rekrutteringstreff/{id}/treffgjennomforing/romfordeling/fordel"),
+        SettInteresse(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/interesse"),
+        LagreIntervjufordeling(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/intervjufordeling"),
+        FordelIntervjuer(Metode.POST, "/api/rekrutteringstreff/{id}/treffgjennomforing/intervjufordeling/fordel"),
+        SettGjeldendeSteg(Metode.PUT, "/api/rekrutteringstreff/{id}/treffgjennomforing/steg"),
+        LagreVurdering(Metode.PUT, "/api/rekrutteringstreff/{id}/oppfolging/vurderinger"),
 
     }
 

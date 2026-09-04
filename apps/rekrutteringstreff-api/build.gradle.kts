@@ -1,6 +1,12 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     id("toi.rapids-and-rivers")
     kotlin("kapt")
+}
+
+application {
+    mainClass.set("no.nav.toi.AppKt")
 }
 
 val javalinVersion = "7.2.0"
@@ -18,9 +24,10 @@ val navCommonVersion = "3.2024.11.26_16.35-432a29107830"
 val openTelemetryVersion = "1.55.0"
 val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.0"
-val kotestVersion = "6.1.4" 
+val kotestVersion = "6.1.4"
 
 dependencies {
+    implementation(project(":technical-libs:logging"))
     implementation("org.flywaydb:flyway-core:$flywayVersion")
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.postgresql:postgresql:$postgresVersion")
@@ -47,6 +54,14 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:$testContainerVersion")
     testImplementation("no.nav.security:mock-oauth2-server:$mockOAuth2ServerVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
-    testImplementation("io.mockk:mockk:1.13.17")
+    testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("io.kotest:kotest-assertions-json-jvm:$kotestVersion")
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform {
+        if (project.hasProperty("skipSlowTests")) { // Brukes slik: ./gradlew clean build -PskipSlowTests
+            excludeTags("slow") // Innført pga no.nav.toi.rekrutteringstreff.sok.RekrutteringstreffSokYtelsestest
+        }
+    }
 }

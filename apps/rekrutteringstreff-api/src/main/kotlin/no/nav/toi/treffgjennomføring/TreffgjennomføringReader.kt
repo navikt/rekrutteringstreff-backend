@@ -1,0 +1,34 @@
+package no.nav.toi.treffgjennomføring
+
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
+import no.nav.toi.oppfølging.OppfølgingRepository
+import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
+import no.nav.toi.treffgjennomføring.dto.tilDto
+import no.nav.toi.treffgjennomføring.matching.MatchingRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
+import java.sql.Connection
+
+class TreffgjennomføringReader(
+    private val stegRepository: StegRepository,
+    private val oppmøteRepository: OppmøteRepository,
+    private val møteplanRepository: MøteplanRepository,
+    private val matchingRepository: MatchingRepository,
+    private val oppfølgingRepository: OppfølgingRepository,
+) {
+
+    fun les(connection: Connection, kontekst: Treffkontekst): TreffgjennomføringDto {
+        val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
+
+        return Treffgjennomføring(
+            gjeldendeSteg = stegRepository.hentGjeldendeSteg(connection, kontekst.treffDbId) ?: TreffgjennomføringSteg.OPPMØTE,
+            antallRom = kontekst.antallRom,
+            oppmøte = oppmøte,
+            deltakernumre = oppmøteRepository.hentDeltakernumre(connection, kontekst.treffDbId),
+            møteplan = møteplanRepository.hentMøteplan(connection, kontekst, oppmøte),
+            matching = matchingRepository.hentFor(connection, kontekst),
+        ).tilDto(
+            rekrutteringstreffId = kontekst.treffId.somString,
+            vurderinger = oppfølgingRepository.hentForTreff(connection, kontekst.treffDbId),
+        )
+    }
+}

@@ -3,6 +3,10 @@ plugins {
     kotlin("kapt")
 }
 
+application {
+    mainClass.set("no.nav.toi.minside.AppKt")
+}
+
 // TODO: Bør ikke trenge dette, men trengs fordi alt fra rekrutteringstreff-api kommer inn i testoppsettet
 repositories {
     maven("https://jitpack.io")
@@ -22,6 +26,7 @@ val wiremockVersion = "3.12.0"
 val opentelemetryLogbackMdcVersion = "2.25.0-alpha"
 
 dependencies {
+    implementation(project(":technical-libs:logging"))
 
     implementation("com.github.kittinunf.fuel:fuel:$fuelVersion")
     implementation("com.github.kittinunf.fuel:fuel-jackson:$fuelVersion")

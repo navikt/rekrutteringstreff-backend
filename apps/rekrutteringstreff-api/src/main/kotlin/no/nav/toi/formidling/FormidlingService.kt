@@ -1,5 +1,6 @@
 package no.nav.toi.formidling
 
+import io.javalin.http.ForbiddenResponse
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
 import no.nav.toi.FormidlingHendelsestype
@@ -50,6 +51,15 @@ class FormidlingService(
         arbeidsgivere: List<String> = emptyList(),
     ): List<FormidlingDto> =
         formidlingRepository.hentEgneForTreff(treffId, veilederNavIdent, sortering, retning, arbeidsgivere)
+
+    fun hentFormidlingerForMittKontor(
+        treffId: TreffId,
+        tilknyttedeEnheter: List<String>,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> =
+        formidlingRepository.hentForMittKontorForTreff(treffId, tilknyttedeEnheter, sortering, retning, arbeidsgivere)
 
     fun opprettFormidling(
         treffId: TreffId,
@@ -264,6 +274,10 @@ class FormidlingService(
                 return
             }
             throw NotFoundResponse("Formidling med id $formidlingId finnes ikke på treffet")
+        }
+
+        if (formidling.opprettetAvNavIdent?.trim()?.uppercase() != navIdent.trim().uppercase()) {
+            throw ForbiddenResponse("Kan ikke slette formidling uten å eie den")
         }
 
         sendUtfallTilKandidatApi(formidling, userToken, eierNavKontorEnhetId, KandidatUtfall.PRESENTERT)

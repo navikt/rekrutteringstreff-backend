@@ -8,7 +8,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.rekrutteringstreff.TreffId
 
 class AktivitetskortFeilLytter(

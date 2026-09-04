@@ -120,7 +120,6 @@ class JobbsøkerSokYtelsesTest {
             return TreffId(treffUuid.toString())
         }
     }
-
     @Test
     fun `søk med 10k jobbsøkere holder terskelverdier`() {
         val warmupRequest = JobbsøkerSøkRequest(

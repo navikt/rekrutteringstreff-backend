@@ -2,6 +2,10 @@ plugins {
     id("toi.rapids-and-rivers")
 }
 
+application {
+    mainClass.set("no.nav.toi.AppKt")
+}
+
 val flywayVersion = "11.3.0"
 val postgresVersion = "42.7.10"
 val hikariVersion = "6.2.1"
@@ -13,6 +17,7 @@ val opentelemetryLogbackMdcVersion = "2.26.0-alpha"
 val openTelemetryAnnotationsVersion = "2.26.0"
 
 dependencies {
+    implementation(project(":technical-libs:logging"))
     implementation("io.javalin:javalin:${javalinVersion}")
     implementation("io.javalin:javalin-micrometer:${javalinVersion}")
     implementation("io.prometheus:simpleclient_common:0.16.0")

@@ -3,9 +3,10 @@ package no.nav.toi.jobbsoker.synlighet
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.opentelemetry.instrumentation.annotations.WithSpan
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.JobbsøkerService
-import org.slf4j.Logger
 import java.util.concurrent.TimeUnit
 
 /**
@@ -24,7 +25,6 @@ class SynlighetsBehovScheduler(
     leaderElection: LeaderElectionInterface,
 ) : ScheduledTask, Scheduler {
 
-    private val secureLogger: Logger = SecureLog(log)
     private val scheduler: Scheduler = DefaultScheduler(leaderElection, this, 60, 60, TimeUnit.SECONDS)
 
     override fun start() {
@@ -71,7 +71,7 @@ class SynlighetsBehovScheduler(
         )
 
         log.info("Publiserer synlighetsbehov for person (fødselsnummer i securelog)")
-        secureLogger.info("Publiserer synlighetsbehov for fødselsnummer: $fodselsnummer")
+        teamlog(log).info("Publiserer synlighetsbehov for fødselsnummer: $fodselsnummer")
 
         rapidsConnection.publish(fodselsnummer, melding.toJson())
     }

@@ -206,6 +206,21 @@ class FormidlingRepository(private val dataSource: DataSource) {
         return hentMedWhere(where, sortering, retning)
     }
 
+    fun hentForMittKontorForTreff(
+        treffId: TreffId,
+        tilknyttedeEnheter: List<String>,
+        sortering: FormidlingSortering = FormidlingSortering.TIDSPUNKT,
+        retning: FormidlingSorteringsretning? = null,
+        arbeidsgivere: List<String> = emptyList(),
+    ): List<FormidlingDto> {
+        val where = tilWhereClause(
+            byggBasisFilter(treffId)
+                + byggKontorFilter(tilknyttedeEnheter)
+                + byggArbeidsgiverFilter(arbeidsgivere)
+        )
+        return hentMedWhere(where, sortering, retning)
+    }
+
     private fun hentMedWhere(
         where: WhereClause,
         sortering: FormidlingSortering,
@@ -225,7 +240,9 @@ class FormidlingRepository(private val dataSource: DataSource) {
                     CASE WHEN j.sperret THEN NULL ELSE j.etternavn END AS etternavn,
                     j.sperret,
                     ag.orgnr,
-                    ag.orgnavn
+                    ag.orgnavn,
+                    j.id::text AS person_treff_id,
+                    ag.id::text AS arbeidsgiver_treff_id
                 FROM formidling f
                 JOIN rekrutteringstreff rt ON f.rekrutteringstreff_id = rt.rekrutteringstreff_id
                 JOIN jobbsoker j ON f.jobbsoker_id = j.jobbsoker_id
@@ -275,6 +292,8 @@ class FormidlingRepository(private val dataSource: DataSource) {
         sperret = getBoolean("sperret"),
         opprettetAvNavn = getString("opprettet_av_veileder_navn"),
         opprettetAvNavIdent = getString("opprettet_av_veileder_navident"),
+        personTreffId = getString("person_treff_id"),
+        arbeidsgiverTreffId = getString("arbeidsgiver_treff_id"),
     )
 
     private data class WhereClause(
@@ -328,6 +347,12 @@ class FormidlingRepository(private val dataSource: DataSource) {
         return listOf(Condition("ag.orgnr = ANY (?::text[])", SqlParam.TextArray(orgnr)))
     }
 
+    private fun byggKontorFilter(tilknyttedeEnheter: List<String>): List<Condition> {
+        val unikeEnheter = tilknyttedeEnheter.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.distinct()
+        if (unikeEnheter.isEmpty()) return listOf(Condition("FALSE"))
+        return listOf(Condition("f.kontornummer = ANY (?::text[])", SqlParam.TextArray(unikeEnheter)))
+    }
+
     private fun tilWhereClause(conditions: List<Condition>): WhereClause = WhereClause(
         sql = "WHERE " + conditions.joinToString(" AND ") { it.sql },
         params = conditions.flatMap { it.params },
@@ -343,6 +368,7 @@ class FormidlingRepository(private val dataSource: DataSource) {
         kandidatlisteId = getObject("kandidatliste_id", UUID::class.java),
         utfallSendtTidspunkt = getTimestamp("utfall_sendt_tidspunkt")?.toInstant()?.atZone(ZoneId.of("Europe/Oslo")),
         opprettetTidspunkt = getTimestamp("opprettet_tidspunkt").toInstant().atZone(ZoneId.of("Europe/Oslo")),
+        opprettetAvNavIdent = getString("opprettet_av_veileder_navident")
     )
 
     private fun PreparedStatement.setNullableUuid(index: Int, value: UUID?) {

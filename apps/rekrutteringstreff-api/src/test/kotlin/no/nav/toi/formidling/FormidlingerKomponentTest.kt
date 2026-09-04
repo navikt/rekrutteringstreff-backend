@@ -534,7 +534,14 @@ class FormidlingerKomponentTest {
             jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
         val kandidatlisteId = UUID.randomUUID()
-        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), kandidatlisteId)
+        db.opprettFormidling(
+            treffId = treffId,
+            personTreffId = personTreffIder[0],
+            arbeidsgiverTreffId = arbeidsgiverTreffId,
+            stillingId = UUID.randomUUID(),
+            kandidatlisteId = kandidatlisteId,
+            opprettetAvNavIdent = "A123456",
+        )
         val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
 
         val response = httpDelete(
@@ -564,7 +571,14 @@ class FormidlingerKomponentTest {
         val personTreffIder = leggTilJobbsøkere(treffId,
             jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
-        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+        db.opprettFormidling(
+            treffId = treffId,
+            personTreffId = personTreffIder[0],
+            arbeidsgiverTreffId = arbeidsgiverTreffId,
+            stillingId = UUID.randomUUID(),
+            kandidatlisteId = UUID.randomUUID(),
+            opprettetAvNavIdent = "A123456",
+        )
         val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
 
         val response = httpDelete(
@@ -609,7 +623,14 @@ class FormidlingerKomponentTest {
         val personTreffIder = leggTilJobbsøkere(treffId,
             jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Veil A"), VeilederNavIdent("V999998")),
         )
-        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
+        db.opprettFormidling(
+                treffId = treffId,
+                personTreffId = personTreffIder[0],
+                arbeidsgiverTreffId = arbeidsgiverTreffId,
+                stillingId = UUID.randomUUID(),
+                kandidatlisteId = UUID.randomUUID(),
+                opprettetAvNavIdent = "Z111111",
+            )
         val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
 
         val response = httpDelete(
@@ -640,26 +661,5 @@ class FormidlingerKomponentTest {
 
         assertThat(response.statusCode()).isEqualTo(403)
         assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).hasSize(1)
-    }
-
-    @Test
-    fun `veileder kan slette annen veileders formidling`() {
-        val annenVeilederIdent = "Z222222"
-        val treffId = opprettTreffMedEier("A123456")
-        val arbeidsgiverTreffId = leggTilArbeidsgiver(treffId)
-        val personTreffIder = leggTilJobbsøkere(treffId,
-            jobbsøker("11111111111", "Aase", "Testesen", Kontor("1000", "Nav Test"), VeilederNavn("Eier Veil"), VeilederNavIdent("V999998")),
-        )
-        db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, UUID.randomUUID(), UUID.randomUUID())
-        val formidlingId = ctx.formidlingService.hentAlleFormidlingerForTreff(treffId).single().id
-
-        val response = httpDelete(
-            "${formidlingPath(treffId)}/$formidlingId?eierNavKontorEnhetId=1234",
-            annenVeilederIdent,
-            listOf(AzureAdRoller.jobbsøkerrettet),
-        )
-
-        assertThat(response.statusCode()).isEqualTo(204)
-        assertThat(ctx.formidlingService.hentAlleFormidlingerForTreff(treffId)).isEmpty()
     }
 }

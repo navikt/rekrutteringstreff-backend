@@ -39,6 +39,7 @@ class JobbsøkerController(
         private const val inviterPath = "$jobbsøkerPath/inviter"
         private const val søkPath = "$jobbsøkerPath/sok"
         private const val formidlingEgnePath = "$jobbsøkerPath/formidling/egne"
+        private const val formidlingMittKontorPath = "$jobbsøkerPath/formidling/mittkontor"
         private const val formidlingAllePath = "$jobbsøkerPath/formidling/alle"
         val log: Logger = LoggerFactory.getLogger(this::class.java)
     }
@@ -51,6 +52,7 @@ class JobbsøkerController(
         routes.get(hendelserPath, hentJobbsøkerHendelserHandler())
         routes.post(inviterPath, inviterJobbsøkereHandler())
         routes.post(formidlingEgnePath, hentEgneJobbsøkereForFormidlingHandler())
+        routes.post(formidlingMittKontorPath, hentJobbsøkereForMittKontorForFormidlingHandler())
         routes.post(formidlingAllePath, hentAlleJobbsøkereForFormidlingHandler())
     }
 
@@ -241,6 +243,69 @@ class JobbsøkerController(
                 treffId = treff,
                 request = request,
                 veilederNavIdent = navIdent,
+                tilknyttedeEnheter = tilknyttedeEnheter,
+            )
+        )
+    }
+
+    @OpenApi(
+        summary = "Hent jobbsøkere for mitt kontor",
+        description = "Returnerer jobbsøkere på treffet der jobbsøkerens kontor matcher et av kontorene " +
+            "innlogget bruker er tilknyttet i Modia — uavhengig av hvem som er registrert som veileder. " +
+            "Inkluderer skjulte jobbsøkere (er_synlig=false), men ikke slettede. " +
+            "Krever jobbsøkerrettet rolle, men ingen eier-status. " +
+            "Støtter paginering og fritekst-søk på navn eller fødselsnummer.",
+        operationId = "hentJobbsøkereForMittKontorForFormidling",
+        security = [OpenApiSecurity(name = "BearerAuth")],
+        pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
+        requestBody = OpenApiRequestBody(
+            content = [OpenApiContent(
+                from = JobbsøkerFormidlingRequest::class,
+                example = """{"fritekst": "Ola", "side": 1, "antallPerSide": 25}"""
+            )]
+        ),
+        responses = [OpenApiResponse(
+            status = "200",
+            content = [OpenApiContent(
+                from = JobbsøkerFormidlingRespons::class,
+                example = """{
+                  "totalt": 2,
+                  "side": 1,
+                  "jobbsøkere": [
+                    {
+                      "personTreffId": "any-uuid",
+                      "fødselsnummer": "12345678901",
+                      "fornavn": "Frida",
+                      "etternavn": "Testberg",
+                      "status": "LAGT_TIL"
+                    },
+                    {
+                      "personTreffId": "any-uuid-2",
+                      "fødselsnummer": "10987654321",
+                      "fornavn": null,
+                      "etternavn": null,
+                      "status": "INVITERT"
+                    }
+                  ]
+                }"""
+            )]
+        )],
+        path = formidlingMittKontorPath,
+        methods = [HttpMethod.POST]
+    )
+    private fun hentJobbsøkereForMittKontorForFormidlingHandler(): (Context) -> Unit = { ctx ->
+        val innloggetBruker = ctx.authenticatedUser()
+        innloggetBruker.verifiserAutorisasjon(Rolle.JOBBSØKER_RETTET)
+        val treff = TreffId(ctx.pathParam(pathParamTreffId))
+        val navIdent = innloggetBruker.extractNavIdent()
+        val request = lesFormidlingRequest(ctx)
+        val tilknyttedeEnheter = modiaKlient.hentMineEnheter(innloggetBruker.innkommendeToken())
+
+        AuditLog.loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(navIdent, treff)
+        ctx.status(200).json(
+            jobbsøkerService.hentJobbsøkereForMittKontorForFormidling(
+                treffId = treff,
+                request = request,
                 tilknyttedeEnheter = tilknyttedeEnheter,
             )
         )

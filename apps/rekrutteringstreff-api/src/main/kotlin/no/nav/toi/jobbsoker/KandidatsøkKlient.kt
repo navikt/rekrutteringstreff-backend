@@ -11,7 +11,7 @@ import no.nav.toi.jobbsoker.Kandidatnummer
 import no.nav.toi.jobbsoker.Kontor
 import no.nav.toi.jobbsoker.VeilederNavIdent
 import no.nav.toi.jobbsoker.VeilederNavn
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.log
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest

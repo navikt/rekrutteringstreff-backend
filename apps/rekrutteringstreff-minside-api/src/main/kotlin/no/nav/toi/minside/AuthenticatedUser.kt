@@ -9,16 +9,14 @@ import com.auth0.jwt.exceptions.JWTVerificationException
 import com.auth0.jwt.interfaces.DecodedJWT
 import com.auth0.jwt.interfaces.RSAKeyProvider
 import io.javalin.http.Context
-import io.javalin.http.ForbiddenResponse
 import io.javalin.http.Header
 import io.javalin.http.InternalServerErrorResponse
 import io.javalin.http.UnauthorizedResponse
 import io.javalin.router.JavalinDefaultRoutingApi
+import no.nav.arbeidsgiver.toi.logging.noClassLogger
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
-import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.collections.plus
 
 private const val PERSON_IDENT_CLAIM = "pid"
 
