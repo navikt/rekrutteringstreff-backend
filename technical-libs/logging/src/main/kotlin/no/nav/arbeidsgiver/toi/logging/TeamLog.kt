@@ -125,13 +125,13 @@ class TeamLogLogger private constructor(private val l: Logger) {
          */
         internal fun validateTeamlogConfiguration(rootLogger: ch.qos.logback.classic.Logger) {
             val teamlogsAppender = requireNotNull(teamlogsAppender(rootLogger)) {
-                "Kan ikke logge til Team Logs. logback.xml mangler ROOT-appender med navn '$teamlogsAppenderName'."
+                "Kan ikke logge til Team Logs. logback.xml mangler ROOT-appender med navn som starter med '$teamlogsAppenderName'."
             }
             require(hasTeamlogsMarkerFilter(teamlogsAppender)) {
-                "Loggmeldinger med potensielt sensitive data beregnet til Team Logs kan havne i feil logg. logback.xml mangler markerfilter på ROOT-appender '$teamlogsAppenderName'. Forventet marker-navn: '$teamlogsMarkerName'."
+                "Loggmeldinger med potensielt sensitive data beregnet til Team Logs kan havne i feil logg. logback.xml mangler markerfilter (på en ROOT-appender med navn som starter med '$teamlogsAppenderName'). Forventet marker-navn: '$teamlogsMarkerName'."
             }
             require(allNonTeamlogsAppendersDenyTeamlogsMarker(rootLogger)) {
-                "Loggmeldinger med potensielt sensitive data beregnet til Team Logs kan havne i feil logg. Alle ROOT-appendere unntatt '$teamlogsAppenderName' må avvise marker '$teamlogsMarkerName'."
+                "Loggmeldinger med potensielt sensitive data beregnet til Team Logs kan havne i feil logg. Alle ROOT-appendere unntatt de med navn som starter med '$teamlogsAppenderName' må avvise marker '$teamlogsMarkerName'."
             }
         }
 
