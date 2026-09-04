@@ -33,7 +33,7 @@ Følgende nye opplysninger inngår i treffgjennomføringen:
 - vurderingsnotater, avtalt intervju og registrert jobbtilbud
 - hendelser som viser hvem som registrerte eller endret opplysninger
 
-## Dataflyt og tillitsgrenser
+#kanskje # Dataflyt og tillitsgrenser
 
 ```text
 [Nav-ansatt]
@@ -77,18 +77,18 @@ Følgende nye opplysninger inngår i treffgjennomføringen:
 Skalaen er 1–4, der 1 er lavest og 4 er høyest. Sannsynlighet og konsekvens er
 foreløpige vurderinger som må godkjennes av risikoeier.
 
-| ID | Risiko | S | K | Viktigste tiltak | Relatert pilot-ROS |
-| --- | --- | ---: | ---: | --- | --- |
-| WO-01 | Jobbsøkeren får ikke tilstrekkelig beslutningsgrunnlag når arbeidsgiverne skjules | 3 | 3 | Forklare format, bransjer, forventninger og frivillighet uten å røpe arbeidsgiverne | 27485, 27385, 27273 |
-| WO-02 | Arbeidsgivere avsløres mens de skal være skjult | 2 | 3 | Skjule i backend på alle innbyggerendepunkter og hindre navn i brukerrettet fritekst og varsler | 27383, 27215 |
-| WO-03 | WorkOp-navnet i SMS eller e-post røper arbeidsrettet oppfølging | 2 | 3 | Personvernvurdere ordlyden og begrense varslet til nødvendig informasjon | 27215, 27383 |
-| WO-04 | Vurderinger og notater kan inneholde helseopplysninger eller gi grunnlag for diskriminering | 3 | 4 | Faglig og personvernfaglig godkjent kodeverk, ingen fritekst og ingen sekundærbruk | 27219, 27216, 27227 |
-| WO-05 | Gjennomføringsdata lagres lenger enn nødvendig eller kan ikke korrigeres og slettes riktig | 3 | 4 | Fastsette behandlingsgrunnlag, slettefrist og rettingsløp for både tilstand og hendelser | 27486, 27227 |
-| WO-06 | Personer uten tjenstlig behov får tilgang til WorkOp- og gjennomføringsdata | 2 | 4 | Ressursbasert tilgang i backend, pilotavgrensning, auditlogg og tilgangsrevisjon | 27217, 27215 |
-| WO-07 | Feil eller samtidige registreringer gir uriktig oppmøte, interesse eller vurdering | 3 | 3 | Individuell registrering, låsing, tydelig lagringsstatus og sporbart rettingsløp | 27388, 27486 |
-| WO-08 | Nettverksbrudd under arrangementet gir manglende eller usikre registreringer | 2 | 3 | Forhåndssjekk, synlige feil, kontrollert reserveprosedyre og etterfølgende avstemming | 27386, 28065 |
-| WO-09 | WorkOp-kategori eller hendelser blir inkonsistente mellom tjenestene | 2 | 3 | Kontraktstester, konsument-før-produsent-utrulling, idempotens, målinger og avstemming | 27381, 27383, 27386 |
-| WO-10 | Utskrifter og deltakernummer gjør jobbsøkere identifiserbare i lokalet | 2 | 3 | Dataminimerte utskrifter, kontrollert utdeling, versjonsmerking, innsamling og makulering | 27215, 27227 |
+| ID    | Risiko                                                                                      |   S |   K | Viktigste tiltak                                                                                | Relatert pilot-ROS  |
+| ----- | ------------------------------------------------------------------------------------------- | --: | --: | ----------------------------------------------------------------------------------------------- | ------------------- |
+| WO-01 | Jobbsøkeren får ikke tilstrekkelig beslutningsgrunnlag når arbeidsgiverne skjules           |   3 |   3 | Forklare format, bransjer, forventninger og frivillighet uten å røpe arbeidsgiverne             | 27485, 27385, 27273 |
+| WO-02 | Arbeidsgivere avsløres mens de skal være skjult                                             |   2 |   3 | Skjule i backend på alle innbyggerendepunkter og hindre navn i brukerrettet fritekst og varsler | 27383, 27215        |
+| WO-03 | WorkOp-navnet i SMS eller e-post røper arbeidsrettet oppfølging                             |   2 |   3 | Personvernvurdere ordlyden og begrense varslet til nødvendig informasjon                        | 27215, 27383        |
+| WO-04 | Vurderinger og notater kan inneholde helseopplysninger eller gi grunnlag for diskriminering |   3 |   4 | Faglig og personvernfaglig godkjent kodeverk, ingen fritekst og ingen sekundærbruk              | 27219, 27216, 27227 |
+| WO-05 | Gjennomføringsdata lagres lenger enn nødvendig eller kan ikke korrigeres og slettes riktig  |   3 |   4 | Fastsette behandlingsgrunnlag, slettefrist og rettingsløp for både tilstand og hendelser        | 27486, 27227        |
+| WO-06 | Personer uten tjenstlig behov får tilgang til WorkOp- og gjennomføringsdata                 |   2 |   4 | Ressursbasert tilgang i backend, pilotavgrensning, auditlogg og tilgangsrevisjon                | 27217, 27215        |
+| WO-07 | Feil eller samtidige registreringer gir uriktig oppmøte, interesse eller vurdering          |   3 |   3 | Individuell registrering, låsing, tydelig lagringsstatus og sporbart rettingsløp                | 27388, 27486        |
+| WO-08 | Nettverksbrudd under arrangementet gir manglende eller usikre registreringer                |   2 |   3 | Forhåndssjekk, synlige feil, kontrollert reserveprosedyre og etterfølgende avstemming           | 27386, 28065        |
+| WO-09 | Feil kategori eller blanding av vanlig treff og WorkOp gir feil prosess og funksjoner       |   3 |   3 | Tydelige kriterier, begrenset oppretting, backendregler, kontraktstester og avviksoppfølging    | 27381, 27383, 27386 |
+| WO-10 | Utskrifter og deltakernummer gjør jobbsøkere identifiserbare i lokalet                      |   2 |   3 | Dataminimerte utskrifter, kontrollert utdeling, versjonsmerking, innsamling og makulering       | 27215, 27227        |
 
 ## WO-01 – utilstrekkelig beslutningsgrunnlag
 
@@ -283,15 +283,39 @@ etterregistrering.
 **Ansvar:** Arrangør og Team Toi.  
 **Ny vurdering:** Etter hver pilot der reserveprosedyren tas i bruk.
 
-## WO-09 – inkonsistens mellom tjenester
+## WO-09 – feil kategori og sammenblanding av trefftyper
 
-**Risiko:** WorkOp-kategori og egne hendelsesnavn går fra
-rekrutteringstreff-backend til aktivitetskort og kandidatvarsel. Ved delvis
-utrulling, ukjent kategori, konsumentfeil eller manglende hendelse kan
-jobbsøkeren få ordinær trefftekst, mangle varsling eller få usynkron status.
+**Risiko:** Et vanlig rekrutteringstreff kan ved en feil, eller bevisst for å
+få tilgang til treffgjennomføringsfunksjonene, opprettes som WorkOp uten at
+WorkOp-prosessen følges. Da kan arbeidsgivere skjules, egne varsler sendes og
+flere personopplysninger registreres uten at det er nødvendig for treffet.
+
+Det motsatte kan også skje: En reell WorkOp opprettes som vanlig
+rekrutteringstreff. Da kan arbeidsgiverne bli vist til jobbsøkerne,
+WorkOp-tekstene utebli og de særskilte kontrollene ikke bli brukt.
+
+Selv med riktig kategori kan delvis utrulling eller ulik tolkning i
+rekrutteringstreff-backend, aktivitetskort, kandidatvarsel og frontend gi en
+blanding av vanlig treff- og WorkOp-oppførsel.
 
 **Tiltak:**
 
+- Definer konkrete kriterier for når et treff er en WorkOp, hvem som kan velge
+  kategorien, og hvilke deler av WorkOp-prosessen som er obligatoriske.
+- Begrens oppretting av WorkOp på serversiden til godkjente brukere eller
+  kontorer i piloten. Vurder en egen tilgang også etter piloten dersom
+  arbeidsgiverrettet rolle blir for vid.
+- Forklar konsekvensene av kategorivalget og krev en eksplisitt bekreftelse
+  ved oppretting. Merk WorkOp tydelig i alle interne visninger.
+- Ikke tillat fritt kategoribytte etter at jobbsøkere er lagt til, treffet er
+  publisert eller gjennomføringsdata er registrert. En eventuell konvertering
+  må være en kontrollert handling som validerer og rydder berørte data og
+  varsler.
+- Håndhev i backend at WorkOp-spesifikke endepunkter bare kan brukes for
+  WorkOp, og at vanlige treff ikke får lagret de utvidede
+  gjennomføringsopplysningene.
+- Bruk en publiseringssjekkliste for å bekrefte at den obligatoriske
+  WorkOp-prosessen er planlagt før invitasjoner sendes.
 - Deploy konsumenter som forstår WorkOp før produsenten begynner å sende
   WorkOp-hendelser.
 - Ha kontraktstester for invitasjon, oppdatering, svar, fullføring og avlysning
@@ -301,14 +325,19 @@ jobbsøkeren få ordinær trefftekst, mangle varsling eller få usynkron status.
   personopplysninger som metrikklapper.
 - Avstem invitasjoner mot aktivitetskort og varsler, og varsle ved varige
   avvik eller konsumentlag.
+- Følg med på antall WorkOp-er per kontor og eier, og undersøk uventet bruk
+  eller treff som ikke følger den avtalte prosessen.
 - Ved rollback: stopp opprettelse av nye WorkOp-er, men la konsumentene
   behandle allerede publiserte hendelser.
 
-**Restrisiko:** Asynkron behandling gir alltid en periode med midlertidig
-ulikhet mellom systemene.
+**Restrisiko:** En bruker med legitim tilgang kan velge feil kategori eller
+bekrefte en sjekkliste uten å følge prosessen. Asynkron behandling gir også
+alltid en periode med midlertidig ulikhet mellom systemene.
 
-**Ansvar:** Team Toi og eiere av de berørte integrasjonene.  
-**Ny vurdering:** Etter produksjonspiloten og ved endring av hendelseskontrakten.
+**Ansvar:** Produkteier, fagansvarlig, Team Toi og eiere av de berørte
+integrasjonene.  
+**Ny vurdering:** Under produksjonspiloten, før bred utrulling og ved endring
+av WorkOp-prosessen eller hendelseskontrakten.
 
 ## WO-10 – identifisering via utskrifter
 
@@ -344,7 +373,8 @@ nummer og initialer til en person.
    restrisiko.
 4. Fastsett perioden arbeidsgivere skal være skjult, og kontroller alle
    brukerrettede kanaler.
-5. Fastsett tilgangsmodell og serversideavgrensning for piloten.
+5. Fastsett tilgangsmodell, kriterier for WorkOp og serversideavgrensning for
+   hvem som kan opprette WorkOp i piloten.
 6. Verifiser hendelseskontraktene og deploy konsumentene før produsenten.
 7. Etabler avstemming, overvåking og reserveprosedyre for arrangementsdagen.
 
@@ -353,8 +383,10 @@ nummer og initialer til en person.
 1. Evaluer forståelse, frivillighet, registreringsfeil og avvik fra piloten.
 2. Verifiser sletting og retting med faktiske pilotdata.
 3. Vurder om tilgangsmodellen og supporttilgangen kan snevres inn.
-4. Dokumenter hvilke restrisikoer produkteier aksepterer.
-5. Sett dato og ansvarlig for periodisk revurdering av ROS-en.
+4. Kontroller at opprettede WorkOp-er faktisk har fulgt WorkOp-prosessen, og
+   vurder om en egen opprettertilgang skal beholdes.
+5. Dokumenter hvilke restrisikoer produkteier aksepterer.
+6. Sett dato og ansvarlig for periodisk revurdering av ROS-en.
 
 ## Forhold som ikke er egne risikopunkter
 
@@ -373,9 +405,11 @@ utrullingsoppgaver:
 ## Rød sone – beslutninger som ikke kan tas av utviklingsteamet alene
 
 - [ ] Behandlingsgrunnlag og lagringstid for oppmøte, interesser, vurderinger
-  og hendelser
+      og hendelser
 - [ ] Om helse-/kapasitetsnotatet kan brukes
 - [ ] Hvem som har tjenstlig behov i pilot og ordinær produksjon
+- [ ] Hvem som kan velge WorkOp-kategorien, og hvilke minstekrav WorkOp-prosessen
+      skal oppfylle
 - [ ] Om WorkOp-navnet kan stå i SMS og e-post
 - [ ] Når arbeidsgiveridentiteten eventuelt kan vises til jobbsøkeren
 
