@@ -2,6 +2,7 @@ package no.nav.toi.jobbsoker.aktivitetskort
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.time.ZonedDateTime
 import java.util.*
@@ -10,6 +11,7 @@ class Aktivitetskortinvitasjon private constructor(
     private val fnr: String,
     private val rekrutteringstreffId: TreffId,
     private val hendelseId: UUID,
+    private val kategori: RekrutteringstreffKategori,
     private val tittel: String,
     private val fraTid: ZonedDateTime,
     private val tilTid: ZonedDateTime,
@@ -25,6 +27,7 @@ class Aktivitetskortinvitasjon private constructor(
             fnr: String,
             rekrutteringstreffId: TreffId,
             hendelseId: UUID,
+            kategori: RekrutteringstreffKategori,
             tittel: String,
             fraTid: ZonedDateTime?,
             tilTid: ZonedDateTime?,
@@ -38,6 +41,7 @@ class Aktivitetskortinvitasjon private constructor(
             fnr = fnr,
             rekrutteringstreffId = rekrutteringstreffId,
             hendelseId = hendelseId,
+            kategori = kategori,
             tittel = tittel,
             opprettetAv = opprettetAv,
             opprettetTidspunkt = opprettetTidspunkt,
@@ -51,12 +55,14 @@ class Aktivitetskortinvitasjon private constructor(
     }
 
     fun publiserTilRapids(rapidsConnection: RapidsConnection) {
+        val eventName = if (kategori == RekrutteringstreffKategori.WORKOP) "workopinvitasjon" else "rekrutteringstreffinvitasjon"
         val message = JsonMessage.newMessage(
-            eventName = "rekrutteringstreffinvitasjon",
+            eventName = eventName,
             map = mapOf<String, Any>(
                 "fnr" to fnr,
                 "rekrutteringstreffId" to rekrutteringstreffId.somUuid,
                 "hendelseId" to hendelseId,
+                "kategori" to kategori.name,
                 "tittel" to tittel,
                 "beskrivelse" to "TODO",
                 "fraTid" to fraTid,

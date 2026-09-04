@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff
 import no.nav.toi.JacksonConfig
 import no.nav.toi.LeaderElectionInterface
 import no.nav.toi.LeaderElectionMock
+import no.nav.toi.Miljø
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
@@ -37,7 +38,8 @@ class RekrutteringstreffSchedulerTest {
             jobbsøkerRepository,
             arbeidsgiverRepository,
             jobbsøkerService,
-            EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource)
+            EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource),
+            Miljø.LOKALT,
         )
     }
 

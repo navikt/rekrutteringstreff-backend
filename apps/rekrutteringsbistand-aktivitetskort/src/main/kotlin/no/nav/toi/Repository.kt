@@ -27,14 +27,14 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         fnr: String,
         rekrutteringstreffId: UUID,
         tittel: String,
-        beskrivelse: String,
         startDato: LocalDate,
         sluttDato: LocalDate,
         tid: String,
         endretAv: String,
         gateAdresse: String,
         postnummer: String,
-        poststed: String
+        poststed: String,
+        aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
     ): UUID? {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -66,13 +66,13 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         fnr, tittel, beskrivelse, start_dato, slutt_dato, 
                         message_id, aktivitetskort_id, aktivitets_status,
                         endret_av, endret_av_type, endret_tidspunkt,
-                        detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}', ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json, ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false)
+                        detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav, aktivitetskort_type
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}', ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json, ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, ?)
                     """.trimIndent()
                     ).apply {
                         setString(1, fnr)
                         setString(2, tittel)
-                        setString(3, beskrivelse)
+                        setString(3, aktivitetskortType.beskrivelse)
                         setObject(4, startDato)
                         setObject(5, sluttDato)
                         setObject(6, messageId)
@@ -92,16 +92,20 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                             objectMapper.writeValueAsString(
                                 listOf(
                                     AktivitetskortHandling(
-                                        "Sjekk ut treffet",
-                                        "Sjekk ut treffet og svar",
+                                        aktivitetskortType.handlingTittel,
+                                        aktivitetskortType.handlingSubtekst,
                                         "$minsideUrl/$rekrutteringstreffId",
                                         LenkeType.FELLES
                                     )
                                 )
                             )
                         )
-                        setString(12, "[]")
+                        setString(
+                            12,
+                            objectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
+                        )
                         setNull(13, VARCHAR)
+                        setString(14, aktivitetskortType.name)
                     }.executeUpdate()
 
                     connection.commit()
@@ -146,7 +150,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         etiketter = AktivitetskortEtikett.fraAkaasJson(resultSet.getString("etiketter")),
                         oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
                         avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
-                        sendtTidspunkt = null
+                        sendtTidspunkt = null,
+                        aktivitetskortType = resultSet.getString("aktivitetskort_type").let(::enumValueOf)
                     )
                 } else {
                     null
@@ -220,6 +225,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                                     ?.let { AktivitetskortOppgave.fraAkaasJson(it) },
                                 avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
                                 sendtTidspunkt = null,
+                                aktivitetskortType = resultSet.getString("aktivitetskort_type").let(::enumValueOf),
                             ),
                             rekrutteringstreffId = resultSet.getObject("rekrutteringstreff_id", UUID::class.java)
                                 .toString(),
@@ -279,7 +285,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 INSERT INTO aktivitetskort
                 (message_id, aktivitetskort_id, fnr, tittel, aktivitets_status, beskrivelse, start_dato, 
                 slutt_dato, detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav, endret_av, 
-                endret_av_type, endret_tidspunkt)
+                endret_av_type, endret_tidspunkt, aktivitetskort_type)
                 SELECT
                     ?,
                     aktivitetskort_id,
@@ -297,7 +303,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     avtalt_med_nav,
                     ?,
                     ?,
-                    ?
+                    ?,
+                    aktivitetskort_type
                 FROM aktivitetskort
                 WHERE aktivitetskort_id = ?
                 ORDER BY endret_tidspunkt DESC
@@ -340,7 +347,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                 INSERT INTO aktivitetskort
                 (message_id, aktivitetskort_id, fnr, tittel, aktivitets_status, beskrivelse, start_dato, 
                 slutt_dato, detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav, endret_av, 
-                endret_av_type, endret_tidspunkt)
+                endret_av_type, endret_tidspunkt, aktivitetskort_type)
                 SELECT
                     ?,
                     aktivitetskort_id,
@@ -358,7 +365,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     avtalt_med_nav,
                     ?,
                     ?,
-                    ?
+                    ?,
+                    aktivitetskort_type
                 FROM aktivitetskort
                 WHERE aktivitetskort_id = ?
                 ORDER BY endret_tidspunkt DESC

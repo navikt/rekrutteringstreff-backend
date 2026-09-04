@@ -12,13 +12,19 @@ import no.nav.toi.Repository
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 
-class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, private val repository: Repository) :
-    River.PacketListener {
+import no.nav.toi.aktivitetskort.AktivitetskortType
+
+class RekrutteringstreffInvitasjonLytter(
+    rapidsConnection: RapidsConnection,
+    private val repository: Repository,
+    private val aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
+) : River.PacketListener {
+    private val eventName = aktivitetskortType.eventName
 
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "rekrutteringstreffinvitasjon")
+                it.requireValue("@event_name", eventName)
                 it.forbid("aktivitetskortuuid")
                 it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
@@ -38,7 +44,7 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         metadata: MessageMetadata,
         meterRegistry: MeterRegistry
     ) {
-        log.info("Mottok rekrutteringstreffinvitasjon")
+        log.info("Mottok $eventName")
         val fnr = packet["fnr"].asText()
 
         val startDato = packet["fraTid"].asZonedDateTime()
@@ -48,14 +54,14 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
             fnr = fnr,
             rekrutteringstreffId = packet["rekrutteringstreffId"].asText().toUUID(),
             tittel = packet["tittel"].asText(),
-            beskrivelse = "Nav arrangerer rekrutteringstreff. På treffet møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
             startDato = startDato.toLocalDate(),
             sluttDato = sluttDato.toLocalDate(),
             tid = formaterTidsperiode(startDato, sluttDato),
             endretAv = packet["opprettetAv"].asText(),
             gateAdresse = packet["gateadresse"].asText(),
             postnummer = packet["postnummer"].asText(),
-            poststed = packet["poststed"].asText()
+            poststed = packet["poststed"].asText(),
+            aktivitetskortType = aktivitetskortType,
         )
         if (aktivitetskortId != null) {
             packet["aktivitetskortuuid"] = aktivitetskortId
@@ -68,8 +74,8 @@ class RekrutteringstreffInvitasjonLytter(rapidsConnection: RapidsConnection, pri
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
-        log.error("Feil ved behandling av rekrutteringstreffinvitasjon: $problems")
-        teamlog(log).error("Feil ved behandling av rekrutteringstreffinvitasjon: ${problems.toExtendedReport()}")
+        log.error("Feil ved behandling av $eventName: $problems")
+        teamlog(log).error("Feil ved behandling av $eventName: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }

@@ -7,9 +7,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
 import no.nav.toi.aktivitetskort.AktivitetskortJobb
+import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.toi.aktivitetskort.ErrorType
+import no.nav.toi.aktivitetskort.Sentiment
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
@@ -66,7 +69,7 @@ class AktivitetskortTest {
         val expectedFnr = "12345678910"
         val expectedRekrutteringstreffId = UUID.randomUUID()
         val expectedTittel = "Test Rekrutteringstreff"
-        val expectedBeskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff."
+        val expectedBeskrivelse = AktivitetskortType.REKRUTTERINGSTREFF.beskrivelse
         val expectedStartDato = LocalDate.now().plusDays(1)
         val expectedSluttDato = LocalDate.now().plusDays(2)
         val expectedEndretAv = "testuser"
@@ -78,7 +81,6 @@ class AktivitetskortTest {
             fnr = expectedFnr,
             rekrutteringstreffId = expectedRekrutteringstreffId,
             tittel = expectedTittel,
-            beskrivelse = expectedBeskrivelse,
             startDato = expectedStartDato,
             sluttDato = expectedSluttDato,
             tid = expectedTid,
@@ -121,6 +123,38 @@ class AktivitetskortTest {
     }
 
     @Test
+    fun `workop skal gi type WORKOP og tilpassede tekster paa aktivitetskortet`() {
+        val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
+        repository.opprettRekrutteringstreffInvitasjon(
+            fnr = "12345678910",
+            rekrutteringstreffId = UUID.randomUUID(),
+            tittel = "Test WorkOp",
+            startDato = LocalDate.now().plusDays(1),
+            sluttDato = LocalDate.now().plusDays(2),
+            tid = "18.08.25 kl 08:00-10:00",
+            endretAv = "testuser",
+            gateAdresse = "Test Sted",
+            postnummer = "1234",
+            poststed = "Test Poststed",
+            aktivitetskortType = AktivitetskortType.WORKOP
+        )
+
+        AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
+
+        val tree = producer.history().first().value().let(objectMapper::readTree)
+        assertThat(tree["aktivitetskortType"].asText()).isEqualTo("WORKOP")
+        assertThat(tree["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(AktivitetskortType.WORKOP.beskrivelse)
+
+        val etiketter = tree["aktivitetskort"]["etiketter"]
+        assertThat(etiketter).isEmpty()
+
+        val handlinger = tree["aktivitetskort"]["handlinger"]
+        assertThat(handlinger).hasSize(1)
+        assertThat(handlinger[0]["tekst"].asText()).isEqualTo("Sjekk ut WorkOp-en")
+        assertThat(handlinger[0]["subtekst"].asText()).isEqualTo("Sjekk ut WorkOp-en og svar")
+    }
+
+    @Test
     fun `tittel med spesialtegn skal gi gyldig json og bevares uendret`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         val expectedFnr = "12345678910"
@@ -130,7 +164,6 @@ class AktivitetskortTest {
             fnr = expectedFnr,
             rekrutteringstreffId = expectedRekrutteringstreffId,
             tittel = expectedTittel,
-            beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
             startDato = LocalDate.now().plusDays(1),
             sluttDato = LocalDate.now().plusDays(2),
             tid = "18.08.25 kl 08:00-10:00",
@@ -158,7 +191,6 @@ class AktivitetskortTest {
             fnr = "12345678910",
             rekrutteringstreffId = UUID.randomUUID(),
             tittel = "Test Rekrutteringstreff",
-            beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
             startDato = LocalDate.now().plusDays(1),
             sluttDato = LocalDate.now().plusDays(2),
             tid = "Whatever",
@@ -454,7 +486,6 @@ private fun Repository.opprettTestRekrutteringstreffInvitasjon() {
         fnr = "12345678910",
         rekrutteringstreffId = UUID.randomUUID(),
         tittel = "Test Rekrutteringstreff",
-        beskrivelse = "Dette er en testbeskrivelse for rekrutteringstreff.",
         startDato = LocalDate.now().plusDays(1),
         sluttDato = LocalDate.now().plusDays(2),
         tid = "Whatever",

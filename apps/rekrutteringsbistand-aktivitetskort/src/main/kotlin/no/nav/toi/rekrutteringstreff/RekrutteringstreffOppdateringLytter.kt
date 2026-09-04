@@ -15,13 +15,14 @@ import no.nav.arbeidsgiver.toi.logging.log
 
 class RekrutteringstreffOppdateringLytter(
     rapidsConnection: RapidsConnection,
-    private val repository: Repository
+    private val repository: Repository,
+    private val eventName: String = "rekrutteringstreffoppdatering"
 ) : River.PacketListener {
 
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "rekrutteringstreffoppdatering")
+                it.requireValue("@event_name", eventName)
                 it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
