@@ -247,6 +247,8 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                                     ?.toString()
                                     ?: error("Mangler stillingId for aktivitetskort $aktivitetskortId"),
                             )
+
+                            AktivitetskortType.WORKOP -> WorkOpFeilMelding(fellesMeldingsfelter = fellesMeldingsfelter)
                         }
                     } else {
                         null
@@ -608,7 +610,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
 
                 if (endredeLinjer == 0) {
                     connection.rollback()
-                    secureLog.info("Aktivitetskort finnes allerede for stilling $stillingId og fnr")
+                    teamLog.info("Aktivitetskort finnes allerede for stilling $stillingId og fnr")
                     return null
                 }
 

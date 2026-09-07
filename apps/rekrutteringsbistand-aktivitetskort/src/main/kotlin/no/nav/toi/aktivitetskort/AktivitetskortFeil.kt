@@ -46,3 +46,9 @@ internal class DeltStillingFeilMelding(
 ) : AktivitetskortFeil(fellesMeldingsfelter) {
     override val eventName = "aktivitetskort-feil-deltstilling"
 }
+
+internal class WorkOpFeilMelding(
+    fellesMeldingsfelter: FellesMeldingsfelter,
+) : AktivitetskortFeil(fellesMeldingsfelter) {
+    override val eventName = "aktivitetskort-feil-workop"
+}

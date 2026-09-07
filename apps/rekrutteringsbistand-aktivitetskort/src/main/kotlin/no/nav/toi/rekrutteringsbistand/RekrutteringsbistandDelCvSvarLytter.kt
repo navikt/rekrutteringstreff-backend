@@ -8,11 +8,11 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
-import no.nav.toi.SecureLog
 import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.EndretAvType
-import no.nav.toi.log
 
 private enum class DelCvSvar(
     val eventName: String,
@@ -36,7 +36,6 @@ class RekrutteringsbistandDelCvSvarLytter private constructor(
     private val repository: Repository,
     private val delCvSvar: DelCvSvar,
 ) : River.PacketListener {
-    private val secureLog = SecureLog(log)
 
     init {
         River(rapidsConnection).apply {
@@ -64,11 +63,11 @@ class RekrutteringsbistandDelCvSvarLytter private constructor(
 
         if (aktivitetskortId == null) {
             log.error("Fant ikke aktivitetskort for delt stilling med id $stillingId (se secure log)")
-            secureLog.error("Fant ikke aktivitetskort for delt stilling med id $stillingId for personbruker $fnr")
+            teamlog(log).error("Fant ikke aktivitetskort for delt stilling med id $stillingId for personbruker $fnr")
             return
         }
 
-        secureLog.info(
+        teamlog(log).info(
             "Oppdaterer aktivitetsstatus for delt stilling med id $stillingId for personbruker $fnr " +
                 "til ${delCvSvar.aktivitetsStatus} (svar=${delCvSvar.svar})"
         )
@@ -86,7 +85,7 @@ class RekrutteringsbistandDelCvSvarLytter private constructor(
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av ${delCvSvar.eventName}: $problems")
-        secureLog.error("Feil ved behandling av ${delCvSvar.eventName}: ${problems.toExtendedReport()}")
+        teamlog(log).error("Feil ved behandling av ${delCvSvar.eventName}: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 

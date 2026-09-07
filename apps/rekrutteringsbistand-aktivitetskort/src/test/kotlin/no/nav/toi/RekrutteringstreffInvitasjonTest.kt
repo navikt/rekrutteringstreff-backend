@@ -121,7 +121,6 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetsType).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
-            assertThat(this[0].aktivitetskortType).isEqualTo("REKRUTTERINGSTREFF")
         }
     }
 
@@ -289,7 +288,7 @@ class RekrutteringstreffInvitasjonTest {
                 eventName = "workopinvitasjon"
             )
         )
-        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
@@ -306,7 +305,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
-            assertThat(this[0].aktivitetskortType).isEqualTo("WORKOP")
+            assertThat(this[0].aktivitetsType).isEqualTo(AktivitetskortType.WORKOP.name)
         }
 
         inspektør.message(0).also { message ->

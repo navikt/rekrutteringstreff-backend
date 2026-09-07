@@ -178,6 +178,12 @@ enum class AktivitetskortType(
         beskrivelse = "Nav arrangerer WorkOp. På WorkOp-en møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
         handlingTittel = "Sjekk ut WorkOp-en",
         handlingSubtekst = "Sjekk ut WorkOp-en og svar",
+    ),
+    DELTSTILLING(
+        eventName = "deltstilling",
+        beskrivelse = "Nav arrangerer deltstilling",
+        handlingTittel = "Sjekk ut deltstilling",
+        handlingSubtekst = "Sjekk ut deltstilling",
     )
 }
 

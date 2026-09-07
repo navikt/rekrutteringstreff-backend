@@ -56,6 +56,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
         meterRegistry = meterRegistry,
         isRunning = {true},
         isReady = {true},
+        workOpLyttereAktivert = false
     )
 
     @BeforeAll

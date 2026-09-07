@@ -9,15 +9,15 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
-import no.nav.toi.SecureLog
-import no.nav.toi.log
 
 class KandidatlisteLukketLytter(
     rapidsConnection: RapidsConnection,
     private val repository: Repository,
 ) : River.PacketListener {
-    private val secureLog = SecureLog(log)
 
     init {
         River(rapidsConnection).apply {
@@ -72,7 +72,7 @@ class KandidatlisteLukketLytter(
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av LukketKandidatliste: $problems")
-        secureLog.error("Feil ved behandling av LukketKandidatliste: ${problems.toExtendedReport()}")
+        teamlog(log).error("Feil ved behandling av LukketKandidatliste: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }
