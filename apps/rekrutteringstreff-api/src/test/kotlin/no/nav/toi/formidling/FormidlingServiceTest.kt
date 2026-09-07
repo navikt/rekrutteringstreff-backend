@@ -1,5 +1,6 @@
 package no.nav.toi.formidling
 
+import io.javalin.http.ForbiddenResponse
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.JacksonConfig
 import no.nav.toi.arbeidsgiver.*
@@ -303,7 +304,14 @@ class FormidlingServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingId = db.opprettFormidling(
+            treffId = treffId,
+            personTreffId = personTreffId,
+            arbeidsgiverTreffId = orgnr,
+            stillingId = stillingId,
+            kandidatlisteId = kandidatlisteId,
+            opprettetAvNavIdent = "testperson"
+        )
         val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         // Verifiser at formidling finnes
@@ -325,7 +333,14 @@ class FormidlingServiceTest {
         jobbsøkerService.inviter(listOf(personTreffId), treffId, "testperson")
         jobbsøkerService.svarJaTilInvitasjon(fnr, treffId, "testperson")
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingId = db.opprettFormidling(
+            treffId = treffId,
+            personTreffId = personTreffId,
+            arbeidsgiverTreffId = orgnr,
+            stillingId = stillingId,
+            kandidatlisteId = kandidatlisteId,
+            opprettetAvNavIdent = "testperson"
+        )
         val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         // Simuler at jobbsøkeren har fått jobb (slik opprettelse av formidling gjør)
@@ -352,7 +367,14 @@ class FormidlingServiceTest {
         jobbsøkerService.inviter(listOf(personTreffId), treffId, "testperson")
         jobbsøkerService.svarNeiTilInvitasjon(fnr, treffId, "testperson")
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingId = db.opprettFormidling(
+            treffId = treffId,
+            personTreffId = personTreffId,
+            arbeidsgiverTreffId = orgnr,
+            stillingId = stillingId,
+            kandidatlisteId = kandidatlisteId,
+            opprettetAvNavIdent = "testperson"
+        )
         val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         db.dataSource.executeInTransaction { connection ->
@@ -368,6 +390,41 @@ class FormidlingServiceTest {
     }
 
     @Test
+    fun `slett formidling kaster ForbiddenResponse når identen ikke er den som opprettet formidlingen`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
+        val orgnr = "123456789"
+        val stillingId = UUID.randomUUID()
+        val kandidatlisteId = UUID.randomUUID()
+
+        arbeidsgiverService.leggTilArbeidsgiver(
+            LeggTilArbeidsgiver(Orgnr(orgnr), Orgnavn("Test AS"), emptyList(), null, null, null),
+            treffId, "eier"
+        )
+
+        jobbsøkerService.leggTilJobbsøkere(
+            listOf(LeggTilJobbsøker(Fødselsnummer("12345678901"), Fornavn("Ola"), Etternavn("Nordmann"), null, null, null)),
+            treffId, "eier"
+        )
+
+        every {
+            stillingKlient.opprettFormidlingStillingOgKandidatliste(any(), any())
+        } returns OpprettFormidlingStillingRespons(stillingsId = stillingId, kandidatlisteId = kandidatlisteId)
+
+        val opprettet = formidlingService.opprettFormidling(
+            treffId = treffId,
+            opprettFormidling = opprettFormidlingDto(orgnr, "12345678901"),
+            navIdent = "eier",
+            userToken = "test-token",
+        ).first()
+
+        assertThatThrownBy {
+            formidlingService.slett(treffId, opprettet.id, "annenperson", "dummytoken", "1234")
+        }.isInstanceOf(ForbiddenResponse::class.java)
+
+        assertThat(formidlingService.hent(opprettet.formidlingId)).isNotNull
+    }
+
+    @Test
     fun `slett formidling via treffId og UUID kaster NotFoundResponse når formidling ikke finnes på treffet`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         assertThatThrownBy {
@@ -380,7 +437,7 @@ class FormidlingServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingId = db.opprettFormidling(treffId = treffId, personTreffId = personTreffId, arbeidsgiverTreffId = orgnr, stillingId = stillingId, kandidatlisteId = kandidatlisteId, opprettetAvNavIdent = "testperson")
         val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         // Slett første gang
@@ -414,8 +471,22 @@ class FormidlingServiceTest {
 
         val personTreffIder = jobbsøkerService.hentJobbsøkere(treffId).map { it.personTreffId }
 
-        val formidlingId1 = db.opprettFormidling(treffId, personTreffIder[0], arbeidsgiverTreffId, stillingId, kandidatlisteId)
-        val formidlingId2 = db.opprettFormidling(treffId, personTreffIder[1], arbeidsgiverTreffId, stillingId, kandidatlisteId)
+        val formidlingId1 = db.opprettFormidling(
+            treffId = treffId,
+            personTreffId = personTreffIder[0],
+            arbeidsgiverTreffId = arbeidsgiverTreffId,
+            stillingId = stillingId,
+            kandidatlisteId = kandidatlisteId,
+            opprettetAvNavIdent = "testperson"
+        )
+        val formidlingId2 = db.opprettFormidling(
+            treffId = treffId,
+            personTreffId = personTreffIder[1],
+            arbeidsgiverTreffId = arbeidsgiverTreffId,
+            stillingId = stillingId,
+            kandidatlisteId = kandidatlisteId,
+            opprettetAvNavIdent = "testperson"
+        )
 
         // Begge finnes
         assertThat(formidlingService.hent(formidlingId1)).isNotNull
@@ -434,7 +505,14 @@ class FormidlingServiceTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "testperson", tittel = "TestTreff")
         val (personTreffId, orgnr, stillingId, kandidatlisteId) = opprettTestdataForFormidling(treffId)
 
-        val formidlingId = db.opprettFormidling(treffId, personTreffId, orgnr, stillingId, kandidatlisteId)
+        val formidlingId = db.opprettFormidling(
+            treffId = treffId,
+            personTreffId = personTreffId,
+            arbeidsgiverTreffId = orgnr,
+            stillingId = stillingId,
+            kandidatlisteId = kandidatlisteId,
+            opprettetAvNavIdent = "testperson"
+        )
         val formidlingUuid = formidlingService.hent(formidlingId)!!.id
 
         val arbeidsgiverTreffId = arbeidsgiverService.hentArbeidsgivere(treffId).first().arbeidsgiverTreffId

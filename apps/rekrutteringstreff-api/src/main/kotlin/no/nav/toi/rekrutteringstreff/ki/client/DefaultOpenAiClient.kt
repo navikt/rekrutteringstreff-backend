@@ -2,8 +2,8 @@ package no.nav.toi.rekrutteringstreff.ki.client
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
-import no.nav.toi.SecureLog
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import no.nav.toi.rekrutteringstreff.ki.EkstraMetaDbJson
@@ -22,7 +22,7 @@ class DefaultOpenAiClient(
     private val openAiProperties: OpenAiProperties,
 ) : OpenAiClient {
     private val mapper = JacksonConfig.mapper
-    private val secureLogger = SecureLog(log)
+    private val teamLog = TeamLogLogger.teamlog(log)
     private val zdtFormatter = DateTimeFormatter.ISO_ZONED_DATE_TIME
 
     companion object {
@@ -38,7 +38,7 @@ class DefaultOpenAiClient(
 
         val elapsedMs = measureTimeMillis {
             val userMessageFiltered = PersondataFilter.filtrerUtPersonsensitiveData(tekst)
-            secureLogger.info("melding før filter: $tekst etter filter: $userMessageFiltered")
+            teamLog.info("melding før filter: $tekst etter filter: $userMessageFiltered")
 
             if (userMessageFiltered.isBlank()) {
                 result = ValiderRekrutteringstreffResponsDto(
@@ -71,13 +71,13 @@ class DefaultOpenAiClient(
 
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
-            secureLogger.info("kimelding input: $userMessageFiltered  response: $response")
+            teamLog.info("kimelding input: $userMessageFiltered  response: $response")
 
             if (response.statusCode() == 429) {
-                secureLogger.warn("For mange requester mot OpenAI.")
+                teamLog.warn("For mange requester mot OpenAI.")
                 throw RuntimeException("For mange requester mot OpenAI: ${response.statusCode()} - ${response.body()}")
             } else if (response.statusCode() == 400) {
-                secureLogger.warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
+                teamLog.warn("Teksten bryter med retningslinjene til OpenAi: ${response.statusCode()} - ${response.body()}")
                 val error = mapper.readValue<OpenAiBadRequestDto>(response.body())
                 val contentFilterResult = error.error?.innererror?.content_filter_result
 
@@ -92,7 +92,7 @@ class DefaultOpenAiClient(
                     )
                     filtered = userMessageFiltered
                 } else {
-                    secureLogger.error("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
+                    teamLog.error("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
                     throw RuntimeException("Uventet feil ved kall mot OpenAI uten content_filter_result: ${response.statusCode()} - ${response.body()}")
                 }
 
@@ -117,7 +117,7 @@ class DefaultOpenAiClient(
                 }
 
             } else {
-                secureLogger.error("Feil ved kall mot OpenAI: ${response.statusCode()}")
+                teamLog.error("Feil ved kall mot OpenAI: ${response.statusCode()}")
                 throw RuntimeException("Feil ved kall mot OpenAI: ${response.statusCode()} - ${response.body()}")
             }
         }

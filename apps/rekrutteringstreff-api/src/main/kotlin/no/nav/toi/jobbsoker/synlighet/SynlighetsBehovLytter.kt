@@ -7,10 +7,9 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
-import no.nav.toi.SecureLog
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.jobbsoker.JobbsøkerService
-import no.nav.toi.log
-import org.slf4j.Logger
 
 /**
  * Lytter på svar fra need-meldinger (synlighetRekrutteringstreff).
@@ -30,7 +29,7 @@ class SynlighetsBehovLytter(
     private val jobbsøkerService: JobbsøkerService
 ) : River.PacketListener {
 
-    private val secureLogger: Logger = SecureLog(log)
+    private val teamLog = TeamLogLogger.teamlog(log)
 
     init {
         log.info("SynlighetsBehovLytter initialisert")
@@ -63,7 +62,7 @@ class SynlighetsBehovLytter(
         val ferdigBeregnet = synlighetNode["ferdigBeregnet"]?.asBoolean() ?: false
         val erSynligNode = synlighetNode["erSynlig"]
         val sperret = synlighetNode["sperret"]?.asBoolean() ?: false
-        
+
         // Hvis ikke ferdigBeregnet eller erSynlig mangler, behandle som ikke-synlig (fail-safe)
         val erSynlig = if (ferdigBeregnet && erSynligNode != null && !erSynligNode.isNull) {
             erSynligNode.asBoolean()
@@ -73,13 +72,13 @@ class SynlighetsBehovLytter(
         }
 
         log.info("Mottok need-svar for synlighetRekrutteringstreff: erSynlig=$erSynlig, sperret=$sperret, ferdigBeregnet=$ferdigBeregnet")
-        secureLogger.info("Mottok need-svar for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig, sperret=$sperret")
+        teamLog.info("Mottok need-svar for fødselsnummer: $fodselsnummer, erSynlig=$erSynlig, sperret=$sperret")
 
         val oppdatert = jobbsøkerService.oppdaterSynlighetFraNeed(fodselsnummer, erSynlig, sperret, meldingTidspunkt)
 
         if (oppdatert > 0) {
             log.info("Oppdaterte synlighet i $oppdatert rekrutteringstreff fra need-svar")
-            secureLogger.info("Oppdaterte synlighet for fødselsnummer $fodselsnummer i $oppdatert treff, erSynlig=$erSynlig")
+            teamLog.info("Oppdaterte synlighet for fødselsnummer $fodselsnummer i $oppdatert treff, erSynlig=$erSynlig")
         } else {
             log.info("Ingen oppdatering fra need-svar (synlighet allerede satt av event-strøm eller person ikke funnet i noen treff)")
         }

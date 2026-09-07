@@ -6,6 +6,7 @@ import io.javalin.openapi.OpenApi
 import io.javalin.openapi.OpenApiContent
 import io.javalin.openapi.OpenApiResponse
 import io.javalin.router.JavalinDefaultRoutingApi
+import no.nav.arbeidsgiver.toi.logging.log
 
 class HealthController(private val healthRepository: HealthRepository)  : RuteRegistrerer {
     companion object {

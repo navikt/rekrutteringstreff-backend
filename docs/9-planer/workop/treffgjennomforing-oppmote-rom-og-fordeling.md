@@ -47,28 +47,28 @@ endepunkter.
 
 ## Beslutninger (avklart)
 
-| Tema                   | Valg                                                                                                                                                                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Omfang                 | **Alle treff** har en treffgjennomføring. WorkOp (`kategori === WORKOP`) er den samme treffgjennomføringen utvidet med møteoppsett, rom og intervjufordeling – de tre stegene som forutsetter rotasjon mellom rom.                                                        |
-| Feature toggle         | Samme mønster som Formidlinger-fanen: `getMiljø() !== Miljø.ProdGcp` (vises i lokalt/dev/test, skjult i prod), gated i både `TabsNav.tsx` og `TabsPanels.tsx`. Kategorien styrer nå hvilke steg som vises, ikke om fanen finnes.                                          |
-| Inngang                | To innganger: (a) **burgermeny** på jobbsøkerkortet for å registrere oppmøte, og (b) en egen **«Treffgjennomføring og oppfølging»-fane**. Fanen heter det samme for begge variantene.                                                                                     |
-| Stegnavigasjon         | Aksel **Stepper** med seks steg for WorkOp og fire for et vanlig treff. Brukeren kan gå tilbake til steg der forutsetningene er oppfylt. Stegnummeret i URL-en er stegets identitet, ikke plassen i rekka.                                                                |
-| Aksel-prinsipp         | Bruk Aksel layout-primitives (`VStack`, `HStack`, `HGrid`, `Box`) med spacing tokens. Nye lokale meldinger bruker `LocalAlert` der det passer.                                                                                                                            |
-| Persistering           | Én komplett målkontrakt og stateful MSW-handlere dekker alle seks steg. Backend implementerer den samme kontrakten uten å endre frontendtypene.                                                                                                                           |
-| Antall rom             | **Avledet: ett rom per arbeidsgiver.** Det er alltid nok rom tilgjengelig, så antallet oppgis ikke manuelt og vises ikke i skjemaet. Rotasjonslogikken håndterer fortsatt ubalanse, men den oppstår ikke i praksis.                                                       |
-| Romfordeling           | **Automatisk** første gang via «Opprett møteplan». I steg 2 kan jobbsøkere flyttes manuelt med dra-og-slipp eller direkte romvalg. «Fordel på nytt» erstatter alle manuelle plasseringer med ny round-robin-fordeling etter bekreftelse.                                  |
-| Oppmøte-omfang         | Første versjon dekker **kun selve WorkOp-dagen**. Formøte er utenfor omfanget.                                                                                                                                                                                            |
-| Oppmøte-lagring        | Oppmøte utledes fra hendelsene `MØTT_OPP`/`ANGRE_MØTT_OPP`. Egen `JobbsøkerStatus` er utenfor omfanget fordi den også krever oppdatering av aktivitetsplanen.                                                                                                             |
-| Hvem kan markeres møtt | **Alle** jobbsøkere på lista (ikke begrenset til svarstatus).                                                                                                                                                                                                             |
-| Redigerbarhet          | Steg er redigerbare når forutsetningene finnes. Møteoppsettet kan endres også etter opprettelse – tidene styrer bare timeplanen, ikke hvem som sitter hvor – og romplasseringene kan endres i samme steg. Første versjon har ingen egen låse- eller gjenåpningsmekanisme. |
-| Oppmøte etter oppsett  | Endret oppmøte skal ikke stille om alle rom i det skjulte. Eksisterende romplasseringer beholdes, ny deltaker legges i rommet med færrest personer, og fjerning berører bare den personen. Brukeren kan deretter flytte manuelt eller velge «Fordel på nytt».             |
-| Møteoppsett            | **Starttidspunkt** og **varighet per møte** settes først i steg 2 (kun WorkOp). Standardverdier er `10:00` og `10`. Siste minutt av hvert møte brukes til forflytning, så det finnes ingen egen pause. Antall rom er avledet fra antall arbeidsgivere.                    |
-| Rotasjonsplan          | Vises som sammendrag og full matrise i steg 2. To separate utskrifter: **én til arbeidsgiverne** (hvilket rom de skal til, per klokkeslett) og **én til jobbsøkerne** (hvem som kommer til rommet, per klokkeslett). Én mottaker per side.                                |
-| Steg 3 (interesse)     | Registrer hvilke arbeidsgivere jobbsøkeren er **interessert i** å møte. Kun fremmøtte jobbsøkere inngår. Gjelder begge variantene.                                                                                                                                        |
-| Steg 4 (fordeling)     | Arrangør lager intervjurekkefølge per arbeidsgiver. Jobbsøkere kan flyttes over og under sperrelinjen. Rekkefølgen lagres, men ikke konkrete tidspunkter. Kun WorkOp.                                                                                                     |
-| Steg 5 (registrering)  | **Registrering av status** per jobbsøker × arbeidsgiver: oppsummering av interesse og intervju, vurdering (**Aktuell / Kanskje / Ikke aktuell**), **2. intervju**, **Jobbtilbud** og skrivebeskyttet **Formidlet** fra Formidlinger. Gjelder begge variantene.            |
-| Steg 6 (oppsummering)  | **Oppsummering** av hele treffet: nøkkeltall for aktuelle kandidater, andregangsintervju, øvrige statuser og formidling, samt en tabell per arbeidsgiver. Hver kandidat telles én gang, med den mest positive vurderinga hen har fått. Gjelder begge variantene.          |
-| Tilgang                | **Avklart:** samme eier-regel som resten av API-et. Eier eller utvikler har tilgang, kontortilgang alene gir ikke tilgang. Egen hovedansvarlig-modell er forkastet som unødvendig kompleksitet.                                                                           |
+| Tema                   | Valg                                                                                                                                                                                                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Omfang                 | **Alle treff** har en treffgjennomføring. WorkOp (`kategori === WORKOP`) er den samme treffgjennomføringen utvidet med møteoppsett, rom og intervjufordeling – de tre stegene som forutsetter rotasjon mellom rom.                                                                                  |
+| Feature toggle         | Samme mønster som Formidlinger-fanen: `getMiljø() !== Miljø.ProdGcp` (vises i lokalt/dev/test, skjult i prod), gated i både `TabsNav.tsx` og `TabsPanels.tsx`. Kategorien styrer nå hvilke steg som vises, ikke om fanen finnes.                                                                    |
+| Inngang                | To innganger: (a) **burgermeny** på jobbsøkerkortet for å registrere oppmøte, og (b) en egen **«Treffgjennomføring og oppfølging»-fane**. Fanen heter det samme for begge variantene.                                                                                                               |
+| Stegnavigasjon         | Aksel **Stepper** med seks steg for WorkOp og fire for et vanlig treff. Brukeren kan gå tilbake til steg der forutsetningene er oppfylt. Stegnummeret i URL-en er stegets identitet, ikke plassen i rekka.                                                                                          |
+| Aksel-prinsipp         | Bruk Aksel layout-primitives (`VStack`, `HStack`, `HGrid`, `Box`) med spacing tokens. Nye lokale meldinger bruker `LocalAlert` der det passer.                                                                                                                                                      |
+| Persistering           | Én komplett målkontrakt og stateful MSW-handlere dekker alle seks steg. Backend implementerer den samme kontrakten uten å endre frontendtypene.                                                                                                                                                     |
+| Antall rom             | **Avledet: ett rom per arbeidsgiver.** Det er alltid nok rom tilgjengelig, så antallet oppgis ikke manuelt og vises ikke i skjemaet. Rotasjonslogikken håndterer fortsatt ubalanse, men den oppstår ikke i praksis.                                                                                 |
+| Romfordeling           | **Automatisk** første gang via «Opprett møteplan». I steg 2 kan jobbsøkere flyttes manuelt med dra-og-slipp eller direkte romvalg. «Fordel på nytt» erstatter alle manuelle plasseringer med ny round-robin-fordeling etter bekreftelse.                                                            |
+| Oppmøte-omfang         | Første versjon dekker **kun selve WorkOp-dagen**. Formøte er utenfor omfanget.                                                                                                                                                                                                                      |
+| Oppmøte-lagring        | **Erstattet:** oppmøte lå opprinnelig kun i hendelsene. Det ligger nå i kolonnen `jobbsoker.oppmote`, se [treffgjennomforing-domeneoppdeling.md](treffgjennomforing-domeneoppdeling.md). Egen `JobbsøkerStatus` er fortsatt utenfor omfanget fordi den også krever oppdatering av aktivitetsplanen. |
+| Hvem kan markeres møtt | **Alle** jobbsøkere på lista (ikke begrenset til svarstatus).                                                                                                                                                                                                                                       |
+| Redigerbarhet          | Steg er redigerbare når forutsetningene finnes. Møteoppsettet kan endres også etter opprettelse – tidene styrer bare timeplanen, ikke hvem som sitter hvor – og romplasseringene kan endres i samme steg. Første versjon har ingen egen låse- eller gjenåpningsmekanisme.                           |
+| Oppmøte etter oppsett  | Endret oppmøte skal ikke stille om alle rom i det skjulte. Eksisterende romplasseringer beholdes, ny deltaker legges i rommet med færrest personer, og fjerning berører bare den personen. Brukeren kan deretter flytte manuelt eller velge «Fordel på nytt».                                       |
+| Møteoppsett            | **Starttidspunkt** og **varighet per møte** settes først i steg 2 (kun WorkOp). Standardverdier er `10:00` og `10`. Siste minutt av hvert møte brukes til forflytning, så det finnes ingen egen pause. Antall rom er avledet fra antall arbeidsgivere.                                              |
+| Rotasjonsplan          | Vises som sammendrag og full matrise i steg 2. To separate utskrifter: **én til arbeidsgiverne** (hvilket rom de skal til, per klokkeslett) og **én til jobbsøkerne** (hvem som kommer til rommet, per klokkeslett). Én mottaker per side.                                                          |
+| Steg 3 (interesse)     | Registrer hvilke arbeidsgivere jobbsøkeren er **interessert i** å møte. Kun fremmøtte jobbsøkere inngår. Gjelder begge variantene.                                                                                                                                                                  |
+| Steg 4 (fordeling)     | Arrangør lager intervjurekkefølge per arbeidsgiver. Jobbsøkere kan flyttes over og under sperrelinjen. Rekkefølgen lagres, men ikke konkrete tidspunkter. Kun WorkOp.                                                                                                                               |
+| Steg 5 (registrering)  | **Registrering av status** per jobbsøker × arbeidsgiver: oppsummering av interesse og intervju, vurdering (**Aktuell / Kanskje / Ikke aktuell**), **2. intervju**, **Jobbtilbud** og skrivebeskyttet **Formidlet** fra Formidlinger. Gjelder begge variantene.                                      |
+| Steg 6 (oppsummering)  | **Oppsummering** av hele treffet: nøkkeltall for aktuelle kandidater, andregangsintervju, øvrige statuser og formidling, samt en tabell per arbeidsgiver. Hver kandidat telles én gang, med den mest positive vurderinga hen har fått. Gjelder begge variantene.                                    |
+| Tilgang                | **Avklart:** samme eier-regel som resten av API-et. Eier eller utvikler har tilgang, kontortilgang alene gir ikke tilgang. Egen hovedansvarlig-modell er forkastet som unødvendig kompleksitet.                                                                                                     |
 
 ---
 
@@ -178,8 +178,9 @@ punktene «Endre svar» og «Slett»). Vi legger til:
 
 - **«Registrer oppmøte»** / **«Fjern oppmøte»** (toggle) som et nytt
   `ActionMenyPunkt`.
-- Punktet er feature-togglet som resten av WorkOp gjennomføring: vises kun for WorkOp-treff
-  og i ikke-prod (`kategori === WORKOP` og `getMiljø() !== Miljø.ProdGcp`).
+- Punktet vises for treff der oppmøtefunksjonen er aktivert. I den lokale
+  implementasjonen betyr det alle treff utenfor produksjon; eventuell
+  finere feature-toggle innføres før produksjonsaktivering.
 - Kortet får en synlig markør når personen er møtt (f.eks. en Aksel `Tag`
   «Møtt», på linje med `JobbsøkerStatusTag`).
 - **«Marker som møtt (N)»** og **«Fjern oppmøte (N)»** i `JobbsøkerHandlingsrad`
@@ -188,10 +189,9 @@ punktene «Endre svar» og «Slett»). Vi legger til:
   burgermenyen) og tømmer valget når alle er registrert. Tellerne viser bare de
   valgte som faktisk endres, så «Marker som møtt» hopper over dem som allerede
   er møtt, og omvendt.
-- Fjerning krever bekreftelse, siden den sletter interesser, intervjuplasser og
-  vurderinger. Dialogen er den samme `FjernOppmøteBekreftelse` som brukes for
-  én person, men får **summen** av registreringene for alle de valgte, slik at
-  konsekvensen vises samlet før noe kjøres.
+- Fjerning trenger ingen bekreftelse, siden ingenting slettes i kaskade. De
+  valgte som har registreringer blir stående urørt, og etterpå forteller en
+  melding hvor mange som ble hoppet over og hvorfor.
 - Avkrysningsboksen i `JobbsøkerKort` var låst til `status === LAGT_TIL` (den
   var laget for invitasjonsflyten). På WorkOp-treff åpnes den for alle
   statuser, siden oppmøte er ortogonalt til svarstatus. «Inviter»-knappen
@@ -217,7 +217,7 @@ ikke om fanen finnes:
 
 ```ts
 const erProd = getMiljø() === Miljø.ProdGcp;
-const visTreffgjennomforing = !erProd && harTilgang;
+const visTreffgjennomføring = !erProd && harTilgang;
 const erWorkOp =
   rekrutteringstreff.kategori === RekrutteringstreffKategori.WORKOP;
 ```
@@ -244,13 +244,13 @@ oppfriskning skal heller ikke kaste deg tilbake til start.
 
 | Parameter | Verdier | Merknad                                                       |
 | --------- | ------- | ------------------------------------------------------------- |
-| `visSteg` | `1`–`7` | Utelates på steg 1 (`clearOnDefault`), så adressen holdes ren |
+| `visSteg` | `1`–`6` | Utelates på steg 1 (`clearOnDefault`), så adressen holdes ren |
 
 Verdien er stegets **identitet**, ikke posisjonen i stegvelgeren. Et vanlig treff
-viser fire steg, men Interesse er fortsatt `visSteg=4`. Stegvelgeren nummererer
+viser fire steg, men Interesse er fortsatt `visSteg=3`. Stegvelgeren nummererer
 det som «2» visuelt, siden Aksel Stepper alltid teller fra 1 – det er en ren
 visningsdetalj, og oversettelsen mellom identitet og posisjon skjer i
-`TreffgjennomføringGjennomføring`.
+`Treffgjennomføring.tsx`.
 
 Som resten av appen skriver den med nuqs' standard `history: 'replace'`.
 Stegbytte lager altså ikke egne oppføringer i nettleserhistorikken – det
@@ -261,7 +261,7 @@ framfor å vandre bakover gjennom stegene.
 eller et håndredigert adressefelt, og kan peke på et steg treffet ikke har
 kommet til. Den kan også peke på et **WorkOp-steg i et vanlig treff**.
 `nærmesteTilgjengeligeSteg` i
-[treffgjennomføringSteg.ts](../../../../rekrutteringsbistand-frontend/app/rekrutteringstreff/%5BrekrutteringstreffId%5D/_ui/treffgjennomforing/treffgjennomforingSteg.ts)
+[treffgjennomføringSteg.ts](../../../../rekrutteringsbistand-frontend/app/rekrutteringstreff/%5BrekrutteringstreffId%5D/_ui/treffgjennomføring/treffgjennomføringSteg.ts)
 går bakover til første steg som faktisk er tilgjengelig, framfor å vise en tom
 side eller kaste brukeren helt til start. URL-en rettes deretter opp, slik at
 adressen viser det man faktisk ser på. Ikke-numeriske verdier faller tilbake
@@ -404,7 +404,7 @@ av sitt rom. Brukeren kan deretter flytte enkeltpersoner manuelt eller velge
 La `R` = antall rom og `E` = antall arbeidsgivere. Rotasjonen skjer over
 `P = maks(R, E)` posisjoner: posisjon `0 … R-1` er rommene, og eventuelle
 posisjoner `R … E-1` er **venteplasser** (benk). Hver arbeidsgiver har en
-`startPosisjon` (standard: arbeidsgiver på indeks `i` starter i posisjon `i`).
+`startposisjon` (standard: arbeidsgiver på indeks `i` starter i posisjon `i`).
 
 - Runde `t` (t = 0, 1, …, P-1): arbeidsgiverens posisjon = `(startPosisjon + t) mod P`.
   Er posisjonen et rom, presenterer arbeidsgiveren der; er den en venteplass,
@@ -449,7 +449,7 @@ side**:
   der – én per linje, slik at lista er lett å lese på papir – og hvilken
   arbeidsgiver som kommer til hvilket klokkeslett.
 
-Begge bruker `useWorkOpUtskrift`, som legger stilene inline i utskrifta i stedet
+Begge bruker `useUtskrift`, som legger stilene inline i utskrifta i stedet
 for å vente på at kopierte `<link>`-stilark melder seg ferdig lastet.
 
 > Kantcase: er `antallRom > antallArbeidsgivere` står noen rom tomme i enkelte
@@ -495,7 +495,7 @@ bein som grunnlag for oppfølgingen i steg 5.
 - **Primærknapp «Neste»** → steg 4 på en WorkOp, steg 5 ellers.
 
 Dette tilsvarer at jobbsøkeren «gir beskjed til arrangør om hvilke arbeidsgivere
-de ønsker å gå på intervju med».
+de er interessert i å gå på intervju med».
 
 ---
 
@@ -525,7 +525,7 @@ interessene alene.
   (`21rem`) er valgt slik at vanlige navn får plass på én linje; å presse inn en
   kolonne til ville tvunget også korte navn til å brytes.
 - Arrangøren endrer rekkefølgen med dra-og-slipp eller piler. Jobbsøkere under
-  sperrelinjen, merket **«Ikke gjennomført speedintervju»**, er ikke med på
+  sperrelinjen, merket **«Skal ikke delta på speedintervju»**, er ikke med på
   speedintervjuet.
 - **Plassen i rekkefølgen vises ikke som et eget tall.** Den er implisitt i
   rekkefølgen på lista. Navnet begynner allerede med deltakernummeret, og et
@@ -570,13 +570,16 @@ sannhetskilde for hvem som har fått jobb.
   kort er lukket og viser arbeidsgiver og antall jobbsøkere i en kompakt
   overskrift. Åpne tomme kort viser en kort tomtilstand.
 - Hver jobbsøkerrad viser relevante oppsummeringstagger: **innsatsbehov**,
-  **Ønsket å møtes**, **Satt opp til intervju** og eventuelt **Formidlet**.
+  **Interessert i å møte**, **Satt opp til intervju** og eventuelt **Formidlet**.
 - **Innsatsbehov** er ren visning av jobbsøkerens gjeldende § 14 a-vurdering, og
   gjenbruker etikettene fra `alleInnsatsgrupper` i kandidatsøket. Det står først
   i taggrekka fordi det er egenskapen ved personen, ikke noe som skjedde på
-  treffgjennomføringen. Feltet kommer fra jobbsøkersøket som `innsatsgruppe` og lagres
-  **ikke** i treffgjennomføringen. Koder frontend ikke kjenner igjen vises ikke i det hele
-  tatt, slik at en ny verdi fra backend ikke havner rå på skjermen.
+  treffgjennomføringen. Feltet hentes fra jobbsøkertabellen via
+  `POST /jobbsoker/sok` som `innsatsgruppe`, og lagres **ikke** i
+  treffgjennomføringen. Steg 5 er dermed avhengig av at jobbsøkersøket svarer
+  med feltet for treffets deltakere. Koder frontend ikke kjenner igjen vises
+  ikke i det hele tatt, slik at en ny verdi fra backend ikke havner rå på
+  skjermen.
 - Arrangøren kan velge **Ingen vurdering / Aktuell / Kanskje / Ikke aktuell** og
   registrere de uavhengige statusene **2. intervju** og **Jobbtilbud**. Valget
   bruker Aksel `Select`.
@@ -590,7 +593,7 @@ sannhetskilde for hvem som har fått jobb.
   Gruppering framfor å gjenta parten i hver etikett holder radene korte, slik at
   flere notater får plass i kortet. Parten ligger i verdien (prefiks `AG_` /
   `JS_`), så part og notat kan ikke komme i utakt. Én kilde til sannhet:
-  `workop/notatvalg.ts`.
+  `_ui/treffgjennomføring/notatvalg.ts`.
 - Notatene velges i en `Popover` med én `CheckboxGroup` per part. Flervalg i en
   popover framfor et nedtrekk, fordi lista er lang og man ofte velger flere.
 - **Dato for 2. intervju** vises bare når 2. intervju er huket av. Avkryssinga
@@ -633,8 +636,8 @@ oppfyller noen av kriteriene. Arbeidsgiverkortet beholdes.
 - «Formidlet» skrives og endres **kun i Formidlinger**. Feltet finnes ikke i
   `TreffgjennomføringDTO`, `VurderingDTO` eller WorkOp-mutasjoner.
 - Frontend speiler aktive, ikke-sperrede formidlingsrader ved å koble
-  fødselsnummer og organisasjonsnummer i minnet. Det matches aldri på navn, og
-  fødselsnummer legges ikke i URL eller logger.
+  `personTreffId` og `arbeidsgiverTreffId` i minnet. Det matches aldri på navn
+  eller fødselsnummer, og fødselsnummer legges ikke i URL eller logger.
 - Flere jobbsøkere kan være registrert i samme formidling og dele
   `stillingId`. Koblingen må derfor aldri anta 1:1 mellom et WorkOp-par og en
   formidling.
@@ -674,18 +677,43 @@ samme kandidat kan være vurdert hos flere.
 
 ### Frontend-typer (mock + framtidig API-form)
 
-Kontrakten er definert som Zod-skjemaer i
-[useTreffgjennomforing.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/[...slug]/treffgjennomforing/useTreffgjennomforing.ts),
-og det er **fasiten** – ikke dette dokumentet. Feltene er beskrevet som tabell
+Treffgjennomføringskontrakten er definert som Zod-skjemaer i
+[useTreffgjennomføring.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/%5B...slug%5D/treffgjennomføring/useTreffgjennomføring.ts),
+og oppmøtesammendraget i jobbsøkersøket er definert i
+[useJobbsøkerSøk.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/%5B...slug%5D/jobbsøkere/useJobbsøkerSøk.ts).
+Disse skjemaene er **fasiten** – ikke dette dokumentet. Feltene er beskrevet som tabell
 under [DTO-er](#dto-er), i den formen backend skal svare med. Typene i frontend
 speiler dem 1:1, med `string` der backend har `UUID`.
 
 «Formidlet» er med vilje ikke del av treffgjennomføringskontrakten. Den avledes
 skrivebeskyttet fra Formidlinger.
 
+#### Oppmøte i `JobbsøkerSøkTreffDTO`
+
+Jobbsøkerkort og massehandlinger leser oppmøte fra den eksisterende, paginerte
+jobbsøkerresponsen. De skal ikke abonnere på hele treffgjennomføringsaggregatet.
+Hver søkerad utvides additivt med:
+
+```json
+{
+  "oppmøte": { "møtt": true }
+}
+```
+
+`oppmøte` er valgfritt i frontend mens backend rulles ut. Manglende felt betyr
+«backend støtter ikke denne lesemodellen», ikke `møtt: false`; frontend skjuler
+da oppmøtehandlingene. Når backendendringen er rullet ut, skal feltet alltid
+finnes på søkeradene. API-feltet kan beholdes selv om visningen senere
+feature-toggles bort.
+
+Etter en vellykket oppmøtemutasjon revaliderer frontend jobbsøkersøket, slik at
+`møtt` alltid kommer fra backend. Hva som eventuelt blokkerer en fjerning leses
+av `409`-svaret, ikke av søkeraden. Treffgjennomføringsfanen fortsetter å lese
+hele aggregatet fra sitt eget endepunkt.
+
 ### MSW-mock (dynamisk for demo)
 
-Legg en `treffgjennomforingStore = new Map<string, TreffgjennomforingDTO>()` i
+Legg en `treffgjennomføringStore = new Map<string, TreffgjennomføringDTO>()` i
 [mswState.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/mswState.ts)
 (samme mønster som `arbeidsgiverStore`/`innleggStore`). Handlerne bygger svar fra
 samme store som leses, slik at oppmøte → romfordeling → interesse → fordeling →
@@ -702,7 +730,7 @@ fordelingskvaliteten, og frontendtester skal ikke måle den.
 ### Backend-kontrakt
 
 Frontend er bygd ferdig mot MSW-mocken, og kontrakten i
-[useTreffgjennomforing.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/[...slug]/treffgjennomforing/useTreffgjennomforing.ts)
+[useTreffgjennomføring.ts](../../../../rekrutteringsbistand-frontend/app/api/rekrutteringstreff/%5B...slug%5D/treffgjennomføring/useTreffgjennomføring.ts)
 er fasiten. Backend skal treffe den uendret, slik at frontend kun trenger å skru
 av mocken.
 
@@ -733,15 +761,15 @@ frontend. I backend-tekst under betyr «treffet» et treff av denne kategorien.
 
 #### Ny pakke
 
-`no.nav.toi.treffgjennomforing` med `Treffgjennomforing.kt` (domenemodell), `TreffgjennomforingController.kt`,
-`TreffgjennomforingService.kt`, `TreffgjennomforingRepository.kt` og `dto/TreffgjennomforingDto.kt`.
+`no.nav.toi.treffgjennomføring` med `Treffgjennomføring.kt` (domenemodell), `TreffgjennomføringController.kt`,
+`TreffgjennomføringService.kt`, `TreffgjennomføringRepository.kt` og `dto/TreffgjennomføringDto.kt`.
 
 #### DTO-er
 
-Speiler frontend-typene 1:1. **`TreffgjennomforingDto` er svaret på samtlige endepunkter** —
+Speiler frontend-typene 1:1. **`TreffgjennomføringDto` er svaret på samtlige endepunkter** —
 også skriveoperasjonene, som alltid returnerer hele treffgjennomføringen.
 
-**`TreffgjennomforingDto`** – hele aggregatet:
+**`TreffgjennomføringDto`** – hele aggregatet:
 
 | Felt                      | Type                     | Merknad                                     |
 | ------------------------- | ------------------------ | ------------------------------------------- |
@@ -751,7 +779,7 @@ også skriveoperasjonene, som alltid returnerer hele treffgjennomføringen.
 | `starttidspunkt`          | tekst                    | `HH:mm`, 24-timers                          |
 | `varighetPerMøteMinutter` | heltall                  | Minst 1                                     |
 | `oppmøte`                 | liste av `personTreffId` | Hvem som er registrert møtt                 |
-| `deltakernummer`          | liste                    | Nummeret på det fysiske kortet, se under    |
+| `deltakernumre`          | liste                    | Nummeret på det fysiske kortet, se under    |
 | `rom`                     | liste                    | Romnummer med ordnet jobbsøkerliste         |
 | `arbeidsgiverRekkefølge`  | liste                    | Startposisjon i rotasjonen per arbeidsgiver |
 | `interesser`              | liste av par             | Hvem som vil snakke med hvem                |
@@ -764,7 +792,7 @@ også skriveoperasjonene, som alltid returnerer hele treffgjennomføringen.
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `DeltakernummerDto`                | `personTreffId`, `nummer`                                                                                                    | 1-basert, gjenbrukes aldri                                                                            |
 | `RomDto`                           | `romnummer`, `jobbsøkere`                                                                                                    | Romnummer er 1-basert                                                                                 |
-| `ArbeidsgiverRotasjonDto`          | `arbeidsgiverTreffId`, `startPosisjon`                                                                                       | 0-basert; er den ≥ antall rom, står arbeidsgiveren på venteplass                                      |
+| `ArbeidsgiverRotasjonDto`          | `arbeidsgiverTreffId`, `startposisjon`                                                                                       | 0-basert; er den ≥ antall rom, står arbeidsgiveren på venteplass                                      |
 | `InteresseDto`                     | `personTreffId`, `arbeidsgiverTreffId`                                                                                       | Rent par, ingen tilleggsdata                                                                          |
 | `ArbeidsgiverIntervjufordelingDto` | `arbeidsgiverTreffId`, `inkludertePersonTreffIder`, `ekskludertePersonTreffIder`                                             | **Rekkefølgen i den inkluderte lista er plassnummeret.** Den er data, ikke presentasjon               |
 | `VurderingDto`                     | `personTreffId`, `arbeidsgiverTreffId`, `vurdering`, `notater`, `andregangsintervju`, `andregangsintervjuDato`, `jobbtilbud` | `vurdering` er nullbar (`AKTUELL`/`KANSKJE`/`IKKE_AKTUELL`), `andregangsintervjuDato` er nullbar dato |
@@ -781,10 +809,14 @@ brukeren har nådd**:
 | `INTERESSE` | 3    | Første interesse er registrert              |
 | `FORDELING` | 4    | Intervjufordelingen er lagret               |
 | `VURDERING` | 5    | Første vurdering er registrert              |
+| `OPPSUMMERING` | 6 | Arrangøren trykker «Neste» i steg 5        |
 
 Fasen går bare framover: et angret oppmøte eller en slettet vurdering skal ikke
-lukke steg brukeren allerede har vært innom. Oppsummeringen (steg 6) er ikke en
-fase – der registreres ingenting, den leser bare det som allerede finnes.
+lukke steg brukeren allerede har vært innom. Oppsummeringen registrerer
+ingenting og leser bare det som allerede finnes, men den trenger likevel en egen
+fase: uten den hadde steget vært umulig å nå igjen etter et besøk, siden det
+ikke setter noe spor i dataene. Derfor kalles `PUT /treffgjennomforing/steg` med
+`{"steg": "OPPSUMMERING"}` når arrangøren går videre fra steg 5.
 
 Det finnes **ingen egen `OPPSETT`-fase**. Den ville betydd «noen er møtt, men
 møteplanen er ikke laget», og siden møteoppsettet og romfordelingen er samme
@@ -804,24 +836,10 @@ variantene, slik at én treffgjennomføring ikke trenger to tilstandsmaskiner.
 - `notater` valideres bevisst **ikke** mot en enum i frontend-skjemaet. Legger
   backend til et nytt notat, vises det som ukjent verdi framfor å velte hele
   treffgjennomføringen. Backend eier lista og bør validere den.
-- `deltakernummer` er valgfritt i frontend-skjemaet. En treffgjennomføring uten lista
+- `deltakernumre` er valgfritt i frontend-skjemaet. En treffgjennomføring uten lista
   åpnes fortsatt, og navnene vises da uten nummer.
 - Backend bør avvise `andregangsintervjuDato` når `andregangsintervju` er
   `false`. Frontend rydder allerede, så dette er et vern mot andre klienter.
-
-En vurderingsrad regnes som **tom** først når verken vurdering, notater, 2.
-intervju, dato eller jobbtilbud er satt. Tomme rader slettes. Regelen ligger
-ett sted i frontend (`harRegistrertNoe`) fordi den brukes både til å avgjøre om
-raden vises, om den lagres og om den slettes — kommer de i utakt, forsvinner
-registreringer uten spor. Backend bør ha samme regel ett sted.
-Frontend behandler en ukjent vurderingsverdi som «ingen vurdering» framfor å
-feile. Den gamle `KLADD`-verdien er tatt bort og skal ikke innføres i backend.
-
-`notater` valideres bevisst **ikke** mot en enum i frontend-skjemaet. Legger
-backend til et nytt notat, skal det vises som ukjent verdi framfor å velte hele
-treffgjennomføringen. Backend eier lista og bør validere den. Backend bør også avvise
-`andregangsintervjuDato` når `andregangsintervju` er `false` — frontend rydder
-allerede, så dette er et vern mot andre klienter.
 
 En vurderingsrad regnes som **tom** først når verken vurdering, notater, 2.
 intervju, dato eller jobbtilbud er satt. Tomme rader slettes. Regelen ligger
@@ -835,6 +853,12 @@ Fanen heter **«Treffgjennomføring og oppfølging»**, og navnet svarer til to 
 1–4 er selve treffgjennomføringen, steg 5–6 er oppfølgingen etterpå. Endepunktene er
 gruppert etter det samme skillet, slik at stien sier hvilken del av arbeidet et
 kall hører til.
+
+**Jobbsøkerlisten leses separat.** Det eksisterende søket utvides additivt:
+
+| Metode | Sti                                          | Funksjon                                                                                            |
+| ------ | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| POST   | `/api/rekrutteringstreff/{id}/jobbsoker/sok` | Returnerer paginert søkeresultat med `oppmøte` på hver returnert rad.                               |
 
 **Lesing er felles.** Hele aggregatet hentes med ett kall:
 
@@ -852,12 +876,13 @@ Alle returnerer hele aggregatet:
 
 | Metode | Sti                                            | Funksjon                                                                                                                                                          |
 | ------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PUT    | `/treffgjennomforing/oppmote`                  | Registrer eller angre oppmøte for én jobbsøker. Fjerning med registreringer krever `bekreftSlettRegistreringer`.                                                  |
+| PUT    | `/treffgjennomforing/oppmote`                  | Registrer eller angre oppmøte for én jobbsøker. Fjerning blokkeres med `409` hvis personen har interesser eller vurdering.                                                  |
 | PUT    | `/treffgjennomforing/moteoppsett`              | Sett tider. Første gang: opprett full round-robin-fordeling + rotasjon, fase = ROM. Senere: oppdater tidene uten å regenerere. Kun WorkOp.                        |
 | PUT    | `/treffgjennomforing/romfordeling`             | Erstatt komplett romfordeling etter manuell flytting eller «Fordel på nytt». Kun WorkOp.                                                                          |
-| PUT    | `/treffgjennomforing/interesse`                | Sett eller fjern ett interessepar, idempotent. Ny interesse legges bakerst blant de inkluderte i intervjufordelingen; trukket interesse fjernes fra begge lister. |
+| PUT    | `/treffgjennomforing/interesse`                | Sett eller fjern ett interessepar, idempotent. Ny interesse legges bakerst blant de inkluderte i intervjufordelingen; trukket interesse fjernes fra begge lister. Fjerning blokkeres med `409` hvis paret har en registrert status. |
 | PUT    | `/treffgjennomforing/intervjufordeling`        | Lagre rekkefølge over og under sperrelinjen for én arbeidsgiver. Brukes ved manuell dra-og-slipp. Kun WorkOp.                                                     |
 | POST   | `/treffgjennomforing/intervjufordeling/fordel` | Fordel intervjuene på nytt. Tom body — alt som trengs er lagret. Erstatter hele fordelingen i én transaksjon. Kun WorkOp.                                         |
+| PUT    | `/treffgjennomforing/steg`                     | Flytt fasen framover uten å skrive data. Brukes når arrangøren går fra steg 5 til oppsummeringen.                                                                 |
 | PUT    | `/oppfolging/vurderinger`                      | Sett eller fjern vurdering og oppfølging for ett par.                                                                                                             |
 
 Oppfølgingsdelen har foreløpig bare ett skriveendepunkt. Grupperinga er likevel
@@ -869,18 +894,24 @@ selvsagt plass.
 
 | Endepunkt                                           | Body                                           | Felt                                                                     |
 | --------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
-| `PUT /treffgjennomforing/oppmote`                   | eget objekt                                    | `personTreffId`, `møtt`, `bekreftSlettRegistreringer` (standard `false`) |
+| `PUT /treffgjennomforing/oppmote`                   | eget objekt                                    | `personTreffId`, `møtt`                                                 |
 | `PUT /treffgjennomforing/moteoppsett`               | eget objekt                                    | `starttidspunkt` (`HH:mm`), `varighetPerMøteMinutter` (minst 1)          |
-| `PUT /treffgjennomforing/romfordeling`              | innpakket                                      | `{ rom: [RomDto] }`                                                      |
+| `PUT /treffgjennomforing/romfordeling`              | **`[RomDto]` direkte**                         | Ikke innpakket                                                           |
 | `PUT /treffgjennomforing/interesse`                 | eget objekt                                    | `personTreffId`, `arbeidsgiverTreffId`, `interessert`                    |
 | `PUT /treffgjennomforing/intervjufordeling`         | **`ArbeidsgiverIntervjufordelingDto` direkte** | Ikke innpakket                                                           |
 | `POST /treffgjennomforing/intervjufordeling/fordel` | tom                                            | Alt som trengs er allerede lagret                                        |
 | `PUT /oppfolging/vurderinger`                       | **`VurderingDto` direkte**                     | Ikke innpakket                                                           |
 
-Merk asymmetrien: bare romfordelingen er pakket inn i et objekt, mens
-intervjufordeling og vurdering sendes som selve DTO-en på rotnivå. Det er slik
-frontend sender i dag, og kontrakten er fasit — ikke rett det opp uten å endre
-frontend samtidig.
+Regelen er enkel: har endepunktet flere selvstendige felt, får det et eget
+objekt. Er nyttelasten én DTO eller én liste, sendes den på rotnivå framfor å
+pakkes inn i en nøkkel som ikke sier noe mer enn stien allerede gjør.
+
+**Romfordelingen sendes komplett, inkludert tomme rom.** Frontend fyller ut
+lista til `antallRom` rom før den sender, slik at et rom uten jobbsøkere er et
+uttrykt valg og ikke et hull backend må gjette seg til. Backend skal derfor
+avvise en romfordeling som ikke inneholder nøyaktig `antallRom` rom med unike
+numre `1..antallRom`, og der hver fremmøtt jobbsøker forekommer nøyaktig én
+gang.
 
 #### Fordelingsalgoritmen (backend)
 
@@ -946,33 +977,50 @@ Invarianter backend må håndheve, ikke bare stole på fra frontend:
   `ROM`. Senere kall oppdaterer bare de tre tidsfeltene.
   Antall rom sendes ikke inn — det beregnes av backend, se
   [Antall rom beregnes, ikke lagres](#antall-rom-beregnes-ikke-lagres).
-- Bare fremmøtte kan få interesser og intervjufordeling. En vurdering kan bestå
-  etter at interesse og intervjufordeling fjernes. En vurderingsrad der vurdering er `null`
-  og begge boolean-feltene er `false`, slettes.
-- Fjerning av oppmøte når det finnes interesser, intervjufordeling eller vurderinger
-  krever eksplisitt bekreftelse; data må aldri bli hengende igjen inkonsistent.
-  Se [Bekreftet kaskadesletting](#bekreftet-kaskadesletting).
+- Bare fremmøtte kan få interesser, intervjufordeling og vurdering. En
+  vurderingsrad slettes når den er helt tom — ingen vurdering, ingen notater,
+  ingen 2. intervju-dato og begge boolean-feltene `false`. Et påbegynt notat
+  holder altså raden i live.
+- Ingenting slettes i kaskade. Du kan ikke fjerne noe som noe annet bygger på.
+  Se [Rydd før du fjerner](#rydd-før-du-fjerner).
 
-#### Bekreftet kaskadesletting
+#### Rydd før du fjerner
 
-`PUT /treffgjennomforing/oppmote` tar feltet `bekreftSlettRegistreringer: Boolean = false`.
-Når oppmøte fjernes for en person som har interesser, intervjufordeling eller
-vurderinger, og feltet er `false`, svarer backend `409 Conflict` uten å endre
-noe:
+Avhengighetskjeden er `oppmøte → interesse → status`, og den ryddes i motsatt
+rekkefølge. Backend nekter å bryte kjeden, slik at ingen registreringer kan
+forsvinne som sideeffekt av en annen handling.
+
+1. **Oppmøte** kan ikke fjernes når personen har interesser eller en vurdering
+   med innhold. Romtildeling og deltakernummer er konsekvenser av oppmøtet og
+   blokkerer ikke; rommet frigis, og deltakernummeret beholdes slik at samme
+   person får samme nummer igjen.
+2. **Interesse** kan ikke fjernes mens det finnes en vurdering med innhold for
+   samme par av jobbsøker og arbeidsgiver. Intervjuplassen blokkerer ikke — den
+   er en konsekvens av interessen, og forsvinner sammen med den.
+3. **Vurdering** kan alltid nullstilles, siden ingenting bygger på den, men kan
+   bare registreres for en fremmøtt person.
+
+Brudd på 1 og 2 gir `409 Conflict` uten sideeffekt:
 
 ```json
 {
-  "feil": "Jobbsøkeren har registreringer som slettes hvis oppmøtet fjernes.",
-  "hint": "Bekreft med bekreftSlettRegistreringer=true.",
-  "registreringer": { "interesser": 2, "intervjuplasser": 1, "vurderinger": 1 }
+  "feil": "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.",
+  "hint": "Fjern interessene og nullstill statusen først.",
+  "registreringer": { "interesser": 2, "vurderinger": 1 }
 }
 ```
 
-Frontend bruker tallene i `registreringer` til å beskrive konsekvensen i
-bekreftelsesdialogen, og sender deretter samme kall med
-`bekreftSlettRegistreringer: true`. Da slettes oppmøtet og de avhengige radene i
-én transaksjon. MSW-mocken i frontend implementerer allerede nøyaktig denne
-oppførselen og er referansen for backend.
+```json
+{
+  "feil": "Jobbsøkeren har en registrert status og interessen kan derfor ikke fjernes.",
+  "hint": "Nullstill statusen for jobbsøkeren hos denne arbeidsgiveren først."
+}
+```
+
+Frontend forhindrer normalt bruddet før kallet: avkrysningsboksen i steg 3 er
+låst med en forklarende tooltip når statusen er registrert, og «Fjern oppmøte»
+viser en dialog som lister opp hva som må ryddes og i hvilket steg. MSW-mocken
+håndhever de samme reglene.
 
 #### Samtidighet
 
@@ -999,7 +1047,7 @@ ikke kan «låse inn» et møteoppsett.
 
 Frontend har ingen egen «ikke startet»-fase; `OPPMØTE` med tom `oppmøte`-liste
 _er_ tomtilstanden. Standardverdiene backend returnerer for et tomt aggregat
-skal speile `treffgjennomforingStartdata.ts` i frontend: `antallRom` = antall
+skal speile `lagTreffgjennomføringStartdata` i frontendmocken: `antallRom` = antall
 arbeidsgivere på treffet (minst 1), `starttidspunkt` `"10:00"`,
 `varighetPerMøteMinutter` 10.
 
@@ -1011,6 +1059,12 @@ Samme regel som resten av API-et, ingen egen mekanisme for treffgjennomføringen
 
 Formidlingsendepunktenes kontortilgang gjenbrukes **ikke** – for treffgjennomføringen er
 eierskap eneste vei inn. Det er en innstramming, ikke en oppmykning.
+
+**Formidlinger knyttet til treffet leses av begge eierne.** Steg 5 viser en
+skrivebeskyttet «Formidlet»-tagg, og den er verdiløs hvis bare den ene eieren
+ser den. Lesetilgangen til treffets formidlinger følger derfor eier-regelen for
+treffet, ikke eierskapet til den enkelte formidlinga. Skriving skjer fortsatt
+kun i Formidlinger-fanen, med formidlingenes egne regler.
 
 At treff av kategorien `WORKOP` ikke skal vises i søket håndteres som en egen
 oppgave.
@@ -1037,7 +1091,7 @@ migrasjon og uten å fjerne noe. Frontend er allerede lagt om til de nye feltene
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | `treffgjennomforing`      | 1:1 med treff: `rekrutteringstreff_id` (unik FK) og `fase`. Ingenting annet                                                     | Begge   |
 | `moteoppsett`             | 1:1 med treffgjennomføring: `start_tidspunkt`, `varighet_min`                                                                   | WorkOp  |
-| `deltakernummer`          | `rekrutteringstreff_id`, `jobbsoker_id`, `nummer` — unik på (treff, nummer) og (treff, jobbsoker)                               | WorkOp  |
+| `deltakernumre`          | `rekrutteringstreff_id`, `jobbsoker_id`, `nummer` — unik på (treff, nummer) og (treff, jobbsoker)                               | WorkOp  |
 | `jobbsoker_rom_tildeling` | `rekrutteringstreff_id`, `jobbsoker_id`, `romnummer`                                                                            | WorkOp  |
 | `arbeidsgiver_rotasjon`   | `arbeidsgiver_id`, `start_posisjon`                                                                                             | WorkOp  |
 | `interesse`               | `jobbsoker_id`, `arbeidsgiver_id`                                                                                               | Begge   |
@@ -1172,7 +1226,7 @@ erDiagram
 ```
 
 Verdiene bak de korte beskrivelsene står i tabellen over: `fase` er
-`OPPMØTE`/`ROM`/`INTERESSE`/`FORDELING`/`VURDERING`, `vurdering` er
+`OPPMØTE`/`ROM`/`INTERESSE`/`FORDELING`/`VURDERING`/`OPPSUMMERING`, `vurdering` er
 `AKTUELL`/`KANSKJE`/`IKKE_AKTUELL` eller `NULL`, og `notat` er kodeverdier med
 `AG_`-prefiks for arbeidsgiverens notater og `JS_` for jobbsøkerens.
 
@@ -1201,13 +1255,13 @@ Noen valg diagrammet ikke viser av seg selv:
   skal ikke ha rader med `10:00` og `10` liggende som om noen hadde bestemt
   det. Fraværet av en `moteoppsett`-rad betyr «ingen møteplan», og det er en
   mer ærlig tilstand enn standardverdier ingen har valgt.
-- **`jobbsoker_rom_tildeling` og `deltakernummer` peker på treffet i tillegg til
+- **`jobbsoker_rom_tildeling` og `deltakernumre` peker på treffet i tillegg til
   jobbsøkeren**, selv om jobbsøkeren allerede tilhører ett treff. Det gjør
   unikhetskravene mulige å uttrykke direkte: ett rom per person per treff, og én
   nummerserie per treff. Uten kolonnen måtte «nummer 3 finnes bare én gang på
   dette treffet» håndheves med en join i en partiell indeks eller i
   applikasjonskoden — begge deler er svakere vern enn en `UNIQUE`.
-- **`deltakernummer` har ikke noe tildelingstidspunkt.** Kolonnen ville vært en
+- **`deltakernumre` har ikke noe tildelingstidspunkt.** Kolonnen ville vært en
   parallell, taus hendelseslogg ved siden av `jobbsoker_hendelse`. Nummeret
   deles ut i samme operasjon som oppmøtet registreres, og det tidspunktet står
   allerede på hendelsen — sammen med hvem som gjorde det, som en kolonne på
@@ -1235,7 +1289,7 @@ Oppmøte får **ingen** ny kolonne, se [Oppmøte lagret som hendelse](#oppmøte-
 
 ##### Antall rom beregnes, ikke lagres
 
-`antallRom` er med i `TreffgjennomforingDto`, men har **ingen kolonne**. Backend regner det
+`antallRom` er med i `TreffgjennomføringDto`, men har **ingen kolonne**. Backend regner det
 ut ved lesing som `max(antall arbeidsgivere på treffet, 1)` — samme uttrykk som
 frontend bruker i dag.
 
@@ -1270,16 +1324,20 @@ kolonne uten avsender.
 
 ##### Deltakernummer
 
-`deltakernummer` er en egen tabell og ikke en kolonne på oppmøtehendelsen. Det er
+`deltakernumre` er en egen tabell og ikke en kolonne på oppmøtehendelsen. Det er
 nettopp separasjonen som gir persistensen: nummeret skal overleve at oppmøtet
 fjernes og settes på nytt.
 
 Nummeret tildeles i **samme transaksjon** som oppmøtet registreres, etter denne
 regelen:
 
+- **Bare på WorkOp.** Tildelinga gjøres når treffet har `kategori = WORKOP`.
+  Regelen henger på kategorien, ikke på treffets id eller navn, og andre treff
+  får ingen rader i tabellen. Kortbunken finnes ikke der, og da skal skjermbildet
+  heller ikke late som.
 - **Neste nummer er høyeste brukte pluss én**, talt innenfor treffet — ikke
   antall rader.
-- **Aldri gjenbruk.** Fjernes oppmøtet, blir raden i `deltakernummer` stående,
+- **Aldri gjenbruk.** Fjernes oppmøtet, blir raden i `deltakernumre` stående,
   og neste person i døra får et nytt nummer. Hull i rekka er derfor forventet og
   riktig: nummeret står på et fysisk kort som allerede er delt ut, og samme
   kortnummer skal aldri peke på to personer i løpet av dagen.
@@ -1303,6 +1361,13 @@ intervjurekkefølgen i steg 4 er implisitt i rekkefølgen på lista, nettopp for
 to tall ved siden av hverandre ikke skal forveksles.
 
 #### Hendelser på treffgjennomføringen
+
+> **Utdatert.** Prinsippet under — «hver operasjon et menneske har utløst med
+> vilje, blir en hendelse» — er reversert. Det ga 30 hendelsestyper som
+> ingen leste, og som bare gjentok det current state-tabellene allerede sa. 18 av
+> dem er fjernet, og parskrivingen mot `arbeidsgiver_hendelse` er borte helt.
+> Se [hendelser-i-treffgjennomforing.md](hendelser-i-treffgjennomforing.md).
+> Teksten står igjen som begrunnelsen den opprinnelige løsningen hadde.
 
 Treffgjennomføringen skriver til de **tre eksisterende hendelsestabellene** —
 `jobbsoker_hendelse`, `arbeidsgiver_hendelse` og `rekrutteringstreff_hendelse`.
@@ -1370,8 +1435,8 @@ Nye verdier i `JobbsøkerHendelsestype`:
 
 | Type                              | Når                             | `hendelse_data`                                                                       |
 | --------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------- |
-| `MØTT_OPP`                        | Oppmøte registreres             | `deltakernummer` – nummeret på kortet personen fikk                                   |
-| `ANGRE_MØTT_OPP`                  | Oppmøte fjernes                 | Antall registreringer som ble slettet: `interesser`, `intervjuplasser`, `vurderinger` |
+| `MØTT_OPP`                        | Oppmøte registreres             | `deltakernumre` – nummeret på kortet personen fikk                                   |
+| `ANGRE_MØTT_OPP`                  | Oppmøte fjernes                 | Ingen. Fjerning er bare tillatt når det ikke finnes registreringer å telle           |
 | `PLASSERT_I_ROM`                  | Rommet settes eller endres      | `romnummer`, `forrigeRomnummer` (`null` første gang). Kun WorkOp                      |
 | `INTERESSE_REGISTRERT`            | Interesse krysses av            | `arbeidsgiverTreffId`                                                                 |
 | `ANGRE_INTERESSE_REGISTRERT`      | Krysset fjernes                 | `arbeidsgiverTreffId`                                                                 |
@@ -1406,11 +1471,10 @@ null`, ikke en egen angrehendelse; det finnes ingen «forrige tilstand» å
   sannhetskilden for at noen faktisk har fått jobb. De skal ikke slås sammen,
   og det ene skal ikke utløse det andre.
 
-**Kaskader gir ingen hendelser.** Fjernes et oppmøte, slettes interesser,
-intervjuplasser og vurderinger for personen — uten en hendelse per slettet rad.
-Brukeren utførte én handling, og `ANGRE_MØTT_OPP` bærer tellingen av hva som
-forsvant. Dette er den eneste unntaket fra hovedregelen, og det følger av den:
-kaskaden er systemets slutning, ikke brukerens avgjørelse.
+**Ingen kaskader, ingen skjulte slettinger.** Et oppmøte kan bare fjernes når
+interessene og vurderingen alt er ryddet, så `REGISTRERT_OPPMØTE_FJERNET` står
+aldri for tapte registreringer. Hver rydding er en egen brukerhandling og får
+sin egen hendelse der hendelsestypen finnes.
 
 ##### Arbeidsgiverhendelser
 
@@ -1429,7 +1493,7 @@ Nye verdier i `ArbeidsgiverHendelsestype`:
 | `ANGRE_ANDREGANGSINTERVJU_AVTALT` | Krysset fjernes                 | `personTreffId`                                                     |
 | `JOBBTILBUD_GITT`                 | Jobbtilbud krysses av           | `personTreffId`                                                     |
 | `ANGRE_JOBBTILBUD_GITT`           | Krysset fjernes                 | `personTreffId`                                                     |
-| `ROTASJON_TILDELT`                | Møteplanen opprettes            | `startPosisjon` – hvor arbeidsgiveren begynner i runden. Kun WorkOp |
+| `ROTASJON_TILDELT`                | Møteplanen opprettes            | `startposisjon` – hvor arbeidsgiveren begynner i runden. Kun WorkOp |
 
 Registreringene i steg 3, 4 og 5 gjelder et **par**, og skrives derfor begge
 steder: én rad på jobbsøkeren og én på arbeidsgiveren, i samme transaksjon. Det er bevisst
@@ -1449,19 +1513,19 @@ Nye verdier i `RekrutteringstreffHendelsestype`, om treffgjennomføringen som he
 
 | Type                                           | Når                                                  | `hendelse_data`                                                             |
 | ---------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------- |
-| `TREFFGJENNOMFORING_OPPRETTET`                 | Første gang møteoppsettet lagres – møteplanen finnes | `antallRom`, `starttidspunkt`, `varighetPerMøteMinutter`, `antallFremmøtte` |
-| `TREFFGJENNOMFORING_OPPSETT_ENDRET`            | Tidene endres senere                                 | Nye verdier for tidsfeltene                                                 |
-| `TREFFGJENNOMFORING_ROMFORDELING_ENDRET`       | «Fordel på nytt» kjøres for rom                      | `antallRom`, `antallJobbsøkere`                                             |
-| `TREFFGJENNOMFORING_INTERVJUFORDELING_FORDELT` | «Fordel på nytt» kjøres for intervjuer               | `antallArbeidsgivere`, `antallPlasseringer`                                 |
+| `TREFFGJENNOMFØRING_OPPRETTET`                 | Første gang møteoppsettet lagres – møteplanen finnes | `antallRom`, `starttidspunkt`, `varighetPerMøteMinutter`, `antallFremmøtte` |
+| `TREFFGJENNOMFØRING_OPPSETT_ENDRET`            | Tidene endres senere                                 | Nye verdier for tidsfeltene                                                 |
+| `TREFFGJENNOMFØRING_ROMFORDELING_ENDRET`       | «Fordel på nytt» kjøres for rom                      | `antallRom`, `antallJobbsøkere`                                             |
+| `TREFFGJENNOMFØRING_INTERVJUFORDELING_FORDELT` | «Fordel på nytt» kjøres for intervjuer               | `antallArbeidsgivere`, `antallPlasseringer`                                 |
 
 Alle fire er WorkOp-spesifikke – en vanlig treffgjennomføring har verken møteoppsett, rom
 eller intervjufordeling, og skriver derfor ingen av dem.
 
 Hvorfor de ligger på treffet og ikke på personene:
 
-- `TREFFGJENNOMFORING_OPPRETTET` er overgangen fra planlegging til gjennomføring, og skjer
+- `TREFFGJENNOMFØRING_OPPRETTET` er overgangen fra planlegging til gjennomføring, og skjer
   én gang.
-- `TREFFGJENNOMFORING_OPPSETT_ENDRET` endrer timeplanen for alle på treffet, ikke for én
+- `TREFFGJENNOMFØRING_OPPSETT_ENDRET` endrer timeplanen for alle på treffet, ikke for én
   person.
 - De to fordelingshendelsene **overskriver manuelle plasseringer** i én
   operasjon. De krever allerede bekreftelse i UI-et, og er nettopp de
@@ -1490,14 +1554,28 @@ tatt**, og tilstanden utledes av hendelsene. Tre alternativer ble vurdert:
   kolonne.**
 - «Har møtt» **utledes** av hendelsene: den siste av `MØTT_OPP` /
   `ANGRE_MØTT_OPP` bestemmer tilstanden. Treffgjennomføring-lista, «Møtt»-taggen og telleren
-  «X møtt av Y» leser fra hendelsene – samme måte som minside-/relevante hendelser
-  allerede utledes i frontend.
+  «X møtt av Y» bygger på denne tilstanden. Jobbsøkersøket eksponerer den samme
+  avledede tilstanden per søkerad.
 - Ved like tidspunkt brukes `jobbsoker_hendelse_id` som deterministisk
   tie-breaker; sorter på tidspunkt synkende og hendelses-ID synkende. Uten den
   er tilstanden udefinert ved to registreringer i samme millisekund, og «har
   møtt» kunne svart ulikt fra kall til kall.
 - Regelen om at hendelser bare skrives ved **reell endring** gjelder også her:
   å registrere oppmøte for en som allerede er møtt gir ingen ny rad.
+
+##### Berikelse av jobbsøkersøket
+
+Backend skal først filtrere, sortere og paginere jobbsøkersøket. Deretter
+berikes bare `personTreffId`-ene på den returnerte siden:
+
+- `møtt` hentes fra siste `MØTT_OPP`/`ANGRE_MØTT_OPP` per person.
+- Berikelsen gjøres med batchspørringer eller én samlet spørring, aldri én
+  spørring per søkerad.
+
+Løsningen skal ytelsestestes med realistiske treff, inkludert 10 000
+jobbsøkere, og dokumentere med `EXPLAIN (ANALYZE, BUFFERS)` at arbeidet følger
+sidestørrelsen og ikke totalt antall treff. Indekser bestemmes ut fra denne
+målingen; det skal ikke legges til spekulative indekser.
 
 **Hvorfor ikke egen status:** En statusendring må også oppdatere aktivitetsplanen
 og aktivitetskortet. Hendelsene er derfor eneste sannhetskilde for oppmøte i denne
@@ -1526,6 +1604,8 @@ Disse finnes i mocken i dag og må håndteres ordentlig når backend tar over:
 - Teller for antall registrerte oppmøter per treff.
 - Teller for lagringsfeil per endepunkt, slik at vi ser om autolagringen i
   frontend feiler systematisk.
+- Varighet og feilrate for jobbsøkersøket etter oppmøteberikelsen, uten
+  personidentifikatorer som metrikklabler.
 - Ingen fødselsnumre i logger. Logg `personTreffId` og treff-id.
 
 #### Testing
@@ -1534,6 +1614,12 @@ Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
 
 - Tilgang: eier får 200, ikke-eier får 403, kontortilgang alene gir 403.
 - Oppmøte: registrer, angre, registrer igjen — utledet tilstand er riktig.
+- Jobbsøkersøk: søkeradene har riktig `møtt` og tellinger fra `interesse`,
+  `intervju_fordeling` og `vurdering`.
+- Paginering før berikelse: repository-/komponenttest viser at bare personene
+  på den returnerte siden inngår i oppmøte- og tellingsspørringene.
+- Ytelse: et realistisk treff med opptil 10 000 jobbsøkere holder avtalt
+  responstid, uten N+1-spørringer.
 - Kaskadesletting: fjerning av oppmøte med registreringer gir 409 uten bekreftelse
   og uten sideeffekt, og sletter alt i én transaksjon med bekreftelse.
 - Aggregatet: hver PUT returnerer hele treffgjennomføringen med de andre delene intakt.
@@ -1557,16 +1643,20 @@ Komponenttester med Testcontainers, som ellers i API-et. Prioriter:
 
 #### Rekkefølge
 
-1. `V14__treffgjennomforing.sql` og repository for lesing.
-2. `GET /treffgjennomforing-og-oppfolging` med tilgangssjekk. Frontend kan da lese ekte data.
-3. `FormidlingDto`-utvidelsen — uavhengig av resten, kan tas først.
-4. Oppmøtehendelsene, inkludert `bekreftSlettRegistreringer` og 409-svaret.
-5. Resten av PUT-endepunktene, ett steg om gangen. Hendelsene for hvert steg følger med sitt eget endepunkt.
-6. `POST /intervjufordeling/fordel` med fordelingsalgoritmen. Frontend kaller
+1. Behold frontend bakoverkompatibel: `oppmøte` er valgfritt og handlingene
+   skjules når feltet mangler.
+2. `V14__treffgjennomforing.sql` og repository for lesing.
+3. Oppmøtehendelsene, inkludert 409-svaret når registreringene ikke er ryddet.
+4. Utvid `POST /jobbsoker/sok` med page-first oppmøteberikelse, komponenttester
+   og ytelsestest.
+5. `GET /treffgjennomforing-og-oppfolging` med tilgangssjekk. Frontend kan da lese ekte data.
+6. `FormidlingDto`-utvidelsen — uavhengig av resten, kan tas først.
+7. Resten av PUT-endepunktene, ett steg om gangen. Hendelsene for hvert steg følger med sitt eget endepunkt.
+8. `POST /intervjufordeling/fordel` med fordelingsalgoritmen. Frontend kaller
    den allerede, og mocken har en forenklet variant som kan slås av her.
-7. Skru av MSW i frontend, ett endepunkt om gangen etter hvert som backend er klar.
-8. **Produksjonsaktivering** — se under. Dette er et eget, bevisst steg og skjer
-   ikke automatisk når backend er ferdig.
+9. Skru av MSW i frontend, ett endepunkt om gangen etter hvert som backend er klar.
+10. **Produksjonsaktivering** — se under. Dette er et eget, bevisst steg og skjer
+    ikke automatisk når backend er ferdig.
 
 #### Produksjonsaktivering
 
@@ -1577,23 +1667,25 @@ bare lokalt, i dev og i test.
 Rekkefølge for å skru på i produksjon:
 
 1. Alle backend-endepunkter er i drift i dev og test, og MSW er skrudd av for dem.
-2. Verifisert i test med et ekte WorkOp-treff: oppmøte, romfordeling,
+2. `POST /jobbsoker/sok` leverer oppmøte og tellinger, og søkeytelsen er
+   verifisert mot realistisk volum.
+3. Verifisert i test med et ekte WorkOp-treff: oppmøte, romfordeling,
    interesse, fordeling, status og utskrift fungerer ende-til-ende. Og med et
    vanlig treff: den generelle treffgjennomføringen viser fire steg og lagrer riktig.
-3. `V14__treffgjennomforing.sql` er kjørt i produksjon, og tabellene er tomme.
-4. Miljøsjekken fjernes fra `useTreffgjennomføringFane`, slik at gatingen bare består av
+4. `V14__treffgjennomforing.sql` er kjørt i produksjon, og tabellene er tomme.
+5. Miljøsjekken fjernes fra `useTreffgjennomføringFane`, slik at gatingen bare består av
    eier-/utviklerrollen. Vurder å slippe WorkOp og den generelle treffgjennomføringen løs
    hver for seg — de har ulik risiko og ulikt antall brukere.
-5. Observability-tellerne følges i første reelle gjennomføring.
+6. Observability-tellerne følges i første reelle gjennomføring.
 
-Punkt 4 er en egen, liten PR. Å holde den atskilt gjør det mulig å skru av
+Punkt 5 er en egen, liten PR. Å holde den atskilt gjør det mulig å skru av
 igjen ved å reversere én linje.
 
 #### Rød sone
 
 Skrives av utvikler selv, ikke generert:
 
-- Tilgangssjekken i `TreffgjennomforingController` — sikkerhetskritisk.
+- Tilgangssjekken i `TreffgjennomføringController` — sikkerhetskritisk.
 - `V14__treffgjennomforing.sql` — irreversibel i produksjon.
 
 ## Kobling til Excel master
@@ -1626,7 +1718,7 @@ Skrives av utvikler selv, ikke generert:
 ## Gjenbruk av eksisterende mønstre
 
 - **Faner/toggle:** `RekrutteringstreffTabs`, `Fanepanel`, `getMiljø()`-gating,
-  og en felles `harWorkOpTilgang`-hook som håndterer 403 fra `/treffgjennomforing-og-oppfolging`.
+  og en felles `useTreffgjennomføringFane`-hook som håndterer 403 fra `/treffgjennomforing-og-oppfolging`.
 - **Lister/kort:** `ListeKort`, `JobbsøkerKort`-stil, `ArbeidsgiverListeItem`,
   `JobbsøkerStatusTag` (for «Møtt»-tag).
 - **Burgermeny:** `ActionMenu` + `ActionMenyPunkt` i `JobbsokerKortValg.tsx`.
@@ -1698,7 +1790,10 @@ Fase A–D3 er **implementert i frontend** mot MSW. Fase E gjenstår.
    oppfølging» og del skriveendepunktene i `/treffgjennomforing/*` og `/oppfolging/*`.
 8. **Fase E – Backend:** implementer samme kontrakt med Flyway-migrasjon,
    controller/service/repository og hendelser. Bytt datakilden fra MSW til API
-   uten å endre komponentenes DTO-er eller flyt.
+   uten å endre komponentenes DTO-er eller flyt. `POST /jobbsoker/sok` skal
+   returnere både `innsatsgruppe` og det sidevis berikede `oppmøte`-feltet.
+   Førstnevnte brukes i steg 5; sistnevnte brukes av jobbsøkerkort og
+   massehandlinger.
 
 Hver fase avsluttes med Playwright-verifisering: bekreft tilstandene manuelt med
 playwright-mcp, og dekk dem med nye tester i `tests/rekrutteringstreff/`.
@@ -1721,7 +1816,7 @@ ikke å teste selve mock-laget.
 
 ### MSW med state (ikke stub-svar)
 
-- `treffgjennomforingStore` (se «MSW-mock») **muteres** av PUT-handlerne og leses av
+- `treffgjennomføringStore` (se «MSW-mock») **muteres** av PUT-handlerne og leses av
   GET-handleren, slik at oppmøte → romfordeling → interesse → fordeling → vurdering henger sammen
   som ekte tilstandsoverganger.
 - Testene skal drive flyten via UI-et og verifisere at tilstanden **utvikler seg
@@ -1745,7 +1840,7 @@ samme mønster som eksisterende tester: `storageState` for rolle
 - **Stepper:** seks steg vises på et WorkOp-treff og fire ellers; fullførte steg er klikkbare, og steg uten
   forutsetninger er ikke-interaktive. Fra `xl` står stegnavnene på én linje.
   Aksel lar ellers hvert stegnavn krympe til sitt lengste ord, og det overstyres
-  med Tailwind-klasser på `Stepper` i `TreffgjennomføringGjennomføring.tsx` – ikke i
+  med Tailwind-klasser på `Stepper` i `Treffgjennomføring.tsx` – ikke i
   `globals.css`, slik at overstyringen står der den gjelder. Under `xl` brytes
   navnene som før.
 - **Steg 1 – oppmøte:** empty state når ingen er møtt; «Møtt»-tag og telleren
@@ -1753,7 +1848,10 @@ samme mønster som eksisterende tester: `storageState` for rolle
   «Marker som møtt (N)»: kryss av to jobbsøkere i jobbsøkerfanen, registrer, og
   sjekk at begge får «Møtt»-tag, at valget tømmes, og at telleren i steg 1 øker.
   Tilsvarende for «Fjern oppmøte (N)»: bekreftelsesdialogen skal navngi antallet
-  og listen skal miste «Møtt»-taggen først etter at fjerningen er bekreftet.
+  og summere tellingene fra søkeradene; listen skal miste «Møtt»-taggen først
+  etter at fjerningen er bekreftet. Test også at manglende `oppmøte` i en
+  overgangsrespons skjuler enkelt- og massehandlingene i stedet for å vise alle
+  som «ikke møtt».
 - **Møteplan og rom:** «Opprett møteplan» fyller rommene, og «Gå til
   romfordeling» navigerer uten lagring. Test dra-og-slipp, direkte romvalg,
   innsetting sist, rollback ved lagringsfeil og full «Fordel på nytt» med
@@ -1831,18 +1929,23 @@ tilstand etter reelle brukerhandlinger.
   «Finn kandidater» — og er derfor en eksisterende begrensning i frontend, ikke
   noe WorkOp innfører. Fikses separat, enten ved at frontend paginerer eller ved
   at backend tilbyr et «hent alle»-endepunkt. WorkOp-treff med speedintervju i
-  maks 9 rom ligger i praksis godt under grensen.
+  maks 9 rom ligger i praksis godt under grensen. Dette endrer ikke kravet til
+  `POST /jobbsoker/sok`: det søket er paginert og skal berike bare den
+  returnerte siden også når treffet totalt har 10 000 jobbsøkere.
 
 ## Åpne spørsmål
 
 - Hva gjør vi hvis møtene er gjennomført og noen endrer fordelingen på nytt?
-  Diskuter **grad av låsing** av verdier i WorkOp gjennomføring-fanen.
+  Diskuter **grad av låsing** av verdier i treffgjennomføringsfanen.
 - **Utskrift:** har romvertene egen notasjon for print, f.eks. bare initialer på
   jobbsøkere?
 - ~~Er dagens eier-/kontorregel streng nok for WorkOp?~~ **Avklart:** ja, vi
   bruker eier-regelen uten egen hovedansvarlig-modell.
-- Hvilket backendendepunkt skal gi begge WorkOp-eierne komplett, autorisert
-  lesetilgang til relevante Formidlinger?
+- ~~Hvilket backendendepunkt skal gi begge WorkOp-eierne komplett, autorisert
+  lesetilgang til relevante Formidlinger?~~ **Avklart:** begge eierne av treffet
+  skal ha lesetilgang til formidlingene som hører til treffet. Tilgangen følger
+  eier-regelen for treffet, ikke eierskapet til den enkelte formidlinga, slik at
+  den som står i rommet ser det samme som den som satte opp treffet.
 - ~~Hvilke autoritative domenenøkler skal erstatte fødselsnummer +
   organisasjonsnummer?~~ **Avklart:** `personTreffId` og `arbeidsgiverTreffId`.
 - Når bør «møtt opp» løftes fra hendelse til egen `JobbsøkerStatus` – i takt med

@@ -1,5 +1,7 @@
 package no.nav.toi
 
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.common.audit_log.cef.AuthorizationDecision
 import no.nav.common.audit_log.cef.CefMessage
 import no.nav.common.audit_log.cef.CefMessageEvent
@@ -10,7 +12,6 @@ import no.nav.toi.rekrutteringstreff.TreffId
 class AuditLog {
     companion object {
         private val auditLogger: AuditLogger = AuditLoggerImpl()
-        private val secureLogger = SecureLog(log)
 
         fun loggVisningAvJobbsøkereTilhørendesRekrutteringstreff(
             navId: String,
@@ -19,7 +20,7 @@ class AuditLog {
             val loggmelding = "Jobbsøkere tilhørendes rekrutteringstreff med uuid $treffId er vist til Nav ansatt"
             val cefMessage = createCefMessage(null, navId, CefMessageEvent.ACCESS, loggmelding)
             auditLogger.log(cefMessage)
-            secureLogger.info("Auditlogg - $loggmelding: $cefMessage")
+            teamlog(log).info("Auditlogg - $loggmelding: $cefMessage")
         }
 
         fun createCefMessage(

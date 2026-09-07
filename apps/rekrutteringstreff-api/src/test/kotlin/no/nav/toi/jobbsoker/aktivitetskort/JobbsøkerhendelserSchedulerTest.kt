@@ -4,6 +4,7 @@ package no.nav.toi.jobbsoker.aktivitetskort
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionMock
+import no.nav.toi.Miljø
 import no.nav.toi.TestRapid
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
@@ -46,7 +47,8 @@ class JobbsøkerhendelserSchedulerTest {
             jobbsøkerRepository,
             arbeidsgiverRepository,
             jobbsøkerService,
-            EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource)
+            EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource),
+            Miljø.LOKALT,
         )
     }
 
@@ -1232,6 +1234,43 @@ class JobbsøkerhendelserSchedulerTest {
         assertThat(hendelserForIkkeSvart2.last()["treffstatus"].asText()).isEqualTo("fullført")
     }
 
+    @Test
+    fun `workop skal sende workop-spesifikke eventer på rapid`() {
+        val fnr = Fødselsnummer("12345678901")
+        val rapid = TestRapid()
+        val scheduler = JobbsøkerhendelserScheduler(
+            db.dataSource,
+            aktivitetskortRepository,
+            rekrutteringstreffRepository,
+            rapid,
+            mapper,
+            LeaderElectionMock(),
+        )
+
+        val workopId = db.opprettRekrutteringstreffMedAlleFelter(kategori = RekrutteringstreffKategori.WORKOP)
+        opprettOgInviterJobbsøker(workopId, fnr)
+        scheduler.wrapJobbkjøring()
+
+        assertThat(rapid.inspektør.size).isEqualTo(1)
+        val invitasjonMelding = rapid.inspektør.message(0)
+        assertThat(invitasjonMelding["@event_name"].asText()).isEqualTo("workopinvitasjon")
+        assertThat(invitasjonMelding["kategori"].asText()).isEqualTo("WORKOP")
+
+        jobbsøkerService.svarJaTilInvitasjon(fnr, workopId, fnr.asString)
+        scheduler.wrapJobbkjøring()
+
+        assertThat(rapid.inspektør.size).isEqualTo(2)
+        val svarMelding = rapid.inspektør.message(1)
+        assertThat(svarMelding["@event_name"].asText()).isEqualTo("workopSvarOgStatus")
+
+        val endringer = Rekrutteringstreffendringer(endredeFelter = setOf(Endringsfelttype.NAVN))
+        db.registrerTreffEndretHendelse(workopId, fnr, endringer)
+        scheduler.wrapJobbkjøring()
+
+        assertThat(rapid.inspektør.size).isEqualTo(3)
+        val oppdateringMelding = rapid.inspektør.message(2)
+        assertThat(oppdateringMelding["@event_name"].asText()).isEqualTo("workopoppdatering")
+    }
 
     private fun opprettPersonOgInviter(
         fødselsnummer: Fødselsnummer,
@@ -1292,4 +1331,3 @@ class JobbsøkerhendelserSchedulerTest {
         jobbsøkerService.inviter(listOf(personTreffId), treffId, "Z123456")
     }
 }
-

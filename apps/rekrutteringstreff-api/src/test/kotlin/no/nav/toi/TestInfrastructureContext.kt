@@ -22,6 +22,7 @@ class TestInfrastructureContext(
     kandidatKlient: KandidatKlient? = null,
     kandidatKlientUrl: String = "",
     val authPort: Int = ubruktPortnr(),
+    override val miljø: Miljø = Miljø.LOKALT,
 ) : InfrastructureContext() {
     val authServer = MockOAuth2Server()
 

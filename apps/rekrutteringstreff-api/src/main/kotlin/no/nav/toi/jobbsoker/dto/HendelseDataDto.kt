@@ -13,8 +13,21 @@ import no.nav.toi.rekrutteringstreff.Endringsfelttype
 @JsonSubTypes(
     JsonSubTypes.Type(MinsideVarselSvarDataDto::class),
     JsonSubTypes.Type(RekrutteringstreffendringerDto::class),
+    JsonSubTypes.Type(OppmøteRegistrertDataDto::class),
+    JsonSubTypes.Type(VurderingHendelseDataDto::class),
+    JsonSubTypes.Type(NotatHendelseDataDto::class),
+    JsonSubTypes.Type(AvtaltIntervjuHendelseDataDto::class),
+    JsonSubTypes.Type(ArbeidsgiverkontekstDataDto::class),
 )
-@OneOf(MinsideVarselSvarDataDto::class, RekrutteringstreffendringerDto::class)
+@OneOf(
+    MinsideVarselSvarDataDto::class,
+    RekrutteringstreffendringerDto::class,
+    OppmøteRegistrertDataDto::class,
+    VurderingHendelseDataDto::class,
+    NotatHendelseDataDto::class,
+    AvtaltIntervjuHendelseDataDto::class,
+    ArbeidsgiverkontekstDataDto::class,
+)
 sealed interface HendelseDataDto
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
@@ -40,24 +53,63 @@ data class RekrutteringstreffendringerDto(
     val endredeFelter: Set<Endringsfelttype>
 ) : HendelseDataDto
 
-fun parseHendelseData(mapper: ObjectMapper, hendelsestype: JobbsøkerHendelsestype, node: JsonNode?): HendelseDataDto? {
-    if (node == null || node.isNull) return null
-    return when (hendelsestype) {
-        JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE ->
-            mapper.treeToValue(node, MinsideVarselSvarDataDto::class.java)
-        JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON ->
-            mapper.treeToValue(node, RekrutteringstreffendringerDto::class.java)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
+@OpenApiName("OppmøteRegistrertHendelseData")
+data class OppmøteRegistrertDataDto(
+    val deltakernummer: Int? = null,
+) : HendelseDataDto
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
+@OpenApiName("VurderingHendelseData")
+data class VurderingHendelseDataDto(
+    val arbeidsgiverTreffId: String? = null,
+    val vurdering: String? = null,
+    val forrigeVurdering: String? = null,
+) : HendelseDataDto
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
+@OpenApiName("NotatHendelseData")
+data class NotatHendelseDataDto(
+    val arbeidsgiverTreffId: String? = null,
+    val notat: String? = null,
+) : HendelseDataDto
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
+@OpenApiName("AvtaltIntervjuHendelseData")
+data class AvtaltIntervjuHendelseDataDto(
+    val arbeidsgiverTreffId: String? = null,
+    val dato: String? = null,
+) : HendelseDataDto
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
+@OpenApiName("ArbeidsgiverkontekstHendelseData")
+data class ArbeidsgiverkontekstDataDto(
+    val arbeidsgiverTreffId: String? = null,
+) : HendelseDataDto
+
+private fun målklasse(hendelsestype: JobbsøkerHendelsestype): Class<out HendelseDataDto>? =
+    when (hendelsestype) {
+        JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE -> MinsideVarselSvarDataDto::class.java
+        JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON -> RekrutteringstreffendringerDto::class.java
+        JobbsøkerHendelsestype.REGISTRERT_OPPMØTE -> OppmøteRegistrertDataDto::class.java
+        JobbsøkerHendelsestype.VURDERT -> VurderingHendelseDataDto::class.java
+        JobbsøkerHendelsestype.NOTAT_LAGT_TIL,
+        JobbsøkerHendelsestype.NOTAT_FJERNET -> NotatHendelseDataDto::class.java
+        JobbsøkerHendelsestype.AVTALT_INTERVJU -> AvtaltIntervjuHendelseDataDto::class.java
+        JobbsøkerHendelsestype.AVTALT_INTERVJU_ANGRET,
+        JobbsøkerHendelsestype.JOBBTILBUD_GITT,
+        JobbsøkerHendelsestype.ANGRE_JOBBTILBUD_GITT -> ArbeidsgiverkontekstDataDto::class.java
         else -> null
     }
+
+fun parseHendelseData(mapper: ObjectMapper, hendelsestype: JobbsøkerHendelsestype, node: JsonNode?): HendelseDataDto? {
+    if (node == null || node.isNull) return null
+    val målklasse = målklasse(hendelsestype) ?: return null
+    return mapper.treeToValue(node, målklasse)
 }
 
 fun parseHendelseData(mapper: ObjectMapper, hendelsestype: JobbsøkerHendelsestype, json: String?): HendelseDataDto? {
     if (json == null) return null
-    return when (hendelsestype) {
-        JobbsøkerHendelsestype.MOTTATT_SVAR_FRA_MINSIDE ->
-            mapper.readValue(json, MinsideVarselSvarDataDto::class.java)
-        JobbsøkerHendelsestype.TREFF_ENDRET_ETTER_PUBLISERING_NOTIFIKASJON ->
-            mapper.readValue(json, RekrutteringstreffendringerDto::class.java)
-        else -> null
-    }
+    val målklasse = målklasse(hendelsestype) ?: return null
+    return mapper.readValue(json, målklasse)
 }

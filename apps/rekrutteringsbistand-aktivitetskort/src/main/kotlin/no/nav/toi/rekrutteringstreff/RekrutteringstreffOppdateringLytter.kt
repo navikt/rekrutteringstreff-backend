@@ -9,20 +9,20 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.toi.Repository
-import no.nav.toi.SecureLog
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
+import no.nav.arbeidsgiver.toi.logging.log
 
 
 class RekrutteringstreffOppdateringLytter(
     rapidsConnection: RapidsConnection,
-    private val repository: Repository
+    private val repository: Repository,
+    private val eventName: String = "rekrutteringstreffoppdatering"
 ) : River.PacketListener {
-    private val secureLog = SecureLog(log)
 
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "rekrutteringstreffoppdatering")
+                it.requireValue("@event_name", eventName)
                 it.requireKey("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
@@ -67,7 +67,7 @@ class RekrutteringstreffOppdateringLytter(
         metadata: MessageMetadata,
     ) {
         log.error("Feil ved behandling av rekrutteringstreffoppdatering: $problems")
-        secureLog.error("Feil ved behandling av rekrutteringstreffoppdatering: ${problems.toExtendedReport()}")
+        teamlog(log).error("Feil ved behandling av rekrutteringstreffoppdatering: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }

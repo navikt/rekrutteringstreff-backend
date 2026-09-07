@@ -96,5 +96,7 @@ data class FormidlingDto(
     val sperret: Boolean,
     val opprettetAvNavn: String?,
     val opprettetAvNavIdent: String?,
+    val personTreffId: String? = null,
+    val arbeidsgiverTreffId: String? = null,
 )
 

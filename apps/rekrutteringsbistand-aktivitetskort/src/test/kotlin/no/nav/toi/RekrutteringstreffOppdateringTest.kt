@@ -50,7 +50,8 @@ class RekrutteringstreffOppdateringTest {
         leaderElection = LeaderElectionMock(),
         meterRegistry = meterRegistry,
         isRunning = { true },
-        isReady = { true }
+        isReady = { true },
+        workOpLyttereAktivert = true,
     )
 
     @BeforeAll

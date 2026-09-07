@@ -1,5 +1,6 @@
 package no.nav.toi
 
+import no.nav.arbeidsgiver.toi.logging.log
 import java.util.*
 
 enum class Rolle {

@@ -1,5 +1,6 @@
 package no.nav.toi
 
+import no.nav.arbeidsgiver.toi.logging.log
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean

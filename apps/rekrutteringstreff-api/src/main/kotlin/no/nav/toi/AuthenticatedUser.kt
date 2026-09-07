@@ -10,6 +10,7 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import com.auth0.jwt.interfaces.RSAKeyProvider
 import io.javalin.http.*
 import io.javalin.router.JavalinDefaultRoutingApi
+import no.nav.arbeidsgiver.toi.logging.noClassLogger
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
@@ -42,6 +43,8 @@ interface AuthenticatedUser {
     fun extractPid(): String
     fun innkommendeToken(): String
     fun erUtvikler(): Boolean = false
+    val erBorger: Boolean get() = false
+    val erNavAnsatt: Boolean get() = false
 
     companion object {
         fun fromJwt(
@@ -100,6 +103,7 @@ private class AuthenticatedNavUser(
     override fun extractPid(): String = throw ForbiddenResponse("PID is not available for NAV users")
     override fun innkommendeToken() = token
     override fun erUtvikler() = roller.any { it == Rolle.UTVIKLER }
+    override val erNavAnsatt = true
 }
 
 private class AuthenticatedCitizenUser(
@@ -114,6 +118,7 @@ private class AuthenticatedCitizenUser(
 
     override fun extractPid(): String = pid
     override fun innkommendeToken() = token
+    override val erBorger = true
 }
 
 

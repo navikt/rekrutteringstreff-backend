@@ -14,11 +14,11 @@ repositories {
 }
 
 val slf4jVersion = "2.0.18"
-val logbackVersion = "1.5.23"
+val logbackVersion = "1.6.1"
 val logstashLogbackEncoderVersion = "9.0"
-val junitJupiterVersion = "5.9.1"
-val junitPlatformVersion = "1.9.1"
-val assertjVersion = "3.23.1"
+val junitJupiterVersion = "5.14.4"
+val junitPlatformVersion = "1.14.4"
+val assertjVersion = "3.27.7"
 
 dependencies {
     constraints {

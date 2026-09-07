@@ -23,6 +23,8 @@ open class InfrastructureContext(
     private fun getenv(key: String): String =
         env[key] ?: throw IllegalStateException("Det finnes ingen miljøvariabel med navn [$key]")
 
+    open val miljø: Miljø by lazy { Miljø.fraClusterNavn(env["NAIS_CLUSTER_NAME"]) }
+
     open val dataSource: DataSource by lazy {
         HikariConfig().apply {
             val base = getenv("NAIS_DATABASE_REKRUTTERINGSTREFF_API_REKRUTTERINGSTREFF_API_JDBC_URL")

@@ -3,7 +3,7 @@ package no.nav.toi.rekrutteringstreff.ki
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.readValue
 import no.nav.toi.JacksonConfig
-import no.nav.toi.log
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.rekrutteringstreff.PersondataFilter
 import no.nav.toi.rekrutteringstreff.dto.ValiderRekrutteringstreffResponsDto
 import no.nav.toi.rekrutteringstreff.ki.client.SystemPrompt

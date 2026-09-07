@@ -7,6 +7,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.LeaderElectionMock
+import no.nav.toi.Miljø
 import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
@@ -42,7 +43,15 @@ class AktivitetskortTransaksjonTest {
         rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
         arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
         jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
-        rekrutteringstreffService = RekrutteringstreffService(db.dataSource, rekrutteringstreffRepository, jobbsøkerRepository, arbeidsgiverRepository, jobbsøkerService, EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource))
+        rekrutteringstreffService = RekrutteringstreffService(
+            db.dataSource,
+            rekrutteringstreffRepository,
+            jobbsøkerRepository,
+            arbeidsgiverRepository,
+            jobbsøkerService,
+            EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource),
+            Miljø.LOKALT,
+        )
     }
 
     @BeforeEach

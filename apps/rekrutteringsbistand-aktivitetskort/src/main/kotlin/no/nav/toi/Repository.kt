@@ -1,5 +1,7 @@
 package no.nav.toi
 
+import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
+import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.*
 import org.flywaydb.core.Flyway
 import java.sql.Statement
@@ -12,7 +14,7 @@ import java.util.*
 
 class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String, private val dabAktivitetskortTopic: String) {
     private val dataSource = databaseConfig.lagDatasource()
-    private val secureLog = SecureLog(log)
+    private val teamLog = TeamLogLogger.teamlog(log)
 
     init {
         Flyway.configure()
@@ -26,14 +28,14 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         fnr: String,
         rekrutteringstreffId: UUID,
         tittel: String,
-        beskrivelse: String,
         startDato: LocalDate,
         sluttDato: LocalDate,
         tid: String,
         endretAv: String,
         gateAdresse: String,
         postnummer: String,
-        poststed: String
+        poststed: String,
+        aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
     ): UUID? {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -67,12 +69,12 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         message_id, aktivitetskort_id, aktivitets_status,
                         endret_av, endret_av_type, endret_tidspunkt,
                         detaljer, handlinger, etiketter, oppgave, action_type, avtalt_med_nav, aktivitetskort_type
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}', ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json, ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${AktivitetskortType.REKRUTTERINGSTREFF.name}')
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}', ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json, ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, ?)
                     """.trimIndent()
                     ).apply {
                         setString(1, fnr)
                         setString(2, tittel)
-                        setString(3, beskrivelse)
+                        setString(3, aktivitetskortType.beskrivelse)
                         setObject(4, startDato)
                         setObject(5, sluttDato)
                         setObject(6, messageId)
@@ -92,16 +94,20 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                             objectMapper.writeValueAsString(
                                 listOf(
                                     AktivitetskortHandling(
-                                        "Sjekk ut treffet",
-                                        "Sjekk ut treffet og svar",
+                                        aktivitetskortType.handlingTittel,
+                                        aktivitetskortType.handlingSubtekst,
                                         "$minsideUrl/$rekrutteringstreffId",
                                         LenkeType.FELLES
                                     )
                                 )
                             )
                         )
-                        setString(12, "[]")
+                        setString(
+                            12,
+                            objectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
+                        )
                         setNull(13, VARCHAR)
+                        setString(14, aktivitetskortType.name)
                     }.executeUpdate()
 
                     connection.commit()
@@ -148,7 +154,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
                         avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
                         sendtTidspunkt = null,
-                        aktivitetskortType = resultSet.getString("aktivitetskort_type").let(::enumValueOf),
+                        aktivitetskortType = resultSet.getString("aktivitetskort_type").let(::enumValueOf)
                     )
                 } else {
                     null
@@ -493,11 +499,11 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
             }.executeUpdate()
         }.let { rowsUpdated ->
             if (rowsUpdated == 0) {
-                secureLog.warn("Aktivitetskort $aktivitetskortId har allerede aktivitetsstatus $aktivitetsStatus med samme endretAv og endretAvType")
+                teamLog.warn("Aktivitetskort $aktivitetskortId har allerede aktivitetsstatus $aktivitetsStatus med samme endretAv og endretAvType")
             } else if (rowsUpdated != 1) {
-                secureLog.error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
+                teamLog.error("$rowsUpdated rader oppdatert i aktivitetskort for aktivitetskortId: $aktivitetskortId, aktivitetsstatus: $aktivitetsStatus, forventet 1 rad oppdatert")
             } else {
-                secureLog.info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
+                teamLog.info("Oppdaterte aktivitetsstatus for aktivitetskortId: $aktivitetskortId til $aktivitetsStatus")
             }
         }
     }
@@ -567,9 +573,9 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
             }.executeUpdate()
         }.let { rowsUpdated ->
             if (rowsUpdated != 1) {
-                secureLog.error("$rowsUpdated rader oppdatert i aktivitetskort for rekrutteringstreff $rekrutteringstreffId, forventet 1 rad oppdatert")
+                teamLog.error("$rowsUpdated rader oppdatert i aktivitetskort for rekrutteringstreff $rekrutteringstreffId, forventet 1 rad oppdatert")
             } else {
-                secureLog.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
+                teamLog.info("Oppdaterte aktivitetskort for rekrutteringstreff $rekrutteringstreffId")
             }
         }
     }

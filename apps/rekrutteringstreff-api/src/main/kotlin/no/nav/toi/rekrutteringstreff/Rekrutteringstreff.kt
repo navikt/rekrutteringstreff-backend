@@ -64,6 +64,7 @@ class Rekrutteringstreff(
         fnr = fnr,
         rekrutteringstreffId = id,
         hendelseId = hendelseId,
+        kategori = kategori,
         tittel = tittel,
         fraTid = fraTid,
         tilTid = tilTid,
@@ -87,6 +88,7 @@ class Rekrutteringstreff(
         endretAv = endretAv ?: if (endretAvPersonbruker) fnr else opprettetAvPersonNavident,
         endretAvPersonbruker = endretAvPersonbruker,
         hendelseId = hendelseId,
+        kategori = kategori,
         svar = svar,
         treffstatus = treffstatus,
     )
@@ -100,6 +102,7 @@ class Rekrutteringstreff(
         fnr = fnr,
         rekrutteringstreffId = id,
         hendelseId = hendelseId,
+        kategori = kategori,
         tittel = tittel,
         fraTid = fraTid!!,
         tilTid = tilTid!!,
