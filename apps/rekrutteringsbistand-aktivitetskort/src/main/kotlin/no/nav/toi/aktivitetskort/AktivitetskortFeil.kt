@@ -49,6 +49,7 @@ internal class DeltStillingFeilMelding(
 
 internal class WorkOpFeilMelding(
     fellesMeldingsfelter: FellesMeldingsfelter,
+    val rekrutteringstreffId: String,
 ) : AktivitetskortFeil(fellesMeldingsfelter) {
     override val eventName = "aktivitetskort-feil-workop"
 }

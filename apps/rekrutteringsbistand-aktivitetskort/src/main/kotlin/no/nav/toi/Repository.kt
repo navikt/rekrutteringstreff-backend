@@ -248,7 +248,12 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                                     ?: error("Mangler stillingId for aktivitetskort $aktivitetskortId"),
                             )
 
-                            AktivitetskortType.WORKOP -> WorkOpFeilMelding(fellesMeldingsfelter = fellesMeldingsfelter)
+                            AktivitetskortType.WORKOP -> WorkOpFeilMelding(fellesMeldingsfelter = fellesMeldingsfelter,
+                                rekrutteringstreffId = resultSet
+                                    .getObject("rekrutteringstreff_id", UUID::class.java)
+                                    ?.toString()
+                                    ?: error("Mangler rekrutteringstreffId for aktivitetskort $aktivitetskortId")
+                            )
                         }
                     } else {
                         null
