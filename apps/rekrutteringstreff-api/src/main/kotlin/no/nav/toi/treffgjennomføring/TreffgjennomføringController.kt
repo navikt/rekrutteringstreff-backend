@@ -165,7 +165,8 @@ class TreffgjennomføringController(
         ctx.status(200).json(møteplanService.lagreMøteoppsett(treffId, dto, navIdent))
     }
 
-    @OpenApi(",
+    @OpenApi(
+        summary = "Flytt én jobbsøker til et rom. Kun WorkOp",
         description = "Flytter valgt jobbsøker til angitt romnummer basert på fersk servertilstand. Overskriver ikke andre endringer.",
         operationId = "flyttJobbsøkerRom",
         security = [OpenApiSecurity(name = "BearerAuth")],
