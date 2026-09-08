@@ -10,17 +10,18 @@ import java.time.LocalTime
 class MøteplanRepository {
 
     fun hentMøteplan(connection: Connection, treffkontekst: Treffkontekst, oppmøte: List<PersonTreffId>): Møteplan {
+        val møteoppsett = hentMøteoppsett(connection, treffkontekst.treffDbId)
         val lagretRom = hentRom(connection, treffkontekst.treffDbId)
         return Møteplan(
-            møteoppsett = hentMøteoppsett(connection, treffkontekst.treffDbId) ?: Møteoppsett.standard(),
-            rom = normaliserRom(lagretRom, oppmøte, treffkontekst.antallRom),
+            møteoppsett = møteoppsett ?: Møteoppsett.standard(),
+            rom = if (møteoppsett == null && lagretRom.isEmpty()) emptyList()
+                else normaliserRom(lagretRom, oppmøte, treffkontekst.antallRom),
             arbeidsgiverRekkefølge = hentArbeidsgiverRotasjon(connection, treffkontekst),
         )
     }
 
     private fun normaliserRom(rom: List<Rom>, oppmøte: List<PersonTreffId>, antallRom: Int): List<Rom> =
-        if (rom.isEmpty()) emptyList()
-        else Romfordeler.oppdaterEtterOppmøte(Romfordeler.normaliser(rom, antallRom), oppmøte)
+        Romfordeler.oppdaterEtterOppmøte(Romfordeler.normaliser(rom, antallRom), oppmøte)
 
     private fun hentMøteoppsett(connection: Connection, treffDbId: Long): Møteoppsett? {
         val sql = """
