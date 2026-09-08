@@ -13,6 +13,7 @@ import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 
@@ -95,7 +96,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"))
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"), "1234")
 
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
@@ -104,6 +105,7 @@ class RekrutteringstreffEierTest {
         assertThat(response.statusCode()).isEqualTo(200)
         val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
         assertThat(eiere).doesNotContain(navIdent)
+        assertThat(database.hentEierrader(opprettetRekrutteringstreff.id).map { it.navIdent }).doesNotContain(navIdent)
     }
 
     @Test
@@ -129,7 +131,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent), "1234")
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
             token.serialize()
@@ -156,6 +158,9 @@ class RekrutteringstreffEierTest {
 
         assertThat(response.statusCode()).isEqualTo(200)
         assertThat(database.hentEiere(treff.id)).contains(navIdent)
+        val eierrad = database.hentEierrader(treff.id).single { it.navIdent == navIdent }
+        assertThat(eierrad.kontorEnhetId).isEqualTo("1234")
+        assertThat(eierrad.lagtTilAv).isEqualTo(navIdent)
     }
 
     @Test
@@ -174,6 +179,40 @@ class RekrutteringstreffEierTest {
 
         assertThat(response.statusCode()).isEqualTo(200)
         assertThat(database.hentEiere(treff.id)).contains(navIdent)
+        assertThat(database.hentEierrader(treff.id).single().kontorEnhetId).isEqualTo("1234")
+        assertThat(ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+            .filter { it.hendelsestype == "EIER_LAGT_TIL" }).isEmpty()
+    }
+
+    @ParameterizedTest
+    @CsvSource("200, false, 400", "404, false, 403", "200, true, 400", "404, true, 400")
+    fun `leggTilEierMedKontor avviser manglende eller blankt kontor uten å skrive`(
+        modiaStatus: Int, erUtvikler: Boolean, forventetStatus: Int
+    ) {
+        opprettRekrutteringstreffIDatabase("A123456")
+        val treff = database.hentAlleRekrutteringstreff().first()
+        val eierraderFør = database.hentEierrader(treff.id)
+        val hendelserFør = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+        val token = infra.authServer.lagToken(
+            infra.authPort, navIdent = "B654321",
+            groups = listOf(if (erUtvikler) AzureAdRoller.utvikler else AzureAdRoller.arbeidsgiverrettet)
+        )
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet")).willReturn(
+                aResponse().withStatus(modiaStatus).withHeader("Content-Type", "application/json")
+                    .withBody("""{"aktivEnhet": " "}""")
+            )
+        )
+
+        val response = httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg", "", token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(forventetStatus)
+        assertThat(database.hentEiere(treff.id)).containsExactly("A123456")
+        assertThat(database.hentEierrader(treff.id)).isEqualTo(eierraderFør)
+        assertThat(database.hentAlleRekrutteringstreff().single().kontorer).isEqualTo(treff.kontorer)
+        assertThat(ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)).isEqualTo(hendelserFør)
     }
 
     @Test
@@ -248,7 +287,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val treff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(treff.id, listOf(skalSlettes))
+        ctx.eierRepository.leggTil(treff.id, listOf(skalSlettes), "1234")
 
         httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/$skalSlettes",
@@ -266,7 +305,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = ikkeEier)
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(treff.id, listOf("B654321"))
+        ctx.eierRepository.leggTil(treff.id, listOf("B654321"), "1234")
 
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/B654321",

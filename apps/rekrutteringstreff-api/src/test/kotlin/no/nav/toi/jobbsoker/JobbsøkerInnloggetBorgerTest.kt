@@ -177,7 +177,7 @@ class JobbsøkerInnloggetBorgerTest {
         )
 
         val jobbsøkere = db.hentAlleJobbsøkere()
-        ctx.eierRepository.leggTil(treffId, listOf("testperson"))
+        ctx.eierRepository.leggTil(treffId, listOf("testperson"), "0315")
 
         inviter(jobbsøkere, treffId, token)
 
@@ -209,7 +209,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.LAGT_TIL)))
-        ctx.eierRepository.leggTil(treffId, listOf("test"))
+        ctx.eierRepository.leggTil(treffId, listOf("test"), "0315")
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
@@ -255,7 +255,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.LAGT_TIL)))
-        ctx.eierRepository.leggTil(treffId, listOf("test"))
+        ctx.eierRepository.leggTil(treffId, listOf("test"), "0315")
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)
@@ -279,7 +279,7 @@ class JobbsøkerInnloggetBorgerTest {
         val borgerToken = infra.authServer.lagTokenBorger(infra.authPort, pid = fødselsnummer.asString)
 
         db.leggTilJobbsøkere(listOf(Jobbsøker(PersonTreffId(UUID.randomUUID()), treffId, fødselsnummer, Fornavn("Test"), Etternavn("Person"), null, null, null, JobbsøkerStatus.LAGT_TIL)))
-        ctx.eierRepository.leggTil(treffId, listOf("test"))
+        ctx.eierRepository.leggTil(treffId, listOf("test"), "0315")
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         inviter(jobbsøkere, treffId, token)

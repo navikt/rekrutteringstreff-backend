@@ -70,7 +70,7 @@ class JobbsøkerOutboundTest {
         val fnr = Fødselsnummer("12345678910")
         val forventetKandidatnummer = "K123456"
 
-        ctx.eierRepository.leggTil(treffId, listOf("A000001"))
+        ctx.eierRepository.leggTil(treffId, listOf("A000001"), "0315")
 
         db.leggTilJobbsøkere(
             listOf(

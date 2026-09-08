@@ -232,7 +232,7 @@ class JobbsokerControllerAutorisasjonsTest {
     @ParameterizedTest
     @MethodSource("autorisasjonsCaser")
     fun testEndepunkter(endepunkt: Endepunkt, gruppetilhørighet: Gruppe, expectedStatus: Int) {
-        ctx.eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A000001"))
+        ctx.eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A000001"), "0315")
 
         val request = endepunkt.metode()
             .uri(URI(endepunkt.url()))
@@ -251,7 +251,7 @@ class JobbsokerControllerAutorisasjonsTest {
     @MethodSource("autorisasjonsCaserMedEier")
     fun testEndepunkterMedEier(endepunkt: Endepunkt, gruppetilhørighet: Gruppe, erEier: Boolean, expectedStatus: Int) {
         if (erEier) {
-            ctx.eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A000001"))
+            ctx.eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A000001"), "0315")
         }
 
         val request = endepunkt.metode()

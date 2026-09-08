@@ -106,7 +106,7 @@ class SynlighetsKomponentTest {
 
     private fun opprettTreffMedEier(): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "TestTreff")
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, listOf("A123456"), "0315")
         return treffId
     }
 
@@ -181,7 +181,7 @@ class SynlighetsKomponentTest {
     fun `synlighetsoppdatering påvirker alle treff der personen er jobbsøker`() {
         val treff1 = opprettTreffMedEier()
         val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "Treff2")
-        eierRepository.leggTil(treff2, listOf("A123456"))
+        eierRepository.leggTil(treff2, listOf("A123456"), "0315")
         
         val fnr = Fødselsnummer("55555555555")
         val jobbsøker = LeggTilJobbsøker(fnr, Fornavn("Test"), Etternavn("Person"), null, null, null)
@@ -398,4 +398,3 @@ class SynlighetsKomponentTest {
         assertThat(treffHendelser).isNotEmpty()
     }
 }
-

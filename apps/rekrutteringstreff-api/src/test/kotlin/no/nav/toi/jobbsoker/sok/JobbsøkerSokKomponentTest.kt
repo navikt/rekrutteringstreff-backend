@@ -64,7 +64,7 @@ class JobbsøkerSokKomponentTest {
 
     private fun opprettTreffMedEier(navIdent: String = "A123456"): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
-        ctx.eierRepository.leggTil(treffId, listOf(navIdent))
+        ctx.eierRepository.leggTil(treffId, listOf(navIdent), "0315")
         return treffId
     }
 
@@ -557,7 +557,7 @@ class JobbsøkerSokKomponentTest {
     fun `søk returnerer kun jobbsøkere for riktig treff`() {
         val treff1 = opprettTreffMedEier()
         val treff2 = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456", tittel = "AnnetTreff")
-        ctx.eierRepository.leggTil(treff2, listOf("A123456"))
+        ctx.eierRepository.leggTil(treff2, listOf("A123456"), "0315")
 
         leggTilJobbsøkere(treff1,
             jobbsøker("11111111111", "Treff1Person", "A"),

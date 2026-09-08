@@ -100,7 +100,7 @@ class FormidlingerKomponentTest {
             tittel = "TestTreff",
             opprettetAvNavkontorEnhetId = opprettetAvKontor,
         )
-        ctx.eierRepository.leggTil(treffId, listOf(eierIdent))
+        ctx.eierRepository.leggTil(treffId, listOf(eierIdent), opprettetAvKontor)
         return treffId
     }
 

@@ -603,7 +603,7 @@ class TreffgjennomføringKomponentTest {
 
     private fun treff(kategori: RekrutteringstreffKategori, antallArbeidsgivere: Int): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = eier, kategori = kategori)
-        ctx.eierRepository.leggTil(treffId, listOf(eier))
+        ctx.eierRepository.leggTil(treffId, listOf(eier), "0315")
         repeat(antallArbeidsgivere) { arbeidsgiver(treffId, "99999999${it + 1}") }
         return treffId
     }
