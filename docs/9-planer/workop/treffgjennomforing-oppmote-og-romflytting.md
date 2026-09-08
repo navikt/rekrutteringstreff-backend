@@ -71,7 +71,9 @@ dagens søke-/synlighetsregler.
   backendvalideringen. Den tidligere blokkeringsmodalen fjernes.
 - Gjenbruk interessestegets sekvensielle autolagringskø med obligatorisk
   registreringsnøkkel. Raske valg, også av/på på samme person, skal beholde
-  siste ønskede verdi uten overlappende forespørsler. Navigasjon venter på køen.
+  siste ønskede verdi uten overlappende forespørsler. «Neste» og stegnavigasjon
+  er deaktivert mens køen arbeider, både i oppmøte- og interessesteget.
+  Det finnes ingen separat «gå videre når køen er tom»-operasjon.
 - Vis feil ved den berørte raden. En senere vellykket lagring på en annen rad
   må ikke fjerne feilmarkeringen eller bli brukt som tekst i feilbanneret.
 - Fjern individuell oppmøteredigering og oppmøtets massehandlinger fra
@@ -131,9 +133,12 @@ fortsatt brukes ved oppretting og omfordeling.
 ## 4. Usikkert lagringsutfall og riktig romrekkefølge
 
 Et feilet HTTP-svar betyr ikke nødvendigvis at serveren avviste lagringen.
-Rom- og intervjulagring skal derfor ikke bare slippe optimistisk state og
-påstå at flyttingen ble tilbakestilt.
+Rom- og intervjulagring skal derfor ikke påstå at en flytting ble tilbakestilt
+uten å hente bekreftet servertilstand.
 
+- `brukLagretSvar(data)` tar inn et bekreftet, validert serversvar i SWR uten
+  ekstra GET. `hentBekreftetTilstand()` brukes ved usikkert lagringsutfall.
+  Disse er eksplisitte operasjoner, ikke én callback med valgfritt argument.
 - Etter lagringsfeil: hent aggregatet via eksisterende
   `GET …/treffgjennomforing-og-oppfolging` og vis serverens tilstand.
   Dette gjelder også «Fordel på nytt» og oppmøteflyten som endres.
@@ -147,9 +152,16 @@ påstå at flyttingen ble tilbakestilt.
   omfordeling lukkes ved bekreftelse, slik at den ikke sperrer gjenhentingen.
 - Gjenbruk en liten felles oppfriskingsfunksjon, men behold egne hooks for rom
   og intervju. Ikke endre FIFO-/feilsemantikken i `useSekvensiellAutolagring`.
+- Romflytting vises først når serversvaret foreligger. Behold «Lagrer» og
+  steglås, men ikke en lokal optimistisk romkopi eller lokal romflyttingsalgoritme.
+  API-et sender fortsatt bare person og målrom. Trefflåsen, den atomiske
+  flyttingen og andre eieres plasseringer påvirkes ikke av denne UI-forenklingen.
+- Optimistiske feltverdier for oppmøte, interesser og vurderinger beholdes,
+  inkludert vernet mot at eldre svar fjerner nyere valg. Intervjufordelingen
+  beholder også sin optimistiske visning.
 - Backendens romrekkefølge er fasit: deltakernummer stigende, manglende nummer
-  sist. Bruk samme hovedregel i optimistisk frontend og mock, og gjenbruk
-  eksisterende nummeroppslag/sortering. Backendens interne ID som sekundær
+  sist. Frontend viser den returnerte romfordelingen direkte, og mocken følger
+  samme hovedregel. Backendens interne ID som sekundær
   sortering trenger ikke eksponeres til frontend.
 - Fjern teksten om at en flyttet person «legges sist». Ikke endre den manuelt
   styrte intervjurekkefølgen.
@@ -169,7 +181,7 @@ Forkortelser brukt i tabellen:
 | Oppmøte                           | FE-UI `treffgjennomføring/oppmøte/`                                                                                                                                                    |
 | Gamle handlinger og statusvisning | FE-UI `jobbsøker/`: `JobbsøkerKort.tsx`, `JobbsokerKortValg.tsx`, `JobbsøkerHandlingsrad.tsx`, `JobbsøkerStatusTag.tsx`, `filter/StatusFilter.tsx`                                     |
 | Frontendkontrakt og mock          | FE-API `treffgjennomføring/`: `mutations.ts`, `treffgjennomføringEndepunkter.ts`, `treffgjennomføringSchema.ts`, `useTreffgjennomføring.msw.ts`                                        |
-| Lagring og sortering              | FE-UI `treffgjennomføring/`: `romOgRotasjon/useRomfordelingLagring.ts`, `romOgRotasjon/romplassering.ts`, `intervjufordeling/useIntervjufordelingLagring.ts`, `felles/deltakernavn.ts` |
+| Lagring og sortering              | FE-UI `treffgjennomføring/`: `felles/useTreffgjennomføringOppdatering.ts`, `felles/useSekvensiellAutolagring.ts`, `romOgRotasjon/useRomfordelingLagring.ts`, `intervjufordeling/useIntervjufordelingLagring.ts`, `felles/deltakernavn.ts` |
 | Romoperasjonen                    | BE `treffgjennomføring/`: `TreffgjennomføringController.kt`, `TreffgjennomføringWriter.kt`, `dto/TreffgjennomføringDto.kt` og `møteplan/`                                              |
 | Oppmøtereglene                    | BE `jobbsoker/oppmøte/OppmøteService.kt`                                                                                                                                               |
 
@@ -191,7 +203,7 @@ syntetiske.
 | Rom-API             | To uavhengige flyttinger fra klienter med ulikt gamle kopier bevares. Dekk samme mål to ganger, ugyldig rom/person, manglende oppmøte og tilgangsavslag.                                   |
 | Beregnet plassering | Flytt en nylig fremmøtt uten lagret romrad. Andre lagrede og beregnede plasseringer bevares.                                                                                               |
 | Lagringsfeil        | La serveren lagre, men mist svaret. Frontend henter og viser faktisk tilstand. Dekk også reell skrivefeil og feil under oppfriskning, for rom og intervju.                                 |
-| Rekkefølge          | Optimistisk romflytting, lagret resultat og reload følger deltakernummer.                                                                                                                  |
+| Rekkefølge          | Rommet endres først ved bekreftet serversvar. Flytting og reload følger serverens rekkefølge. En klient med gammel visning får også med andre klienters romflyttinger fra serversvaret. |
 
 Frontendtestene ligger i
 `tests/rekrutteringstreff/treffgjennomføring/{enhet,e2e}`. Backend har

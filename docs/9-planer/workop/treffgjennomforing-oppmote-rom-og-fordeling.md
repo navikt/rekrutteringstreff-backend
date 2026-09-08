@@ -139,6 +139,11 @@ ikke skyve matriser, arbeidsgiverkort eller jobbsøkerrader. I steg 2 er Stepper
 og lokale navigasjonsknapper ikke interaktive mens en romendring lagres, slik at
 en lagringsfeil ikke kan skjules ved at komponenten navigeres bort.
 
+Oppmøte og interesser bruker samme prinsipp: «Neste» er deaktivert mens
+lagringskøen arbeider. Feltene kan fortsatt redigeres, og nyere valg beholdes
+optimistisk. Lagringsflytene skiller mellom `brukLagretSvar(data)` og
+`hentBekreftetTilstand()`. Bekreftede svar brukes direkte, uten ekstra GET.
+
 > **Hvorfor Stepper?** Aksel anbefaler Stepper til å «navigere eller vise
 > brukerens progresjon mellom steg», og komponenten er interaktiv slik at man kan
 > hoppe tilbake til fullførte steg. `Process` er for statiske, ikke-styrbare forløp,
@@ -280,7 +285,8 @@ et vanlig treff går rett videre til interesse.
 - Alle søkesider hentes sekvensielt og valideres som ett komplett datagrunnlag.
   Senere steg og oppsummeringen får også personer fra ubesøkte oppmøtesider.
 - Oppmøtevalg autolagres i samme sekvensielle kø som interesser. Siste valg
-  beholdes optimistisk, feil vises per rad, og navigasjon venter på køen.
+  beholdes optimistisk, feil vises per rad, og navigasjon er deaktivert
+  mens køen arbeider.
 - **Liste over arbeidsgivere** – deltakende arbeidsgivere (typisk 5), gjenbruker
   `ArbeidsgiverListeItem`. Teller «Z arbeidsgivere».
 - Oppmøtelista har **ingen egen skrollboks**. Den vokser med innholdet, og hele
@@ -358,10 +364,12 @@ en redigerbar arbeidsflate:
 - Tastatur- og klikkfallback er en Aksel `ActionMenu` kalt **«Flytt til rom»**.
   Brukeren velger målrom direkte i stedet for å måtte klikke gjennom naborom eller
   skrive og validere et romnummer.
-- Flytting lagres optimistisk via
+- Flytting lagres via
   `PUT /treffgjennomforing/romfordeling/{personTreffId}` med `{ "romnummer": 2 }`.
   Backend flytter i fersk, normalisert fordeling under transaksjon og trefflås,
-  slik at andre arrangørers plasseringer bevares.
+  slik at andre arrangørers plasseringer bevares. Frontend viser «Lagrer» og
+  beholder den sist bekreftede romfordelingen til svaret kommer. Ingen lokal
+  optimistisk romkopi beregnes; hele fordelingen fra serveren vises.
 - Ved usikkert lagringsutfall hentes og valideres aggregatet eksplisitt.
   Dette gjelder også intervju, oppmøte og omfordeling. Feiler hentingen,
   vises «Tilstanden er ubekreftet» og «Hent på nytt». Kø og redigering venter
@@ -483,9 +491,10 @@ bein som grunnlag for oppfølgingen i steg 5.
   bunnjusteres slik at «Jobbsøker» står rett over navnene uten luft imellom.
 - Avkryssinger oppdateres optimistisk og legges i en serialisert lagringskø, slik
   at mange interesser kan registreres raskt uten at matrisen låses.
-- **Neste** venter på og tømmer lagringskøen før neste steg åpnes. Ved
-  lagringsfeil beholdes brukeren i steget, og bare den aktuelle avkryssingen
-  oppdateres fra serveren. Køen venter på bekreftet oppfriskning.
+- **Neste** er deaktivert mens lagringskøen arbeider. Brukeren klikker videre
+  når køen er ferdig, i stedet for å bestille en stegovergang som venter på køen.
+  Ved lagringsfeil oppdateres den aktuelle avkryssingen fra serveren.
+  Køen og steglåsen venter fortsatt på bekreftet oppfriskning.
 - **Primærknapp «Neste»** → steg 4 på en WorkOp, steg 5 ellers.
 
 Dette tilsvarer at jobbsøkeren «gir beskjed til arrangør om hvilke arbeidsgivere
