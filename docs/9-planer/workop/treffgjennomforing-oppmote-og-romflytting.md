@@ -1,8 +1,5 @@
 # Treffgjennomføring: paginert oppmøte og trygg romflytting
 
-Avklart 7. september 2026. Kodeendringene gjenstår. Planen er en selvstendig
-overlevering til utvikler og Copilot, og krever ikke tidligere samtalehistorikk.
-
 ## Rammer
 
 - Endre `rekrutteringsbistand-frontend` og `rekrutteringstreff-backend`.
@@ -20,25 +17,42 @@ overlevering til utvikler og Copilot, og krever ikke tidligere samtalehistorikk.
 - Responsive kortbredder fra tidligere review er **ikke** del av oppgaven.
   Ikke commit eller stage endringene; utvikleren gjør dette selv.
 
-## 1. Komplett datagrunnlag, paginert visning
+## 1. Delt datahenting: oppmøteside og komplett fremmøtteliste
 
-Gjennomføringen bruker i dag `useJobbsøkere`, som bare henter side 1 med
-100 personer. Det gir manglende personer og feil oppsummering på større treff.
-Backend tillater allerede 1–100 personer per forespørsel.
+`useAlleJobbsøkere` er erstattet med to databehov. Begge bruker eksisterende
+`POST /jobbsoker/sok`, som tillater 1–100 personer per forespørsel.
+Ingen ny backendkontrakt er nødvendig.
 
-- Lag en avgrenset `useAlleJobbsøkere` for gjennomføringen. Gjenbruk eksisterende
-  søke-API, skjema, fetcher og tilgangssjekker. Ikke endre oppførselen til andre
-  konsumenter av `useJobbsøkere`.
-- Hent alle sider sekvensielt med `antallPerSide: 100` og stabil navnesortering.
-  Samle resultatet i én SWR-cache, uten duplikater på `personTreffId`.
-  Globale tellinger fra responsene skal **ikke summeres per side**.
-- Ikke presenter et delvis resultat som komplett ved hentefeil eller avvik i
-  sider/tellinger. Vis feil og mulighet for ny henting.
-- Oppmøtestegget viser 100 rader per side. Gjenbruk `LitenPaginering`, men skjul
-  sidevelgeren når det er høyst 100 personer.
-- Øvrige steg får hele det relevante datagrunnlaget, også ved direkte navigasjon
-  til et senere steg. Det må aldri avhenge av hvilke oppmøtesider brukeren har
-  besøkt. Behold dagens filtrering til fremmøtte der den gjelder.
+- Jobbsøkerfanen beholder `useJobbsøkerSøk`. Steg 1 bruker en avgrenset
+  `useJobbsøkereForOppmøte` mot samme API, og henter bare valgt side med
+  `antallPerSide: 100` og stabil navnesortering. Sidevelgeren skjules
+  når det er høyst 100 personer. En feil på en ubesøkt side blokkerer ikke
+  første side.
+- Steg 2 og videre bruker `useJobbsøkereForGjennomføring`, med statusfilter
+  `MØTT_OPP` og `FÅTT_JOBB`. Begge regnes som fremmøtte i backend.
+  Hent alle filtrerte sider sekvensielt og samle dem i én SWR-cache, uten
+  duplikater på `personTreffId`. Ikke hent dette datasettet i steg 1.
+- Valider skjema, sidenummer og sidelengde. Den samlede fremmøttelisten krever
+  også uendret totaltall, riktige statuser og riktig antall unike personer.
+  Hentefeil eller avvik gir feilvisning og mulighet for ny henting, aldri en
+  tilsynelatende komplett delliste.
+- Streng sidevalidering er felles for de to gjennomføringshookene, men holdes
+  utenfor `useSWRPost` og øvrige delte SWR-hooks. Eksisterende søkehook og
+  responsskjema for andre konsumenter beholder sin oppførsel.
+- Påmeldttallet i oppsummeringen gjelder hele treffet, ikke bare fremmøtte.
+  Bruk summen av `antallPerStatus` fra første respons; backend beregner denne
+  uten statusfilter. Tellingene skal **ikke summeres per side**.
+- Etter oppretting, sletting og oppmøteendringer ugyldiggjøres fremmøttecachen.
+  Hvis den ikke er i bruk, hentes den først ved neste stegovergang.
+  Oppmøtesiden revalideres uten å fjerne radene, og tidligere besøkte
+  oppmøtesider oppfriskes når de åpnes igjen. Øvrige jobbsøkercacher tømmes
+  og revalideres hvis de er aktive. Bare cacher for aktuelt treff berøres.
+- Treffgjennomføringsaggregatet oppdateres også ved sletting. Behold eksisterende
+  tilgangs- og synlighetsregler.
+- Oppmøtekøen eies av stegkomponenten, utenfor sidens laste-/feilvisning.
+  Sidebytte skal verken tømme køen, fjerne radfeil eller miste optimistiske valg.
+- Senere steg har alltid komplett fremmøttegrunnlag, også ved direkte åpning.
+  Det må aldri avhenge av hvilke oppmøtesider brukeren har besøkt.
 
 ## 2. Samle oppmøteregistrering på gjennomføringssiden
 
@@ -52,10 +66,14 @@ dagens søke-/synlighetsregler.
   hopper til en annen side etter avkrysning. Deltakernummer kan fortsatt vises.
 - Gi checkboxen et tilgjengelig navn knyttet til personen, og behold god
   tastaturbetjening og fokus.
-- Behold `OppmøteBlokkert`: oppmøte kan ikke fjernes når personen har interesser
-  eller vurderinger. Både frontendforklaringen og backendvalideringen må bevares.
-- Behold lagringslåsene. Ikke tillat overlappende lokale oppmøtemutasjoner eller
-  overgang til neste steg mens oppmøtet lagres.
+- Oppmøte kan ikke fjernes når personen har interesser eller vurderinger.
+  Deaktiver checkboxen, forklar sperren ved tastaturfokus/hover, og behold
+  backendvalideringen. Den tidligere blokkeringsmodalen fjernes.
+- Gjenbruk interessestegets sekvensielle autolagringskø med obligatorisk
+  registreringsnøkkel. Raske valg, også av/på på samme person, skal beholde
+  siste ønskede verdi uten overlappende forespørsler. Navigasjon venter på køen.
+- Vis feil ved den berørte raden. En senere vellykket lagring på en annen rad
+  må ikke fjerne feilmarkeringen eller bli brukt som tekst i feilbanneret.
 - Fjern individuell oppmøteredigering og oppmøtets massehandlinger fra
   jobbsøkersiden. Ikke innfør «marker alle møtt» på den nye listen.
   Behold generell kandidatmarkering som brukes til andre handlinger.
@@ -96,6 +114,8 @@ Bruk en egen request-DTO og oppdater OpenAPI. Frontendmutasjonen kan hete
 4. Gjentatt flytting til samme rom skal være idempotent. For ulike mål for samme
    person gjelder siste serveroperasjon; flyttinger av ulike personer skal ikke
    overskrive hverandre.
+5. Et lagret møteoppsett beholder tomme rom når siste oppmøte fjernes.
+   Nye fremmøtte kan dermed få beregnet plassering og flyttes igjen.
 
 **Viktig:** Nye fremmøtte kan ha en beregnet romplassering uten egen lagret
 romrad. En ren `UPDATE` av én eksisterende rad er derfor ikke tilstrekkelig.
@@ -122,6 +142,9 @@ påstå at flyttingen ble tilbakestilt.
   videre fra en ubekreftet gammel kopi eller send mutasjonen automatisk igjen.
 - Sørg for at hente-feil faktisk rapporteres. Et fullført SWR-`mutate()` er ikke
   i seg selv bevis på vellykket henting; gammel cache kan fortsatt returneres.
+- Hent eksplisitt, valider aggregatet med Zod og oppdater SWR uten ny revalidering.
+  Hold kø og steglåser mens «Hent på nytt» venter. Bekreftelsesdialogen for
+  omfordeling lukkes ved bekreftelse, slik at den ikke sperrer gjenhentingen.
 - Gjenbruk en liten felles oppfriskingsfunksjon, men behold egne hooks for rom
   og intervju. Ikke endre FIFO-/feilsemantikken i `useSekvensiellAutolagring`.
 - Backendens romrekkefølge er fasit: deltakernummer stigende, manglende nummer
@@ -139,16 +162,16 @@ Forkortelser brukt i tabellen:
 - **FE-UI:** `rekrutteringsbistand-frontend/app/rekrutteringstreff/[rekrutteringstreffId]/_ui/`
 - **BE:** `rekrutteringstreff-backend/apps/rekrutteringstreff-api/src/main/kotlin/no/nav/toi/`
 
-| Område | Sentrale filer |
-| --- | --- |
-| Datainnhenting | FE-API `jobbsøkere/`: `useJobbsøkere.ts`, `useJobbsøkerSøk.ts` |
-| Datagrunnlag mellom steg | FE-UI `treffgjennomføring/`: `Treffgjennomføring.tsx`, `navigasjon/Steginnhold.tsx` |
-| Oppmøte | FE-UI `treffgjennomføring/oppmøte/` |
-| Gamle handlinger og statusvisning | FE-UI `jobbsøker/`: `JobbsøkerKort.tsx`, `JobbsokerKortValg.tsx`, `JobbsøkerHandlingsrad.tsx`, `JobbsøkerStatusTag.tsx`, `filter/StatusFilter.tsx` |
-| Frontendkontrakt og mock | FE-API `treffgjennomføring/`: `mutations.ts`, `treffgjennomføringEndepunkter.ts`, `treffgjennomføringSchema.ts`, `useTreffgjennomføring.msw.ts` |
-| Lagring og sortering | FE-UI `treffgjennomføring/`: `romOgRotasjon/useRomfordelingLagring.ts`, `romOgRotasjon/romplassering.ts`, `intervjufordeling/useIntervjufordelingLagring.ts`, `felles/deltakernavn.ts` |
-| Romoperasjonen | BE `treffgjennomføring/`: `TreffgjennomføringController.kt`, `TreffgjennomføringWriter.kt`, `dto/TreffgjennomføringDto.kt` og `møteplan/` |
-| Oppmøtereglene | BE `jobbsoker/oppmøte/OppmøteService.kt` |
+| Område                            | Sentrale filer                                                                                                                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Datainnhenting                    | FE-API `jobbsøkere/`: `useJobbsøkereForOppmøte.ts`, `useJobbsøkereForGjennomføring.ts`, `hentJobbsøkersideForGjennomføring.ts`, `useOppdaterJobbsøkere.ts` |
+| Datagrunnlag mellom steg          | FE-UI `treffgjennomføring/`: `Treffgjennomføring.tsx`, `navigasjon/Steginnhold.tsx`, `navigasjon/StegMedFremmøtte.tsx` |
+| Oppmøte                           | FE-UI `treffgjennomføring/oppmøte/`                                                                                                                                                    |
+| Gamle handlinger og statusvisning | FE-UI `jobbsøker/`: `JobbsøkerKort.tsx`, `JobbsokerKortValg.tsx`, `JobbsøkerHandlingsrad.tsx`, `JobbsøkerStatusTag.tsx`, `filter/StatusFilter.tsx`                                     |
+| Frontendkontrakt og mock          | FE-API `treffgjennomføring/`: `mutations.ts`, `treffgjennomføringEndepunkter.ts`, `treffgjennomføringSchema.ts`, `useTreffgjennomføring.msw.ts`                                        |
+| Lagring og sortering              | FE-UI `treffgjennomføring/`: `romOgRotasjon/useRomfordelingLagring.ts`, `romOgRotasjon/romplassering.ts`, `intervjufordeling/useIntervjufordelingLagring.ts`, `felles/deltakernavn.ts` |
+| Romoperasjonen                    | BE `treffgjennomføring/`: `TreffgjennomføringController.kt`, `TreffgjennomføringWriter.kt`, `dto/TreffgjennomføringDto.kt` og `møteplan/`                                              |
+| Oppmøtereglene                    | BE `jobbsoker/oppmøte/OppmøteService.kt`                                                                                                                                               |
 
 Se også [arkitekturprinsippene](../../2-arkitektur/prinsipper.md).
 Behold Javalin, ren SQL/JDBC og lagdelingen Controller → Service → Repository.
@@ -160,14 +183,15 @@ Tilpass eksisterende tester fremfor å duplisere dem. Test brukerflyt og faktisk
 persistering, ikke bare mockens algoritmer. Nye persondata skal være tydelig
 syntetiske.
 
-| Område | Nødvendig dekning |
-| --- | --- |
-| Paginering | 25 og 100 uten sidevelger; 101 og over 200 med riktige sider. Personer fra ubesøkte sider inngår i senere steg og oppsummering. Hentefeil på en senere side gir ikke et komplett resultat. |
-| Oppmøte | Av/på på ulike sider, blokkert fjerning, lagringslås, tastatur/fokus og riktige statusmerker/tellinger på jobbsøkersiden etter fanebytte. |
-| Rom-API | To uavhengige flyttinger fra klienter med ulikt gamle kopier bevares. Dekk samme mål to ganger, ugyldig rom/person, manglende oppmøte og tilgangsavslag. |
-| Beregnet plassering | Flytt en nylig fremmøtt uten lagret romrad. Andre lagrede og beregnede plasseringer bevares. |
-| Lagringsfeil | La serveren lagre, men mist svaret. Frontend henter og viser faktisk tilstand. Dekk også reell skrivefeil og feil under oppfriskning, for rom og intervju. |
-| Rekkefølge | Optimistisk romflytting, lagret resultat og reload følger deltakernummer. |
+| Område              | Nødvendig dekning                                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Paginering          | 25 og 100 uten sidevelger; 101 og over 200 med riktige sider. Steg 1 henter bare valgt side. Senere steg henter alle fremmøtte, også over 100 og med status FÅTT_JOBB. Påmeldttallet gjelder hele treffet. |
+| Delt datagrunnlag    | Feil på ubesøkt oppmøteside blokkerer ikke første side. Ufullstendig fremmøtteliste vises ikke. Sidebytte bevarer kø/radfeil, og stegovergang henter oppdaterte fremmøtte uten å gjenbruke gammel cache. |
+| Oppmøte             | Av/på på ulike sider, blokkert fjerning, lagringslås, tastatur/fokus og riktige statusmerker/tellinger på jobbsøkersiden etter fanebytte.                                                  |
+| Rom-API             | To uavhengige flyttinger fra klienter med ulikt gamle kopier bevares. Dekk samme mål to ganger, ugyldig rom/person, manglende oppmøte og tilgangsavslag.                                   |
+| Beregnet plassering | Flytt en nylig fremmøtt uten lagret romrad. Andre lagrede og beregnede plasseringer bevares.                                                                                               |
+| Lagringsfeil        | La serveren lagre, men mist svaret. Frontend henter og viser faktisk tilstand. Dekk også reell skrivefeil og feil under oppfriskning, for rom og intervju.                                 |
+| Rekkefølge          | Optimistisk romflytting, lagret resultat og reload følger deltakernummer.                                                                                                                  |
 
 Frontendtestene ligger i
 `tests/rekrutteringstreff/treffgjennomføring/{enhet,e2e}`. Backend har
