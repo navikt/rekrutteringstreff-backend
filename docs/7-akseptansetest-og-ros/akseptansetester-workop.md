@@ -1,15 +1,6 @@
 # Manuelle akseptansetester – WorkOp og treffgjennomføring
 
 Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene følger arbeidet før, under og etter et WorkOp, og dekker også forskjellene fra vanlige rekrutteringstreff.
-
-> **Målgruppe:** Domeneeksperter uten dyp teknisk bakgrunn. Tester merket «Utvikler» krever hjelp til testdata, API-kall eller simulerte feil. De kan hoppes over av domeneeksperter, men må fordeles til en utvikler før samlet godkjenning.
-
-> **Format:** Som i [akseptansetester.md](akseptansetester.md) har testtabellene kolonnene `#`, `Test`, `Forventet resultat`, `✅❌` og `Notat`. Vis filen som rendret Markdown/HTML, marker tabellen og kopier den til Loop. Resultat- og notatfeltene er tomme og fylles ut under testingen.
-
-> **Kjente avvik:** Testene omfatter også ønsket oppførsel der dagens kode ikke er tilstrekkelig. Disse testene er samlet i seksjon 16 og merket «Kjent avvik» eller «Avklaring». De skal ikke godkjennes bare fordi løsningen oppfører seg slik koden gjør i dag. Resultatkolonnene er ikke forhåndsutfylt.
-
-> **Miljøavgrensning:** Hovedflyten for WorkOp testes i dev med reelle integrasjoner. Dagens kode sperrer opprettelse av WorkOp i produksjon, skjuler gjennomføringsfanen der og aktiverer ikke WorkOp-lytterne for varsler/aktivitetskort. Produksjonssperrene testes med produksjonskonfigurasjon og syntetiske data i et isolert testoppsett, ikke ved å sende testvarsler til reelle brukere.
-
 ## Testmiljø
 
 | System | URL (dev) | Brukes av | Også kalt |
@@ -22,12 +13,7 @@ Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene føl
 
 ## Slik gjennomføres testene
 
-1. Bruk bare syntetiske testpersoner og testvirksomheter. Ikke legg personopplysninger, skjermbilder med persondata eller innhold fra interne vurderinger i Loop.
-2. Noter dato, miljø og versjonene som testes, sammen med hvem som utfører testen. Avklar at frontend, backend, brukersiden og varsel- og aktivitetskorttjenestene har de tilhørende endringene.
-3. Kjør hovedflyten i rekkefølge. Bruk egne treff eller gjenopprett testdata før tester som fjerner deltakere, arbeidsgivere, interesser eller vurderinger, eller som avlyser/fullfører treff.
-4. Vent til lagringen er bekreftet før du laster siden på nytt. Kontroller at lagrede endringer består etter ny åpning; en avkrysning som bare vises lokalt, er ikke nok.
-5. Varsler og aktivitetskort oppdateres asynkront. Vent til hendelsen er ferdig behandlet, og bruk utviklerhjelp ved forsinkelse eller feil. En lokal kjøring med simulerte svar bekrefter ikke integrasjonene.
-6. Fyll inn ✅ eller ❌ og noter avvik. Hvis en test ikke kan gjennomføres, skriv «Ikke kjørt» og årsaken i Notat; ikke marker den som bestått.
+Test slik det er beskrevet. Fyll inn ✅ eller ❌ og noter avvik. Hvis en test ikke kan gjennomføres, skriv «Ikke kjørt» og årsaken i Notat.
 
 ## Testdata og begreper
 
@@ -35,11 +21,11 @@ Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene føl
 
 **Hovedtreff:** Opprett et WorkOp med fem arbeidsgivere og 30 synlige jobbsøkere. I gjennomføringsdelen registreres 25 som møtt; invitasjons- og svartestene kjøres først. Ha personer som bare er lagt til, inviterte uten svar, personer som har svart ja og personer som har svart nei. Fordel kontaktopplysningene slik at SMS, e-post og MinSide uten ekstern kontaktinformasjon kan prøves. Bruk et vanlig rekrutteringstreff som kontroll.
 
-**Egne grensetreff:** Klargjør treff uten deltakere, uten arbeidsgivere, med én arbeidsgiver og med fire/seks arbeidsgivere. Utvikler klargjør dessuten treff med 100, 101 og over 200 jobbsøkere, inkludert over 100 fremmøtte, og testdata med skjulte, slettede og formidlede jobbsøkere. Bruk små, separate treff til tester av svarfrist, start, slutt, avlysning og fullføring.
+**Egne grensetreff:** Klargjør treff uten deltakere, uten arbeidsgivere, med én arbeidsgiver og med fire/seks arbeidsgivere. Bruk små, separate treff til tester av svarfrist, start, slutt, avlysning og fullføring.
 
 **Deltakernummer** identifiserer en fremmøtt innenfor ett WorkOp. **Interesse** er jobbsøkerens ønske om å møte en arbeidsgiver. **Intervjufordeling** er rekkefølgen og utvalget til speedintervju. **Vurdering**, **avtalt intervju**, **jobbtilbud** og **formidling** er ulike opplysninger; ett av dem skal ikke uten videre tolkes som et annet.
 
-**Omfang:** Testene bygger på kildekoden i `rekrutteringsbistand-frontend`, `rekrutteringstreff-backend`, `rekrutteringstreff-bruker` og `rekrutteringsbistand-kandidatvarsel-api`. Presentasjonen og skjermbildescriptet i `workop-oversikt` er også gjennomgått, men beskriver delvis eldre flyter og brukes ikke som fasit. Planlagte funksjoner i eldre plandokumenter regnes ikke som ferdig implementert.
+**Omfang:** Testene bygger på kildekoden i `rekrutteringsbistand-frontend`, `rekrutteringstreff-backend`, `rekrutteringstreff-bruker` og `rekrutteringsbistand-kandidatvarsel-api`.
 
 ---
 
@@ -55,12 +41,10 @@ Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene føl
 | --- | --- | --- | --- | --- |
 | 1.1.1 | Eier – Søk etter eget WorkOp i kladd, publisert, avlyst og fullført status. Bruk passende dato-/statusfilter. | Eget WorkOp finnes i de relevante filtrene og er tydelig merket «WorkOp». Slettede treff vises ikke. | | |
 | 1.1.2 | Markedskontakt og veileder uten eierskap – Gjenta søket, også med «Alle», eget kontor og valgte kontorer. | WorkOp vises ikke, selv om personen tilhører treffets kontor. Vanlige tilgjengelige rekrutteringstreff kan fortsatt finnes. | | |
-| 1.1.3 | Markedskontakt uten eierskap – Åpne direkte lenke til et WorkOp. | Hovedtreffet er ikke tilgjengelig. Det vises ikke gjennomføringsdata eller redigeringshandlinger. | | |
-| 1.1.4 | Medeier med arbeidsgiverrettet rolle – Åpne et WorkOp hvor medeierskapet er klargjort av utvikler. | Medeier kan lese og redigere gjennomføringen som eier. Ingen særskilt hovedansvarlig må velges. | | |
+| 1.1.3 | Markedskontakt uten eierskap – Åpne direkte lenke til et WorkOp. | Treffet er ikke tilgjengelig. Det vises ikke gjennomføringsdata eller redigeringshandlinger. | | |
+| 1.1.4 | Medeier med arbeidsgiverrettet rolle – Åpne et WorkOp som medeier (evt. åpne et og bli medeier først). | Medeier kan lese og redigere gjennomføringen som eier. Ingen særskilt hovedansvarlig må velges. | | |
 | 1.1.5 | Utvikler uten eierskap – Søk etter WorkOp, og åpne deretter en kjent direkte lenke. | WorkOp filtreres bort i søket uten eierskap, men direkte tilgang tillates av utviklerrollen. | | |
-| 1.1.6 | Utvikler – Bruk en testbruker som står som eier, men bare har jobbsøkerrettet rolle, mot gjennomførings-API-et. | Eierskap alene er ikke nok: gjennomføringen krever arbeidsgiverrettet rolle eller utviklerrolle. Kallet avvises. | | |
 | 1.1.7 | Eier – Fjern en medeier uten utviklerrolle, og la den tidligere medeieren åpne og endre gjennomføringen på nytt. | Den tidligere medeieren mister tilgang. En gammel åpen fane gir ikke fortsatt skrivetilgang. | | |
-| 1.1.8 | Eier – Forsøk å fjerne treffets siste eier. | Handlingen avvises. Treffet skal ha minst én eier. | | |
 | 1.1.9 | Eier – Åpne et slettet testtreff via gammel lenke. | Slettet-melding vises uten faner eller redigeringshandlinger. | | |
 
 > **Viktig:** Direkte tilgang til underressurser og selvinnmelding som medeier har egne avvikstester i seksjon 16.1. At hovedsiden er skjult, er ikke tilstrekkelig tilgangskontroll.
@@ -71,8 +55,6 @@ Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene føl
 | --- | --- | --- | --- | --- |
 | 1.2.1 | Eier – Åpne publisert WorkOp i dev. | Gjennomføringsfanen vises med seks steg når API-et gir tilgang. | | |
 | 1.2.2 | Eier – Åpne et vanlig rekrutteringstreff i dev. | Gjennomføringsfanen er skjult. WorkOp-funksjonene gjøres ikke tilgjengelige ved bare å endre faneparameter i URL-en. | | |
-| 1.2.3 | Utvikler – Åpne et vanlig treff lokalt, med lokal backend, og gjennomfør oppmøte, interesse, vurdering og oppsummering. | Disse fire stegene virker lokalt. Rom/rotasjon og intervjufordeling vises ikke; interesse og vurdering beholder stegidentitet 3 og 5 i lenkene. | | |
-| 1.2.4 | Utvikler – Bruk produksjonskonfigurasjon i isolert testoppsett og åpne opprettingsmeny og eksisterende treff. | WorkOp-oppretting og gjennomføringsfanen er skjult. Dette er dagens miljøsperre, ikke bevis på at WorkOp kan produksjonssettes. | | |
 | 1.2.5 | Utvikler – Kall interesse- og vurderings-API for vanlig treff i dev, og for begge kategorier med produksjonskonfigurasjon. | Lagring avvises. Bare lokal utvikling tillater disse registreringene på vanlige treff; produksjon avviser også WorkOp. | | |
 | 1.2.6 | Utvikler – Kall møteoppsett, romflytting og intervjufordeling på vanlig treff, også lokalt. | Kallene avvises fordi disse operasjonene krever kategorien WORKOP. | | |
 
@@ -105,21 +87,12 @@ Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene føl
 | 2.2.4 | Eier – Søk opp testarbeidsgiver med navn og organisasjonsnummer, og legg til både før og etter publisering. | Riktig virksomhet knyttes til treffet. Den er tilgjengelig som intern arbeidsgiver i gjennomføringen, men skal ikke vises på jobbsøkerens treffside. | | |
 | 2.2.5 | Eier – Åpne jobbsøkerfanen med færre enn, nøyaktig og flere enn 25 personer. | WorkOp-informasjonen om å planlegge for 25 jobbsøkere vises uansett antall. Det er mulig å legge til flere enn 25. | | |
 | 2.2.6 | Eier – Åpne samme arbeidsgiver-/jobbsøkervisninger på et vanlig treff. | De WorkOp-spesifikke infoboksene vises ikke. | | |
-| 2.2.7 | Eier – Skriv praktisk informasjon om formøte i introduksjonen og kontroller den på treffsiden etter invitasjon. | Teksten er tilgjengelig for jobbsøkeren. Formøte er fritekst i informasjonen, ikke et separat oppmøte, tidspunktsskjema eller automatisk påminnelsesløp. | | |
-| 2.2.8 | Eier – Gå manuelt gjennom innholdet før publisering: formål, aktuelle bransjer, program, tid/sted, kontaktpunkt, frivillighet og hvordan man svarer nei. | Innholdet er forståelig og ferdigstilt uten arbeidsgivernavn som skal skjules, eller uutfylte malplassholdere. Dette er manuell innholdskontroll; dagens kode har ikke en egen WorkOp-mal for introduksjonen eller en `#...#`-publiseringssperre. | | |
 
 ### Publisering og forhåndsvisning
 
 | # | Test | Forventet resultat | ✅❌ | Notat |
 | --- | --- | --- | --- | --- |
-| 2.3.1 | Eier – Prøv å publisere med manglende påkrevde felt, og med ugyldig tidspunkt eller postnummer. | Publisering er sperret til de vanlige skjemakravene er oppfylt. WorkOp omgår ikke valideringen. | | |
-| 2.3.2 | Eier – Fyll inn alle grunnfelter, men ha ingen arbeidsgivere. Legg så til én. | Sjekklisten krever minst én arbeidsgiver. Den krever ikke fem arbeidsgivere eller 25 jobbsøkere før publisering. | | |
-| 2.3.3 | Eier – Gjør tittel og introduksjon klare, men la påkrevd KI-sjekk være ugjort. Utfør deretter sjekken og håndter resultatet. | WorkOp bruker samme KI-/publiseringskrav som vanlige treff. Publisering blir ikke mulig før kravene er oppfylt. | | |
-| 2.3.4 | Eier – Åpne publiseringsdialogen og velg «Avbryt». | Treffet forblir kladd. Ingen invitasjoner, varsler eller aktivitetskort opprettes. | | |
-| 2.3.5 | Eier – Bekreft publisering etter at alle krav er oppfylt. | Treffet får status «Publisert» og beholder WorkOp-kategori. Publisering alene sender ingen invitasjon. | | |
-| 2.3.6 | Eier – Sammenlign forhåndsvisning med jobbsøkerens faktiske treffside. | Navn, tider, sted og introduksjon samsvarer. Arbeidsgiverlisten skal ikke avsløres på den faktiske WorkOp-treffsiden; varslenes forhåndsvisning har egen avvikstest i seksjon 16.3. | | |
-
-> **Se også:** Detaljtestene for adresse, KI-validering og generell kladdredigering står i [akseptansetester.md](akseptansetester.md). Kjør dem også ved endringer i de felles skjemaene.
+| 2.3.1 | Eier – Opprett et WorkOp og sammenlign forhåndsvisning med jobbsøkerens faktiske treffside. | Navn, tider, sted og introduksjon samsvarer. Arbeidsgiverlisten skal ikke avsløres på den faktiske WorkOp-treffsiden; varslenes forhåndsvisning har egen avvikstest i seksjon 16.3. | | |
 
 ---
 
@@ -129,23 +102,11 @@ Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene føl
 
 **Hva skjer:** Å legge til noen er ikke det samme som å invitere dem. Invitasjonen utløser varsel og aktivitetskort. Leveringsstatus for et varsel er ikke jobbsøkerens ja-/nei-svar.
 
-### Legge til, finne og velge jobbsøkere
-
-| # | Test | Forventet resultat | ✅❌ | Notat |
-| --- | --- | --- | --- | --- |
-| 3.1.1 | Eier – Legg til en synlig testperson via kandidatsøk og en annen via fødselsnummer. | Begge finnes én gang på treffet med status «Lagt til». Ingen får varsel eller aktivitetskort før invitasjon. | | |
-| 3.1.2 | Eier – Søk i jobbsøkerlisten, velg statusfilter og sorter på navn eller lagt til. | Riktige personer vises. Endring av filter/sortering setter siden tilbake til første side; søk og filter kan fjernes igjen. | | |
-| 3.1.3 | Eier – Ha flere enn 25 personer, bla til neste side og endre antall per side. | Intervall og total stemmer. Valg av sideantall og side gir ikke duplikater eller tap av personer. Oppmøtestegets egne 100-personers sider er uavhengige av dette. | | |
-| 3.1.4 | Eier – Marker en person, bytt side og marker en annen. Endre deretter filter. | Markeringer kan beholdes over sidebytte; filterendring nullstiller markeringene slik at skjulte, tidligere valg ikke inviteres utilsiktet. | | |
-| 3.1.5 | Eier – Fjern en person som bare er lagt til, og legg personen til igjen. | Personen kan fjernes og legges til igjen uten duplikat. En invitert person kan ikke slettes gjennom samme vanlige slettehandling. | | |
-| 3.1.6 | Utvikler/Eier – La en ikke-invitert testperson bli usynlig, og forsøk invitasjon etter at synlighetsendringen har slått gjennom. | Personen kan ikke inviteres som synlig deltaker, og det sendes ikke invitasjon. Bruk de eksisterende synlighetstestene for årsakene til skjuling. | | |
-
 ### Invitasjon og varselkanaler
+*Inviter noen jobbsøkere som eier før de neste testene.*
 
 | # | Test | Forventet resultat | ✅❌ | Notat |
 | --- | --- | --- | --- | --- |
-| 3.2.1 | Eier – Marker én person og åpne invitasjonsdialogen. Avbryt. | Dialogen viser valgt mottaker. Avbryt gir ingen invitasjon, varsel eller aktivitetskort. | | |
-| 3.2.2 | Eier – Inviter de valgte testpersonene, inkludert en på en annen side. | Bare de valgte inviteres. Status oppdateres, og hver mottaker får sin egen invitasjon. | | |
 | 3.2.3 | Jobbsøker med SMS som varselkanal – Motta WorkOp-invitasjonen, logg inn på Nav som meldingen ber om, og åpne invitasjonen. | SMS omtaler WorkOp og ber om ja-/nei-svar. Invitasjonen på MinSide leder til riktig treff. SMS-malen trenger ikke inneholde en direkte trefflenke og inneholder ikke arbeidsgivernavn, oppmøte, vurderinger eller notater. | | |
 | 3.2.4 | Jobbsøker med e-post som varselkanal – Motta invitasjonen, logg inn på Nav og åpne kortet som meldingen viser til. | Emnet er «Invitasjon til å treffe arbeidsgivere», mens innholdet omtaler WorkOp. Kortet leder til riktig treff bak innlogging; intern gjennomføringsinformasjon er ikke med i e-posten. | | |
 | 3.2.5 | Jobbsøker uten ekstern kontaktinformasjon – Logg inn på MinSide. | WorkOp-invitasjonen finnes på MinSide og lenker til riktig treff. Manglende SMS/e-post er ikke det samme som at invitasjonen mangler. | | |
@@ -160,7 +121,6 @@ Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene føl
 | 3.3.2 | Jobbsøker – Følg «Sjekk ut WorkOp-en» fra aktivitetskortet. | Riktig treffside åpnes etter eventuell innlogging, med invitasjonen til denne personen. | | |
 | 3.3.3 | Utvikler – Kontroller den utgående aktivitetskortmeldingen for WorkOp og kontrolltreffet. | Korttypene er henholdsvis WORKOP og REKRUTTERINGSTREFF. WorkOp bruker type og beskrivelse, ikke en ekstra etikett i `etiketter`-listen, som er tom. | | |
 | 3.3.4 | Eier – Registrer oppmøte, romplassering, interesse, vurdering, «2. intervju» og jobbtilbud. | Disse handlingene sender ikke hver for seg nye SMS-er, e-poster eller aktivitetskort. Interne notater og vurderinger overføres ikke til aktivitetskortet. | | |
-| 3.3.5 | Eier/Veileder – Følg opp behov for påminnelse før formøte eller WorkOp-dag. | Det finnes ikke et automatisk eller eget WorkOp-SMS-påminnelsesløp i disse repoene. En avtalt manuell påminnelse må håndteres i aktivitetsplandialogen, og skal ikke forventes fra oppmøte- eller møteplanregistrering. | | |
 
 ---
 
@@ -176,29 +136,9 @@ Testscenarier for domeneeksperter før pilot og produksjonssetting. Testene føl
 | --- | --- | --- | --- | --- |
 | 4.1.1 | Jobbsøker – Åpne lenken uten å være innlogget, og logg deretter inn som invitert testperson. | Innlogging kreves før personlig svarstatus vises. Etter innlogging åpnes riktig treff. | | |
 | 4.1.2 | Jobbsøker – Les et WorkOp med fem registrerte arbeidsgivere. | Treffnavn, tid, sted og introduksjon vises. Arbeidsgiverlisten er skjult; interne vurderinger, interesser og romfordeling vises ikke. | | |
-| 4.1.3 | Jobbsøker – Åpne samme WorkOp før start, mens det pågår, etter slutt og etter avlysning. | Arbeidsgiverlisten forblir skjult i alle tilfellene. Dagens løsning har ingen tidsstyrt avsløring på treffsiden. | | |
 | 4.1.4 | Jobbsøker – Åpne et vanlig rekrutteringstreff som kontroll. | De registrerte arbeidsgiverne vises etter vanlig trefflogikk. WorkOp-skjulingen rammer ikke kontrolltreffet. | | |
-| 4.1.5 | Utvikler – Hent WorkOp via både sammensatt MinSide-GET og separat `/arbeidsgiver`-GET med gyldig borgertilgang. | Begge svar har tom arbeidsgiverliste, også etter start/slutt. Navn og organisasjonsnummer er ikke bare skjult med CSS. Ukjent treff gir ikke et falskt, vellykket tomt treff. | | |
 | 4.1.6 | Jobbsøker – Åpne en gyldig trefflenke som en testperson uten invitasjon. | Personen får ikke en annen persons svarstatus. Det vises informasjon om manglende invitasjon og kontakt med veileder, ikke et svarskjema for den inviterte. | | |
 | 4.1.7 | Jobbsøker – Åpne en ukjent treff-ID. | En forståelig ikke-funnet-/feilmelding vises, ikke et tomt treff som kan besvares. | | |
-
-### Ja, nei og endring av svar
-
-Disse testene kjøres før registrering av oppmøte/formidling. Kollisjoner mellom svar og gjennomføringsstatus testes særskilt i seksjon 16.2.
-
-| # | Test | Forventet resultat | ✅❌ | Notat |
-| --- | --- | --- | --- | --- |
-| 4.2.1 | Jobbsøker – Åpne «Svar», la ja/nei være uvalgt og prøv å sende. | Svaret kan ikke sendes uten et valg. Avbryt/lukk registrerer ikke et svar. | | |
-| 4.2.2 | Jobbsøker – Svar ja før treffstart og åpne siden på nytt. | «Jeg blir med» og mulighet til å endre svar vises. Intern jobbsøkerstatus viser ja, og aktivitetskortet blir «Gjennomføres». | | |
-| 4.2.3 | Jobbsøker – Svar nei før treffstart og åpne siden på nytt. | «Jeg blir ikke med» vises. Intern status viser nei, og aktivitetskortet blir «Avbrutt». | | |
-| 4.2.4 | Jobbsøker – Endre ja til nei og deretter nei til ja. | Siste svar beholdes på treffsiden og i intern visning. Samme aktivitetskort endres mellom «Avbrutt» og «Gjennomføres»; det opprettes ikke et nytt kort. | | |
-| 4.2.5 | Eier – Bruk «Endre svar» på vegne av en invitert, ikke-fremmøtt person; prøv ja, nei og fjerning av svar. | Intern status og jobbsøkerens svarvisning oppdateres. Historikken viser at arrangør svarte/endret, ikke at jobbsøkeren gjorde det selv. | | |
-| 4.2.6 | Jobbsøker – Åpne invitasjonen etter svarfristen, men før treffstart. | Utløpt svarfrist opplyses, men dagens brukerflate tillater fortsatt svar/endring frem til start. Dette avviker fra den eldre testmalens antakelse om en absolutt svarfrist. | | |
-| 4.2.7 | Jobbsøker – Åpne siden etter treffstart og etter treffslutt. | «Treffet er i gang» og deretter «Treffet er over» erstatter svarboksen. Det vises ikke vanlig svarhandling. | | |
-| 4.2.8 | Jobbsøker – Åpne et avlyst WorkOp du er invitert til. | «Arrangement avlyst» vises i stedet for svarskjema. Generelle trefftekster i denne visningen er dagens implementasjon. | | |
-| 4.2.9 | Utvikler/Jobbsøker – La sending av svar feile. | En feilmelding vises i svardialogen. Den gir ikke en falsk bekreftelse eller endrer lokalt svar til noe som ikke er lagret. | | |
-
----
 
 ## 5. Åpne gjennomføringen og navigere mellom steg
 
@@ -253,22 +193,7 @@ Disse testene kjøres før registrering av oppmøte/formidling. Kollisjoner mell
 | 6.2.4 | Eier – Nullstill vurderingen hos én arbeidsgiver, men behold den hos en annen. Prøv å fjerne oppmøtet. | Oppmøtet er fortsatt låst. Alle sperrende registreringer for personen må være ryddet, ikke bare den sist åpnete arbeidsgiveren. | | |
 | 6.2.5 | Eier – Registrer oppmøte og fjern det igjen før øvrige registreringer, først for en som svarte ja og deretter for en som svarte nei. | Opprinnelig svarstatus vises igjen etter fjerning: ja for den første, nei for den andre. Det registreres ikke et nytt ja-/nei-svar av oppmøtehandlingen. | | |
 
-### Flere sider og store deltakerlister
-
-Tester med store datasett krever utviklerhjelp til oppsett, men selve handlingene gjøres i nettleseren.
-
-| # | Test | Forventet resultat | ✅❌ | Notat |
-| --- | --- | --- | --- | --- |
-| 6.3.1 | Utvikler/Eier – Åpne oppmøte med henholdsvis 25 og 100 personer. | Alle får plass på én side. Sidevelgeren er skjult. | | |
-| 6.3.2 | Utvikler/Eier – Åpne oppmøte med 101 og deretter 205 personer. Bla gjennom alle sider. | Sidene inneholder henholdsvis 100 + 1 og 100 + 100 + 5 personer, uten manglende personer eller duplikater. | | |
-| 6.3.3 | Eier – Kryss av en person på side 1, bytt straks til side 2 og kryss av en annen. Gå tilbake. | Begge endringene lagres. Sidebytte mister verken ventende valg eller feil knyttet til en rad. | | |
-| 6.3.4 | Utvikler/Eier – Registrer over 100 fremmøtte, også på siste side og med «Fått jobb». Åpne steg 2–6 direkte. | Alle fremmøtte inngår én gang. Ingen steg bruker bare de første 100 eller bare sidene som har vært åpnet. | | |
-| 6.3.5 | Utvikler/Eier – Ha 205 deltakere, hvor 120 er fremmøtte. Åpne oppsummeringen. | Oppmøtetallet er 120 og totaltallet 205. Totaltallet summeres ikke på nytt for hver hentet side. | | |
-| 6.3.6 | Utvikler/Eier – La henting av en ubesøkt oppmøteside feile. | Første side kan fortsatt brukes. Feilen vises når den berørte siden åpnes; den tolkes ikke som en tom deltakerliste. | | |
-| 6.3.7 | Utvikler/Eier – La én av sidene i det samlede fremmøttegrunnlaget feile eller inneholde duplikater/feil totaltall. | Senere steg viser feil og «Hent på nytt», ikke en tilsynelatende komplett delliste som kan fordeles eller vurderes. | | |
-
 ---
-
 ## 7. WorkOp – møteoppsett, rom og rotasjon
 
 **Hvor:** gjennomføringen → «Rom og rotasjon»
@@ -323,7 +248,7 @@ Tester med store datasett krever utviklerhjelp til oppsett, men selve handlingen
 | 8.1.5 | Eier – Fjern alle interesser og prøv «Neste». | Du kan ikke gå videre uten minst én interesse. | | |
 | 8.1.6 | Eier – Registrer interesser og gå videre på WorkOp første gang. | Intervjufordelingen klargjøres fra interessene. Du kommer til intervjufordeling når lagringen/fordelingen er ferdig. | | |
 | 8.1.7 | Eier – Lag manuell intervjurekkefølge, gå tilbake til interesse og deretter frem igjen uten endringer. | Eksisterende rekkefølge blir ikke automatisk fordelt på nytt ved stegnavigasjon. | | |
-| 8.1.8 | Eier – Prøv å fjerne interesse når paret har vurdering, notat, avtalt intervju eller jobbtilbud. Prøv feltene hver for seg. | Krysset er låst med forklaring om å nullstille registreringen i steg 5 først. | | |
+| 8.1.8 | Eier – Prøv å fjerne interesse når jobbsøker-arbeidsgiver-paret har vurdering, notat, avtalt intervju eller jobbtilbud. Prøv feltene hver for seg. | Krysset er låst med forklaring om å nullstille registreringen i steg 5 først. | | |
 | 8.1.9 | Eier – Sett vurderingen til «Ingen vurdering», men behold et notat eller jobbtilbud. | Interessen er fortsatt låst. Å tømme bare vurderingsvalget nullstiller ikke hele registreringen. | | |
 | 8.1.10 | Eier – Nullstill alle vurderingsfelter for paret og fjern interessen. | Interessen kan fjernes. Vurderinger hos andre arbeidsgivere blir stående. | | |
 | 8.1.11 | Eier – Kryss raskt av, av og på samme celle, og kryss av en annen celle mens det lagres. | Siste valg per celle består etter at køen er ferdig og siden er lastet på nytt. Et eldre svar overskriver ikke et nyere valg. | | |
@@ -334,7 +259,7 @@ Tester med store datasett krever utviklerhjelp til oppsett, men selve handlingen
 
 **Hvor:** gjennomføringen → «Intervjufordeling»
 
-**Hva skjer:** Hver arbeidsgiver har en intervjurekkefølge og en liste under sperrelinjen for dem som ikke gjennomfører speedintervju. Plasskonflikter er varsler om rekkefølge, ikke kalenderbestillinger.
+**Hva skjer:** Hver arbeidsgiver har en intervjurekkefølge og en liste under sperrelinjen for dem som ikke gjennomfører speedintervju. Plasskonflikter er varsler om rekkefølge.
 
 | # | Test | Forventet resultat | ✅❌ | Notat |
 | --- | --- | --- | --- | --- |
@@ -457,50 +382,6 @@ Tester med store datasett krever utviklerhjelp til oppsett, men selve handlingen
 | 12.2.3 | Eier – Fokuser en låst oppmøte- eller interessekontroll med tastatur. | Årsaken til låsingen er tilgjengelig uten at musen må holdes over kontrollen. | | |
 | 12.2.4 | Eier – Bruk 200 % zoom og smal nettleser gjennom alle seks steg og dialoger. | Felter, feilmeldinger og knapper er tilgjengelige. Brede matriser kan rulles uten at nødvendige handlinger blir utilgjengelige. | | |
 | 12.2.5 | Eier – Observer siden mens lagringsstatus veksler mellom lagring, lagret og feil. | Det er tydelig hva som er lagret. Radene flytter seg ikke slik at et pågående klikk treffer en annen person. | | |
-
----
-
-## 13. Endringer, avlysning, fullføring og etterarbeid
-
-**Hvor:** rekrutteringsbistand, treffsiden, varsler og aktivitetsplan
-
-**Forutsetning:** Bruk egne treff med inviterte som har svart ja, svart nei og ikke svart. Kjør først uten oppmøte/formidling; gjenta deretter de særskilte kollisjonstestene i seksjon 16.2.
-
-### Endre publisert WorkOp
-
-| # | Test | Forventet resultat | ✅❌ | Notat |
-| --- | --- | --- | --- | --- |
-| 13.1.1 | Eier – Endre navn, tidspunkt, sted, svarfrist og introduksjon. Åpne «Lagre endringer». | Dialogen viser endringene og mulighet til å velge hvilke endringer det skal varsles om når aktuelle mottakere finnes. | | |
-| 13.1.2 | Eier – Avbryt dialogen før publisering av endringene. | Endringene publiseres ikke gjennom dialogen, og det sendes ikke endringsvarsel. | | |
-| 13.1.3 | Eier – La alle varslingsvalg være av og velg «Lagre uten å varsle». | Treffsiden og inviterte personers aktivitetskort får oppdaterte treffdetaljer. Ingen ny SMS, e-post eller MinSide-beskjed om endringen sendes. | | |
-| 13.1.4 | Eier – Velg bare nytt tidspunkt og nytt sted og deretter «Lagre og varsle». | WorkOp-varselet nevner bare tidspunkt og sted, ikke uvalgte felt eller nye feltverdier med intern informasjon. | | |
-| 13.1.5 | Eier – Varsle om alle fem endringstyper. | Meldingen omtaler WorkOp og navn, tidspunkt, svarfrist, sted og introduksjon. Det står ikke en uerstattet `{{ENDRINGER}}` i SMS/e-post/MinSide. | | |
-| 13.1.6 | Jobbsøker – Sammenlign mottakere med ja, nei og ikke svart etter endringsvarsel. | Ja-mottaker får endringsvarsel. Nei og ikke svart får ikke endringsvarsel. Inviterte personers aktivitetskort kan likevel få oppdaterte treffdetaljer. | | |
-| 13.1.7 | Jobbsøker uten ekstern kontaktinformasjon – Svar ja og motta en varslet endring. | Endringsbeskjeden finnes på MinSide, og aktivitetskort/treffsiden viser de nye opplysningene. | | |
-| 13.1.8 | Utvikler – Kontroller ferdig flettet SMS for invitasjon, endring med alle fem felt og avlysning. | Hver WorkOp-SMS er maksimalt 160 tegn og uten tekniske plassholdere. | | |
-
-### Avlysning og gjenåpning
-
-| # | Test | Forventet resultat | ✅❌ | Notat |
-| --- | --- | --- | --- | --- |
-| 13.2.1 | Eier – Åpne avlysningsdialogen og avbryt. | Treffet forblir publisert. Ingen avlysningsvarsler eller kortendringer utløses. | | |
-| 13.2.2 | Eier – Bekreft avlysning av et publisert WorkOp. | Treffstatus blir «Avlyst». Inviterte jobbsøkere ser avlysningsmelding og ikke vanlig svarskjema. | | |
-| 13.2.3 | Jobbsøker – Kontroller varsler etter avlysning for ja, nei og ikke svart. | Bare ja-mottaker får avlysningsvarsel. WorkOp omtales som avlyst; interne vurderinger og arbeidsgivernavn følger ikke med. | | |
-| 13.2.4 | Jobbsøker/Veileder – Kontroller aktivitetskort for de samme tre personene. | Kortene er «Avbrutt». Det opprettes ikke tre nye kort som erstatning for de eksisterende. | | |
-| 13.2.5 | Eier – Åpne jobbsøkerlisten og gjennomføringen etter avlysning. | Registrerte deltakere og gjennomføringsopplysninger er ikke automatisk slettet. Eventuell redigering på avlyst treff vurderes etter avklaringstesten i seksjon 16.4. | | |
-| 13.2.6 | Eier – Åpne «Gjenåpne» på avlyst treff, avbryt først og bekreft deretter. | Avbryt beholder avlyst status. Bekreftelse setter status til «Publisert» og bevarer eksisterende deltakere og gjennomføringsdata. | | |
-| 13.2.7 | Utvikler/Eier – La gjenåpning feile. | Feil vises, dialogen gir ikke inntrykk av vellykket gjenåpning, og treffstatus er ikke bare endret lokalt. | | |
-
-### Fullføring og oppfølging etter treffet
-
-| # | Test | Forventet resultat | ✅❌ | Notat |
-| --- | --- | --- | --- | --- |
-| 13.3.1 | Eier – Åpne «Fullfør» før sluttidspunktet. | Handlingen kan ikke fullføre et fortsatt pågående treff. | | |
-| 13.3.2 | Eier – Fullfør et publisert WorkOp etter slutt, med inviterte, eller la den automatiske fullføringsjobben behandle det. | Treffet blir «Fullført». Dette er uavhengig av om oppsummeringssteget tidligere er åpnet. | | |
-| 13.3.3 | Jobbsøker/Veileder – Kontroller kort etter fullføring for ja, nei og ikke svart, uten registrert oppmøte/formidling. | Ja gir «Fullført». Nei og ikke svart gir «Avbrutt». Ingen egen SMS om fullføring sendes. | | |
-| 13.3.4 | Eier – Åpne vurdering og oppfølging etter at treffet er fullført, og registrer et nytt notat eller «2. intervju». | Etterarbeid kan lagres i dev. Tidligere oppmøte, rom, interesser og vurderinger er bevart. Fullføring sletter ikke gjennomføringsdataene. | | |
-| 13.3.5 | Eier – Forsøk å avlyse et allerede fullført treff. | Handlingen avvises. Det finnes ikke en vanlig knapp for å angre fullføringen. | | |
-| 13.3.6 | Utvikler – Forsøk fullføring av kladd, allerede fullført/avlyst treff og publisert treff uten sluttid. | Ugyldige fullføringer avvises. Ingen nye fullføringsvarsler/kortendringer oppstår fra et avvist kall. | | |
 
 ---
 
