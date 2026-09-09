@@ -73,6 +73,7 @@ class RekrutteringstreffRepository(
 
     fun opprett(connection: Connection, dto: OpprettRekrutteringstreffInternalDto): Pair<TreffId, Long> {
         require(dto.opprettetAvNavkontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
+        require(dto.opprettetAvPersonNavident.isNotBlank()) { "Eier må ha Nav-ident" }
         val nyTreffId = TreffId(UUID.randomUUID())
         val dbId = connection.prepareStatement(
             """

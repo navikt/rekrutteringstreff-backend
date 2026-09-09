@@ -9,8 +9,6 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffService
 import no.nav.toi.rekrutteringstreff.TestDatabase
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggRepository
 import no.nav.toi.rekrutteringstreff.innlegg.InnleggService
 import no.nav.toi.rekrutteringstreff.innlegg.OpprettInnleggRequestDto
@@ -51,7 +49,6 @@ class InnleggServiceTest {
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
                 jobbsøkerService,
-                EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource),
                 Miljø.LOKALT,
             )
             innleggService = InnleggService(innleggRepository, rekrutteringstreffService)
