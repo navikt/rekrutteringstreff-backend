@@ -1,5 +1,7 @@
 package no.nav.toi.rekrutteringstreff.eier
 
+import io.javalin.http.NotFoundResponse
+import no.nav.toi.executeInTransaction
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
 import javax.sql.DataSource
@@ -35,44 +37,71 @@ class EierRepository(
             }
     }
 
-    fun leggTil(treff: TreffId, nyeEiere: List<String>) {
-        dataSource.connection.use { connection ->
-            leggTil(connection, treff, nyeEiere)
+    fun leggTil(treff: TreffId, eierNavIdent: String, kontorEnhetId: String) {
+        dataSource.executeInTransaction { connection ->
+            leggTil(connection, treff, eierNavIdent, kontorEnhetId)
         }
     }
 
-    fun leggTil(connection: Connection, treff: TreffId, nyeEiere: List<String>) {
+    fun leggTil(connection: Connection, treff: TreffId, eierNavIdent: String, kontorEnhetId: String) {
+        require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
+        require(eierNavIdent.isNotBlank()) { "Eier må ha Nav-ident" }
         connection.prepareStatement(
                 """
-                    UPDATE $rekrutteringstreff
-                    SET $eiere = array(SELECT DISTINCT unnest(array_cat($eiere, ?)))
-                    WHERE $id = ?
+                    WITH oppdatert_treff AS (
+                        UPDATE $rekrutteringstreff
+                        SET $eiere = array(SELECT DISTINCT unnest(array_append($eiere, ?)))
+                        WHERE $id = ?
+                        RETURNING rekrutteringstreff_id
+                    )
+                    INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_av)
+                    SELECT rekrutteringstreff_id, ?, ?, ?
+                    FROM oppdatert_treff
+                    ON CONFLICT (rekrutteringstreff_id, nav_ident)
+                    DO UPDATE SET kontor_enhetid = EXCLUDED.kontor_enhetid
                 """.trimIndent()
             ).use { stmt ->
-                stmt.setArray(1, connection.createArrayOf("text", nyeEiere.toTypedArray()))
+                stmt.setString(1, eierNavIdent)
                 stmt.setObject(2, treff.somUuid)
-                stmt.executeUpdate()
+                stmt.setString(3, eierNavIdent)
+                stmt.setString(4, kontorEnhetId)
+                stmt.setString(5, eierNavIdent)
+                if (stmt.executeUpdate() == 0) {
+                    throw NotFoundResponse("Rekrutteringstreff med id ${treff.somString} finnes ikke")
+                }
             }
     }
 
     fun slett(treff: TreffId, eier: String): Boolean {
-        dataSource.connection.use { connection ->
-            return slett(connection, treff, eier)
+        return dataSource.executeInTransaction { connection ->
+            slett(connection, treff, eier)
         }
     }
 
     fun slett(connection: Connection, treff: TreffId, eier: String): Boolean {
         connection.prepareStatement(
             """
-                    UPDATE $rekrutteringstreff
-                    SET $eiere = array_remove($eiere, ?) 
-                    WHERE $id = ? AND array_length($eiere, 1) > 1 AND $eiere @> ARRAY[?]::text[]
+                    WITH oppdatert_treff AS (
+                        UPDATE $rekrutteringstreff
+                        SET $eiere = array_remove($eiere, ?)
+                        WHERE $id = ? AND array_length($eiere, 1) > 1 AND $eiere @> ARRAY[?]::text[]
+                        RETURNING rekrutteringstreff_id
+                    ), slettet_eier AS (
+                        DELETE FROM rekrutteringstreff_eier
+                        WHERE rekrutteringstreff_id IN (SELECT rekrutteringstreff_id FROM oppdatert_treff)
+                          AND nav_ident = ?
+                    )
+                    SELECT EXISTS (SELECT 1 FROM oppdatert_treff)
                 """.trimIndent()
         ).use { stmt ->
             stmt.setString(1, eier)
             stmt.setObject(2, treff.somUuid)
             stmt.setString(3, eier)
-            return stmt.executeUpdate() > 0
+            stmt.setString(4, eier)
+            return stmt.executeQuery().use { rs ->
+                rs.next()
+                rs.getBoolean(1)
+            }
         }
     }
 }

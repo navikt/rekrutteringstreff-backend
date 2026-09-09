@@ -68,7 +68,7 @@ class JobbsøkerFormidlingKomponentTest {
             tittel = "TestTreff",
             opprettetAvNavkontorEnhetId = opprettetAvKontor,
         )
-        ctx.eierRepository.leggTil(treffId, listOf(eierIdent))
+        ctx.eierRepository.leggTil(treffId, eierIdent, opprettetAvKontor)
         return treffId
     }
 

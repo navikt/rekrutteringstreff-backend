@@ -1,6 +1,6 @@
 # Plan: Flytte eiere og kontorer ut i egen tabell
 
-**Status:** Under implementering — fase 1 (`V15`) er skrevet. Modellvalg besluttet (seksjon 6 og 7),
+**Status:** Fase 1 (`V15`) og fase 2 (dual write) er implementert. Modellvalg besluttet (seksjon 6 og 7),
 én åpen avklaring (seksjon 8) og de tvetydige eierradene gjenstår før fase 4.
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
 
@@ -40,7 +40,7 @@ CREATE INDEX idx_rekrutteringstreff_eier_kontor ON rekrutteringstreff_eier (kont
 | Én tabell, kontor som kolonne | Kontor er avledet av eierskap — ingen selvstendig livssyklus | Kan ikke ha kontor uten eier (f.eks. kontor lagt til manuelt) |
 | Unik `id` som UUID i tillegg til intern primærnøkkel | Samme todeling som `rekrutteringstreff`. `DEFAULT gen_random_uuid()` gir også backfillede rader en UUID uten ekstra INSERT-logikk | Ekstra unik indeks; `rekrutteringstreff_eier_id` beholdes som intern nøkkel |
 | `kontor_enhetid` — mål: `NOT NULL` | `EierController` avviser nå manglende kontor. Av backfillens 70 hull kan 50 utledes entydig; 20 må avklares — se seksjon 1 | Krever at de 20 løses før constrainten kan settes |
-| Oppdaterer ikke eksisterende eierrader | `leggTilEierMedKontor` returnerer tidlig hvis brukeren alt er eier | Kontor-/navnendringer fanges ikke opp — vurder endring i fase 2 |
+| Oppdaterer kontor for eksisterende eiere | `leggTilEierMedKontor` bruker upsert fra fase 2, også når eierraden mangler før backfill | Navn endres ikke før navnekilden er avklart |
 | `eier_navn` nullable, denormalisert | Ingen server-side navIdent→navn-oppslag finnes i appen. Migrerte rader har ingen navnekilde | Navn kan bli utdatert; må tåle NULL i visning |
 | Unik `(treff, nav_ident)` | Én eier kan bare være eier én gang | Eier som bytter kontor må oppdateres (UPDATE, ikke ny rad) |
 | Ingen `ON DELETE CASCADE` | Treff slettes aldri fysisk (status `SLETTET`) | — |
@@ -58,9 +58,8 @@ kontor:
 
 ```kotlin
 val kontorId = ctx.authenticatedUser().extractKontorId()
-if (kontorId == null) {
-    throw IllegalStateException("Innlogget bruker har ikke kontor-tilknytning, ...")
-}
+    ?.takeIf { it.isNotBlank() }
+    ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
 ```
 
 ⚠️ **Backfillen er blokkeringen.** 70 av 269 eierrader får ingen kontor fra hendelsesloggen (se seksjon 6).
@@ -184,19 +183,30 @@ tabellen all *ny* aktivitet før historikken fylles inn.
 
 ### Fase 2 — Dual write
 
-Skriv til både arrayene og den nye tabellen i samme transaksjon. Berørte steder:
+**Implementert.** Opprettelse, tillegg og sletting skriver til eierarrayet og eiertabellen i samme
+SQL-setning. `EierService` samler disse endringene, kontorarrayet og hendelsene i én transaksjon.
 
-- `RekrutteringstreffRepository.opprett` — sett inn eierrad for oppretter med kontor
-- `RekrutteringstreffRepository.leggTilKontor` — erstattes gradvis av oppdatering på eierraden
-- `EierRepository.leggTil` / `slett`
-- `EierService.leggTilEierMedKontor` / `slettEier`
+- `RekrutteringstreffRepository.opprett` setter inn oppretteren med kontor, tidspunkt og `lagt_til_av`.
+- `EierRepository.leggTil` krever kontor og oppdaterer det ved gjentatte kall. Radens ID, tidspunkt,
+  `lagt_til_av` og eventuelt navn beholdes ved oppdatering.
+- `EierService.leggTilEierMedKontor` fyller også manglende eierrader for eksisterende eiere, uten ny
+  `EIER_LAGT_TIL`-hendelse. `leggTilKontor` vedlikeholder fortsatt kontorarrayet og utløser
+  `KONTOR_LAGT_TIL` når kontoret er nytt på treffet.
+- Sletting fjerner eieren fra begge lagringsformene, også når den historiske eierraden mangler.
+  Sperren mot å slette siste eier bruker fortsatt arrayet.
 
-Alle skrivestier må skrive til begge steder i samme transaksjon, inkludert sletting, og nye eierrader
-må alltid ha kontor. **Alle instanser må kjøre denne versjonen før fase 3.** Under rullerende deploy kan
-gamle instanser fortsatt skrive bare til arrayene.
+Lesing, søk og tilgangskontroll bruker fortsatt arrayene. Kontorer fjernes ikke fra kontorarrayet ved
+sletting eller kontorbytte i denne fasen. Den nye semantikken og `KONTOR_FJERNET` innføres før lesingen
+byttes i fase 5. `eier_navn` for nye rader er fortsatt NULL mens navnekilden avklares.
 
-Før backfill forventes historiske rader å mangle i den nye tabellen. Kontroller nye endringer under dual
-write nå; full likhet mellom arrayene og tabellen kontrolleres etter fase 3.
+**Låserekkefølge:** Treffraden låses før eiertabellen endres. Serviceoperasjonene bruker `FOR UPDATE`;
+repository-operasjonene oppdaterer treffraden før de skriver eierraden. Fase 3 må blokkere skriving
+og `FOR UPDATE` på trefftabellen før eiertabellen låses og backfillen starter. En
+`ACCESS EXCLUSIVE`-lås på trefftabellen først dekker begge deler; vurder driftsvinduet før `V16` lages.
+
+**Alle instanser må kjøre denne versjonen før fase 3.** Under rullerende deploy kan gamle instanser
+fortsatt skrive bare til arrayene. `V16` følger ikke denne releasen. Før backfill forventes historiske
+rader å mangle i eiertabellen; kontroller nye endringer nå og full likhet etter fase 3.
 
 ### Fase 3 — Backfill (`V16__rekrutteringstreff_eier_backfill.sql`)
 
@@ -542,10 +552,9 @@ med tilhørende scope, feilhåndtering og driftsansvar.
 
 Ingen av alternativene gir navn for de 269 eksisterende radene — `eier_navn` blir `NULL`.
 
-⚠️ Navnet fylles **ikke** inn av seg selv senere: `leggTilEierMedKontor` returnerer tidlig for eksisterende
-eiere, så et nytt `PUT /eiere/meg` gjør ingenting. Skal historiske rader få navn, må enten migreringen
-fylle dem (se delvis backfill under) eller `leggTilEierMedKontor` endres til å oppdatere navn og kontor på
-eksisterende rader — se «Følger for øvrig».
+Navnet fylles ikke inn av seg selv senere. Fra fase 2 oppdaterer `PUT /eiere/meg` kontor også for
+eksisterende eiere, men lar navnet stå urørt. Skal historiske rader få navn, må vi først velge navnekilde
+og deretter utvide skrivingen eller migrere navnene (se delvis backfill under).
 
 Delvis backfill er mulig fra `innlegg`, som har både navident og navn for de som har skrevet innlegg:
 

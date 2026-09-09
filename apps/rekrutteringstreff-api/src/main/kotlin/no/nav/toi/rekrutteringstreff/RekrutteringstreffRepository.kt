@@ -72,12 +72,20 @@ class RekrutteringstreffRepository(
     }
 
     fun opprett(connection: Connection, dto: OpprettRekrutteringstreffInternalDto): Pair<TreffId, Long> {
+        require(dto.opprettetAvNavkontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
+        require(dto.opprettetAvPersonNavident.isNotBlank()) { "Eier må ha Nav-ident" }
         val nyTreffId = TreffId(UUID.randomUUID())
         val dbId = connection.prepareStatement(
             """
-            INSERT INTO $tabellnavn($id,$tittel,$kategori,$status,$opprettetAvPersonNavident,
-                                     $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere,$kontorer,$sistEndret,$sistEndretAv)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            WITH nytt_treff AS (
+                INSERT INTO $tabellnavn($id,$tittel,$kategori,$status,$opprettetAvPersonNavident,
+                                         $opprettetAvKontorEnhetid,$opprettetAvTidspunkt,$eiere,$kontorer,$sistEndret,$sistEndretAv)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                RETURNING rekrutteringstreff_id, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt
+            )
+            INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_tidspunkt, lagt_til_av)
+            SELECT rekrutteringstreff_id, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $opprettetAvPersonNavident
+            FROM nytt_treff
             RETURNING rekrutteringstreff_id
             """
         ).apply {

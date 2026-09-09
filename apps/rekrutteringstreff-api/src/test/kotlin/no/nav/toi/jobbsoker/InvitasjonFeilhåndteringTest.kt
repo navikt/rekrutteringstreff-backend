@@ -93,7 +93,7 @@ class InvitasjonFeilhåndteringTest {
 
         val jobbsøkere = db.hentAlleJobbsøkere()
         val personTreffId = jobbsøkere.first().personTreffId
-        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, "A123456", "0315")
 
         val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
 
@@ -168,7 +168,7 @@ class InvitasjonFeilhåndteringTest {
         // Sett én jobbsøker til ikke-synlig (simulerer at CV ikke lenger er delt)
         db.settSynlighet(personTreffIdUsynlig, erSynlig = false)
 
-        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, "A123456", "0315")
 
         // Forsøk å invitere begge jobbsøkere
         val requestBody = """{ "personTreffIder": ["$personTreffIdUsynlig", "$personTreffIdSynlig"] }"""
@@ -214,7 +214,7 @@ class InvitasjonFeilhåndteringTest {
             )
         )
 
-        ctx.eierRepository.leggTil(treffId, listOf("A123456"))
+        ctx.eierRepository.leggTil(treffId, "A123456", "0315")
 
         val requestBody = """{ "personTreffIder": ["$personTreffId"] }"""
 
