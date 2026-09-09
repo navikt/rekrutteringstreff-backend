@@ -3,6 +3,7 @@ package no.nav.toi.treffgjennomføring.møteplan
 import io.javalin.http.BadRequestResponse
 import no.nav.toi.HendelseWriter
 import no.nav.toi.RekrutteringstreffHendelsestype
+import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.StegRepository
@@ -10,7 +11,6 @@ import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
 import no.nav.toi.treffgjennomføring.TreffgjennomføringSteg
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
-import no.nav.toi.treffgjennomføring.dto.RomDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import java.sql.Connection
 
@@ -74,13 +74,36 @@ class MøteplanService(
         stegRepository.settGjeldendeSteg(connection, kontekst.treffDbId, nåværendeSteg, TreffgjennomføringSteg.ROM)
     }
 
-    fun lagreRomfordeling(treffId: TreffId, rom: List<RomDto>): TreffgjennomføringDto =
-        writer.skriv(treffId) { connection, kontekst, _ ->
+    fun flyttJobbsøkerTilRom(treffId: TreffId, personTreffId: PersonTreffId, målromnummer: Int): TreffgjennomføringDto =
+        writer.skriv(treffId) { connection, kontekst, rad ->
             kontekst.krevWorkOp()
+            if (!repository.harMøteoppsett(connection, rad.id)) {
+                throw BadRequestResponse("Møteoppsettet må opprettes før romfordeling kan endres")
+            }
+            if (målromnummer !in 1..kontekst.antallRom) {
+                throw BadRequestResponse("Ugyldig romnummer: $målromnummer. Må være mellom 1 og ${kontekst.antallRom}")
+            }
+            if (kontekst.jobbsøkerId(personTreffId) == null) {
+                throw BadRequestResponse("Jobbsøkeren finnes ikke på treffet")
+            }
             val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
-            val ny = MøteplanValidering.romfordeling(rom, kontekst.antallRom, oppmøte)
+            if (personTreffId !in oppmøte) {
+                throw BadRequestResponse("Bare fremmøtte jobbsøkere kan plasseres i rom")
+            }
 
-            repository.erstattRomfordeling(connection, kontekst.treffDbId, ny, kontekst)
+            val gjeldendeMøteplan = repository.hentMøteplan(connection, kontekst, oppmøte)
+            require(gjeldendeMøteplan.rom.any { it.romnummer == målromnummer }) {
+                "Romfordelingen må opprettes før jobbsøkere kan flyttes"
+            }
+            val oppdaterteRom = gjeldendeMøteplan.rom.map { rom ->
+                val utenPerson = rom.jobbsøkere.filter { it != personTreffId }
+                if (rom.romnummer == målromnummer) {
+                    Rom(rom.romnummer, utenPerson + personTreffId)
+                } else {
+                    Rom(rom.romnummer, utenPerson)
+                }
+            }
+            repository.erstattRomfordeling(connection, kontekst.treffDbId, oppdaterteRom, kontekst)
         }
 
     fun fordelRomPåNytt(treffId: TreffId): TreffgjennomføringDto =

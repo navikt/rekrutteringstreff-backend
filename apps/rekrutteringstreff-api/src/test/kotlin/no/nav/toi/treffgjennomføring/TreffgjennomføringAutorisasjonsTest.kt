@@ -89,8 +89,8 @@ class TreffgjennomføringAutorisasjonsTest {
         ),
         Romfordeling(
             Metode.PUT,
-            "/treffgjennomforing/romfordeling",
-            """[{"romnummer":1,"jobbsøkere":[]}]""",
+            "/treffgjennomforing/romfordeling/11111111-1111-1111-1111-111111111111",
+            """{"romnummer":1}""",
             true,
         ),
         FordelRom(Metode.POST, "/treffgjennomforing/romfordeling/fordel", "{}", true),

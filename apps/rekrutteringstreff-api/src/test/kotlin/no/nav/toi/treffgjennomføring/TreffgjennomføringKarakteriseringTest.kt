@@ -703,10 +703,6 @@ class TreffgjennomføringKarakteriseringTest {
         møtt(treffId, p1)
         møtt(treffId, p2)
         møteplanService.lagreMøteoppsett(treffId, MøteoppsettRequestDto("09:00", 15), navIdent)
-        møteplanService.lagreRomfordeling(
-            treffId,
-            listOf(RomDto(1, listOf(p1.somString)), RomDto(2, listOf(p2.somString))),
-        )
         interesse(treffId, p1, ag[0])
         interesse(treffId, p2, ag[0])
         matchingService.lagreIntervjufordeling(

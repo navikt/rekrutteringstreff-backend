@@ -35,6 +35,8 @@ import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.UUID
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -205,7 +207,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(svar["starttidspunkt"].asText()).isEqualTo("09:00")
         assertThat(svar["rom"]).hasSize(2)
         assertThat(svar["rom"].flatMap { it["jobbsøkere"] }.map { it.asText() })
-            .containsExactlyInAnyOrder(p1.somString, p2.somString)
+            .containsExactly(p1.somString, p2.somString)
         assertThat(svar["arbeidsgiverRekkefølge"].map { it["førsteRomnummer"].asInt() }).containsExactly(1, 2)
     }
 
@@ -423,7 +425,7 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `romfordeling erstatter plasseringene`() {
+    fun `flytting til annet rom flytter personen og bevarer andre`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val p1 = jobbsøker(treff, "11111111111")
         val p2 = jobbsøker(treff, "22222222222")
@@ -431,51 +433,139 @@ class TreffgjennomføringKomponentTest {
         oppmøte(treff, p2, møtt = true)
         møteoppsett(treff)
 
-        val nyFordeling = """[{"romnummer":1,"jobbsøkere":["${p1.somString}","${p2.somString}"]},{"romnummer":2,"jobbsøkere":[]}]"""
-        assertThat(put(treff, "/treffgjennomforing/romfordeling", nyFordeling).statusCode()).isEqualTo(200)
+        val flyttP2TilRom1 = """{"romnummer":1}"""
+        assertThat(put(treff, "/treffgjennomforing/romfordeling/${p2.somString}", flyttP2TilRom1).statusCode()).isEqualTo(200)
 
         val rom = aggregat(treff)["rom"]
         assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
-            .containsExactly(p1.somString, p2.somString)
+            .containsExactlyInAnyOrder(p1.somString, p2.somString)
         assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"]).isEmpty()
     }
 
     @Test
-    fun `romfordeling avvises med feil antall rom`() {
+    fun `flytting til samme rom er idempotent`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        oppmøte(treff, p1, møtt = true)
+        møteoppsett(treff)
+
+        assertThat(flyttTilRom(treff, p1, 2).statusCode()).isEqualTo(200)
+        val førsteFordeling = aggregat(treff)["rom"]
+        assertThat(flyttTilRom(treff, p1, 2).statusCode()).isEqualTo(200)
+        val gjentattFordeling = aggregat(treff)["rom"]
+        assertThat(gjentattFordeling).isEqualTo(førsteFordeling)
+        assertThat(gjentattFordeling.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p1.somString)
+    }
+
+    @Test
+    fun `samtidige flyttinger av ulike personer bevarer begge endringene`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        oppmøte(treff, p1, møtt = true)
+        oppmøte(treff, p2, møtt = true)
+        møteoppsett(treff)
+
+        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            val første = executor.submit<HttpResponse<String>> { flyttTilRom(treff, p1, 2) }
+            val andre = executor.submit<HttpResponse<String>> { flyttTilRom(treff, p2, 1) }
+            assertThat(første.get(10, TimeUnit.SECONDS).statusCode()).isEqualTo(200)
+            assertThat(andre.get(10, TimeUnit.SECONDS).statusCode()).isEqualTo(200)
+        }
+
+        val rom = aggregat(treff)["rom"]
+        assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p2.somString)
+        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p1.somString)
+    }
+
+    @Test
+    fun `flytting avviser person fra et annet treff og manglende møteoppsett`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff, "11111111111")
+        val annetTreff = workOpTreff()
+        val annenPerson = jobbsøker(annetTreff, "22222222222")
+        oppmøte(treff, person, møtt = true)
+        oppmøte(annetTreff, annenPerson, møtt = true)
+
+        assertThat(flyttTilRom(treff, person, 2).statusCode()).isEqualTo(400)
+        møteoppsett(treff)
+        val før = aggregat(treff)["rom"]
+        assertThat(flyttTilRom(treff, annenPerson, 2).statusCode()).isEqualTo(400)
+        assertThat(aggregat(treff)["rom"]).isEqualTo(før)
+    }
+
+    @Test
+    fun `rom beholdes når siste oppmøte fjernes og ny fremmøtt kan flyttes`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff, "11111111111")
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+        oppmøte(treff, person, møtt = false)
+
+        val tommeRom = aggregat(treff)["rom"]
+        assertThat(tommeRom).hasSize(2)
+        assertThat(tommeRom.flatMap { it["jobbsøkere"].toList() }).isEmpty()
+
+        val nyPerson = jobbsøker(treff, "22222222222")
+        oppmøte(treff, nyPerson, møtt = true)
+        assertThat(flyttTilRom(treff, nyPerson, 2).statusCode()).isEqualTo(200)
+        val rom = aggregat(treff)["rom"]
+        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(nyPerson.somString)
+    }
+
+    @Test
+    fun `flytting avvises med ugyldig romnummer`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff)
         oppmøte(treff, person, møtt = true)
         møteoppsett(treff)
 
-        val ettRom = """[{"romnummer":1,"jobbsøkere":["${person.somString}"]}]"""
-        assertThat(put(treff, "/treffgjennomforing/romfordeling", ettRom).statusCode()).isEqualTo(400)
+        val ugyldigRom = """{"romnummer":99}"""
+        assertThat(put(treff, "/treffgjennomforing/romfordeling/${person.somString}", ugyldigRom).statusCode()).isEqualTo(400)
     }
 
     @Test
-    fun `romfordeling avviser samme person i to rom`() {
-        val treff = workOpTreff(antallArbeidsgivere = 2)
-        val person = jobbsøker(treff)
-        oppmøte(treff, person, møtt = true)
-        møteoppsett(treff)
-
-        val dobbelt = """
-            [{"romnummer":1,"jobbsøkere":["${person.somString}"]},{"romnummer":2,"jobbsøkere":["${person.somString}"]}]
-        """.trimIndent()
-        assertThat(put(treff, "/treffgjennomforing/romfordeling", dobbelt).statusCode()).isEqualTo(400)
-    }
-
-    @Test
-    fun `romfordeling avviser person som ikke er fremmøtt`() {
+    fun `flytting avviser person som ikke er fremmøtt`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val person = jobbsøker(treff)
         val hjemme = jobbsøker(treff, "22222222222")
         oppmøte(treff, person, møtt = true)
         møteoppsett(treff)
 
-        val medHjemme = """
-            [{"romnummer":1,"jobbsøkere":["${person.somString}","${hjemme.somString}"]},{"romnummer":2,"jobbsøkere":[]}]
-        """.trimIndent()
-        assertThat(put(treff, "/treffgjennomforing/romfordeling", medHjemme).statusCode()).isEqualTo(400)
+        val flyttHjemme = """{"romnummer":1}"""
+        assertThat(put(treff, "/treffgjennomforing/romfordeling/${hjemme.somString}", flyttHjemme).statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `flytting av nylig fremmøtt uten lagret romrad bevarer beregnet plassering for andre`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        oppmøte(treff, p1, møtt = true)
+        oppmøte(treff, p2, møtt = true)
+        møteoppsett(treff)
+
+        val p3 = jobbsøker(treff, "33333333333")
+        val p4 = jobbsøker(treff, "44444444444")
+        oppmøte(treff, p3, møtt = true)
+        oppmøte(treff, p4, møtt = true)
+
+        val før = aggregat(treff)["rom"]
+        assertThat(før.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p1.somString, p3.somString)
+        assertThat(før.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p2.somString, p4.somString)
+        assertThat(flyttTilRom(treff, p3, 2).statusCode()).isEqualTo(200)
+
+        val rom = aggregat(treff)["rom"]
+        assertThat(rom.first { it["romnummer"].asInt() == 1 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p1.somString)
+        assertThat(rom.first { it["romnummer"].asInt() == 2 }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p2.somString, p3.somString, p4.somString)
     }
 
     @Test
@@ -489,9 +579,9 @@ class TreffgjennomføringKomponentTest {
         oppmøte(treff, p3, møtt = true)
         møteoppsett(treff)
 
-        // Manuelt legg alle i rom 1
-        val manuelt = """[{"romnummer":1,"jobbsøkere":["${p1.somString}","${p2.somString}","${p3.somString}"]},{"romnummer":2,"jobbsøkere":[]}]"""
-        assertThat(put(treff, "/treffgjennomforing/romfordeling", manuelt).statusCode()).isEqualTo(200)
+        // Manuelt flytt p2 og p3 til rom 1
+        assertThat(put(treff, "/treffgjennomforing/romfordeling/${p2.somString}", """{"romnummer":1}""").statusCode()).isEqualTo(200)
+        assertThat(put(treff, "/treffgjennomforing/romfordeling/${p3.somString}", """{"romnummer":1}""").statusCode()).isEqualTo(200)
 
         // Kall fordel på nytt
         val respons = post(treff, "/treffgjennomforing/romfordeling/fordel", "{}")
@@ -655,6 +745,9 @@ class TreffgjennomføringKomponentTest {
         treffId, "/treffgjennomforing/oppmote",
         """{"personTreffId":"${personTreffId.somString}","møtt":$møtt}""",
     )
+
+    private fun flyttTilRom(treffId: TreffId, personTreffId: PersonTreffId, romnummer: Int): HttpResponse<String> =
+        put(treffId, "/treffgjennomforing/romfordeling/${personTreffId.somString}", """{"romnummer":$romnummer}""")
 
     private fun put(treffId: TreffId, sti: String, body: String): HttpResponse<String> = send(
         HttpRequest.newBuilder().PUT(HttpRequest.BodyPublishers.ofString(body)),
