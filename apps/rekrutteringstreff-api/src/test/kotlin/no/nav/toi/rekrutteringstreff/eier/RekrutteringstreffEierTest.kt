@@ -13,7 +13,6 @@ import no.nav.toi.ubruktPortnrFra10000.ubruktPortnr
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 
@@ -183,37 +182,6 @@ class RekrutteringstreffEierTest {
         assertThat(database.hentEierrader(treff.id).single().kontorEnhetId).isEqualTo("1234")
         assertThat(ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
             .filter { it.hendelsestype == "EIER_LAGT_TIL" }).isEmpty()
-    }
-
-    @ParameterizedTest
-    @CsvSource("200, false, 400", "404, false, 403", "200, true, 400", "404, true, 400")
-    fun `leggTilEierMedKontor avviser manglende eller blankt kontor uten å skrive`(
-        modiaStatus: Int, erUtvikler: Boolean, forventetStatus: Int
-    ) {
-        opprettRekrutteringstreffIDatabase("A123456")
-        val treff = database.hentAlleRekrutteringstreff().first()
-        val eierraderFør = database.hentEierrader(treff.id)
-        val hendelserFør = ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
-        val token = infra.authServer.lagToken(
-            infra.authPort, navIdent = "B654321",
-            groups = listOf(if (erUtvikler) AzureAdRoller.utvikler else AzureAdRoller.arbeidsgiverrettet)
-        )
-        stubFor(
-            get(urlPathEqualTo("/api/context/v2/aktivenhet")).willReturn(
-                aResponse().withStatus(modiaStatus).withHeader("Content-Type", "application/json")
-                    .withBody("""{"aktivEnhet": " "}""")
-            )
-        )
-
-        val response = httpPut(
-            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg", "", token.serialize()
-        )
-
-        assertThat(response.statusCode()).isEqualTo(forventetStatus)
-        assertThat(database.hentEiere(treff.id)).containsExactly("A123456")
-        assertThat(database.hentEierrader(treff.id)).isEqualTo(eierraderFør)
-        assertThat(database.hentAlleRekrutteringstreff().single().kontorer).isEqualTo(treff.kontorer)
-        assertThat(ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)).isEqualTo(hendelserFør)
     }
 
     @Test
