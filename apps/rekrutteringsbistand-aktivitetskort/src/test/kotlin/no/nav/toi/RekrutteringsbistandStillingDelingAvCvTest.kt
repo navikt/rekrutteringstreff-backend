@@ -176,8 +176,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             stillingId = stillingId.toString(),
             tittel = "Test Stilling",
             opprettetAv = "Z123456",
-            arbeidsgiver = "Test Arbeidsgiver",
-            arbeidssted = "Oslo",
         )
         val melding = samtykkeBesvartMelding(
             fnr = fnr,
@@ -207,8 +205,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             stillingId = stillingId.toString(),
             tittel = "Test Stilling",
             opprettetAv = navIdent,
-            arbeidsgiver = "Test Arbeidsgiver",
-            arbeidssted = "Oslo",
         )
 
         rapid.sendTestMessage(
@@ -354,7 +350,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
     }
 
     @Test
-    fun `registrert fått jobben skal endre status til avbrutt før kandidaten har svart ja`() {
+    fun `registrert fått jobben skal ikke endre status før kandidaten har svart ja`() {
         val fnr = "01010012345"
         val stillingId = UUID.randomUUID()
         opprettDeltStilling(fnr, stillingId)
@@ -369,7 +365,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
 
         val hendelser = testRepository.hentAlleRekrutteringsbistandStillinger()
         assertThat(hendelser).hasSize(1)
-        assertThat(hendelser.single().aktivitetsStatus).isEqualTo(AktivitetsStatus.FULLFORT.name)
+        assertThat(hendelser.single().aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
     }
 
     @Test
@@ -506,8 +502,6 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             stillingId = stillingId.toString(),
             tittel = "Test Stilling",
             opprettetAv = "Z123456",
-            arbeidsgiver = "Test Arbeidsgiver",
-            arbeidssted = "Oslo",
         )
         if (aktivitetsStatus != AktivitetsStatus.FORSLAG) {
             repository.oppdaterAktivitetsstatus(

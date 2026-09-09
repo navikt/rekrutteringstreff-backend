@@ -592,8 +592,6 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         stillingId: String,
         tittel: String,
         opprettetAv: String,
-        arbeidsgiver: String,
-        arbeidssted: String
     ): UUID? {
         val aktivitetskortId = UUID.randomUUID()
 
@@ -642,15 +640,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     setObject(5, aktivitetskortId)
                     setString(6, opprettetAv)
                     setObject(7, ZonedDateTime.now().toLocalDateTime())
-                    setString(
-                        8,
-                        objectMapper.writeValueAsString(
-                            listOf(
-                                AktivitetskortDetalj("Arbeidsgiver", arbeidsgiver),
-                                AktivitetskortDetalj("Arbeidssted", arbeidssted),
-                            )
-                        )
-                    )
+                    setString(8, "[]")
                     setString(9, "[]")
                     setString(10, "[]")
                     setNull(11, VARCHAR)

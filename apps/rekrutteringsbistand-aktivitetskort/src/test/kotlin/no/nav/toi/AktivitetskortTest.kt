@@ -129,15 +129,11 @@ class AktivitetskortTest {
         val expectedStillingId = UUID.randomUUID()
         val expectedTittel = "Teststilling"
         val expectedOpprettetAv = "testuser"
-        val expectedArbeidsgiver = "Testarbeidsgiver"
-        val expectedArbeidssted = "Oslo"
         val expectedAktivitetskortId = repository.opprettDeltStilling(
             fnr = expectedFnr,
             stillingId = expectedStillingId.toString(),
             tittel = expectedTittel,
             opprettetAv = expectedOpprettetAv,
-            arbeidsgiver = expectedArbeidsgiver,
-            arbeidssted = expectedArbeidssted,
         )
 
         AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
@@ -164,10 +160,7 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["endretTidspunkt"].isMissingNode()).isFalse
             assertThat(this["aktivitetskort"]["avtaltMedNav"].asBoolean()).isFalse
             assertThat(this["aktivitetskort"]["detaljer"].isArray).isTrue()
-            val expectedDetaljer = objectMapper.readTree(
-                """[{"label":"Arbeidsgiver","verdi":"$expectedArbeidsgiver"},{"label":"Arbeidssted","verdi":"$expectedArbeidssted"}]"""
-            )
-            assertThat(this["aktivitetskort"]["detaljer"]).containsExactlyInAnyOrder(*expectedDetaljer.toList().toTypedArray())
+            assertThat(this["aktivitetskort"]["detaljer"]).isEmpty()
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
             assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
@@ -440,8 +433,6 @@ class AktivitetskortTest {
             stillingId = stillingId.toString(),
             tittel = "Teststilling",
             opprettetAv = "testuser",
-            arbeidsgiver = "Testarbeidsgiver",
-            arbeidssted = "Oslo"
         )
         val deltStilling = testRepository.hentAlleRekrutteringsbistandStillinger().single()
         val errorMessage = "Aktivitetskortet ble avvist"

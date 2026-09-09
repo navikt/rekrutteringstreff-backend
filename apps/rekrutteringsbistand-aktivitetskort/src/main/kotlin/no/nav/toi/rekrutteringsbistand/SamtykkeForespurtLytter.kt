@@ -11,46 +11,49 @@ import io.micrometer.core.instrument.MeterRegistry
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.Repository
+import java.time.ZonedDateTime
 
-class RekrutteringsbistandDelCvLytter(
+class SamtykkeForespurtLytter(
     rapidsConnection: RapidsConnection,
-    private val repository: Repository
-): River.PacketListener {
+    private val repository: Repository,
+) : River.PacketListener {
 
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "rekrutteringsbistandstilling-deling-av-cv")
+                it.requireValue("@event_name", EVENT_NAME)
                 it.forbid("aktivitetskortuuid")
-                it.requireKey("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
-                it.requireKey("fnr", "stillingId", "tittel", "opprettetAv", "arbeidsgiver", "arbeidssted")
-                it.require("stillingId") { node -> node.asText().toUUID() }
+                it.requireKey(
+                    "fnr",
+                    "stillingsId",
+                    "stillingsTittel",
+                    "svarfrist",
+                    "forespurtAvIdent",
+                    "forespurtTidspunkt",
+                )
+                it.require("stillingsId") { node -> node.asText().toUUID() }
+                it.require("svarfrist") { node -> ZonedDateTime.parse(node.asText()) }
+                it.require("forespurtTidspunkt") { node -> ZonedDateTime.parse(node.asText()) }
             }
-
         }.register(this)
     }
+
     override fun onPacket(
         packet: JsonMessage,
         context: MessageContext,
         metadata: MessageMetadata,
-        meterRegistry: MeterRegistry
+        meterRegistry: MeterRegistry,
     ) {
         val fnr = packet["fnr"].asText()
-        val stillingId = packet["stillingId"].asText()
-        val tittel = packet["tittel"].asText()
-        val opprettetAv = packet["opprettetAv"].asText()
-        val arbeidsgiver = packet["arbeidsgiver"].asText()
-        val arbeidssted = packet["arbeidssted"].asText()
+        val stillingId = packet["stillingsId"].asText()
 
         repository.opprettDeltStilling(
-            fnr,
-            stillingId,
-            tittel,
-            opprettetAv,
-            arbeidsgiver,
-            arbeidssted
+            fnr = fnr,
+            stillingId = stillingId,
+            tittel = packet["stillingsTittel"].asText(),
+            opprettetAv = packet["forespurtAvIdent"].asText(),
         )?.let { aktivitetskortId ->
             packet["aktivitetskortuuid"] = aktivitetskortId
             context.publish(fnr, packet.toJson())
@@ -62,8 +65,12 @@ class RekrutteringsbistandDelCvLytter(
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
-        log.error("Feil ved behandling av rekrutteringsbistandstilling-deling-av-cv: $problems")
-        teamlog(log).error("Feil ved behandling av rekrutteringsbistandstilling-deling-av-cv: ${problems.toExtendedReport()}")
+        log.error("Feil ved behandling av $EVENT_NAME: $problems")
+        teamlog(log).error("Feil ved behandling av $EVENT_NAME: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
+    }
+
+    private companion object {
+        const val EVENT_NAME = "samtykke-forespurt-om-deling-av-cv"
     }
 }
