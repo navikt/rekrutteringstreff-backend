@@ -1,6 +1,7 @@
 # Plan: Flytte eiere og kontorer ut i egen tabell
 
-**Status:** Fase 1 (`V15`) og fase 2 (dual write) er implementert. Modellvalg besluttet (seksjon 6 og 7),
+**Status:** Fase 1 (`V15`), fase 2 (dual write) og fase 3 (`V16`, backfill) er implementert.
+`V16` må deployes etter at alle instanser kjører dual write. Modellvalg besluttet (seksjon 6 og 7),
 én åpen avklaring (seksjon 8) og de tvetydige eierradene gjenstår før fase 4.
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
 
@@ -200,9 +201,9 @@ sletting eller kontorbytte i denne fasen. Den nye semantikken og `KONTOR_FJERNET
 byttes i fase 5. `eier_navn` for nye rader er fortsatt NULL mens navnekilden avklares.
 
 **Låserekkefølge:** Treffraden låses før eiertabellen endres. Serviceoperasjonene bruker `FOR UPDATE`;
-repository-operasjonene oppdaterer treffraden før de skriver eierraden. Fase 3 må blokkere skriving
-og `FOR UPDATE` på trefftabellen før eiertabellen låses og backfillen starter. En
-`ACCESS EXCLUSIVE`-lås på trefftabellen først dekker begge deler; vurder driftsvinduet før `V16` lages.
+repository-operasjonene oppdaterer treffraden før de skriver eierraden. `V16` tar `ACCESS EXCLUSIVE`
+på trefftabellen før eiertabellen låses i samme modus. Dette blokkerer både skriving, `FOR UPDATE`
+og vanlig lesing mens migreringen kjører. Vurder driftsvinduet før deploy.
 
 **Alle instanser må kjøre denne versjonen før fase 3.** Under rullerende deploy kan gamle instanser
 fortsatt skrive bare til arrayene. `V16` følger ikke denne releasen. Før backfill forventes historiske
@@ -210,7 +211,7 @@ rader å mangle i eiertabellen; kontroller nye endringer nå og full likhet ette
 
 ### Fase 3 — Backfill (`V16__rekrutteringstreff_eier_backfill.sql`)
 
-Backfill dagens eiere fra arrayene, også på slettede treff, og fyll kontor fra hendelser,
+**Implementert.** Backfill dagens eiere fra arrayene, også på slettede treff, og fyll kontor fra hendelser,
 oppretterkontor eller entydig treffkontor. Eksisterende dual write-rader beholdes.
 
 **`V16` legges til i en senere release enn dual write.** Flyway kjører ved oppstart, før den nye koden
@@ -221,10 +222,12 @@ vanlig i migreringshistorikken.
 kontor lagres med NULL. Ingen manuell mapping eller `SET NOT NULL` inngår her: radene må først finnes
 med varige ID-er, slik at vi kan lage mappingen uten Nav-identer etterpå.
 
-**Samtidige endringer må samordnes med backfillen.** Migreringen må bruke låsing som blokkerer
-eierendringer mens den leser og fyller, i samme låserekkefølge som dual write. `ON CONFLICT DO NOTHING`
-bevarer eksisterende rader, men hindrer ikke alene at en samtidig slettet eier gjeninnføres. Avklar
-låsingen mot fase 2-koden før migreringsfilen opprettes; skriving kan måtte vente mens den kjører.
+**Samtidige endringer samordnes med låsing.** Migreringen låser trefftabellen før eiertabellen,
+i samme rekkefølge som dual write, og beholder låsene til Flyway-transaksjonen er fullført.
+`lock_timeout = '10s'` avbryter migreringen hvis en lås ikke kan tas innen ti sekunder.
+Dette er en grense for låseventing, ikke total kjøretid. Ved feil rulles hele `V16` tilbake.
+Etter fullføring beholdes eierradene ved kode-rollback; arrayene er fortsatt fasit.
+`ON CONFLICT DO NOTHING` alene hindrer ikke at en samtidig slettet eier gjeninnføres.
 
 `ON CONFLICT DO NOTHING` gjør at rader dual write allerede har skrevet vinner. Det er ønsket: de radene har
 kontor fra innlogget bruker, mens backfillen bare rekonstruerer.
@@ -281,10 +284,9 @@ ble lagt til i `V2__kontorer.sql`, samme migrering som innførte `kontorer`-kolo
 
 Begge gir NULL, ikke feil kontor.
 
-⚠️ **Hullene lukker seg ikke av seg selv.** `EierService.leggTilEierMedKontor` returnerer tidlig hvis
-brukeren allerede er eier (`if (eiere.contains(navIdent)) return`), så et nytt `PUT /eiere/meg` oppdaterer
-verken kontor eller navn for en eksisterende eier. Manglende verdier må derfor fylles i migreringen — se
-seksjon 1.
+⚠️ **Hullene kan ikke forventes å lukke seg av seg selv.** Fra fase 2 oppdaterer et nytt
+`PUT /eiere/meg` kontor også for eksisterende eiere, men bare når brukeren gjør kallet.
+Backfill fyller entydige kontorer; resterende hull må avklares i fase 4. Navn oppdateres ikke.
 
 ✅ **Målt mot prod: ingen kontorer går tapt.** `kontorkoblinger_som_forsvinner = 0` — hvert kontor i dagens
 `kontorer[]` dekkes av minst én gjenværende eier. De 70 eierradene som får `NULL` er nettopp tilfelle 1 over:
@@ -371,6 +373,9 @@ Eksisterende tester som må oppdateres: `EierRepositoryTest`, `Rekrutteringstref
 `rekrutteringstreff-minside-api` — sistnevnte leser `kontorer` direkte i sin `TestDatabase.kt`).
 
 Nye tester:
+
+`EierBackfillTest` dekker migrering fra `V15`, kontorkilder, metadata, NULL og duplikater i eierarrayet,
+slettede treff, uendrede arrays og hendelser, gjentatt kjøring, rollback og låsing mot dual write.
 
 - Backfill-migrering: treff der eier har `KONTOR_LAGT_TIL`-hendelse → kontor gjenskapt fra hendelsen
 - Backfill-migrering: eier uten hendelse som *er* oppretter → kontor fra `opprettet_av_kontor_enhetid`
