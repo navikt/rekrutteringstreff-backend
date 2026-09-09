@@ -37,7 +37,8 @@ class EierController(
         pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
         responses = [
             OpenApiResponse(status = "200", description = "Eier lagt til (eller allerede eier). Genererer EIER_LAGT_TIL-hendelse hvis ny."),
-            OpenApiResponse(status = "400", description = "Brukerens kontor er ikke tilgjengelig")
+            OpenApiResponse(status = "400", description = "Brukerens kontor er ikke tilgjengelig"),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
         ],
         path = megEndepunkt,
         methods = [HttpMethod.PUT]
