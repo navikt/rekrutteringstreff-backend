@@ -107,6 +107,7 @@ class RekrutteringstreffController(
         ctx.authenticatedUser().verifiserAutorisasjon(Rolle.ARBEIDSGIVER_RETTET)
         val inputDto = ctx.bodyAsClass<OpprettRekrutteringstreffDto>()
         val kontorId = ctx.authenticatedUser().extractKontorId()
+            ?.takeIf { it.isNotBlank() }
             ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
         val internalDto = OpprettRekrutteringstreffInternalDto(
             tittel = inputDto.tittel,

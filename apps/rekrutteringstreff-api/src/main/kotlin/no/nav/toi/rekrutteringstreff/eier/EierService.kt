@@ -41,29 +41,29 @@ class EierService(
         return treff.kontorer.any { it in tilknyttedeEnheterSet }
     }
 
-    fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String? = null) {
+    fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String) {
+        require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
         val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
-        if (eiere.contains(navIdent)) return
 
-        eierRepository.leggTil(connection, treffId, listOf(navIdent))
-        rekrutteringstreffRepository.leggTilHendelseForTreff(
-            connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
-            subjektId = navIdent, subjektNavn = navIdent,
-        )
+        eierRepository.leggTil(connection, treffId, navIdent, kontorEnhetId)
+        if (!eiere.contains(navIdent)) {
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
+                subjektId = navIdent, subjektNavn = navIdent,
+            )
+        }
 
-        if (kontorEnhetId != null) {
-            val nyttKontor = rekrutteringstreffRepository.leggTilKontor(connection, treffId, kontorEnhetId)
-            if (nyttKontor) {
-                rekrutteringstreffRepository.leggTilHendelseForTreff(
-                    connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, navIdent,
-                    subjektId = kontorEnhetId, subjektNavn = kontorEnhetId,
-                )
-            }
+        val nyttKontor = rekrutteringstreffRepository.leggTilKontor(connection, treffId, kontorEnhetId)
+        if (nyttKontor) {
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, navIdent,
+                subjektId = kontorEnhetId, subjektNavn = kontorEnhetId,
+            )
         }
     }
 
-    fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String? = null) {
+    fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String) {
         dataSource.executeInTransaction { connection ->
             leggTilEierMedKontor(connection, treffId, navIdent, kontorEnhetId)
         }

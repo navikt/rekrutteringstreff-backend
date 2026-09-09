@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff.eier
 
 
+import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import io.javalin.http.ForbiddenResponse
 import io.javalin.openapi.*
@@ -30,12 +31,14 @@ class EierController(
 
     @OpenApi(
         summary = "Legg til deg selv som eier av et rekrutteringstreff",
-        description = "Bruker trenger ikke være eksisterende eier. Idempotent — returnerer alltid 200. Utføres atomisk med FOR UPDATE-lås.",
+        description = "Bruker trenger ikke være eksisterende eier. Krever kontortilknytning. Oppdaterer kontor for eksisterende eier. Utføres atomisk med FOR UPDATE-lås.",
         operationId = "leggTilMegSomEier",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, description = "Rekrutteringstreffets UUID")],
         responses = [
-            OpenApiResponse(status = "200", description = "Eier lagt til (eller allerede eier). Genererer EIER_LAGT_TIL-hendelse hvis ny.")
+            OpenApiResponse(status = "200", description = "Eier lagt til (eller allerede eier). Genererer EIER_LAGT_TIL-hendelse hvis ny."),
+            OpenApiResponse(status = "400", description = "Brukerens kontor er ikke tilgjengelig"),
+            OpenApiResponse(status = "404", description = "Rekrutteringstreff finnes ikke")
         ],
         path = megEndepunkt,
         methods = [HttpMethod.PUT]
@@ -45,6 +48,8 @@ class EierController(
         val id = TreffId(ctx.pathParam("id"))
         val navIdent = ctx.authenticatedUser().extractNavIdent()
         val kontorId = ctx.authenticatedUser().extractKontorId()
+            ?.takeIf { it.isNotBlank() }
+            ?: throw BadRequestResponse("Brukerens kontor er ikke tilgjengelig")
 
         eierService.leggTilEierMedKontor(id, navIdent, kontorId)
         ctx.status(200)
@@ -111,4 +116,3 @@ class EierController(
         }
     }
 }
-

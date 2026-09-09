@@ -105,7 +105,6 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         jobbsøkerRepository,
         arbeidsgiverRepository,
         jobbsøkerService,
-        eierService,
         infra.miljø
     )
     val innleggService = InnleggService(innleggRepository, rekrutteringstreffService)

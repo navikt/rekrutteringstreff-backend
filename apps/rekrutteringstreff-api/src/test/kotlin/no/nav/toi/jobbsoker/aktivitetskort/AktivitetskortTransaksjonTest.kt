@@ -12,8 +12,6 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.*
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeAll
@@ -49,7 +47,6 @@ class AktivitetskortTransaksjonTest {
             jobbsøkerRepository,
             arbeidsgiverRepository,
             jobbsøkerService,
-            EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource),
             Miljø.LOKALT,
         )
     }

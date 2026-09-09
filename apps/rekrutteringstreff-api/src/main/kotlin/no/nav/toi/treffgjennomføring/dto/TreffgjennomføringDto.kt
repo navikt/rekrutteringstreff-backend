@@ -57,6 +57,10 @@ data class OppmøteRequestDto(
     val møtt: Boolean,
 )
 
+data class FlyttJobbsøkerRomRequestDto(
+    val romnummer: Int,
+)
+
 data class StegRequestDto(val steg: TreffgjennomføringSteg)
 
 data class MøteoppsettRequestDto(

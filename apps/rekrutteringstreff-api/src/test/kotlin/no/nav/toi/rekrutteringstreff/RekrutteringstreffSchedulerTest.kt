@@ -8,8 +8,6 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverRepository
 import no.nav.toi.jobbsoker.JobbsøkerRepository
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.nowOslo
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeAll
@@ -38,7 +36,6 @@ class RekrutteringstreffSchedulerTest {
             jobbsøkerRepository,
             arbeidsgiverRepository,
             jobbsøkerService,
-            EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource),
             Miljø.LOKALT,
         )
     }

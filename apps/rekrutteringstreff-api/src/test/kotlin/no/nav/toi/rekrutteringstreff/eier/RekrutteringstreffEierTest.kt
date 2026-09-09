@@ -95,7 +95,8 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"))
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, "B987654", "1234")
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, "A123456", "1234")
 
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
@@ -104,6 +105,7 @@ class RekrutteringstreffEierTest {
         assertThat(response.statusCode()).isEqualTo(200)
         val eiere = database.hentEiere(opprettetRekrutteringstreff.id)
         assertThat(eiere).doesNotContain(navIdent)
+        assertThat(database.hentEierrader(opprettetRekrutteringstreff.id).map { it.navIdent }).doesNotContain(navIdent)
     }
 
     @Test
@@ -129,7 +131,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent))
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, beholdIdent, "1234")
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
             token.serialize()
@@ -156,6 +158,9 @@ class RekrutteringstreffEierTest {
 
         assertThat(response.statusCode()).isEqualTo(200)
         assertThat(database.hentEiere(treff.id)).contains(navIdent)
+        val eierrad = database.hentEierrader(treff.id).single { it.navIdent == navIdent }
+        assertThat(eierrad.kontorEnhetId).isEqualTo("1234")
+        assertThat(eierrad.lagtTilAv).isEqualTo(navIdent)
     }
 
     @Test
@@ -174,6 +179,9 @@ class RekrutteringstreffEierTest {
 
         assertThat(response.statusCode()).isEqualTo(200)
         assertThat(database.hentEiere(treff.id)).contains(navIdent)
+        assertThat(database.hentEierrader(treff.id).single().kontorEnhetId).isEqualTo("1234")
+        assertThat(ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+            .filter { it.hendelsestype == "EIER_LAGT_TIL" }).isEmpty()
     }
 
     @Test
@@ -248,7 +256,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val treff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(treff.id, listOf(skalSlettes))
+        ctx.eierRepository.leggTil(treff.id, skalSlettes, "1234")
 
         httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/$skalSlettes",
@@ -266,7 +274,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = ikkeEier)
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(treff.id, listOf("B654321"))
+        ctx.eierRepository.leggTil(treff.id, "B654321", "1234")
 
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/B654321",

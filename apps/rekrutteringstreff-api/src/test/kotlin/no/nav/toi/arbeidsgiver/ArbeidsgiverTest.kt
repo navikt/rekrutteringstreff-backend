@@ -91,7 +91,7 @@ class ArbeidsgiverTest {
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, "A123456", "0315")
         val requestBody = JacksonConfig.mapper.writeValueAsString(
             mapOf(
                 "organisasjonsnummer" to orgnr.asString,
@@ -134,7 +134,7 @@ class ArbeidsgiverTest {
         val orgnr = Orgnr("555555555")
         val orgnavn = Orgnavn("Oooorgnavn")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, "A123456", "0315")
 
         val næringskoder = listOf(Næringskode("47.111", "Detaljhandel med bredt varesortiment uten salg av drivstoff"))
         val requestBody = JacksonConfig.mapper.writeValueAsString(
@@ -260,7 +260,7 @@ class ArbeidsgiverTest {
     fun slettArbeidsgiver() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, "A123456", "0315")
         val requestBody = """
             {
               "organisasjonsnummer": "888888888",
@@ -301,7 +301,7 @@ class ArbeidsgiverTest {
     fun `legg til arbeidsgiver med ugyldig orgnummer gir 400`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, "A123456", "0315")
 
         // Orgnummer med feil antall siffer (8 i stedet for 9)
         val requestBody = """
@@ -321,7 +321,7 @@ class ArbeidsgiverTest {
     fun `legg til arbeidsgiver med orgnummer med bokstaver gir 400`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, "A123456", "0315")
 
         // Orgnummer med bokstaver
         val requestBody = """
@@ -341,7 +341,7 @@ class ArbeidsgiverTest {
     fun `legg til arbeidsgiver uten orgnummer gir 400`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, "A123456", "0315")
 
         // Mangler organisasjonsnummer
         val requestBody = """
@@ -360,7 +360,7 @@ class ArbeidsgiverTest {
     fun `legg til arbeidsgiver uten navn gir 400`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, "A123456", "0315")
 
         // Mangler navn
         val requestBody = """
@@ -379,7 +379,7 @@ class ArbeidsgiverTest {
     fun `legg til arbeidsgiver med tomt orgnummer gir 400`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A123456")
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        eierRepository.leggTil(treffId, listOf("A123456"))
+        eierRepository.leggTil(treffId, "A123456", "0315")
 
         val requestBody = """
             {
