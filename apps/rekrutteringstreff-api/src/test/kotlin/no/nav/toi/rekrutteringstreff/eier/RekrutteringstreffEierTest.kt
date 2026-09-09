@@ -96,7 +96,8 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf("B987654", "A123456"), "1234")
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, "B987654", "1234")
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, "A123456", "1234")
 
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
@@ -131,7 +132,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, listOf(beholdIdent), "1234")
+        ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, beholdIdent, "1234")
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere/$navIdent",
             token.serialize()
@@ -287,7 +288,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
         opprettRekrutteringstreffIDatabase(navIdent)
         val treff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(treff.id, listOf(skalSlettes), "1234")
+        ctx.eierRepository.leggTil(treff.id, skalSlettes, "1234")
 
         httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/$skalSlettes",
@@ -305,7 +306,7 @@ class RekrutteringstreffEierTest {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = ikkeEier)
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
-        ctx.eierRepository.leggTil(treff.id, listOf("B654321"), "1234")
+        ctx.eierRepository.leggTil(treff.id, "B654321", "1234")
 
         val response = httpDelete(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/B654321",

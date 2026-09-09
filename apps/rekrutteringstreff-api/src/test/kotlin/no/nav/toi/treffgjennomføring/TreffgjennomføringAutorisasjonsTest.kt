@@ -258,7 +258,7 @@ class TreffgjennomføringAutorisasjonsTest {
 
     private fun treff(kategori: RekrutteringstreffKategori): TreffId {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = eier, kategori = kategori)
-        ctx.eierRepository.leggTil(treffId, listOf(eier), "0315")
+        ctx.eierRepository.leggTil(treffId, eier, "0315")
         db.leggTilArbeidsgiverMedHendelse(
             LeggTilArbeidsgiver(Orgnr("999999991"), Orgnavn("Testbedrift"), emptyList(), null, null, null),
             treffId,

@@ -1,6 +1,7 @@
 package no.nav.toi.rekrutteringstreff.eier
 
 import io.javalin.http.BadRequestResponse
+import io.javalin.http.NotFoundResponse
 import io.mockk.every
 import io.mockk.spyk
 import no.nav.toi.RekrutteringstreffHendelsestype
@@ -67,18 +68,18 @@ class EierRepositoryTest {
     }
 
     @Test
-    fun `leggTil legger til nye eiere`() {
+    fun `leggTil legger til en ny eier`() {
         val navIdent = "A123456"
-        val nyeEiere = listOf("B654321", "C987654")
+        val eierNavIdent = "B654321"
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
 
-        repository.leggTil(treffId, nyeEiere, "0315")
+        repository.leggTil(treffId, eierNavIdent, "0315")
 
         val eiere = repository.hent(treffId)
         assertThat(eiere).isNotNull
-        assertThat(eiere!!.tilNavIdenter()).containsExactlyInAnyOrder(navIdent, "B654321", "C987654")
-        assertThat(db.hentEierrader(treffId).filter { it.navIdent in nyeEiere })
-            .hasSize(2)
+        assertThat(eiere!!.tilNavIdenter()).containsExactlyInAnyOrder(navIdent, eierNavIdent)
+        assertThat(db.hentEierrader(treffId).filter { it.navIdent == eierNavIdent })
+            .hasSize(1)
             .allSatisfy {
                 assertThat(it.kontorEnhetId).isEqualTo("0315")
                 assertThat(it.lagtTilAv).isEqualTo(it.navIdent)
@@ -87,13 +88,39 @@ class EierRepositoryTest {
     }
 
     @Test
+    fun `blank Nav-ident avvises uten å skrive`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        val før = db.hentEierrader(treffId)
+
+        listOf("", " ").forEach { eierNavIdent ->
+            assertThatThrownBy { repository.leggTil(treffId, eierNavIdent, "0315") }
+                .isInstanceOf(IllegalArgumentException::class.java)
+                .hasMessage("Eier må ha Nav-ident")
+        }
+
+        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactly("A123456")
+        assertThat(db.hentEierrader(treffId)).isEqualTo(før)
+    }
+
+    @Test
+    fun `leggTil avviser treff som ikke finnes`() {
+        val treffId = TreffId("00000000-0000-0000-0000-000000000000")
+
+        assertThatThrownBy { repository.leggTil(treffId, "B654321", "0315") }
+            .isInstanceOf(NotFoundResponse::class.java)
+
+        assertThat(repository.hent(treffId)).isNull()
+        assertThat(db.hentEierrader(treffId)).isEmpty()
+    }
+
+    @Test
     fun `leggTil legger ikke til duplikater`() {
         val navIdent = "A123456"
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
 
         // Legg til samme eier to ganger
-        repository.leggTil(treffId, listOf(navIdent), "0315")
-        repository.leggTil(treffId, listOf(navIdent), "0315")
+        repository.leggTil(treffId, navIdent, "0315")
+        repository.leggTil(treffId, navIdent, "0315")
 
         val eiere = repository.hent(treffId)
         assertThat(eiere).isNotNull
@@ -106,7 +133,7 @@ class EierRepositoryTest {
         val navIdent = "A123456"
         val andreEier = "B654321"
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
-        repository.leggTil(treffId, listOf(andreEier), "0315")
+        repository.leggTil(treffId, andreEier, "0315")
 
         val eiereFør = repository.hent(treffId)
         assertThat(eiereFør!!.tilNavIdenter()).contains(andreEier)
@@ -138,7 +165,7 @@ class EierRepositoryTest {
     fun `tilNavIdenter mapper liste av Eiere til liste av navIdenter`() {
         val navIdent = "A123456"
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = navIdent, tittel = "TestTreff")
-        repository.leggTil(treffId, listOf("B654321"), "0315")
+        repository.leggTil(treffId, "B654321", "0315")
 
         val eiere = repository.hent(treffId)
 
@@ -180,11 +207,11 @@ class EierRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
         val annetTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "B654321")
         val annenEierrad = db.hentEierrader(annetTreff).single()
-        repository.leggTil(treffId, listOf("B654321"), "0315")
+        repository.leggTil(treffId, "B654321", "0315")
         val gammelId = db.hentEierrader(treffId).single { it.navIdent == "B654321" }.id
 
         assertThat(repository.slett(treffId, "B654321")).isTrue()
-        repository.leggTil(treffId, listOf("B654321"), "1201")
+        repository.leggTil(treffId, "B654321", "1201")
 
         assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactlyInAnyOrder("A123456", "B654321")
         val nyEierrad = db.hentEierrader(treffId).single { it.navIdent == "B654321" }
@@ -268,7 +295,7 @@ class EierRepositoryTest {
     @Test
     fun `feil ved slettehendelse ruller tilbake begge lagringsformer`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        repository.leggTil(treffId, listOf("B654321"), "0315")
+        repository.leggTil(treffId, "B654321", "0315")
         val eierraderFør = db.hentEierrader(treffId)
         val treffRepository = spyk(RekrutteringstreffRepository(db.dataSource))
         val hendelserFør = treffRepository.hentAlleHendelser(treffId)
@@ -310,7 +337,7 @@ class EierRepositoryTest {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
         val før = db.hentEierrader(treffId)
 
-        assertThatThrownBy { repository.leggTil(treffId, listOf("B654321"), " ") }
+        assertThatThrownBy { repository.leggTil(treffId, "B654321", " ") }
             .isInstanceOf(IllegalArgumentException::class.java)
 
         assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactly("A123456")
@@ -333,7 +360,7 @@ class EierRepositoryTest {
                     ))
                 }.isInstanceOf(SQLException::class.java)
                 assertThatThrownBy {
-                    repository.leggTil(connection, treffId, listOf("B654321"), "avvist")
+                    repository.leggTil(connection, treffId, "B654321", "avvist")
                 }.isInstanceOf(SQLException::class.java)
             } finally {
                 connection.createStatement().use {
@@ -376,7 +403,7 @@ class EierRepositoryTest {
     @Test
     fun `samtidige slettinger beholder siste eier i begge lagringsformer`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        repository.leggTil(treffId, listOf("B654321"), "0315")
+        repository.leggTil(treffId, "B654321", "0315")
         val treffRepository = RekrutteringstreffRepository(db.dataSource)
         val service = EierService(repository, treffRepository, db.dataSource)
         val start = CountDownLatch(1)

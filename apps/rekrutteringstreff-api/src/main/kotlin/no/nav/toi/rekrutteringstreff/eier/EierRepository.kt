@@ -37,35 +37,35 @@ class EierRepository(
             }
     }
 
-    fun leggTil(treff: TreffId, nyeEiere: List<String>, kontorEnhetId: String) {
+    fun leggTil(treff: TreffId, eierNavIdent: String, kontorEnhetId: String) {
         dataSource.executeInTransaction { connection ->
-            leggTil(connection, treff, nyeEiere, kontorEnhetId)
+            leggTil(connection, treff, eierNavIdent, kontorEnhetId)
         }
     }
 
-    fun leggTil(connection: Connection, treff: TreffId, nyeEiere: List<String>, kontorEnhetId: String) {
+    fun leggTil(connection: Connection, treff: TreffId, eierNavIdent: String, kontorEnhetId: String) {
         require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
-        require(nyeEiere.isNotEmpty() && nyeEiere.all { it.isNotBlank() }) { "Eiere må ha Nav-ident" }
+        require(eierNavIdent.isNotBlank()) { "Eier må ha Nav-ident" }
         connection.prepareStatement(
                 """
                     WITH oppdatert_treff AS (
                         UPDATE $rekrutteringstreff
-                        SET $eiere = array(SELECT DISTINCT unnest(array_cat($eiere, ?)))
+                        SET $eiere = array(SELECT DISTINCT unnest(array_append($eiere, ?)))
                         WHERE $id = ?
                         RETURNING rekrutteringstreff_id
                     )
                     INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_av)
-                    SELECT rekrutteringstreff_id, nav_ident, ?, nav_ident
+                    SELECT rekrutteringstreff_id, ?, ?, ?
                     FROM oppdatert_treff
-                    CROSS JOIN (SELECT DISTINCT unnest(?::text[]) AS nav_ident) nye_eiere
                     ON CONFLICT (rekrutteringstreff_id, nav_ident)
                     DO UPDATE SET kontor_enhetid = EXCLUDED.kontor_enhetid
                 """.trimIndent()
             ).use { stmt ->
-                stmt.setArray(1, connection.createArrayOf("text", nyeEiere.toTypedArray()))
+                stmt.setString(1, eierNavIdent)
                 stmt.setObject(2, treff.somUuid)
-                stmt.setString(3, kontorEnhetId)
-                stmt.setArray(4, connection.createArrayOf("text", nyeEiere.toTypedArray()))
+                stmt.setString(3, eierNavIdent)
+                stmt.setString(4, kontorEnhetId)
+                stmt.setString(5, eierNavIdent)
                 if (stmt.executeUpdate() == 0) {
                     throw NotFoundResponse("Rekrutteringstreff med id ${treff.somString} finnes ikke")
                 }

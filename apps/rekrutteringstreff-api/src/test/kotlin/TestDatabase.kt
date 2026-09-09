@@ -256,7 +256,7 @@ class TestDatabase {
             fylkesnummer = fylkesnummer,
         )
 
-        eierRepository.leggTil(treffId, listOf(navIdent), kontorId)
+        eierRepository.leggTil(treffId, navIdent, kontorId)
 
         return treffId
     }

@@ -116,7 +116,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov tillater språk fra Spraksamling`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -151,7 +151,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov oppretter atomisk og emitter OPPRETTET + BEHOV_ENDRET`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -198,7 +198,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov med antall over 99 gir 400`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -213,7 +213,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov tillater bare null konseptId for førerkort`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         val ugyldigBehov = """
             {
@@ -239,7 +239,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov uten gyldig behov gir 400 og ingen lagring`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         val ugyldigBehov = """
             {
@@ -263,7 +263,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov med ukjent ansettelsesform gir 400`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         val ugyldigBehov = """
             {
@@ -287,7 +287,7 @@ class ArbeidsgiversBehovTest {
     fun `POST arbeidsgiver-med-behov ignorerer Annet som arbeidssprak`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         val response = httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -310,7 +310,7 @@ class ArbeidsgiversBehovTest {
     fun `PUT behov upserter og emitter BEHOV_ENDRET, returnerer oppdatert DTO`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         // Først legg til arbeidsgiver uten behov via gammelt POST-endepunkt for å simulere "eldre data"
         val opprettResp = httpPost(
@@ -363,7 +363,7 @@ class ArbeidsgiversBehovTest {
     fun `PUT behov for ukjent arbeidsgiver gir 404`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         val response = httpPut(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver/${UUID.randomUUID()}/behov",
@@ -379,7 +379,7 @@ class ArbeidsgiversBehovTest {
         val tokenEier = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val tokenAnnen = infra.authServer.lagToken(infra.authPort, navIdent = "B222222").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",
@@ -398,7 +398,7 @@ class ArbeidsgiversBehovTest {
     fun `Soft-slettet arbeidsgiver skjuler behov, reaktivering bevarer behov`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
         val orgnr = Orgnr("555555555")
         val opprinneligeNæringskoder = listOf(Næringskode("47.111", "Detaljhandel"))
         val nyeNæringskoderVedReaktivering = listOf(Næringskode("56.101", "Drift av restauranter og kafeer"))
@@ -479,7 +479,7 @@ class ArbeidsgiversBehovTest {
     fun `BEHOV_ENDRET-hendelsen lagrer behov-payload som hendelse_data`() {
         val token = infra.authServer.lagToken(infra.authPort, navIdent = "A111111").serialize()
         val treffId = db.opprettRekrutteringstreffIDatabase()
-        ctx.eierRepository.leggTil(treffId, listOf("A111111"), "0315")
+        ctx.eierRepository.leggTil(treffId, "A111111", "0315")
 
         httpPost(
             "http://localhost:$appPort/api/rekrutteringstreff/${treffId.somUuid}/arbeidsgiver-med-behov",

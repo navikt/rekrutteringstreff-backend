@@ -46,7 +46,7 @@ class EierService(
         val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
 
-        eierRepository.leggTil(connection, treffId, listOf(navIdent), kontorEnhetId)
+        eierRepository.leggTil(connection, treffId, navIdent, kontorEnhetId)
         if (!eiere.contains(navIdent)) {
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
