@@ -1,7 +1,8 @@
 # Plan: Flytte eiere og kontorer ut i egen tabell
 
 **Status:** Fase 1 (`V15`), fase 2 (dual write) og fase 3 (`V16`, backfill) er implementert.
-`V17` er opprettet med tre UUID → kontor-koblinger fra dev; prod-mappingen gjenstår før første deploy.
+`V17` inneholder nå UUID → kontor-koblinger for både dev (3) og prod (23).
+Resultatet må kontrolleres etter kjøring før `V18` med `NOT NULL` opprettes.
 Modellvalg er besluttet (seksjon 6 og 7), og kilde for eiernavn gjenstår å avklare (seksjon 8).
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
 
@@ -40,7 +41,7 @@ CREATE INDEX idx_rekrutteringstreff_eier_kontor ON rekrutteringstreff_eier (kont
 | --- | --- | --- |
 | Én tabell, kontor som kolonne | Kontor er avledet av eierskap — ingen selvstendig livssyklus | Kan ikke ha kontor uten eier (f.eks. kontor lagt til manuelt) |
 | Unik `id` som UUID i tillegg til intern primærnøkkel | Samme todeling som `rekrutteringstreff`. `DEFAULT gen_random_uuid()` gir også backfillede rader en UUID uten ekstra INSERT-logikk | Ekstra unik indeks; `rekrutteringstreff_eier_id` beholdes som intern nøkkel |
-| `kontor_enhetid` — mål: `NOT NULL` | `EierController` avviser nå manglende kontor. Av backfillens 70 hull kan 50 utledes entydig; 20 må avklares — se seksjon 1 | Krever at de 20 løses før constrainten kan settes |
+| `kontor_enhetid` — mål: `NOT NULL` | `EierController` avviser manglende kontor. Avklarte UUID → kontor-koblinger er lagt inn i `V17` — se seksjon 1 | Krever kontroll av at ingen rader mangler kontor før constrainten settes i `V18` |
 | Oppdaterer kontor for eksisterende eiere | `leggTilEierMedKontor` bruker upsert fra fase 2, også når eierraden mangler før backfill | Navn endres ikke før navnekilden er avklart |
 | `eier_navn` nullable, denormalisert | Ingen server-side navIdent→navn-oppslag finnes i appen. Migrerte rader har ingen navnekilde | Navn kan bli utdatert; må tåle NULL i visning |
 | Unik `(treff, nav_ident)` | Én eier kan bare være eier én gang | Eier som bytter kontor må oppdateres (UPDATE, ikke ny rad) |
@@ -93,7 +94,7 @@ WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id
 50 av 70 kan altså fylles deterministisk. Ingen ligger på treff helt uten kontor, så alle 70 har *et* svar
 — for 20 av dem er det bare ikke entydig hvilket av treffets kontorer det er.
 
-### De 20 tvetydige — må avgjøres
+### Kontoravklaring med UUID
 
 | Alternativ | Vurdering |
 | --- | --- |
@@ -131,12 +132,12 @@ databasen, oppdateres. Dette forutsetter uavhengig genererte UUID-er; ved kopier
 miljøer følger UUID-ene med. Ikke bruk `bigserial`, som kan vise til ulike eiere i ulike miljøer.
 UUID-ene unngår direkte Nav-identer i kildekoden, men er pseudonyme referanser, ikke anonyme data.
 
-**Migrering opprettet:** `V17__rekrutteringstreff_eier_kontor.sql`. Tre koblinger fra dev er lagt inn i
-`UPDATE ... FROM (VALUES ...)`. Legg til UUID → kontor-koblingene fra prod før første deploy.
-Mappingen skal inneholde én avklart kontorverdi per UUID.
+**Mapping lagt inn:** `V17__rekrutteringstreff_eier_kontor.sql` inneholder 26 UUID → kontor-koblinger:
+3 fra dev og 23 fra prod, i `UPDATE ... FROM (VALUES ...)`. Ingen Nav-identer eller navn er lagret i
+mappingen. De tidligere 20 tvetydige radene var et historisk øyeblikksbilde, ikke antallet i dagens
+prod-mapping. Antallet gjenværende NULL må fortsatt kontrolleres etter kjøring.
 
-**Fyll hele mappingen før første deploy, også til dev.** En kjørt Flyway-fil skal ikke endres senere.
-Eventuelle senere rettinger gjøres i en ny migrering.
+**En kjørt Flyway-fil skal ikke endres senere.** Eventuelle senere rettinger gjøres i en ny migrering.
 
 `V17` fyller bare matchende eierrader med `kontor_enhetid IS NULL`. Det brukes ingen midlertidig tabell,
 eksplisitt låsing, NULL-kontroll eller `ALTER TABLE`. PostgreSQL tar fortsatt vanlige låser ved `UPDATE`.
