@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/oppdater-manglende-kontor
+      deploy_dev_branch: refs/heads/eiere-med-kontor-not-null
     permissions:
       contents: read
       id-token: write

@@ -255,6 +255,55 @@ class EierBackfillTest {
         assertThat(Flyway.configure().dataSource(dataSource).target("17").load().migrate().migrationsExecuted).isEqualTo(1)
     }
 
+    @Test
+    fun `V18 bevarer eierradene og avviser NULL ved innsetting og oppdatering`() {
+        val treffId = opprettHistoriskTreff(listOf("A123456"), listOf("0315"))
+        Flyway.configure().dataSource(dataSource).target("17").load().migrate()
+        val før = snapshot("rekrutteringstreff_eier")
+
+        assertThat(Flyway.configure().dataSource(dataSource).target("18").load().migrate().migrationsExecuted).isEqualTo(1)
+
+        assertThat(snapshot("rekrutteringstreff_eier")).isEqualTo(før)
+        dataSource.connection.use { connection ->
+            assertThatThrownBy {
+                connection.prepareStatement(
+                    """
+                    INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid)
+                    SELECT rekrutteringstreff_id, 'B654321', NULL
+                    FROM rekrutteringstreff WHERE id = ?
+                    """.trimIndent()
+                ).use {
+                    it.setObject(1, treffId.somUuid)
+                    it.executeUpdate()
+                }
+            }.isInstanceOfSatisfying(java.sql.SQLException::class.java) {
+                assertThat(it.sqlState).isEqualTo("23502")
+            }
+            assertThatThrownBy {
+                connection.createStatement().use {
+                    it.executeUpdate("UPDATE rekrutteringstreff_eier SET kontor_enhetid = NULL")
+                }
+            }.isInstanceOfSatisfying(java.sql.SQLException::class.java) {
+                assertThat(it.sqlState).isEqualTo("23502")
+            }
+        }
+        assertThat(snapshot("rekrutteringstreff_eier")).isEqualTo(før)
+    }
+
+    @Test
+    fun `V18 feiler hvis en eierrad fortsatt mangler kontor`() {
+        opprettHistoriskTreff(listOf("B654321"), listOf("0315", "1201"), status = "SLETTET")
+        Flyway.configure().dataSource(dataSource).target("17").load().migrate()
+        val før = snapshot("rekrutteringstreff_eier")
+
+        assertThatThrownBy { Flyway.configure().dataSource(dataSource).target("18").load().migrate() }
+            .isInstanceOf(FlywayException::class.java)
+            .hasStackTraceContaining("contains null values")
+
+        assertThat(snapshot("rekrutteringstreff_eier")).isEqualTo(før)
+        assertThat(Flyway.configure().dataSource(dataSource).load().info().current().version.version).isEqualTo("17")
+    }
+
     private fun migrer() {
         Flyway.configure().dataSource(dataSource).target("16").load().migrate()
     }

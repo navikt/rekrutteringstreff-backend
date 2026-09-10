@@ -2,7 +2,7 @@
 
 **Status:** Fase 1 (`V15`), fase 2 (dual write) og fase 3 (`V16`, backfill) er implementert.
 `V17` inneholder nå UUID → kontor-koblinger for både dev (3) og prod (23).
-Resultatet må kontrolleres etter kjøring før `V18` med `NOT NULL` opprettes.
+`V18` er opprettet og setter `kontor_enhetid NOT NULL`. Resultatet av `V17` må være kontrollert før deploy.
 Modellvalg er besluttet (seksjon 6 og 7), og kilde for eiernavn gjenstår å avklare (seksjon 8).
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
 
@@ -144,15 +144,15 @@ eksplisitt låsing, NULL-kontroll eller `ALTER TABLE`. PostgreSQL tar fortsatt v
 Eksisterende kontorer overskrives ikke, og uavklarte eierrader forblir NULL.
 
 **Etter kjøring:** kontroller de oppdaterte koblingene og hent restlisten med spørringen over.
-Når alt er avklart og ingen rader mangler kontor, opprettes en separat
-`V18__rekrutteringstreff_eier_kontor_not_null.sql` med:
+`V18__rekrutteringstreff_eier_kontor_not_null.sql` er opprettet som en separat migrering.
+Den deployes når alt er avklart og ingen rader mangler kontor:
 
 ```sql
 ALTER TABLE rekrutteringstreff_eier
     ALTER COLUMN kontor_enhetid SET NOT NULL;
 ```
 
-`V18` opprettes ikke ennå. PostgreSQL avviser constrainten hvis noen rader fortsatt har NULL.
+PostgreSQL avviser constrainten hvis noen rader fortsatt har NULL, også på slettede treff.
 
 Gevinsten: `FILTER (WHERE kontor_enhetid IS NOT NULL)` i fase 5 faller bort — én betingelse mindre å glemme
 i tilgangskritisk kode.
@@ -311,7 +311,7 @@ Etter at `V16` er fullført, kontrolleres eiere og kontorer mot arrayene. Hent d
 
 Kjøres separat etter at `V16` er fullført og de gjenværende eierradene er avklart. Bruk
 eierradens UUID (`id`) fra riktig miljø til mappingen i `V17__rekrutteringstreff_eier_kontor.sql`.
-Kontroller resultatet etter deploy. Først når alt er i orden, opprettes og deployes `V18` med
+Kontroller resultatet etter deploy. Først når alt er i orden, deployes den opprettede `V18` med
 `SET NOT NULL`. SQL og krav til miljøavgrensning står i seksjon 1.
 
 **Fasen må være fullført i prod før lesingen byttes.** Arrayene er fortsatt fasit frem til fase 5.
@@ -386,7 +386,8 @@ slettede treff, uendrede arrays og hendelser, gjentatt kjøring, rollback og lå
 - Fase 4-migrering: ID-mapping → bare angitt eierrad oppdateres, ikke alle treff for samme person
 - Fase 4-migrering: UUID-er som bare finnes i et annet miljø → ingen lokale rader oppdateres
 - Fase 4-migrering: delvis mapping → `V17` fyller avklarte rader og lar resten forbli NULL
-- Senere `V18`: alle kontorer avklart → `NOT NULL` settes og avviser senere skriving av NULL
+- `V18`: alle kontorer avklart → eksisterende data beholdes, og NULL avvises ved INSERT og UPDATE
+- `V18`: gjenværende NULL, også på slettede treff → migreringen feiler, og `V17` forblir siste fullførte versjon
 - `PUT /eiere/meg` uten kontor-tilknytning → avvises, ingen eierrad opprettes
 
 ---
@@ -410,7 +411,7 @@ Backfill og kontoravklaring skilles for å kunne bruke varige eierrad-ID-er frem
 | Fase 6 (drop kolonner) | `V19` | Middels — irreversibelt |
 
 **Releasegrenser:** `V16` legges til først etter at alle instanser kjører dual write. `V17` legges til
-etter fullført `V16`, når rad-ID-er og kontorer er avklart per miljø. `V18` legges til etter at resultatet
+etter fullført `V16`, når rad-ID-er og kontorer er avklart per miljø. `V18` deployes etter at resultatet
 av `V17` er kontrollert og ingen eierrader mangler kontor. `V19` legges til etter at lesingen er byttet og
 verifisert i prod. Tidligere migreringsfiler beholdes urørt; det er hvilke migreringer som er
 ventende ved deploy som avgjør hva Flyway kjører.
