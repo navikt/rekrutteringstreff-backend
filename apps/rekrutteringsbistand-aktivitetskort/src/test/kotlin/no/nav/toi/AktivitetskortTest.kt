@@ -144,7 +144,7 @@ class AktivitetskortTest {
         record.value().let(objectMapper::readTree).apply {
             assertThat(this["messageId"].asText()).isNotBlank()
             assertThat(this["source"].asText()).isEqualTo("REKRUTTERINGSBISTAND")
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELTSTILLING.name)
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER.name)
             assertThat(this["actionType"].asText()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
             assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
             assertThat(this["aktivitetskort"]["personIdent"].asText()).isEqualTo(expectedFnr)
@@ -448,7 +448,7 @@ class AktivitetskortTest {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-deltstilling")
             assertThat(this["fnr"].asText()).isEqualTo(deltStilling.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(deltStilling.aktivitetskortId.toString())
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELTSTILLING.name)
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER.name)
             assertThat(this["stillingId"].asText()).isEqualTo(stillingId.toString())
             assertThat(this.has("rekrutteringstreffId")).isFalse()
             assertThat(this["endretAv"].asText()).isEqualTo(deltStilling.endretAv)

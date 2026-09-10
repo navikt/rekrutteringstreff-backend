@@ -241,7 +241,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                                     ?: error("Mangler rekrutteringstreffId for aktivitetskort $aktivitetskortId"),
                             )
 
-                            AktivitetskortType.DELTSTILLING -> DeltStillingFeilMelding(
+                            AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER -> DeltStillingFeilMelding(
                                 fellesMeldingsfelter = fellesMeldingsfelter,
                                 stillingId = resultSet.getObject("stilling_id", UUID::class.java)
                                     ?.toString()
@@ -626,7 +626,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     ) VALUES (
                         ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}',
                         ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json,
-                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${AktivitetskortType.DELTSTILLING.name}'
+                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER.name}'
                     )
                     """.trimIndent()
                 ).apply {

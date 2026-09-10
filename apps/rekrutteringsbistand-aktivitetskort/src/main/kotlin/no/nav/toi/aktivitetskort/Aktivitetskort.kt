@@ -179,7 +179,7 @@ enum class AktivitetskortType(
         handlingTittel = "Sjekk ut WorkOp-en",
         handlingSubtekst = "Sjekk ut WorkOp-en og svar",
     ),
-    DELTSTILLING(
+    DELE_CV_MED_ARBEIDSGIVER(
         eventName = "deltstilling",
         beskrivelse = "Nav arrangerer deltstilling",
         handlingTittel = "Sjekk ut deltstilling",
