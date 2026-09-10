@@ -5,6 +5,9 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.toUUID
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
+import no.nav.toi.aktivitetskort.AktivitetskortType
+import no.nav.toi.aktivitetskort.RekrutteringstreffType
+import no.nav.toi.aktivitetskort.WorkOpType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
@@ -102,7 +105,7 @@ class RekrutteringstreffInvitasjonTest {
                 poststed
             )
         )
-        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
@@ -117,9 +120,9 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
             assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
+            assertThat(this[0].aktivitetsType).isEqualTo(RekrutteringstreffType.dbType)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
-            assertThat(this[0].aktivitetskortType).isEqualTo("REKRUTTERINGSTREFF")
         }
     }
 
@@ -151,7 +154,7 @@ class RekrutteringstreffInvitasjonTest {
             )
         )
 
-        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
@@ -189,7 +192,7 @@ class RekrutteringstreffInvitasjonTest {
                 poststed
             )
         )
-        val expectedRekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val expectedRekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(expectedRekrutteringstreffInvitasjoner).hasSize(1)
         rapid.sendTestMessage(
             rapidPeriodeMelding(
@@ -206,7 +209,7 @@ class RekrutteringstreffInvitasjonTest {
             )
         )
 
-        val actualRekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val actualRekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(actualRekrutteringstreffInvitasjoner).hasSize(1)
         assertThat(actualRekrutteringstreffInvitasjoner.first()).usingRecursiveComparison().isEqualTo(expectedRekrutteringstreffInvitasjoner.first())
         val inspektør = rapid.inspektør
@@ -287,7 +290,7 @@ class RekrutteringstreffInvitasjonTest {
                 eventName = "workopinvitasjon"
             )
         )
-        val rekrutteringstreffInvitasjoner = testRepository.hentAlle()
+        val rekrutteringstreffInvitasjoner = testRepository.hentAlleRekrutteringstreffInvitasjoner()
         assertThat(rekrutteringstreffInvitasjoner).hasSize(1)
         val inspektør = rapid.inspektør
         assertThat(inspektør.size).isEqualTo(1)
@@ -304,7 +307,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
-            assertThat(this[0].aktivitetskortType).isEqualTo("WORKOP")
+            assertThat(this[0].aktivitetsType).isEqualTo(WorkOpType.dbType)
         }
 
         inspektør.message(0).also { message ->
@@ -340,7 +343,8 @@ class RekrutteringstreffInvitasjonTest {
             "opprettetTidspunkt": "$opprettetTidspunkt",
             "gateadresse": "$gateadresse",
             "postnummer": "$postnummer",
-            "poststed": "$poststed"
+            "poststed": "$poststed",
+            "aktørId": "Dummy aktørId"
         }
         """.trimIndent()
 }
