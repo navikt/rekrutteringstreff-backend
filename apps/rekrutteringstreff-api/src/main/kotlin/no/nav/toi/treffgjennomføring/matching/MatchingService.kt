@@ -16,6 +16,7 @@ import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import java.sql.Connection
+import no.nav.toi.Miljø
 
 class MatchingService(
     private val writer: TreffgjennomføringWriter,
@@ -24,10 +25,12 @@ class MatchingService(
     private val oppfølgingRepository: OppfølgingRepository,
     private val stegRepository: StegRepository,
     private val hendelseWriter: HendelseWriter,
+    private val miljø: Miljø = Miljø.LOKALT,
 ) {
 
     fun settInteresse(treffId: TreffId, dto: InteresseRequestDto): TreffgjennomføringDto =
         writer.skriv(treffId) { connection, kontekst, rad ->
+            kontekst.krevWorkOpEllerLokalUtvikling(miljø)
             val person = PersonTreffId(dto.personTreffId)
             val arbeidsgiver = ArbeidsgiverTreffId(dto.arbeidsgiverTreffId)
             val jobbsøkerId = kontekst.jobbsøkerId(person)

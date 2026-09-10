@@ -2,6 +2,7 @@ package no.nav.toi.rekrutteringstreff
 
 import no.nav.toi.JacksonConfig
 import no.nav.toi.JobbsøkerHendelsestype
+import no.nav.toi.Miljø
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.arbeidsgiver.*
 import no.nav.toi.exception.UlovligOppdateringException
@@ -10,12 +11,11 @@ import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.nowOslo
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
-import no.nav.toi.rekrutteringstreff.eier.EierRepository
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
+import java.time.temporal.ChronoUnit
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -47,7 +47,7 @@ class RekrutteringstreffServiceTest {
                 jobbsøkerRepository,
                 arbeidsgiverRepository,
                 jobbsøkerService,
-                EierService(EierRepository(db.dataSource), rekrutteringstreffRepository, db.dataSource)
+                Miljø.LOKALT,
             )
         }
     }
@@ -60,6 +60,23 @@ class RekrutteringstreffServiceTest {
     @AfterEach
     fun afterEach() {
         db.slettAlt()
+    }
+
+    @Test
+    fun `opprett lagrer eier og kontor i begge lagringsformer med kun opprettet-hendelsen`() {
+        val treffId = opprettTreff()
+
+        val treff = rekrutteringstreffRepository.hent(treffId)!!
+        assertThat(treff.eiere).containsExactly("NAV1234")
+        assertThat(treff.kontorer).containsExactly("0605")
+        assertThat(db.hentEierrader(treffId)).hasSize(1).allSatisfy {
+            assertThat(it.navIdent).isEqualTo("NAV1234")
+            assertThat(it.kontorEnhetId).isEqualTo("0605")
+            assertThat(it.lagtTilAv).isEqualTo("NAV1234")
+            assertThat(it.lagtTilTidspunkt.truncatedTo(ChronoUnit.MILLIS)).isEqualTo(treff.opprettetAvTidspunkt.toInstant())
+        }
+        assertThat(rekrutteringstreffRepository.hentHendelser(treffId).map { it.hendelsestype })
+            .containsExactly(RekrutteringstreffHendelsestype.OPPRETTET)
     }
 
     @Test
@@ -653,6 +670,45 @@ class RekrutteringstreffServiceTest {
             }
         }
     }
+
+    @Test
+    fun `Skal ikke kunne opprette WorkOp i prod`() {
+        assertThatThrownBy {
+            prodService().opprett(
+                OpprettRekrutteringstreffInternalDto(
+                    tittel = "WorkOp",
+                    kategori = RekrutteringstreffKategori.WORKOP,
+                    opprettetAvPersonNavident = "NAV1234",
+                    opprettetAvNavkontorEnhetId = "0605",
+                    opprettetAvTidspunkt = nowOslo(),
+                )
+            )
+        }.isInstanceOf(UlovligOppdateringException::class.java)
+    }
+
+    @Test
+    fun `Skal fortsatt kunne opprette ordinaert rekrutteringstreff i prod`() {
+        val treffId = prodService().opprett(
+            OpprettRekrutteringstreffInternalDto(
+                tittel = "Treff",
+                kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
+                opprettetAvPersonNavident = "NAV1234",
+                opprettetAvNavkontorEnhetId = "0605",
+                opprettetAvTidspunkt = nowOslo(),
+            )
+        )
+
+        assertThat(rekrutteringstreffService.hentRekrutteringstreff(treffId)).isNotNull()
+    }
+
+    private fun prodService() = RekrutteringstreffService(
+        db.dataSource,
+        rekrutteringstreffRepository,
+        jobbsøkerRepository,
+        arbeidsgiverRepository,
+        jobbsøkerService,
+        Miljø.PROD_GCP,
+    )
 
     private fun opprettTreff(): TreffId {
         val rekrutteringstreff = OpprettRekrutteringstreffInternalDto(

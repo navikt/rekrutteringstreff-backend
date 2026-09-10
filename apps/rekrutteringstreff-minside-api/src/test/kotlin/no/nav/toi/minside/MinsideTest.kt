@@ -266,8 +266,9 @@ class MinsideTest {
             is Success -> {
                 assertThat(response.statusCode).isEqualTo(200)
                 val dto = mapper.readTree(result.get())
-                assertThat(dto["organisasjonsnummer"].asText()).isEqualTo(arrangørOrgNr)
-                assertThat(dto["navn"].asText()).isEqualTo(arrangørOrgnavn)
+                assertThat(dto.isArray).isTrue()
+                assertThat(dto[0]["organisasjonsnummer"].asText()).isEqualTo(arrangørOrgNr)
+                assertThat(dto[0]["navn"].asText()).isEqualTo(arrangørOrgnavn)
             }
         }
     }
@@ -288,6 +289,25 @@ class MinsideTest {
         val dto = mapper.readTree(response.body())
         assertThat(dto["kategori"].asText()).isEqualTo(RekrutteringstreffKategori.WORKOP.name)
         assertThat(dto["arbeidsgivere"]).isEmpty()
+    }
+
+    @Test
+    fun `arbeidsgiverendepunkt returnerer tom liste når kategori er WorkOp`() {
+        val token = authServer.lagToken(authPort, pid = "12345678910")
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:$appPort/api/rekrutteringstreff/${workOp.id}/arbeidsgiver"))
+            .header("Authorization", "Bearer ${token.serialize()}")
+            .GET()
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        assertThat(response.body()).isEqualTo("[]")
+        val dto = mapper.readTree(response.body())
+        assertThat(dto.isArray).isTrue()
+        assertThat(dto.isEmpty).isTrue()
     }
 
     @Test

@@ -23,14 +23,15 @@ private val IKKE_SVART = null
 
 class RekrutteringstreffSvarOgStatusLytter(
     rapidsConnection: RapidsConnection,
-    private val repository: Repository
+    private val repository: Repository,
+    private val eventName: String = "rekrutteringstreffSvarOgStatus"
 ) : River.PacketListener {
     private val teamLog = TeamLogLogger.teamlog(log)
 
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "rekrutteringstreffSvarOgStatus")
+                it.requireValue("@event_name", eventName)
                 it.forbid("aktørId")
             }
             validate {
@@ -66,7 +67,7 @@ class RekrutteringstreffSvarOgStatusLytter(
         val aktivitetsStatus = beregnAktivitetsStatus(svar, treffstatus, rekrutteringstreffId, fnr) ?: return
 
         val endretAvPersonbruker = packet["endretAvPersonbruker"].asBoolean()
-        teamLog.info("Oppdaterer aktivitetsstatus for rekrutteringstreff med id $rekrutteringstreffId for personbruker $fnr til $aktivitetsStatus (svar=$svar, treffstatus=$treffstatus)")
+        teamLog.info("Oppdaterer aktivitetsstatus for arrangement med id $rekrutteringstreffId for personbruker $fnr til $aktivitetsStatus (svar=$svar, treffstatus=$treffstatus)")
 
         repository.oppdaterAktivitetsstatus(
             aktivitetskortId = aktivitetskortId,
@@ -114,8 +115,8 @@ class RekrutteringstreffSvarOgStatusLytter(
         context: MessageContext,
         metadata: MessageMetadata,
     ) {
-        log.error("Feil ved behandling av rekrutteringstreffSvarOgStatus: $problems")
-        teamLog.error("Feil ved behandling av rekrutteringstreffSvarOgStatus: ${problems.toExtendedReport()}")
+        log.error("Feil ved behandling av $eventName: $problems")
+        teamLog.error("Feil ved behandling av $eventName: ${problems.toExtendedReport()}")
         throw Exception(problems.toString())
     }
 }

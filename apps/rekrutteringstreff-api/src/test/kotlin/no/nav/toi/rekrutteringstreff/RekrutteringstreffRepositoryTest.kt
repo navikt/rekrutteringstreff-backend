@@ -7,12 +7,15 @@ import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.nowOslo
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.time.temporal.ChronoUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -35,6 +38,25 @@ class RekrutteringstreffRepositoryTest {
     fun tearDown() {
         db.slettAlt()
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", " ", "\t"])
+    fun `opprett avviser blank Nav-ident uten å skrive`(navIdent: String) {
+        assertThatThrownBy { db.opprettRekrutteringstreffIDatabase(navIdent = navIdent) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessage("Eier må ha Nav-ident")
+
+        assertThat(repository.hentAlle()).isEmpty()
+        db.dataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.executeQuery("SELECT count(*) FROM rekrutteringstreff_eier").use { rs ->
+                    rs.next()
+                    assertThat(rs.getInt(1)).isZero()
+                }
+            }
+        }
+    }
+
     @Test
     fun `opprett og oppdater registrerer hendelser`() {
         val id = db.opprettRekrutteringstreffIDatabase(navIdent = "A1", tittel = "Initielt")

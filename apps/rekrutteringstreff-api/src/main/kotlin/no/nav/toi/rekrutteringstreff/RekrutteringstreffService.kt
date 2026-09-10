@@ -12,7 +12,6 @@ import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
 import no.nav.toi.rekrutteringstreff.dto.OppdaterRekrutteringstreffDto
 import no.nav.toi.rekrutteringstreff.dto.OpprettRekrutteringstreffInternalDto
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
-import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.slf4j.Logger
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -24,7 +23,7 @@ class RekrutteringstreffService(
     private val jobbsøkerRepository: JobbsøkerRepository,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
     private val jobbsøkerService: JobbsøkerService,
-    private val eierService: EierService,
+    private val miljø: Miljø,
 ) {
     private val logger: Logger = log
 
@@ -256,6 +255,10 @@ class RekrutteringstreffService(
     }
 
     fun opprett(internalDto: OpprettRekrutteringstreffInternalDto): TreffId {
+        if (internalDto.kategori == RekrutteringstreffKategori.WORKOP && miljø.erProd) {
+            logger.warn("Forsøk på å opprette WorkOp i produksjon. Avvist.")
+            throw UlovligOppdateringException("WorkOp kan ikke opprettes i produksjon")
+        }
         return dataSource.executeInTransaction { connection ->
             val (treffId, dbId) = rekrutteringstreffRepository.opprett(connection, internalDto)
             rekrutteringstreffRepository.leggTilHendelse(
@@ -264,11 +267,6 @@ class RekrutteringstreffService(
                 RekrutteringstreffHendelsestype.OPPRETTET,
                 AktørType.ARRANGØR,
                 internalDto.opprettetAvPersonNavident
-            )
-            eierService.leggTilEierMedKontor(
-                connection, treffId,
-                internalDto.opprettetAvPersonNavident,
-                internalDto.opprettetAvNavkontorEnhetId
             )
             treffId
         }

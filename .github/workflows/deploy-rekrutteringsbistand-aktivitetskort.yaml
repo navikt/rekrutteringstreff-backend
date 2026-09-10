@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/loggelib-som-i-toirapidsandrivers
+      deploy_dev_branch: refs/heads/workop-db-endring
     permissions:
       contents: read
       id-token: write

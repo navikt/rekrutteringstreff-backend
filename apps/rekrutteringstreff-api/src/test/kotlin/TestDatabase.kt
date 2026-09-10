@@ -258,9 +258,46 @@ class TestDatabase {
             fylkesnummer = fylkesnummer,
         )
 
-        eierRepository.leggTil(treffId, listOf(navIdent))
+        eierRepository.leggTil(treffId, navIdent, kontorId)
 
         return treffId
+    }
+
+    data class Eierrad(
+        val id: UUID,
+        val navIdent: String,
+        val kontorEnhetId: String?,
+        val eierNavn: String?,
+        val lagtTilAv: String?,
+        val lagtTilTidspunkt: Instant,
+    )
+
+    fun hentEierrader(treffId: TreffId): List<Eierrad> = dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+            SELECT e.*
+            FROM rekrutteringstreff_eier e
+            JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = e.rekrutteringstreff_id
+            WHERE rt.id = ?
+            ORDER BY e.nav_ident
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                buildList {
+                    while (rs.next()) {
+                        add(Eierrad(
+                            id = rs.getObject("id", UUID::class.java),
+                            navIdent = rs.getString("nav_ident"),
+                            kontorEnhetId = rs.getString("kontor_enhetid"),
+                            eierNavn = rs.getString("eier_navn"),
+                            lagtTilAv = rs.getString("lagt_til_av"),
+                            lagtTilTidspunkt = rs.getTimestamp("lagt_til_tidspunkt").toInstant(),
+                        ))
+                    }
+                }
+            }
+        }
     }
 
     /**

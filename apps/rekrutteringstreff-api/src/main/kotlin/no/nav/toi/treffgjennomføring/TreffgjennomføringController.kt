@@ -12,6 +12,7 @@ import io.javalin.openapi.OpenApiSecurity
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuditLog
 import no.nav.toi.RuteRegistrerer
+import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.jobbsoker.oppmøte.OppmøteService
 import no.nav.toi.treffgjennomføring.matching.MatchingService
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
@@ -19,11 +20,11 @@ import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import no.nav.toi.rekrutteringstreff.eier.krevEierEllerUtvikler
 import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
+import no.nav.toi.treffgjennomføring.dto.FlyttJobbsøkerRomRequestDto
 import no.nav.toi.treffgjennomføring.dto.InteresseRequestDto
 import no.nav.toi.treffgjennomføring.dto.OppmøteBlokkertDto
 import no.nav.toi.treffgjennomføring.dto.MøteoppsettRequestDto
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
-import no.nav.toi.treffgjennomføring.dto.RomDto
 import no.nav.toi.treffgjennomføring.dto.StegRequestDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
 import java.util.*
@@ -43,8 +44,8 @@ class TreffgjennomføringController(
 
         const val OPPMØTE = "$skrivPath/oppmote"
         const val MØTEOPPSETT = "$skrivPath/moteoppsett"
-        const val ROMFORDELING = "$skrivPath/romfordeling"
-        const val FORDEL_ROM = "$ROMFORDELING/fordel"
+        const val FLYTT_JOBBSØKER_ROM = "$skrivPath/romfordeling/{personTreffId}"
+        const val FORDEL_ROM = "$skrivPath/romfordeling/fordel"
         const val INTERESSE = "$skrivPath/interesse"
         const val INTERVJUFORDELING = "$skrivPath/intervjufordeling"
         const val FORDEL_INTERVJUER = "$INTERVJUFORDELING/fordel"
@@ -86,7 +87,7 @@ class TreffgjennomføringController(
         routes.get(HENT, hentHandler())
         routes.put(OPPMØTE, oppmøteHandler())
         routes.put(MØTEOPPSETT, møteoppsettHandler())
-        routes.put(ROMFORDELING, romfordelingHandler())
+        routes.put(FLYTT_JOBBSØKER_ROM, flyttJobbsøkerRomHandler())
         routes.post(FORDEL_ROM, fordelRomHandler())
         routes.put(INTERESSE, interesseHandler())
         routes.put(INTERVJUFORDELING, intervjufordelingHandler())
@@ -165,24 +166,32 @@ class TreffgjennomføringController(
     }
 
     @OpenApi(
-        summary = "Erstatt hele romfordelingen. Kun WorkOp",
-        description = "Bodyen er en liste av rom på rotnivå, og må inneholde alle rom — også de tomme.",
-        operationId = "lagreRomfordeling",
+        summary = "Flytt én jobbsøker til et rom. Kun WorkOp",
+        description = "Flytter valgt jobbsøker til angitt romnummer basert på fersk servertilstand. Overskriver ikke andre endringer.",
+        operationId = "flyttJobbsøkerRom",
         security = [OpenApiSecurity(name = "BearerAuth")],
-        pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
+        pathParams = [
+            OpenApiParam(name = "id", type = UUID::class, required = true),
+            OpenApiParam(name = "personTreffId", type = UUID::class, required = true),
+        ],
         requestBody = OpenApiRequestBody(content = [OpenApiContent(
-            from = Array<RomDto>::class,
-            example = """[{"romnummer": 1, "jobbsøkere": ["11111111-1111-1111-1111-111111111111"]}, {"romnummer": 2, "jobbsøkere": []}]""",
+            from = FlyttJobbsøkerRomRequestDto::class,
+            example = """{"romnummer": 2}""",
         )]),
-        responses = [OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)])],
-        path = ROMFORDELING,
+        responses = [
+            OpenApiResponse(status = "200", content = [OpenApiContent(from = TreffgjennomføringDto::class, example = AGGREGAT_EKSEMPEL)]),
+            OpenApiResponse(status = "400", description = "Ugyldig person eller målrom, manglende oppmøte eller møteoppsett, eller treffet er ikke WorkOp."),
+            OpenApiResponse(status = "403", description = "Bruker er ikke eier eller utvikler."),
+        ],
+        path = FLYTT_JOBBSØKER_ROM,
         methods = [HttpMethod.PUT],
     )
-    private fun romfordelingHandler(): (Context) -> Unit = { ctx ->
+    private fun flyttJobbsøkerRomHandler(): (Context) -> Unit = { ctx ->
         val treffId = ctx.treffId()
         ctx.krevEierEllerUtvikler(eierService, treffId)
-        val rom = ctx.bodyAsClass<Array<RomDto>>().toList()
-        ctx.status(200).json(møteplanService.lagreRomfordeling(treffId, rom))
+        val personTreffId = PersonTreffId(ctx.pathParam("personTreffId"))
+        val dto = ctx.bodyAsClass<FlyttJobbsøkerRomRequestDto>()
+        ctx.status(200).json(møteplanService.flyttJobbsøkerTilRom(treffId, personTreffId, dto.romnummer))
     }
 
     @OpenApi(

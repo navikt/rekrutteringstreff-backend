@@ -1,0 +1,1 @@
+ALTER TABLE aktivitetskort ADD COLUMN aktivitetskort_type TEXT NOT NULL DEFAULT 'REKRUTTERINGSTREFF';

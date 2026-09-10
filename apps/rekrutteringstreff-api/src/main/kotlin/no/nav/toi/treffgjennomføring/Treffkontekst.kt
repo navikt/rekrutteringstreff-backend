@@ -6,6 +6,7 @@ import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
+import no.nav.toi.Miljø
 
 data class Treffkontekst(
     val treffId: TreffId,
@@ -28,6 +29,18 @@ data class Treffkontekst(
 
     fun krevWorkOp() {
         if (!erWorkOp) throw BadRequestResponse("Steget finnes bare på treff av kategorien WORKOP")
+    }
+
+    /**
+     * Krever at treffet er et WorkOp.
+     * For ordinære treff er dette kun tilgjengelig under lokal utvikling/testing.
+     */
+    fun krevWorkOpEllerLokalUtvikling(miljø: Miljø) {
+        when (miljø) {
+            Miljø.PROD_GCP -> throw BadRequestResponse("Steget er ikke tilgjengelig i produksjon")
+            Miljø.DEV_GCP -> krevWorkOp()
+            Miljø.LOKALT -> {}
+        }
     }
 }
 

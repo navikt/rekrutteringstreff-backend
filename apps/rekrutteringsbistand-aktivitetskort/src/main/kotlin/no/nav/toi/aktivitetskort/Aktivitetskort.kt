@@ -30,7 +30,8 @@ class Aktivitetskort (
     private val endretAv: String,
     private val endretAvType: EndretAvType,
     private val endretTidspunkt: ZonedDateTime,
-    private val sendtTidspunkt: ZonedDateTime?
+    private val sendtTidspunkt: ZonedDateTime?,
+    private val aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF
 ) {
 
     fun send(producer: Producer<String, String>) {
@@ -51,7 +52,7 @@ class Aktivitetskort (
         val melding = AkaasMelding(
             messageId = messageId,
             source = "REKRUTTERINGSBISTAND",
-            aktivitetskortType = "REKRUTTERINGSTREFF",
+            aktivitetskortType = aktivitetskortType.name,
             actionType = actionType.name,
             aktivitetskort = AkaasAktivitetskort(
                 id = aktivitetskortId,
@@ -161,9 +162,11 @@ class AktivitetskortHandling(
     }
 }
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 class AktivitetskortEtikett(
     val tekst: String,
-    val label: Sentiment,
+    val sentiment: Sentiment,
+    val kode: String? = null,
 ) {
     companion object {
         fun fraAkaasJson(json: String) =
@@ -191,6 +194,26 @@ enum class Sentiment {
     POSITIVE,
     NEGATIVE,
     NEUTRAL
+}
+
+enum class AktivitetskortType(
+    val eventName: String,
+    val beskrivelse: String,
+    val handlingTittel: String,
+    val handlingSubtekst: String,
+) {
+    REKRUTTERINGSTREFF(
+        eventName = "rekrutteringstreffinvitasjon",
+        beskrivelse = "Nav arrangerer rekrutteringstreff. På treffet møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
+        handlingTittel = "Sjekk ut treffet",
+        handlingSubtekst = "Sjekk ut treffet og svar",
+    ),
+    WORKOP(
+        eventName = "workopinvitasjon",
+        beskrivelse = "Nav arrangerer WorkOp. På WorkOp-en møter du arbeidsgivere med behov for å ansette. Kanskje finner du nye og spennende jobbmuligheter? Følg lenken under for å svare JA eller NEI på om du planlegger å delta. Husk å svare innen fristen som du vil se når du åpner lenken.",
+        handlingTittel = "Sjekk ut WorkOp-en",
+        handlingSubtekst = "Sjekk ut WorkOp-en og svar",
+    )
 }
 
 enum class LenkeType {

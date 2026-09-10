@@ -10,6 +10,7 @@ import io.javalin.json.JavalinJackson
 import io.javalin.micrometer.MicrometerPlugin
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.SchedulerContext
@@ -40,6 +41,7 @@ class App(
     private val meterRegistry: PrometheusMeterRegistry,
     private val isRunning: () -> Boolean,
     private val isReady: () -> Boolean,
+    private val workOpLyttereAktivert: Boolean,
 ) {
     private lateinit var javalin: Javalin
     private lateinit var schedulerContext: SchedulerContext
@@ -69,9 +71,19 @@ class App(
 
     private fun startRapidsAndRivers() {
         log.info("Starter RapidsConnection")
+        // Rekrutteringstreff
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
+
+        if (workOpLyttereAktivert) {
+            RekrutteringstreffInvitasjonLytter(rapidsConnection, repository, AktivitetskortType.WORKOP)
+            RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository, eventName = "workopSvarOgStatus")
+            RekrutteringstreffOppdateringLytter(rapidsConnection, repository, eventName = "workopoppdatering")
+        } else {
+            log.info("WorkOp-lyttere er deaktivert i dette miljøet")
+        }
+
         Thread {
             try {
                 rapidsConnection.start()
@@ -116,13 +128,17 @@ fun main() {
         leaderElection = LeaderElection(),
         meterRegistry = meterRegistry,
         isRunning = rapidsConnection::isRunning,
-        isReady = rapidsConnection::isReady
+        isReady = rapidsConnection::isReady,
+        workOpLyttereAktivert = skalRegistrereWorkOpLyttere(env["NAIS_CLUSTER_NAME"]),
     )
     Runtime.getRuntime().addShutdownHook(Thread {
         app.stop()
     })
     app.start()
 }
+
+internal fun skalRegistrereWorkOpLyttere(clusterNavn: String?): Boolean =
+    clusterNavn.isNullOrBlank() || clusterNavn == "local" || clusterNavn == "lokalt" || clusterNavn == "dev-gcp"
 
 fun producerConfig(env: Map<String, String>) = mapOf(
     CommonClientConfigs.CLIENT_ID_CONFIG to "rekrutteringsbistand-aktivitetskort",

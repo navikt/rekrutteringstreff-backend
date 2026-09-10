@@ -83,7 +83,7 @@ class RekrutteringstreffEierAutorisasjonsTest {
             )
         )
         gyldigRekrutteringstreff = database.hentAlleRekrutteringstreff()[0].id
-        ctx.eierRepository.leggTil(gyldigRekrutteringstreff, listOf("A1234"))
+        ctx.eierRepository.leggTil(gyldigRekrutteringstreff, "A1234", "0315")
 
     }
 

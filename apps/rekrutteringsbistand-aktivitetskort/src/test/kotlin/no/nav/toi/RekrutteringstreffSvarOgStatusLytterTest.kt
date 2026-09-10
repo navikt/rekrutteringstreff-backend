@@ -54,7 +54,8 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         leaderElection = LeaderElectionMock(),
         meterRegistry = meterRegistry,
         isRunning = { true },
-        isReady = { true }
+        isReady = { true },
+        workOpLyttereAktivert = true,
     )
 
     @BeforeAll
@@ -196,7 +197,6 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             fnr,
             rekrutteringstreffId,
             tittel,
-            "Beskrivelse av rekrutteringstreff",
             fraTid.toLocalDate(),
             tilTid.toLocalDate(),
             "formatertTid",
@@ -262,7 +262,6 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             fnr,
             rekrutteringstreffId,
             tittel,
-            "Beskrivelse av rekrutteringstreff",
             fraTid.toLocalDate(),
             tilTid.toLocalDate(),
             "formatertTid",
@@ -327,7 +326,6 @@ class RekrutteringstreffSvarOgStatusLytterTest {
             fnr,
             rekrutteringstreffId,
             tittel,
-            "Beskrivelse av rekrutteringstreff",
             fraTid.toLocalDate(),
             tilTid.toLocalDate(),
             "formatertTid",
@@ -395,4 +393,3 @@ class RekrutteringstreffSvarOgStatusLytterTest {
         """.trimIndent()
     }
 }
-
