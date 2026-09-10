@@ -1,8 +1,8 @@
 # Plan: Flytte eiere og kontorer ut i egen tabell
 
 **Status:** Fase 1 (`V15`), fase 2 (dual write) og fase 3 (`V16`, backfill) er implementert.
-`V16` må deployes etter at alle instanser kjører dual write. Modellvalg besluttet (seksjon 6 og 7),
-én åpen avklaring (seksjon 8) og de tvetydige eierradene gjenstår før fase 4.
+`V17` er opprettet med tre UUID → kontor-koblinger fra dev; prod-mappingen gjenstår før første deploy.
+Modellvalg er besluttet (seksjon 6 og 7), og kilde for eiernavn gjenstår å avklare (seksjon 8).
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
 
 **Mål:** Bevare sammenhengen mellom eier og kontor. I dag er `rekrutteringstreff.eiere text[]` og
@@ -102,12 +102,12 @@ WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id
 | **Behold nullable** | Trygt, men beholder `FILTER (WHERE kontor_enhetid IS NOT NULL)` som en betingelse å glemme i rød sone — og de 20 blir aldri fylt, siden hullene ikke lukker seg selv. |
 
 **`V16` og `V17` kjøres separat.** `V16` backfiller og lagrer eierradene permanent før vi lager mappingen.
-Deretter brukes `rekrutteringstreff_eier_id`, ikke Nav-ident, som nøkkel for kontoravklaringen i `V17`.
+Deretter brukes eierradens UUID (`id`), ikke Nav-ident eller `rekrutteringstreff_eier_id`, som nøkkel i `V17`.
 De 20 er et tidligere øyeblikksbilde; etter `V16` hentes den faktiske restlisten direkte fra tabellen:
 
 ```sql
 SELECT
-    e.rekrutteringstreff_eier_id,
+    e.id AS eier_id,
     rt.id AS treff_id,
     e.nav_ident,
     rt.status,
@@ -116,50 +116,42 @@ FROM rekrutteringstreff_eier e
 JOIN rekrutteringstreff rt
   ON rt.rekrutteringstreff_id = e.rekrutteringstreff_id
 WHERE e.kontor_enhetid IS NULL
-ORDER BY e.rekrutteringstreff_eier_id;
+ORDER BY e.id;
 ```
 
 Uttrekket inkluderer slettede treff og rader uavhengig av antall kandidatkontorer. Det inneholder
 Nav-identer for selve avklaringen og skal ikke lagres i Git. Mappingen som brukes til oppdatering,
-inneholder bare eierrad-ID og avklart kontor. Avklar per eierrad: samme person kan ha ulike kontorer på
+inneholder bare eierradens UUID og avklart kontor. Avklar per eierrad: samme person kan ha ulike kontorer på
 ulike treff.
 
 Spørring 7 og 8 er fortsatt nyttige for analyse før backfill, men erstatter ikke dette uttrekket.
 
-**Miljøavgrensning:** `rekrutteringstreff_eier_id` er `bigserial` og kan vise til forskjellige eiere i dev
-og prod. Mappingen må derfor leveres og kjøres miljøspesifikt; produksjons-ID-er skal ikke legges
-ukondisjonert i en felles Flyway-fil. Hvordan mappingen tilføres per miljø må være på plass før `V17`
-opprettes. ID-ene unngår direkte Nav-identer i kildekoden, men er pseudonyme referanser, ikke anonyme data.
+**Miljøavgrensning:** Mappingen kan inneholde UUID-er fra både dev og prod. Bare UUID-er som finnes i
+databasen, oppdateres. Dette forutsetter uavhengig genererte UUID-er; ved kopiering av databasedata mellom
+miljøer følger UUID-ene med. Ikke bruk `bigserial`, som kan vise til ulike eiere i ulike miljøer.
+UUID-ene unngår direkte Nav-identer i kildekoden, men er pseudonyme referanser, ikke anonyme data.
 
-**Mal for fase 4 (`V17__rekrutteringstreff_eier_kontor_not_null.sql`):** tallene under er fiktive og skal
-erstattes med avklarte rad-ID-er fra riktig miljø, ikke gjettes fra innsettingsrekkefølgen.
+**Migrering opprettet:** `V17__rekrutteringstreff_eier_kontor.sql`. Tre koblinger fra dev er lagt inn i
+`UPDATE ... FROM (VALUES ...)`. Legg til UUID → kontor-koblingene fra prod før første deploy.
+Mappingen skal inneholde én avklart kontorverdi per UUID.
+
+**Fyll hele mappingen før første deploy, også til dev.** En kjørt Flyway-fil skal ikke endres senere.
+Eventuelle senere rettinger gjøres i en ny migrering.
+
+`V17` fyller bare matchende eierrader med `kontor_enhetid IS NULL`. Det brukes ingen midlertidig tabell,
+eksplisitt låsing, NULL-kontroll eller `ALTER TABLE`. PostgreSQL tar fortsatt vanlige låser ved `UPDATE`.
+Eksisterende kontorer overskrives ikke, og uavklarte eierrader forblir NULL.
+
+**Etter kjøring:** kontroller de oppdaterte koblingene og hent restlisten med spørringen over.
+Når alt er avklart og ingen rader mangler kontor, opprettes en separat
+`V18__rekrutteringstreff_eier_kontor_not_null.sql` med:
 
 ```sql
--- 1. Fyll avklarte eierrader fra en miljøspesifikk mapping
-UPDATE rekrutteringstreff_eier e
-SET kontor_enhetid = m.kontor_enhetid
-FROM (VALUES
-    (101::bigint, '0315'),
-    (102::bigint, '1201')
-) AS m(rekrutteringstreff_eier_id, kontor_enhetid)
-WHERE e.rekrutteringstreff_eier_id = m.rekrutteringstreff_eier_id
-  AND e.kontor_enhetid IS NULL;
-
--- 2. Verifiser at ingen hull gjenstår før constrainten settes.
---    Feiler migreringen her, er mappingen ufullstendig.
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM rekrutteringstreff_eier WHERE kontor_enhetid IS NULL) THEN
-        RAISE EXCEPTION 'Eierrader uten kontor gjenstår — mappingen i steg 1 er ufullstendig';
-    END IF;
-END $$;
-
-ALTER TABLE rekrutteringstreff_eier ALTER COLUMN kontor_enhetid SET NOT NULL;
+ALTER TABLE rekrutteringstreff_eier
+    ALTER COLUMN kontor_enhetid SET NOT NULL;
 ```
 
-Mappingen, kontrollen og `SET NOT NULL` kjøres i én Flyway-transaksjon i `V17`. Ved gjenværende NULL rulles
-`V17` tilbake; den fullførte backfillen fra `V16` beholdes. Før kjøring må mappingen kontrolleres mot
-gjeldende rader og kontorer. Er en rad slettet eller endret siden uttrekket, må mappingen vurderes på nytt.
+`V18` opprettes ikke ennå. PostgreSQL avviser constrainten hvis noen rader fortsatt har NULL.
 
 Gevinsten: `FILTER (WHERE kontor_enhetid IS NOT NULL)` i fase 5 faller bort — én betingelse mindre å glemme
 i tilgangskritisk kode.
@@ -314,11 +306,12 @@ WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id
 Etter at `V16` er fullført, kontrolleres eiere og kontorer mot arrayene. Hent deretter radene med
 `kontor_enhetid IS NULL` med spørringen i seksjon 1. Dette er grunnlaget for ID-mappingen i neste fase.
 
-### Fase 4 — ID-basert kontoravklaring og `NOT NULL` (`V17__rekrutteringstreff_eier_kontor_not_null.sql`)
+### Fase 4 — ID-basert kontoravklaring, deretter `NOT NULL` (`V17` og senere `V18`)
 
 Kjøres separat etter at `V16` er fullført og de gjenværende eierradene er avklart. Bruk
-`rekrutteringstreff_eier_id` fra riktig miljø til mappingen, og avslutt med kontroll av gjenværende NULL
-og `SET NOT NULL`. SQL-mal og krav til miljøavgrensning står i seksjon 1.
+eierradens UUID (`id`) fra riktig miljø til mappingen i `V17__rekrutteringstreff_eier_kontor.sql`.
+Kontroller resultatet etter deploy. Først når alt er i orden, opprettes og deployes `V18` med
+`SET NOT NULL`. SQL og krav til miljøavgrensning står i seksjon 1.
 
 **Fasen må være fullført i prod før lesingen byttes.** Arrayene er fortsatt fasit frem til fase 5.
 
@@ -342,7 +335,7 @@ Forutsetter at fase 4 er fullført: alle eierrader har kontor, og databasen hån
 - Verifiser ytelse: `RekrutteringstreffSokYtelsestest` finnes allerede. Med dagens datavolum (269 eierrader,
   se måleresultater i seksjon 6) er subqueries uproblematisk — materialisert view er ikke nødvendig.
 
-### Fase 6 — Contract (`V18__dropp_eiere_kontorer_arrays.sql`)
+### Fase 6 — Contract (`V19__dropp_eiere_kontorer_arrays.sql`)
 
 - `ALTER TABLE rekrutteringstreff DROP COLUMN eiere, DROP COLUMN kontorer;`
 - Kjøres **etter** at fase 5 er verifisert i prod (egen deploy, ikke samme release).
@@ -390,16 +383,17 @@ slettede treff, uendrede arrays og hendelser, gjentatt kjøring, rollback og lå
 - Siste eier fra kontor fjernet → kontoret forsvinner fra `kontorer`-aggregatet
 - 🔴 Tilgang: `harTilgangViaTreffkontor` gir *ikke* tilgang etter at kontorets siste eier er fjernet
 - Fase 4-migrering: ID-mapping → bare angitt eierrad oppdateres, ikke alle treff for samme person
-- Fase 4-migrering: miljøavgrensning → produksjonsmapping brukes ikke i dev eller test
-- Fase 4-migrering: ufullstendig mapping → `V17` rulles tilbake, fullført `V16` beholdes
-- Fase 4-migrering: alle kontorer avklart → `NOT NULL` settes og avviser senere skriving av NULL
+- Fase 4-migrering: UUID-er som bare finnes i et annet miljø → ingen lokale rader oppdateres
+- Fase 4-migrering: delvis mapping → `V17` fyller avklarte rader og lar resten forbli NULL
+- Senere `V18`: alle kontorer avklart → `NOT NULL` settes og avviser senere skriving av NULL
 - `PUT /eiere/meg` uten kontor-tilknytning → avvises, ingen eierrad opprettes
 
 ---
 
 ## 5. Rekkefølge og risiko
 
-Hver fase er en **egen deploy**. Rekkefølgen er ikke vilkårlig: tabellen må finnes før koden kan skrive til
+Hver fase er en **egen deploy**, og fase 4 deles i to deployer med kontroll av data mellom dem.
+Rekkefølgen er ikke vilkårlig: tabellen må finnes før koden kan skrive til
 den, og koden må skrive til den før historikken fylles inn — ellers rekker tabellen å bli utdatert.
 De tvetydige kontorene må være avklart og `NOT NULL` satt før lesingen byttes.
 Backfill og kontoravklaring skilles for å kunne bruke varige eierrad-ID-er fremfor Nav-identer i mappingen.
@@ -409,13 +403,15 @@ Backfill og kontoravklaring skilles for å kunne bruke varige eierrad-ID-er frem
 | Fase 1 (tom tabell) | `V15` | Lav — ingen skrivere eller lesere ennå |
 | Fase 2 (dual write) | — | Lav — arrayene er fortsatt fasit |
 | Fase 3 (backfill) | `V16` | Middels — låsing under drift; uavklarte kontorer forblir NULL |
-| Fase 4 (ID-mapping + `NOT NULL`) | `V17` | Middels — miljøspesifikke ID-er; stopper ved gjenværende NULL |
+| Fase 4a (ID-mapping) | `V17` | Middels — resultatet må kontrolleres; gjenværende NULL tillates |
+| Fase 4b (`NOT NULL`, etter kontroll) | `V18` | Lav — constrainten avvises ved gjenværende NULL |
 | Fase 5 (bytt lesing + view) | — | 🔴 Høy — tilgangsstyring og søk |
-| Fase 6 (drop kolonner) | `V18` | Middels — irreversibelt |
+| Fase 6 (drop kolonner) | `V19` | Middels — irreversibelt |
 
 **Releasegrenser:** `V16` legges til først etter at alle instanser kjører dual write. `V17` legges til
-etter fullført `V16`, når rad-ID-er og kontorer er avklart per miljø. `V18` legges til etter at lesingen er
-byttet og verifisert i prod. Tidligere migreringsfiler beholdes urørt; det er hvilke migreringer som er
+etter fullført `V16`, når rad-ID-er og kontorer er avklart per miljø. `V18` legges til etter at resultatet
+av `V17` er kontrollert og ingen eierrader mangler kontor. `V19` legges til etter at lesingen er byttet og
+verifisert i prod. Tidligere migreringsfiler beholdes urørt; det er hvilke migreringer som er
 ventende ved deploy som avgjør hva Flyway kjører.
 
 **Før migrering kjøres:** kjør spørring 2 på nytt og bekreft at `kontorkoblinger_som_forsvinner` fortsatt er

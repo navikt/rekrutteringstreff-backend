@@ -125,7 +125,7 @@ class EierBackfillTest {
             connection.commit()
         }
         assertThat(snapshot("rekrutteringstreff_eier")).isEqualTo(etterBackfill)
-        assertThat(Flyway.configure().dataSource(dataSource).load().migrate().migrationsExecuted).isZero()
+        assertThat(Flyway.configure().dataSource(dataSource).target("16").load().migrate().migrationsExecuted).isZero()
     }
 
     @Test
@@ -210,8 +210,75 @@ class EierBackfillTest {
         assertThat(treff.kontorer).containsExactlyInAnyOrder("0315", "1201")
     }
 
+    @Test
+    fun `kontoravklaring fyller bare matchende UUID og bevarer kontorer som allerede er satt`() {
+        val førsteTreff = opprettHistoriskTreff(listOf("A123456", "B654321"), listOf("0315", "1201"))
+        val andreTreff = opprettHistoriskTreff(listOf("B654321"), listOf("0315", "1201"), status = "SLETTET")
+        migrer()
+        val kjentEier = hentEiere(førsteTreff).single { it.navIdent == "A123456" }
+        val førsteEier = hentEiere(førsteTreff).single { it.navIdent == "B654321" }
+        val andreEier = hentEiere(andreTreff).single()
+
+        kjørKontoravklaring(mapOf(
+            kjentEier.id to "1201",
+            førsteEier.id to "1201",
+            andreEier.id to "0315",
+            UUID.randomUUID() to "9999",
+        ))
+
+        assertThat(hentEiere(førsteTreff)).containsExactly(kjentEier, førsteEier.copy(kontor = "1201"))
+        assertThat(hentEiere(andreTreff)).containsExactly(andreEier.copy(kontor = "0315"))
+    }
+
+    @Test
+    fun `delvis UUID-mapping fyller avklarte kontorer og lar resten forbli NULL`() {
+        val treffId = opprettHistoriskTreff(listOf("B654321", "C987654"), listOf("0315", "1201"))
+        migrer()
+        val eiere = hentEiere(treffId)
+
+        kjørKontoravklaring(mapOf(eiere.first().id to "0315"))
+
+        assertThat(hentEiere(treffId)).containsExactly(eiere.first().copy(kontor = "0315"), eiere.last())
+        assertThat(Flyway.configure().dataSource(dataSource).target("17").load().migrate().migrationsExecuted).isEqualTo(1)
+        assertThat(hentEiere(treffId).last().kontor).isNull()
+        dataSource.connection.use { connection ->
+            connection.prepareStatement("UPDATE rekrutteringstreff_eier SET kontor_enhetid = NULL WHERE id = ?").use {
+                it.setObject(1, eiere.first().id)
+                assertThat(it.executeUpdate()).isEqualTo(1)
+            }
+        }
+    }
+
+    @Test
+    fun `V17 kan migrere uten treff eller uavklarte kontorer`() {
+        migrer()
+        assertThat(Flyway.configure().dataSource(dataSource).target("17").load().migrate().migrationsExecuted).isEqualTo(1)
+    }
+
     private fun migrer() {
-        Flyway.configure().dataSource(dataSource).load().migrate()
+        Flyway.configure().dataSource(dataSource).target("16").load().migrate()
+    }
+
+    private fun kjørKontoravklaring(mapping: Map<UUID, String>) {
+        val sql = requireNotNull(javaClass.getResourceAsStream("/db/migration/V17__rekrutteringstreff_eier_kontor.sql"))
+            .bufferedReader().use { it.readText() }
+        val fra = "FROM (VALUES"
+        val til = ") AS m(id, kontor_enhetid)"
+        check(sql.contains(fra) && sql.contains(til))
+        // Behold migreringslogikken, men bruk syntetiske UUID-er og kontorer i testene.
+        val testSql = sql.substringBefore(fra) + fra +
+            mapping.entries.joinToString(",") { "(?::uuid, ?::text)" } +
+            til + sql.substringAfter(til)
+        dataSource.connection.use { connection ->
+            connection.prepareStatement(testSql).use { stmt ->
+                var parameter = 1
+                mapping.forEach { (id, kontor) ->
+                    stmt.setObject(parameter++, id)
+                    stmt.setString(parameter++, kontor)
+                }
+                stmt.executeUpdate()
+            }
+        }
     }
 
     private fun kjørBackfill(connection: Connection) {

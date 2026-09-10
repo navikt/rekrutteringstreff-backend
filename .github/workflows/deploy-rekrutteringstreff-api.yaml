@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/deploy-template.yaml
     with:
       app_name: ${{ github.workflow }}
-      deploy_dev_branch: refs/heads/eiere-backfill-tabell
+      deploy_dev_branch: refs/heads/oppdater-manglende-kontor
     permissions:
       contents: read
       id-token: write
