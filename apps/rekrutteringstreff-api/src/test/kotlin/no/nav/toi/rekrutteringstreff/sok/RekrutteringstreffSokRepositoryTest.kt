@@ -61,7 +61,7 @@ class RekrutteringstreffSokRepositoryTest {
         navIdent: String = "A123456",
         kontorId: String = "0315",
         statuser: List<SokStatus>? = null,
-        fritekst: String? = null,
+        fritekst: List<String>? = null,
         visning: Visning = Visning.ALLE,
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int = 1,
@@ -799,7 +799,7 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Rekrutteringstreff for sveisere")
         opprettTreff(tittel = "Jobbtreff for helsefagarbeidere")
 
-        val resultat = sok(fritekst = "sveisere")
+        val resultat = sok(fritekst = listOf("sveisere"))
 
         assertThat(resultat.antallTotalt).isEqualTo(1)
         assertThat(resultat.treff).extracting<String> { it.tittel }.containsExactly("Rekrutteringstreff for sveisere")
@@ -813,7 +813,7 @@ class RekrutteringstreffSokRepositoryTest {
         )
         db.opprettRekrutteringstreffMedEierOgKontor(tittel = "Treff B", beskrivelse = "Noe helt annet")
 
-        val resultat = sok(fritekst = "lagerarbeid")
+        val resultat = sok(fritekst = listOf("lagerarbeid"))
 
         assertThat(resultat.treff).extracting<String> { it.tittel }.containsExactly("Treff A")
     }
@@ -822,16 +822,16 @@ class RekrutteringstreffSokRepositoryTest {
     fun `fritekst stemmer ord slik at kokk finner kokker`() {
         opprettTreff(tittel = "Vi søker kokker til hotell")
 
-        assertThat(sok(fritekst = "kokk").antallTotalt).isEqualTo(1)
-        assertThat(sok(fritekst = "kokker").antallTotalt).isEqualTo(1)
+        assertThat(sok(fritekst = listOf("kokk")).antallTotalt).isEqualTo(1)
+        assertThat(sok(fritekst = listOf("kokker")).antallTotalt).isEqualTo(1)
     }
 
     @Test
     fun `fritekst håndterer norske tegn`() {
         opprettTreff(tittel = "Rekrutteringstreff i Tromsø for lærlinger")
 
-        assertThat(sok(fritekst = "Tromsø").antallTotalt).isEqualTo(1)
-        assertThat(sok(fritekst = "lærling").antallTotalt).isEqualTo(1)
+        assertThat(sok(fritekst = listOf("Tromsø")).antallTotalt).isEqualTo(1)
+        assertThat(sok(fritekst = listOf("lærling")).antallTotalt).isEqualTo(1)
     }
 
     @Test
@@ -840,7 +840,7 @@ class RekrutteringstreffSokRepositoryTest {
         opprettTreff(tittel = "Treff B")
         leggTilArbeidsgiver(treffMedArbeidsgiver, orgnavn = "Nordsjø Sveiseservice")
 
-        val resultat = sok(fritekst = "Nordsjø")
+        val resultat = sok(fritekst = listOf("Nordsjø"))
 
         assertThat(resultat.antallTotalt).isEqualTo(1)
         assertThat(resultat.treff.single().tittel).isEqualTo("Treff A")
@@ -851,6 +851,6 @@ class RekrutteringstreffSokRepositoryTest {
         val treffId = opprettTreff(tittel = "Treff A")
         leggTilArbeidsgiver(treffId, orgnavn = "Et Firma", orgnr = "912345678")
 
-        assertThat(sok(fritekst = "912345678").antallTotalt).isEqualTo(1)
+        assertThat(sok(fritekst = listOf("912345678")).antallTotalt).isEqualTo(1)
     }
 }

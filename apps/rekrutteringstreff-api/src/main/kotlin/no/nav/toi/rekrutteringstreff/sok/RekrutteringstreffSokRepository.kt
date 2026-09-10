@@ -21,7 +21,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kontorer: List<String>?,
         fylkesnumre: List<String>?,
         kommunenumre: List<String>?,
-        fritekst: String?,
+        fritekst: List<String>?,
         visning: Visning,
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
@@ -316,7 +316,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kontorer: List<String>?,
         fylkesnumre: List<String>?,
         kommunenumre: List<String>?,
-        fritekst: String?,
+        fritekst: List<String>?,
         visning: Visning,
     ): Pair<String, List<SqlParam>> {
         val conditions = listOfNotNull(
@@ -452,10 +452,17 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         )
     }
 
-    private fun byggFritekstCondition(fritekst: String?): Condition? {
-        val normalisertFritekst = fritekst?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        return Condition(
-            clause = """
+    private fun byggFritekstCondition(fritekst: List<String>?): Condition? {
+        val ord = fritekst
+            ?.mapNotNull { it.trim().takeIf(String::isNotEmpty) }
+            ?.takeIf { it.isNotEmpty() }
+            ?: return null
+
+        val clauses = mutableListOf<String>()
+        val params = mutableListOf<SqlParam>()
+
+        ord.forEach { term ->
+            clauses += """
             rekrutteringstreff_id IN (
                 SELECT rekrutteringstreff_id FROM rekrutteringstreff
                  WHERE sok_tsv @@ websearch_to_tsquery('norwegian', ?)
@@ -464,11 +471,14 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
                  WHERE status = 'AKTIV'
                    AND sok_tsv @@ websearch_to_tsquery('norwegian', ?)
             )
-        """.trimIndent(),
-            params = listOf(
-                SqlParam(normalisertFritekst, ParamType.STRING),
-                SqlParam(normalisertFritekst, ParamType.STRING),
-            ),
+        """.trimIndent()
+            params += SqlParam(term, ParamType.STRING)
+            params += SqlParam(term, ParamType.STRING)
+        }
+
+        return Condition(
+            clause = clauses.joinToString(" AND ", prefix = "(", postfix = ")"),
+            params = params,
         )
     }
 

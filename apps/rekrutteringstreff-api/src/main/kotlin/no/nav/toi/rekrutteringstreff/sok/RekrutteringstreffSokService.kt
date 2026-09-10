@@ -58,7 +58,7 @@ class RekrutteringstreffSokService(
                 request.kategorier?.size ?: 0,
                 request.statuser?.size ?: 0,
                 request.kontorer?.size ?: 0,
-                request.fritekst?.length ?: 0,
+                request.fritekst?.size ?: 0,
                 resultat.antallTotalt,
             )
         }

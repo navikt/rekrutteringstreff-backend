@@ -79,8 +79,12 @@ class RekrutteringstreffSokKomponenttest {
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
-    private fun fritekstSøk(fritekst: String, ekstra: String = "", navIdent: String = "A123456") =
-        sokGet("?fritekst=${URLEncoder.encode(fritekst, StandardCharsets.UTF_8)}$ekstra", navIdent = navIdent)
+    private fun fritekstSøk(vararg fritekst: String, ekstra: String = "", navIdent: String = "A123456") =
+        sokGet(
+            fritekst.joinToString("") { "&fritekst=${URLEncoder.encode(it, StandardCharsets.UTF_8)}" }
+                .replaceFirst('&', '?') + ekstra,
+            navIdent = navIdent,
+        )
 
     private fun HttpResponse<String>.tilRespons(): RekrutteringstreffSokRespons =
         mapper.readValue(body())
@@ -225,6 +229,35 @@ class RekrutteringstreffSokKomponenttest {
         val respons = fritekstSøk("Nordsjø").tilRespons()
 
         assertThat(respons.treff).extracting<String> { it.tittel }.containsExactly("Treff A")
+    }
+
+    @Test
+    fun `alle fritekstord må matche`() {
+        opprettTreffMedEier(tittel = "Rekrutteringstreff for sveisere")
+        opprettTreffMedEier(tittel = "Jobbmesse for kokker")
+
+        assertThat(fritekstSøk("sveisere", "rekrutteringstreff").tilRespons().antallTotalt).isEqualTo(1)
+        assertThat(fritekstSøk("sveisere", "kokker").tilRespons().antallTotalt).isEqualTo(0)
+    }
+
+    @Test
+    fun `fritekstord kan matche treff og arbeidsgiver hver for seg`() {
+        val treffId = opprettTreffMedEier(tittel = "Rekrutteringstreff for sveisere")
+        leggTilArbeidsgiver(treffId, orgnavn = "Nordsjø Sveiseservice")
+
+        assertThat(fritekstSøk("sveisere", "Nordsjø").tilRespons().antallTotalt).isEqualTo(1)
+    }
+
+    @Test
+    fun `for mange fritekstord gir 400`() {
+        val ord = (1..11).map { "ord$it" }.toTypedArray()
+        assertThat(fritekstSøk(*ord).statusCode()).isEqualTo(400)
+    }
+
+    @Test
+    fun `komma i fritekst splittes ikke`() {
+        opprettTreffMedEier(tittel = "Bygg, anlegg og transport")
+        assertThat(fritekstSøk("bygg, anlegg").tilRespons().antallTotalt).isEqualTo(1)
     }
 
     @Test

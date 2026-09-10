@@ -31,7 +31,9 @@ class RekrutteringstreffSokController(
             OpenApiParam(name = "kontorer", type = String::class, required = false, description = "Kommaseparert liste av enhetId-er, for eksempel 0315,1201", example = "0315,1201"),
             OpenApiParam(name = "fylkesnumre", type = String::class, required = false, description = "Kommaseparert liste av fylkesnumre, for eksempel 03,11", example = "03,11"),
             OpenApiParam(name = "kommunenumre", type = String::class, required = false, description = "Kommaseparert liste av kommunenumre, for eksempel 0301,1103", example = "0301,1103"),
-            OpenApiParam(name = "fritekst", type = String::class, required = false, description = "Streng med søkeord skrevet av brukeren", example = "bygg og anlegg"),
+            OpenApiParam(name = "fritekst", type = Array<String>::class, required = false,
+                description = "Søkeord. Kan gjentas: ?fritekst=bygg&fritekst=anlegg. Alle ordene må matche.",
+                example = "bygg"),
             OpenApiParam(name = "sortering", type = Sortering::class, required = false, description = "Sorteringsrekkefølge for trefflisten", example = "sist_oppdaterte"),
             OpenApiParam(name = "side", type = Int::class, required = false, description = "Sidetall, starter på 1", example = "1"),
             OpenApiParam(name = "antallPerSide", type = Int::class, required = false, description = "Antall treff per side, må være mellom 1 og 100", example = "20"),
@@ -167,9 +169,18 @@ class RekrutteringstreffSokController(
             throw IllegalArgumentException("antallPerSide må være mellom 1 og 100")
         }
 
-        val fritekst = ctx.queryParam("fritekst")?.trim()?.takeIf { it.isNotEmpty() }
-        if (fritekst != null && fritekst.length > 200) { // 200 tegn er omtrent 30–40 ord. Grensen er valgt for å stoppe for store requester
-            throw IllegalArgumentException("fritekst kan ikke være lengre enn 200 tegn")
+        val fritekst = ctx.queryParams("fritekst")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .takeIf { it.isNotEmpty() }
+
+        if (fritekst != null) {
+            if (fritekst.size > 10) {
+                throw IllegalArgumentException("fritekst kan ikke ha flere enn 10 søkeord")
+            }
+            if (fritekst.sumOf { it.length } > 200) { // 200 tegn totalt, ca. 30–40 ord. Grensen er valgt for å stoppe for store requester
+                throw IllegalArgumentException("fritekst kan ikke være lengre enn 200 tegn totalt")
+            }
         }
 
         val request = RekrutteringstreffSokRequest(
