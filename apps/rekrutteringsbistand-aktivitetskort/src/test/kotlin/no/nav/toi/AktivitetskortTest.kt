@@ -11,8 +11,11 @@ import no.nav.toi.aktivitetskort.AktivitetskortEtikett
 import no.nav.toi.aktivitetskort.AktivitetskortFeilJobb
 import no.nav.toi.aktivitetskort.AktivitetskortJobb
 import no.nav.toi.aktivitetskort.AktivitetskortType
+import no.nav.toi.aktivitetskort.DeleCvMedArbeidsgiverType
 import no.nav.toi.aktivitetskort.ErrorType
+import no.nav.toi.aktivitetskort.RekrutteringstreffType
 import no.nav.toi.aktivitetskort.Sentiment
+import no.nav.toi.aktivitetskort.WorkOpType
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy.StrategyType
@@ -69,7 +72,7 @@ class AktivitetskortTest {
         val expectedFnr = "12345678910"
         val expectedRekrutteringstreffId = UUID.randomUUID()
         val expectedTittel = "Test Rekrutteringstreff"
-        val expectedBeskrivelse = AktivitetskortType.REKRUTTERINGSTREFF.beskrivelse
+        val expectedBeskrivelse = RekrutteringstreffType.beskrivelse
         val expectedStartDato = LocalDate.now().plusDays(1)
         val expectedSluttDato = LocalDate.now().plusDays(2)
         val expectedEndretAv = "testuser"
@@ -144,7 +147,7 @@ class AktivitetskortTest {
         record.value().let(objectMapper::readTree).apply {
             assertThat(this["messageId"].asText()).isNotBlank()
             assertThat(this["source"].asText()).isEqualTo("REKRUTTERINGSBISTAND")
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER.name)
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(DeleCvMedArbeidsgiverType.akaasType)
             assertThat(this["actionType"].asText()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
             assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
             assertThat(this["aktivitetskort"]["personIdent"].asText()).isEqualTo(expectedFnr)
@@ -183,14 +186,14 @@ class AktivitetskortTest {
             gateAdresse = "Test Sted",
             postnummer = "1234",
             poststed = "Test Poststed",
-            aktivitetskortType = AktivitetskortType.WORKOP
+            aktivitetskortType = WorkOpType
         )
 
         AktivitetskortJobb(repository, producer, LeaderElectionMock()).run()
 
         val tree = producer.history().first().value().let(objectMapper::readTree)
         assertThat(tree["aktivitetskortType"].asText()).isEqualTo("WORKOP")
-        assertThat(tree["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(AktivitetskortType.WORKOP.beskrivelse)
+        assertThat(tree["aktivitetskort"]["beskrivelse"].asText()).isEqualTo(WorkOpType.beskrivelse)
 
         val etiketter = tree["aktivitetskort"]["etiketter"]
         assertThat(etiketter).isEmpty()
@@ -414,7 +417,7 @@ class AktivitetskortTest {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-rekrutteringstreff")
             assertThat(this["fnr"].asText()).isEqualTo(invitasjon.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(invitasjon.aktivitetskortId.toString())
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(RekrutteringstreffType.akaasType)
             assertThat(this.has("stillingId")).isFalse()
             assertThat(this["rekrutteringstreffId"].asText()).isEqualTo(invitasjon.rekrutteringstreffId.toString())
             assertThat(this["endretAv"].asText()).isEqualTo(invitasjon.endretAv)
@@ -448,7 +451,7 @@ class AktivitetskortTest {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-deltstilling")
             assertThat(this["fnr"].asText()).isEqualTo(deltStilling.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(deltStilling.aktivitetskortId.toString())
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER.name)
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(DeleCvMedArbeidsgiverType.akaasType)
             assertThat(this["stillingId"].asText()).isEqualTo(stillingId.toString())
             assertThat(this.has("rekrutteringstreffId")).isFalse()
             assertThat(this["endretAv"].asText()).isEqualTo(deltStilling.endretAv)

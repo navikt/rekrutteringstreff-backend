@@ -3,6 +3,7 @@ package no.nav.toi
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetskortType
+import no.nav.toi.aktivitetskort.RekrutteringstreffType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
 import org.apache.kafka.clients.consumer.MockConsumer
 import org.apache.kafka.clients.consumer.internals.AutoOffsetResetStrategy
@@ -133,7 +134,7 @@ class RekrutteringstreffOppdateringTest {
 
         // Verify the update was applied
         assertThat(oppdatertKort.aktivitetskortId).isEqualTo(aktivitetskortId)
-        assertThat(oppdatertKort.aktivitetsType).isEqualTo(AktivitetskortType.REKRUTTERINGSTREFF.name)
+        assertThat(oppdatertKort.aktivitetsType).isEqualTo(RekrutteringstreffType.akaasType)
         assertThat(oppdatertKort.tittel).isEqualTo(nyTittel)
         assertThat(oppdatertKort.fraTid).isEqualTo(nyFraTid.toLocalDate())
         assertThat(oppdatertKort.tilTid).isEqualTo(nyTilTid.toLocalDate())

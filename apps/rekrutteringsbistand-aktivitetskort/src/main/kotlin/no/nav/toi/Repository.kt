@@ -4,6 +4,7 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.*
 import org.flywaydb.core.Flyway
+import java.sql.ResultSet
 import java.sql.Statement
 import java.sql.Timestamp
 import java.sql.Types.VARCHAR
@@ -35,7 +36,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
         gateAdresse: String,
         postnummer: String,
         poststed: String,
-        aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
+        aktivitetskortType: AktivitetskortType = RekrutteringstreffType,
     ): UUID? {
         val aktivitietskortId = UUID.randomUUID()
         dataSource.connection.use { connection ->
@@ -107,7 +108,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                             objectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
                         )
                         setNull(13, VARCHAR)
-                        setString(14, aktivitetskortType.name)
+                        setString(14, aktivitetskortType.akaasType)
                     }.executeUpdate()
 
                     connection.commit()
@@ -154,7 +155,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
                         avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
                         sendtTidspunkt = null,
-                        aktivitetskortType = resultSet.getString("aktivitetskort_type").let(::enumValueOf)
+                        aktivitetskortType = resultSet.getString("aktivitetskort_type").let(AktivitetskortType::fraAkaasKode)
                     )
                 } else {
                     null
@@ -232,29 +233,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                             aktivitetskortType = aktivitetskortType,
                             timestamp = ZonedDateTime.now().toString()
                         )
-                        when (aktivitetskortType.let<_, AktivitetskortType>(::enumValueOf)) {
-                            AktivitetskortType.REKRUTTERINGSTREFF -> RekrutteringstreffFeilMelding(
-                                fellesMeldingsfelter = fellesMeldingsfelter,
-                                rekrutteringstreffId = resultSet
-                                    .getObject("rekrutteringstreff_id", UUID::class.java)
-                                    ?.toString()
-                                    ?: error("Mangler rekrutteringstreffId for aktivitetskort $aktivitetskortId"),
-                            )
-
-                            AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER -> DeltStillingFeilMelding(
-                                fellesMeldingsfelter = fellesMeldingsfelter,
-                                stillingId = resultSet.getObject("stilling_id", UUID::class.java)
-                                    ?.toString()
-                                    ?: error("Mangler stillingId for aktivitetskort $aktivitetskortId"),
-                            )
-
-                            AktivitetskortType.WORKOP -> WorkOpFeilMelding(fellesMeldingsfelter = fellesMeldingsfelter,
-                                rekrutteringstreffId = resultSet
-                                    .getObject("rekrutteringstreff_id", UUID::class.java)
-                                    ?.toString()
-                                    ?: error("Mangler rekrutteringstreffId for aktivitetskort $aktivitetskortId")
-                            )
-                        }
+                        AktivitetskortType.fraAkaasKode(aktivitetskortType).tilFeil(fellesMeldingsfelter, resultSet, aktivitetskortId)
                     } else {
                         null
                     }
@@ -626,7 +605,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     ) VALUES (
                         ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}',
                         ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json,
-                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER.name}'
+                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${DeleCvMedArbeidsgiverType.akaasType}'
                     )
                     """.trimIndent()
                 ).apply {

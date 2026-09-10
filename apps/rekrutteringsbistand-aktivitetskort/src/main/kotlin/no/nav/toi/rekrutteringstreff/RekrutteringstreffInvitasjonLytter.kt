@@ -13,11 +13,12 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 
 import no.nav.toi.aktivitetskort.AktivitetskortType
+import no.nav.toi.aktivitetskort.RekrutteringstreffType
 
 class RekrutteringstreffInvitasjonLytter(
     rapidsConnection: RapidsConnection,
     private val repository: Repository,
-    private val aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
+    private val aktivitetskortType: AktivitetskortType = RekrutteringstreffType,
 ) : River.PacketListener {
     private val eventName = aktivitetskortType.eventName
 

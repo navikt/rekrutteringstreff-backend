@@ -5,6 +5,7 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import no.nav.toi.aktivitetskort.AktivitetsStatus
 import no.nav.toi.aktivitetskort.AktivitetskortType
+import no.nav.toi.aktivitetskort.DeleCvMedArbeidsgiverType
 import no.nav.toi.aktivitetskort.EndretAvType
 import no.nav.toi.rekrutteringsbistand.IdentType
 import no.nav.toi.ubruktPortnrFra11000.ubruktPortnr
@@ -105,7 +106,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
-            assertThat(this[0].aktivitetsType).isEqualTo(AktivitetskortType.DELE_CV_MED_ARBEIDSGIVER.name)
+            assertThat(this[0].aktivitetsType).isEqualTo(DeleCvMedArbeidsgiverType.akaasType)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
             assertThat(this[0].opprettetTidspunkt).isBetween(opprettetTidspunkt, ZonedDateTime.now())

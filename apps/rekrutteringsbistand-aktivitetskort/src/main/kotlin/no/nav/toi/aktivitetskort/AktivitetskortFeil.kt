@@ -34,20 +34,20 @@ abstract class AktivitetskortFeil(
     }
 }
 
-internal class RekrutteringstreffFeilMelding(
+class RekrutteringstreffFeilMelding(
     fellesMeldingsfelter: FellesMeldingsfelter,
     val rekrutteringstreffId: String,
 ) : AktivitetskortFeil(fellesMeldingsfelter) {
     override val eventName = "aktivitetskort-feil-rekrutteringstreff"
 }
-internal class DeltStillingFeilMelding(
+class DeltStillingFeilMelding(
     fellesMeldingsfelter: FellesMeldingsfelter,
     val stillingId: String,
 ) : AktivitetskortFeil(fellesMeldingsfelter) {
     override val eventName = "aktivitetskort-feil-deltstilling"
 }
 
-internal class WorkOpFeilMelding(
+class WorkOpFeilMelding(
     fellesMeldingsfelter: FellesMeldingsfelter,
     val rekrutteringstreffId: String,
 ) : AktivitetskortFeil(fellesMeldingsfelter) {
