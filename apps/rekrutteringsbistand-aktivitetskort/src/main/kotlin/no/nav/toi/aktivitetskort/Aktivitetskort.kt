@@ -169,9 +169,11 @@ interface AktivitetskortType{
     val handlingTittel: String
     val handlingSubtekst: String
     val akaasType: String
+    val dbType: String
+        get() = akaasType
     companion object {
-        fun fraAkaasKode(verdi: String) = listOf(RekrutteringstreffType, WorkOpType, DeleCvMedArbeidsgiverType)
-            .firstOrNull { it.akaasType == verdi }
+        fun fraDbKode(verdi: String) = listOf(RekrutteringstreffType, WorkOpType, DeleCvMedArbeidsgiverType)
+            .firstOrNull { it.dbType == verdi }
             ?: throw IllegalArgumentException("Ukjent aktivitetskorttype: $verdi")
     }
     fun tilFeil(
@@ -221,10 +223,11 @@ object WorkOpType: AktivitetskortType {
 }
 object DeleCvMedArbeidsgiverType: AktivitetskortType {
     override val eventName = "deltstilling"
-    override val beskrivelse = "Nav arrangerer deltstilling"
-    override val handlingTittel = "Sjekk ut deltstilling"
-    override val handlingSubtekst = "Sjekk ut deltstilling og svar"
-    override val akaasType = "DELE_CV_MED_ARBEIDSGIVER"
+    override val beskrivelse = "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
+    override val handlingTittel = "Sjekk ut stillingen"
+    override val handlingSubtekst = "Sjekk ut stillingen og svar"
+    override val dbType = "DELE_CV_MED_ARBEIDSGIVER"
+    override val akaasType = "REKRUTTERINGSTREFF"   // Midlertidig inntil "DELE_CV_MED_ARBEIDSGIVER" er på plass
 
     override fun tilFeil(
         fellesMeldingsfelter: FellesMeldingsfelter,

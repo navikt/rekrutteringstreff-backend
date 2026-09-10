@@ -108,7 +108,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                             objectMapper.writeValueAsString(emptyList<AktivitetskortEtikett>())
                         )
                         setNull(13, VARCHAR)
-                        setString(14, aktivitetskortType.akaasType)
+                        setString(14, aktivitetskortType.dbType)
                     }.executeUpdate()
 
                     connection.commit()
@@ -155,7 +155,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                         oppgave = resultSet.getString("oppgave")?.let { AktivitetskortOppgave.fraAkaasJson(it) },
                         avtaltMedNav = resultSet.getBoolean("avtalt_med_nav"),
                         sendtTidspunkt = null,
-                        aktivitetskortType = resultSet.getString("aktivitetskort_type").let(AktivitetskortType::fraAkaasKode)
+                        aktivitetskortType = resultSet.getString("aktivitetskort_type").let(AktivitetskortType::fraDbKode)
                     )
                 } else {
                     null
@@ -233,7 +233,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                             aktivitetskortType = aktivitetskortType,
                             timestamp = ZonedDateTime.now().toString()
                         )
-                        AktivitetskortType.fraAkaasKode(aktivitetskortType).tilFeil(fellesMeldingsfelter, resultSet, aktivitetskortId)
+                        AktivitetskortType.fraDbKode(aktivitetskortType).tilFeil(fellesMeldingsfelter, resultSet, aktivitetskortId)
                     } else {
                         null
                     }
@@ -605,7 +605,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     ) VALUES (
                         ?, ?, ?, ?, ?, '${AktivitetsStatus.FORSLAG.name}',
                         ?, '${EndretAvType.NAVIDENT.name}', ?, ?::json, ?::json, ?::json,
-                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${DeleCvMedArbeidsgiverType.akaasType}'
+                        ?::json, '${ActionType.UPSERT_AKTIVITETSKORT_V1.name}', false, '${DeleCvMedArbeidsgiverType.dbType}'
                     )
                     """.trimIndent()
                 ).apply {
@@ -613,14 +613,26 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                     setString(2, tittel)
                     setString(
                         3,
-                        "Nav hjelper en arbeidsgiver med å finne kandidater til en stilling, og tror den kan passe for deg."
+                        DeleCvMedArbeidsgiverType.beskrivelse
                     )
                     setObject(4, UUID.randomUUID())
                     setObject(5, aktivitetskortId)
                     setString(6, opprettetAv)
                     setObject(7, ZonedDateTime.now().toLocalDateTime())
                     setString(8, "[]")
-                    setString(9, "[]")
+                    setString(
+                        9,
+                        objectMapper.writeValueAsString(
+                            listOf(
+                                AktivitetskortHandling(
+                                    DeleCvMedArbeidsgiverType.handlingTittel,
+                                    DeleCvMedArbeidsgiverType.handlingSubtekst,
+                                    "$minsideUrl/stilling/$stillingId",
+                                    LenkeType.FELLES
+                                )
+                            )
+                        )
+                    )
                     setString(10, "[]")
                     setNull(11, VARCHAR)
                 }.executeUpdate()

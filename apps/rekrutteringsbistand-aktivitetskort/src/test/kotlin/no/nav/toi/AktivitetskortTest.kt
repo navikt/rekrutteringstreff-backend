@@ -67,7 +67,7 @@ class AktivitetskortTest {
     }
 
     @Test
-    fun `bestill aktivitetskort`() {
+    fun `bestill rekrutteringstreff-aktivitetskort`() {
         val producer = MockProducer(true, null, StringSerializer(), StringSerializer())
         val expectedFnr = "12345678910"
         val expectedRekrutteringstreffId = UUID.randomUUID()
@@ -167,7 +167,11 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["etiketter"].isArray).isTrue()
             assertThat(this["aktivitetskort"]["etiketter"]).isEmpty()
             assertThat(this["aktivitetskort"]["handlinger"].isArray).isTrue()
-            assertThat(this["aktivitetskort"]["handlinger"]).isEmpty()
+            assertThat(this["aktivitetskort"]["handlinger"]).hasSize(1)
+            assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asText()).isEqualTo("Sjekk ut stillingen")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["subtekst"].asText()).isEqualTo("Sjekk ut stillingen og svar")
+            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asText()).isEqualTo("http://url/rekrutteringstreff/stilling/$expectedStillingId") // TODO: Feil url
+            assertThat(this["aktivitetskort"]["handlinger"][0]["lenkeType"].asText()).isEqualTo("FELLES")
             assertThat(this["aktivitetskort"]["oppgave"].isNull).isTrue()
         }
     }
@@ -451,7 +455,7 @@ class AktivitetskortTest {
             assertThat(this["@event_name"].asText()).isEqualTo("aktivitetskort-feil-deltstilling")
             assertThat(this["fnr"].asText()).isEqualTo(deltStilling.fnr)
             assertThat(this["aktivitetskortId"].asText()).isEqualTo(deltStilling.aktivitetskortId.toString())
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(DeleCvMedArbeidsgiverType.akaasType)
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo(DeleCvMedArbeidsgiverType.dbType)
             assertThat(this["stillingId"].asText()).isEqualTo(stillingId.toString())
             assertThat(this.has("rekrutteringstreffId")).isFalse()
             assertThat(this["endretAv"].asText()).isEqualTo(deltStilling.endretAv)

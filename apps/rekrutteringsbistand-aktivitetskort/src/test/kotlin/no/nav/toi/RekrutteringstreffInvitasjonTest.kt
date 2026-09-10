@@ -120,7 +120,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
             assertThat(this[0].rekrutteringstreffId).isEqualTo(rekrutteringstreffId)
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
-            assertThat(this[0].aktivitetsType).isEqualTo(RekrutteringstreffType.akaasType)
+            assertThat(this[0].aktivitetsType).isEqualTo(RekrutteringstreffType.dbType)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
         }
@@ -307,7 +307,7 @@ class RekrutteringstreffInvitasjonTest {
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetTidspunkt).isCloseTo(opprettetTidspunkt, within(10, ChronoUnit.MILLIS))
-            assertThat(this[0].aktivitetsType).isEqualTo(WorkOpType.akaasType)
+            assertThat(this[0].aktivitetsType).isEqualTo(WorkOpType.dbType)
         }
 
         inspektør.message(0).also { message ->

@@ -134,7 +134,7 @@ class RekrutteringstreffOppdateringTest {
 
         // Verify the update was applied
         assertThat(oppdatertKort.aktivitetskortId).isEqualTo(aktivitetskortId)
-        assertThat(oppdatertKort.aktivitetsType).isEqualTo(RekrutteringstreffType.akaasType)
+        assertThat(oppdatertKort.aktivitetsType).isEqualTo(RekrutteringstreffType.dbType)
         assertThat(oppdatertKort.tittel).isEqualTo(nyTittel)
         assertThat(oppdatertKort.fraTid).isEqualTo(nyFraTid.toLocalDate())
         assertThat(oppdatertKort.tilTid).isEqualTo(nyTilTid.toLocalDate())

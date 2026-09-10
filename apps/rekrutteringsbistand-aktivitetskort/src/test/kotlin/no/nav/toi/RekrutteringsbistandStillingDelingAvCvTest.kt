@@ -106,7 +106,7 @@ class RekrutteringsbistandStillingDelingAvCvTest {
             assertThat(this[0].detaljer).isEqualToIgnoringWhitespace( expectedDetaljer)
             assertThat(this[0].aktivitetskortId).isEqualTo(inspektør.message(0)["aktivitetskortuuid"].asText().toUUID())
             assertThat(this[0].aktivitetsStatus).isEqualTo(AktivitetsStatus.FORSLAG.name)
-            assertThat(this[0].aktivitetsType).isEqualTo(DeleCvMedArbeidsgiverType.akaasType)
+            assertThat(this[0].aktivitetsType).isEqualTo(DeleCvMedArbeidsgiverType.dbType)
             assertThat(this[0].opprettetAv).isEqualTo(opprettetAv)
             assertThat(this[0].opprettetAvType).isEqualTo(EndretAvType.NAVIDENT.name)
             assertThat(this[0].opprettetTidspunkt).isBetween(opprettetTidspunkt, ZonedDateTime.now())
