@@ -80,6 +80,7 @@ class RekrutteringstreffController(
 
     @OpenApi(
         summary = "Opprett rekrutteringstreff",
+        description = "Oppretter og kontor bestemmes fra innlogget bruker. Valgfritt eierNavn fra frontend lagres som visningsnavn; manglende eller blankt navn lagres som NULL.",
         operationId = "opprettRekrutteringstreff",
         security = [OpenApiSecurity(name = "BearerAuth")],
         requestBody = OpenApiRequestBody(
@@ -88,7 +89,8 @@ class RekrutteringstreffController(
                 example = """
                     {
                         "tittel": "Nytt rekrutteringstreff",
-                        "kategori": "WORKOP"
+                        "kategori": "WORKOP",
+                        "eierNavn": "Kari Testesen"
                     }
                 """
             )]
@@ -115,6 +117,7 @@ class RekrutteringstreffController(
             opprettetAvPersonNavident = ctx.extractNavIdent(),
             opprettetAvNavkontorEnhetId = kontorId,
             opprettetAvTidspunkt = ZonedDateTime.now(),
+            opprettetAvPersonNavn = inputDto.eierNavn?.trim()?.takeIf { it.isNotEmpty() },
         )
         val id = rekrutteringstreffService.opprett(internalDto)
         ctx.status(201).json(mapOf("id" to id.toString()))

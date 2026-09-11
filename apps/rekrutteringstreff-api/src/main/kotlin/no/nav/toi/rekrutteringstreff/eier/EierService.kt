@@ -41,12 +41,12 @@ class EierService(
         return treff.kontorer.any { it in tilknyttedeEnheterSet }
     }
 
-    fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String) {
+    fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
         require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
         val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
 
-        eierRepository.leggTil(connection, treffId, navIdent, kontorEnhetId)
+        eierRepository.leggTil(connection, treffId, navIdent, kontorEnhetId, eierNavn)
         if (!eiere.contains(navIdent)) {
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
@@ -63,9 +63,9 @@ class EierService(
         }
     }
 
-    fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String) {
+    fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
         dataSource.executeInTransaction { connection ->
-            leggTilEierMedKontor(connection, treffId, navIdent, kontorEnhetId)
+            leggTilEierMedKontor(connection, treffId, navIdent, kontorEnhetId, eierNavn)
         }
     }
 

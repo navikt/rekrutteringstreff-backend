@@ -83,8 +83,8 @@ class RekrutteringstreffRepository(
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)
                 RETURNING rekrutteringstreff_id, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt
             )
-            INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_tidspunkt, lagt_til_av)
-            SELECT rekrutteringstreff_id, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $opprettetAvPersonNavident
+            INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_tidspunkt, lagt_til_av, eier_navn)
+            SELECT rekrutteringstreff_id, $opprettetAvPersonNavident, $opprettetAvKontorEnhetid, $opprettetAvTidspunkt, $opprettetAvPersonNavident, ?
             FROM nytt_treff
             RETURNING rekrutteringstreff_id
             """
@@ -101,6 +101,7 @@ class RekrutteringstreffRepository(
             setArray(++i, connection.createArrayOf("text", arrayOf(dto.opprettetAvNavkontorEnhetId)))
             setTimestamp(++i, Timestamp.from(Instant.now()))
             setString(++i, dto.opprettetAvPersonNavident)
+            setString(++i, dto.opprettetAvPersonNavn)
         }.executeQuery().run { next(); getLong(1) }
 
         return Pair(nyTreffId, dbId)

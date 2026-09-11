@@ -4,5 +4,6 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 
 data class OpprettRekrutteringstreffDto(
     val tittel: String = "Nytt rekrutteringstreff",
-    val kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
+    val kategori: RekrutteringstreffKategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF,
+    val eierNavn: String? = null,
 )
