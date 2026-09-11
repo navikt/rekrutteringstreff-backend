@@ -5,5 +5,6 @@ data class ArbeidsgiverSlettingBlokkertDto(
     val hint: String,
     val personerIRom: Int,
     val interesser: Int,
+    val intervjufordelinger: Int,
     val vurderinger: Int,
 )

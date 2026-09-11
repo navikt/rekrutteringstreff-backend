@@ -2,12 +2,32 @@ package no.nav.toi.treffgjennomføring.møteplan
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.tilListe
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import java.sql.Connection
 import java.time.LocalTime
 
 class MøteplanRepository {
+
+    fun harMøteplan(connection: Connection, treffId: TreffId): Boolean {
+        val sql = """
+            SELECT EXISTS (
+                SELECT 1 FROM moteoppsett m
+                JOIN treffgjennomforing t ON t.treffgjennomforing_id = m.treffgjennomforing_id
+                WHERE t.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            ) OR EXISTS (
+                SELECT 1 FROM jobbsoker_romtildeling r
+                JOIN jobbsoker j ON j.jobbsoker_id = r.jobbsoker_id
+                WHERE r.rekrutteringstreff_id = rt.rekrutteringstreff_id AND j.status != 'SLETTET'
+            )
+            FROM rekrutteringstreff rt WHERE rt.id = ?
+        """.trimIndent()
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
+        }
+    }
 
     fun hentMøteplan(connection: Connection, treffkontekst: Treffkontekst, oppmøte: List<PersonTreffId>): Møteplan {
         val møteoppsett = hentMøteoppsett(connection, treffkontekst.treffDbId)

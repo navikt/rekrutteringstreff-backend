@@ -149,9 +149,10 @@ object ExceptionMapping {
             ctx.status(409).json(
                 OppmøteBlokkertDto(
                     feil = "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.",
-                    hint = "Fjern interessene og nullstill statusen først.",
+                    hint = e.registreringer.lagHint(),
                     registreringer = RegistreringerDto(
                         interesser = e.registreringer.interesser,
+                        intervjufordelinger = e.registreringer.intervjufordelinger,
                         vurderinger = e.registreringer.vurderinger,
                     ),
                 )
@@ -164,8 +165,9 @@ object ExceptionMapping {
                     feil = e.message ?: "Arbeidsgiveren har registreringer og kan ikke slettes.",
                     hint = e.lagHint(),
                     personerIRom = e.registreringer.personerIRom,
-                    interesser = e.registreringer.interesser,
-                    vurderinger = e.registreringer.vurderinger,
+                    interesser = e.registreringer.treffregistreringer.interesser,
+                    intervjufordelinger = e.registreringer.treffregistreringer.intervjufordelinger,
+                    vurderinger = e.registreringer.treffregistreringer.vurderinger,
                 )
             )
         }

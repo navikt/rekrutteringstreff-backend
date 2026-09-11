@@ -19,10 +19,13 @@ import no.nav.toi.jobbsoker.Etternavn
 import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
+import no.nav.toi.jobbsoker.JobbsøkerStatus
 import no.nav.toi.jobbsoker.PersonTreffId
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.treffgjennomføring.dto.ArbeidsgiverIntervjufordelingDto
+import no.nav.toi.treffgjennomføring.matching.ArbeidsgiverIntervjufordeling
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterAll
@@ -32,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.net.http.HttpRequest
@@ -955,7 +959,255 @@ class TreffgjennomføringKomponentTest {
         assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(annet)).hasSize(1)
     }
 
+    @Test
+    fun `eldre romplasseringer uten møteoppsett bevares ved tillegg og sletting`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff, "00000000000")
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+        flyttTilRom(treff, person, 2)
+        val tomArbeidsgiver = ArbeidsgiverTreffId(lagretRotasjon(treff).entries.single { it.value == 1 }.key)
+        db.dataSource.connection.use { connection ->
+            connection.prepareStatement(
+                """
+                DELETE FROM moteoppsett WHERE treffgjennomforing_id IN (
+                    SELECT t.treffgjennomforing_id FROM treffgjennomforing t
+                    JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = t.rekrutteringstreff_id
+                    WHERE rt.id = ?
+                )
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                assertThat(stmt.executeUpdate()).isEqualTo(1)
+            }
+        }
+
+        val ny = opprettArbeidsgiverViaApi(treff, "000000001")
+        assertThat(lagredeRom(treff)).containsExactlyEntriesOf(mapOf(person.somString to 2))
+        assertThat(lagretRotasjon(treff)[ny.somString]).isEqualTo(3)
+        assertThat(slettArbeidsgiver(treff, tomArbeidsgiver).statusCode()).isEqualTo(204)
+        assertThat(lagredeRom(treff)).containsExactlyEntriesOf(mapOf(person.somString to 1))
+        assertThat(lagretRotasjon(treff)[ny.somString]).isEqualTo(2)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `registreringer blokkerer sletting på vanlig treff uten møteplan`(medVurdering: Boolean) {
+        val treff = vanligTreff()
+        val person = jobbsøker(treff, "00000000000")
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        val registrert = if (medVurdering) {
+            vurderingFor(treff, person, ag, ""","vurderingsstatus":"AKTUELL"""")
+        } else {
+            interesse(treff, person, ag, true)
+        }
+        assertThat(registrert.statusCode()).isEqualTo(200)
+        assertThat(aggregat(treff)["rom"]).isEmpty()
+
+        val respons = slettArbeidsgiver(treff, ag)
+
+        assertThat(respons.statusCode()).isEqualTo(409)
+        val felt = if (medVurdering) "vurderinger" else "interesser"
+        assertThat(mapper.readTree(respons.body())[felt].asInt()).isEqualTo(1)
+        assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(1)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `tillegg ser møteoppsett som opprettes mens det venter på trefflåsen`(medBehov: Boolean) {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff, "00000000000")
+        oppmøte(treff, person, møtt = true)
+
+        val ny = medVentendeOperasjon(treff, { opprettArbeidsgiverViaApi(treff, "000000001", medBehov) }) { connection ->
+            connection.prepareStatement(
+                """
+                INSERT INTO moteoppsett (treffgjennomforing_id, starttidspunkt, varighet_min)
+                SELECT t.treffgjennomforing_id, '09:00', 15 FROM treffgjennomforing t
+                JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = t.rekrutteringstreff_id
+                WHERE rt.id = ?
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setObject(1, treff.somUuid)
+                assertThat(stmt.executeUpdate()).isEqualTo(1)
+            }
+        }
+
+        assertThat(lagretRotasjon(treff)[ny.somString]).isEqualTo(2)
+        assertThat(lagredeRom(treff)).containsExactlyEntriesOf(mapOf(person.somString to 1))
+        assertThat(aggregat(treff)["rom"].last()["jobbsøkere"]).isEmpty()
+    }
+
+    @ParameterizedTest
+    @CsvSource("true,false", "false,false", "true,true", "false,true")
+    fun `intervjufordeling telles separat og blokkerer både arbeidsgiversletting og fjerning av oppmøte`(
+        inkludert: Boolean,
+        medInteresse: Boolean,
+    ) {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff, "00000000000")
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        if (medInteresse) assertThat(interesse(treff, person, ag, true).statusCode()).isEqualTo(200)
+        assertThat(
+            intervjufordeling(
+                treff, ag,
+                inkluderte = if (inkludert) listOf(person) else emptyList(),
+                ekskluderte = if (inkludert) emptyList() else listOf(person),
+            ).statusCode()
+        ).isEqualTo(200)
+        val før = aggregat(treff)
+        val forventetHint = if (medInteresse) {
+            "Fjern registrerte interesser og fjern registrerte intervjufordelinger først."
+        } else {
+            "Fjern registrerte intervjufordelinger først."
+        }
+
+        val sletting = slettArbeidsgiver(treff, ag)
+        assertThat(sletting.statusCode()).isEqualTo(409)
+        val arbeidsgiverFeil = mapper.readTree(sletting.body())
+        assertThat(arbeidsgiverFeil["interesser"].asInt()).isEqualTo(if (medInteresse) 1 else 0)
+        assertThat(arbeidsgiverFeil["intervjufordelinger"].asInt()).isEqualTo(1)
+        assertThat(arbeidsgiverFeil["hint"].asText()).isEqualTo(forventetHint)
+
+        val oppmøteSvar = oppmøte(treff, person, møtt = false)
+        assertThat(oppmøteSvar.statusCode()).isEqualTo(409)
+        val oppmøteFeil = mapper.readTree(oppmøteSvar.body())
+        assertThat(oppmøteFeil["registreringer"]["interesser"].asInt()).isEqualTo(if (medInteresse) 1 else 0)
+        assertThat(oppmøteFeil["registreringer"]["intervjufordelinger"].asInt()).isEqualTo(1)
+        assertThat(oppmøteFeil["hint"].asText()).isEqualTo(forventetHint)
+        assertThat(aggregat(treff)).isEqualTo(før)
+
+        assertThat(intervjufordeling(treff, ag).statusCode()).isEqualTo(200)
+        if (medInteresse) assertThat(interesse(treff, person, ag, false).statusCode()).isEqualTo(200)
+        assertThat(oppmøte(treff, person, møtt = false).statusCode()).isEqualTo(200)
+        assertThat(slettArbeidsgiver(treff, ag).statusCode()).isEqualTo(204)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["interesse", "intervjufordeling", "vurdering"])
+    fun `vanlig jobbsøkersletting blokkeres av registreringer også med status LAGT_TIL`(type: String) {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff, "00000000000")
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+        val registrert = when (type) {
+            "interesse" -> interesse(treff, person, ag, true)
+            "intervjufordeling" -> intervjufordeling(treff, ag, inkluderte = listOf(person))
+            else -> vurderingFor(treff, person, ag, ""","vurderingsstatus":"AKTUELL"""")
+        }
+        assertThat(registrert.statusCode()).isEqualTo(200)
+        db.dataSource.connection.use { ctx.jobbsøkerRepository.endreStatus(it, person, JobbsøkerStatus.LAGT_TIL) }
+        val før = aggregat(treff)
+        val hendelserFør = antallJobbsøkerhendelser(treff)
+
+        assertThat(slettJobbsøker(treff, person).statusCode()).isEqualTo(422)
+        assertThat(aggregat(treff)).isEqualTo(før)
+        assertThat(antallJobbsøkerhendelser(treff)).isEqualTo(hendelserFør)
+        assertThat(ctx.jobbsøkerService.hentJobbsøkere(treff).single().status).isEqualTo(JobbsøkerStatus.LAGT_TIL)
+    }
+
+    @Test
+    fun `lovlig jobbsøkersletting rydder egen gammel romplassering uten å flytte andre`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val første = jobbsøker(treff, "00000000000")
+        val andre = jobbsøker(treff, "00000000001")
+        oppmøte(treff, første, møtt = true)
+        oppmøte(treff, andre, møtt = true)
+        møteoppsett(treff)
+        val romFør = lagredeRom(treff)
+        db.dataSource.connection.use { ctx.jobbsøkerRepository.endreStatus(it, første, JobbsøkerStatus.LAGT_TIL) }
+
+        assertThat(slettJobbsøker(treff, første).statusCode()).isEqualTo(200)
+        assertThat(lagredeRom(treff)).isEqualTo(romFør - første.somString)
+        assertThat(slettJobbsøker(treff, første).statusCode()).isEqualTo(404)
+        assertThat(ctx.jobbsøkerService.hentJobbsøkerHendelser(treff).count { it.hendelsestype == JobbsøkerHendelsestype.SLETTET })
+            .isEqualTo(1)
+    }
+
+    @Test
+    fun `jobbsøkersletting avviser feil treff selv om samme person finnes på begge treff`() {
+        val førsteTreff = workOpTreff()
+        val andreTreff = workOpTreff()
+        val første = jobbsøker(førsteTreff, "00000000000")
+        jobbsøker(andreTreff, "00000000000")
+
+        assertThat(slettJobbsøker(andreTreff, første).statusCode()).isEqualTo(404)
+        assertThat(ctx.jobbsøkerService.hentJobbsøkere(førsteTreff)).hasSize(1)
+        assertThat(ctx.jobbsøkerService.hentJobbsøkere(andreTreff)).hasSize(1)
+    }
+
+    @Test
+    fun `jobbsøkersletting ser oppmøte som ble registrert mens den ventet på trefflåsen`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff, "00000000000")
+
+        val svar = medVentendeOperasjon(treff, { slettJobbsøker(treff, person) }) { connection ->
+            ctx.jobbsøkerService.registrerOppmøte(connection, person)
+        }
+
+        assertThat(svar.statusCode()).isEqualTo(422)
+        assertThat(oppmøteliste(treff)).containsExactly(person.somString)
+        assertThat(antallHendelser(treff, "SLETTET")).isZero()
+    }
+
+    @Test
+    fun `jobbsøkersletting ser intervjufordeling som ble lagret mens den ventet på trefflåsen`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff, "00000000000")
+        val ag = aktivArbeidsgiver(treff)
+
+        val svar = medVentendeOperasjon(treff, { slettJobbsøker(treff, person) }) { connection ->
+            ctx.matchingRepository.erstattIntervjufordelinger(
+                connection,
+                listOf(ArbeidsgiverIntervjufordeling(ag, listOf(person), emptyList())),
+                ctx.treffkontekstRepository.krevKontekst(connection, treff),
+            )
+        }
+
+        assertThat(svar.statusCode()).isEqualTo(422)
+        assertThat(aggregat(treff)["intervjufordelinger"]).hasSize(1)
+        assertThat(antallHendelser(treff, "SLETTET")).isZero()
+    }
+
+    @Test
+    fun `oppmøte avviser jobbsøker slettet mens det ventet på trefflåsen`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff, "00000000000")
+
+        val svar = medVentendeOperasjon(treff, { oppmøte(treff, person, møtt = true) }) { connection ->
+            ctx.jobbsøkerRepository.endreStatus(connection, person, JobbsøkerStatus.SLETTET)
+        }
+
+        assertThat(svar.statusCode()).isEqualTo(400)
+        assertThat(oppmøteliste(treff)).isEmpty()
+        assertThat(lagredeRom(treff)).isEmpty()
+    }
+
     // --- hjelpere -------------------------------------------------------------
+
+    private fun slettJobbsøker(treff: TreffId, person: PersonTreffId): HttpResponse<String> = send(
+        HttpRequest.newBuilder().DELETE(),
+        "/api/rekrutteringstreff/${treff.somString}/jobbsoker/${person.somString}/slett",
+        eier,
+        listOf(arbeidsgiverrettet),
+    )
+
+    private fun intervjufordeling(
+        treff: TreffId,
+        arbeidsgiver: ArbeidsgiverTreffId,
+        inkluderte: List<PersonTreffId> = emptyList(),
+        ekskluderte: List<PersonTreffId> = emptyList(),
+    ): HttpResponse<String> = put(
+        treff,
+        "/treffgjennomforing/intervjufordeling",
+        mapper.writeValueAsString(
+            ArbeidsgiverIntervjufordelingDto(
+                arbeidsgiver.somString, inkluderte.map { it.somString }, ekskluderte.map { it.somString },
+            )
+        ),
+    )
 
     private fun opprettArbeidsgiverViaApi(
         treff: TreffId,
@@ -1011,18 +1263,18 @@ class TreffgjennomføringKomponentTest {
         }
     }
 
-    private fun medVentendeOperasjon(
+    private fun <T> medVentendeOperasjon(
         treff: TreffId,
-        operasjon: () -> HttpResponse<String>,
+        operasjon: () -> T,
         førFrigivelse: (Connection) -> Unit,
-    ): HttpResponse<String> = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+    ): T = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
         db.dataSource.connection.use { connection ->
             connection.autoCommit = false
             connection.låsTreff(treff)
             val pid = connection.createStatement().use { stmt ->
                 stmt.executeQuery("SELECT pg_backend_pid()").use { it.next(); it.getInt(1) }
             }
-            val ventende = executor.submit<HttpResponse<String>> { operasjon() }
+            val ventende = executor.submit<T> { operasjon() }
             try {
                 val frist = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
                 var venter = false

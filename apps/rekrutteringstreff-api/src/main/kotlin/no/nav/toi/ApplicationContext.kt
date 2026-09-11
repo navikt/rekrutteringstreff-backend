@@ -50,6 +50,7 @@ import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanService
 import no.nav.toi.treffgjennomføring.TreffgjennomføringService
 import no.nav.toi.treffgjennomføring.TreffkontekstRepository
+import no.nav.toi.treffgjennomføring.RegistreringerRepository
 
 @Suppress("MemberVisibilityCanBePrivate")
 class ApplicationContext(val infra: InfrastructureContext = InfrastructureContext()) {
@@ -84,6 +85,7 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val møteplanRepository = MøteplanRepository()
     val matchingRepository = MatchingRepository()
     val oppfølgingRepository = OppfølgingRepository()
+    val registreringerRepository = RegistreringerRepository()
     val treffgjennomføringReader = TreffgjennomføringReader(
         stegRepository, oppmøteRepository, møteplanRepository, matchingRepository, oppfølgingRepository,
     )
@@ -96,10 +98,12 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
         dataSource = infra.dataSource,
         jobbsøkerRepository = jobbsøkerRepository,
         kandidatsøkKlient = infra.kandidatsøkKlient,
+        registreringerRepository = registreringerRepository,
+        møteplanRepository = møteplanRepository,
     )
     val arbeidsgiverService = ArbeidsgiverService(
         infra.dataSource, arbeidsgiverRepository, JacksonConfig.mapper,
-        treffkontekstRepository, møteplanRepository, oppmøteRepository,
+        treffkontekstRepository, møteplanRepository, oppmøteRepository, registreringerRepository,
     )
     val eierService = EierService(eierRepository, rekrutteringstreffRepository, infra.dataSource)
     val rekrutteringstreffService = RekrutteringstreffService(
@@ -126,9 +130,8 @@ class ApplicationContext(val infra: InfrastructureContext = InfrastructureContex
     val oppmøteService = OppmøteService(
         treffgjennomføringWriter = treffgjennomføringWriter,
         oppmøteRepository = oppmøteRepository,
-        matchingRepository = matchingRepository,
+        registreringerRepository = registreringerRepository,
         møteplanRepository = møteplanRepository,
-        oppfølgingRepository = oppfølgingRepository,
         jobbsøkerService = jobbsøkerService,
         hendelseWriter = hendelseWriter,
     )

@@ -6,10 +6,13 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.toi.exception.JobbsøkerIkkeFunnetException
 import no.nav.toi.exception.JobbsøkerIkkeSynligException
 import no.nav.toi.executeInTransaction
+import no.nav.toi.medLåstTreff
 import no.nav.toi.jobbsoker.dto.JobbsøkerHendelseMedJobbsøkerData
 import no.nav.toi.jobbsoker.sok.*
 import no.nav.toi.kandidatsok.KandidatsøkKlient
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.treffgjennomføring.RegistreringerRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
@@ -26,6 +29,8 @@ class JobbsøkerService(
     private val jobbsøkerSokRepository: JobbsøkerSokRepository = JobbsøkerSokRepository(dataSource),
     private val jobbsøkerFormidlingSokRepository: JobbsøkerFormidlingSokRepository = JobbsøkerFormidlingSokRepository(dataSource),
     private val kandidatsøkKlient: KandidatsøkKlient? = null,
+    private val registreringerRepository: RegistreringerRepository = RegistreringerRepository(),
+    private val møteplanRepository: MøteplanRepository = MøteplanRepository(),
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private val teamLog = TeamLogLogger.teamlog(logger)
@@ -254,17 +259,17 @@ class JobbsøkerService(
     }
 
     fun markerSlettet(personTreffId: PersonTreffId, treffId: TreffId, navIdent: String): MarkerSlettetResultat {
-        val fødselsnummer = jobbsøkerRepository.hentFødselsnummer(personTreffId)
-            ?: return MarkerSlettetResultat.IKKE_FUNNET
+        val resultat = dataSource.medLåstTreff(treffId) { connection ->
+            val jobbsøker = jobbsøkerRepository.hentSlettestatus(connection, treffId, personTreffId)
+                ?: return@medLåstTreff MarkerSlettetResultat.IKKE_FUNNET
+            if (jobbsøker.status != JobbsøkerStatus.LAGT_TIL) {
+                return@medLåstTreff MarkerSlettetResultat.IKKE_TILLATT
+            }
+            if (registreringerRepository.hentForJobbsøker(connection, jobbsøker.jobbsøkerId).finnesRegistreringer()) {
+                return@medLåstTreff MarkerSlettetResultat.IKKE_TILLATT
+            }
 
-        val jobbsøker = jobbsøkerRepository.hentJobbsøker(treffId, fødselsnummer)
-            ?: return MarkerSlettetResultat.IKKE_FUNNET
-
-        if (jobbsøker.status != JobbsøkerStatus.LAGT_TIL) {
-            return MarkerSlettetResultat.IKKE_TILLATT
-        }
-
-        dataSource.executeInTransaction { connection ->
+            møteplanRepository.slettRomForJobbsøker(connection, jobbsøker.jobbsøkerId)
             jobbsøkerRepository.leggTilHendelserForJobbsøkere(
                 connection,
                 JobbsøkerHendelsestype.SLETTET,
@@ -272,10 +277,11 @@ class JobbsøkerService(
                 navIdent
             )
             jobbsøkerRepository.endreStatus(connection, personTreffId, JobbsøkerStatus.SLETTET)
+            MarkerSlettetResultat.OK
         }
 
-        logger.info("Slettet jobbsøker $personTreffId for treff $treffId")
-        return MarkerSlettetResultat.OK
+        if (resultat == MarkerSlettetResultat.OK) logger.info("Slettet jobbsøker $personTreffId for treff $treffId")
+        return resultat
     }
 
     fun hentJobbsøkere(treffId: TreffId): List<Jobbsøker> {

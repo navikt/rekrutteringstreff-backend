@@ -8,6 +8,7 @@ import no.nav.toi.executeInTransaction
 import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.medLåstTreff
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.treffgjennomføring.RegistreringerRepository
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import no.nav.toi.treffgjennomføring.TreffkontekstRepository
 import no.nav.toi.treffgjennomføring.krevKontekst
@@ -25,14 +26,16 @@ class ArbeidsgiverService(
     private val kontekstRepository: TreffkontekstRepository,
     private val møteplanRepository: MøteplanRepository,
     private val oppmøteRepository: OppmøteRepository,
+    private val registreringerRepository: RegistreringerRepository,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     fun leggTilArbeidsgiver(arbeidsgiver: LeggTilArbeidsgiver, treffId: TreffId, navIdent: String): ArbeidsgiverTreffId {
         val arbeidsgiverTreffId = dataSource.medLåstTreff(treffId) { connection ->
-            oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
+            val harMøteplan = møteplanRepository.harMøteplan(connection, treffId)
+            if (harMøteplan) oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
             val id = opprettArbeidsgiverMedNæringskoder(connection, arbeidsgiver, treffId, navIdent)
-            oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
+            if (harMøteplan) oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
             id
         }
         logger.info("La til arbeidsgiver ${arbeidsgiver.orgnr.asString} for treff $treffId")
@@ -46,7 +49,8 @@ class ArbeidsgiverService(
         navIdent: String,
     ) {
         dataSource.medLåstTreff(treffId) { connection ->
-            oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
+            val harMøteplan = møteplanRepository.harMøteplan(connection, treffId)
+            if (harMøteplan) oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
             val reaktivert = arbeidsgiverRepository.reaktiverArbeidsgiver(connection, treffId, arbeidsgiver)
             val arbeidsgiverTreffId = if (reaktivert != null) {
                 arbeidsgiverRepository.leggTilHendelse(connection, reaktivert, ArbeidsgiverHendelsestype.REAKTIVERT, AktørType.ARRANGØR, navIdent)
@@ -63,7 +67,7 @@ class ArbeidsgiverService(
                 navIdent,
                 hendelseData = serialiserBehov(behov),
             )
-            oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
+            if (harMøteplan) oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
         }
         logger.info("La til arbeidsgiver med behov ${arbeidsgiver.orgnr.asString} for treff $treffId")
     }
@@ -116,8 +120,13 @@ class ArbeidsgiverService(
             val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
             val kontekst = kontekstRepository.krevKontekst(connection, treffId)
             val internId = kontekst.arbeidsgiverId(arbeidsgiverTreffId) ?: return@medLåstTreff false
-            oppdaterMøteplan(connection, kontekst)
-            val registreringer = arbeidsgiverRepository.sjekkRegistreringer(connection, internId, kontekst.treffDbId)
+            if (møteplanRepository.harMøteplan(connection, treffId)) {
+                oppdaterMøteplan(connection, kontekst)
+            }
+            val registreringer = ArbeidsgiverRegistreringer(
+                personerIRom = arbeidsgiverRepository.tellPersonerIRom(connection, internId, kontekst.treffDbId),
+                treffregistreringer = registreringerRepository.hentForArbeidsgiver(connection, internId),
+            )
             if (registreringer.finnesRegistreringer()) {
                 throw ArbeidsgiverKanIkkeSlettesException(registreringer)
             }

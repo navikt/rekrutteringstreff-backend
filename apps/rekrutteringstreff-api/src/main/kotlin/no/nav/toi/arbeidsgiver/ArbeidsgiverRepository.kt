@@ -367,8 +367,8 @@ class ArbeidsgiverRepository(
         return true
     }
 
-    fun sjekkRegistreringer(connection: Connection, arbeidsgiverId: Long, treffDbId: Long): ArbeidsgiverRegistreringer {
-        val personerIRom = connection.prepareStatement(
+    fun tellPersonerIRom(connection: Connection, arbeidsgiverId: Long, treffDbId: Long): Int =
+        connection.prepareStatement(
             """
             SELECT COUNT(*)
             FROM jobbsoker_romtildeling r
@@ -381,34 +381,6 @@ class ArbeidsgiverRepository(
             stmt.setLong(2, arbeidsgiverId)
             stmt.executeQuery().use { it.next(); it.getInt(1) }
         }
-
-        val antallInteresser = connection.prepareStatement(
-            "SELECT COUNT(*) FROM interesse WHERE arbeidsgiver_id = ?"
-        ).use { stmt ->
-            stmt.setLong(1, arbeidsgiverId)
-            stmt.executeQuery().use { if (it.next()) it.getInt(1) else 0 }
-        }
-
-        val antallIntervjufordeling = connection.prepareStatement(
-            "SELECT COUNT(*) FROM intervjufordeling WHERE arbeidsgiver_id = ?"
-        ).use { stmt ->
-            stmt.setLong(1, arbeidsgiverId)
-            stmt.executeQuery().use { if (it.next()) it.getInt(1) else 0 }
-        }
-
-        val antallVurderinger = connection.prepareStatement(
-            "SELECT COUNT(*) FROM vurdering WHERE arbeidsgiver_id = ?"
-        ).use { stmt ->
-            stmt.setLong(1, arbeidsgiverId)
-            stmt.executeQuery().use { if (it.next()) it.getInt(1) else 0 }
-        }
-
-        return ArbeidsgiverRegistreringer(
-            personerIRom = personerIRom,
-            interesser = antallInteresser + antallIntervjufordeling,
-            vurderinger = antallVurderinger,
-        )
-    }
 
     private fun finnesArbeidsgiver(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): Boolean {
         return connection.prepareStatement("SELECT 1 FROM arbeidsgiver WHERE id = ?").use { ps ->

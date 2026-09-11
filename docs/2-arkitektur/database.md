@@ -302,13 +302,30 @@ eventuelle beregnede plasseringer fra eldre data. Dermed får nye arbeidsgivere
 tomme rom uten at eksisterende deltakere flyttes. Ved lovlig sletting fjernes
 det tomme rommet, og høyere romnumre justeres samlet.
 
+Møteplanen oppdateres direkte i arbeidsgiver- og oppmøteservicene på samme
+databaseforbindelse som endringen. De sjekker først om møteoppsett eller romplasseringer for
+ikke-slettede jobbsøkere finnes. Uten slike data hoppes møteplanoppdateringen
+over. Ved tillegg erstatter én eksistenssjekk de 14 lesespørringene før og
+etter endringen. Sjekken gjøres under trefflåsen og er uavhengig av miljø og
+funksjonstoggel; kontroll av trefftilhørighet og slettesperrer beholdes.
+
 Disse operasjonene og øvrige skrivinger i treffgjennomføringen bruker
 `medLåstTreff`: radlås på treffet og `READ COMMITTED`. Etter venting på låsen
 må neste spørring se endringene som nettopp ble lagret. GET beholder
 `REPEATABLE READ` og skriver verken romplasseringer eller arbeidsgiverrotasjon.
 
-Sletting blokkeres av personer i rommet, interesser, intervjufordeling og
-vurderinger. Formidling alene blokkerer ikke sletting.
+Arbeidsgiversletting blokkeres av personer i rommet, interesser,
+intervjufordeling og vurderinger. Formidling alene blokkerer ikke sletting.
+`RegistreringerRepository` og `Registreringer` gir felles telling og
+ryddehint for interesser, intervjufordelinger og vurderinger. Intervjufordeling
+telles separat, også når den finnes uten interesse.
+
+Jobbsøkere får ikke rom bare ved å legges til på treffet; romplassering følger
+oppmøtet. Oppmøte kan fjernes fra et rom, men ikke så lenge noen av de tre
+registreringstypene finnes. Vanlig sletting fra treffet krever fortsatt status
+`LAGT_TIL` og ingen slike registreringer. Trefftilhørighet, synlighet, status
+og registreringer kontrolleres i samme transaksjon under trefflåsen og radlås
+på jobbsøkeren. Ved lovlig sletting fjernes eventuell gammel romplassering.
 
 ## Flyway-migrasjoner
 
