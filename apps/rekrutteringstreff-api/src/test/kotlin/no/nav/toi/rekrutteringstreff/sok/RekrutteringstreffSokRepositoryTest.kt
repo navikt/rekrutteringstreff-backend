@@ -814,7 +814,8 @@ class RekrutteringstreffSokRepositoryTest {
         )
 
         val resultat = repository.sokMedAggregering(
-            navIdent = "A123456", kontorId = "0315",
+            navIdent = "A123456",
+            kontorId = "0315",
             kategorier = null,
             statuser = null,
             publisertStatuser = null,
@@ -825,6 +826,7 @@ class RekrutteringstreffSokRepositoryTest {
             side = 1,
             antallPerSide = 25,
             erUtvikler = true,
+            fritekst = null,
         )
 
         assertThat(resultat.treff).extracting("id")
