@@ -26,6 +26,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
         antallPerSide: Int,
+        erUtvikler: Boolean = false,
     ): SokMedAggregeringResultat {
         val (whereForKategoriAggregering, paramsForKategoriAggregering) = byggWhere(
             navIdent = navIdent,
@@ -38,6 +39,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kommunenumre = kommunenumre,
             fritekst = fritekst,
             visning = visning,
+            erUtvikler = erUtvikler,
         )
         val (whereForStatusaggregering, paramsForStatusaggregering) = byggWhere(
             navIdent = navIdent,
@@ -50,6 +52,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kommunenumre = kommunenumre,
             fritekst = fritekst,
             visning = visning,
+            erUtvikler = erUtvikler,
         )
 
         val (whereForFylkesnummerAggregering, paramsForFylkesnummerAggregering) = byggWhere(
@@ -63,6 +66,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kommunenumre = null,
             fritekst = fritekst,
             visning = visning,
+            erUtvikler = erUtvikler,
         )
 
         val (whereForKommunenummerAggregering, paramsForKommunenummerAggregering) = byggWhere(
@@ -76,6 +80,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kommunenumre = null,
             fritekst = fritekst,
             visning = visning,
+            erUtvikler = erUtvikler,
         )
 
         val (whereForTreffliste, paramsForTreffliste) = byggWhere(
@@ -89,6 +94,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kommunenumre = kommunenumre,
             fritekst = fritekst,
             visning = visning,
+            erUtvikler = erUtvikler,
         )
 
         return dataSource.connection.use { conn ->
@@ -318,11 +324,12 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kommunenumre: List<String>?,
         fritekst: List<String>?,
         visning: Visning,
+        erUtvikler: Boolean = false,
     ): Pair<String, List<SqlParam>> {
         val conditions = listOfNotNull(
             byggVisningsCondition(visning, navIdent, kontorId),
             byggUtkastSynlighetCondition(navIdent),
-            byggWorkOpSynlighetCondition(navIdent),
+            byggWorkOpSynlighetCondition(navIdent, erUtvikler),
             byggKategoriCondition(kategorier),
             byggStatusCondition(statuser, publisertStatuser),
             byggKontorCondition(kontorer),
@@ -365,7 +372,8 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         )
     }
 
-    private fun byggWorkOpSynlighetCondition(navIdent: String?): Condition {
+    private fun byggWorkOpSynlighetCondition(navIdent: String?, erUtvikler: Boolean): Condition? {
+        if (erUtvikler) return null
         return Condition(
             clause = "(kategori <> 'WORKOP' OR ? = ANY(eiere))",
             params = listOf(SqlParam(navIdent ?: "", ParamType.STRING)),

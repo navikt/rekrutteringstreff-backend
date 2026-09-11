@@ -795,6 +795,50 @@ class RekrutteringstreffSokRepositoryTest {
     }
 
     @Test
+    fun `skal returnere andres WorkOp og inkludere i aggregering nar bruker er utvikler`() {
+        val egetWorkOp = opprettTreff(
+            navIdent = "A123456", tittel = "Mitt WorkOp",
+            kategori = RekrutteringstreffKategori.WORKOP
+        )
+        val egetRekrutteringstreff = opprettTreff(
+            navIdent = "A123456", tittel = "Mitt rekrutteringstreff",
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
+        )
+        val andresWorkOp = opprettTreff(
+            navIdent = "B654321", tittel = "Andres WorkOp",
+            kategori = RekrutteringstreffKategori.WORKOP
+        )
+        val andresRekrutteringstreff = opprettTreff(
+            navIdent = "B654321", tittel = "Andres rekrutteringstreff",
+            kategori = RekrutteringstreffKategori.REKRUTTERINGSTREFF
+        )
+
+        val resultat = repository.sokMedAggregering(
+            navIdent = "A123456", kontorId = "0315",
+            kategorier = null,
+            statuser = null,
+            publisertStatuser = null,
+            kontorer = null,
+            fylkesnumre = null,
+            kommunenumre = null,
+            visning = Visning.ALLE,
+            side = 1,
+            antallPerSide = 25,
+            erUtvikler = true,
+        )
+
+        assertThat(resultat.treff).extracting("id")
+            .contains(egetWorkOp.toString(), andresWorkOp.toString(), egetRekrutteringstreff.toString(), andresRekrutteringstreff.toString())
+
+        val workOpAggregering = resultat.kategoriaggregering.find { it.verdi == SokKategori.WORKOP.name }
+        val rekrutteringstreffAggregering =
+            resultat.kategoriaggregering.find { it.verdi == SokKategori.REKRUTTERINGSTREFF.name }
+
+        assertThat(workOpAggregering?.antall).isEqualTo(2)
+        assertThat(rekrutteringstreffAggregering?.antall).isEqualTo(2)
+    }
+
+    @Test
     fun `fritekst matcher tittel`() {
         opprettTreff(tittel = "Rekrutteringstreff for sveisere")
         opprettTreff(tittel = "Jobbtreff for helsefagarbeidere")

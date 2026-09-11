@@ -208,8 +208,9 @@ class RekrutteringstreffSokController(
         } else {
             null
         }
+        val erUtvikler = ctx.authenticatedUser().erUtvikler()
 
-        ctx.status(200).json(sokService.sok(request, navIdent, kontorId))
+        ctx.status(200).json(sokService.sok(request, navIdent, kontorId, erUtvikler))
     }
 }
 
