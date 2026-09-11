@@ -21,6 +21,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kontorer: List<String>?,
         fylkesnumre: List<String>?,
         kommunenumre: List<String>?,
+        fritekst: List<String>?,
         visning: Visning,
         sortering: Sortering = Sortering.SIST_OPPDATERTE,
         side: Int,
@@ -36,6 +37,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = kommunenumre,
+            fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
         )
@@ -48,6 +50,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = kommunenumre,
+            fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
         )
@@ -61,6 +64,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = null,
             kommunenumre = null,
+            fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
         )
@@ -74,6 +78,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = null,
+            fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
         )
@@ -87,6 +92,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             kontorer = kontorer,
             fylkesnumre = fylkesnumre,
             kommunenumre = kommunenumre,
+            fritekst = fritekst,
             visning = visning,
             erUtvikler = erUtvikler,
         )
@@ -316,6 +322,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         kontorer: List<String>?,
         fylkesnumre: List<String>?,
         kommunenumre: List<String>?,
+        fritekst: List<String>?,
         visning: Visning,
         erUtvikler: Boolean = false,
     ): Pair<String, List<SqlParam>> {
@@ -328,6 +335,7 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             byggKontorCondition(kontorer),
             byggFylkesnummerCondition(fylkesnumre),
             byggKommunenummerCondition(kommunenumre),
+            byggFritekstCondition(fritekst),
         )
 
         val whereClause = conditions
@@ -449,6 +457,36 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
         return Condition(
             clause = "kommunenummer = ANY(?::text[])",
             params = listOf(SqlParam(kommunenumre, ParamType.STRING_ARRAY)),
+        )
+    }
+
+    private fun byggFritekstCondition(fritekst: List<String>?): Condition? {
+        val ord = fritekst
+            ?.mapNotNull { it.trim().takeIf(String::isNotEmpty) }
+            ?.takeIf { it.isNotEmpty() }
+            ?: return null
+
+        val clauses = mutableListOf<String>()
+        val params = mutableListOf<SqlParam>()
+
+        ord.forEach { term ->
+            clauses += """
+            rekrutteringstreff_id IN (
+                SELECT rekrutteringstreff_id FROM rekrutteringstreff
+                 WHERE sok_tsv @@ websearch_to_tsquery('norwegian', ?)
+                UNION
+                SELECT rekrutteringstreff_id FROM arbeidsgiver
+                 WHERE status = 'AKTIV'
+                   AND sok_tsv @@ websearch_to_tsquery('norwegian', ?)
+            )
+        """.trimIndent()
+            params += SqlParam(term, ParamType.STRING)
+            params += SqlParam(term, ParamType.STRING)
+        }
+
+        return Condition(
+            clause = clauses.joinToString(" AND ", prefix = "(", postfix = ")"),
+            params = params,
         )
     }
 
