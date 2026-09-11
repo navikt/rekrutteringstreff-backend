@@ -74,7 +74,7 @@ data class InteresseRequestDto(
     val interessert: Boolean,
 )
 
-data class RegistreringerDto(val interesser: Int, val vurderinger: Int)
+data class RegistreringerDto(val interesser: Int, val intervjufordelinger: Int, val vurderinger: Int)
 
 data class OppmøteBlokkertDto(
     val feil: String,

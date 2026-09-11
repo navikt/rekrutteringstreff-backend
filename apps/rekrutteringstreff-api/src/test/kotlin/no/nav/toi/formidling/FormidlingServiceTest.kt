@@ -14,10 +14,14 @@ import io.mockk.clearMocks
 import io.mockk.mockk
 import io.mockk.verify
 import no.nav.toi.jobbsoker.*
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.jobbsoker.sok.JobbsøkerSokRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.treffgjennomføring.TreffkontekstRepository
+import no.nav.toi.treffgjennomføring.RegistreringerRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatNoException
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -55,7 +59,10 @@ class FormidlingServiceTest {
             jobbsøkerService = JobbsøkerService(db.dataSource, jobbsøkerRepository, JobbsøkerSokRepository(db.dataSource))
 
             val arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-            arbeidsgiverService = ArbeidsgiverService(db.dataSource, arbeidsgiverRepository, mapper)
+            arbeidsgiverService = ArbeidsgiverService(
+                db.dataSource, arbeidsgiverRepository, mapper,
+                TreffkontekstRepository(), MøteplanRepository(), OppmøteRepository(), RegistreringerRepository(),
+            )
 
             formidlingRepository = FormidlingRepository(db.dataSource)
             rekrutteringstreffRepository = RekrutteringstreffRepository(db.dataSource)
@@ -604,4 +611,3 @@ class FormidlingServiceTest {
         )
     }
 }
-
