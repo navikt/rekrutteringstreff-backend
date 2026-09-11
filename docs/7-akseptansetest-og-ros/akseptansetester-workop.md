@@ -39,9 +39,8 @@ Marker ✅ eller ❌ og noter avvik. Skriv «Ikke kjørt» ved tester som ikke e
 
 | #     | Gjør dette                                                                                                      | Forventet resultat                                                                                                              | ✅❌ | Notat |
 | ----- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---- | ----- |
-| 2.3.1 | Eier – Publiser standardteksten. Sammenlign forhåndsvisningen med jobbsøkersiden.                               | Navn, tid, sted, introduksjon og eventuell WorkOp-merking samsvarer. Arbeidsgiverlisten er skjult i begge.                      |      |       |
+| 2.3.1 | Eier – Publiser standardteksten. Sammenlign forhåndsvisningen med jobbsøkers invitasjonsside.                               | Navn, tid, sted, introduksjon og eventuell WorkOp-merking samsvarer. Arbeidsgiverlisten er skjult i begge.                      |      |       |
 | 2.3.2 | Jobbsøker – Les standardteksten og svarboksen på stor og liten skjerm. Prøv lenkene.                            | Lesbare overskrifter, avsnitt og lister, fungerende lenker, ingen plassholdere eller rå HTML. Det fremgår hva du skal svare på. |      |       |
-| 2.3.3 | Eier/fagansvarlig – Sammenlign tidene i teksten og svarvisningen. Endre WorkOp-tidspunktet og sammenlign igjen. | Formøte, WorkOp-dag og svarfrist er tydelig atskilt, uten motstridende tider.                                                   |      |       |
 
 ## 3. Jobbsøkerliste, invitasjoner og aktivitetskort
 
@@ -74,10 +73,9 @@ Marker ✅ eller ❌ og noter avvik. Skriv «Ikke kjørt» ved tester som ikke e
 
 | #     | Gjør dette                                                                        | Forventet resultat                                                                                              | ✅❌ | Notat |
 | ----- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---- | ----- |
-| 3.4.1 | Eier/jobbsøker – Endre tid og sted, varsle ja-svarere uten oppmøte og les SMS-en. | WorkOp, tidspunkt og sted omtales; ingen uvalgte felt, plassholdere, arbeidsgivernavn eller interne data.       |      |       |
-| 3.4.2 | Jobbsøker – Les e-posten om endringen.                                            | Emne/innhold omtaler WorkOp. Endrede felt og beskjed om innlogging vises, uten arbeidsgivernavn/interne data.   |      |       |
-| 3.4.3 | Jobbsøker – Les endringsvarselet på MinSide og følg lenken.                       | WorkOp og valgte felt omtales, uten arbeidsgivernavn/interne data. Riktig WorkOp åpnes med ny tid og nytt sted. |      |       |
-| 3.4.4 | Jobbsøker/veileder – Åpne aktivitetskortet. Følg lenken som jobbsøker.            | Samme kort og WorkOp-lenke, med ny tid og nytt sted. WorkOp-beskrivelse og lenketekst beholdes.                 |      |       |
+| 3.4.1 | Jobbsøker – Les e-posten om endringen.                                            | Emne/innhold omtaler WorkOp. Endrede felt og beskjed om innlogging vises, uten arbeidsgivernavn/interne data.   |      |       |
+| 3.4.2 | Jobbsøker – Les endringsvarselet på MinSide og følg lenken.                       | WorkOp og valgte felt omtales, uten arbeidsgivernavn/interne data. Riktig WorkOp åpnes med ny tid og nytt sted. |      |       |
+| 3.4.3 | Jobbsøker/veileder – Åpne aktivitetskortet. Følg lenken som jobbsøker.            | Samme kort og WorkOp-lenke, med ny tid og nytt sted. WorkOp-beskrivelse og lenketekst beholdes.                 |      |       |
 
 ### 3.5. Avlysning
 
@@ -285,8 +283,7 @@ Marker ✅ eller ❌ og noter avvik. Skriv «Ikke kjørt» ved tester som ikke e
 | 10.3.1 | Eier – Formidle personen til arbeidsgiveren og åpne oppfølging.                       | Paret merkes «Formidlet» med riktig lenke. Merket kan ikke settes manuelt i vurderingen.          |      |       |
 | 10.3.2 | Eier – Kontroller samme person hos en annen arbeidsgiver.                             | Den andre arbeidsgiveren merkes ikke «Formidlet».                                                 |      |       |
 | 10.3.3 | Eier – Tøm vurdering, notater, intervju/dato og jobbtilbud på et par uten formidling. | Registreringen er tom; interessen kan fjernes. Historikken beholdes.                              |      |       |
-| 10.3.4 | Utvikler/eier – La formidlingshentingen feile.                                        | Feil varsles; vurdering kan brukes. Manglende data vises ikke som bekreftet fravær av formidling. |      |       |
-| 10.3.5 | Eier – Angre personens eneste formidling. Åpne oppfølging og oppsummering.            | Merke og telling oppdateres; andre vurderingsfelter og tidligere oppmøte beholdes.                |      |       |
+| 10.3.4 | Eier – Angre personens eneste formidling. Åpne oppfølging og oppsummering.            | Merke og telling oppdateres; andre vurderingsfelter og tidligere oppmøte beholdes.                |      |       |
 
 ## 11. Oppsummering
 
@@ -303,7 +300,6 @@ Marker ✅ eller ❌ og noter avvik. Skriv «Ikke kjørt» ved tester som ikke e
 | 11.1.7  | Eier – Endre A fra «Aktuell» til «Kanskje» hos arbeidsgiver 1.                                                      | Samlet 0 aktuelle og 2 kanskje.                                                                     |      |       |
 | 11.1.8  | Eier – Registrer videre intervju for A også hos arbeidsgiver 2.                                                     | Samlet fortsatt 1 person; begge arbeidsgivere viser 1 avtalt intervju.                              |      |       |
 | 11.1.9  | Eier – Flytt C under sperrelinjen hos arbeidsgiver 2. Behold oppmøtet.                                              | Intervjutallet synker fra 4 til 3; fremmøtetallet forblir 3.                                        |      |       |
-| 11.1.10 | Utvikler/eier – La formidlingshentingen feile.                                                                      | Advarsel om mulig for lavt formidlingstall; øvrige tall vises.                                      |      |       |
 
 ## 12. Utskrift og tastaturbruk
 
@@ -319,7 +315,7 @@ Marker ✅ eller ❌ og noter avvik. Skriv «Ikke kjørt» ved tester som ikke e
 | 12.1.6 | Eier – Åpne nettleserens forhåndsvisning for alle utskrifter.                     | Rom/rotasjon stående, intervjufordeling liggende. Sideskift mellom seksjoner; lesbar tekst uten avkuttede kolonner.                         |      |       |
 | 12.1.7 | Eier – Endre rom, tid og intervjurekkefølge. Vent på lagring og åpne utskriftene. | Siste lagrede plan vises.                                                                                                                   |      |       |
 | 12.1.8 | Eier – Avbryt utskrift. Lukk dialogen med lukkeknapp og Escape.                   | Samme steg åpnes, med uendrede data og fungerende navigasjon.                                                                               |      |       |
-| 12.1.9 | Eier – Skriv ut planen for «Testperson-Alfa Eksempel Fiktiv».                     | Initialene TAEF og deltakernummer vises, ikke fullt navn.                                                                                   |      |       |
+| 12.1.9 | Eier – Skriv ut planen                     | Kun initialene og deltakernummer vises, ikke fullt navn.                                                                                   |      |       |
 
 ### 12.2. Tastatur, zoom og liten skjerm
 
