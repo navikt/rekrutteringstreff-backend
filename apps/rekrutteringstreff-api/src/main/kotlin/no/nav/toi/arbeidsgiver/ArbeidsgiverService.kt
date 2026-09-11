@@ -103,9 +103,21 @@ class ArbeidsgiverService(
     fun markerArbeidsgiverSlettet(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String): Boolean {
         val resultat = dataSource.executeInTransaction { connection ->
             val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
+            val intern = arbeidsgiverRepository.hentInternArbeidsgiver(connection, arbeidsgiverTreffId)
+            if (intern != null) {
+                val (internId, treffDbId) = intern
+                val registreringer = arbeidsgiverRepository.sjekkRegistreringer(connection, internId, treffDbId)
+                if (registreringer.finnesRegistreringer()) {
+                    throw ArbeidsgiverKanIkkeSlettesException(registreringer)
+                }
+            }
             val markert = arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId)
             if (markert) {
                 arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
+                if (intern != null) {
+                    val (internId, treffDbId) = intern
+                    arbeidsgiverRepository.fjernFraMøteplanOgKompakter(connection, internId, treffDbId)
+                }
             }
             markert
         }

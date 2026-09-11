@@ -621,6 +621,135 @@ class TreffgjennomføringKomponentTest {
         assertThat(aggregat(treff)["gjeldendeSteg"].asText()).isEqualTo("INTERESSE")
     }
 
+    @Test
+    fun `arbeidsgiver lagt til etter møteoppsett får tomt rom som personer kan flyttes til og fordeles til`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        oppmøte(treff, p1, møtt = true)
+        møteoppsett(treff)
+
+        val ag3 = arbeidsgiver(treff, "999999999")
+
+        val etterTillegg = aggregat(treff)
+        assertThat(etterTillegg["antallRom"].asInt()).isEqualTo(3)
+        assertThat(etterTillegg["rom"]).hasSize(3)
+        val ag3Rotasjon = etterTillegg["arbeidsgiverRekkefølge"].first { it["arbeidsgiverTreffId"].asText() == ag3.somString }
+        val ag3Romnummer = ag3Rotasjon["førsteRomnummer"].asInt()
+        assertThat(etterTillegg["rom"].first { it["romnummer"].asInt() == ag3Romnummer }["jobbsøkere"]).isEmpty()
+
+        // Kan flytte person til ag3 sitt rom
+        assertThat(flyttTilRom(treff, p1, ag3Romnummer).statusCode()).isEqualTo(200)
+        val etterFlytt = aggregat(treff)["rom"]
+        assertThat(etterFlytt.first { it["romnummer"].asInt() == ag3Romnummer }["jobbsøkere"].map { it.asText() })
+            .containsExactly(p1.somString)
+
+        // Kan registrere interesse for ag3
+        assertThat(interesse(treff, p1, ag3, interessert = true).statusCode()).isEqualTo(200)
+        assertThat(aggregat(treff)["interesser"]).hasSize(1)
+    }
+
+    @Test
+    fun `sletting av arbeidsgiver med personer i rom avvises med 409`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        oppmøte(treff, p1, møtt = true)
+        møteoppsett(treff)
+
+        val agg = aggregat(treff)
+        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asText()
+        val ag1 = ArbeidsgiverTreffId(ag1Id)
+
+        // p1 starter i rom 1 (arbeidsgiver 1 sitt rom)
+        val slettRespons = slettArbeidsgiver(treff, ag1)
+        assertThat(slettRespons.statusCode()).isEqualTo(409)
+        val feil = mapper.readTree(slettRespons.body())
+        assertThat(feil["personerIRom"].asInt()).isEqualTo(1)
+        assertThat(feil["hint"].asText()).containsIgnoringCase("arbeidsgiverens rom")
+
+        // Arbeidsgiver er ikke slettet
+        assertThat(aggregat(treff)["antallRom"].asInt()).isEqualTo(2)
+    }
+
+    @Test
+    fun `sletting av arbeidsgiver med interesser avvises med 409`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        oppmøte(treff, p1, møtt = true)
+        møteoppsett(treff)
+
+        // Flytt p1 til rom 2 slik at rom 1 blir tomt
+        assertThat(flyttTilRom(treff, p1, 2).statusCode()).isEqualTo(200)
+
+        val agg = aggregat(treff)
+        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asText()
+        val ag1 = ArbeidsgiverTreffId(ag1Id)
+
+        // Legg til interesse for ag1
+        assertThat(interesse(treff, p1, ag1, interessert = true).statusCode()).isEqualTo(200)
+
+        val slettRespons = slettArbeidsgiver(treff, ag1)
+        assertThat(slettRespons.statusCode()).isEqualTo(409)
+        val feil = mapper.readTree(slettRespons.body())
+        assertThat(feil["personerIRom"].asInt()).isEqualTo(0)
+        assertThat(feil["interesser"].asInt()).isEqualTo(1)
+        assertThat(feil["hint"].asText()).containsIgnoringCase("interesser")
+    }
+
+    @Test
+    fun `sletting av arbeidsgiver med vurdering avvises med 409`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        oppmøte(treff, p1, møtt = true)
+        møteoppsett(treff)
+
+        // Flytt p1 til rom 2 slik at rom 1 blir tomt
+        assertThat(flyttTilRom(treff, p1, 2).statusCode()).isEqualTo(200)
+
+        val agg = aggregat(treff)
+        val ag1Id = agg["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 1 }["arbeidsgiverTreffId"].asText()
+        val ag1 = ArbeidsgiverTreffId(ag1Id)
+
+        assertThat(vurderingFor(treff, p1, ag1, ""","vurderingsstatus":"AKTUELL"""").statusCode()).isEqualTo(200)
+
+        val slettRespons = slettArbeidsgiver(treff, ag1)
+        assertThat(slettRespons.statusCode()).isEqualTo(409)
+        val feil = mapper.readTree(slettRespons.body())
+        assertThat(feil["vurderinger"].asInt()).isEqualTo(1)
+        assertThat(feil["hint"].asText()).containsIgnoringCase("vurderinger")
+    }
+
+    @Test
+    fun `sletting av arbeidsgiver i tomt rom tillates selv med formidling og kompakterer møteplan`() {
+        val treff = workOpTreff(antallArbeidsgivere = 3)
+        val p1 = jobbsøker(treff, "11111111111")
+        oppmøte(treff, p1, møtt = true)
+        møteoppsett(treff)
+
+        val aggFør = aggregat(treff)
+        val ag2Id = aggFør["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 2 }["arbeidsgiverTreffId"].asText()
+        val ag3Id = aggFør["arbeidsgiverRekkefølge"].first { it["førsteRomnummer"].asInt() == 3 }["arbeidsgiverTreffId"].asText()
+        val ag2 = ArbeidsgiverTreffId(ag2Id)
+
+        // p1 er i rom 3 (ag3 sitt rom)
+        assertThat(flyttTilRom(treff, p1, 3).statusCode()).isEqualTo(200)
+
+        // Opprett en formidling for ag2
+        db.opprettFormidling(treff, p1, ag2, UUID.randomUUID(), UUID.randomUUID())
+
+        // Slett ag2 (som har tomt rom 2 og kun formidling)
+        val slettRespons = slettArbeidsgiver(treff, ag2)
+        assertThat(slettRespons.statusCode()).isEqualTo(204)
+
+        // Verifiser at møteplan er komprimert: antall rom er nå 2, ag3 har nå rom 2, og p1 er nå i rom 2
+        val aggEtter = aggregat(treff)
+        assertThat(aggEtter["antallRom"].asInt()).isEqualTo(2)
+        assertThat(aggEtter["rom"]).hasSize(2)
+        val nyAg3Rotasjon = aggEtter["arbeidsgiverRekkefølge"].first { it["arbeidsgiverTreffId"].asText() == ag3Id }
+        assertThat(nyAg3Rotasjon["førsteRomnummer"].asInt()).isEqualTo(2)
+        val rom2 = aggEtter["rom"].first { it["romnummer"].asInt() == 2 }
+        assertThat(rom2["jobbsøkere"].map { it.asText() }).containsExactly(p1.somString)
+    }
+
     // --- hjelpere -------------------------------------------------------------
 
     private fun aktivArbeidsgiver(treffId: TreffId): ArbeidsgiverTreffId = db.dataSource.connection.use { conn ->
@@ -748,6 +877,13 @@ class TreffgjennomføringKomponentTest {
 
     private fun flyttTilRom(treffId: TreffId, personTreffId: PersonTreffId, romnummer: Int): HttpResponse<String> =
         put(treffId, "/treffgjennomforing/romfordeling/${personTreffId.somString}", """{"romnummer":$romnummer}""")
+
+    private fun slettArbeidsgiver(treffId: TreffId, arbeidsgiverTreffId: ArbeidsgiverTreffId): HttpResponse<String> = send(
+        HttpRequest.newBuilder().DELETE(),
+        "/api/rekrutteringstreff/${treffId.somString}/arbeidsgiver/${arbeidsgiverTreffId.somString}",
+        eier,
+        listOf(arbeidsgiverrettet),
+    )
 
     private fun put(treffId: TreffId, sti: String, body: String): HttpResponse<String> = send(
         HttpRequest.newBuilder().PUT(HttpRequest.BodyPublishers.ofString(body)),

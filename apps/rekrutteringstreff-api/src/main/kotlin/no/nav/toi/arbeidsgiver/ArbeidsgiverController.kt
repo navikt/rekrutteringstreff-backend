@@ -192,7 +192,10 @@ class ArbeidsgiverController(
             OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
             OpenApiParam(name = pathParamArbeidsgiverId, type = UUID::class, required = true)
         ],
-        responses = [OpenApiResponse(status = "204")],
+        responses = [
+            OpenApiResponse(status = "204"),
+            OpenApiResponse(status = "409", content = [OpenApiContent(from = ArbeidsgiverSlettingBlokkertDto::class)])
+        ],
         path = arbeidsgiverItemPath,
         methods = [HttpMethod.DELETE]
     )

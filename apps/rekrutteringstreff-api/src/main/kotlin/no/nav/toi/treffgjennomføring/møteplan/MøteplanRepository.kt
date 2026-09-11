@@ -75,11 +75,21 @@ class MøteplanRepository {
         if (rotasjon.isEmpty()) return emptyList()
 
         val brukteRomnumre = rotasjon.values.toMutableSet()
-        return kontekst.arbeidsgiverTreffIder.map { arbeidsgiver ->
-            val romnummer = rotasjon[arbeidsgiver] ?: generateSequence(1) { it + 1 }.first { it !in brukteRomnumre }
+        val nyRotasjoner = mutableListOf<ArbeidsgiverRotasjon>()
+        val resultat = kontekst.arbeidsgiverTreffIder.map { arbeidsgiver ->
+            val eksisterende = rotasjon[arbeidsgiver]
+            val romnummer = eksisterende ?: generateSequence(1) { it + 1 }.first { it !in brukteRomnumre }
             brukteRomnumre.add(romnummer)
-            ArbeidsgiverRotasjon(arbeidsgiver, romnummer)
+            val rot = ArbeidsgiverRotasjon(arbeidsgiver, romnummer)
+            if (eksisterende == null) {
+                nyRotasjoner.add(rot)
+            }
+            rot
         }
+        if (nyRotasjoner.isNotEmpty()) {
+            lagreArbeidsgiverRotasjon(connection, nyRotasjoner, kontekst)
+        }
+        return resultat
     }
 
     fun harMøteoppsett(connection: Connection, treffgjennomføringId: Long): Boolean =
