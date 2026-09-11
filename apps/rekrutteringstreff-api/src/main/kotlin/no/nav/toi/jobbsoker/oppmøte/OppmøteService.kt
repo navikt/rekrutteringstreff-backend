@@ -33,10 +33,19 @@ class OppmøteService(
 
             val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             if (oppmøteRequestDto.møtt != harMøtt) {
+                // Bevar eldre beregnede plasseringer før oppmøtelisten endres.
+                oppdaterMøteplan(connection, kontekst)
                 if (oppmøteRequestDto.møtt) registrerOppmøte(connection, kontekst, personTreffId, jobbsøkerId, navIdent)
                 else fjernOppmøte(connection, personTreffId, jobbsøkerId, navIdent)
+                oppdaterMøteplan(connection, kontekst)
             }
         }
+
+    private fun oppdaterMøteplan(connection: Connection, kontekst: Treffkontekst) {
+        val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
+        val møteplan = møteplanRepository.hentMøteplan(connection, kontekst, oppmøte)
+        møteplanRepository.lagreMøteplan(connection, kontekst, møteplan)
+    }
 
     private fun registrerOppmøte(
         connection: Connection,

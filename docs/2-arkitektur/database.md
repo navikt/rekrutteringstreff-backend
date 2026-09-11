@@ -294,6 +294,22 @@ To ting skjemaet ikke viser av seg selv:
   møte - vurdering, notat, andregangsintervju og jobbtilbud - logges fortsatt,
   og da bare på jobbsøkeren med `arbeidsgiverTreffId` i `hendelse_data`.
 
+#### Endringer i deltakere og arbeidsgivere
+
+Oppmøte, arbeidsgivertillegg og arbeidsgiversletting oppdaterer romplasseringene
+i samme transaksjon som endringen. Før arbeidsgiverantallet endres, lagres også
+eventuelle beregnede plasseringer fra eldre data. Dermed får nye arbeidsgivere
+tomme rom uten at eksisterende deltakere flyttes. Ved lovlig sletting fjernes
+det tomme rommet, og høyere romnumre justeres samlet.
+
+Disse operasjonene og øvrige skrivinger i treffgjennomføringen bruker
+`medLåstTreff`: radlås på treffet og `READ COMMITTED`. Etter venting på låsen
+må neste spørring se endringene som nettopp ble lagret. GET beholder
+`REPEATABLE READ` og skriver verken romplasseringer eller arbeidsgiverrotasjon.
+
+Sletting blokkeres av personer i rommet, interesser, intervjufordeling og
+vurderinger. Formidling alene blokkerer ikke sletting.
+
 ## Flyway-migrasjoner
 
 Migrasjonsfilene ligger i `apps/rekrutteringstreff-api/src/main/resources/db/migration/`.

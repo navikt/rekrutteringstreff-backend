@@ -31,12 +31,16 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.sql.Connection
 import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import javax.sql.DataSource
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @WireMockTest
@@ -45,6 +49,11 @@ class TreffgjennomføringKomponentTest {
     private val db = TestDatabase()
     private val appPort = ubruktPortnrFra10000.ubruktPortnr()
     private val mapper = JacksonConfig.mapper
+    private val dataSource = object : DataSource by db.dataSource {
+        override fun getConnection(): Connection = db.dataSource.connection.apply {
+            transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
+        }
+    }
 
     private lateinit var infra: TestInfrastructureContext
     private lateinit var ctx: ApplicationContext
@@ -56,7 +65,7 @@ class TreffgjennomføringKomponentTest {
     @BeforeAll
     fun setUp(wmInfo: WireMockRuntimeInfo) {
         Flyway.configure().dataSource(db.dataSource).load().migrate()
-        infra = TestInfrastructureContext(dataSource = db.dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
+        infra = TestInfrastructureContext(dataSource = dataSource, modiaKlientUrl = wmInfo.httpBaseUrl)
             .also { it.start() }
         ctx = ApplicationContext(infra)
         app = App(ctx = ctx, port = appPort).also { it.start() }
@@ -750,7 +759,291 @@ class TreffgjennomføringKomponentTest {
         assertThat(rom2["jobbsøkere"].map { it.asText() }).containsExactly(p1.somString)
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `tillegg lagrer tomt rom uten å flytte sent fremmøtte`(medBehov: Boolean) {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val p1 = jobbsøker(treff, "11111111111")
+        val p2 = jobbsøker(treff, "22222222222")
+        oppmøte(treff, p1, møtt = true)
+        oppmøte(treff, p2, møtt = true)
+        møteoppsett(treff)
+        val sen = jobbsøker(treff, "33333333333")
+        oppmøte(treff, sen, møtt = true)
+        val romFør = lagredeRom(treff)
+        assertThat(romFør[sen.somString]).isEqualTo(1)
+
+        val ny = opprettArbeidsgiverViaApi(treff, "000000001", medBehov)
+
+        assertThat(lagretRotasjon(treff)[ny.somString]).isEqualTo(3)
+        assertThat(lagredeRom(treff)).isEqualTo(romFør)
+        val etter = aggregat(treff)
+        assertThat(etter["rom"].last()["jobbsøkere"]).isEmpty()
+        assertThat(flyttTilRom(treff, sen, 3).statusCode()).isEqualTo(200)
+        assertThat(post(treff, "/treffgjennomforing/romfordeling/fordel").statusCode()).isEqualTo(200)
+        assertThat(aggregat(treff)["rom"].map { it["jobbsøkere"].size() }).containsExactly(1, 1, 1)
+        assertThat(interesse(treff, sen, ny, true).statusCode()).isEqualTo(200)
+        assertThat(post(treff, "/treffgjennomforing/intervjufordeling/fordel").statusCode()).isEqualTo(200)
+        assertThat(vurderingFor(treff, sen, ny, ""","vurderingsstatus":"AKTUELL"""").statusCode()).isEqualTo(200)
+    }
+
+    @Test
+    fun `sent oppmøte lagres i rom og blokkerer sletting frem til oppmøtet fjernes`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val første = jobbsøker(treff, "11111111111")
+        oppmøte(treff, første, møtt = true)
+        møteoppsett(treff)
+        val sen = jobbsøker(treff, "22222222222")
+        oppmøte(treff, sen, møtt = true)
+        val arbeidsgiver = ArbeidsgiverTreffId(lagretRotasjon(treff).entries.single { it.value == 2 }.key)
+
+        assertThat(lagredeRom(treff)[sen.somString]).isEqualTo(2)
+        val blokkert = slettArbeidsgiver(treff, arbeidsgiver)
+        assertThat(blokkert.statusCode()).isEqualTo(409)
+        assertThat(mapper.readTree(blokkert.body())["personerIRom"].asInt()).isEqualTo(1)
+
+        assertThat(oppmøte(treff, sen, møtt = false).statusCode()).isEqualTo(200)
+        assertThat(lagredeRom(treff)).doesNotContainKey(sen.somString)
+        assertThat(slettArbeidsgiver(treff, arbeidsgiver).statusCode()).isEqualTo(204)
+    }
+
+    @Test
+    fun `eldre beregnet romplassering blokkerer sletting uten lagring ved avvisning`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val første = jobbsøker(treff, "11111111111")
+        oppmøte(treff, første, møtt = true)
+        møteoppsett(treff)
+        val sen = jobbsøker(treff, "22222222222")
+        oppmøte(treff, sen, møtt = true)
+        fjernLagretRom(sen)
+        val arbeidsgiver = ArbeidsgiverTreffId(lagretRotasjon(treff).entries.single { it.value == 2 }.key)
+        val før = aggregat(treff)
+
+        assertThat(slettArbeidsgiver(treff, arbeidsgiver).statusCode()).isEqualTo(409)
+
+        assertThat(aggregat(treff)).isEqualTo(før)
+        assertThat(lagredeRom(treff)).doesNotContainKey(sen.somString)
+    }
+
+    @Test
+    fun `eldre beregnede plasseringer bevares når arbeidsgiver legges til eller fjernes`() {
+        val treff = workOpTreff(antallArbeidsgivere = 3)
+        val første = jobbsøker(treff, "11111111111")
+        oppmøte(treff, første, møtt = true)
+        møteoppsett(treff)
+        flyttTilRom(treff, første, 3)
+        val sen = jobbsøker(treff, "22222222222")
+        oppmøte(treff, sen, møtt = true)
+        fjernLagretRom(sen)
+        val tomArbeidsgiver = ArbeidsgiverTreffId(lagretRotasjon(treff).entries.single { it.value == 2 }.key)
+
+        assertThat(slettArbeidsgiver(treff, tomArbeidsgiver).statusCode()).isEqualTo(204)
+        assertThat(lagredeRom(treff)).containsEntry(sen.somString, 1).containsEntry(første.somString, 2)
+        fjernLagretRom(sen)
+        val ny = opprettArbeidsgiverViaApi(treff, "000000001")
+        assertThat(lagredeRom(treff)).containsEntry(sen.somString, 1).containsEntry(første.somString, 2)
+        assertThat(lagretRotasjon(treff)[ny.somString]).isEqualTo(3)
+        assertThat(aggregat(treff)["rom"].last()["jobbsøkere"]).isEmpty()
+    }
+
+    @Test
+    fun `GET beregner eldre møteplan uten å skrive til databasen`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff)
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+        fjernLagretRom(person)
+        val ny = arbeidsgiver(treff, "000000001")
+        val rotasjonFør = lagretRotasjon(treff)
+
+        db.dataSource.connection.use { connection ->
+            connection.isReadOnly = true
+            connection.autoCommit = false
+            val kontekst = ctx.treffkontekstRepository.krevKontekst(connection, treff)
+            val dto = ctx.treffgjennomføringReader.les(connection, kontekst)
+            assertThat(dto.arbeidsgiverRekkefølge.map { it.arbeidsgiverTreffId }).contains(ny.somString)
+            connection.commit()
+        }
+
+        assertThat(hent(treff, eier).statusCode()).isEqualTo(200)
+        assertThat(lagretRotasjon(treff)).isEqualTo(rotasjonFør)
+        assertThat(lagredeRom(treff)).isEmpty()
+    }
+
+    @Test
+    fun `sletting venter på trefflåsen og ser interessen som ble lagret mens den ventet`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+
+        val respons = medVentendeOperasjon(treff, { slettArbeidsgiver(treff, ag) }) { connection ->
+            connection.prepareStatement(
+                """
+                INSERT INTO interesse (jobbsoker_id, arbeidsgiver_id)
+                SELECT j.jobbsoker_id, a.arbeidsgiver_id FROM jobbsoker j, arbeidsgiver a
+                WHERE j.id = ? AND a.id = ?
+                """.trimIndent()
+            ).use { stmt ->
+                stmt.setObject(1, person.somUuid)
+                stmt.setObject(2, ag.somUuid)
+                stmt.executeUpdate()
+            }
+        }
+
+        assertThat(respons.statusCode()).isEqualTo(409)
+        assertThat(mapper.readTree(respons.body())["interesser"].asInt()).isEqualTo(1)
+        assertThat(aggregat(treff)["interesser"]).hasSize(1)
+        assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(1)
+    }
+
+    @Test
+    fun `interesse venter på trefflåsen og avviser arbeidsgiver slettet mens den ventet`() {
+        val treff = workOpTreff()
+        val person = jobbsøker(treff)
+        val ag = aktivArbeidsgiver(treff)
+        oppmøte(treff, person, møtt = true)
+
+        val respons = medVentendeOperasjon(treff, { interesse(treff, person, ag, true) }) { connection ->
+            ctx.arbeidsgiverRepository.markerSlettet(connection, ag.somUuid)
+        }
+
+        assertThat(respons.statusCode()).isEqualTo(400)
+        assertThat(aggregat(treff)["interesser"]).isEmpty()
+    }
+
+    @Test
+    fun `samtidige arbeidsgivertillegg lagrer ulike rom før noen leser gjennomføringen`() {
+        val treff = workOpTreff(antallArbeidsgivere = 2)
+        val person = jobbsøker(treff)
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+
+        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            val første = executor.submit<ArbeidsgiverTreffId> { opprettArbeidsgiverViaApi(treff, "000000001") }
+            val andre = executor.submit<ArbeidsgiverTreffId> { opprettArbeidsgiverViaApi(treff, "000000002", true) }
+            val nye = listOf(første.get(10, TimeUnit.SECONDS), andre.get(10, TimeUnit.SECONDS))
+            val lagret = lagretRotasjon(treff)
+            assertThat(nye.map { lagret[it.somString] }).containsExactlyInAnyOrder(3, 4)
+            assertThat(lagredeRom(treff)).containsExactlyEntriesOf(mapOf(person.somString to 1))
+        }
+    }
+
+    @Test
+    fun `siste arbeidsgiver kan fjernes fra tom møteplan og reaktiveres med rom igjen`() {
+        val treff = workOpTreff(antallArbeidsgivere = 0)
+        val ag = opprettArbeidsgiverViaApi(treff, "000000001", true)
+        val person = jobbsøker(treff)
+        oppmøte(treff, person, møtt = true)
+        møteoppsett(treff)
+        oppmøte(treff, person, møtt = false)
+
+        assertThat(slettArbeidsgiver(treff, ag).statusCode()).isEqualTo(204)
+        assertThat(lagretRotasjon(treff)).isEmpty()
+        val reaktivert = opprettArbeidsgiverViaApi(treff, "000000001", true)
+        assertThat(reaktivert).isEqualTo(ag)
+        assertThat(lagretRotasjon(treff)).containsExactlyEntriesOf(mapOf(ag.somString to 1))
+        assertThat(aggregat(treff)["rom"].single()["jobbsøkere"]).isEmpty()
+    }
+
+    @Test
+    fun `sletting av arbeidsgiver fra et annet treff avvises`() {
+        val treff = workOpTreff()
+        val annet = workOpTreff()
+        val ag = aktivArbeidsgiver(annet)
+        assertThat(slettArbeidsgiver(treff, ag).statusCode()).isEqualTo(404)
+        assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(annet)).hasSize(1)
+    }
+
     // --- hjelpere -------------------------------------------------------------
+
+    private fun opprettArbeidsgiverViaApi(
+        treff: TreffId,
+        orgnr: String,
+        medBehov: Boolean = false,
+    ): ArbeidsgiverTreffId {
+        val behov = if (medBehov) """,
+            "behov": {
+                "samledeKvalifikasjoner": [{"label":"Testyrke","kategori":"YRKESTITTEL","konseptId":1}],
+                "arbeidssprak":["Norsk"],"antall":1,"ansettelsesformer":["Fast"],"personligeEgenskaper":[]
+            }
+        """ else ""
+        val sti = if (medBehov) "/arbeidsgiver-med-behov" else "/arbeidsgiver"
+        val respons = post(treff, sti, """{"organisasjonsnummer":"$orgnr","navn":"Fiktiv testbedrift","næringskoder":[]$behov}""")
+        assertThat(respons.statusCode()).withFailMessage(respons.body()).isEqualTo(201)
+        return ctx.arbeidsgiverService.hentArbeidsgiver(treff, Orgnr(orgnr))!!.arbeidsgiverTreffId
+    }
+
+    private fun lagredeRom(treff: TreffId): Map<String, Int> = db.dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+            SELECT j.id::text, r.romnummer FROM jobbsoker_romtildeling r
+            JOIN jobbsoker j ON j.jobbsoker_id = r.jobbsoker_id
+            JOIN rekrutteringstreff t ON t.rekrutteringstreff_id = r.rekrutteringstreff_id
+            WHERE t.id = ?
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, treff.somUuid)
+            stmt.executeQuery().use { rs -> buildMap { while (rs.next()) put(rs.getString(1), rs.getInt(2)) } }
+        }
+    }
+
+    private fun lagretRotasjon(treff: TreffId): Map<String, Int> = db.dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            """
+            SELECT a.id::text, r.forste_romnummer FROM arbeidsgiver_rotasjon r
+            JOIN arbeidsgiver a ON a.arbeidsgiver_id = r.arbeidsgiver_id
+            JOIN rekrutteringstreff t ON t.rekrutteringstreff_id = a.rekrutteringstreff_id
+            WHERE t.id = ?
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, treff.somUuid)
+            stmt.executeQuery().use { rs -> buildMap { while (rs.next()) put(rs.getString(1), rs.getInt(2)) } }
+        }
+    }
+
+    private fun fjernLagretRom(person: PersonTreffId) = db.dataSource.connection.use { connection ->
+        connection.prepareStatement(
+            "DELETE FROM jobbsoker_romtildeling WHERE jobbsoker_id = (SELECT jobbsoker_id FROM jobbsoker WHERE id = ?)"
+        ).use { stmt ->
+            stmt.setObject(1, person.somUuid)
+            stmt.executeUpdate()
+        }
+    }
+
+    private fun medVentendeOperasjon(
+        treff: TreffId,
+        operasjon: () -> HttpResponse<String>,
+        førFrigivelse: (Connection) -> Unit,
+    ): HttpResponse<String> = Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+        db.dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            connection.låsTreff(treff)
+            val pid = connection.createStatement().use { stmt ->
+                stmt.executeQuery("SELECT pg_backend_pid()").use { it.next(); it.getInt(1) }
+            }
+            val ventende = executor.submit<HttpResponse<String>> { operasjon() }
+            try {
+                val frist = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+                var venter = false
+                while (!venter && System.nanoTime() < frist) {
+                    venter = db.dataSource.connection.use { sjekk ->
+                        sjekk.prepareStatement("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid)))").use { stmt ->
+                            stmt.setInt(1, pid)
+                            stmt.executeQuery().use { it.next(); it.getBoolean(1) }
+                        }
+                    }
+                    if (!venter) Thread.sleep(10)
+                }
+                assertThat(venter).withFailMessage("Operasjonen tok ikke trefflåsen").isTrue()
+                førFrigivelse(connection)
+                connection.commit()
+            } finally {
+                connection.rollback()
+            }
+            ventende.get(10, TimeUnit.SECONDS)
+        }
+    }
 
     private fun aktivArbeidsgiver(treffId: TreffId): ArbeidsgiverTreffId = db.dataSource.connection.use { conn ->
         val sql = """

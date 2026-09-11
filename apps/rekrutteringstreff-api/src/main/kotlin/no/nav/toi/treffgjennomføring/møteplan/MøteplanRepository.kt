@@ -16,7 +16,7 @@ class MøteplanRepository {
             møteoppsett = møteoppsett ?: Møteoppsett.standard(),
             rom = if (møteoppsett == null && lagretRom.isEmpty()) emptyList()
                 else normaliserRom(lagretRom, oppmøte, treffkontekst.antallRom),
-            arbeidsgiverRekkefølge = hentArbeidsgiverRotasjon(connection, treffkontekst),
+            arbeidsgiverRekkefølge = hentArbeidsgiverRotasjon(connection, treffkontekst, møteoppsett != null),
         )
     }
 
@@ -59,7 +59,11 @@ class MøteplanRepository {
         }
     }
 
-    private fun hentArbeidsgiverRotasjon(connection: Connection, kontekst: Treffkontekst): List<ArbeidsgiverRotasjon> {
+    private fun hentArbeidsgiverRotasjon(
+        connection: Connection,
+        kontekst: Treffkontekst,
+        harMøteoppsett: Boolean,
+    ): List<ArbeidsgiverRotasjon> {
         val sql = """
             SELECT a.id::text, r.forste_romnummer
             FROM arbeidsgiver_rotasjon r
@@ -72,24 +76,51 @@ class MøteplanRepository {
                 rs.tilListe { ArbeidsgiverTreffId(it.getString(1)) to it.getInt(2) }.toMap()
             }
         }
-        if (rotasjon.isEmpty()) return emptyList()
+        if (rotasjon.isEmpty() && !harMøteoppsett) return emptyList()
 
         val brukteRomnumre = rotasjon.values.toMutableSet()
-        val nyRotasjoner = mutableListOf<ArbeidsgiverRotasjon>()
-        val resultat = kontekst.arbeidsgiverTreffIder.map { arbeidsgiver ->
-            val eksisterende = rotasjon[arbeidsgiver]
-            val romnummer = eksisterende ?: generateSequence(1) { it + 1 }.first { it !in brukteRomnumre }
+        return kontekst.arbeidsgiverTreffIder.map { arbeidsgiver ->
+            val romnummer = rotasjon[arbeidsgiver] ?: generateSequence(1) { it + 1 }.first { it !in brukteRomnumre }
             brukteRomnumre.add(romnummer)
-            val rot = ArbeidsgiverRotasjon(arbeidsgiver, romnummer)
-            if (eksisterende == null) {
-                nyRotasjoner.add(rot)
-            }
-            rot
+            ArbeidsgiverRotasjon(arbeidsgiver, romnummer)
         }
-        if (nyRotasjoner.isNotEmpty()) {
-            lagreArbeidsgiverRotasjon(connection, nyRotasjoner, kontekst)
+    }
+
+    fun lagreMøteplan(connection: Connection, kontekst: Treffkontekst, møteplan: Møteplan) {
+        if (møteplan.rom.isEmpty()) return
+        erstattRomfordeling(connection, kontekst.treffDbId, møteplan.rom, kontekst)
+        lagreArbeidsgiverRotasjon(connection, møteplan.arbeidsgiverRekkefølge, kontekst)
+    }
+
+    fun fjernArbeidsgiverOgKompakter(connection: Connection, arbeidsgiverId: Long, treffDbId: Long) {
+        val førsteRomnummer = connection.prepareStatement(
+            "DELETE FROM arbeidsgiver_rotasjon WHERE arbeidsgiver_id = ? RETURNING forste_romnummer"
+        ).use { stmt ->
+            stmt.setLong(1, arbeidsgiverId)
+            stmt.executeQuery().use { if (it.next()) it.getInt(1) else null }
+        } ?: return
+
+        connection.prepareStatement(
+            "UPDATE jobbsoker_romtildeling SET romnummer = romnummer - 1 WHERE rekrutteringstreff_id = ? AND romnummer > ?"
+        ).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setInt(2, førsteRomnummer)
+            stmt.executeUpdate()
         }
-        return resultat
+
+        connection.prepareStatement(
+            """
+            UPDATE arbeidsgiver_rotasjon
+            SET forste_romnummer = forste_romnummer - 1
+            WHERE arbeidsgiver_id IN (
+                SELECT arbeidsgiver_id FROM arbeidsgiver WHERE rekrutteringstreff_id = ?
+            ) AND forste_romnummer > ?
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setInt(2, førsteRomnummer)
+            stmt.executeUpdate()
+        }
     }
 
     fun harMøteoppsett(connection: Connection, treffgjennomføringId: Long): Boolean =

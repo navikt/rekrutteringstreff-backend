@@ -367,33 +367,20 @@ class ArbeidsgiverRepository(
         return true
     }
 
-    fun hentInternArbeidsgiver(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): Pair<Long, Long>? {
-        val sql = "SELECT arbeidsgiver_id, rekrutteringstreff_id FROM arbeidsgiver WHERE id = ? AND status <> 'SLETTET'"
-        return connection.prepareStatement(sql).use { stmt ->
-            stmt.setObject(1, arbeidsgiverTreffId.somUuid)
-            stmt.executeQuery().use { rs ->
-                if (rs.next()) rs.getLong(1) to rs.getLong(2) else null
-            }
-        }
-    }
-
     fun sjekkRegistreringer(connection: Connection, arbeidsgiverId: Long, treffDbId: Long): ArbeidsgiverRegistreringer {
-        val forsteRomnummer = finnEllerBeregnRomnummer(connection, arbeidsgiverId, treffDbId)
-
-        val personerIRom = if (forsteRomnummer != null) {
-            connection.prepareStatement(
-                """
-                SELECT COUNT(*)
-                FROM jobbsoker_romtildeling r
-                JOIN jobbsoker j ON j.jobbsoker_id = r.jobbsoker_id
-                WHERE r.rekrutteringstreff_id = ? AND r.romnummer = ? AND j.status != 'SLETTET'
-                """.trimIndent()
-            ).use { stmt ->
-                stmt.setLong(1, treffDbId)
-                stmt.setInt(2, forsteRomnummer)
-                stmt.executeQuery().use { if (it.next()) it.getInt(1) else 0 }
-            }
-        } else 0
+        val personerIRom = connection.prepareStatement(
+            """
+            SELECT COUNT(*)
+            FROM jobbsoker_romtildeling r
+            JOIN jobbsoker j ON j.jobbsoker_id = r.jobbsoker_id
+            JOIN arbeidsgiver_rotasjon a ON a.forste_romnummer = r.romnummer
+            WHERE r.rekrutteringstreff_id = ? AND a.arbeidsgiver_id = ? AND j.status != 'SLETTET'
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setLong(2, arbeidsgiverId)
+            stmt.executeQuery().use { it.next(); it.getInt(1) }
+        }
 
         val antallInteresser = connection.prepareStatement(
             "SELECT COUNT(*) FROM interesse WHERE arbeidsgiver_id = ?"
@@ -421,71 +408,6 @@ class ArbeidsgiverRepository(
             interesser = antallInteresser + antallIntervjufordeling,
             vurderinger = antallVurderinger,
         )
-    }
-
-    private fun finnEllerBeregnRomnummer(connection: Connection, arbeidsgiverId: Long, treffDbId: Long): Int? {
-        val lagretRomnummer = connection.prepareStatement(
-            "SELECT forste_romnummer FROM arbeidsgiver_rotasjon WHERE arbeidsgiver_id = ?"
-        ).use { stmt ->
-            stmt.setLong(1, arbeidsgiverId)
-            stmt.executeQuery().use { if (it.next()) it.getInt(1) else null }
-        }
-        if (lagretRomnummer != null) return lagretRomnummer
-
-        val brukteRom = connection.prepareStatement(
-            """
-            SELECT r.forste_romnummer
-            FROM arbeidsgiver_rotasjon r
-            JOIN arbeidsgiver a ON a.arbeidsgiver_id = r.arbeidsgiver_id
-            WHERE a.rekrutteringstreff_id = ? AND a.status = 'AKTIV'
-            """.trimIndent()
-        ).use { stmt ->
-            stmt.setLong(1, treffDbId)
-            stmt.executeQuery().use { rs ->
-                val set = mutableSetOf<Int>()
-                while (rs.next()) set.add(rs.getInt(1))
-                set
-            }
-        }
-        if (brukteRom.isEmpty()) return null
-
-        return generateSequence(1) { it + 1 }.first { it !in brukteRom }
-    }
-
-    fun fjernFraMøteplanOgKompakter(connection: Connection, arbeidsgiverId: Long, treffDbId: Long) {
-        val forsteRomnummer = connection.prepareStatement(
-            "SELECT forste_romnummer FROM arbeidsgiver_rotasjon WHERE arbeidsgiver_id = ?"
-        ).use { stmt ->
-            stmt.setLong(1, arbeidsgiverId)
-            stmt.executeQuery().use { if (it.next()) it.getInt(1) else null }
-        } ?: return
-
-        connection.prepareStatement("DELETE FROM arbeidsgiver_rotasjon WHERE arbeidsgiver_id = ?").use { stmt ->
-            stmt.setLong(1, arbeidsgiverId)
-            stmt.executeUpdate()
-        }
-
-        connection.prepareStatement(
-            "UPDATE jobbsoker_romtildeling SET romnummer = romnummer - 1 WHERE rekrutteringstreff_id = ? AND romnummer > ?"
-        ).use { stmt ->
-            stmt.setLong(1, treffDbId)
-            stmt.setInt(2, forsteRomnummer)
-            stmt.executeUpdate()
-        }
-
-        connection.prepareStatement(
-            """
-            UPDATE arbeidsgiver_rotasjon
-            SET forste_romnummer = forste_romnummer - 1
-            WHERE arbeidsgiver_id IN (
-                SELECT arbeidsgiver_id FROM arbeidsgiver WHERE rekrutteringstreff_id = ?
-            ) AND forste_romnummer > ?
-            """.trimIndent()
-        ).use { stmt ->
-            stmt.setLong(1, treffDbId)
-            stmt.setInt(2, forsteRomnummer)
-            stmt.executeUpdate()
-        }
     }
 
     private fun finnesArbeidsgiver(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): Boolean {

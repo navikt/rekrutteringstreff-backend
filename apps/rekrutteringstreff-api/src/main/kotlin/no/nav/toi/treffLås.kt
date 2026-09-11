@@ -2,6 +2,14 @@ package no.nav.toi
 
 import no.nav.toi.rekrutteringstreff.TreffId
 import java.sql.Connection
+import javax.sql.DataSource
+
+fun <T> DataSource.medLåstTreff(treffId: TreffId, block: (Connection) -> T): T =
+    // Neste spørring må se endringer fra transaksjonen vi eventuelt ventet på.
+    executeInTransaction(transactionIsolation = Connection.TRANSACTION_READ_COMMITTED) { connection ->
+        connection.låsTreff(treffId)
+        block(connection)
+    }
 
 /** Radlås på treffet som serialiserer alle skrivinger i treffgjennomføringen. */
 fun Connection.låsTreff(treffId: TreffId) {

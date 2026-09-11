@@ -3,7 +3,10 @@ package no.nav.toi.arbeidsgiver
 import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.JacksonConfig
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.treffgjennomføring.TreffkontekstRepository
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.*
@@ -27,7 +30,10 @@ class ArbeidsgiverServiceTest {
                 .migrate()
 
             arbeidsgiverRepository = ArbeidsgiverRepository(db.dataSource, mapper)
-            arbeidsgiverService = ArbeidsgiverService(db.dataSource, arbeidsgiverRepository, JacksonConfig.mapper)
+            arbeidsgiverService = ArbeidsgiverService(
+                db.dataSource, arbeidsgiverRepository, JacksonConfig.mapper,
+                TreffkontekstRepository(), MøteplanRepository(), OppmøteRepository(),
+            )
         }
     }
 
@@ -156,4 +162,3 @@ class ArbeidsgiverServiceTest {
         }
     }
 }
-
