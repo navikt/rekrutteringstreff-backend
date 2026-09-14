@@ -662,7 +662,7 @@ class TreffgjennomføringKomponentTest {
     }
 
     @Test
-    fun `sletting av arbeidsgiver med personer i rom avvises med 409`() {
+    fun `sletting av arbeidsgiver med personer i rom avvises med ProblemDetails og 409`() {
         val treff = workOpTreff(antallArbeidsgivere = 2)
         val p1 = jobbsøker(treff, "11111111111")
         oppmøte(treff, p1, møtt = true)
@@ -676,8 +676,19 @@ class TreffgjennomføringKomponentTest {
         val slettRespons = slettArbeidsgiver(treff, ag1)
         assertThat(slettRespons.statusCode()).isEqualTo(409)
         val feil = mapper.readTree(slettRespons.body())
-        assertThat(feil["personerIRom"].asInt()).isEqualTo(1)
-        assertThat(feil["hint"].asText()).containsIgnoringCase("arbeidsgiverens rom")
+        val problem = mapper.treeToValue(feil, ProblemDetails::class.java)
+        assertThat(problem.type).isEqualTo("about:blank")
+        assertThat(problem.title).isEqualTo("ArbeidsgiverKanIkkeSlettesException")
+        assertThat(problem.status).isEqualTo(409)
+        assertThat(problem.detail).isEqualTo("Arbeidsgiveren har registreringer i treffgjennomføringen og kan derfor ikke slettes.")
+        assertThat(problem.feil).isEqualTo(problem.detail)
+        assertThat(problem.hint).isEqualTo("Flytt personene ut av arbeidsgiverens rom først.")
+        assertThat(problem.instance).isEqualTo("/api/rekrutteringstreff/${treff.somString}/arbeidsgiver/${ag1.somString}")
+        assertThat(problem.timestamp).isNotNull()
+        assertThat(problem.traceid).isNotBlank()
+        assertThat(feil.fieldNames().asSequence().toSet()).containsExactlyInAnyOrder(
+            "type", "title", "status", "detail", "instance", "timestamp", "traceid", "hint", "feil",
+        )
 
         // Arbeidsgiver er ikke slettet
         assertThat(aggregat(treff)["antallRom"].asInt()).isEqualTo(2)
@@ -703,9 +714,7 @@ class TreffgjennomføringKomponentTest {
         val slettRespons = slettArbeidsgiver(treff, ag1)
         assertThat(slettRespons.statusCode()).isEqualTo(409)
         val feil = mapper.readTree(slettRespons.body())
-        assertThat(feil["personerIRom"].asInt()).isEqualTo(0)
-        assertThat(feil["interesser"].asInt()).isEqualTo(1)
-        assertThat(feil["hint"].asText()).containsIgnoringCase("interesser")
+        assertThat(feil["hint"].asText()).isEqualTo("Fjern registrerte interesser først.")
     }
 
     @Test
@@ -727,8 +736,7 @@ class TreffgjennomføringKomponentTest {
         val slettRespons = slettArbeidsgiver(treff, ag1)
         assertThat(slettRespons.statusCode()).isEqualTo(409)
         val feil = mapper.readTree(slettRespons.body())
-        assertThat(feil["vurderinger"].asInt()).isEqualTo(1)
-        assertThat(feil["hint"].asText()).containsIgnoringCase("vurderinger")
+        assertThat(feil["hint"].asText()).isEqualTo("Nullstill registrerte vurderinger først.")
     }
 
     @Test
@@ -804,7 +812,7 @@ class TreffgjennomføringKomponentTest {
         assertThat(lagredeRom(treff)[sen.somString]).isEqualTo(2)
         val blokkert = slettArbeidsgiver(treff, arbeidsgiver)
         assertThat(blokkert.statusCode()).isEqualTo(409)
-        assertThat(mapper.readTree(blokkert.body())["personerIRom"].asInt()).isEqualTo(1)
+        assertThat(mapper.readTree(blokkert.body())["hint"].asText()).isEqualTo("Flytt personene ut av arbeidsgiverens rom først.")
 
         assertThat(oppmøte(treff, sen, møtt = false).statusCode()).isEqualTo(200)
         assertThat(lagredeRom(treff)).doesNotContainKey(sen.somString)
@@ -896,7 +904,7 @@ class TreffgjennomføringKomponentTest {
         }
 
         assertThat(respons.statusCode()).isEqualTo(409)
-        assertThat(mapper.readTree(respons.body())["interesser"].asInt()).isEqualTo(1)
+        assertThat(mapper.readTree(respons.body())["hint"].asText()).isEqualTo("Fjern registrerte interesser først.")
         assertThat(aggregat(treff)["interesser"]).hasSize(1)
         assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(1)
     }
@@ -1008,8 +1016,8 @@ class TreffgjennomføringKomponentTest {
         val respons = slettArbeidsgiver(treff, ag)
 
         assertThat(respons.statusCode()).isEqualTo(409)
-        val felt = if (medVurdering) "vurderinger" else "interesser"
-        assertThat(mapper.readTree(respons.body())[felt].asInt()).isEqualTo(1)
+        val forventetHint = if (medVurdering) "Nullstill registrerte vurderinger først." else "Fjern registrerte interesser først."
+        assertThat(mapper.readTree(respons.body())["hint"].asText()).isEqualTo(forventetHint)
         assertThat(ctx.arbeidsgiverService.hentArbeidsgivere(treff)).hasSize(1)
     }
 
@@ -1067,8 +1075,6 @@ class TreffgjennomføringKomponentTest {
         val sletting = slettArbeidsgiver(treff, ag)
         assertThat(sletting.statusCode()).isEqualTo(409)
         val arbeidsgiverFeil = mapper.readTree(sletting.body())
-        assertThat(arbeidsgiverFeil["interesser"].asInt()).isEqualTo(if (medInteresse) 1 else 0)
-        assertThat(arbeidsgiverFeil["intervjufordelinger"].asInt()).isEqualTo(1)
         assertThat(arbeidsgiverFeil["hint"].asText()).isEqualTo(forventetHint)
 
         val oppmøteSvar = oppmøte(treff, person, møtt = false)

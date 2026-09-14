@@ -7,6 +7,7 @@ import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.ProblemDetails
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.arbeidsgiver.dto.*
@@ -194,7 +195,7 @@ class ArbeidsgiverController(
         ],
         responses = [
             OpenApiResponse(status = "204"),
-            OpenApiResponse(status = "409", content = [OpenApiContent(from = ArbeidsgiverSlettingBlokkertDto::class)])
+            OpenApiResponse(status = "409", content = [OpenApiContent(from = ProblemDetails::class)])
         ],
         path = arbeidsgiverItemPath,
         methods = [HttpMethod.DELETE]

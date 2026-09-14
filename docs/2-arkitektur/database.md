@@ -319,6 +319,8 @@ intervjufordeling og vurderinger. Formidling alene blokkerer ikke sletting.
 `RegistreringerRepository` og `Registreringer` gir felles telling og
 ryddehint for interesser, intervjufordelinger og vurderinger. Intervjufordeling
 telles separat, også når den finnes uten interesse.
+Blokkert arbeidsgiversletting returnerer HTTP 409 med `ProblemDetails`,
+feilmelding og ryddehint. Antall registreringer brukes internt, ikke i feilresponsen.
 
 Jobbsøkere får ikke rom bare ved å legges til på treffet; romplassering følger
 oppmøtet. Oppmøte kan fjernes fra et rom, men ikke så lenge noen av de tre
