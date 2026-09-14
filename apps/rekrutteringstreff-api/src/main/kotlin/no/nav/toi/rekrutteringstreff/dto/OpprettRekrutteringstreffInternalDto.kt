@@ -9,4 +9,5 @@ data class OpprettRekrutteringstreffInternalDto(
     val opprettetAvPersonNavident: String,
     val opprettetAvNavkontorEnhetId: String,
     val opprettetAvTidspunkt: ZonedDateTime,
+    val opprettetAvPersonNavn: String? = null,
 )
