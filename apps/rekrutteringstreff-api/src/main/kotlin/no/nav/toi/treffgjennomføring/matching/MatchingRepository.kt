@@ -122,12 +122,4 @@ class MatchingRepository {
         addBatch()
     }
 
-    fun tellInteresserForJobbsøker(connection: Connection, jobbsøkerId: Long): Int =
-        connection.prepareStatement("SELECT COUNT(*) FROM interesse WHERE jobbsoker_id = ?").use { stmt ->
-            stmt.setLong(1, jobbsøkerId)
-            stmt.executeQuery().use { rs ->
-                rs.next()
-                rs.getInt(1)
-            }
-        }
 }

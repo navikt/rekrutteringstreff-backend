@@ -402,7 +402,7 @@ class JobbsøkerController(
             OpenApiResponse("200", description = "Jobbsøker markert som slettet."),
             OpenApiResponse("403", description = "Innlogget bruker er ikke eier av rekrutteringstreffet."),
             OpenApiResponse("404", description = "Fant ikke jobbsøker med oppgitt id på treffet."),
-            OpenApiResponse("422", description = "Sletting er ikke tillatt (f.eks. jobbsøker allerede slettet)."),
+            OpenApiResponse("422", description = "Jobbsøkeren har annen status enn LAGT_TIL eller har registreringer i treffgjennomføringen."),
         ],
         path = slettPath,
         methods = [HttpMethod.DELETE]

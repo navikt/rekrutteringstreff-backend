@@ -5,22 +5,20 @@ import no.nav.toi.HendelseWriter
 import no.nav.toi.JobbsøkerHendelsestype
 import no.nav.toi.jobbsoker.JobbsøkerService
 import no.nav.toi.jobbsoker.PersonTreffId
-import no.nav.toi.oppfølging.OppfølgingRepository
 import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.treffgjennomføring.TreffgjennomføringWriter
+import no.nav.toi.treffgjennomføring.RegistreringerRepository
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import no.nav.toi.treffgjennomføring.dto.OppmøteRequestDto
 import no.nav.toi.treffgjennomføring.dto.TreffgjennomføringDto
-import no.nav.toi.treffgjennomføring.matching.MatchingRepository
 import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import java.sql.Connection
 
 class OppmøteService(
     private val treffgjennomføringWriter: TreffgjennomføringWriter,
     private val oppmøteRepository: OppmøteRepository,
-    private val matchingRepository: MatchingRepository,
+    private val registreringerRepository: RegistreringerRepository,
     private val møteplanRepository: MøteplanRepository,
-    private val oppfølgingRepository: OppfølgingRepository,
     private val jobbsøkerService: JobbsøkerService,
     private val hendelseWriter: HendelseWriter,
 ) {
@@ -33,10 +31,19 @@ class OppmøteService(
 
             val harMøtt = personTreffId in oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
             if (oppmøteRequestDto.møtt != harMøtt) {
+                val harMøteplan = møteplanRepository.harMøteplan(connection, treffId)
+                if (harMøteplan) oppdaterMøteplan(connection, kontekst)
                 if (oppmøteRequestDto.møtt) registrerOppmøte(connection, kontekst, personTreffId, jobbsøkerId, navIdent)
                 else fjernOppmøte(connection, personTreffId, jobbsøkerId, navIdent)
+                if (harMøteplan) oppdaterMøteplan(connection, kontekst)
             }
         }
+
+    private fun oppdaterMøteplan(connection: Connection, kontekst: Treffkontekst) {
+        val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
+        val møteplan = møteplanRepository.hentMøteplan(connection, kontekst, oppmøte)
+        møteplanRepository.lagreMøteplan(connection, kontekst, møteplan)
+    }
 
     private fun registrerOppmøte(
         connection: Connection,
@@ -63,10 +70,7 @@ class OppmøteService(
         jobbsøkerId: Long,
         navIdent: String,
     ) {
-        val registreringer = Registreringer(
-            interesser = matchingRepository.tellInteresserForJobbsøker(connection, jobbsøkerId),
-            vurderinger = oppfølgingRepository.tellForJobbsøker(connection, jobbsøkerId),
-        )
+        val registreringer = registreringerRepository.hentForJobbsøker(connection, jobbsøkerId)
         if (registreringer.finnesRegistreringer()) throw OppmøteKanIkkeFjernesException(registreringer)
 
         møteplanRepository.slettRomForJobbsøker(connection, jobbsøkerId)

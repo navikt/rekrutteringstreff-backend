@@ -119,7 +119,7 @@ class TreffgjennomføringController(
 
     @OpenApi(
         summary = "Registrer eller angre oppmøte for én jobbsøker",
-        description = "Oppmøtet kan bare fjernes når jobbsøkeren ikke har interesser eller registrert status, ellers 409.",
+        description = "Oppmøtet kan bare fjernes når jobbsøkeren ikke har interesser, intervjufordelinger eller vurderinger, ellers 409.",
         operationId = "oppdaterOppmote",
         security = [OpenApiSecurity(name = "BearerAuth")],
         pathParams = [OpenApiParam(name = "id", type = UUID::class, required = true)],
@@ -134,7 +134,7 @@ class TreffgjennomføringController(
                 description = "Jobbsøkeren har registreringer som må ryddes før oppmøtet kan fjernes.",
                 content = [OpenApiContent(
                     from = OppmøteBlokkertDto::class,
-                    example = """{"feil": "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.", "hint": "Fjern interessene og nullstill statusen først.", "registreringer": {"interesser": 2, "vurderinger": 0}}""",
+                    example = """{"feil": "Jobbsøkeren har registreringer og oppmøtet kan derfor ikke fjernes.", "hint": "Fjern registrerte intervjufordelinger først.", "registreringer": {"interesser": 0, "intervjufordelinger": 1, "vurderinger": 0}}""",
                 )],
             ),
         ],
