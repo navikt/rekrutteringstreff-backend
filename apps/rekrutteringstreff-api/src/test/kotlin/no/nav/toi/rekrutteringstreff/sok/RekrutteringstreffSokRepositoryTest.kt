@@ -5,6 +5,7 @@ import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.dto.EierOgKontorDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
@@ -60,13 +61,18 @@ class RekrutteringstreffSokRepositoryTest {
         val treffId = opprettTreff()
         val eierRepository = EierRepository(db.dataSource)
         val service = EierService(eierRepository, RekrutteringstreffRepository(db.dataSource), db.dataSource)
-        service.leggTilEierMedKontor(treffId, "B654321", "1201")
+        service.leggTilEierMedKontor(treffId, "B654321", "1201", "Kari Testesen")
         service.leggTilEierMedKontor(treffId, "C987654", "0315")
         db.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
 
         val treff = sokEierskap(Visning.MINE, navIdent = "B654321").treff.single()
         assertThat(treff.eiere).containsExactlyInAnyOrder("A123456", "B654321", "C987654")
         assertThat(treff.kontorer).containsExactlyInAnyOrder("0315", "1201")
+        assertThat(treff.eierOgKontor).containsExactly(
+            EierOgKontorDto("A123456", null, "0315"),
+            EierOgKontorDto("B654321", "Kari Testesen", "1201"),
+            EierOgKontorDto("C987654", null, "0315"),
+        )
         assertThat(sokEierskap(Visning.MINE, navIdent = "gammel eier").antallTotalt).isZero()
         assertThat(sokEierskap(Visning.MITT_KONTOR, kontorId = "gammelt kontor").antallTotalt).isZero()
         assertThat(sokEierskap(Visning.MITT_KONTOR, kontorId = "1201").antallTotalt).isEqualTo(1)
@@ -121,6 +127,7 @@ class RekrutteringstreffSokRepositoryTest {
         assertThat(treff.id).isEqualTo(treffId.somString)
         assertThat(treff.eiere).isEmpty()
         assertThat(treff.kontorer).isEmpty()
+        assertThat(treff.eierOgKontor).isEmpty()
         assertThat(sokEierskap(Visning.MINE).antallTotalt).isZero()
         assertThat(sokEierskap(Visning.MITT_KONTOR).antallTotalt).isZero()
         assertThat(sokEierskap(Visning.VALGTE_KONTORER, kontorer = listOf("0315")).antallTotalt).isZero()

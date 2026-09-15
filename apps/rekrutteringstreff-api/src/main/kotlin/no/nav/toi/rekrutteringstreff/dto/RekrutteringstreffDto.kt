@@ -30,6 +30,7 @@ data class RekrutteringstreffDto(
     val antallJobbsøkereFåttJobb: Int?,
     val eiere: List<String>,
     val kontorer: List<String>,
+    val eierOgKontor: List<EierOgKontorDto>,
     val sistEndret: ZonedDateTime,
     val sistEndretAv: String,
 )

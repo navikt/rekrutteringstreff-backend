@@ -125,6 +125,7 @@ class RekrutteringstreffController(
 
     @OpenApi(
         summary = "Hent et rekrutteringstreff",
+        description = "eierOgKontor kobler Nav-ident, valgfritt eiernavn og kontorets enhetId. Eiere og kontorer beholdes som separate lister for bakoverkompatibilitet.",
         operationId = "hentRekrutteringstreff",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
@@ -147,6 +148,9 @@ class RekrutteringstreffController(
                     "opprettetAvPersonNavident":"A123456",
                     "opprettetAvNavkontorEnhetId":"0318",
                     "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+                    "eiere":["A123456"],
+                    "kontorer":["0318"],
+                    "eierOgKontor":[{"navIdent":"A123456","eierNavn":"Kari Testesen","kontorEnhetId":"0318"}],
                     "antallArbeidsgivere":1,
                     "antallJobbsøkere":1,
                     "antallJobbsøkereSvartJa":0
