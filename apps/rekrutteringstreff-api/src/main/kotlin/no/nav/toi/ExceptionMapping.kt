@@ -306,6 +306,19 @@ object ExceptionMapping {
             )
         }
 
+        exception(AktivEnhetManglerException::class.java) { e, ctx ->
+            ctx.status(400).json(
+                ProblemDetails.fromThrowable(
+                    throwable = e,
+                    status = HttpStatus.BAD_REQUEST,
+                    ctx = ctx,
+                    feil = e.message,
+                    melding = e.message,
+                    feilkode = "AKTIV_ENHET_MANGLER"
+                )
+            )
+        }
+
         exception(ForbiddenResponse::class.java) { e, ctx ->
             ctx.status(403).json(
                 ProblemDetails.fromThrowable(
