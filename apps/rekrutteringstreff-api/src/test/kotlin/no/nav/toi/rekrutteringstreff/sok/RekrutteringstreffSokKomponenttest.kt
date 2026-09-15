@@ -7,7 +7,10 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import no.nav.toi.*
 import no.nav.toi.jobbsoker.*
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.TestDatabase
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import java.net.URI
@@ -114,6 +117,31 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(respons.treff).isEmpty()
         assertThat(respons.antallTotalt).isEqualTo(0)
         assertThat(respons.statusaggregering).isEmpty()
+    }
+
+    @Test
+    fun `søk mister eier og kontormatch når siste eier fra kontoret fjernes`() {
+        val treffId = opprettTreffMedEier(navIdent = "B654321", kontorId = "1201")
+        val service = EierService(EierRepository(db.dataSource), RekrutteringstreffRepository(db.dataSource), db.dataSource)
+        service.leggTilEierMedKontor(treffId, "A123456", "0315")
+
+        listOf("?visning=mine", "?visning=mitt_kontor", "?kontorer=0315").forEach { query ->
+            val response = sokGet(query)
+            assertThat(response.statusCode()).isEqualTo(200)
+            assertThat(mapper.readValue<RekrutteringstreffSokRespons>(response.body()).antallTotalt).isEqualTo(1)
+        }
+
+        service.slettEier(treffId, "A123456", "B654321")
+        db.oppdaterEierarrays(listOf("A123456", "B654321"), listOf("0315", "1201"), treffId)
+
+        listOf("?visning=mine", "?visning=mitt_kontor", "?kontorer=0315").forEach { query ->
+            val response = sokGet(query)
+            assertThat(response.statusCode()).isEqualTo(200)
+            val resultat = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+            assertThat(resultat.antallTotalt).isZero()
+            assertThat(resultat.treff).isEmpty()
+            assertThat(resultat.statusaggregering).isEmpty()
+        }
     }
 
     @Test

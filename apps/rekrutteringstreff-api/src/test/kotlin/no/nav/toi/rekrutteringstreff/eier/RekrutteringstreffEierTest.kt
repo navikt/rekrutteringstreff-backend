@@ -81,7 +81,9 @@ class RekrutteringstreffEierTest {
 
         opprettRekrutteringstreffIDatabase(navIdent)
         val opprettetRekrutteringstreff = database.hentAlleRekrutteringstreff().first()
-        database.oppdaterRekrutteringstreff(eiere, opprettetRekrutteringstreff.id)
+        eiere.forEach { ctx.eierRepository.leggTil(opprettetRekrutteringstreff.id, it, "1234") }
+        ctx.eierService.slettEier(opprettetRekrutteringstreff.id, navIdent, navIdent)
+        database.oppdaterEierarrays(listOf(navIdent), listOf("gammelt kontor"), opprettetRekrutteringstreff.id)
         val response = httpGet(
             "http://localhost:$appPort/api/rekrutteringstreff/${opprettetRekrutteringstreff.id}/eiere",
             token.serialize()

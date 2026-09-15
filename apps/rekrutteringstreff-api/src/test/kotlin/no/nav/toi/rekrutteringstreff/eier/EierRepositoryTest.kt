@@ -20,6 +20,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.sql.SQLException
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.CountDownLatch
@@ -56,6 +58,7 @@ class EierRepositoryTest {
         assertThat(eiere).isNotNull
         assertThat(eiere).hasSize(1)
         assertThat(eiere!!.tilNavIdenter().first()).isEqualTo(navIdent)
+        assertThat(eiere.single().kontorEnhetId).isEqualTo("Original Kontor")
     }
 
     @Test
@@ -194,6 +197,7 @@ class EierRepositoryTest {
     @Test
     fun `siste eier beholdes i begge lagringsformer`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        db.oppdaterEierarrays(listOf("A123456", "gammel eier"), listOf("Original Kontor"), treffId)
         val før = db.hentEierrader(treffId)
 
         assertThat(repository.slett(treffId, "A123456")).isFalse()
@@ -221,24 +225,23 @@ class EierRepositoryTest {
     }
 
     @Test
-    fun `historisk eier uten eierrad kan slettes`() {
+    fun `eier bare i gammelt array kan ikke slettes eller få eierhendelse`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        db.oppdaterRekrutteringstreff(listOf("A123456", "B654321"), treffId)
+        db.oppdaterEierarrays(listOf("A123456", "B654321"), listOf("Original Kontor"), treffId)
         val treffRepository = RekrutteringstreffRepository(db.dataSource)
 
-        EierService(repository, treffRepository, db.dataSource).slettEier(treffId, "B654321", "A123456")
+        assertThatThrownBy {
+            EierService(repository, treffRepository, db.dataSource).slettEier(treffId, "B654321", "A123456")
+        }.isInstanceOf(NotFoundResponse::class.java)
 
         assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactly("A123456")
         assertThat(db.hentEierrader(treffId).map { it.navIdent }).containsExactly("A123456")
-        assertThat(treffRepository.hentAlleHendelser(treffId)).anyMatch {
-            it.hendelsestype == "EIER_FJERNET" && it.subjektId == "B654321"
-        }
+        assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "EIER_FJERNET" }).isEmpty()
     }
 
     @Test
-    fun `gjentatt tillegg fyller historisk eierrad og oppdaterer kontor uten ny eierhendelse`() {
+    fun `gjentatt tillegg oppdaterer kontor uten ny eierhendelse og fjerner gammelt kontor`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
-        db.oppdaterRekrutteringstreff(listOf("A123456", "B654321"), treffId)
         val treffRepository = RekrutteringstreffRepository(db.dataSource)
         val service = EierService(repository, treffRepository, db.dataSource)
 
@@ -250,14 +253,21 @@ class EierRepositoryTest {
         assertThat(db.hentEierrader(treffId).single { it.navIdent == "B654321" })
             .isEqualTo(før.copy(kontorEnhetId = "1201"))
         assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactlyInAnyOrder("A123456", "B654321")
-        assertThat(treffRepository.hent(treffId)!!.kontorer).contains("0315", "1201")
+        assertThat(treffRepository.hent(treffId)!!.kontorer).containsExactlyInAnyOrder("Original Kontor", "1201")
+        assertThat(service.harTilgangViaTreffkontor(treffId, listOf("0315"))).isFalse()
+        assertThat(service.harTilgangViaTreffkontor(treffId, listOf("1201"))).isTrue()
         val hendelser = treffRepository.hentAlleHendelser(treffId)
-        assertThat(hendelser.filter { it.hendelsestype == "EIER_LAGT_TIL" }).isEmpty()
+        assertThat(hendelser.filter { it.hendelsestype == "EIER_LAGT_TIL" }).hasSize(1)
         assertThat(hendelser.filter { it.hendelsestype == "KONTOR_LAGT_TIL" }).hasSize(2)
+        assertThat(hendelser.filter { it.hendelsestype == "KONTOR_FJERNET" }).hasSize(1).allSatisfy {
+            assertThat(it.subjektId).isEqualTo("0315")
+            assertThat(it.subjektNavn).isEqualTo("0315")
+            assertThat(it.aktørIdentifikasjon).isEqualTo("B654321")
+        }
     }
 
     @Test
-    fun `sletting beholder kontorarray og kontorbasert tilgang i fase 2`() {
+    fun `sletting av siste eier fra kontor fjerner kontor og kontorbasert tilgang`() {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
         val treffRepository = RekrutteringstreffRepository(db.dataSource)
         val service = EierService(repository, treffRepository, db.dataSource)
@@ -266,8 +276,86 @@ class EierRepositoryTest {
         service.slettEier(treffId, "B654321", "A123456")
 
         assertThat(db.hentEierrader(treffId).map { it.navIdent }).containsExactly("A123456")
-        assertThat(treffRepository.hent(treffId)!!.kontorer).contains("0315")
+        assertThat(treffRepository.hent(treffId)!!.kontorer).doesNotContain("0315")
+        assertThat(service.harTilgangViaTreffkontor(treffId, listOf("0315"))).isFalse()
+        assertThat(service.harTilgangViaTreffkontor(treffId, listOf("Original Kontor"))).isTrue()
+        assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "KONTOR_FJERNET" })
+            .hasSize(1).allSatisfy {
+                assertThat(it.subjektId).isEqualTo("0315")
+                assertThat(it.subjektNavn).isEqualTo("0315")
+                assertThat(it.aktørIdentifikasjon).isEqualTo("A123456")
+            }
+        assertEierarrays(treffId, listOf("A123456"), listOf("Original Kontor"))
+    }
+
+    @Test
+    fun `kontor består til siste eier fjernes og får ny hendelse ved gjeninnmelding`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        val treffRepository = RekrutteringstreffRepository(db.dataSource)
+        val service = EierService(repository, treffRepository, db.dataSource)
+        service.leggTilEierMedKontor(treffId, "B654321", "0315")
+        service.leggTilEierMedKontor(treffId, "C987654", "0315")
+        service.slettEier(treffId, "B654321", "A123456")
+
         assertThat(service.harTilgangViaTreffkontor(treffId, listOf("0315"))).isTrue()
+        assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "KONTOR_FJERNET" }).isEmpty()
+
+        service.leggTilEierMedKontor(treffId, "C987654", "Original Kontor")
+        service.leggTilEierMedKontor(treffId, "B654321", "0315")
+
+        val hendelser = treffRepository.hentAlleHendelser(treffId)
+        assertThat(hendelser.filter { it.hendelsestype == "KONTOR_FJERNET" }).hasSize(1)
+        assertThat(hendelser.filter { it.hendelsestype == "KONTOR_LAGT_TIL" && it.subjektId == "0315" }).hasSize(2)
+        assertThat(hendelser.filter { it.hendelsestype == "KONTOR_LAGT_TIL" && it.subjektId == "Original Kontor" }).isEmpty()
+        assertEierarrays(treffId, listOf("A123456", "B654321", "C987654"), listOf("Original Kontor", "0315"))
+    }
+
+    @Test
+    fun `hent og slett bruker eierrader selv om eier mangler i gammelt array`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        repository.leggTil(treffId, "B654321", "0315")
+        db.oppdaterEierarrays(listOf("A123456"), emptyList(), treffId)
+
+        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactlyInAnyOrder("A123456", "B654321")
+        assertThat(repository.slett(treffId, "B654321")).isTrue()
+        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactly("A123456")
+    }
+
+    @Test
+    fun `treff uten eierrader gir tom liste også med låsing`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        db.dataSource.connection.use { connection ->
+            connection.createStatement().use { it.executeUpdate("DELETE FROM rekrutteringstreff_eier") }
+        }
+        assertThat(repository.hent(treffId)).isEmpty()
+        db.dataSource.executeInTransaction { connection ->
+            assertThat(repository.hent(connection, treffId, forUpdate = true)).isEmpty()
+            assertThat(repository.hent(connection, TreffId("00000000-0000-0000-0000-000000000000"), forUpdate = true)).isNull()
+        }
+    }
+
+    @Test
+    fun `feil ved fjernet kontor ruller tilbake sletting og kontorbytte`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        val treffRepository = spyk(RekrutteringstreffRepository(db.dataSource))
+        val service = EierService(repository, treffRepository, db.dataSource)
+        service.leggTilEierMedKontor(treffId, "B654321", "0315")
+        val eierraderFør = db.hentEierrader(treffId)
+        val hendelserFør = treffRepository.hentAlleHendelser(treffId)
+        every {
+            treffRepository.leggTilHendelseForTreff(
+                any(), any(), RekrutteringstreffHendelsestype.KONTOR_FJERNET, any(), any(), any(), any()
+            )
+        } throws IllegalStateException("Simulert skrivefeil")
+
+        assertThatThrownBy { service.slettEier(treffId, "B654321", "A123456") }
+            .isInstanceOf(IllegalStateException::class.java)
+        assertThatThrownBy { service.leggTilEierMedKontor(treffId, "B654321", "1201") }
+            .isInstanceOf(IllegalStateException::class.java)
+
+        assertThat(db.hentEierrader(treffId)).isEqualTo(eierraderFør)
+        assertThat(treffRepository.hentAlleHendelser(treffId)).isEqualTo(hendelserFør)
+        assertEierarrays(treffId, listOf("A123456", "B654321"), listOf("Original Kontor", "0315"))
     }
 
     @Test
@@ -374,9 +462,16 @@ class EierRepositoryTest {
         assertThat(db.hentEierrader(treffId)).isEqualTo(før)
     }
 
-    @Test
-    fun `samtidige tillegg av samme eier lager én eierrad og én eierhendelse`() {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `samtidige tillegg av samme eier lager én eierrad og én eierhendelse`(utenEiere: Boolean) {
         val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        if (utenEiere) {
+            db.dataSource.connection.use { connection ->
+                connection.createStatement().use { it.executeUpdate("DELETE FROM rekrutteringstreff_eier") }
+            }
+            db.oppdaterEierarrays(emptyList(), emptyList(), treffId)
+        }
         val treffRepository = RekrutteringstreffRepository(db.dataSource)
         val service = EierService(repository, treffRepository, db.dataSource)
         val start = CountDownLatch(1)
@@ -394,10 +489,52 @@ class EierRepositoryTest {
             pool.shutdownNow()
         }
 
-        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactlyInAnyOrder("A123456", "B654321")
+        val forventedeEiere = if (utenEiere) listOf("B654321") else listOf("A123456", "B654321")
+        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactlyInAnyOrderElementsOf(forventedeEiere)
         assertThat(db.hentEierrader(treffId).filter { it.navIdent == "B654321" }).hasSize(1)
         assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "EIER_LAGT_TIL" }).hasSize(1)
         assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "KONTOR_LAGT_TIL" }).hasSize(1)
+    }
+
+    @Test
+    fun `forUpdate låser både treffraden og eierradene`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        db.dataSource.executeInTransaction { connection ->
+            repository.hent(connection, treffId, forUpdate = true)
+            listOf(
+                "SELECT id FROM rekrutteringstreff WHERE id = ? FOR UPDATE NOWAIT",
+                """
+                SELECT e.id FROM rekrutteringstreff_eier e
+                JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = e.rekrutteringstreff_id
+                WHERE rt.id = ? FOR UPDATE OF e NOWAIT
+                """.trimIndent(),
+            ).forEach { sql ->
+                assertThatThrownBy {
+                    db.dataSource.connection.use { annenConnection ->
+                        annenConnection.prepareStatement(sql).use { stmt ->
+                            stmt.setObject(1, treffId.somUuid)
+                            stmt.executeQuery().close()
+                        }
+                    }
+                }.isInstanceOfSatisfying(SQLException::class.java) {
+                    assertThat(it.sqlState).isEqualTo("55P03")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `sletting med eksplisitt connection krever transaksjon for å beskytte siste eier`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase(navIdent = "A123456")
+        repository.leggTil(treffId, "B654321", "0315")
+
+        db.dataSource.connection.use { connection ->
+            assertThatThrownBy { repository.slett(connection, treffId, "B654321") }
+                .isInstanceOf(IllegalStateException::class.java)
+                .hasMessage("FOR UPDATE krever en transaksjon")
+        }
+
+        assertThat(repository.hent(treffId)!!.tilNavIdenter()).containsExactlyInAnyOrder("A123456", "B654321")
     }
 
     @Test
@@ -430,5 +567,18 @@ class EierRepositoryTest {
         assertThat(gjenværende).hasSize(1)
         assertThat(db.hentEierrader(treffId).map { it.navIdent }).containsExactlyElementsOf(gjenværende)
         assertThat(treffRepository.hentAlleHendelser(treffId).filter { it.hendelsestype == "EIER_FJERNET" }).hasSize(1)
+    }
+
+    private fun assertEierarrays(treffId: TreffId, eiere: List<String>, kontorer: List<String>) {
+        db.dataSource.connection.use { connection ->
+            connection.prepareStatement("SELECT eiere, kontorer FROM rekrutteringstreff WHERE id = ?").use { stmt ->
+                stmt.setObject(1, treffId.somUuid)
+                stmt.executeQuery().use { rs ->
+                    check(rs.next())
+                    assertThat((rs.getArray("eiere").array as Array<*>).toList()).containsExactlyInAnyOrderElementsOf(eiere)
+                    assertThat((rs.getArray("kontorer").array as Array<*>).toList()).containsExactlyInAnyOrderElementsOf(kontorer)
+                }
+            }
+        }
     }
 }

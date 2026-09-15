@@ -13,8 +13,12 @@ SELECT
     rt.opprettet_av_person_navident,
     rt.opprettet_av_tidspunkt,
     rt.sist_endret,
-    rt.eiere,
-    rt.kontorer,
+    COALESCE((SELECT array_agg(DISTINCT e.nav_ident)
+              FROM rekrutteringstreff_eier e
+              WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS eiere,
+    COALESCE((SELECT array_agg(DISTINCT e.kontor_enhetid)
+              FROM rekrutteringstreff_eier e
+              WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS kontorer,
     CASE
         WHEN rt.svarfrist IS NOT NULL AND rt.svarfrist < now() THEN true
         ELSE false

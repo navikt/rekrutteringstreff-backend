@@ -43,24 +43,18 @@ class EierService(
 
     fun leggTilEierMedKontor(connection: Connection, treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
         require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
-        val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
+        val eiere = eierRepository.hent(connection, treffId, forUpdate = true)
             ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
 
         eierRepository.leggTil(connection, treffId, navIdent, kontorEnhetId, eierNavn)
-        if (!eiere.contains(navIdent)) {
+        if (navIdent !in eiere.tilNavIdenter()) {
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.EIER_LAGT_TIL, navIdent,
                 subjektId = navIdent, subjektNavn = navIdent,
             )
         }
 
-        val nyttKontor = rekrutteringstreffRepository.leggTilKontor(connection, treffId, kontorEnhetId)
-        if (nyttKontor) {
-            rekrutteringstreffRepository.leggTilHendelseForTreff(
-                connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, navIdent,
-                subjektId = kontorEnhetId, subjektNavn = kontorEnhetId,
-            )
-        }
+        oppdaterKontorerOgHendelser(connection, treffId, eiere, navIdent)
     }
 
     fun leggTilEierMedKontor(treffId: TreffId, navIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
@@ -71,18 +65,41 @@ class EierService(
 
     fun slettEier(treffId: TreffId, eierNavIdent: String, utførtAv: String) {
         dataSource.executeInTransaction { connection ->
-            val eiere = eierRepository.hent(connection, treffId, forUpdate = true)?.tilNavIdenter()
+            val eiere = eierRepository.hent(connection, treffId, forUpdate = true)
                 ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
-            if (!eiere.contains(eierNavIdent)) {
+            if (eierNavIdent !in eiere.tilNavIdenter()) {
                 throw NotFoundResponse("Eier med navIdent $eierNavIdent finnes ikke for rekrutteringstreff ${treffId.somString}")
             }
             if (eiere.size <= 1) {
                 throw BadRequestResponse("Kan ikke slette siste eier for rekrutteringstreff ${treffId.somString}")
             }
-            eierRepository.slett(connection, treffId, eierNavIdent)
+            check(eierRepository.slett(connection, treffId, eierNavIdent)) {
+                "Kunne ikke slette eier for rekrutteringstreff ${treffId.somString}"
+            }
             rekrutteringstreffRepository.leggTilHendelseForTreff(
                 connection, treffId, RekrutteringstreffHendelsestype.EIER_FJERNET, utførtAv,
                 subjektId = eierNavIdent, subjektNavn = eierNavIdent,
+            )
+            oppdaterKontorerOgHendelser(connection, treffId, eiere, utførtAv)
+        }
+    }
+
+    private fun oppdaterKontorerOgHendelser(connection: Connection, treffId: TreffId, eiereFør: List<Eier>, utførtAv: String) {
+        val eiereEtter = eierRepository.hent(connection, treffId)
+            ?: throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
+        val kontorerFør = eiereFør.map { it.kontorEnhetId }.toSet()
+        val kontorerEtter = eiereEtter.map { it.kontorEnhetId }.toSet()
+        rekrutteringstreffRepository.oppdaterKontorer(connection, treffId)
+        (kontorerEtter - kontorerFør).forEach { kontor ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.KONTOR_LAGT_TIL, utførtAv,
+                subjektId = kontor, subjektNavn = kontor,
+            )
+        }
+        (kontorerFør - kontorerEtter).forEach { kontor ->
+            rekrutteringstreffRepository.leggTilHendelseForTreff(
+                connection, treffId, RekrutteringstreffHendelsestype.KONTOR_FJERNET, utførtAv,
+                subjektId = kontor, subjektNavn = kontor,
             )
         }
     }

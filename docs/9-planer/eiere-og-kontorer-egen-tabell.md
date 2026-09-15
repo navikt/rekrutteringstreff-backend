@@ -3,6 +3,8 @@
 **Status:** Fase 1 (`V15`), fase 2 (dual write) og fase 3 (`V16`, backfill) er implementert.
 `V17` inneholder nå UUID → kontor-koblinger for både dev (3) og prod (23).
 `V18` er opprettet og setter `kontor_enhetid NOT NULL`. Resultatet av `V17` må være kontrollert før deploy.
+Fase 5 er implementert: lesing, søk og tilgangskontroll bruker eiertabellen. Dual write beholdes.
+Deploy av fase 5 forutsetter at fase 4 er fullført og kontrollert i prod.
 Modellvalg er besluttet (seksjon 6 og 7). API-et tar imot valgfritt `eierNavn` fra frontend (seksjon 8).
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
 
@@ -190,9 +192,9 @@ SQL-setning. `EierService` samler disse endringene, kontorarrayet og hendelsene 
 - Sletting fjerner eieren fra begge lagringsformene, også når den historiske eierraden mangler.
   Sperren mot å slette siste eier bruker fortsatt arrayet.
 
-Lesing, søk og tilgangskontroll bruker fortsatt arrayene. Kontorer fjernes ikke fra kontorarrayet ved
-sletting eller kontorbytte i denne fasen. Den nye semantikken og `KONTOR_FJERNET` innføres før lesingen
-byttes i fase 5. `eier_navn` fylles fra valgfritt `eierNavn` i begge opprettelsesflytene (se seksjon 8).
+I fase 2 bruker lesing, søk og tilgangskontroll fortsatt arrayene. Kontorer fjernes ikke fra
+kontorarrayet ved sletting eller kontorbytte i denne fasen. Fase 5 innfører den nye semantikken og
+`KONTOR_FJERNET`. `eier_navn` fylles fra valgfritt `eierNavn` i begge opprettelsesflytene (se seksjon 8).
 
 **Låserekkefølge:** Treffraden låses før eiertabellen endres. Serviceoperasjonene bruker `FOR UPDATE`;
 repository-operasjonene oppdaterer treffraden før de skriver eierraden. `V16` tar `ACCESS EXCLUSIVE`
@@ -320,23 +322,34 @@ Kontroller resultatet etter deploy. Først når alt er i orden, deployes den opp
 
 ### Fase 5 — Bytt lesing
 
-Forutsetter at fase 4 er fullført: alle eierrader har kontor, og databasen håndhever `NOT NULL`.
+**Implementert.** Forutsetter at fase 4 er fullført: alle eierrader har kontor, og databasen håndhever
+`NOT NULL`. Ingen nye versjonerte migreringer følger fase 5.
 
-- `EierRepository.hent` → `SELECT nav_ident, kontor_enhetid FROM rekrutteringstreff_eier ...`
-  (behold `FOR UPDATE`-låsing; nå låser man eierradene, ikke treffraden)
-- `RekrutteringstreffRepository.tilRekrutteringstreff` → hent eiere/kontorer via join eller `array_agg`
-- `R__rekrutteringstreff_sok_view.sql` → erstatt `rt.eiere` / `rt.kontorer` med subqueries:
-  ```sql
-  (SELECT array_agg(DISTINCT e.nav_ident) FROM rekrutteringstreff_eier e
-    WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id) AS eiere,
-  (SELECT array_agg(DISTINCT e.kontor_enhetid)
-     FROM rekrutteringstreff_eier e
-    WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id) AS kontorer
-  ```
-  ⚠️ `array_agg` gir NULL (ikke `{}`) ved ingen rader — pakk inn i `COALESCE(..., '{}'::text[])`, ellers
-  brekker `? = ANY(eiere)`-filtrene i `RekrutteringstreffSokRepository`.
-- Verifiser ytelse: `RekrutteringstreffSokYtelsestest` finnes allerede. Med dagens datavolum (269 eierrader,
-  se måleresultater i seksjon 6) er subqueries uproblematisk — materialisert view er ikke nødvendig.
+- `EierRepository.hent` leser `nav_ident` og `kontor_enhetid` fra eiertabellen. Et eksisterende treff
+  uten eierrader gir tom liste; ukjent treff gir fortsatt `null` og 404 fra service-laget.
+- Alle lesemetoder i `RekrutteringstreffRepository` og `R__rekrutteringstreff_sok_view.sql` bruker
+  `array_agg(DISTINCT ...)` fra eiertabellen, med `COALESCE(..., '{}'::text[])` for tomme aggregater.
+  Søk, eiertilgang og kontortilgang ignorerer dermed gamle arrays, også når de avviker fra eiertabellen.
+- Sperren mot å slette siste eier bruker låste eierrader. Eiere skrives fortsatt til begge lagringsformer.
+  `EierService` oppdaterer kontorarrayet fra gjenværende eierrader i samme transaksjon.
+- `KONTOR_LAGT_TIL` og `KONTOR_FJERNET` bygger på forskjellen mellom kontorene før og etter endringen.
+  Det gjelder både sletting og kontorbytte. Et kontor består så lenge minst én eier tilhører det.
+  `subjektId` og `subjektNavn` er kontorets enhetId. Feil ved hendelsesskriving ruller tilbake hele endringen.
+- API-formatene er uendret. `GET /eiere` returnerer fortsatt en liste med Nav-identer, ikke eierobjekter.
+
+**Justert låsing:** `FOR UPDATE` låser treffraden først og eierradene etterpå. Å bare låse eierradene,
+slik planen opprinnelig foreslo, ville gitt motsatt låserekkefølge av dual write under rullerende deploy.
+Trefflåsen samordner også samtidige tillegg når treffet ennå ikke har eierrader.
+
+Regresjonstestene dekker avvikende arrays, tomme aggregater, søkefiltre og aggregeringer, kontorbytte,
+kontortilgang, rollback og samtidige endringer. `RekrutteringstreffSokYtelsestest` oppretter nå også
+40 000 eierrader for sine 20 000 treff og krever ikke-tomme søkeresultater. Tersklene er fortsatt
+2 000 ms for warmup og 500 ms for neste søk.
+
+Ved rullerende deploy kan gamle instanser fortsatt bruke den gamle kontorsemantikken. Kontroller derfor
+tilgangen etter at alle instanser er oppdatert. Rollback til eldre kode må også ta hensyn til at
+`KONTOR_FJERNET` er en ny enum-verdi i hendelsesloggen. Ikke slett arraykolonnene før fase 5 er verifisert
+i prod.
 
 ### Fase 6 — Contract (`V19__dropp_eiere_kontorer_arrays.sql`)
 
@@ -355,8 +368,7 @@ Dette er gevinsten — vurder om noe skal med i første leveranse:
 - `GET /api/rekrutteringstreff/{id}/eiere` kan returnere `[{navIdent, navn, kontorEnhetId}]` i stedet for
   bare identer — kontornavn slås opp fra JSON-fila ut fra `kontorEnhetId`. **Breaking change** for frontend
   — vurder nytt endepunkt eller versjonert respons.
-- `KONTOR_FJERNET`-hendelse i `RekrutteringstreffHendelsestype` (`typer.kt`), utstedes når siste eier fra et
-  kontor fjernes. Mangler i dag — se seksjon 7, dette er nå et *krav* før lesingen byttes i fase 5, ikke en mulighet.
+- `KONTOR_FJERNET` er implementert i fase 5 når siste eier fra et kontor fjernes eller bytter kontor.
 - Statistikk per kontor basert på faktisk deltakelse.
 
 ---
@@ -461,7 +473,7 @@ kontornivå er 100 %.
 
 - **Ingen nullable `nav_ident`.** Semantikken «kontor forsvinner når siste eier fjernes» holder fullt ut.
 - **Ingen manuell opprydding eller varsling.** Ingen berørte kontorer.
-- **Ytelsespunktet i fase 5 er strøket.** 269 eierrader gjør `array_agg`-subqueries uproblematisk.
+- **Materialisert view er ikke planlagt.** Søkets eksisterende ytelsestest dekker fase 5 med større datavolum.
 - **Restansen på 70 rader må fylles i migreringen.** 50 kan utledes entydig, 20 krever avklaring — se
   seksjon 1. De lukker seg *ikke* av seg selv, siden `leggTilEierMedKontor` returnerer tidlig for
   eksisterende eiere.
@@ -506,13 +518,13 @@ viderefører eksisterende semantikk.
 
 ### Konsekvens: `KONTOR_FJERNET` blir et krav
 
-I dag skrives `EIER_FJERNET` ved fjerning, men ingenting registrerer at kontoret forlot treffet. Så lenge
+Før fase 5 ble `EIER_FJERNET` skrevet ved fjerning, men ingenting registrerte at kontoret forlot treffet. Så lenge
 `kontorer[]` finnes, kan tilstanden leses der. Etter fase 6 er kolonnen borte, og med hard delete finnes da
 *ingen* kilde til når et kontor mistet tilknytningen.
 
-`KONTOR_FJERNET` må derfor innføres før lesingen byttes i fase 5, utstedt fra `EierService.slettEier` når den fjernede
-eieren var den siste fra sitt kontor. Hendelsestypen legges til i `RekrutteringstreffHendelsestype`
-(`typer.kt`) med `subjektId`/`subjektNavn` satt til kontorets enhetId, i tråd med `KONTOR_LAGT_TIL`.
+`KONTOR_FJERNET` er derfor innført i fase 5. `EierService` skriver hendelsen når siste eier fra et kontor
+fjernes eller bytter kontor. Hendelsestypen finnes i `RekrutteringstreffHendelsestype` (`typer.kt`), med
+`subjektId`/`subjektNavn` satt til kontorets enhetId, i tråd med `KONTOR_LAGT_TIL`.
 
 ### Merk om dagens slettemulighet
 
