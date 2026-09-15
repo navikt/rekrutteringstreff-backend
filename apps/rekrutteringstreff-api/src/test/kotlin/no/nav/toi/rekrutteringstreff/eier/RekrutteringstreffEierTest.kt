@@ -14,6 +14,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.NullAndEmptySource
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.*
 
 
@@ -145,14 +147,14 @@ class RekrutteringstreffEierTest {
     fun `leggTilEierMedKontor gir 200 og legger til bruker som eier`() {
         val navIdent = "Z999001"
         val oppretter = "A123456"
-        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
+        val token = lagEiertoken(navIdent, "Feil navn fra JWT")
         opprettRekrutteringstreffIDatabase(oppretter)
         val treff = database.hentAlleRekrutteringstreff().first()
         assertThat(database.hentEiere(treff.id)).doesNotContain(navIdent)
 
         val response = httpPut(
             "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
-            "",
+            """{"eierNavn":"  Kari Testesen  "}""",
             token.serialize()
         )
 
@@ -161,7 +163,119 @@ class RekrutteringstreffEierTest {
         val eierrad = database.hentEierrader(treff.id).single { it.navIdent == navIdent }
         assertThat(eierrad.kontorEnhetId).isEqualTo("1234")
         assertThat(eierrad.lagtTilAv).isEqualTo(navIdent)
+        assertThat(eierrad.eierNavn).isEqualTo("Kari Testesen")
+        assertThat(database.hentEierrader(treff.id).single { it.navIdent == oppretter }.eierNavn).isNull()
     }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = ["  Kari Testesen  ", " "])
+    fun `opprett treff lagrer valgfritt eiernavn fra request og ignorerer JWT-navnet`(navn: String?) {
+        val token = lagEiertoken("A123456", "Feil navn fra JWT")
+
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff",
+            mapper.writeValueAsString(mapOf("tittel" to "Treff med eiernavn", "eierNavn" to navn)),
+            token.serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(201)
+        val treff = database.hentAlleRekrutteringstreff().single()
+        val eier = database.hentEierrader(treff.id).single()
+        assertThat(eier.navIdent).isEqualTo("A123456")
+        assertThat(eier.eierNavn).isEqualTo(navn?.trim()?.takeIf { it.isNotEmpty() })
+        assertThat(eier.kontorEnhetId).isEqualTo("1234")
+        assertThat(treff.eiere).containsExactly("A123456")
+        assertThat(treff.kontorer).containsExactly("1234")
+    }
+
+    @Test
+    fun `eksisterende eier får oppdatert navn men beholder det når request mangler navn`() {
+        val navIdent = "A123456"
+        opprettRekrutteringstreffIDatabase(navIdent)
+        val treff = database.hentAlleRekrutteringstreff().single()
+        val eierFør = database.hentEierrader(treff.id).single()
+
+        listOf(
+            "Kari Testesen" to "Kari Testesen",
+            "Kari Nyttnavn" to "Kari Nyttnavn",
+            null to "Kari Nyttnavn",
+            " " to "Kari Nyttnavn",
+        ).forEach { (navn, forventetNavn) ->
+            val response = httpPut(
+                "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg",
+                mapper.writeValueAsString(mapOf("eierNavn" to navn)),
+                lagEiertoken(navIdent, "Feil navn fra JWT").serialize()
+            )
+
+            assertThat(response.statusCode()).isEqualTo(200)
+            assertThat(database.hentEierrader(treff.id).single()).isEqualTo(
+                eierFør.copy(kontorEnhetId = "1234", eierNavn = forventetNavn)
+            )
+        }
+        assertThat(ctx.rekrutteringstreffRepository.hentAlleHendelser(treff.id)
+            .filter { it.hendelsestype == "EIER_LAGT_TIL" }).isEmpty()
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", " ", "{}", """{"eierNavn":null}""", """{"eierNavn":""}""", """{"eierNavn":" "}"""])
+    fun `PUT uten navn oppretter eierrad uten navn og beholder eksisterende navn`(body: String) {
+        opprettRekrutteringstreffIDatabase("A123456")
+        val treff = database.hentAlleRekrutteringstreff().single()
+        val navIdent = "B654321"
+        val token = lagEiertoken(navIdent, "Feil navn fra JWT")
+        val url = "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg"
+
+        assertThat(httpPut(url, body, token.serialize()).statusCode()).isEqualTo(200)
+        assertThat(database.hentEierrader(treff.id).single { it.navIdent == navIdent }.eierNavn).isNull()
+        ctx.eierRepository.leggTil(treff.id, navIdent, "1234", "Kari Testesen")
+        val eierFør = database.hentEierrader(treff.id).single { it.navIdent == navIdent }
+
+        assertThat(httpPut(url, body, token.serialize()).statusCode()).isEqualTo(200)
+        assertThat(database.hentEierrader(treff.id).single { it.navIdent == navIdent }).isEqualTo(eierFør)
+    }
+
+    @Test
+    fun `POST uten eierNavn er bakoverkompatibelt og bruker ikke JWT-navnet`() {
+        val response = httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff",
+            """{"tittel":"Treff uten eiernavn"}""",
+            lagEiertoken("A123456", "Feil navn fra JWT").serialize()
+        )
+
+        assertThat(response.statusCode()).isEqualTo(201)
+        val treff = database.hentAlleRekrutteringstreff().single()
+        assertThat(database.hentEierrader(treff.id).single().eierNavn).isNull()
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["{", """{"eierNavn":{}}"""])
+    fun `ugyldig request gir 400 uten endringer i treff eller eiere`(body: String) {
+        opprettRekrutteringstreffIDatabase("A123456")
+        val treff = database.hentAlleRekrutteringstreff().single()
+        val eiereFør = database.hentEierrader(treff.id)
+        val token = lagEiertoken("B654321", "Feil navn fra JWT")
+
+        assertThat(httpPut(
+            "http://localhost:$appPort/api/rekrutteringstreff/${treff.id}/eiere/meg", body, token.serialize()
+        ).statusCode()).isEqualTo(400)
+        assertThat(httpPost(
+            "http://localhost:$appPort/api/rekrutteringstreff", body, token.serialize()
+        ).statusCode()).isEqualTo(400)
+
+        assertThat(database.hentAlleRekrutteringstreff()).hasSize(1)
+        assertThat(database.hentEiere(treff.id)).containsExactly("A123456")
+        assertThat(database.hentEierrader(treff.id)).isEqualTo(eiereFør)
+    }
+
+    private fun lagEiertoken(navIdent: String, navn: String?) = infra.authServer.lagToken(
+        infra.authPort,
+        claims = buildMap<String, Any> {
+            put("NAVident", navIdent)
+            put("groups", listOf(AzureAdRoller.arbeidsgiverrettet.toString()))
+            navn?.let { put("name", it) }
+        }
+    )
 
     @Test
     fun `leggTilEierMedKontor er idempotent og gir 200 når bruker allerede er eier`() {

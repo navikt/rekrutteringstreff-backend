@@ -3,7 +3,7 @@
 **Status:** Fase 1 (`V15`), fase 2 (dual write) og fase 3 (`V16`, backfill) er implementert.
 `V17` inneholder nå UUID → kontor-koblinger for både dev (3) og prod (23).
 `V18` er opprettet og setter `kontor_enhetid NOT NULL`. Resultatet av `V17` må være kontrollert før deploy.
-Modellvalg er besluttet (seksjon 6 og 7), og kilde for eiernavn gjenstår å avklare (seksjon 8).
+Modellvalg er besluttet (seksjon 6 og 7). API-et tar imot valgfritt `eierNavn` fra frontend (seksjon 8).
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
 
 **Mål:** Bevare sammenhengen mellom eier og kontor. I dag er `rekrutteringstreff.eiere text[]` og
@@ -42,8 +42,8 @@ CREATE INDEX idx_rekrutteringstreff_eier_kontor ON rekrutteringstreff_eier (kont
 | Én tabell, kontor som kolonne | Kontor er avledet av eierskap — ingen selvstendig livssyklus | Kan ikke ha kontor uten eier (f.eks. kontor lagt til manuelt) |
 | Unik `id` som UUID i tillegg til intern primærnøkkel | Samme todeling som `rekrutteringstreff`. `DEFAULT gen_random_uuid()` gir også backfillede rader en UUID uten ekstra INSERT-logikk | Ekstra unik indeks; `rekrutteringstreff_eier_id` beholdes som intern nøkkel |
 | `kontor_enhetid` — mål: `NOT NULL` | `EierController` avviser manglende kontor. Avklarte UUID → kontor-koblinger er lagt inn i `V17` — se seksjon 1 | Krever kontroll av at ingen rader mangler kontor før constrainten settes i `V18` |
-| Oppdaterer kontor for eksisterende eiere | `leggTilEierMedKontor` bruker upsert fra fase 2, også når eierraden mangler før backfill | Navn endres ikke før navnekilden er avklart |
-| `eier_navn` nullable, denormalisert | Ingen server-side navIdent→navn-oppslag finnes i appen. Migrerte rader har ingen navnekilde | Navn kan bli utdatert; må tåle NULL i visning |
+| Oppdaterer kontor og navn for eksisterende eiere | `leggTilEierMedKontor` bruker upsert fra fase 2; frontend kan sende valgfritt `eierNavn` | Manglende navn overskriver ikke et eksisterende navn |
+| `eier_navn` nullable, denormalisert | Klientoppgitt visningsnavn brukes når det finnes; migrerte rader har ingen historisk navnekilde | Navnet er ikke verifisert identitet; NULL tillates når navn ikke sendes |
 | Unik `(treff, nav_ident)` | Én eier kan bare være eier én gang | Eier som bytter kontor må oppdateres (UPDATE, ikke ny rad) |
 | Ingen `ON DELETE CASCADE` | Treff slettes aldri fysisk (status `SLETTET`) | — |
 | Hard delete av eierrader (ingen `slettet_tidspunkt`) | Historikken ligger i `rekrutteringstreff_hendelse` (`EIER_FJERNET`); soft delete ville lagt en ekstra betingelse å glemme i tilgangskritisk aggregering | Krever at hendelsesloggen er komplett — se `KONTOR_FJERNET` |
@@ -180,9 +180,10 @@ tabellen all *ny* aktivitet før historikken fylles inn.
 **Implementert.** Opprettelse, tillegg og sletting skriver til eierarrayet og eiertabellen i samme
 SQL-setning. `EierService` samler disse endringene, kontorarrayet og hendelsene i én transaksjon.
 
-- `RekrutteringstreffRepository.opprett` setter inn oppretteren med kontor, tidspunkt og `lagt_til_av`.
-- `EierRepository.leggTil` krever kontor og oppdaterer det ved gjentatte kall. Radens ID, tidspunkt,
-  `lagt_til_av` og eventuelt navn beholdes ved oppdatering.
+- `RekrutteringstreffRepository.opprett` setter inn oppretteren med kontor, tidspunkt, `lagt_til_av` og
+  navn fra request-body når det finnes.
+- `EierRepository.leggTil` krever kontor og oppdaterer kontor og eventuelt navn ved gjentatte kall.
+  Radens ID, tidspunkt og `lagt_til_av` beholdes. Manglende navn overskriver ikke lagret navn.
 - `EierService.leggTilEierMedKontor` fyller også manglende eierrader for eksisterende eiere, uten ny
   `EIER_LAGT_TIL`-hendelse. `leggTilKontor` vedlikeholder fortsatt kontorarrayet og utløser
   `KONTOR_LAGT_TIL` når kontoret er nytt på treffet.
@@ -191,7 +192,7 @@ SQL-setning. `EierService` samler disse endringene, kontorarrayet og hendelsene 
 
 Lesing, søk og tilgangskontroll bruker fortsatt arrayene. Kontorer fjernes ikke fra kontorarrayet ved
 sletting eller kontorbytte i denne fasen. Den nye semantikken og `KONTOR_FJERNET` innføres før lesingen
-byttes i fase 5. `eier_navn` for nye rader er fortsatt NULL mens navnekilden avklares.
+byttes i fase 5. `eier_navn` fylles fra valgfritt `eierNavn` i begge opprettelsesflytene (se seksjon 8).
 
 **Låserekkefølge:** Treffraden låses før eiertabellen endres. Serviceoperasjonene bruker `FOR UPDATE`;
 repository-operasjonene oppdaterer treffraden før de skriver eierraden. `V16` tar `ACCESS EXCLUSIVE`
@@ -279,7 +280,8 @@ Begge gir NULL, ikke feil kontor.
 
 ⚠️ **Hullene kan ikke forventes å lukke seg av seg selv.** Fra fase 2 oppdaterer et nytt
 `PUT /eiere/meg` kontor også for eksisterende eiere, men bare når brukeren gjør kallet.
-Backfill fyller entydige kontorer; resterende hull må avklares i fase 4. Navn oppdateres ikke.
+Backfill fyller entydige kontorer; resterende hull må avklares i fase 4. Navn oppdateres ved selvbetjening
+når frontend sender `eierNavn`.
 
 ✅ **Målt mot prod: ingen kontorer går tapt.** `kontorkoblinger_som_forsvinner = 0` — hvert kontor i dagens
 `kontorer[]` dekkes av minst én gjenværende eier. De 70 eierradene som får `NULL` er nettopp tilfelle 1 over:
@@ -519,63 +521,58 @@ kan fjerne seg selv i dag — eneste sperre er at siste eier ikke kan fjernes (`
 
 ---
 
-## 8. `eier_navn` — kilde må avklares
+## 8. `eier_navn` — valgfritt navn fra frontend
 
-Kolonnen `eier_navn` lagrer visningsnavnet til eieren, slik at `GET /eiere` kan returnere navn uten oppslag
-per forespørsel.
+**Implementert i backend:** Begge opprettelsesflytene tar imot `eierNavn: String?` i JSON-body.
+JWT-tokenets `name`-claim brukes ikke lenger, siden det ikke er en pålitelig navnekilde for oss.
+Navnet trimmes; manglende eller blankt navn behandles som ikke oppgitt. Verifisering av token og
+autorisasjon er uendret.
 
-**Problemet:** appen har ingen server-side navIdent→navn-oppslag. Det finnes ingen NOM- eller
-Graph-integrasjon, og ingen kode leser et `name`-claim fra tokenet i dag.
+### Kontrakt for frontend
 
-Dagens navnekilder i kodebasen henter alle navnet fra *utsiden*:
+Ved opprettelse av treff, `POST /api/rekrutteringstreff`:
 
-| Felt | Kilde |
-| --- | --- |
-| `jobbsoker.veileder_navn` | `KandidatsøkKlient` — gjelder jobbsøkerens veileder, ikke eiere |
-| `formidling.opprettet_av_veileder_navn` | request-DTO (`opprettFormidling.opprettetAvNavn`) |
-| `innlegg.opprettet_av_person_navn` | request-DTO |
-| `rekrutteringstreff_hendelse.subjekt_navn` for `EIER_LAGT_TIL` | plassholder — settes til navIdent, ikke et reelt navn |
+```json
+{
+  "tittel": "Nytt rekrutteringstreff",
+  "kategori": "REKRUTTERINGSTREFF",
+  "eierNavn": "Kari Testesen"
+}
+```
 
-### Alternativer
+Ved selvbetjening, `PUT /api/rekrutteringstreff/{id}/eiere/meg`:
 
-**(a) `name`-claim fra tokenet.** Azure AD-tokens inneholder normalt et `name`-claim. Krever bare en
-`extractNavn()` i `AuthenticatedUser`, ingen ny integrasjon. Passer godt fordi `PUT /eiere/meg` er
-selvbetjening — brukeren som legges til *er* den innloggede.
-⚠️ Må verifiseres mot et faktisk token i dev før det velges; ingen kode i repoet leser claimet i dag.
+```json
+{
+  "eierNavn": "Kari Testesen"
+}
+```
 
-**(b) Frontend sender navnet.** Følger mønsteret fra `innlegg` og `formidling`. Men `PUT /eiere/meg` har i
-dag ingen request-body, så API-kontrakten må utvides — og klientoppgitte visningsnavn er en svakere kilde.
+`eierNavn` er valgfritt i begge forespørslene. PUT støtter fortsatt helt tom body, i tillegg til `{}`.
+Frontend-koden ligger ikke i dette repoet og må oppdateres til å sende feltet.
 
-**(c) Nytt oppslag mot NOM/Graph.** Mest korrekt og gir også navn ved backfill, men er en ny integrasjon
-med tilhørende scope, feilhåndtering og driftsansvar.
+- Ved opprettelse av treff sendes navnet gjennom `OpprettRekrutteringstreffInternalDto` til
+  `RekrutteringstreffRepository.opprett`, som lagrer det på oppretterens eierrad.
+- Ved `PUT /eiere/meg` sendes navnet gjennom `EierService` til `EierRepository.leggTil`. Nye rader får
+  navn, og eksisterende rader får oppdatert navn når det sendes inn.
+- Hvis navn mangler, er NULL eller blankt, tillates operasjonen fortsatt. Nye rader får NULL, mens eksisterende navn
+  beholdes med `coalesce(EXCLUDED.eier_navn, rekrutteringstreff_eier.eier_navn)`.
 
-**Anbefaling:** (a), med (c) som senere forbedring hvis navn trengs for historiske rader.
+**Valg og avveining:** Frontend velger navnekilde, uten avhengighet til `name`-claimet eller en ny
+NOM-/Graph-integrasjon i backend. Navnet er klientoppgitt visningsdata og skal ikke oppfattes som
+verifisert identitet. Tillegget er bakoverkompatibelt med klienter som ikke sender navn.
+
+🔴 **Rød sone — forstå dette grundig:** Nav-ident og kontor bestemmes fortsatt på serversiden fra
+innlogget bruker og Modia. Klienten får bare oppgi et visningsnavn for sin egen eierrad; navnet brukes
+aldri til identifikasjon eller tilgangskontroll. Token eller navn logges ikke.
 
 ### Backfill
 
-Ingen av alternativene gir navn for de 269 eksisterende radene — `eier_navn` blir `NULL`.
-
-Navnet fylles ikke inn av seg selv senere. Fra fase 2 oppdaterer `PUT /eiere/meg` kontor også for
-eksisterende eiere, men lar navnet stå urørt. Skal historiske rader få navn, må vi først velge navnekilde
-og deretter utvide skrivingen eller migrere navnene (se delvis backfill under).
-
-Delvis backfill er mulig fra `innlegg`, som har både navident og navn for de som har skrevet innlegg:
-
-```sql
-UPDATE rekrutteringstreff_eier e
-SET eier_navn = i.opprettet_av_person_navn
-FROM innlegg i
-WHERE i.opprettet_av_person_navident = e.nav_ident
-  AND i.opprettet_av_person_navn IS NOT NULL
-  AND e.eier_navn IS NULL;
-```
-
-Vurder om det er verdt kompleksiteten — dekningen er trolig lav.
+Ingen massemigrering av historiske navn er gjort. En eksisterende eierrad får navn neste gang eieren
+bruker `PUT /eiere/meg` og frontend sender navn. Dette oppdaterer bare eierraden på det aktuelle
+treffet, ikke alle treff personen eier. Full historisk utfylling krever en egen navnekilde og avklaring.
 
 ### Følger for øvrig
 
-- `Eier`-klassen (`eier/Eier.kt`) må utvides fra `Eier(navIdent)`. `tilJson()` og `tilNavIdenter()` brukes
-  av `EierController` og `EierService`, så endringen berører responsformatet — se punktet om breaking
-  change i seksjon 3.
-- `subjektNavn` for `EIER_LAGT_TIL`/`EIER_FJERNET` kan endelig settes til et reelt navn i stedet for
-  navIdent-plassholderen.
+`GET /eiere` returnerer fortsatt Nav-identer; responsformatet er uendret. Å eksponere navn i responsen er
+en separat endring (seksjon 3). `subjektNavn` i eierhendelser er heller ikke endret.

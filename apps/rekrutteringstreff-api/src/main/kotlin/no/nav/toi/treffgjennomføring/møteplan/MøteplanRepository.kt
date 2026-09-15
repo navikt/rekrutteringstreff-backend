@@ -2,12 +2,32 @@ package no.nav.toi.treffgjennomføring.møteplan
 
 import no.nav.toi.arbeidsgiver.ArbeidsgiverTreffId
 import no.nav.toi.jobbsoker.PersonTreffId
+import no.nav.toi.rekrutteringstreff.TreffId
 import no.nav.toi.tilListe
 import no.nav.toi.treffgjennomføring.Treffkontekst
 import java.sql.Connection
 import java.time.LocalTime
 
 class MøteplanRepository {
+
+    fun harMøteplan(connection: Connection, treffId: TreffId): Boolean {
+        val sql = """
+            SELECT EXISTS (
+                SELECT 1 FROM moteoppsett m
+                JOIN treffgjennomforing t ON t.treffgjennomforing_id = m.treffgjennomforing_id
+                WHERE t.rekrutteringstreff_id = rt.rekrutteringstreff_id
+            ) OR EXISTS (
+                SELECT 1 FROM jobbsoker_romtildeling r
+                JOIN jobbsoker j ON j.jobbsoker_id = r.jobbsoker_id
+                WHERE r.rekrutteringstreff_id = rt.rekrutteringstreff_id AND j.status != 'SLETTET'
+            )
+            FROM rekrutteringstreff rt WHERE rt.id = ?
+        """.trimIndent()
+        return connection.prepareStatement(sql).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
+        }
+    }
 
     fun hentMøteplan(connection: Connection, treffkontekst: Treffkontekst, oppmøte: List<PersonTreffId>): Møteplan {
         val møteoppsett = hentMøteoppsett(connection, treffkontekst.treffDbId)
@@ -16,7 +36,7 @@ class MøteplanRepository {
             møteoppsett = møteoppsett ?: Møteoppsett.standard(),
             rom = if (møteoppsett == null && lagretRom.isEmpty()) emptyList()
                 else normaliserRom(lagretRom, oppmøte, treffkontekst.antallRom),
-            arbeidsgiverRekkefølge = hentArbeidsgiverRotasjon(connection, treffkontekst),
+            arbeidsgiverRekkefølge = hentArbeidsgiverRotasjon(connection, treffkontekst, møteoppsett != null),
         )
     }
 
@@ -59,7 +79,11 @@ class MøteplanRepository {
         }
     }
 
-    private fun hentArbeidsgiverRotasjon(connection: Connection, kontekst: Treffkontekst): List<ArbeidsgiverRotasjon> {
+    private fun hentArbeidsgiverRotasjon(
+        connection: Connection,
+        kontekst: Treffkontekst,
+        harMøteoppsett: Boolean,
+    ): List<ArbeidsgiverRotasjon> {
         val sql = """
             SELECT a.id::text, r.forste_romnummer
             FROM arbeidsgiver_rotasjon r
@@ -72,13 +96,50 @@ class MøteplanRepository {
                 rs.tilListe { ArbeidsgiverTreffId(it.getString(1)) to it.getInt(2) }.toMap()
             }
         }
-        if (rotasjon.isEmpty()) return emptyList()
+        if (rotasjon.isEmpty() && !harMøteoppsett) return emptyList()
 
         val brukteRomnumre = rotasjon.values.toMutableSet()
         return kontekst.arbeidsgiverTreffIder.map { arbeidsgiver ->
             val romnummer = rotasjon[arbeidsgiver] ?: generateSequence(1) { it + 1 }.first { it !in brukteRomnumre }
             brukteRomnumre.add(romnummer)
             ArbeidsgiverRotasjon(arbeidsgiver, romnummer)
+        }
+    }
+
+    fun lagreMøteplan(connection: Connection, kontekst: Treffkontekst, møteplan: Møteplan) {
+        if (møteplan.rom.isEmpty()) return
+        erstattRomfordeling(connection, kontekst.treffDbId, møteplan.rom, kontekst)
+        lagreArbeidsgiverRotasjon(connection, møteplan.arbeidsgiverRekkefølge, kontekst)
+    }
+
+    fun fjernArbeidsgiverOgKompakter(connection: Connection, arbeidsgiverId: Long, treffDbId: Long) {
+        val førsteRomnummer = connection.prepareStatement(
+            "DELETE FROM arbeidsgiver_rotasjon WHERE arbeidsgiver_id = ? RETURNING forste_romnummer"
+        ).use { stmt ->
+            stmt.setLong(1, arbeidsgiverId)
+            stmt.executeQuery().use { if (it.next()) it.getInt(1) else null }
+        } ?: return
+
+        connection.prepareStatement(
+            "UPDATE jobbsoker_romtildeling SET romnummer = romnummer - 1 WHERE rekrutteringstreff_id = ? AND romnummer > ?"
+        ).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setInt(2, førsteRomnummer)
+            stmt.executeUpdate()
+        }
+
+        connection.prepareStatement(
+            """
+            UPDATE arbeidsgiver_rotasjon
+            SET forste_romnummer = forste_romnummer - 1
+            WHERE arbeidsgiver_id IN (
+                SELECT arbeidsgiver_id FROM arbeidsgiver WHERE rekrutteringstreff_id = ?
+            ) AND forste_romnummer > ?
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setInt(2, førsteRomnummer)
+            stmt.executeUpdate()
         }
     }
 

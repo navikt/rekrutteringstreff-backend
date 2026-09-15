@@ -367,6 +367,21 @@ class ArbeidsgiverRepository(
         return true
     }
 
+    fun tellPersonerIRom(connection: Connection, arbeidsgiverId: Long, treffDbId: Long): Int =
+        connection.prepareStatement(
+            """
+            SELECT COUNT(*)
+            FROM jobbsoker_romtildeling r
+            JOIN jobbsoker j ON j.jobbsoker_id = r.jobbsoker_id
+            JOIN arbeidsgiver_rotasjon a ON a.forste_romnummer = r.romnummer
+            WHERE r.rekrutteringstreff_id = ? AND a.arbeidsgiver_id = ? AND j.status != 'SLETTET'
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setLong(1, treffDbId)
+            stmt.setLong(2, arbeidsgiverId)
+            stmt.executeQuery().use { it.next(); it.getInt(1) }
+        }
+
     private fun finnesArbeidsgiver(connection: Connection, arbeidsgiverTreffId: ArbeidsgiverTreffId): Boolean {
         return connection.prepareStatement("SELECT 1 FROM arbeidsgiver WHERE id = ?").use { ps ->
             ps.setObject(1, arbeidsgiverTreffId.somUuid)
