@@ -10,9 +10,12 @@ Marker ✅ eller ❌ og noter avvik. Skriv «Ikke kjørt» ved tester som ikke e
 | ----- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---- | ----- |
 | 1.1.1 | Eier – Søk etter eget WorkOp i kladd, publisert, avlyst og fullført status. Bruk dato-/statusfilter. | WorkOp vises i tilhørende filtre med WorkOp-merking. Slettede treff er skjult. |      |       |
 | 1.1.2 | Markedskontakt/veileder uten eierskap – Søk med «Alle», eget kontor og valgte kontorer.              | WorkOp er skjult; vanlige tilgjengelige treff vises.                           |      |       |
-| 1.1.3 | Markedskontakt uten eierskap – Åpne direkte lenke til WorkOp.                                        | Ingen tilgang til treff, gjennomføringsdata eller redigering.                  |      |       |
-| 1.1.4 | Medeier med arbeidsgiverrettet rolle – Åpne WorkOp.                                                  | Gjennomføringen kan leses og redigeres uten å velge hovedansvarlig.            |      |       |
+| 1.1.3 | Markedskontakt uten eierskap – Åpne direkte lenke til WorkOp. Velg «Legg til meg som medeier» og bekreft. | Siden vises i vanlig forhåndsvisning, som for øvrige treff, med mulighet til å legge seg selv til som medeier. Gjennomføring og eierredigering er utilgjengelig før selvinnmelding. Etter bekreftelse åpnes eierfunksjonene uten manuell omlasting. Eksisterende eiere beholdes. |      |       |
+| 1.1.4 | Registrert medeier med arbeidsgiverrettet rolle – Åpne WorkOp via direkte lenke.                    | Gjennomføringen kan leses og redigeres uten å velge hovedansvarlig.            |      |       |
 | 1.1.5 | Utvikler uten eierskap – Søk etter WorkOp og åpne direkte lenke.                                     | Skjult i søket, tilgjengelig via direkte lenke.                                |      |       |
+| 1.1.6 | Markedskontakt uten eierskap – Åpne direkte lenke til WorkOp. La selvinnmeldingen feile. | En feilmelding vises. Brukeren forblir ikke-eier, med vanlig forhåndsvisning og mulighet til å prøve igjen. Ingen eierfunksjoner åpnes. |      |       |
+
+Eventuelle ytterligere begrensninger på innholdet i forhåndsvisningen avklares senere. Muligheten til å legge seg selv til som medeier skal beholdes dersom mer innhold skjules. WorkOp skal fortsatt være skjult i søk for ikke-eiere, som beskrevet i 1.1.2.
 
 ## 2. Opprette og publisere WorkOp
 
@@ -402,7 +405,7 @@ Marker ✅ eller ❌ og noter avvik. Skriv «Ikke kjørt» ved tester som ikke e
 
 **Kjente feil og uavklarte regler**
 
-- **Tilgang:** Flere underressurser mangler WorkOp-eiersjekk, og `/eiere/meg` tillater selvinnmelding. Avklar eierkravet, kontortilgang og tillatte unntak.
+- **Tilgang:** Direkte lenke skal gi vanlig forhåndsvisning og mulighet for selvinnmelding via `/eiere/meg`, med gjeldende rollekrav og kontortilknytning. Gjennomføring og eierredigering krever fortsatt eierskap eller utviklerrolle. Flere underressurser mangler WorkOp-eiersjekk; avklar hvilke opplysninger som skal være tilgjengelige før selvinnmelding. Eventuelle innsynsbegrensninger må håndheves i API-et, ikke bare ved å skjule innhold på siden.
 - **Svarstatus:** Oppmøte og «Fått jobb» overskriver ja/nei. Tidligere svar må fortsatt styre svarvisning, endrings-/avlysningsvarsler og kortstatus ved avlysning/fullføring. Direkte svarendring må ikke ødelegge oppmøte/formidling.
 - **Formidling og oppmøte:** «Fått jobb» telles som møtt, også uten oppmøteregistrering. Oppmøtefjerning kan logges uten faktisk endring. Avklar telling og retting; visning, nummer og historikk må samsvare.
 - **Arbeidsgiverfjerning:** Skjulte interesser/vurderinger hos fjernet arbeidsgiver kan sperre oppmøtefjerning uten tilgjengelig retting. Forslaget er å sperre arbeidsgiverfjerning til avklart opprydding, også for usynlige personer/formidlinger. Siste-arbeidsgiver-sperren finnes bare i skjermbildet; API-regelen må avklares.

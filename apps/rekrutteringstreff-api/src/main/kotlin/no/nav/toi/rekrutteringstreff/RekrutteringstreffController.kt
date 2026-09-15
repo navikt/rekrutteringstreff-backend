@@ -25,27 +25,6 @@ class RekrutteringstreffController(
     private val kiLoggService: KiLoggService,
 ) : RuteRegistrerer {
 
-    /**
-     * Sjekker om innlogget bruker har tilgang til å se et rekrutteringstreff.
-     *
-     * Tilgangsregler:
-     * - Ordinære rekrutteringstreff: alle autoriserte veiledere/markedskontakter og borgere har lesetilgang.
-     * - WorkOp:
-     *   - Eiere / utviklere (Nav-ansatte registrert som eiere): full tilgang (les + skriv)
-     *   - Jobbsøkere / borgere (personbrukere uten Nav-ident): lesetilgang til treffet (arbeidsgivere skjules i minside-api)
-     *   - Andre veiledere / Nav-ansatte uten eierskap: har IKKE tilgang (skjult i søk og ved direkte oppslag)
-     */
-    private fun harInnloggetBrukerTilgangTil(
-        ctx: Context,
-        treffId: TreffId,
-        kategori: RekrutteringstreffKategori,
-    ): Boolean {
-        if (kategori != RekrutteringstreffKategori.WORKOP) return true
-        val user = ctx.authenticatedUser()
-        if (user.erBorger) return true // Borger/jobbsøker har lesetilgang
-        val navIdent = user.extractNavIdent()
-        return eierService.erEierEllerUtvikler(treffId = treffId, navIdent = navIdent, context = ctx)
-    }
     companion object {
         private const val pathParamTreffId = "id"
         private const val endepunktRekrutteringstreff = "/api/rekrutteringstreff"
@@ -125,7 +104,7 @@ class RekrutteringstreffController(
 
     @OpenApi(
         summary = "Hent et rekrutteringstreff",
-        description = "eierOgKontor kobler Nav-ident, valgfritt eiernavn og kontorets enhetId. Eiere og kontorer beholdes som separate lister for bakoverkompatibilitet.",
+        description = "Autoriserte brukere kan hente treffet uten eierskap, også WorkOp via direkte lenke. Dette gir ikke tilgang til gjennomføring eller eierredigering. Søk har egne tilgangsfiltre. eierOgKontor kobler Nav-ident, valgfritt eiernavn og kontorets enhetId. Eiere og kontorer beholdes som separate lister for bakoverkompatibilitet.",
         operationId = "hentRekrutteringstreff",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
@@ -172,9 +151,6 @@ class RekrutteringstreffController(
             val rekrutteringstreff = rekrutteringstreffService.hentRekrutteringstreff(treffId)
             if (rekrutteringstreff == null) {
                 log.info("Fant ikke rekrutteringstreff med id $treffId")
-                ctx.status(404)
-            } else if (!harInnloggetBrukerTilgangTil(ctx, treffId, rekrutteringstreff.kategori)) {
-                log.info("Nav-ansatt uten eierskap forsøkte å hente WorkOp med id $treffId")
                 ctx.status(404)
             } else {
                 log.info("Hentet rekrutteringstreff med id $treffId")
