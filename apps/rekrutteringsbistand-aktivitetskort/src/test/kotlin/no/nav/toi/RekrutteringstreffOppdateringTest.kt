@@ -44,7 +44,7 @@ class RekrutteringstreffOppdateringTest {
     private val app = App(
         port = appPort,
         rapidsConnection = rapid,
-        repository = Repository(databaseConfig, "http://url", "topic"),
+        repository = Repository(databaseConfig, "http://url", "http://url/stilling", "topic"),
         producer = MockProducer(),
         consumer = MockConsumer(AutoOffsetResetStrategy.StrategyType.EARLIEST.toString()),
         dabAktivitetskortFeilTopic = "topic",

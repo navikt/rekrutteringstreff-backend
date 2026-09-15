@@ -53,7 +53,7 @@ class AktivitetskortTest {
     private val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "topic")
+    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "http://url/stilling", "topic")
     private val objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
 
     @BeforeEach
@@ -147,7 +147,7 @@ class AktivitetskortTest {
         record.value().let(objectMapper::readTree).apply {
             assertThat(this["messageId"].asText()).isNotBlank()
             assertThat(this["source"].asText()).isEqualTo("REKRUTTERINGSBISTAND")
-            assertThat(this["aktivitetskortType"].asText()).isEqualTo(DeleCvMedArbeidsgiverType.akaasType)
+            assertThat(this["aktivitetskortType"].asText()).isEqualTo("DELE_CV_MED_ARBEIDSGIVER")
             assertThat(this["actionType"].asText()).isEqualTo("UPSERT_AKTIVITETSKORT_V1")
             assertThat(this["aktivitetskort"]["id"].asText()).isEqualTo(expectedAktivitetskortId.toString())
             assertThat(this["aktivitetskort"]["personIdent"].asText()).isEqualTo(expectedFnr)
@@ -170,7 +170,7 @@ class AktivitetskortTest {
             assertThat(this["aktivitetskort"]["handlinger"]).hasSize(1)
             assertThat(this["aktivitetskort"]["handlinger"][0]["tekst"].asText()).isEqualTo("Sjekk ut stillingen")
             assertThat(this["aktivitetskort"]["handlinger"][0]["subtekst"].asText()).isEqualTo("Sjekk ut stillingen og svar")
-            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asText()).isEqualTo("http://url/rekrutteringstreff/stilling/$expectedStillingId") // TODO: Feil url
+            assertThat(this["aktivitetskort"]["handlinger"][0]["url"].asText()).isEqualTo("http://url/stilling/$expectedStillingId") // TODO: Feil url
             assertThat(this["aktivitetskort"]["handlinger"][0]["lenkeType"].asText()).isEqualTo("FELLES")
             assertThat(this["aktivitetskort"]["oppgave"].isNull).isTrue()
         }

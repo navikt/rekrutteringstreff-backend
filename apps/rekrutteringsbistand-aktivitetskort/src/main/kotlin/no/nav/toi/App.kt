@@ -128,7 +128,8 @@ fun main() {
         rapidsConnection = rapidsConnection,
         repository = Repository(
             DatabaseConfig(env),
-            env.variable("MIN_SIDE_URL"),
+            env.variable("MIN_SIDE_REKRUTTERINGSTREFF_URL"),
+            env.variable("MIN_SIDE_STILLING_URL"),
             env.variable("DAB_AKTIVITETSKORT_TOPIC")
         ),
         producer = KafkaProducer(producerConfig(env)),

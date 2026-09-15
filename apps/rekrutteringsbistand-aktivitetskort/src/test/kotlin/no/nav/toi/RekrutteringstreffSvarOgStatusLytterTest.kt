@@ -45,7 +45,7 @@ class RekrutteringstreffSvarOgStatusLytterTest {
     private val rapid = TestRapid()
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
     private val testRepository = TestRepository(databaseConfig)
-    private val repository = Repository(databaseConfig, "http://url", "topic")
+    private val repository = Repository(databaseConfig, "http://url", "http://url/stilling", "topic")
     private val app = App(
         port = appPort,
         rapidsConnection = rapid,

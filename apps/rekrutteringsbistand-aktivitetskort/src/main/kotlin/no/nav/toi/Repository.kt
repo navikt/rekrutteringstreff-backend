@@ -4,7 +4,6 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.*
 import org.flywaydb.core.Flyway
-import java.sql.ResultSet
 import java.sql.Statement
 import java.sql.Timestamp
 import java.sql.Types.VARCHAR
@@ -13,7 +12,7 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.util.*
 
-class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String, private val dabAktivitetskortTopic: String) {
+class Repository(databaseConfig: DatabaseConfig, private val minsideRekrutteringstreffUrl: String, private val minsideStillingUrl: String, private val dabAktivitetskortTopic: String) {
     private val dataSource = databaseConfig.lagDatasource()
     private val teamLog = TeamLogLogger.teamlog(log)
 
@@ -97,7 +96,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                                     AktivitetskortHandling(
                                         aktivitetskortType.handlingTittel,
                                         aktivitetskortType.handlingSubtekst,
-                                        "$minsideUrl/$rekrutteringstreffId",
+                                        "$minsideRekrutteringstreffUrl/$rekrutteringstreffId",
                                         LenkeType.FELLES
                                     )
                                 )
@@ -627,7 +626,7 @@ class Repository(databaseConfig: DatabaseConfig, private val minsideUrl: String,
                                 AktivitetskortHandling(
                                     DeleCvMedArbeidsgiverType.handlingTittel,
                                     DeleCvMedArbeidsgiverType.handlingSubtekst,
-                                    "$minsideUrl/stilling/$stillingId",
+                                    "$minsideStillingUrl/$stillingId",
                                     LenkeType.FELLES
                                 )
                             )

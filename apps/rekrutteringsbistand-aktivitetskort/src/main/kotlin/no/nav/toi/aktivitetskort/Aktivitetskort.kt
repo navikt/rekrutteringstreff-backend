@@ -227,7 +227,7 @@ object DeleCvMedArbeidsgiverType: AktivitetskortType {
     override val handlingTittel = "Sjekk ut stillingen"
     override val handlingSubtekst = "Sjekk ut stillingen og svar"
     override val dbType = "DELE_CV_MED_ARBEIDSGIVER"
-    override val akaasType = "REKRUTTERINGSTREFF"   // Midlertidig inntil "DELE_CV_MED_ARBEIDSGIVER" er på plass
+    override val akaasType = "DELE_CV_MED_ARBEIDSGIVER"
 
     override fun tilFeil(
         fellesMeldingsfelter: FellesMeldingsfelter,
