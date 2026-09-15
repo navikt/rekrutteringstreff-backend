@@ -11,6 +11,7 @@ import com.auth0.jwt.interfaces.RSAKeyProvider
 import io.javalin.http.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.arbeidsgiver.toi.logging.noClassLogger
+import no.nav.toi.exception.AktivEnhetManglerException
 import no.nav.toi.rekrutteringstreff.tilgangsstyring.ModiaKlient
 import java.net.URI
 import java.security.interfaces.RSAPublicKey
@@ -92,7 +93,7 @@ private class AuthenticatedNavUser(
         } else {
             veiledersKontor = modiaKlient.hentVeiledersAktivEnhet(token)
             if (veiledersKontor.isNullOrEmpty()) {
-                throw ForbiddenResponse("Finner ikke veileders innloggede kontor")
+                throw AktivEnhetManglerException()
             }
         }
     }

@@ -39,6 +39,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.net.URI
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -187,6 +189,55 @@ class StatistikkKomponentTest {
             groups = listOf(UUID.randomUUID()),
         )
         assertThat(response.statusCode()).isEqualTo(403)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["""{"aktivEnhet": null}""", "{}", """{"aktivEnhet": ""}"""])
+    fun `manglende aktiv enhet gir 403 med forklaring`(modiaRespons: String) {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(aResponse().withStatus(200).withBody(modiaRespons))
+        )
+
+        val response = hentStatistikk(navKontor = "1000", fraOgMed = "2026-06-01", tilOgMed = "2026-06-30")
+
+        assertThat(response.statusCode()).isEqualTo(403)
+        val feil = mapper.readTree(response.body())
+        assertThat(feil["feilkode"].asText()).isEqualTo("AKTIV_ENHET_MANGLER")
+        assertThat(feil["feil"].asText()).isEqualTo("Aktiv enhet mangler. Velg Nav-kontor og prøv igjen.")
+        assertThat(feil["detail"].asText()).isEqualTo(feil["feil"].asText())
+    }
+
+    @Test
+    fun `teknisk Modia-feil gir 502 og ikke manglende aktiv enhet`() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(aResponse().withStatus(503))
+        )
+
+        val response = hentStatistikk(navKontor = "1000", fraOgMed = "2026-06-01", tilOgMed = "2026-06-30")
+
+        assertThat(response.statusCode()).isEqualTo(502)
+        val feil = mapper.readTree(response.body())
+        assertThat(feil.has("feilkode")).isFalse()
+        assertThat(feil["feil"].asText()).isEqualTo("Klarte ikke å hente aktiv enhet fra Modia. Prøv igjen senere.")
+    }
+
+    @Test
+    fun `utvikler trenger fortsatt ikke aktiv enhet`() {
+        stubFor(
+            get(urlPathEqualTo("/api/context/v2/aktivenhet"))
+                .willReturn(aResponse().withStatus(200).withBody("""{"aktivEnhet": null}"""))
+        )
+
+        val response = hentStatistikk(
+            navKontor = "1000",
+            fraOgMed = "2026-06-01",
+            tilOgMed = "2026-06-30",
+            groups = listOf(AzureAdRoller.utvikler),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
     }
 
     private fun hentStatistikk(
