@@ -33,7 +33,7 @@ class HelsesjekkControllerTest {
             localEnv["NAIS_DATABASE_REKRUTTERINGSBISTAND_AKTIVITETSKORT_AKTIVITETSKORT_DB_PORT"] = localConfig.getMappedPort(5432).toString()
         }
     private val databaseConfig = DatabaseConfig(localEnv, meterRegistry)
-    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "topic")
+    private val repository = Repository(databaseConfig, "http://url/rekrutteringstreff", "http://url/stilling", "topic")
 
     private lateinit var app: App
 

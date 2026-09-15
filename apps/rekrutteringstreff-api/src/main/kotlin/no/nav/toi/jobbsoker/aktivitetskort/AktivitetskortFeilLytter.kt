@@ -19,7 +19,7 @@ class AktivitetskortFeilLytter(
     init {
         River(rapidsConnection).apply {
             precondition {
-                it.requireValue("@event_name", "aktivitetskort-feil")
+                it.requireAny("@event_name", listOf("aktivitetskort-feil", "aktivitetskort-feil-rekrutteringstreff", "aktivitetskort-feil-workop"))
                 it.requireKey("rekrutteringstreffId", "fnr", "endretAv")
                 it.forbid("aktørId")
             }

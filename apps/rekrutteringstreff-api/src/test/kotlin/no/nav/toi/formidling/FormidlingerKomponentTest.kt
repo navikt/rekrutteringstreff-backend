@@ -115,6 +115,22 @@ class FormidlingerKomponentTest {
     private fun formidlingListeEgnePath(treffId: TreffId): String =
         "/api/rekrutteringstreff/${treffId.somUuid}/formidling/liste/egne"
 
+    @Test
+    fun `arbeidsgiverrettet mister innsyn når kontorets siste eier fjernes`() {
+        val treffId = opprettTreffMedEier("A123456", "1201")
+        ctx.eierService.leggTilEierMedKontor(treffId, "B654321", "0315")
+        stubMineEnheter("0315")
+
+        val før = httpGet(formidlingListeAllePath(treffId), "C987654", listOf(AzureAdRoller.arbeidsgiverrettet))
+        assertThat(før.statusCode()).isEqualTo(200)
+
+        ctx.eierService.slettEier(treffId, "B654321", "A123456")
+        db.oppdaterEierarrays(listOf("A123456", "B654321"), listOf("0315", "1201"), treffId)
+
+        val etter = httpGet(formidlingListeAllePath(treffId), "C987654", listOf(AzureAdRoller.arbeidsgiverrettet))
+        assertThat(etter.statusCode()).isEqualTo(403)
+    }
+
     private fun httpGet(
         path: String,
         navIdent: String,

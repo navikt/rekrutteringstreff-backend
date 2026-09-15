@@ -13,11 +13,12 @@ import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 
 import no.nav.toi.aktivitetskort.AktivitetskortType
+import no.nav.toi.aktivitetskort.RekrutteringstreffType
 
 class RekrutteringstreffInvitasjonLytter(
     rapidsConnection: RapidsConnection,
     private val repository: Repository,
-    private val aktivitetskortType: AktivitetskortType = AktivitetskortType.REKRUTTERINGSTREFF,
+    private val aktivitetskortType: AktivitetskortType = RekrutteringstreffType,
 ) : River.PacketListener {
     private val eventName = aktivitetskortType.eventName
 
@@ -26,7 +27,7 @@ class RekrutteringstreffInvitasjonLytter(
             precondition {
                 it.requireValue("@event_name", eventName)
                 it.forbid("aktivitetskortuuid")
-                it.forbid("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
+                it.requireKey("aktørId")    // Identmapper populerer meldinger med aktørId, men vi bruker ikke det i denne sammenhengen
             }
             validate {
                 it.requireKey(

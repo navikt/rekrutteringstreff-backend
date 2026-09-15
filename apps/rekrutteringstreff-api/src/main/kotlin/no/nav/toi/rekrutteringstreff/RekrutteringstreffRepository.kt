@@ -1,7 +1,9 @@
 package no.nav.toi.rekrutteringstreff
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
+import no.nav.toi.JacksonConfig
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.atOslo
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -69,6 +71,27 @@ class RekrutteringstreffRepository(
         private const val fylkesnummer = "fylkesnummer"
         private const val sistEndret = "sist_endret"
         private const val sistEndretAv = "sist_endret_av"
+        private const val selectTreff = """
+            SELECT rt.id, rt.tittel, rt.beskrivelse, rt.kategori, rt.status,
+                   rt.opprettet_av_person_navident, rt.opprettet_av_kontor_enhetid,
+                   rt.opprettet_av_tidspunkt, rt.fratid, rt.tiltid, rt.svarfrist,
+                   rt.gateadresse, rt.postnummer, rt.poststed, rt.kommune, rt.kommunenummer,
+                   rt.fylke, rt.fylkesnummer, rt.sist_endret, rt.sist_endret_av,
+                   COALESCE((SELECT array_agg(DISTINCT e.nav_ident)
+                             FROM rekrutteringstreff_eier e
+                             WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS eiere,
+                   COALESCE((SELECT array_agg(DISTINCT e.kontor_enhetid)
+                             FROM rekrutteringstreff_eier e
+                             WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS kontorer,
+                   COALESCE((SELECT jsonb_agg(jsonb_build_object(
+                                 'navIdent', e.nav_ident,
+                                 'eierNavn', e.eier_navn,
+                                 'kontorEnhetId', e.kontor_enhetid
+                             ) ORDER BY e.rekrutteringstreff_eier_id)
+                             FROM rekrutteringstreff_eier e
+                             WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '[]'::jsonb) AS eier_og_kontor
+            FROM rekrutteringstreff rt
+        """
     }
 
     fun opprett(connection: Connection, dto: OpprettRekrutteringstreffInternalDto): Pair<TreffId, Long> {
@@ -136,7 +159,7 @@ class RekrutteringstreffRepository(
 
     fun hentAlle(): List<Rekrutteringstreff> =
         dataSource.connection.use { c ->
-            c.prepareStatement("SELECT * FROM $tabellnavn").use { s ->
+            c.prepareStatement(selectTreff).use { s ->
                 s.executeQuery().let { rs ->
                     generateSequence {
                         if (rs.next()) rs.tilRekrutteringstreff() else null
@@ -147,7 +170,7 @@ class RekrutteringstreffRepository(
 
     fun hentPubliserteTreffHvorTilTidErPassert(): List<Rekrutteringstreff> =
         dataSource.connection.use { c ->
-            c.prepareStatement("SELECT * FROM $tabellnavn where $status = ? and $tiltid < now()").use { s ->
+            c.prepareStatement("$selectTreff WHERE $status = ? AND $tiltid < now()").use { s ->
                 s.setObject(1, RekrutteringstreffStatus.PUBLISERT.name)
                 s.executeQuery().let { rs ->
                     generateSequence {
@@ -159,7 +182,7 @@ class RekrutteringstreffRepository(
 
     fun hent(treff: TreffId): Rekrutteringstreff? =
         dataSource.connection.use { c ->
-            c.prepareStatement("SELECT * FROM $tabellnavn WHERE $id = ?").use { s ->
+            c.prepareStatement("$selectTreff WHERE $id = ?").use { s ->
                 s.setObject(1, treff.somUuid)
                 s.executeQuery().let { rs -> if (rs.next()) rs.tilRekrutteringstreff() else null }
             }
@@ -383,25 +406,30 @@ class RekrutteringstreffRepository(
         opprettetAvPersonNavident = getString(opprettetAvPersonNavident),
         opprettetAvNavkontorEnhetId = getString(opprettetAvKontorEnhetid),
         opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
-        eiere = (getArray(eiere).array as Array<String>).toList(),
-        kontorer = (getArray(kontorer)?.array as? Array<String>)?.toList() ?: emptyList(),
+        eiere = (getArray(eiere).array as Array<*>).map { it.toString() },
+        kontorer = (getArray(kontorer).array as Array<*>).map { it.toString() },
+        eierOgKontor = JacksonConfig.mapper.readValue(getString("eier_og_kontor")),
         sistEndret = getTimestamp(sistEndret).toInstant().atOslo(),
         sistEndretAv = getString(sistEndretAv) ?: "Ukjent",
     )
 
-    fun leggTilKontor(connection: Connection, treffId: TreffId, kontorEnhetId: String): Boolean {
-        val rowsUpdated = connection.prepareStatement(
+    fun oppdaterKontorer(connection: Connection, treffId: TreffId) {
+        connection.prepareStatement(
             """
-            UPDATE $tabellnavn
-            SET $kontorer = $kontorer || ARRAY[?]::text[]
-            WHERE $id = ? AND NOT ($kontorer @> ARRAY[?]::text[]) 
+            UPDATE $tabellnavn rt
+            SET $kontorer = ARRAY(
+                SELECT DISTINCT e.kontor_enhetid
+                FROM rekrutteringstreff_eier e
+                WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id
+                ORDER BY e.kontor_enhetid
+            )
+            WHERE $id = ?
             """
         ).use { s ->
-            s.setString(1, kontorEnhetId)
-            s.setObject(2, treffId.somUuid)
-            s.setString(3, kontorEnhetId)
-            s.executeUpdate()
+            s.setObject(1, treffId.somUuid)
+            if (s.executeUpdate() == 0) {
+                throw NotFoundResponse("Rekrutteringstreff med id ${treffId.somString} finnes ikke")
+            }
         }
-        return rowsUpdated > 0
     }
 }

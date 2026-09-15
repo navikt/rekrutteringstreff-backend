@@ -4,6 +4,7 @@ import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortOppdatering
 import no.nav.toi.jobbsoker.aktivitetskort.AktivitetskortTreffstatus
 import no.nav.toi.jobbsoker.aktivitetskort.Aktivitetskortinvitasjon
 import no.nav.toi.jobbsoker.aktivitetskort.RekrutteringstreffSvarOgStatus
+import no.nav.toi.rekrutteringstreff.dto.EierOgKontorDto
 import no.nav.toi.rekrutteringstreff.dto.RekrutteringstreffDto
 import java.time.ZonedDateTime
 import java.util.*
@@ -29,6 +30,7 @@ class Rekrutteringstreff(
     val opprettetAvTidspunkt: ZonedDateTime,
     val eiere: List<String>,
     val kontorer: List<String>,
+    val eierOgKontor: List<EierOgKontorDto>,
     val sistEndret: ZonedDateTime,
     val sistEndretAv: String,
 ) {
@@ -57,6 +59,7 @@ class Rekrutteringstreff(
         antallJobbsøkereFåttJobb = antallJobbsøkereFåttJobb,
         eiere = eiere,
         kontorer = kontorer,
+        eierOgKontor = eierOgKontor,
         sistEndret = sistEndret,
         sistEndretAv = sistEndretAv
     )
