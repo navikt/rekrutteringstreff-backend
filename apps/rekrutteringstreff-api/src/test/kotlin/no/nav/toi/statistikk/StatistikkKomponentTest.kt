@@ -193,7 +193,7 @@ class StatistikkKomponentTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["""{"aktivEnhet": null}""", "{}", """{"aktivEnhet": ""}"""])
-    fun `manglende aktiv enhet gir 403 med forklaring`(modiaRespons: String) {
+    fun `manglende aktiv enhet gir 400 med forklaring`(modiaRespons: String) {
         stubFor(
             get(urlPathEqualTo("/api/context/v2/aktivenhet"))
                 .willReturn(aResponse().withStatus(200).withBody(modiaRespons))
@@ -201,7 +201,7 @@ class StatistikkKomponentTest {
 
         val response = hentStatistikk(navKontor = "1000", fraOgMed = "2026-06-01", tilOgMed = "2026-06-30")
 
-        assertThat(response.statusCode()).isEqualTo(403)
+        assertThat(response.statusCode()).isEqualTo(400)
         val feil = mapper.readTree(response.body())
         assertThat(feil["feilkode"].asText()).isEqualTo("AKTIV_ENHET_MANGLER")
         assertThat(feil["feil"].asText()).isEqualTo("Aktiv enhet mangler. Velg Nav-kontor og prøv igjen.")

@@ -310,15 +310,23 @@ class RekrutteringstreffSokKomponenttest {
         stubFor(
             get(urlPathEqualTo("/api/context/v2/aktivenhet"))
                 .atPriority(1)
-                .willReturn(aResponse().withStatus(500))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"aktivEnhet": null}""")
+                )
         )
 
         val response = sokGet(
             queryParams = "?visning=mitt_kontor",
-            grupper = listOf(AzureAdRoller.utvikler),
+            grupper = listOf(AzureAdRoller.jobbsøkerrettet),
         )
 
         assertThat(response.statusCode()).isEqualTo(400)
+        val feil = mapper.readTree(response.body())
+        assertThat(feil["feilkode"].asText()).isEqualTo("AKTIV_ENHET_MANGLER")
+        assertThat(feil["feil"].asText()).isEqualTo("Aktiv enhet mangler. Velg Nav-kontor og prøv igjen.")
     }
 
     @Test
