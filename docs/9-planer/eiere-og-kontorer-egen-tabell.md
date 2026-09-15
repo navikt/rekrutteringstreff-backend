@@ -1,8 +1,9 @@
 # Plan: Flytte eiere og kontorer ut i egen tabell
 
 **Status:** Fase 1 (`V15`), fase 2 (dual write) og fase 3 (`V16`, backfill) er implementert.
-`V16` må deployes etter at alle instanser kjører dual write. Modellvalg besluttet (seksjon 6 og 7),
-én åpen avklaring (seksjon 8) og de tvetydige eierradene gjenstår før fase 4.
+`V17` inneholder nå UUID → kontor-koblinger for både dev (3) og prod (23).
+`V18` er opprettet og setter `kontor_enhetid NOT NULL`. Resultatet av `V17` må være kontrollert før deploy.
+Modellvalg er besluttet (seksjon 6 og 7). API-et tar imot valgfritt `eierNavn` fra frontend (seksjon 8).
 **Omfang:** Datamodell og migrering i `rekrutteringstreff-api`
 
 **Mål:** Bevare sammenhengen mellom eier og kontor. I dag er `rekrutteringstreff.eiere text[]` og
@@ -40,9 +41,9 @@ CREATE INDEX idx_rekrutteringstreff_eier_kontor ON rekrutteringstreff_eier (kont
 | --- | --- | --- |
 | Én tabell, kontor som kolonne | Kontor er avledet av eierskap — ingen selvstendig livssyklus | Kan ikke ha kontor uten eier (f.eks. kontor lagt til manuelt) |
 | Unik `id` som UUID i tillegg til intern primærnøkkel | Samme todeling som `rekrutteringstreff`. `DEFAULT gen_random_uuid()` gir også backfillede rader en UUID uten ekstra INSERT-logikk | Ekstra unik indeks; `rekrutteringstreff_eier_id` beholdes som intern nøkkel |
-| `kontor_enhetid` — mål: `NOT NULL` | `EierController` avviser nå manglende kontor. Av backfillens 70 hull kan 50 utledes entydig; 20 må avklares — se seksjon 1 | Krever at de 20 løses før constrainten kan settes |
-| Oppdaterer kontor for eksisterende eiere | `leggTilEierMedKontor` bruker upsert fra fase 2, også når eierraden mangler før backfill | Navn endres ikke før navnekilden er avklart |
-| `eier_navn` nullable, denormalisert | Ingen server-side navIdent→navn-oppslag finnes i appen. Migrerte rader har ingen navnekilde | Navn kan bli utdatert; må tåle NULL i visning |
+| `kontor_enhetid` — mål: `NOT NULL` | `EierController` avviser manglende kontor. Avklarte UUID → kontor-koblinger er lagt inn i `V17` — se seksjon 1 | Krever kontroll av at ingen rader mangler kontor før constrainten settes i `V18` |
+| Oppdaterer kontor og navn for eksisterende eiere | `leggTilEierMedKontor` bruker upsert fra fase 2; frontend kan sende valgfritt `eierNavn` | Manglende navn overskriver ikke et eksisterende navn |
+| `eier_navn` nullable, denormalisert | Klientoppgitt visningsnavn brukes når det finnes; migrerte rader har ingen historisk navnekilde | Navnet er ikke verifisert identitet; NULL tillates når navn ikke sendes |
 | Unik `(treff, nav_ident)` | Én eier kan bare være eier én gang | Eier som bytter kontor må oppdateres (UPDATE, ikke ny rad) |
 | Ingen `ON DELETE CASCADE` | Treff slettes aldri fysisk (status `SLETTET`) | — |
 | Hard delete av eierrader (ingen `slettet_tidspunkt`) | Historikken ligger i `rekrutteringstreff_hendelse` (`EIER_FJERNET`); soft delete ville lagt en ekstra betingelse å glemme i tilgangskritisk aggregering | Krever at hendelsesloggen er komplett — se `KONTOR_FJERNET` |
@@ -93,7 +94,7 @@ WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id
 50 av 70 kan altså fylles deterministisk. Ingen ligger på treff helt uten kontor, så alle 70 har *et* svar
 — for 20 av dem er det bare ikke entydig hvilket av treffets kontorer det er.
 
-### De 20 tvetydige — må avgjøres
+### Kontoravklaring med UUID
 
 | Alternativ | Vurdering |
 | --- | --- |
@@ -102,12 +103,12 @@ WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id
 | **Behold nullable** | Trygt, men beholder `FILTER (WHERE kontor_enhetid IS NOT NULL)` som en betingelse å glemme i rød sone — og de 20 blir aldri fylt, siden hullene ikke lukker seg selv. |
 
 **`V16` og `V17` kjøres separat.** `V16` backfiller og lagrer eierradene permanent før vi lager mappingen.
-Deretter brukes `rekrutteringstreff_eier_id`, ikke Nav-ident, som nøkkel for kontoravklaringen i `V17`.
+Deretter brukes eierradens UUID (`id`), ikke Nav-ident eller `rekrutteringstreff_eier_id`, som nøkkel i `V17`.
 De 20 er et tidligere øyeblikksbilde; etter `V16` hentes den faktiske restlisten direkte fra tabellen:
 
 ```sql
 SELECT
-    e.rekrutteringstreff_eier_id,
+    e.id AS eier_id,
     rt.id AS treff_id,
     e.nav_ident,
     rt.status,
@@ -116,50 +117,42 @@ FROM rekrutteringstreff_eier e
 JOIN rekrutteringstreff rt
   ON rt.rekrutteringstreff_id = e.rekrutteringstreff_id
 WHERE e.kontor_enhetid IS NULL
-ORDER BY e.rekrutteringstreff_eier_id;
+ORDER BY e.id;
 ```
 
 Uttrekket inkluderer slettede treff og rader uavhengig av antall kandidatkontorer. Det inneholder
 Nav-identer for selve avklaringen og skal ikke lagres i Git. Mappingen som brukes til oppdatering,
-inneholder bare eierrad-ID og avklart kontor. Avklar per eierrad: samme person kan ha ulike kontorer på
+inneholder bare eierradens UUID og avklart kontor. Avklar per eierrad: samme person kan ha ulike kontorer på
 ulike treff.
 
 Spørring 7 og 8 er fortsatt nyttige for analyse før backfill, men erstatter ikke dette uttrekket.
 
-**Miljøavgrensning:** `rekrutteringstreff_eier_id` er `bigserial` og kan vise til forskjellige eiere i dev
-og prod. Mappingen må derfor leveres og kjøres miljøspesifikt; produksjons-ID-er skal ikke legges
-ukondisjonert i en felles Flyway-fil. Hvordan mappingen tilføres per miljø må være på plass før `V17`
-opprettes. ID-ene unngår direkte Nav-identer i kildekoden, men er pseudonyme referanser, ikke anonyme data.
+**Miljøavgrensning:** Mappingen kan inneholde UUID-er fra både dev og prod. Bare UUID-er som finnes i
+databasen, oppdateres. Dette forutsetter uavhengig genererte UUID-er; ved kopiering av databasedata mellom
+miljøer følger UUID-ene med. Ikke bruk `bigserial`, som kan vise til ulike eiere i ulike miljøer.
+UUID-ene unngår direkte Nav-identer i kildekoden, men er pseudonyme referanser, ikke anonyme data.
 
-**Mal for fase 4 (`V17__rekrutteringstreff_eier_kontor_not_null.sql`):** tallene under er fiktive og skal
-erstattes med avklarte rad-ID-er fra riktig miljø, ikke gjettes fra innsettingsrekkefølgen.
+**Mapping lagt inn:** `V17__rekrutteringstreff_eier_kontor.sql` inneholder 26 UUID → kontor-koblinger:
+3 fra dev og 23 fra prod, i `UPDATE ... FROM (VALUES ...)`. Ingen Nav-identer eller navn er lagret i
+mappingen. De tidligere 20 tvetydige radene var et historisk øyeblikksbilde, ikke antallet i dagens
+prod-mapping. Antallet gjenværende NULL må fortsatt kontrolleres etter kjøring.
+
+**En kjørt Flyway-fil skal ikke endres senere.** Eventuelle senere rettinger gjøres i en ny migrering.
+
+`V17` fyller bare matchende eierrader med `kontor_enhetid IS NULL`. Det brukes ingen midlertidig tabell,
+eksplisitt låsing, NULL-kontroll eller `ALTER TABLE`. PostgreSQL tar fortsatt vanlige låser ved `UPDATE`.
+Eksisterende kontorer overskrives ikke, og uavklarte eierrader forblir NULL.
+
+**Etter kjøring:** kontroller de oppdaterte koblingene og hent restlisten med spørringen over.
+`V18__rekrutteringstreff_eier_kontor_not_null.sql` er opprettet som en separat migrering.
+Den deployes når alt er avklart og ingen rader mangler kontor:
 
 ```sql
--- 1. Fyll avklarte eierrader fra en miljøspesifikk mapping
-UPDATE rekrutteringstreff_eier e
-SET kontor_enhetid = m.kontor_enhetid
-FROM (VALUES
-    (101::bigint, '0315'),
-    (102::bigint, '1201')
-) AS m(rekrutteringstreff_eier_id, kontor_enhetid)
-WHERE e.rekrutteringstreff_eier_id = m.rekrutteringstreff_eier_id
-  AND e.kontor_enhetid IS NULL;
-
--- 2. Verifiser at ingen hull gjenstår før constrainten settes.
---    Feiler migreringen her, er mappingen ufullstendig.
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM rekrutteringstreff_eier WHERE kontor_enhetid IS NULL) THEN
-        RAISE EXCEPTION 'Eierrader uten kontor gjenstår — mappingen i steg 1 er ufullstendig';
-    END IF;
-END $$;
-
-ALTER TABLE rekrutteringstreff_eier ALTER COLUMN kontor_enhetid SET NOT NULL;
+ALTER TABLE rekrutteringstreff_eier
+    ALTER COLUMN kontor_enhetid SET NOT NULL;
 ```
 
-Mappingen, kontrollen og `SET NOT NULL` kjøres i én Flyway-transaksjon i `V17`. Ved gjenværende NULL rulles
-`V17` tilbake; den fullførte backfillen fra `V16` beholdes. Før kjøring må mappingen kontrolleres mot
-gjeldende rader og kontorer. Er en rad slettet eller endret siden uttrekket, må mappingen vurderes på nytt.
+PostgreSQL avviser constrainten hvis noen rader fortsatt har NULL, også på slettede treff.
 
 Gevinsten: `FILTER (WHERE kontor_enhetid IS NOT NULL)` i fase 5 faller bort — én betingelse mindre å glemme
 i tilgangskritisk kode.
@@ -187,9 +180,10 @@ tabellen all *ny* aktivitet før historikken fylles inn.
 **Implementert.** Opprettelse, tillegg og sletting skriver til eierarrayet og eiertabellen i samme
 SQL-setning. `EierService` samler disse endringene, kontorarrayet og hendelsene i én transaksjon.
 
-- `RekrutteringstreffRepository.opprett` setter inn oppretteren med kontor, tidspunkt og `lagt_til_av`.
-- `EierRepository.leggTil` krever kontor og oppdaterer det ved gjentatte kall. Radens ID, tidspunkt,
-  `lagt_til_av` og eventuelt navn beholdes ved oppdatering.
+- `RekrutteringstreffRepository.opprett` setter inn oppretteren med kontor, tidspunkt, `lagt_til_av` og
+  navn fra request-body når det finnes.
+- `EierRepository.leggTil` krever kontor og oppdaterer kontor og eventuelt navn ved gjentatte kall.
+  Radens ID, tidspunkt og `lagt_til_av` beholdes. Manglende navn overskriver ikke lagret navn.
 - `EierService.leggTilEierMedKontor` fyller også manglende eierrader for eksisterende eiere, uten ny
   `EIER_LAGT_TIL`-hendelse. `leggTilKontor` vedlikeholder fortsatt kontorarrayet og utløser
   `KONTOR_LAGT_TIL` når kontoret er nytt på treffet.
@@ -198,7 +192,7 @@ SQL-setning. `EierService` samler disse endringene, kontorarrayet og hendelsene 
 
 Lesing, søk og tilgangskontroll bruker fortsatt arrayene. Kontorer fjernes ikke fra kontorarrayet ved
 sletting eller kontorbytte i denne fasen. Den nye semantikken og `KONTOR_FJERNET` innføres før lesingen
-byttes i fase 5. `eier_navn` for nye rader er fortsatt NULL mens navnekilden avklares.
+byttes i fase 5. `eier_navn` fylles fra valgfritt `eierNavn` i begge opprettelsesflytene (se seksjon 8).
 
 **Låserekkefølge:** Treffraden låses før eiertabellen endres. Serviceoperasjonene bruker `FOR UPDATE`;
 repository-operasjonene oppdaterer treffraden før de skriver eierraden. `V16` tar `ACCESS EXCLUSIVE`
@@ -286,7 +280,8 @@ Begge gir NULL, ikke feil kontor.
 
 ⚠️ **Hullene kan ikke forventes å lukke seg av seg selv.** Fra fase 2 oppdaterer et nytt
 `PUT /eiere/meg` kontor også for eksisterende eiere, men bare når brukeren gjør kallet.
-Backfill fyller entydige kontorer; resterende hull må avklares i fase 4. Navn oppdateres ikke.
+Backfill fyller entydige kontorer; resterende hull må avklares i fase 4. Navn oppdateres ved selvbetjening
+når frontend sender `eierNavn`.
 
 ✅ **Målt mot prod: ingen kontorer går tapt.** `kontorkoblinger_som_forsvinner = 0` — hvert kontor i dagens
 `kontorer[]` dekkes av minst én gjenværende eier. De 70 eierradene som får `NULL` er nettopp tilfelle 1 over:
@@ -314,11 +309,12 @@ WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id
 Etter at `V16` er fullført, kontrolleres eiere og kontorer mot arrayene. Hent deretter radene med
 `kontor_enhetid IS NULL` med spørringen i seksjon 1. Dette er grunnlaget for ID-mappingen i neste fase.
 
-### Fase 4 — ID-basert kontoravklaring og `NOT NULL` (`V17__rekrutteringstreff_eier_kontor_not_null.sql`)
+### Fase 4 — ID-basert kontoravklaring, deretter `NOT NULL` (`V17` og senere `V18`)
 
 Kjøres separat etter at `V16` er fullført og de gjenværende eierradene er avklart. Bruk
-`rekrutteringstreff_eier_id` fra riktig miljø til mappingen, og avslutt med kontroll av gjenværende NULL
-og `SET NOT NULL`. SQL-mal og krav til miljøavgrensning står i seksjon 1.
+eierradens UUID (`id`) fra riktig miljø til mappingen i `V17__rekrutteringstreff_eier_kontor.sql`.
+Kontroller resultatet etter deploy. Først når alt er i orden, deployes den opprettede `V18` med
+`SET NOT NULL`. SQL og krav til miljøavgrensning står i seksjon 1.
 
 **Fasen må være fullført i prod før lesingen byttes.** Arrayene er fortsatt fasit frem til fase 5.
 
@@ -342,7 +338,7 @@ Forutsetter at fase 4 er fullført: alle eierrader har kontor, og databasen hån
 - Verifiser ytelse: `RekrutteringstreffSokYtelsestest` finnes allerede. Med dagens datavolum (269 eierrader,
   se måleresultater i seksjon 6) er subqueries uproblematisk — materialisert view er ikke nødvendig.
 
-### Fase 6 — Contract (`V18__dropp_eiere_kontorer_arrays.sql`)
+### Fase 6 — Contract (`V19__dropp_eiere_kontorer_arrays.sql`)
 
 - `ALTER TABLE rekrutteringstreff DROP COLUMN eiere, DROP COLUMN kontorer;`
 - Kjøres **etter** at fase 5 er verifisert i prod (egen deploy, ikke samme release).
@@ -390,16 +386,18 @@ slettede treff, uendrede arrays og hendelser, gjentatt kjøring, rollback og lå
 - Siste eier fra kontor fjernet → kontoret forsvinner fra `kontorer`-aggregatet
 - 🔴 Tilgang: `harTilgangViaTreffkontor` gir *ikke* tilgang etter at kontorets siste eier er fjernet
 - Fase 4-migrering: ID-mapping → bare angitt eierrad oppdateres, ikke alle treff for samme person
-- Fase 4-migrering: miljøavgrensning → produksjonsmapping brukes ikke i dev eller test
-- Fase 4-migrering: ufullstendig mapping → `V17` rulles tilbake, fullført `V16` beholdes
-- Fase 4-migrering: alle kontorer avklart → `NOT NULL` settes og avviser senere skriving av NULL
+- Fase 4-migrering: UUID-er som bare finnes i et annet miljø → ingen lokale rader oppdateres
+- Fase 4-migrering: delvis mapping → `V17` fyller avklarte rader og lar resten forbli NULL
+- `V18`: alle kontorer avklart → eksisterende data beholdes, og NULL avvises ved INSERT og UPDATE
+- `V18`: gjenværende NULL, også på slettede treff → migreringen feiler, og `V17` forblir siste fullførte versjon
 - `PUT /eiere/meg` uten kontor-tilknytning → avvises, ingen eierrad opprettes
 
 ---
 
 ## 5. Rekkefølge og risiko
 
-Hver fase er en **egen deploy**. Rekkefølgen er ikke vilkårlig: tabellen må finnes før koden kan skrive til
+Hver fase er en **egen deploy**, og fase 4 deles i to deployer med kontroll av data mellom dem.
+Rekkefølgen er ikke vilkårlig: tabellen må finnes før koden kan skrive til
 den, og koden må skrive til den før historikken fylles inn — ellers rekker tabellen å bli utdatert.
 De tvetydige kontorene må være avklart og `NOT NULL` satt før lesingen byttes.
 Backfill og kontoravklaring skilles for å kunne bruke varige eierrad-ID-er fremfor Nav-identer i mappingen.
@@ -409,13 +407,15 @@ Backfill og kontoravklaring skilles for å kunne bruke varige eierrad-ID-er frem
 | Fase 1 (tom tabell) | `V15` | Lav — ingen skrivere eller lesere ennå |
 | Fase 2 (dual write) | — | Lav — arrayene er fortsatt fasit |
 | Fase 3 (backfill) | `V16` | Middels — låsing under drift; uavklarte kontorer forblir NULL |
-| Fase 4 (ID-mapping + `NOT NULL`) | `V17` | Middels — miljøspesifikke ID-er; stopper ved gjenværende NULL |
+| Fase 4a (ID-mapping) | `V17` | Middels — resultatet må kontrolleres; gjenværende NULL tillates |
+| Fase 4b (`NOT NULL`, etter kontroll) | `V18` | Lav — constrainten avvises ved gjenværende NULL |
 | Fase 5 (bytt lesing + view) | — | 🔴 Høy — tilgangsstyring og søk |
-| Fase 6 (drop kolonner) | `V18` | Middels — irreversibelt |
+| Fase 6 (drop kolonner) | `V19` | Middels — irreversibelt |
 
 **Releasegrenser:** `V16` legges til først etter at alle instanser kjører dual write. `V17` legges til
-etter fullført `V16`, når rad-ID-er og kontorer er avklart per miljø. `V18` legges til etter at lesingen er
-byttet og verifisert i prod. Tidligere migreringsfiler beholdes urørt; det er hvilke migreringer som er
+etter fullført `V16`, når rad-ID-er og kontorer er avklart per miljø. `V18` deployes etter at resultatet
+av `V17` er kontrollert og ingen eierrader mangler kontor. `V19` legges til etter at lesingen er byttet og
+verifisert i prod. Tidligere migreringsfiler beholdes urørt; det er hvilke migreringer som er
 ventende ved deploy som avgjør hva Flyway kjører.
 
 **Før migrering kjøres:** kjør spørring 2 på nytt og bekreft at `kontorkoblinger_som_forsvinner` fortsatt er
@@ -521,63 +521,58 @@ kan fjerne seg selv i dag — eneste sperre er at siste eier ikke kan fjernes (`
 
 ---
 
-## 8. `eier_navn` — kilde må avklares
+## 8. `eier_navn` — valgfritt navn fra frontend
 
-Kolonnen `eier_navn` lagrer visningsnavnet til eieren, slik at `GET /eiere` kan returnere navn uten oppslag
-per forespørsel.
+**Implementert i backend:** Begge opprettelsesflytene tar imot `eierNavn: String?` i JSON-body.
+JWT-tokenets `name`-claim brukes ikke lenger, siden det ikke er en pålitelig navnekilde for oss.
+Navnet trimmes; manglende eller blankt navn behandles som ikke oppgitt. Verifisering av token og
+autorisasjon er uendret.
 
-**Problemet:** appen har ingen server-side navIdent→navn-oppslag. Det finnes ingen NOM- eller
-Graph-integrasjon, og ingen kode leser et `name`-claim fra tokenet i dag.
+### Kontrakt for frontend
 
-Dagens navnekilder i kodebasen henter alle navnet fra *utsiden*:
+Ved opprettelse av treff, `POST /api/rekrutteringstreff`:
 
-| Felt | Kilde |
-| --- | --- |
-| `jobbsoker.veileder_navn` | `KandidatsøkKlient` — gjelder jobbsøkerens veileder, ikke eiere |
-| `formidling.opprettet_av_veileder_navn` | request-DTO (`opprettFormidling.opprettetAvNavn`) |
-| `innlegg.opprettet_av_person_navn` | request-DTO |
-| `rekrutteringstreff_hendelse.subjekt_navn` for `EIER_LAGT_TIL` | plassholder — settes til navIdent, ikke et reelt navn |
+```json
+{
+  "tittel": "Nytt rekrutteringstreff",
+  "kategori": "REKRUTTERINGSTREFF",
+  "eierNavn": "Kari Testesen"
+}
+```
 
-### Alternativer
+Ved selvbetjening, `PUT /api/rekrutteringstreff/{id}/eiere/meg`:
 
-**(a) `name`-claim fra tokenet.** Azure AD-tokens inneholder normalt et `name`-claim. Krever bare en
-`extractNavn()` i `AuthenticatedUser`, ingen ny integrasjon. Passer godt fordi `PUT /eiere/meg` er
-selvbetjening — brukeren som legges til *er* den innloggede.
-⚠️ Må verifiseres mot et faktisk token i dev før det velges; ingen kode i repoet leser claimet i dag.
+```json
+{
+  "eierNavn": "Kari Testesen"
+}
+```
 
-**(b) Frontend sender navnet.** Følger mønsteret fra `innlegg` og `formidling`. Men `PUT /eiere/meg` har i
-dag ingen request-body, så API-kontrakten må utvides — og klientoppgitte visningsnavn er en svakere kilde.
+`eierNavn` er valgfritt i begge forespørslene. PUT støtter fortsatt helt tom body, i tillegg til `{}`.
+Frontend-koden ligger ikke i dette repoet og må oppdateres til å sende feltet.
 
-**(c) Nytt oppslag mot NOM/Graph.** Mest korrekt og gir også navn ved backfill, men er en ny integrasjon
-med tilhørende scope, feilhåndtering og driftsansvar.
+- Ved opprettelse av treff sendes navnet gjennom `OpprettRekrutteringstreffInternalDto` til
+  `RekrutteringstreffRepository.opprett`, som lagrer det på oppretterens eierrad.
+- Ved `PUT /eiere/meg` sendes navnet gjennom `EierService` til `EierRepository.leggTil`. Nye rader får
+  navn, og eksisterende rader får oppdatert navn når det sendes inn.
+- Hvis navn mangler, er NULL eller blankt, tillates operasjonen fortsatt. Nye rader får NULL, mens eksisterende navn
+  beholdes med `coalesce(EXCLUDED.eier_navn, rekrutteringstreff_eier.eier_navn)`.
 
-**Anbefaling:** (a), med (c) som senere forbedring hvis navn trengs for historiske rader.
+**Valg og avveining:** Frontend velger navnekilde, uten avhengighet til `name`-claimet eller en ny
+NOM-/Graph-integrasjon i backend. Navnet er klientoppgitt visningsdata og skal ikke oppfattes som
+verifisert identitet. Tillegget er bakoverkompatibelt med klienter som ikke sender navn.
+
+🔴 **Rød sone — forstå dette grundig:** Nav-ident og kontor bestemmes fortsatt på serversiden fra
+innlogget bruker og Modia. Klienten får bare oppgi et visningsnavn for sin egen eierrad; navnet brukes
+aldri til identifikasjon eller tilgangskontroll. Token eller navn logges ikke.
 
 ### Backfill
 
-Ingen av alternativene gir navn for de 269 eksisterende radene — `eier_navn` blir `NULL`.
-
-Navnet fylles ikke inn av seg selv senere. Fra fase 2 oppdaterer `PUT /eiere/meg` kontor også for
-eksisterende eiere, men lar navnet stå urørt. Skal historiske rader få navn, må vi først velge navnekilde
-og deretter utvide skrivingen eller migrere navnene (se delvis backfill under).
-
-Delvis backfill er mulig fra `innlegg`, som har både navident og navn for de som har skrevet innlegg:
-
-```sql
-UPDATE rekrutteringstreff_eier e
-SET eier_navn = i.opprettet_av_person_navn
-FROM innlegg i
-WHERE i.opprettet_av_person_navident = e.nav_ident
-  AND i.opprettet_av_person_navn IS NOT NULL
-  AND e.eier_navn IS NULL;
-```
-
-Vurder om det er verdt kompleksiteten — dekningen er trolig lav.
+Ingen massemigrering av historiske navn er gjort. En eksisterende eierrad får navn neste gang eieren
+bruker `PUT /eiere/meg` og frontend sender navn. Dette oppdaterer bare eierraden på det aktuelle
+treffet, ikke alle treff personen eier. Full historisk utfylling krever en egen navnekilde og avklaring.
 
 ### Følger for øvrig
 
-- `Eier`-klassen (`eier/Eier.kt`) må utvides fra `Eier(navIdent)`. `tilJson()` og `tilNavIdenter()` brukes
-  av `EierController` og `EierService`, så endringen berører responsformatet — se punktet om breaking
-  change i seksjon 3.
-- `subjektNavn` for `EIER_LAGT_TIL`/`EIER_FJERNET` kan endelig settes til et reelt navn i stedet for
-  navIdent-plassholderen.
+`GET /eiere` returnerer fortsatt Nav-identer; responsformatet er uendret. Å eksponere navn i responsen er
+en separat endring (seksjon 3). `subjektNavn` i eierhendelser er heller ikke endret.

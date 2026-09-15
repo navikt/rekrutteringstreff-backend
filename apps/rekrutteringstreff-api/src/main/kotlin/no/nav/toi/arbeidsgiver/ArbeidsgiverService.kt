@@ -5,7 +5,14 @@ import no.nav.toi.AktørType
 import no.nav.toi.ArbeidsgiverHendelsestype
 import no.nav.toi.arbeidsgiver.dto.ArbeidsgiversBehovDto
 import no.nav.toi.executeInTransaction
+import no.nav.toi.jobbsoker.oppmøte.OppmøteRepository
+import no.nav.toi.medLåstTreff
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.treffgjennomføring.RegistreringerRepository
+import no.nav.toi.treffgjennomføring.Treffkontekst
+import no.nav.toi.treffgjennomføring.TreffkontekstRepository
+import no.nav.toi.treffgjennomføring.krevKontekst
+import no.nav.toi.treffgjennomføring.møteplan.MøteplanRepository
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.sql.Connection
@@ -16,18 +23,23 @@ class ArbeidsgiverService(
     private val dataSource: DataSource,
     private val arbeidsgiverRepository: ArbeidsgiverRepository,
     private val objectMapper: ObjectMapper,
+    private val kontekstRepository: TreffkontekstRepository,
+    private val møteplanRepository: MøteplanRepository,
+    private val oppmøteRepository: OppmøteRepository,
+    private val registreringerRepository: RegistreringerRepository,
 ) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     fun leggTilArbeidsgiver(arbeidsgiver: LeggTilArbeidsgiver, treffId: TreffId, navIdent: String): ArbeidsgiverTreffId {
-        var arbeidsgiverTreffId: ArbeidsgiverTreffId? = null
-        dataSource.executeInTransaction { connection ->
-            arbeidsgiverTreffId = arbeidsgiverRepository.opprettArbeidsgiver(connection, arbeidsgiver, treffId)
-            arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.OPPRETTET, AktørType.ARRANGØR, navIdent)
-            arbeidsgiverRepository.leggTilNaringskoder(connection, arbeidsgiverTreffId, arbeidsgiver.næringskoder)
-            logger.info("La til arbeidsgiver ${arbeidsgiver.orgnr.asString} for treff $treffId")
+        val arbeidsgiverTreffId = dataSource.medLåstTreff(treffId) { connection ->
+            val harMøteplan = møteplanRepository.harMøteplan(connection, treffId)
+            if (harMøteplan) oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
+            val id = opprettArbeidsgiverMedNæringskoder(connection, arbeidsgiver, treffId, navIdent)
+            if (harMøteplan) oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
+            id
         }
-        return arbeidsgiverTreffId!!
+        logger.info("La til arbeidsgiver ${arbeidsgiver.orgnr.asString} for treff $treffId")
+        return arbeidsgiverTreffId
     }
 
     fun leggTilArbeidsgiverMedBehov(
@@ -36,7 +48,9 @@ class ArbeidsgiverService(
         treffId: TreffId,
         navIdent: String,
     ) {
-        dataSource.executeInTransaction { connection ->
+        dataSource.medLåstTreff(treffId) { connection ->
+            val harMøteplan = møteplanRepository.harMøteplan(connection, treffId)
+            if (harMøteplan) oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
             val reaktivert = arbeidsgiverRepository.reaktiverArbeidsgiver(connection, treffId, arbeidsgiver)
             val arbeidsgiverTreffId = if (reaktivert != null) {
                 arbeidsgiverRepository.leggTilHendelse(connection, reaktivert, ArbeidsgiverHendelsestype.REAKTIVERT, AktørType.ARRANGØR, navIdent)
@@ -53,6 +67,7 @@ class ArbeidsgiverService(
                 navIdent,
                 hendelseData = serialiserBehov(behov),
             )
+            if (harMøteplan) oppdaterMøteplan(connection, kontekstRepository.krevKontekst(connection, treffId))
         }
         logger.info("La til arbeidsgiver med behov ${arbeidsgiver.orgnr.asString} for treff $treffId")
     }
@@ -101,11 +116,24 @@ class ArbeidsgiverService(
         objectMapper.writeValueAsString(ArbeidsgiversBehovDto.fra(behov))
 
     fun markerArbeidsgiverSlettet(arbeidsgiverId: UUID, treffId: TreffId, navIdent: String): Boolean {
-        val resultat = dataSource.executeInTransaction { connection ->
+        val resultat = dataSource.medLåstTreff(treffId) { connection ->
             val arbeidsgiverTreffId = ArbeidsgiverTreffId(arbeidsgiverId)
+            val kontekst = kontekstRepository.krevKontekst(connection, treffId)
+            val internId = kontekst.arbeidsgiverId(arbeidsgiverTreffId) ?: return@medLåstTreff false
+            if (møteplanRepository.harMøteplan(connection, treffId)) {
+                oppdaterMøteplan(connection, kontekst)
+            }
+            val registreringer = ArbeidsgiverRegistreringer(
+                personerIRom = arbeidsgiverRepository.tellPersonerIRom(connection, internId, kontekst.treffDbId),
+                treffregistreringer = registreringerRepository.hentForArbeidsgiver(connection, internId),
+            )
+            if (registreringer.finnesRegistreringer()) {
+                throw ArbeidsgiverKanIkkeSlettesException(registreringer)
+            }
             val markert = arbeidsgiverRepository.markerSlettet(connection, arbeidsgiverId)
             if (markert) {
                 arbeidsgiverRepository.leggTilHendelse(connection, arbeidsgiverTreffId, ArbeidsgiverHendelsestype.SLETTET, AktørType.ARRANGØR, navIdent)
+                møteplanRepository.fjernArbeidsgiverOgKompakter(connection, internId, kontekst.treffDbId)
             }
             markert
         }
@@ -113,6 +141,13 @@ class ArbeidsgiverService(
             logger.info("Markert arbeidsgiver $arbeidsgiverId som slettet for treff $treffId")
         }
         return resultat
+    }
+
+    // Lagrer også eldre beregnede plasseringer før arbeidsgiverantallet endres.
+    private fun oppdaterMøteplan(connection: Connection, kontekst: Treffkontekst) {
+        val oppmøte = oppmøteRepository.hentFremmøtteJobbsøkere(connection, kontekst.treffDbId)
+        val møteplan = møteplanRepository.hentMøteplan(connection, kontekst, oppmøte)
+        møteplanRepository.lagreMøteplan(connection, kontekst, møteplan)
     }
 
     fun hentArbeidsgivere(treffId: TreffId): List<Arbeidsgiver> {

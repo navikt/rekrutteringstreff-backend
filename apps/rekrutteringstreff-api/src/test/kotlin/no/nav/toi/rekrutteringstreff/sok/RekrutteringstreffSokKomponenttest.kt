@@ -79,12 +79,14 @@ class RekrutteringstreffSokKomponenttest {
         tittel: String = "TestTreff",
         status: RekrutteringstreffStatus = RekrutteringstreffStatus.PUBLISERT,
         kontorId: String = "0315",
+        kategori: no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori = no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori.REKRUTTERINGSTREFF,
     ): no.nav.toi.rekrutteringstreff.TreffId =
         db.opprettRekrutteringstreffMedEierOgKontor(
             navIdent = navIdent,
             tittel = tittel,
             status = status,
             kontorId = kontorId,
+            kategori = kategori,
         )
 
     private fun settTidspunkter(
@@ -591,5 +593,43 @@ class RekrutteringstreffSokKomponenttest {
         assertThat(body.has("title")).isTrue()
         assertThat(body.get("status").asInt()).isEqualTo(400)
         assertThat(body.get("feil").asText()).contains("Ugyldig visning")
+    }
+
+    @Test
+    fun `visning ALLE for utvikler returnerer ogsa andres WorkOp`() {
+        opprettTreffMedEier(navIdent = "A123456", tittel = "Mitt WorkOp", kategori = no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori.WORKOP)
+        opprettTreffMedEier(navIdent = "B654321", tittel = "Andres WorkOp", kategori = no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori.WORKOP)
+        opprettTreffMedEier(navIdent = "B654321", tittel = "Andres Rekrutteringstreff", kategori = no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+
+        val response = sokGet(
+            queryParams = "?visning=alle",
+            navIdent = "A123456",
+            grupper = listOf(AzureAdRoller.utvikler),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff.map { it.tittel }).containsExactlyInAnyOrder(
+            "Mitt WorkOp", "Andres WorkOp", "Andres Rekrutteringstreff"
+        )
+    }
+
+    @Test
+    fun `visning ALLE for vanlig veileder returnerer ikke andres WorkOp`() {
+        opprettTreffMedEier(navIdent = "A123456", tittel = "Mitt WorkOp", kategori = no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori.WORKOP)
+        opprettTreffMedEier(navIdent = "B654321", tittel = "Andres WorkOp", kategori = no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori.WORKOP)
+        opprettTreffMedEier(navIdent = "B654321", tittel = "Andres Rekrutteringstreff", kategori = no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori.REKRUTTERINGSTREFF)
+
+        val response = sokGet(
+            queryParams = "?visning=alle",
+            navIdent = "A123456",
+            grupper = listOf(AzureAdRoller.arbeidsgiverrettet),
+        )
+
+        assertThat(response.statusCode()).isEqualTo(200)
+        val respons = mapper.readValue<RekrutteringstreffSokRespons>(response.body())
+        assertThat(respons.treff.map { it.tittel }).containsExactlyInAnyOrder(
+            "Mitt WorkOp", "Andres Rekrutteringstreff"
+        )
     }
 }

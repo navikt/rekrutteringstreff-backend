@@ -7,6 +7,7 @@ import io.javalin.http.bodyAsClass
 import io.javalin.openapi.*
 import io.javalin.router.JavalinDefaultRoutingApi
 import no.nav.toi.AuthenticatedUser.Companion.extractNavIdent
+import no.nav.toi.ProblemDetails
 import no.nav.toi.RuteRegistrerer
 import no.nav.toi.Rolle
 import no.nav.toi.arbeidsgiver.dto.*
@@ -192,7 +193,10 @@ class ArbeidsgiverController(
             OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true),
             OpenApiParam(name = pathParamArbeidsgiverId, type = UUID::class, required = true)
         ],
-        responses = [OpenApiResponse(status = "204")],
+        responses = [
+            OpenApiResponse(status = "204"),
+            OpenApiResponse(status = "409", content = [OpenApiContent(from = ProblemDetails::class)])
+        ],
         path = arbeidsgiverItemPath,
         methods = [HttpMethod.DELETE]
     )

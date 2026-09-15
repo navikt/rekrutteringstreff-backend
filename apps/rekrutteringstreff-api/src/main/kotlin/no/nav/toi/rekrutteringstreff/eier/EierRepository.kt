@@ -37,13 +37,13 @@ class EierRepository(
             }
     }
 
-    fun leggTil(treff: TreffId, eierNavIdent: String, kontorEnhetId: String) {
+    fun leggTil(treff: TreffId, eierNavIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
         dataSource.executeInTransaction { connection ->
-            leggTil(connection, treff, eierNavIdent, kontorEnhetId)
+            leggTil(connection, treff, eierNavIdent, kontorEnhetId, eierNavn)
         }
     }
 
-    fun leggTil(connection: Connection, treff: TreffId, eierNavIdent: String, kontorEnhetId: String) {
+    fun leggTil(connection: Connection, treff: TreffId, eierNavIdent: String, kontorEnhetId: String, eierNavn: String? = null) {
         require(kontorEnhetId.isNotBlank()) { "Eier må ha kontortilknytning" }
         require(eierNavIdent.isNotBlank()) { "Eier må ha Nav-ident" }
         connection.prepareStatement(
@@ -54,11 +54,12 @@ class EierRepository(
                         WHERE $id = ?
                         RETURNING rekrutteringstreff_id
                     )
-                    INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_av)
-                    SELECT rekrutteringstreff_id, ?, ?, ?
+                    INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid, lagt_til_av, eier_navn)
+                    SELECT rekrutteringstreff_id, ?, ?, ?, ?
                     FROM oppdatert_treff
                     ON CONFLICT (rekrutteringstreff_id, nav_ident)
-                    DO UPDATE SET kontor_enhetid = EXCLUDED.kontor_enhetid
+                    DO UPDATE SET kontor_enhetid = EXCLUDED.kontor_enhetid,
+                                  eier_navn = coalesce(EXCLUDED.eier_navn, rekrutteringstreff_eier.eier_navn)
                 """.trimIndent()
             ).use { stmt ->
                 stmt.setString(1, eierNavIdent)
@@ -66,6 +67,7 @@ class EierRepository(
                 stmt.setString(3, eierNavIdent)
                 stmt.setString(4, kontorEnhetId)
                 stmt.setString(5, eierNavIdent)
+                stmt.setString(6, eierNavn)
                 if (stmt.executeUpdate() == 0) {
                     throw NotFoundResponse("Rekrutteringstreff med id ${treff.somString} finnes ikke")
                 }

@@ -15,6 +15,8 @@ import javax.sql.DataSource
 
 internal const val MAKS_ANTALL_JOBBSØKERE_PER_BATCH = 500
 
+data class JobbsøkerSlettestatus(val jobbsøkerId: Long, val status: JobbsøkerStatus)
+
 class JobbsøkerRepository(private val dataSource: DataSource, private val mapper: ObjectMapper) {
 
     private fun PreparedStatement.execBatchReturnIds(): List<Long> =
@@ -359,6 +361,22 @@ class JobbsøkerRepository(private val dataSource: DataSource, private val mappe
             }
         }
     }
+
+    fun hentSlettestatus(connection: Connection, treffId: TreffId, personTreffId: PersonTreffId): JobbsøkerSlettestatus? =
+        connection.prepareStatement(
+            """
+            SELECT j.jobbsoker_id, j.status FROM jobbsoker j
+            JOIN rekrutteringstreff rt ON rt.rekrutteringstreff_id = j.rekrutteringstreff_id
+            WHERE rt.id = ? AND j.id = ? AND j.status != 'SLETTET' AND j.er_synlig = TRUE
+            FOR UPDATE OF j
+            """.trimIndent()
+        ).use { stmt ->
+            stmt.setObject(1, treffId.somUuid)
+            stmt.setObject(2, personTreffId.somUuid)
+            stmt.executeQuery().use { rs ->
+                if (rs.next()) JobbsøkerSlettestatus(rs.getLong(1), JobbsøkerStatus.valueOf(rs.getString(2))) else null
+            }
+        }
 
     fun hentFødselsnummer(personTreffId: PersonTreffId): Fødselsnummer? =
         dataSource.connection.use { conn ->
