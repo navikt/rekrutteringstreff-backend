@@ -76,10 +76,12 @@ class App(
 
     private fun startRapidsAndRivers() {
         log.info("Starter RapidsConnection")
-        SamtykkeForespurtLytter(rapidsConnection, repository)
-        SamtykkeStatusLytter.registrer(rapidsConnection, repository)
-        RegistrertFattJobbenLytter(rapidsConnection, repository)
-        KandidatlisteLukketLytter(rapidsConnection, repository)
+        if(!Miljø.fraClusterNavn(System.getenv("NAIS_CLUSTER_NAME")).erProd) {
+            SamtykkeForespurtLytter(rapidsConnection, repository)
+            SamtykkeStatusLytter.registrer(rapidsConnection, repository)
+            RegistrertFattJobbenLytter(rapidsConnection, repository)
+            KandidatlisteLukketLytter(rapidsConnection, repository)
+        }
         // Rekrutteringstreff
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
