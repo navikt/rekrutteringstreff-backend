@@ -21,6 +21,7 @@ class RekrutteringstreffSokController(
 
     @OpenApi(
         summary = "Søk etter rekrutteringstreff",
+        description = "Hvert treff har eierOgKontor med Nav-ident, valgfritt eiernavn og kontorets enhetId.",
         operationId = "sokRekrutteringstreff",
         security = [OpenApiSecurity(name = "BearerAuth")],
         queryParams = [
@@ -61,6 +62,7 @@ class RekrutteringstreffSokController(
                             "sistEndret": "2026-03-10T14:30:00Z",
                             "eiere": ["A123456"],
                             "kontorer": ["0315"],
+                            "eierOgKontor": [{"navIdent": "A123456", "eierNavn": "Kari Testesen", "kontorEnhetId": "0315"}],
                             "antallArbeidsgivere": 3,
                             "antallJobbsøkere": 12,
                             "antallJobbsøkereSvartJa": 9
@@ -82,6 +84,7 @@ class RekrutteringstreffSokController(
                             "sistEndret": "2026-03-05T08:00:00Z",
                             "eiere": ["B654321"],
                             "kontorer": ["1201"],
+                            "eierOgKontor": [{"navIdent": "B654321", "eierNavn": null, "kontorEnhetId": "1201"}],
                             "antallArbeidsgivere": 0,
                             "antallJobbsøkere": 0,
                             "antallJobbsøkereSvartJa": 0

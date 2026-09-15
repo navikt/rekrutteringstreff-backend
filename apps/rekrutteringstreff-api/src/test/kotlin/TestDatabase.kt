@@ -431,10 +431,11 @@ class TestDatabase {
         }
     }
 
-    fun oppdaterRekrutteringstreff(eiere: List<String>, id: TreffId) = dataSource.connection.use {
-        it.prepareStatement("UPDATE rekrutteringstreff SET eiere = ? WHERE id = ?").apply {
+    fun oppdaterEierarrays(eiere: List<String>, kontorer: List<String>, id: TreffId) = dataSource.connection.use {
+        it.prepareStatement("UPDATE rekrutteringstreff SET eiere = ?, kontorer = ? WHERE id = ?").apply {
             setArray(1, connection.createArrayOf("text", eiere.toTypedArray()))
-            setObject(2, id.somUuid)
+            setArray(2, connection.createArrayOf("text", kontorer.toTypedArray()))
+            setObject(3, id.somUuid)
         }.executeUpdate()
     }
 

@@ -17,6 +17,7 @@ Vi har valgt en **hybrid tilnærming** med current state-tabeller kombinert med 
 Vi bruker current state-tabeller for:
 
 - `rekrutteringstreff`
+- `rekrutteringstreff_eier`
 - `jobbsoker`
 - `arbeidsgiver`
 
@@ -61,6 +62,17 @@ Vi valgte `json_agg`-tilnærmingen fordi den gir best ytelse for våre leseopera
 
 ---
 
+### Eiere og kontortilgang
+
+`rekrutteringstreff_eier` er kilden for eiere og kontorer i API-et, søket og tilgangskontrollen.
+Hver eierrad har ett kontor. Kontorene på treffet er de unike kontorene til gjenværende eiere.
+Når siste eier fra et kontor fjernes eller bytter kontor, faller kontortilgangen bort og
+`EierService` skriver `KONTOR_FJERNET` i samme transaksjon.
+
+Arraykolonnene `rekrutteringstreff.eiere` og `rekrutteringstreff.kontorer` vedlikeholdes fortsatt med
+dual write, men brukes ikke ved lesing. De fjernes først i en senere deploy.
+Se [migreringsplanen](../9-planer/eiere-og-kontorer-egen-tabell.md).
+
 ## Entity Relationship Diagram
 
 Vis denne filen i Github for å se en grafisk fremstilling av databaseskjemaet ved hjelp av Mermaid.
@@ -72,6 +84,7 @@ erDiagram
     rekrutteringstreff ||--o{ arbeidsgiver : "har"
     rekrutteringstreff ||--o{ jobbsoker : "har"
     rekrutteringstreff ||--o{ innlegg : "har"
+    rekrutteringstreff ||--o{ rekrutteringstreff_eier : "har"
     rekrutteringstreff ||--o{ rekrutteringstreff_hendelse : "logger"
     rekrutteringstreff ||--o{ ki_spørring_logg : "refererer til"
 
@@ -98,11 +111,22 @@ erDiagram
         text fylke "Fylke for treffstedet (V5)"
         text kommune "Kommune for treffstedet (V5)"
         timestamptz svarfrist "Frist for påmelding/svar"
-        text[] eiere "Array av Nav-identer som eier treffet"
-        text[] kontorer "Array av kontor-enhetIDer knyttet til treffet"
+        text[] eiere "Dual write, ikke kilde for lesing"
+        text[] kontorer "Dual write, avledet fra eierrader"
         text beskrivelse "Beskrivelse av treffet"
         text sist_endret_av_person_navident "Nav-ident for sist endring (V6)"
         timestamptz sist_endret_av_tidspunkt "Tidspunkt for sist endring (V6)"
+    }
+
+    rekrutteringstreff_eier {
+        bigserial rekrutteringstreff_eier_id PK
+        uuid id UK
+        bigint rekrutteringstreff_id FK
+        text nav_ident "Unik per treff, NOT NULL"
+        text kontor_enhetid "NOT NULL"
+        text eier_navn "Valgfritt visningsnavn"
+        timestamptz lagt_til_tidspunkt
+        text lagt_til_av
     }
 
     arbeidsgiver {

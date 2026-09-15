@@ -13,8 +13,12 @@ SELECT
     rt.opprettet_av_person_navident,
     rt.opprettet_av_tidspunkt,
     rt.sist_endret,
-    rt.eiere,
-    rt.kontorer,
+    COALESCE((SELECT array_agg(DISTINCT e.nav_ident)
+              FROM rekrutteringstreff_eier e
+              WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS eiere,
+    COALESCE((SELECT array_agg(DISTINCT e.kontor_enhetid)
+              FROM rekrutteringstreff_eier e
+              WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS kontorer,
     CASE
         WHEN rt.svarfrist IS NOT NULL AND rt.svarfrist < now() THEN true
         ELSE false
@@ -26,6 +30,13 @@ SELECT
     rt.kategori,
     rt.kommunenummer,
     rt.fylkesnummer,
+    COALESCE((SELECT jsonb_agg(jsonb_build_object(
+                  'navIdent', e.nav_ident,
+                  'eierNavn', e.eier_navn,
+                  'kontorEnhetId', e.kontor_enhetid
+              ) ORDER BY e.rekrutteringstreff_eier_id)
+              FROM rekrutteringstreff_eier e
+              WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '[]'::jsonb) AS eier_og_kontor,
     rt.rekrutteringstreff_id
 FROM rekrutteringstreff rt
 WHERE rt.status != 'SLETTET';

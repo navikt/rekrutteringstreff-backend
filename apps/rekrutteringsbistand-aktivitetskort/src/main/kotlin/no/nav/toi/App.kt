@@ -14,7 +14,12 @@ import no.nav.toi.aktivitetskort.AktivitetskortType
 import no.nav.arbeidsgiver.toi.logging.TeamLogLogger.Companion.teamlog
 import no.nav.arbeidsgiver.toi.logging.log
 import no.nav.toi.aktivitetskort.SchedulerContext
+import no.nav.toi.aktivitetskort.WorkOpType
 import no.nav.toi.aktivitetskort.scheduler
+import no.nav.toi.rekrutteringsbistand.KandidatlisteLukketLytter
+import no.nav.toi.rekrutteringsbistand.RegistrertFattJobbenLytter
+import no.nav.toi.rekrutteringsbistand.SamtykkeForespurtLytter
+import no.nav.toi.rekrutteringsbistand.SamtykkeStatusLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffInvitasjonLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffOppdateringLytter
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffSvarOgStatusLytter
@@ -71,13 +76,19 @@ class App(
 
     private fun startRapidsAndRivers() {
         log.info("Starter RapidsConnection")
+        if(!Miljø.fraClusterNavn(System.getenv("NAIS_CLUSTER_NAME")).erProd) {
+            SamtykkeForespurtLytter(rapidsConnection, repository)
+            SamtykkeStatusLytter.registrer(rapidsConnection, repository)
+            RegistrertFattJobbenLytter(rapidsConnection, repository)
+            KandidatlisteLukketLytter(rapidsConnection, repository)
+        }
         // Rekrutteringstreff
         RekrutteringstreffInvitasjonLytter(rapidsConnection, repository)
         RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository)
         RekrutteringstreffOppdateringLytter(rapidsConnection, repository)
 
         if (workOpLyttereAktivert) {
-            RekrutteringstreffInvitasjonLytter(rapidsConnection, repository, AktivitetskortType.WORKOP)
+            RekrutteringstreffInvitasjonLytter(rapidsConnection, repository, WorkOpType)
             RekrutteringstreffSvarOgStatusLytter(rapidsConnection, repository, eventName = "workopSvarOgStatus")
             RekrutteringstreffOppdateringLytter(rapidsConnection, repository, eventName = "workopoppdatering")
         } else {
@@ -119,7 +130,8 @@ fun main() {
         rapidsConnection = rapidsConnection,
         repository = Repository(
             DatabaseConfig(env),
-            env.variable("MIN_SIDE_URL"),
+            env.variable("MIN_SIDE_REKRUTTERINGSTREFF_URL"),
+            env.variable("MIN_SIDE_STILLING_URL"),
             env.variable("DAB_AKTIVITETSKORT_TOPIC")
         ),
         producer = KafkaProducer(producerConfig(env)),

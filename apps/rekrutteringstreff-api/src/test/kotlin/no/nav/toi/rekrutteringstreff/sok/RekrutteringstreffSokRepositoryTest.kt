@@ -4,9 +4,13 @@ import no.nav.toi.arbeidsgiver.LeggTilArbeidsgiver
 import no.nav.toi.arbeidsgiver.Orgnavn
 import no.nav.toi.arbeidsgiver.Orgnr
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
+import no.nav.toi.rekrutteringstreff.RekrutteringstreffRepository
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
 import no.nav.toi.rekrutteringstreff.TestDatabase
 import no.nav.toi.rekrutteringstreff.TreffId
+import no.nav.toi.rekrutteringstreff.dto.EierOgKontorDto
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
+import no.nav.toi.rekrutteringstreff.eier.EierService
 import org.assertj.core.api.Assertions.assertThat
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterEach
@@ -96,6 +100,93 @@ class RekrutteringstreffSokRepositoryTest {
             poststed = "Oslo",
         ),
         treffId,
+    )
+
+    @Test
+    fun `søk bruker eiertabellen for eiere kontorer og aggregeringer`() {
+        val treffId = opprettTreff()
+        val eierRepository = EierRepository(db.dataSource)
+        val service = EierService(eierRepository, RekrutteringstreffRepository(db.dataSource), db.dataSource)
+        service.leggTilEierMedKontor(treffId, "B654321", "1201", "Kari Testesen")
+        service.leggTilEierMedKontor(treffId, "C987654", "0315")
+        db.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
+
+        val treff = sokEierskap(Visning.MINE, navIdent = "B654321").treff.single()
+        assertThat(treff.eiere).containsExactlyInAnyOrder("A123456", "B654321", "C987654")
+        assertThat(treff.kontorer).containsExactlyInAnyOrder("0315", "1201")
+        assertThat(treff.eierOgKontor).containsExactly(
+            EierOgKontorDto("A123456", null, "0315"),
+            EierOgKontorDto("B654321", "Kari Testesen", "1201"),
+            EierOgKontorDto("C987654", null, "0315"),
+        )
+        assertThat(sokEierskap(Visning.MINE, navIdent = "gammel eier").antallTotalt).isZero()
+        assertThat(sokEierskap(Visning.MITT_KONTOR, kontorId = "gammelt kontor").antallTotalt).isZero()
+        assertThat(sokEierskap(Visning.MITT_KONTOR, kontorId = "1201").antallTotalt).isEqualTo(1)
+        assertThat(sokEierskap(Visning.VALGTE_KONTORER, kontorer = listOf("1201")).antallTotalt).isEqualTo(1)
+
+        service.slettEier(treffId, "B654321", "A123456")
+        db.oppdaterEierarrays(listOf("A123456", "B654321"), listOf("0315", "1201"), treffId)
+
+        listOf(
+            sokEierskap(Visning.MINE, navIdent = "B654321"),
+            sokEierskap(Visning.MITT_KONTOR, kontorId = "1201"),
+            sokEierskap(Visning.VALGTE_KONTORER, kontorer = listOf("1201")),
+        ).forEach {
+            assertThat(it.treff).isEmpty()
+            assertThat(it.antallTotalt).isZero()
+            assertThat(it.kategoriaggregering).isEmpty()
+            assertThat(it.statusaggregering).isEmpty()
+            assertThat(it.publisertstatusaggregering).isEmpty()
+            assertThat(it.geografiaggregering.fylkesnummeraggregering).isEmpty()
+            assertThat(it.geografiaggregering.kommunenummeraggregering).isEmpty()
+        }
+    }
+
+    @Test
+    fun `gammelt eierarray gir ikke innsyn i utkast eller workop`() {
+        val utkast = opprettTreff(status = RekrutteringstreffStatus.UTKAST)
+        val workop = opprettTreff(kategori = RekrutteringstreffKategori.WORKOP)
+        listOf(utkast, workop).forEach {
+            db.oppdaterEierarrays(listOf("B654321"), listOf("0315"), it)
+        }
+
+        assertThat(sokEierskap(Visning.ALLE, navIdent = "B654321").antallTotalt).isZero()
+        assertThat(sokEierskap(Visning.ALLE, navIdent = "A123456").antallTotalt).isEqualTo(2)
+    }
+
+    @Test
+    fun `view returnerer tomme arrays uten eierrader og filtrene gir ingen eier eller kontormatch`() {
+        val treffId = opprettTreff()
+        db.dataSource.connection.use { connection ->
+            connection.createStatement().use { stmt ->
+                stmt.executeUpdate("DELETE FROM rekrutteringstreff_eier")
+                stmt.executeQuery("SELECT eiere, kontorer FROM rekrutteringstreff_sok_view").use { rs ->
+                    check(rs.next())
+                    assertThat(rs.getArray("eiere")).isNotNull()
+                    assertThat(rs.getArray("kontorer")).isNotNull()
+                    assertThat(rs.getArray("eiere").array as Array<*>).isEmpty()
+                    assertThat(rs.getArray("kontorer").array as Array<*>).isEmpty()
+                }
+            }
+        }
+        val treff = sokEierskap(Visning.ALLE).treff.single()
+        assertThat(treff.id).isEqualTo(treffId.somString)
+        assertThat(treff.eiere).isEmpty()
+        assertThat(treff.kontorer).isEmpty()
+        assertThat(treff.eierOgKontor).isEmpty()
+        assertThat(sokEierskap(Visning.MINE).antallTotalt).isZero()
+        assertThat(sokEierskap(Visning.MITT_KONTOR).antallTotalt).isZero()
+        assertThat(sokEierskap(Visning.VALGTE_KONTORER, kontorer = listOf("0315")).antallTotalt).isZero()
+    }
+
+    private fun sokEierskap(
+        visning: Visning,
+        navIdent: String = "A123456",
+        kontorId: String = "0315",
+        kontorer: List<String>? = null,
+    ) = repository.sokMedAggregering(
+        navIdent = navIdent, kontorId = kontorId, kategorier = null, statuser = null, publisertStatuser = null,
+        kontorer = kontorer, fylkesnumre = null, kommunenumre = null, visning = visning, side = 1, antallPerSide = 25,
     )
 
     @Test

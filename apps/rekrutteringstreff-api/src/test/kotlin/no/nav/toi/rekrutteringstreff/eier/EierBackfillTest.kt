@@ -163,7 +163,27 @@ class EierBackfillTest {
                 try {
                     ventPåVentendeLås("rekrutteringstreff", "AccessExclusiveLock")
                     // Migreringen må ikke ha låst eiertabellen før trefftabellen.
-                    assertThat(repository.slett(connection, treffId, "B654321")).isTrue()
+                    // Før backfill bruker den deployede fase 2-koden fortsatt arrayet som fasit.
+                    connection.prepareStatement(
+                        """
+                        WITH oppdatert_treff AS (
+                            UPDATE rekrutteringstreff SET eiere = array_remove(eiere, 'B654321')
+                            WHERE id = ? AND array_length(eiere, 1) > 1
+                            RETURNING rekrutteringstreff_id
+                        ), slettet_eier AS (
+                            DELETE FROM rekrutteringstreff_eier
+                            WHERE rekrutteringstreff_id IN (SELECT rekrutteringstreff_id FROM oppdatert_treff)
+                              AND nav_ident = 'B654321'
+                        )
+                        SELECT EXISTS (SELECT 1 FROM oppdatert_treff)
+                        """.trimIndent()
+                    ).use { stmt ->
+                        stmt.setObject(1, treffId.somUuid)
+                        stmt.executeQuery().use { rs ->
+                            check(rs.next())
+                            assertThat(rs.getBoolean(1)).isTrue()
+                        }
+                    }
                     connection.commit()
                     backfill.get(15, TimeUnit.SECONDS)
                 } finally {

@@ -125,6 +125,7 @@ class RekrutteringstreffController(
 
     @OpenApi(
         summary = "Hent et rekrutteringstreff",
+        description = "eierOgKontor kobler Nav-ident, valgfritt eiernavn og kontorets enhetId. Eiere og kontorer beholdes som separate lister for bakoverkompatibilitet.",
         operationId = "hentRekrutteringstreff",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true)],
@@ -147,6 +148,9 @@ class RekrutteringstreffController(
                     "opprettetAvPersonNavident":"A123456",
                     "opprettetAvNavkontorEnhetId":"0318",
                     "opprettetAvTidspunkt":"2025-06-01T08:00:00+02:00",
+                    "eiere":["A123456"],
+                    "kontorer":["0318"],
+                    "eierOgKontor":[{"navIdent":"A123456","eierNavn":"Kari Testesen","kontorEnhetId":"0318"}],
                     "antallArbeidsgivere":1,
                     "antallJobbsøkere":1,
                     "antallJobbsøkereSvartJa":0
@@ -329,7 +333,7 @@ class RekrutteringstreffController(
 
     @OpenApi(
         summary = "Hent ALLE hendelser for et rekrutteringstreff (jobbsøker, arbeidsgiver, treff)",
-        description = "Samler hendelser fra rekrutteringstreff, jobbsøker og arbeidsgiver i én sortert liste. Krever at innlogget bruker er eier eller utvikler. Feltet 'subjektId'/'subjektNavn' identifiserer hvem/hva hendelsen gjelder — for jobbsøker: fødselsnummer/navn via FK, for arbeidsgiver: orgnr/orgnavn via FK, for rekrutteringstreff: lagret direkte på hendelsen (EIER_LAGT_TIL, EIER_FJERNET og KONTOR_LAGT_TIL, null for øvrige).",
+        description = "Samler hendelser fra rekrutteringstreff, jobbsøker og arbeidsgiver i én sortert liste. Krever at innlogget bruker er eier eller utvikler. Feltet 'subjektId'/'subjektNavn' identifiserer hvem/hva hendelsen gjelder — for jobbsøker: fødselsnummer/navn via FK, for arbeidsgiver: orgnr/orgnavn via FK, for rekrutteringstreff: lagret direkte på hendelsen (EIER_LAGT_TIL, EIER_FJERNET, KONTOR_LAGT_TIL og KONTOR_FJERNET, null for øvrige).",
         operationId = "hentAlleHendelser",
         security = [OpenApiSecurity("BearerAuth")],
         pathParams = [OpenApiParam(name = pathParamTreffId, type = UUID::class, required = true, description = "Rekrutteringstreffets UUID")],
