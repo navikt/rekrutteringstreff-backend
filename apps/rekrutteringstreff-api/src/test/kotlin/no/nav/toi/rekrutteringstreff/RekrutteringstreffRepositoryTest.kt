@@ -6,6 +6,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.nowOslo
+import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.Assertions.within
@@ -37,6 +38,41 @@ class RekrutteringstreffRepositoryTest {
     @AfterEach
     fun tearDown() {
         db.slettAlt()
+    }
+
+    @Test
+    fun `alle trefflesinger bruker eiertabellen og dedupliserer kontorer`() {
+        val treffId = db.opprettRekrutteringstreffMedAlleFelter(
+            navIdent = "A123456", tilTid = nowOslo().minusDays(1), opprettetAvNavkontorEnhetId = "0315",
+        )
+        val annetTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "D111111", opprettetAvNavkontorEnhetId = "9999")
+        val eierRepository = EierRepository(db.dataSource)
+        eierRepository.leggTil(treffId, "B654321", "0315")
+        eierRepository.leggTil(treffId, "C987654", "1201")
+        db.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
+
+        listOf(
+            repository.hent(treffId)!!,
+            repository.hentAlle().single { it.id == treffId },
+            repository.hentPubliserteTreffHvorTilTidErPassert().single(),
+        ).forEach {
+            assertThat(it.id).isEqualTo(treffId)
+            assertThat(it.eiere).containsExactlyInAnyOrder("A123456", "B654321", "C987654")
+            assertThat(it.kontorer).containsExactlyInAnyOrder("0315", "1201")
+        }
+        assertThat(repository.hent(annetTreff)!!.eiere).containsExactly("D111111")
+    }
+
+    @Test
+    fun `treff uten eierrader har tomme eiere og kontorer`() {
+        val treffId = db.opprettRekrutteringstreffIDatabase()
+        db.dataSource.connection.use { connection ->
+            connection.createStatement().use { it.executeUpdate("DELETE FROM rekrutteringstreff_eier") }
+        }
+
+        val treff = repository.hent(treffId)!!
+        assertThat(treff.eiere).isEmpty()
+        assertThat(treff.kontorer).isEmpty()
     }
 
     @ParameterizedTest

@@ -104,6 +104,18 @@ class RekrutteringstreffSokYtelsestest {
                     statement.executeBatch()
                 }
 
+                conn.createStatement().use {
+                    it.executeUpdate(
+                        """
+                        INSERT INTO rekrutteringstreff_eier (rekrutteringstreff_id, nav_ident, kontor_enhetid)
+                        SELECT rt.rekrutteringstreff_id, e.nav_ident, rt.kontorer[1]
+                        FROM rekrutteringstreff rt
+                        CROSS JOIN LATERAL unnest(rt.eiere) AS e(nav_ident)
+                        """.trimIndent()
+                    )
+                    it.execute("ANALYZE rekrutteringstreff_eier")
+                }
+
                 val treffIds = conn.prepareStatement(
                     "SELECT rekrutteringstreff_id FROM rekrutteringstreff"
                 ).use { s ->
@@ -194,10 +206,15 @@ class RekrutteringstreffSokYtelsestest {
 
     private fun målSøk(request: RekrutteringstreffSokRequest): Long =
         measureTimeMillis {
-            service.sok(
+            val resultat = service.sok(
                 request = request,
                 navIdent = "A123456",
                 kontorId = "0315",
             )
+            assertThat(resultat.treff).hasSize(request.antallPerSide)
+            assertThat(resultat.treff).allSatisfy {
+                assertThat(it.eiere).containsExactlyInAnyOrder("A123456", "B654321")
+                assertThat(it.kontorer).hasSize(1)
+            }
         }
 }
