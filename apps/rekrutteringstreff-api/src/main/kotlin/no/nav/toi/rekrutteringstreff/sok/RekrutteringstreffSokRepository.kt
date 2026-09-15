@@ -473,11 +473,12 @@ class RekrutteringstreffSokRepository(private val dataSource: DataSource) {
             clauses += """
             rekrutteringstreff_id IN (
                 SELECT rekrutteringstreff_id FROM rekrutteringstreff
-                 WHERE sok_tsv @@ websearch_to_tsquery('norwegian', ?)
+                WHERE status != 'SLETTET' 
+                  AND sok_tsv @@ plainto_tsquery('norwegian', ?)
                 UNION
                 SELECT rekrutteringstreff_id FROM arbeidsgiver
                  WHERE status = 'AKTIV'
-                   AND sok_tsv @@ websearch_to_tsquery('norwegian', ?)
+                   AND sok_tsv @@ plainto_tsquery('norwegian', ?)
             )
         """.trimIndent()
             params += SqlParam(term, ParamType.STRING)

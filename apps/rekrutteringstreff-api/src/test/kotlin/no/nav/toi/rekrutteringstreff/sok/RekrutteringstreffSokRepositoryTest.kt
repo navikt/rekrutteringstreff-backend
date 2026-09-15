@@ -98,15 +98,6 @@ class RekrutteringstreffSokRepositoryTest {
         treffId,
     )
 
-    private fun settSistEndret(treffId: TreffId, tidspunkt: Instant) {
-        db.dataSource.connection.use { conn ->
-            conn.prepareStatement("UPDATE rekrutteringstreff SET sist_endret = ? WHERE id = ?").apply {
-                setTimestamp(1, Timestamp.from(tidspunkt))
-                setObject(2, treffId.somUuid)
-            }.executeUpdate()
-        }
-    }
-
     @Test
     fun `sok returnerer tomme resultater når ingen treff finnes`() {
         val resultat = repository.sokMedAggregering(
