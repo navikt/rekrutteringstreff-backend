@@ -185,8 +185,18 @@ class RekrutteringstreffSokRepositoryTest {
         kontorId: String = "0315",
         kontorer: List<String>? = null,
     ) = repository.sokMedAggregering(
-        navIdent = navIdent, kontorId = kontorId, kategorier = null, statuser = null, publisertStatuser = null,
-        kontorer = kontorer, fylkesnumre = null, kommunenumre = null, visning = visning, side = 1, antallPerSide = 25,
+        navIdent = navIdent,
+        kontorId = kontorId,
+        kategorier = null,
+        statuser = null,
+        publisertStatuser = null,
+        kontorer = kontorer,
+        fylkesnumre = null,
+        kommunenumre = null,
+        visning = visning,
+        side = 1,
+        antallPerSide = 25,
+        fritekst = null,
     )
 
     @Test
