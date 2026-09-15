@@ -1,7 +1,9 @@
 package no.nav.toi.rekrutteringstreff
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import io.javalin.http.NotFoundResponse
 import no.nav.toi.AktørType
+import no.nav.toi.JacksonConfig
 import no.nav.toi.RekrutteringstreffHendelsestype
 import no.nav.toi.atOslo
 import no.nav.toi.rekrutteringstreff.dto.FellesHendelseOutboundDto
@@ -80,7 +82,14 @@ class RekrutteringstreffRepository(
                              WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS eiere,
                    COALESCE((SELECT array_agg(DISTINCT e.kontor_enhetid)
                              FROM rekrutteringstreff_eier e
-                             WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS kontorer
+                             WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '{}'::text[]) AS kontorer,
+                   COALESCE((SELECT jsonb_agg(jsonb_build_object(
+                                 'navIdent', e.nav_ident,
+                                 'eierNavn', e.eier_navn,
+                                 'kontorEnhetId', e.kontor_enhetid
+                             ) ORDER BY e.rekrutteringstreff_eier_id)
+                             FROM rekrutteringstreff_eier e
+                             WHERE e.rekrutteringstreff_id = rt.rekrutteringstreff_id), '[]'::jsonb) AS eier_og_kontor
             FROM rekrutteringstreff rt
         """
     }
@@ -399,6 +408,7 @@ class RekrutteringstreffRepository(
         opprettetAvTidspunkt = getTimestamp(opprettetAvTidspunkt).toInstant().atOslo(),
         eiere = (getArray(eiere).array as Array<*>).map { it.toString() },
         kontorer = (getArray(kontorer).array as Array<*>).map { it.toString() },
+        eierOgKontor = JacksonConfig.mapper.readValue(getString("eier_og_kontor")),
         sistEndret = getTimestamp(sistEndret).toInstant().atOslo(),
         sistEndretAv = getString(sistEndretAv) ?: "Ukjent",
     )

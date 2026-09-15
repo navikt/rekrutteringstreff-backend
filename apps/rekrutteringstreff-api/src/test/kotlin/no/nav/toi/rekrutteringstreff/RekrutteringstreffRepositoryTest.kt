@@ -6,6 +6,7 @@ import no.nav.toi.jobbsoker.Fornavn
 import no.nav.toi.jobbsoker.Fødselsnummer
 import no.nav.toi.jobbsoker.LeggTilJobbsøker
 import no.nav.toi.nowOslo
+import no.nav.toi.rekrutteringstreff.dto.EierOgKontorDto
 import no.nav.toi.rekrutteringstreff.eier.EierRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -47,7 +48,7 @@ class RekrutteringstreffRepositoryTest {
         )
         val annetTreff = db.opprettRekrutteringstreffIDatabase(navIdent = "D111111", opprettetAvNavkontorEnhetId = "9999")
         val eierRepository = EierRepository(db.dataSource)
-        eierRepository.leggTil(treffId, "B654321", "0315")
+        eierRepository.leggTil(treffId, "B654321", "0315", "Kari Testesen")
         eierRepository.leggTil(treffId, "C987654", "1201")
         db.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
 
@@ -59,6 +60,11 @@ class RekrutteringstreffRepositoryTest {
             assertThat(it.id).isEqualTo(treffId)
             assertThat(it.eiere).containsExactlyInAnyOrder("A123456", "B654321", "C987654")
             assertThat(it.kontorer).containsExactlyInAnyOrder("0315", "1201")
+            assertThat(it.eierOgKontor).containsExactly(
+                EierOgKontorDto("A123456", null, "0315"),
+                EierOgKontorDto("B654321", "Kari Testesen", "0315"),
+                EierOgKontorDto("C987654", null, "1201"),
+            )
         }
         assertThat(repository.hent(annetTreff)!!.eiere).containsExactly("D111111")
     }
@@ -73,6 +79,7 @@ class RekrutteringstreffRepositoryTest {
         val treff = repository.hent(treffId)!!
         assertThat(treff.eiere).isEmpty()
         assertThat(treff.kontorer).isEmpty()
+        assertThat(treff.eierOgKontor).isEmpty()
     }
 
     @ParameterizedTest

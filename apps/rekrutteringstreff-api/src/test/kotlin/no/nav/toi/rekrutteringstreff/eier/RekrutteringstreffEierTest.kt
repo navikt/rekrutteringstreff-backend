@@ -112,6 +112,53 @@ class RekrutteringstreffEierTest {
         assertThat(database.hentEierrader(opprettetRekrutteringstreff.id).map { it.navIdent }).doesNotContain(navIdent)
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `detalj og liste returnerer gjeldende eierOgKontor fra eiertabellen`(hentListe: Boolean) {
+        val navIdent = "A123456"
+        val token = infra.authServer.lagToken(infra.authPort, navIdent = navIdent)
+        val treffId = database.opprettRekrutteringstreffMedEierOgKontor(navIdent = navIdent, kontorId = "0315")
+        database.opprettRekrutteringstreffMedEierOgKontor(navIdent = "D111111", kontorId = "9999")
+        ctx.eierRepository.leggTil(treffId, "B654321", "0315", "Kari Testesen")
+        ctx.eierRepository.leggTil(treffId, "C987654", "1201", "Ola Testesen")
+        database.oppdaterEierarrays(listOf("gammel eier"), listOf("gammelt kontor"), treffId)
+
+        fun verifiserEierOgKontor(forventetJson: String) {
+            val path = if (hentListe) "sok?visning=alle" else treffId.somString
+            val response = httpGet(
+                "http://localhost:$appPort/api/rekrutteringstreff/$path",
+                token.serialize(),
+            )
+            assertThat(response.statusCode()).isEqualTo(200)
+            val json = mapper.readTree(response.body())
+            val treff = if (hentListe) json["treff"].single { it["id"].asText() == treffId.somString } else json
+            val forventet = mapper.readTree(forventetJson)
+            assertThat(treff["eierOgKontor"]).isEqualTo(forventet)
+            assertThat(treff["eiere"].map { it.asText() })
+                .containsExactlyInAnyOrderElementsOf(forventet.map { it["navIdent"].asText() })
+            assertThat(treff["kontorer"].map { it.asText() })
+                .containsExactlyInAnyOrderElementsOf(forventet.map { it["kontorEnhetId"].asText() }.distinct())
+        }
+
+        verifiserEierOgKontor(
+            """[
+                {"navIdent":"A123456","eierNavn":null,"kontorEnhetId":"0315"},
+                {"navIdent":"B654321","eierNavn":"Kari Testesen","kontorEnhetId":"0315"},
+                {"navIdent":"C987654","eierNavn":"Ola Testesen","kontorEnhetId":"1201"}
+            ]"""
+        )
+
+        ctx.eierRepository.leggTil(treffId, "B654321", "0403", "Kari Nyttnavn")
+        ctx.eierService.slettEier(treffId, "C987654", navIdent)
+
+        verifiserEierOgKontor(
+            """[
+                {"navIdent":"A123456","eierNavn":null,"kontorEnhetId":"0315"},
+                {"navIdent":"B654321","eierNavn":"Kari Nyttnavn","kontorEnhetId":"0403"}
+            ]"""
+        )
+    }
+
     @Test
     fun `Slett eier hvis det bare er 1 eier skal gi bad request`() {
         val navIdent = "A123456"

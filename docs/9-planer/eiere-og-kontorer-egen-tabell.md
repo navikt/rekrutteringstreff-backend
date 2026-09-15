@@ -586,5 +586,23 @@ treffet, ikke alle treff personen eier. Full historisk utfylling krever en egen 
 
 ### Følger for øvrig
 
-`GET /eiere` returnerer fortsatt Nav-identer; responsformatet er uendret. Å eksponere navn i responsen er
-en separat endring (seksjon 3). `subjektNavn` i eierhendelser er heller ikke endret.
+`GET /eiere` returnerer fortsatt Nav-identer; responsformatet er uendret.
+`subjektNavn` i eierhendelser er heller ikke endret.
+
+`GET /api/rekrutteringstreff/{id}` og hvert treff i `GET /api/rekrutteringstreff/sok`
+returnerer i tillegg `eierOgKontor` fra eiertabellen:
+
+```json
+{
+  "eierOgKontor": [
+    {"navIdent": "A123456", "eierNavn": "Kari Testesen", "kontorEnhetId": "0315"}
+  ]
+}
+```
+
+`eierNavn` er `null` når navn ikke er lagret. `kontorEnhetId` er kontorets enhetId, ikke kontornavn.
+Uten eierrader returneres en tom liste. Eierne sorteres etter eierradens interne ID.
+De eksisterende feltene `eiere` og `kontorer` beholdes for bakoverkompatibilitet.
+Eierinformasjonen hentes i samme SQL-spørring som treffene, uten et ekstra databasekall per treff.
+For søk sammenstilles `eier_og_kontor` i `rekrutteringstreff_sok_view`; søkerepositoryet leser kolonnen
+direkte. Detaljoppslag beholder sin egen sammenstilling, siden søkeviewet filtrerer bort slettede treff.

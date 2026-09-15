@@ -3,6 +3,7 @@ package no.nav.toi.rekrutteringstreff.sok
 import com.fasterxml.jackson.annotation.JsonValue
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffKategori
 import no.nav.toi.rekrutteringstreff.RekrutteringstreffStatus
+import no.nav.toi.rekrutteringstreff.dto.EierOgKontorDto
 import java.time.Instant
 
 enum class SokKategori(@JsonValue val jsonVerdi: String) {
@@ -128,6 +129,7 @@ data class RekrutteringstreffSokTreff(
     val sistEndret: Instant,
     val eiere: List<String>,
     val kontorer: List<String>,
+    val eierOgKontor: List<EierOgKontorDto>,
     val antallArbeidsgivere: Long,
     val antallJobbsøkere: Long,
     val antallJobbsøkereSvartJa: Long,
